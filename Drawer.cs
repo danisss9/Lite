@@ -1,6 +1,8 @@
 ﻿using AngleSharp.Css.Dom;
 using SkiaSharp;
 using System.Text.RegularExpressions;
+using AngleSharp.Css;
+using AngleSharp.Css.Values;
 
 namespace Lite
 {
@@ -30,7 +32,7 @@ namespace Lite
                             canvas.DrawRect(rect, paint);
                             break;
                         }
-                    case "H1":
+                    case { } h when h.StartsWith('H'):
                     case "P":
                         {
                             using var paint = new SKPaint
@@ -105,23 +107,10 @@ namespace Lite
             }
         }
 
-        private static SKColor GetColor(DrawCommand command)
-        {
-            var style = command.CssStyleDeclaration;
-            var match = Regex.Match(style.GetBackgroundColor(), @"rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)");
-
-            if (match.Success)
-            {
-                var r = byte.Parse(match.Groups[1].Value);
-                var g = byte.Parse(match.Groups[2].Value);
-                var b = byte.Parse(match.Groups[3].Value);
-                var a = byte.Parse(match.Groups[4].Value);
-
-                return new SKColor(r, g, b, (byte)(a * 255));
-            }
-
-            return SKColors.Transparent;
-        }
+        private static SKColor GetColor(DrawCommand command) =>
+            command.CssStyleDeclaration.GetProperty(PropertyNames.BackgroundColor).RawValue is Color color 
+                ? new SKColor(color.R, color.G, color.B, color.A) 
+                : SKColors.Transparent;
     }
 
     internal record DrawCommand(string? Id, string TagName, string Text, ICssStyleDeclaration CssStyleDeclaration);
