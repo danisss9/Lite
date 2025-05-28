@@ -1,4 +1,4 @@
-using AngleSharp.Css.Dom;
+﻿using AngleSharp.Css.Dom;
 using SkiaSharp;
 using AngleSharp.Css;
 using AngleSharp.Css.Values;
@@ -30,7 +30,7 @@ internal static class Drawer
                     canvas.DrawRect(rect, paint);
                     break;
                 }
-                case { } h when h.StartsWith('H'):
+                case { } h when h.StartsWith('H') && h.Length == 2:
                 case "P":
                 {
                     using var paint = new SKPaint
