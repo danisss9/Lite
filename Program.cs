@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using Lite.Models;
+using Lite.Models.Delegates;
 using Lite.Models.Structs;
 using Lite.Utils;
 
@@ -21,10 +22,7 @@ internal class Program
     private static int Height { get; set; }
     private static List<DrawCommand>? DrawCommands { get; set;}
     private static IntPtr Pixels { get; set; }
-
-    // Delegate for the window procedure.
-    private delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
-    private static readonly WndProcDelegate _wndProcDelegate = WndProc;
+    private static readonly WndProcDelegate WndProcDelegate = WndProc;
 
     private static void Main()
     {
@@ -38,7 +36,7 @@ internal class Program
         {
             cbSize = (uint)Marshal.SizeOf(typeof(WNDCLASSEX)),
             style = 0,
-            lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProcDelegate),
+            lpfnWndProc = Marshal.GetFunctionPointerForDelegate(WndProcDelegate),
             cbClsExtra = 0,
             cbWndExtra = 0,
             hInstance = hInstance,

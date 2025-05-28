@@ -1,6 +1,6 @@
-﻿using SkiaSharp;
-using Lite.Extensions;
+﻿using Lite.Extensions;
 using Lite.Models;
+using SkiaSharp;
 
 namespace Lite;
 
@@ -25,7 +25,7 @@ internal static class Drawer
                 case "DIV":
                 {
                     var rect = CalculateSizeAndPosition(drawCommand, width, height);
-                    using var paint = new SKPaint() { Color = drawCommand.GetBackgroundColor(), IsAntialias = true };
+                    using var paint = new SKPaint { Color = drawCommand.GetBackgroundColor(), IsAntialias = true };
                     canvas.DrawRect(rect, paint);
                     break;
                 }
