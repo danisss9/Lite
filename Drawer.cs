@@ -1,4 +1,4 @@
-﻿using AngleSharp.Css.Dom;
+using AngleSharp.Css.Dom;
 using SkiaSharp;
 using AngleSharp.Css;
 using AngleSharp.Css.Values;
@@ -44,7 +44,6 @@ internal static class Drawer
                         Embolden = drawCommand.TagName == "H1",
                         Typeface = SKTypeface.FromFamilyName("Arial")
                     };
-                    var rect = new SKRect(50, 50, 350, 150);
                     canvas.DrawText(drawCommand.Text, 32, y, SKTextAlign.Left, font, paint);
                     y += 48;
                     break;
