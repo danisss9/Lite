@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using Lite.Models;
 using Lite.Models.Structs;
 using Lite.Utils;
 
@@ -12,20 +13,28 @@ internal class Program
     private const int SW_SHOW = 5;
     private const int WM_PAINT = 0x000F;
     private const int WM_DESTROY = 0x0002;
-    private const int BI_RGB = 0;
+    private const int WM_SIZE = 0x0005;
+    private const uint BI_RGB = 0;
     private const uint DIB_RGB_COLORS = 0;
+    
+    private static int Width { get; set; }
+    private static int Height { get; set; }
+    private static List<DrawCommand>? DrawCommands { get; set;}
+    private static IntPtr Pixels { get; set; }
 
     // Delegate for the window procedure.
     private delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
     private static readonly WndProcDelegate _wndProcDelegate = WndProc;
 
-    private static void Main(string[] args)
+    private static void Main()
     {
+        DrawCommands = Parser.TraverseHtml("https://example.com");
+        
         // Retrieve the module handle.
-        IntPtr hInstance = Marshal.GetHINSTANCE(typeof(Program).Module);
+        var hInstance = Marshal.GetHINSTANCE(typeof(Program).Module);
 
         // Set up the window class.
-        WNDCLASSEX wcex = new WNDCLASSEX
+        var wcex = new WNDCLASSEX
         {
             cbSize = (uint)Marshal.SizeOf(typeof(WNDCLASSEX)),
             style = 0,
@@ -42,7 +51,7 @@ internal class Program
             hIconSm = IntPtr.Zero
         };
 
-        ushort regResult = User32.RegisterClassEx(ref wcex);
+        var regResult = User32.RegisterClassEx(ref wcex);
         if (regResult == 0)
         {
             Console.WriteLine("Window class registration failed!");
@@ -50,7 +59,7 @@ internal class Program
         }
 
         // Create the window.
-        IntPtr hWnd = User32.CreateWindowEx(
+        var hWnd = User32.CreateWindowEx(
             0,
             CLASS_NAME,
             "SkiaSharp Rendering in Native Window",
@@ -59,7 +68,8 @@ internal class Program
             IntPtr.Zero,
             IntPtr.Zero,
             hInstance,
-            IntPtr.Zero);
+            IntPtr.Zero
+        );
 
         if (hWnd == IntPtr.Zero)
         {
@@ -71,8 +81,7 @@ internal class Program
         User32.UpdateWindow(hWnd);
 
         // Enter the message loop.
-        MSG msg;
-        while (User32.GetMessage(out msg, IntPtr.Zero, 0, 0))
+        while (User32.GetMessage(out var msg, IntPtr.Zero, 0, 0))
         {
             User32.TranslateMessage(ref msg);
             User32.DispatchMessage(ref msg);
@@ -85,30 +94,19 @@ internal class Program
         switch (msg)
         {
             case WM_PAINT:
-            {
                 // Begin painting and obtain the device context.
-                PAINTSTRUCT ps;
-                IntPtr hdc = User32.BeginPaint(hWnd, out ps);
-
-                // Get the client area dimensions.
-                User32.GetClientRect(hWnd, out RECT clientRect);
-                int width = clientRect.right - clientRect.left;
-                int height = clientRect.bottom - clientRect.top;
-
-                // Get pointer to the pixel data.
-                List<DrawCommand> drawCommands = Parser.TraverseHtml("https://example.com");
-                IntPtr pixels = Drawer.Draw(width, height, drawCommands);
+                var hdc = User32.BeginPaint(hWnd, out var ps);
 
                 // Prepare BITMAPINFO for transferring data to the window.
-                BITMAPINFO bmi = new BITMAPINFO();
+                var bmi = new BITMAPINFO();
                 bmi.bmiHeader.biSize = (uint)Marshal.SizeOf(typeof(BITMAPINFOHEADER));
-                bmi.bmiHeader.biWidth = width;
+                bmi.bmiHeader.biWidth = Width;
                 // Use a negative height for a top–down DIB.
-                bmi.bmiHeader.biHeight = -height;
+                bmi.bmiHeader.biHeight = -Height;
                 bmi.bmiHeader.biPlanes = 1;
                 bmi.bmiHeader.biBitCount = 32;
-                bmi.bmiHeader.biCompression = (uint)BI_RGB;
-                bmi.bmiHeader.biSizeImage = (uint)(width * height * 4);
+                bmi.bmiHeader.biCompression = BI_RGB;
+                bmi.bmiHeader.biSizeImage = (uint)(Width * Height * 4);
                 bmi.bmiHeader.biXPelsPerMeter = 0;
                 bmi.bmiHeader.biYPelsPerMeter = 0;
                 bmi.bmiHeader.biClrUsed = 0;
@@ -118,21 +116,33 @@ internal class Program
                 Gdi32.SetDIBitsToDevice(
                     hdc,
                     0, 0,
-                    (uint)width, (uint)height,
+                    (uint)Width, (uint)Height,
                     0, 0,
-                    0, (uint)height,
-                    pixels,
+                    0, (uint)Height,
+                    Pixels,
                     ref bmi,
                     DIB_RGB_COLORS);
 
                 User32.EndPaint(hWnd, ref ps);
-            }
+                
                 return IntPtr.Zero;
 
             case WM_DESTROY:
                 User32.PostQuitMessage(0);
                 break;
+            
+            case WM_SIZE:
+                User32.GetClientRect(hWnd, out var clientRect);
+                Width = clientRect.right - clientRect.left;
+                Height = clientRect.bottom - clientRect.top;
 
+                if (DrawCommands != null)
+                {
+                    Pixels = Drawer.Draw(Width, Height, DrawCommands);
+                }
+                
+                break;
+            
             default:
                 return User32.DefWindowProc(hWnd, msg, wParam, lParam);
         }
