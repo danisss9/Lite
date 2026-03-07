@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using Lite.Models;
 using Lite.Models.Structs;
 
 namespace Lite.Utils;
@@ -53,4 +54,19 @@ internal static class User32
 
     [DllImport("user32.dll")]
     internal static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    internal static extern bool InvalidateRect(IntPtr hWnd, IntPtr lpRect, bool bErase);
+
+    [DllImport("user32.dll")]
+    internal static extern bool GetCursorPos(out POINT lpPoint);
+
+    [DllImport("user32.dll")]
+    internal static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr SetCursor(IntPtr hCursor);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    internal static extern IntPtr LoadCursor(IntPtr hInstance, int lpCursorName);
 }

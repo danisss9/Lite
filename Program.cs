@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Lite.Models;
 using Lite.Models.Delegates;
 using Lite.Models.Structs;
@@ -15,13 +16,20 @@ internal class Program
     private const int WM_PAINT = 0x000F;
     private const int WM_DESTROY = 0x0002;
     private const int WM_SIZE = 0x0005;
+    private const int WM_LBUTTONUP = 0x0202;
+    private const int WM_SETCURSOR = 0x0020;
+    private const int HTCLIENT = 1;
+    private const int IDC_ARROW = 32512;
+    private const int IDC_IBEAM = 32513;
+    private const int IDC_HAND  = 32649;
     private const uint BI_RGB = 0;
     private const uint DIB_RGB_COLORS = 0;
-    
+
     private static int Width { get; set; }
     private static int Height { get; set; }
-    private static List<DrawCommand>? DrawCommands { get; set;}
+    private static List<DrawCommand>? DrawCommands { get; set; }
     private static IntPtr Pixels { get; set; }
+    private static List<HitRegion> HitRegions { get; set; } = [];
     private static readonly WndProcDelegate WndProcDelegate = WndProc;
 
     private static void Main()
@@ -136,11 +144,50 @@ internal class Program
 
                 if (DrawCommands != null)
                 {
-                    Pixels = Drawer.Draw(Width, Height, DrawCommands);
+                    (Pixels, HitRegions) = Drawer.Draw(Width, Height, DrawCommands);
+                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                 }
-                
+
                 break;
-            
+
+            case WM_LBUTTONUP:
+            {
+                var x = (short)(lParam.ToInt32() & 0xFFFF);
+                var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+                foreach (var region in HitRegions)
+                {
+                    if (region.Href != null && region.Bounds.Contains(x, y))
+                    {
+                        Process.Start(new ProcessStartInfo(region.Href) { UseShellExecute = true });
+                        break;
+                    }
+                }
+                break;
+            }
+
+            case WM_SETCURSOR:
+                if ((lParam.ToInt32() & 0xFFFF) == HTCLIENT)
+                {
+                    User32.GetCursorPos(out var pt);
+                    User32.ScreenToClient(hWnd, ref pt);
+                    var cursorId = IDC_ARROW;
+                    foreach (var region in HitRegions)
+                    {
+                        if (region.Bounds.Contains(pt.X, pt.Y))
+                        {
+                            cursorId = region.Cursor switch
+                            {
+                                CursorType.Pointer => IDC_HAND,
+                                CursorType.Text    => IDC_IBEAM,
+                                _                  => IDC_ARROW
+                            };
+                        }
+                    }
+                    User32.SetCursor(User32.LoadCursor(IntPtr.Zero, cursorId));
+                    return new IntPtr(1);
+                }
+                return User32.DefWindowProc(hWnd, msg, wParam, lParam);
+
             default:
                 return User32.DefWindowProc(hWnd, msg, wParam, lParam);
         }

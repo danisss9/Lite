@@ -401,3 +401,4 @@ FodyWeavers.xsd
 *.sln.iml
 
 .idea/
+.vscode-debug-eval.cs
