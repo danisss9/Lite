@@ -1,5 +1,5 @@
 using AngleSharp.Css.Dom;
-using SkiaSharp;
+using Lite.Layout;
 
 namespace Lite.Models;
 
@@ -12,7 +12,7 @@ public class LayoutNode
     public string? Href { get; }
     public LayoutNode? Parent { get; set; }
     public List<LayoutNode> Children { get; } = [];
-    public SKRect ContentBox { get; set; }
+    public BoxDimensions Box { get; set; }
 
     public LayoutNode(string? id, string tagName, string text, ICssStyleDeclaration style, string? href = null)
     {

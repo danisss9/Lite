@@ -1,5 +1,6 @@
 using AngleSharp.Css;
 using AngleSharp.Css.Values;
+using Lite.Layout;
 using Lite.Models;
 using SkiaSharp;
 
@@ -11,9 +12,44 @@ public static class StyleExtensions
     public static SKColor GetColor(this LayoutNode node) => GetColor(node, PropertyNames.Color, SKColors.Black);
     public static float GetFontSize(this LayoutNode node) => GetSize(node, PropertyNames.FontSize, size: 16);
     public static float GetHeight(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.Height, total, size);
-    public static float GetMarginLeft(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginLeft, total, size);
-    public static float GetMarginTop(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginTop, total, size);
     public static float GetWidth(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.Width, total, size);
+
+    // Margins
+    public static float GetMarginTop(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginTop, total, size);
+    public static float GetMarginRight(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginRight, total, size);
+    public static float GetMarginBottom(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginBottom, total, size);
+    public static float GetMarginLeft(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginLeft, total, size);
+
+    public static EdgeSizes GetMargin(this LayoutNode node, float totalWidth = 0, float totalHeight = 0, float fontSize = 16) => new()
+    {
+        Top    = GetSize(node, PropertyNames.MarginTop,    totalHeight, fontSize),
+        Right  = GetSize(node, PropertyNames.MarginRight,  totalWidth,  fontSize),
+        Bottom = GetSize(node, PropertyNames.MarginBottom, totalHeight, fontSize),
+        Left   = GetSize(node, PropertyNames.MarginLeft,   totalWidth,  fontSize),
+    };
+
+    // Padding
+    public static EdgeSizes GetPadding(this LayoutNode node, float totalWidth = 0, float totalHeight = 0, float fontSize = 16) => new()
+    {
+        Top    = GetSize(node, PropertyNames.PaddingTop,    totalHeight, fontSize),
+        Right  = GetSize(node, PropertyNames.PaddingRight,  totalWidth,  fontSize),
+        Bottom = GetSize(node, PropertyNames.PaddingBottom, totalHeight, fontSize),
+        Left   = GetSize(node, PropertyNames.PaddingLeft,   totalWidth,  fontSize),
+    };
+
+    // Border widths
+    public static EdgeSizes GetBorderWidth(this LayoutNode node) => new()
+    {
+        Top    = GetBorderSideWidth(node, PropertyNames.BorderTopWidth),
+        Right  = GetBorderSideWidth(node, PropertyNames.BorderRightWidth),
+        Bottom = GetBorderSideWidth(node, PropertyNames.BorderBottomWidth),
+        Left   = GetBorderSideWidth(node, PropertyNames.BorderLeftWidth),
+    };
+
+    public static SKColor GetBorderTopColor(this LayoutNode node)    => GetColor(node, PropertyNames.BorderTopColor,    SKColors.Black);
+    public static SKColor GetBorderRightColor(this LayoutNode node)   => GetColor(node, PropertyNames.BorderRightColor,  SKColors.Black);
+    public static SKColor GetBorderBottomColor(this LayoutNode node)  => GetColor(node, PropertyNames.BorderBottomColor, SKColors.Black);
+    public static SKColor GetBorderLeftColor(this LayoutNode node)    => GetColor(node, PropertyNames.BorderLeftColor,   SKColors.Black);
 
     public static bool IsUnderline(this LayoutNode node) =>
         node.Style.GetPropertyValue(PropertyNames.TextDecorationLine).Contains("underline", StringComparison.OrdinalIgnoreCase) ||
@@ -39,6 +75,14 @@ public static class StyleExtensions
         node.Style.GetProperty(propertyName).RawValue is Color color
             ? new SKColor(color.R, color.G, color.B, color.A)
             : defaultColor;
+
+    private static float GetBorderSideWidth(LayoutNode node, string propertyName)
+    {
+        var raw = node.Style.GetProperty(propertyName).RawValue;
+        if (raw is Length borderLength && borderLength.Type == Length.Unit.Px)
+            return (float)borderLength.Value;
+        return 0f;
+    }
 
     private static float GetSize(LayoutNode node, string propertyName, float total = 0, float size = 0)
     {

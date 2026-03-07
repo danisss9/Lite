@@ -1,4 +1,5 @@
 ﻿using Lite.Extensions;
+using Lite.Layout;
 using Lite.Models;
 using SkiaSharp;
 
@@ -30,12 +31,41 @@ internal static class Drawer
         {
             case "DIV":
             {
-                var rect = CalculateSizeAndPosition(node, width, height);
-                using var paint = new SKPaint { Color = node.GetBackgroundColor(), IsAntialias = true };
-                canvas.DrawRect(rect, paint);
+                var fontSize = node.GetFontSize();
+                var margin  = node.GetMargin(width, height, fontSize);
+                var padding = node.GetPadding(width, height, fontSize);
+                var border  = node.GetBorderWidth();
+
+                var rectWidth  = node.GetWidth(width);
+                var rectHeight = node.GetHeight(height);
+
+                // Position content box using margin offsets
+                var left = node.GetMarginLeft(width, rectWidth);
+                var top  = node.GetMarginTop(height, rectHeight);
+
+                var box = new BoxDimensions
+                {
+                    ContentBox = new SKRect(left, top, left + rectWidth, top + rectHeight),
+                    Margin     = margin,
+                    Padding    = padding,
+                    Border     = border,
+                };
+                node.Box = box;
+
+                // Fill background over padding box
+                var bgColor = node.GetBackgroundColor();
+                if (bgColor != SKColors.Transparent)
+                {
+                    using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
+                    canvas.DrawRect(box.PaddingBox, bgPaint);
+                }
+
+                // Draw four borders
+                DrawBorders(canvas, box, node);
+
                 var divCursor = node.GetCursor();
                 if (divCursor != CursorType.Default)
-                    _hitRegions.Add(new HitRegion(rect, divCursor));
+                    _hitRegions.Add(new HitRegion(box.BorderBox, divCursor));
                 break;
             }
             case { } h when h.StartsWith('H') && h.Length == 2:
@@ -44,23 +74,29 @@ internal static class Drawer
             {
                 if (!string.IsNullOrEmpty(node.Text))
                 {
-                    using var paint = new SKPaint
-                    {
-                        Color = node.GetColor(),
-                        IsAntialias = true,
-                    };
+                    var fontSize = node.GetFontSize();
+                    var padding  = node.GetPadding(width, height, fontSize);
+                    var border   = node.GetBorderWidth();
+
+                    using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
                     using var font = new SKFont
                     {
-                        Size = node.GetFontSize(),
+                        Size     = fontSize,
                         Embolden = node.TagName == "H1",
-                        Typeface = SKTypeface.FromFamilyName(node.GetFontFamily())
+                        Typeface = SKTypeface.FromFamilyName(node.GetFontFamily()),
                     };
-                    const float x = 32f;
-                    var yBefore = _y;
-                    _y = DrawWrappedText(canvas, node.Text, x, _y, width - 64, font, paint, node.IsUnderline());
+
+                    // Text starts inset by left padding + border, with max width reduced accordingly
+                    var x        = 32f + padding.Left + border.Left;
+                    var maxWidth = width - 64 - padding.Left - padding.Right - border.Left - border.Right;
+                    var yBefore  = _y + padding.Top + border.Top;
+
+                    _y = DrawWrappedText(canvas, node.Text, x, yBefore, maxWidth, font, paint, node.IsUnderline());
+                    _y += padding.Bottom + border.Bottom;
+
                     var textCursor = node.GetCursor();
                     if (textCursor != CursorType.Default)
-                        _hitRegions.Add(new HitRegion(new SKRect(x, yBefore, x + (width - 64), _y), textCursor, node.Href));
+                        _hitRegions.Add(new HitRegion(new SKRect(32f, yBefore - padding.Top, 32f + (width - 64), _y), textCursor, node.Href));
                 }
                 break;
             }
@@ -69,6 +105,31 @@ internal static class Drawer
         foreach (var child in node.Children)
         {
             PaintNode(canvas, child, width, height);
+        }
+    }
+
+    private static void DrawBorders(SKCanvas canvas, BoxDimensions box, LayoutNode node)
+    {
+        var bw = box.Border;
+        if (bw.Top > 0)
+        {
+            using var p = new SKPaint { Color = node.GetBorderTopColor(), StrokeWidth = bw.Top, IsAntialias = true };
+            canvas.DrawLine(box.BorderBox.Left, box.BorderBox.Top + bw.Top / 2, box.BorderBox.Right, box.BorderBox.Top + bw.Top / 2, p);
+        }
+        if (bw.Right > 0)
+        {
+            using var p = new SKPaint { Color = node.GetBorderRightColor(), StrokeWidth = bw.Right, IsAntialias = true };
+            canvas.DrawLine(box.BorderBox.Right - bw.Right / 2, box.BorderBox.Top, box.BorderBox.Right - bw.Right / 2, box.BorderBox.Bottom, p);
+        }
+        if (bw.Bottom > 0)
+        {
+            using var p = new SKPaint { Color = node.GetBorderBottomColor(), StrokeWidth = bw.Bottom, IsAntialias = true };
+            canvas.DrawLine(box.BorderBox.Left, box.BorderBox.Bottom - bw.Bottom / 2, box.BorderBox.Right, box.BorderBox.Bottom - bw.Bottom / 2, p);
+        }
+        if (bw.Left > 0)
+        {
+            using var p = new SKPaint { Color = node.GetBorderLeftColor(), StrokeWidth = bw.Left, IsAntialias = true };
+            canvas.DrawLine(box.BorderBox.Left + bw.Left / 2, box.BorderBox.Top, box.BorderBox.Left + bw.Left / 2, box.BorderBox.Bottom, p);
         }
     }
 
@@ -109,21 +170,10 @@ internal static class Drawer
         canvas.DrawText(text, x, y, SKTextAlign.Left, font, paint);
         if (!underline) return;
 
-        var metrics = font.Metrics;
+        var metrics   = font.Metrics;
         var underlineY = y + (metrics.UnderlinePosition ?? font.Size * 0.1f);
         var underlineThickness = Math.Max(metrics.UnderlineThickness ?? 1f, 1f);
         using var linePaint = new SKPaint { Color = paint.Color, StrokeWidth = underlineThickness, IsAntialias = true };
         canvas.DrawLine(x, underlineY, x + font.MeasureText(text), underlineY, linePaint);
-    }
-
-    private static SKRect CalculateSizeAndPosition(LayoutNode node, int width, int height)
-    {
-        var rectWidth = node.GetWidth(width);
-        var rectHeight = node.GetHeight(height);
-
-        var leftRect = node.GetMarginLeft(width, rectWidth);
-        var topRect = node.GetMarginTop(height, rectHeight);
-
-        return new SKRect(leftRect, topRect, leftRect + rectWidth, topRect + rectHeight);
     }
 }
