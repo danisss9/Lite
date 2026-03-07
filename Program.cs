@@ -27,14 +27,14 @@ internal class Program
 
     private static int Width { get; set; }
     private static int Height { get; set; }
-    private static List<DrawCommand>? DrawCommands { get; set; }
+    private static LayoutNode? RootNode { get; set; }
     private static IntPtr Pixels { get; set; }
     private static List<HitRegion> HitRegions { get; set; } = [];
     private static readonly WndProcDelegate WndProcDelegate = WndProc;
 
     private static void Main()
     {
-        DrawCommands = Parser.TraverseHtml("https://example.com");
+        RootNode = Parser.TraverseHtml("https://example.com");
         
         // Retrieve the module handle.
         var hInstance = Marshal.GetHINSTANCE(typeof(Program).Module);
@@ -142,9 +142,9 @@ internal class Program
                 Width = clientRect.right - clientRect.left;
                 Height = clientRect.bottom - clientRect.top;
 
-                if (DrawCommands != null)
+                if (RootNode != null)
                 {
-                    (Pixels, HitRegions) = Drawer.Draw(Width, Height, DrawCommands);
+                    (Pixels, HitRegions) = Drawer.Draw(Width, Height, RootNode);
                     User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                 }
 

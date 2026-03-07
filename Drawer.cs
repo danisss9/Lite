@@ -6,60 +6,70 @@ namespace Lite;
 
 internal static class Drawer
 {
-    public static (IntPtr Pixels, List<HitRegion> HitRegions) Draw(int width, int height, IEnumerable<DrawCommand> drawCommands)
-    {
-        // Create an SKImageInfo that matches the client area.
-        var imageInfo = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+    private static float _y;
+    private static List<HitRegion> _hitRegions = [];
 
-        // Draw the scene into an offscreen SKBitmap.
+    public static (IntPtr Pixels, List<HitRegion> HitRegions) Draw(int width, int height, LayoutNode root)
+    {
+        var imageInfo = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
         var bitmap = new SKBitmap(imageInfo);
         var canvas = new SKCanvas(bitmap);
 
-        // Fill the background with blue.
         canvas.Clear(new SKColor(240, 240, 242));
-        var y = 64f;
-        var hitRegions = new List<HitRegion>();
+        _y = 64f;
+        _hitRegions = [];
 
-        foreach (var drawCommand in drawCommands) {
-            switch (drawCommand.TagName)
+        PaintNode(canvas, root, width, height);
+
+        return (bitmap.GetPixels(), _hitRegions);
+    }
+
+    private static void PaintNode(SKCanvas canvas, LayoutNode node, int width, int height)
+    {
+        switch (node.TagName)
+        {
+            case "DIV":
             {
-                case "DIV":
-                {
-                    var rect = CalculateSizeAndPosition(drawCommand, width, height);
-                    using var paint = new SKPaint { Color = drawCommand.GetBackgroundColor(), IsAntialias = true };
-                    canvas.DrawRect(rect, paint);
-                    var divCursor = drawCommand.GetCursor();
-                    if (divCursor != CursorType.Default)
-                        hitRegions.Add(new HitRegion(rect, divCursor));
-                    break;
-                }
-                case { } h when h.StartsWith('H') && h.Length == 2:
-                case "P":
-                case "A":
+                var rect = CalculateSizeAndPosition(node, width, height);
+                using var paint = new SKPaint { Color = node.GetBackgroundColor(), IsAntialias = true };
+                canvas.DrawRect(rect, paint);
+                var divCursor = node.GetCursor();
+                if (divCursor != CursorType.Default)
+                    _hitRegions.Add(new HitRegion(rect, divCursor));
+                break;
+            }
+            case { } h when h.StartsWith('H') && h.Length == 2:
+            case "P":
+            case "A":
+            {
+                if (!string.IsNullOrEmpty(node.Text))
                 {
                     using var paint = new SKPaint
                     {
-                        Color = drawCommand.GetColor(),
+                        Color = node.GetColor(),
                         IsAntialias = true,
                     };
                     using var font = new SKFont
                     {
-                        Size = drawCommand.GetFontSize(),
-                        Embolden = drawCommand.TagName == "H1",
-                        Typeface = SKTypeface.FromFamilyName(drawCommand.GetFontFamily())
+                        Size = node.GetFontSize(),
+                        Embolden = node.TagName == "H1",
+                        Typeface = SKTypeface.FromFamilyName(node.GetFontFamily())
                     };
                     const float x = 32f;
-                    var yBefore = y;
-                    y = DrawWrappedText(canvas, drawCommand.Text, x, y, width - 64, font, paint, drawCommand.IsUnderline());
-                    var textCursor = drawCommand.GetCursor();
+                    var yBefore = _y;
+                    _y = DrawWrappedText(canvas, node.Text, x, _y, width - 64, font, paint, node.IsUnderline());
+                    var textCursor = node.GetCursor();
                     if (textCursor != CursorType.Default)
-                        hitRegions.Add(new HitRegion(new SKRect(x, yBefore, x + (width - 64), y), textCursor, drawCommand.Href));
-                    break;
+                        _hitRegions.Add(new HitRegion(new SKRect(x, yBefore, x + (width - 64), _y), textCursor, node.Href));
                 }
+                break;
             }
         }
 
-        return (bitmap.GetPixels(), hitRegions);
+        foreach (var child in node.Children)
+        {
+            PaintNode(canvas, child, width, height);
+        }
     }
 
     private static float DrawWrappedText(SKCanvas canvas, string text, float x, float y, float maxWidth, SKFont font, SKPaint paint, bool underline = false)
@@ -106,13 +116,13 @@ internal static class Drawer
         canvas.DrawLine(x, underlineY, x + font.MeasureText(text), underlineY, linePaint);
     }
 
-    private static SKRect CalculateSizeAndPosition(DrawCommand command, int width, int height)
+    private static SKRect CalculateSizeAndPosition(LayoutNode node, int width, int height)
     {
-        var rectWidth = command.GetWidth(width);
-        var rectHeight = command.GetHeight(height);
+        var rectWidth = node.GetWidth(width);
+        var rectHeight = node.GetHeight(height);
 
-        var leftRect = command.GetMarginLeft(width, rectWidth);
-        var topRect = command.GetMarginTop(height, rectHeight);
+        var leftRect = node.GetMarginLeft(width, rectWidth);
+        var topRect = node.GetMarginTop(height, rectHeight);
 
         return new SKRect(leftRect, topRect, leftRect + rectWidth, topRect + rectHeight);
     }
