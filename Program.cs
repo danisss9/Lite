@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Lite.Layout;
 using Lite.Models;
 using Lite.Models.Delegates;
 using Lite.Models.Structs;
@@ -16,8 +17,9 @@ internal class Program
     private const int WM_PAINT = 0x000F;
     private const int WM_DESTROY = 0x0002;
     private const int WM_SIZE = 0x0005;
-    private const int WM_LBUTTONUP = 0x0202;
-    private const int WM_SETCURSOR = 0x0020;
+    private const int WM_LBUTTONUP    = 0x0202;
+    private const int WM_MOUSEWHEEL   = 0x020A;
+    private const int WM_SETCURSOR    = 0x0020;
     private const int HTCLIENT = 1;
     private const int IDC_ARROW = 32512;
     private const int IDC_IBEAM = 32513;
@@ -30,6 +32,7 @@ internal class Program
     private static LayoutNode? RootNode { get; set; }
     private static IntPtr Pixels { get; set; }
     private static List<HitRegion> HitRegions { get; set; } = [];
+    private static readonly Viewport Viewport = new();
     private static readonly WndProcDelegate WndProcDelegate = WndProc;
 
     private static void Main()
@@ -141,22 +144,36 @@ internal class Program
                 User32.GetClientRect(hWnd, out var clientRect);
                 Width = clientRect.right - clientRect.left;
                 Height = clientRect.bottom - clientRect.top;
+                Viewport.ViewportHeight = Height;
 
                 if (RootNode != null)
                 {
-                    (Pixels, HitRegions) = Drawer.Draw(Width, Height, RootNode);
+                    (Pixels, HitRegions) = Drawer.Draw(Width, Height, RootNode, Viewport);
                     User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                 }
 
                 break;
 
+            case WM_MOUSEWHEEL:
+            {
+                var delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
+                Viewport.ScrollBy(-delta / 120f * 60f);
+                if (RootNode != null)
+                {
+                    (Pixels, HitRegions) = Drawer.Draw(Width, Height, RootNode, Viewport);
+                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                }
+                break;
+            }
+
             case WM_LBUTTONUP:
             {
                 var x = (short)(lParam.ToInt32() & 0xFFFF);
                 var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+                var contentY = y + Viewport.ScrollY;
                 foreach (var region in HitRegions)
                 {
-                    if (region.Href != null && region.Bounds.Contains(x, y))
+                    if (region.Href != null && region.Bounds.Contains(x, contentY))
                     {
                         Process.Start(new ProcessStartInfo(region.Href) { UseShellExecute = true });
                         break;
@@ -171,9 +188,10 @@ internal class Program
                     User32.GetCursorPos(out var pt);
                     User32.ScreenToClient(hWnd, ref pt);
                     var cursorId = IDC_ARROW;
+                    var contentPtY = pt.Y + Viewport.ScrollY;
                     foreach (var region in HitRegions)
                     {
-                        if (region.Bounds.Contains(pt.X, pt.Y))
+                        if (region.Bounds.Contains(pt.X, contentPtY))
                         {
                             cursorId = region.Cursor switch
                             {

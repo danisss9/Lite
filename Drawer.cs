@@ -10,7 +10,7 @@ internal static class Drawer
     private static float _y;
     private static List<HitRegion> _hitRegions = [];
 
-    public static (IntPtr Pixels, List<HitRegion> HitRegions) Draw(int width, int height, LayoutNode root)
+    public static (IntPtr Pixels, List<HitRegion> HitRegions) Draw(int width, int height, LayoutNode root, Viewport viewport)
     {
         var imageInfo = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
         var bitmap = new SKBitmap(imageInfo);
@@ -20,9 +20,31 @@ internal static class Drawer
         _y = 64f;
         _hitRegions = [];
 
+        canvas.Save();
+        canvas.Translate(0, -viewport.ScrollY);
         PaintNode(canvas, root, width, height);
+        canvas.Restore();
+
+        viewport.ContentHeight = _y;
+        DrawScrollbar(canvas, viewport, width, height);
 
         return (bitmap.GetPixels(), _hitRegions);
+    }
+
+    private static void DrawScrollbar(SKCanvas canvas, Viewport viewport, int width, int height)
+    {
+        if (viewport.ContentHeight <= viewport.ViewportHeight) return;
+
+        const float barWidth = 6f;
+        const float margin   = 2f;
+        var ratio      = viewport.ViewportHeight / viewport.ContentHeight;
+        var trackH     = viewport.ViewportHeight;
+        var thumbH     = Math.Max(trackH * ratio, 24f);
+        var thumbTop   = viewport.ScrollY / viewport.ContentHeight * trackH;
+        var x          = width - barWidth - margin;
+
+        using var paint = new SKPaint { Color = new SKColor(0, 0, 0, 80), IsAntialias = true };
+        canvas.DrawRoundRect(x, thumbTop + margin, barWidth, thumbH - margin * 2, 3, 3, paint);
     }
 
     private static void PaintNode(SKCanvas canvas, LayoutNode node, int width, int height)
