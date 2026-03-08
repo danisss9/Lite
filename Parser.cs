@@ -2,6 +2,7 @@
 using AngleSharp;
 using AngleSharp.Dom;
 using Lite.Models;
+using Lite.Network;
 
 namespace Lite;
 
@@ -19,10 +20,18 @@ internal static class Parser
         p { display: block; margin-top: 1em; margin-bottom: 1em; margin-left: 0px; margin-right: 0px; cursor: text; }
         h1, h2, h3, h4, h5, h6 { cursor: text; }
         a { color: blue; text-decoration: underline; cursor: pointer; }
+        img { display: inline; }
+        input { display: inline-block; cursor: text; }
+        input[type="checkbox"] { cursor: default; }
+        button { display: inline-block; cursor: pointer; }
         """;
+
+    private static string? _baseUrl;
 
     internal static LayoutNode TraverseHtml(string address)
     {
+        _baseUrl = address;
+
         var config = Configuration.Default
             .WithDefaultLoader(new LoaderOptions { IsResourceLoadingEnabled = true })
             .WithCss()
@@ -47,6 +56,27 @@ internal static class Parser
         var directText = string.Concat(element.ChildNodes.OfType<IText>().Select(t => t.Data)).Trim();
         var href = element.TagName == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, element.TagName, directText, element.ComputeCurrentStyle(), href);
+
+        if (element.TagName == "IMG")
+        {
+            var src = element.GetAttribute("src");
+            node.Alt = element.GetAttribute("alt") ?? string.Empty;
+
+            if (int.TryParse(element.GetAttribute("width"), out var w)) node.IntrinsicWidth = w;
+            if (int.TryParse(element.GetAttribute("height"), out var h)) node.IntrinsicHeight = h;
+
+            if (!string.IsNullOrEmpty(src))
+                node.Image = ResourceLoader.FetchImage(src, _baseUrl);
+        }
+
+        if (element.TagName is "INPUT" or "BUTTON")
+        {
+            foreach (var attr in new[] { "type", "value", "placeholder", "checked" })
+            {
+                var val = element.GetAttribute(attr);
+                if (val != null) node.Attributes[attr] = val;
+            }
+        }
 
         foreach (var child in element.Children)
         {

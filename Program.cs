@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Lite.Interaction;
 using Lite.Layout;
 using Lite.Models;
 using Lite.Models.Delegates;
@@ -17,6 +18,7 @@ internal class Program
     private const int WM_PAINT = 0x000F;
     private const int WM_DESTROY = 0x0002;
     private const int WM_SIZE = 0x0005;
+    private const int WM_CHAR          = 0x0102;
     private const int WM_LBUTTONUP    = 0x0202;
     private const int WM_MOUSEWHEEL   = 0x020A;
     private const int WM_SETCURSOR    = 0x0020;
@@ -171,14 +173,65 @@ internal class Program
                 var x = (short)(lParam.ToInt32() & 0xFFFF);
                 var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
                 var contentY = y + Viewport.ScrollY;
+                var handled = false;
+
                 foreach (var region in HitRegions)
                 {
-                    if (region.Href != null && region.Bounds.Contains(x, contentY))
+                    if (!region.Bounds.Contains(x, contentY)) continue;
+
+                    if (region.Href != null)
                     {
                         Process.Start(new ProcessStartInfo(region.Href) { UseShellExecute = true });
+                        handled = true;
+                        break;
+                    }
+
+                    if (region.InputAction == InputAction.TextInput)
+                    {
+                        FormState.FocusedInput = region.NodeKey;
+                        handled = true;
+                        break;
+                    }
+
+                    if (region.InputAction == InputAction.Checkbox)
+                    {
+                        if (!FormState.CheckedBoxes.Remove(region.NodeKey))
+                            FormState.CheckedBoxes.Add(region.NodeKey);
+                        handled = true;
                         break;
                     }
                 }
+
+                // Click outside any form element clears focus
+                var focusChanged = !handled && FormState.FocusedInput != null;
+                if (focusChanged) FormState.FocusedInput = null;
+
+                if ((handled || focusChanged) && RootNode != null)
+                {
+                    (Pixels, HitRegions) = Drawer.Draw(Width, Height, RootNode, Viewport);
+                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                }
+                break;
+            }
+
+            case WM_CHAR:
+            {
+                if (FormState.FocusedInput == null || RootNode == null) break;
+                var c = (char)wParam.ToInt32();
+                if (c == '\b')
+                {
+                    var key = FormState.FocusedInput.Value;
+                    if (FormState.TextInputValues.TryGetValue(key, out var cur) && cur.Length > 0)
+                        FormState.TextInputValues[key] = cur[..^1];
+                }
+                else if (!char.IsControl(c))
+                {
+                    var key = FormState.FocusedInput.Value;
+                    FormState.TextInputValues.TryGetValue(key, out var cur);
+                    FormState.TextInputValues[key] = (cur ?? string.Empty) + c;
+                }
+                (Pixels, HitRegions) = Drawer.Draw(Width, Height, RootNode, Viewport);
+                User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                 break;
             }
 

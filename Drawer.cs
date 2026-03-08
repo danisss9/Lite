@@ -1,4 +1,5 @@
 ﻿using Lite.Extensions;
+using Lite.Interaction;
 using Lite.Layout;
 using Lite.Models;
 using SkiaSharp;
@@ -90,8 +91,134 @@ internal static class Drawer
                     _hitRegions.Add(new HitRegion(box.BorderBox, divCursor));
                 break;
             }
+            case "IMG":
+            {
+                var drawW = node.IntrinsicWidth > 0 ? (float)node.IntrinsicWidth
+                          : node.Image?.Width ?? 100f;
+                var drawH = node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight
+                          : node.Image?.Height ?? 100f;
+
+                var destRect = new SKRect(32f, _y, 32f + drawW, _y + drawH);
+
+                if (node.Image != null)
+                {
+                    canvas.DrawBitmap(node.Image, destRect);
+                }
+                else
+                {
+                    using var borderPaint = new SKPaint { Color = SKColors.Gray, Style = SKPaintStyle.Stroke, StrokeWidth = 1 };
+                    canvas.DrawRect(destRect, borderPaint);
+
+                    if (!string.IsNullOrEmpty(node.Alt))
+                    {
+                        using var altPaint = new SKPaint { Color = SKColors.Gray, IsAntialias = true };
+                        using var altFont = new SKFont { Size = 12 };
+                        canvas.DrawText(node.Alt, 32f + 4, _y + 14, SKTextAlign.Left, altFont, altPaint);
+                    }
+                }
+
+                _y += drawH;
+                break;
+            }
             case { } h when h.StartsWith('H') && h.Length == 2:
             case "P":
+            case "INPUT":
+            {
+                var inputType = node.Attributes.TryGetValue("type", out var t) ? t.ToLowerInvariant() : "text";
+                if (inputType == "checkbox")
+                {
+                    var size = FormLayout.CheckboxSize;
+                    var rect = new SKRect(32f, _y, 32f + size, _y + size);
+
+                    using var bgPaint = new SKPaint { Color = SKColors.White };
+                    canvas.DrawRect(rect, bgPaint);
+
+                    using var borderPaint = new SKPaint { Color = new SKColor(150, 150, 150), Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
+                    canvas.DrawRect(rect, borderPaint);
+
+                    var defaultChecked = node.Attributes.ContainsKey("checked");
+                    if (FormState.IsChecked(node.NodeKey, defaultChecked))
+                    {
+                        using var checkPaint = new SKPaint { Color = SKColors.Black, StrokeWidth = 1.5f, IsAntialias = true, Style = SKPaintStyle.Stroke };
+                        canvas.DrawLine(rect.Left + 2, rect.MidY, rect.MidX - 1, rect.Bottom - 3, checkPaint);
+                        canvas.DrawLine(rect.MidX - 1, rect.Bottom - 3, rect.Right - 2, rect.Top + 3, checkPaint);
+                    }
+
+                    _hitRegions.Add(new HitRegion(rect, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.Checkbox));
+                    _y += size + FormLayout.ElementGap;
+                }
+                else // text
+                {
+                    var rect = new SKRect(32f, _y, 32f + FormLayout.TextInputWidth, _y + FormLayout.TextInputHeight);
+                    var isFocused = FormState.FocusedInput == node.NodeKey;
+
+                    using var bgPaint = new SKPaint { Color = SKColors.White };
+                    canvas.DrawRect(rect, bgPaint);
+
+                    using var borderPaint = new SKPaint
+                    {
+                        Color = isFocused ? new SKColor(0, 120, 215) : new SKColor(150, 150, 150),
+                        Style = SKPaintStyle.Stroke,
+                        StrokeWidth = isFocused ? 2f : 1f,
+                        IsAntialias = true
+                    };
+                    canvas.DrawRect(rect, borderPaint);
+
+                    node.Attributes.TryGetValue("value", out var defaultVal);
+                    var text = FormState.GetTextValue(node.NodeKey, defaultVal);
+
+                    if (string.IsNullOrEmpty(text) && node.Attributes.TryGetValue("placeholder", out var ph))
+                    {
+                        using var phPaint = new SKPaint { Color = new SKColor(170, 170, 170), IsAntialias = true };
+                        using var phFont = new SKFont { Size = 12 };
+                        canvas.DrawText(ph, rect.Left + 4, rect.Top + 14, SKTextAlign.Left, phFont, phPaint);
+                    }
+                    else if (!string.IsNullOrEmpty(text))
+                    {
+                        using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
+                        using var textFont = new SKFont { Size = 12 };
+                        canvas.DrawText(text, rect.Left + 4, rect.Top + 14, SKTextAlign.Left, textFont, textPaint);
+                    }
+
+                    if (isFocused)
+                    {
+                        // draw caret
+                        using var textFont = new SKFont { Size = 12 };
+                        var caretX = rect.Left + 4 + textFont.MeasureText(text);
+                        using var caretPaint = new SKPaint { Color = SKColors.Black, StrokeWidth = 1 };
+                        canvas.DrawLine(caretX, rect.Top + 3, caretX, rect.Bottom - 3, caretPaint);
+                    }
+
+                    _hitRegions.Add(new HitRegion(rect, CursorType.Text, NodeKey: node.NodeKey, InputAction: InputAction.TextInput));
+                    _y += FormLayout.TextInputHeight + FormLayout.ElementGap;
+                }
+                break;
+            }
+            case "BUTTON":
+            {
+                var label = node.Text;
+                if (string.IsNullOrEmpty(label)) node.Attributes.TryGetValue("value", out label);
+                if (string.IsNullOrEmpty(label)) label = "Button";
+
+                using var btnFont = new SKFont { Size = 13 };
+                var textWidth = btnFont.MeasureText(label);
+                var btnW = textWidth + FormLayout.ButtonPaddingX * 2;
+                var btnH = 13f + FormLayout.ButtonPaddingY * 2;
+                var rect = new SKRect(32f, _y, 32f + btnW, _y + btnH);
+
+                using var bgPaint = new SKPaint { Color = new SKColor(225, 225, 225) };
+                canvas.DrawRect(rect, bgPaint);
+
+                using var borderPaint = new SKPaint { Color = new SKColor(173, 173, 173), Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
+                canvas.DrawRect(rect, borderPaint);
+
+                using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
+                canvas.DrawText(label, rect.Left + FormLayout.ButtonPaddingX, rect.Top + FormLayout.ButtonPaddingY + 13, SKTextAlign.Left, btnFont, textPaint);
+
+                _hitRegions.Add(new HitRegion(rect, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.Button));
+                _y += btnH + FormLayout.ElementGap;
+                break;
+            }
             case "A":
             {
                 if (!string.IsNullOrEmpty(node.Text))
