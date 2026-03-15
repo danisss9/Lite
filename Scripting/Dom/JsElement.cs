@@ -1,5 +1,6 @@
 using Jint;
 using Jint.Native;
+using Lite.Interaction;
 using Lite.Models;
 
 namespace Lite.Scripting.Dom;
@@ -34,6 +35,27 @@ public class JsElement
         set => Node.TextOverride = value;
     }
 
+    // ---- form value / checked ----
+    public string value
+    {
+        get
+        {
+            Node.Attributes.TryGetValue("value", out var defaultVal);
+            return FormState.GetTextValue(Node.NodeKey, defaultVal);
+        }
+        set => FormState.TextInputValues[Node.NodeKey] = value;
+    }
+
+    public bool @checked
+    {
+        get => FormState.IsChecked(Node.NodeKey, Node.Attributes.ContainsKey("checked"));
+        set
+        {
+            if (value) FormState.CheckedBoxes.Add(Node.NodeKey);
+            else       FormState.CheckedBoxes.Remove(Node.NodeKey);
+        }
+    }
+
     // ---- style ----
     public JsStyle style => _style ??= new JsStyle(Node);
 
@@ -52,6 +74,19 @@ public class JsElement
 
     public JsElement? parentElement =>
         Node.Parent is { } p ? new JsElement(_engine, p) : null;
+
+    public JsElement appendChild(JsElement child)
+    {
+        Node.AddChild(child.Node);
+        return child;
+    }
+
+    public JsElement removeChild(JsElement child)
+    {
+        Node.Children.Remove(child.Node);
+        child.Node.Parent = null;
+        return child;
+    }
 
     // ---- class list (minimal) ----
     private readonly HashSet<string> _classes = [];

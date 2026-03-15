@@ -6,8 +6,31 @@ using SkiaSharp;
 
 namespace Lite.Extensions;
 
+public enum DisplayType { Block, Inline, InlineBlock, None }
+
 public static class StyleExtensions
 {
+    public static DisplayType GetDisplay(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.Display, out var ov)
+            ? ov
+            : node.Style.GetPropertyValue(PropertyNames.Display);
+        return raw switch
+        {
+            "block"        => DisplayType.Block,
+            "inline-block" => DisplayType.InlineBlock,
+            "none"         => DisplayType.None,
+            _              => DisplayType.Inline,
+        };
+    }
+
+    public static bool GetFontBold(this LayoutNode node)
+    {
+        var weight = node.Style.GetPropertyValue(PropertyNames.FontWeight);
+        return weight is "bold" or "bolder" or "700" or "800" or "900";
+    }
+
+
     public static SKColor GetBackgroundColor(this LayoutNode node) => GetColor(node, PropertyNames.BackgroundColor, SKColors.Transparent);
     public static SKColor GetColor(this LayoutNode node) => GetColor(node, PropertyNames.Color, SKColors.Black);
     public static float GetFontSize(this LayoutNode node) => GetSize(node, PropertyNames.FontSize, size: 16);
@@ -79,9 +102,19 @@ public static class StyleExtensions
             if (parsed.HasValue) return parsed.Value;
         }
 
-        return node.Style.GetProperty(propertyName).RawValue is Color color
-            ? new SKColor(color.R, color.G, color.B, color.A)
-            : defaultColor;
+        // Try RawValue (works when AngleSharp exposes the value as Color struct)
+        if (node.Style.GetProperty(propertyName).RawValue is Color color)
+            return new SKColor(color.R, color.G, color.B, color.A);
+
+        // Fallback: parse the serialized CSS string value (e.g. "#3b82f6", "rgb(59,130,246)")
+        var str = node.Style.GetPropertyValue(propertyName);
+        if (!string.IsNullOrEmpty(str))
+        {
+            var parsed = ParseCssColor(str);
+            if (parsed.HasValue) return parsed.Value;
+        }
+
+        return defaultColor;
     }
 
     private static SKColor? ParseCssColor(string value)
@@ -89,12 +122,11 @@ public static class StyleExtensions
         value = value.Trim();
         if (string.IsNullOrEmpty(value)) return null;
 
-        // Hex via SkiaSharp (#rgb, #rrggbb, #rgba, #rrggbbaa)
-        if (value.StartsWith('#') && SKColor.TryParse(value, out var hexColor))
-            return hexColor;
+        var lower = value.ToLowerInvariant();
+
+        if (lower == "transparent") return SKColors.Transparent;
 
         // rgb(r, g, b) / rgba(r, g, b, a)
-        var lower = value.ToLowerInvariant();
         if (lower.StartsWith("rgb") && lower.Contains('(') && lower.EndsWith(')'))
         {
             var inner = lower[(lower.IndexOf('(') + 1)..^1];
@@ -113,30 +145,11 @@ public static class StyleExtensions
             }
         }
 
-        // Named colours
-        return lower switch
-        {
-            "red"         => SKColors.Red,
-            "green"       => new SKColor(0, 128, 0),
-            "blue"        => SKColors.Blue,
-            "black"       => SKColors.Black,
-            "white"       => SKColors.White,
-            "gray"        => SKColors.Gray,
-            "grey"        => SKColors.Gray,
-            "yellow"      => SKColors.Yellow,
-            "orange"      => new SKColor(255, 165, 0),
-            "purple"      => new SKColor(128, 0, 128),
-            "pink"        => new SKColor(255, 192, 203),
-            "cyan"        => SKColors.Cyan,
-            "magenta"     => SKColors.Magenta,
-            "lime"        => new SKColor(0, 255, 0),
-            "navy"        => new SKColor(0, 0, 128),
-            "teal"        => new SKColor(0, 128, 128),
-            "silver"      => new SKColor(192, 192, 192),
-            "maroon"      => new SKColor(128, 0, 0),
-            "transparent" => SKColors.Transparent,
-            _             => null
-        };
+        // Hex and named colours — SkiaSharp handles all CSS named colours and hex formats
+        if (SKColor.TryParse(value, out var skColor))
+            return skColor;
+
+        return null;
     }
 
     private static float GetBorderSideWidth(LayoutNode node, string propertyName)
@@ -149,6 +162,24 @@ public static class StyleExtensions
 
     private static float GetSize(LayoutNode node, string propertyName, float total = 0, float size = 0)
     {
+        // Inline style override (e.g. from element.style.setProperty)
+        if (node.StyleOverrides.TryGetValue(propertyName, out var overrideStr))
+        {
+            overrideStr = overrideStr.Trim();
+            if (overrideStr.EndsWith("px") && float.TryParse(overrideStr[..^2],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var px))
+                return px;
+            if (overrideStr.EndsWith("em") && float.TryParse(overrideStr[..^2],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var em))
+                return em * size;
+            if (overrideStr.EndsWith('%') && float.TryParse(overrideStr[..^1],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var pct))
+                return pct / 100f * total;
+        }
+
         if (node.Style.GetProperty(propertyName).RawValue is Constant<Length>)
         {
             return size == 0 ? total - size : (total - size) / 2f;

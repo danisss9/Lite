@@ -10,7 +10,7 @@ namespace Lite;
 internal static class Parser
 {
     private const string UserAgentStylesheet = """
-        div { display: block; }
+        div, section, article, header, footer, main, nav, aside, form, ul, ol, li, fieldset, figure, figcaption, address, details, summary, label { display: block; }
         body { display: block; margin: 8px; }
         h1 { display: block; font-size: 2em; margin-top: 0.67em; margin-bottom: 0.67em; margin-left: 0px; margin-right: 0px; font-weight: bold; }
         h2 { display: block; font-size: 1.5em; margin-top: 0.83em; margin-bottom: 0.83em; margin-left: 0px; margin-right: 0px; font-weight: bold; }
@@ -48,10 +48,30 @@ internal static class Parser
         var context  = BrowsingContext.New(config);
         var document = context.OpenAsync(address).Result;
 
+        var head = document.Head ?? document.DocumentElement;
+
+        // Inject UA stylesheet first
         var uaStyle = document.CreateElement("style");
         uaStyle.TextContent = UserAgentStylesheet;
-        var head = document.Head ?? document.DocumentElement;
         head.InsertBefore(uaStyle, head.FirstChild);
+
+        // Eagerly fetch and inline all <link rel="stylesheet"> files so that
+        // ComputeCurrentStyle() sees the fully-cascaded styles synchronously.
+        foreach (var link in document.QuerySelectorAll("link[rel='stylesheet']"))
+        {
+            var href = link.GetAttribute("href");
+            if (string.IsNullOrEmpty(href)) continue;
+            var cssUrl = ResolveUrl(href);
+            if (cssUrl is null) continue;
+            try
+            {
+                var css     = _httpClient.GetStringAsync(cssUrl).Result;
+                var styleEl = document.CreateElement("style");
+                styleEl.TextContent = css;
+                head.AppendChild(styleEl);
+            }
+            catch (Exception ex) { Console.WriteLine($"[CSS load error] {cssUrl}: {ex.Message}"); }
+        }
 
         var root = Traverse(document.DocumentElement, 0);
 

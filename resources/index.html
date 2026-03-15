@@ -7,85 +7,103 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <header>
     <h1>Lite Browser</h1>
-    <p class="subtitle">A minimal browser built with SkiaSharp</p>
+    <p class="subtitle">A lightweight HTML renderer built with C# and SkiaSharp</p>
   </header>
 
   <main>
 
-    <!-- Headings -->
+    <!-- Typography -->
     <section class="card">
-      <h2>Headings</h2>
+      <h2>Typography</h2>
       <h1>Heading 1</h1>
       <h2>Heading 2</h2>
       <h3>Heading 3</h3>
       <h4>Heading 4</h4>
       <h5>Heading 5</h5>
       <h6>Heading 6</h6>
+      <p>A regular paragraph. The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</p>
+      <p class="muted">A muted paragraph used for secondary information or captions.</p>
+      <a href="https://github.com/anthropics/claude-code">Visit a link &rarr;</a>
     </section>
 
-    <!-- Typography -->
+    <!-- Colors & Backgrounds -->
     <section class="card">
-      <h2>Typography</h2>
-      <p>This is a regular paragraph with some <strong>bold text</strong> and some <em>italic text</em> mixed in.</p>
-      <p class="mt-sm">A second paragraph with a bit of top margin. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-      <p class="mt-sm ml-md">This paragraph has extra left margin applied via class.</p>
-      <p class="my-md mx-lg">This one has vertical and horizontal margin classes.</p>
+      <h2>Colors</h2>
+      <div class="color-row">
+        <div class="swatch swatch-blue">Blue</div>
+        <div class="swatch swatch-green">Green</div>
+        <div class="swatch swatch-red">Red</div>
+        <div class="swatch swatch-orange">Orange</div>
+        <div class="swatch swatch-purple">Purple</div>
+      </div>
     </section>
 
-    <!-- Images -->
+    <!-- Boxes: padding & margin -->
     <section class="card">
-      <h2>Images</h2>
-      <p>A placeholder image below, sized via attributes:</p>
-      <img src="https://placehold.co/300x120.png" width="300" height="120" alt="Placeholder 300x120" />
-      <p class="mt-sm">A smaller one:</p>
-      <img src="https://placehold.co/100x100.png" width="100" height="100" alt="Placeholder 100x100" />
+      <h2>Box Model</h2>
+      <div class="box-demo">
+        <div class="demo-outer">
+          <p class="demo-label">margin</p>
+          <div class="demo-border">
+            <p class="demo-label">border</p>
+            <div class="demo-padding">
+              <p class="demo-label">padding</p>
+              <div class="demo-content">content</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- Buttons with alerts -->
+    <!-- Buttons -->
     <section class="card">
-      <h2>Buttons &amp; Alerts</h2>
-      <p>Each button triggers a JavaScript alert:</p>
-      <button onclick="alert('Hello from Lite Browser!')">Say Hello</button>
-      <button class="ml-sm" onclick="alert('Button 2 clicked!')">Button 2</button>
-      <button class="ml-sm" onclick="alert('The answer is ' + (6 * 7))">Compute 6×7</button>
+      <h2>Buttons</h2>
+      <button onclick="alert('Primary clicked!')">Primary</button>
+      <button class="btn-success ml-sm" onclick="alert('Success!')">Success</button>
+      <button class="btn-danger ml-sm" onclick="alert('Danger!')">Danger</button>
+      <button class="btn-ghost ml-sm" onclick="alert('Ghost!')">Ghost</button>
     </section>
 
-    <!-- Margins showcase -->
-    <section class="card">
-      <h2>Margins</h2>
-      <div class="box margin-xs">margin: 4px</div>
-      <div class="box margin-sm">margin: 12px</div>
-      <div class="box margin-asymmetric">margin: 4px 32px</div>
-      <div class="box margin-left-lg">margin-left: 48px</div>
-      <div class="box margin-right-lg">margin-right: 48px</div>
-    </section>
-
-    <!-- Interactive form -->
+    <!-- Form -->
     <section class="card">
       <h2>Form</h2>
-      <label for="name">Your name:</label>
-      <input type="text" id="name" placeholder="Type here..." />
-      <br />
-      <label><input type="checkbox" id="check" /> I agree</label>
-      <br />
-      <button id="submit">Submit</button>
-      <p id="result" class="output"></p>
+      <label for="name">Full name</label>
+      <input type="text" id="name" placeholder="Jane Doe" />
+      <label for="email">Email address</label>
+      <input type="text" id="email" placeholder="jane@example.com" />
+      <label for="agree">I agree to the terms</label>
+      <input type="checkbox" id="agree" />
+      <div>
+        <button type="button" id="submit-btn" class="mt-sm">Submit</button>
+      </div>
+      <p id="form-result" class="output"></p>
     </section>
 
-    <!-- addEventListener demo -->
+    <!-- Counter -->
     <section class="card">
-      <h2>addEventListener</h2>
-      <p>Counter updated via JS event listener:</p>
-      <button id="counter-btn">Click to count</button>
-      <p id="counter-out" class="output">Count: 0</p>
+      <h2>Interactive Counter</h2>
+      <p>Click the button to increment. The count is tracked in JavaScript.</p>
+      <button id="dec-btn">-</button>
+      <button id="inc-btn" class="ml-sm">+</button>
+      <button id="reset-btn" class="ml-sm">Reset</button>
+      <p id="count-display" class="counter-display">0</p>
+    </section>
+
+    <!-- Todo list -->
+    <section class="card">
+      <h2>Todo List</h2>
+      <input type="text" id="todo-input" placeholder="Add a task..." />
+      <button id="todo-add" class="ml-sm">Add</button>
+      <div id="todo-list"></div>
     </section>
 
   </main>
 
   <footer>
-    <p>&copy; 2026 Lite Browser</p>
+    <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
   </footer>
 
   <script src="script.js"></script>
