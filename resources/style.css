@@ -4,6 +4,12 @@
   padding: 0;
 }
 
+/* Override UA stylesheet specificity — * selector loses to element selectors */
+h1, h2, h3, h4, h5, h6, p, label {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 body {
   font-family: system-ui, sans-serif;
   background-color: #f0f4f8;
@@ -12,22 +18,22 @@ body {
 }
 
 header {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 header h1 {
   font-size: 2em;
   color: #2b6cb0;
+  margin-bottom: 6px;
 }
 
 .subtitle {
   color: #718096;
-  margin-top: 4px;
 }
 
 .card {
   background-color: #ffffff;
-  padding: 24px;
+  padding: 16px;
   border-top-width: 1px;
   border-right-width: 1px;
   border-bottom-width: 1px;
@@ -36,17 +42,18 @@ header h1 {
   border-right-color: #e2e8f0;
   border-bottom-color: #e2e8f0;
   border-left-color: #e2e8f0;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
-.card h2 {
-  font-size: 1.25em;
-  margin-bottom: 12px;
-  color: #2d3748;
-}
+.card h1 { margin-bottom: 4px; }
+.card h2 { font-size: 1.25em; color: #2d3748; margin-bottom: 10px; }
+.card h3 { margin-bottom: 4px; }
+.card h4 { margin-bottom: 4px; }
+.card h5 { margin-bottom: 4px; }
+.card h6 { margin-bottom: 4px; }
 
 .card p {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 input[type="text"] {
@@ -68,11 +75,11 @@ footer {
 }
 
 /* Spacing utilities */
-.mt-sm { margin-top: 12px; }
+.mt-sm { margin-top: 8px; }
 .ml-sm { margin-left: 10px; }
 .ml-md { margin-left: 24px; }
-.my-md { margin-top: 20px; margin-bottom: 20px; }
-.mx-lg { margin-left: 40px; margin-right: 40px; }
+.my-md { margin-top: 12px; margin-bottom: 12px; }
+.mx-lg { margin-left: 32px; margin-right: 32px; }
 
 /* Margin showcase boxes */
 .box {
