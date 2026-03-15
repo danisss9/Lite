@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lite Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Lite Browser</h1>
+    <p class="subtitle">A minimal browser built with SkiaSharp</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Welcome</h2>
+      <p>This page is served locally from the <strong>resources</strong> folder via ASP.NET Core on port 4444.</p>
+      <button id="btn">Click me</button>
+      <p id="output" class="output"></p>
+    </section>
+
+    <section class="card">
+      <h2>Form</h2>
+      <label for="name">Your name:</label>
+      <input type="text" id="name" placeholder="Type here..." />
+      <br />
+      <label><input type="checkbox" id="check" /> I agree</label>
+      <br />
+      <button id="submit">Submit</button>
+      <p id="result" class="output"></p>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Lite Browser</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

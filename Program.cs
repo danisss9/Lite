@@ -40,7 +40,10 @@ internal class Program
 
     private static void Main()
     {
-        RootNode = Parser.TraverseHtml("https://example.com");
+        var resourcesPath = Path.GetFullPath("resources");
+        StaticFileServer.Start(resourcesPath);
+
+        RootNode = Parser.TraverseHtml("http://localhost:4444");
         
         // Retrieve the module handle.
         var hInstance = Marshal.GetHINSTANCE(typeof(Program).Module);
