@@ -33,6 +33,7 @@ internal static class Parser
 
     private static string? _baseUrl;
     private static readonly List<string> _pendingScripts = [];
+    private static readonly HttpClient _httpClient = new();
 
     internal static LayoutNode TraverseHtml(string address)
     {
@@ -54,15 +55,21 @@ internal static class Parser
 
         var root = Traverse(document.DocumentElement, 0);
 
-        // Execute collected <script> blocks after DOM tree is built
-        if (_pendingScripts.Count > 0)
-        {
-            var engine = JsEngine.Create(root);
-            foreach (var script in _pendingScripts)
-                engine.Execute(script);
-        }
+        // Always create the JS engine so inline onclick/on* handlers work,
+        // even when there are no external or inline script blocks.
+        var jsEngine = JsEngine.Create(root);
+        foreach (var script in _pendingScripts)
+            jsEngine.Execute(script);
 
         return root;
+    }
+
+    private static string? ResolveUrl(string src)
+    {
+        if (Uri.TryCreate(src, UriKind.Absolute, out _)) return src;
+        if (_baseUrl != null && Uri.TryCreate(new Uri(_baseUrl), src, out var resolved))
+            return resolved.ToString();
+        return null;
     }
 
     private static LayoutNode Traverse(IElement element, int indent)
@@ -108,8 +115,24 @@ internal static class Parser
             if (child.TagName == "SCRIPT")
             {
                 var src = child.GetAttribute("src");
-                if (src == null && !string.IsNullOrWhiteSpace(child.TextContent))
+                if (src != null)
+                {
+                    var scriptUrl = ResolveUrl(src);
+                    if (scriptUrl != null)
+                    {
+                        try
+                        {
+                            var code = _httpClient.GetStringAsync(scriptUrl).Result;
+                            if (!string.IsNullOrWhiteSpace(code))
+                                _pendingScripts.Add(code);
+                        }
+                        catch (Exception ex) { Console.WriteLine($"[Script load error] {scriptUrl}: {ex.Message}"); }
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(child.TextContent))
+                {
                     _pendingScripts.Add(child.TextContent);
+                }
                 continue;
             }
 

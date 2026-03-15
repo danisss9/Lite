@@ -1,4 +1,4 @@
-﻿using Lite.Extensions;
+using Lite.Extensions;
 using Lite.Interaction;
 using Lite.Layout;
 using Lite.Models;
@@ -9,6 +9,7 @@ namespace Lite;
 internal static class Drawer
 {
     private static float _y;
+    private static bool _measuring;
     private static List<HitRegion> _hitRegions = [];
 
     public static (IntPtr Pixels, List<HitRegion> HitRegions) Draw(int width, int height, LayoutNode root, Viewport viewport)
@@ -19,6 +20,7 @@ internal static class Drawer
 
         canvas.Clear(new SKColor(240, 240, 242));
         _y = 64f;
+        _measuring = false;
         _hitRegions = [];
 
         canvas.Save();
@@ -53,50 +55,71 @@ internal static class Drawer
         switch (node.TagName)
         {
             case "DIV":
+            case "SECTION":
+            case "HEADER":
+            case "MAIN":
+            case "FOOTER":
+            case "NAV":
+            case "ARTICLE":
             {
-                var fontSize = node.GetFontSize();
-                var margin  = node.GetMargin(width, height, fontSize);
-                var padding = node.GetPadding(width, height, fontSize);
-                var border  = node.GetBorderWidth();
+                var fontSize  = node.GetFontSize();
+                var margin    = node.GetMargin(width, height, fontSize);
+                var padding   = node.GetPadding(width, height, fontSize);
+                var border    = node.GetBorderWidth();
+                var rectWidth = node.GetWidth(width);
+                if (rectWidth <= 0) rectWidth = width - 64;
 
-                var rectWidth  = node.GetWidth(width);
-                var rectHeight = node.GetHeight(height);
+                var left   = 32f + margin.Left;
+                var startY = _y + margin.Top;
 
-                // Position content box using margin offsets
-                var left = node.GetMarginLeft(width, rectWidth);
-                var top  = node.GetMarginTop(height, rectHeight);
+                // Measure pass — advance _y through children without drawing
+                _y = startY + padding.Top + border.Top;
+                _measuring = true;
+                foreach (var child in node.Children)
+                    PaintNode(canvas, child, width, height);
+                _measuring = false;
+                var endY = _y + padding.Bottom + border.Bottom;
 
-                var box = new BoxDimensions
-                {
-                    ContentBox = new SKRect(left, top, left + rectWidth, top + rectHeight),
-                    Margin     = margin,
-                    Padding    = padding,
-                    Border     = border,
-                };
-                node.Box = box;
-
-                // Fill background over padding box
+                // Draw background over the measured content area
                 var bgColor = node.GetBackgroundColor();
                 if (bgColor != SKColors.Transparent)
                 {
+                    var bgRect = new SKRect(left, startY, left + rectWidth, endY);
                     using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
-                    canvas.DrawRect(box.PaddingBox, bgPaint);
+                    canvas.DrawRect(bgRect, bgPaint);
                 }
 
-                // Draw four borders
+                // Draw borders
+                var box = new BoxDimensions
+                {
+                    ContentBox = new SKRect(left + padding.Left, startY + padding.Top,
+                                           left + padding.Left + rectWidth - padding.Left - padding.Right,
+                                           endY - padding.Bottom),
+                    Margin  = margin,
+                    Padding = padding,
+                    Border  = border,
+                };
+                node.Box = box;
                 DrawBorders(canvas, box, node);
 
                 var divCursor = node.GetCursor();
                 if (divCursor != CursorType.Default)
                     _hitRegions.Add(new HitRegion(box.BorderBox, divCursor));
-                break;
+
+                // Real draw pass
+                _y = startY + padding.Top + border.Top;
+                foreach (var child in node.Children)
+                    PaintNode(canvas, child, width, height);
+
+                _y = endY + margin.Bottom;
+                return; // children already processed — skip shared loop below
             }
             case "IMG":
             {
-                var drawW = node.IntrinsicWidth > 0 ? (float)node.IntrinsicWidth
-                          : node.Image?.Width ?? 100f;
-                var drawH = node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight
-                          : node.Image?.Height ?? 100f;
+                if (_measuring) { _y += (node.IntrinsicHeight > 0 ? node.IntrinsicHeight : node.Image?.Height ?? 100f); break; }
+
+                var drawW = node.IntrinsicWidth  > 0 ? (float)node.IntrinsicWidth  : node.Image?.Width  ?? 100f;
+                var drawH = node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight : node.Image?.Height ?? 100f;
 
                 var destRect = new SKRect(32f, _y, 32f + drawW, _y + drawH);
 
@@ -112,7 +135,7 @@ internal static class Drawer
                     if (!string.IsNullOrEmpty(node.Alt))
                     {
                         using var altPaint = new SKPaint { Color = SKColors.Gray, IsAntialias = true };
-                        using var altFont = new SKFont { Size = 12 };
+                        using var altFont  = new SKFont { Size = 12 };
                         canvas.DrawText(node.Alt, 32f + 4, _y + 14, SKTextAlign.Left, altFont, altPaint);
                     }
                 }
@@ -122,8 +145,60 @@ internal static class Drawer
             }
             case { } h when h.StartsWith('H') && h.Length == 2:
             case "P":
+            case "LABEL":
+            {
+                var fontSize = node.GetFontSize();
+                var margin   = node.GetMargin(width, height, fontSize);
+                var padding  = node.GetPadding(width, height, fontSize);
+                var border   = node.GetBorderWidth();
+
+                _y += margin.Top;
+
+                if (!string.IsNullOrEmpty(node.DisplayText))
+                {
+                    if (!_measuring)
+                    {
+                        using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+                        using var font  = new SKFont
+                        {
+                            Size     = fontSize,
+                            Embolden = node.TagName != "P" && node.TagName != "LABEL",
+                            Typeface = SKTypeface.FromFamilyName(node.GetFontFamily()),
+                        };
+
+                        var x        = 32f + margin.Left + padding.Left + border.Left;
+                        var maxWidth = width - 64 - margin.Left - margin.Right
+                                             - padding.Left - padding.Right
+                                             - border.Left  - border.Right;
+
+                        var yBefore = _y + padding.Top + border.Top;
+                        _y = DrawWrappedText(canvas, node.DisplayText, x, yBefore, maxWidth, font, paint, node.IsUnderline());
+                        _y += padding.Bottom + border.Bottom;
+
+                        var cursor = node.GetCursor();
+                        if (cursor != CursorType.Default)
+                            _hitRegions.Add(new HitRegion(
+                                new SKRect(32f, yBefore - padding.Top, 32f + (width - 64), _y),
+                                cursor, node.Href));
+                    }
+                    else
+                    {
+                        // Measure: estimate height from font size and text length
+                        var lineHeight = fontSize * 1.4f;
+                        var maxWidth   = width - 64 - margin.Left - margin.Right;
+                        var charsPerLine = Math.Max(1, (int)(maxWidth / (fontSize * 0.6f)));
+                        var lines = (int)Math.Ceiling((double)node.DisplayText.Length / charsPerLine);
+                        _y += padding.Top + border.Top + lines * lineHeight + padding.Bottom + border.Bottom;
+                    }
+                }
+
+                _y += margin.Bottom;
+                break;
+            }
             case "INPUT":
             {
+                if (_measuring) { _y += FormLayout.TextInputHeight + FormLayout.ElementGap; break; }
+
                 var inputType = node.Attributes.TryGetValue("type", out var t) ? t.ToLowerInvariant() : "text";
                 if (inputType == "checkbox")
                 {
@@ -147,9 +222,9 @@ internal static class Drawer
                     _hitRegions.Add(new HitRegion(rect, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.Checkbox));
                     _y += size + FormLayout.ElementGap;
                 }
-                else // text
+                else
                 {
-                    var rect = new SKRect(32f, _y, 32f + FormLayout.TextInputWidth, _y + FormLayout.TextInputHeight);
+                    var rect      = new SKRect(32f, _y, 32f + FormLayout.TextInputWidth, _y + FormLayout.TextInputHeight);
                     var isFocused = FormState.FocusedInput == node.NodeKey;
 
                     using var bgPaint = new SKPaint { Color = SKColors.White };
@@ -157,10 +232,10 @@ internal static class Drawer
 
                     using var borderPaint = new SKPaint
                     {
-                        Color = isFocused ? new SKColor(0, 120, 215) : new SKColor(150, 150, 150),
-                        Style = SKPaintStyle.Stroke,
+                        Color       = isFocused ? new SKColor(0, 120, 215) : new SKColor(150, 150, 150),
+                        Style       = SKPaintStyle.Stroke,
                         StrokeWidth = isFocused ? 2f : 1f,
-                        IsAntialias = true
+                        IsAntialias = true,
                     };
                     canvas.DrawRect(rect, borderPaint);
 
@@ -170,21 +245,20 @@ internal static class Drawer
                     if (string.IsNullOrEmpty(text) && node.Attributes.TryGetValue("placeholder", out var ph))
                     {
                         using var phPaint = new SKPaint { Color = new SKColor(170, 170, 170), IsAntialias = true };
-                        using var phFont = new SKFont { Size = 12 };
+                        using var phFont  = new SKFont { Size = 12 };
                         canvas.DrawText(ph, rect.Left + 4, rect.Top + 14, SKTextAlign.Left, phFont, phPaint);
                     }
                     else if (!string.IsNullOrEmpty(text))
                     {
                         using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
-                        using var textFont = new SKFont { Size = 12 };
+                        using var textFont  = new SKFont { Size = 12 };
                         canvas.DrawText(text, rect.Left + 4, rect.Top + 14, SKTextAlign.Left, textFont, textPaint);
                     }
 
                     if (isFocused)
                     {
-                        // draw caret
-                        using var textFont = new SKFont { Size = 12 };
-                        var caretX = rect.Left + 4 + textFont.MeasureText(text);
+                        using var caretFont  = new SKFont { Size = 12 };
+                        var caretX = rect.Left + 4 + caretFont.MeasureText(text);
                         using var caretPaint = new SKPaint { Color = SKColors.Black, StrokeWidth = 1 };
                         canvas.DrawLine(caretX, rect.Top + 3, caretX, rect.Bottom - 3, caretPaint);
                     }
@@ -196,24 +270,34 @@ internal static class Drawer
             }
             case "BUTTON":
             {
-                var label = node.DisplayText;
-                if (string.IsNullOrEmpty(label)) node.Attributes.TryGetValue("value", out label);
-                if (string.IsNullOrEmpty(label)) label = "Button";
+                if (_measuring)
+                {
+                    using var mFont = new SKFont { Size = 13 };
+                    var label = node.DisplayText;
+                    if (string.IsNullOrEmpty(label)) node.Attributes.TryGetValue("value", out label);
+                    if (string.IsNullOrEmpty(label)) label = "Button";
+                    _y += 13f + FormLayout.ButtonPaddingY * 2 + FormLayout.ElementGap;
+                    break;
+                }
+
+                var btnLabel = node.DisplayText;
+                if (string.IsNullOrEmpty(btnLabel)) node.Attributes.TryGetValue("value", out btnLabel);
+                if (string.IsNullOrEmpty(btnLabel)) btnLabel = "Button";
 
                 using var btnFont = new SKFont { Size = 13 };
-                var textWidth = btnFont.MeasureText(label);
+                var textWidth = btnFont.MeasureText(btnLabel);
                 var btnW = textWidth + FormLayout.ButtonPaddingX * 2;
                 var btnH = 13f + FormLayout.ButtonPaddingY * 2;
                 var rect = new SKRect(32f, _y, 32f + btnW, _y + btnH);
 
-                using var bgPaint = new SKPaint { Color = new SKColor(225, 225, 225) };
+                using var bgPaint     = new SKPaint { Color = new SKColor(225, 225, 225) };
                 canvas.DrawRect(rect, bgPaint);
 
                 using var borderPaint = new SKPaint { Color = new SKColor(173, 173, 173), Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
                 canvas.DrawRect(rect, borderPaint);
 
                 using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
-                canvas.DrawText(label, rect.Left + FormLayout.ButtonPaddingX, rect.Top + FormLayout.ButtonPaddingY + 13, SKTextAlign.Left, btnFont, textPaint);
+                canvas.DrawText(btnLabel, rect.Left + FormLayout.ButtonPaddingX, rect.Top + FormLayout.ButtonPaddingY + 13, SKTextAlign.Left, btnFont, textPaint);
 
                 _hitRegions.Add(new HitRegion(rect, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.Button));
                 _y += btnH + FormLayout.ElementGap;
@@ -227,25 +311,32 @@ internal static class Drawer
                     var padding  = node.GetPadding(width, height, fontSize);
                     var border   = node.GetBorderWidth();
 
-                    using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
-                    using var font = new SKFont
+                    if (!_measuring)
                     {
-                        Size     = fontSize,
-                        Embolden = node.TagName == "H1",
-                        Typeface = SKTypeface.FromFamilyName(node.GetFontFamily()),
-                    };
+                        using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+                        using var font  = new SKFont
+                        {
+                            Size     = fontSize,
+                            Embolden = node.TagName == "H1",
+                            Typeface = SKTypeface.FromFamilyName(node.GetFontFamily()),
+                        };
 
-                    // Text starts inset by left padding + border, with max width reduced accordingly
-                    var x        = 32f + padding.Left + border.Left;
-                    var maxWidth = width - 64 - padding.Left - padding.Right - border.Left - border.Right;
-                    var yBefore  = _y + padding.Top + border.Top;
+                        var x        = 32f + padding.Left + border.Left;
+                        var maxWidth = width - 64 - padding.Left - padding.Right - border.Left - border.Right;
+                        var yBefore  = _y + padding.Top + border.Top;
 
-                    _y = DrawWrappedText(canvas, node.DisplayText, x, yBefore, maxWidth, font, paint, node.IsUnderline());
-                    _y += padding.Bottom + border.Bottom;
+                        _y = DrawWrappedText(canvas, node.DisplayText, x, yBefore, maxWidth, font, paint, node.IsUnderline());
+                        _y += padding.Bottom + border.Bottom;
 
-                    var textCursor = node.GetCursor();
-                    if (textCursor != CursorType.Default)
-                        _hitRegions.Add(new HitRegion(new SKRect(32f, yBefore - padding.Top, 32f + (width - 64), _y), textCursor, node.Href));
+                        var textCursor = node.GetCursor();
+                        if (textCursor != CursorType.Default)
+                            _hitRegions.Add(new HitRegion(new SKRect(32f, yBefore - padding.Top, 32f + (width - 64), _y), textCursor, node.Href));
+                    }
+                    else
+                    {
+                        var lineHeight = fontSize * 1.4f;
+                        _y += padding.Top + border.Top + lineHeight + padding.Bottom + border.Bottom;
+                    }
                 }
                 break;
             }
@@ -319,10 +410,10 @@ internal static class Drawer
         canvas.DrawText(text, x, y, SKTextAlign.Left, font, paint);
         if (!underline) return;
 
-        var metrics   = font.Metrics;
-        var underlineY = y + (metrics.UnderlinePosition ?? font.Size * 0.1f);
+        var metrics            = font.Metrics;
+        var underlineY         = y + (metrics.UnderlinePosition ?? font.Size * 0.1f);
         var underlineThickness = Math.Max(metrics.UnderlineThickness ?? 1f, 1f);
-        using var linePaint = new SKPaint { Color = paint.Color, StrokeWidth = underlineThickness, IsAntialias = true };
+        using var linePaint    = new SKPaint { Color = paint.Color, StrokeWidth = underlineThickness, IsAntialias = true };
         canvas.DrawLine(x, underlineY, x + font.MeasureText(text), underlineY, linePaint);
     }
 }

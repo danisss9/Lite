@@ -8,7 +8,7 @@ internal class JsWindow
 
     public JsWindow(JsEngine engine) => _engine = engine;
 
-    public void alert(object? message) => Console.WriteLine($"[alert] {message}");
+    public void alert(object? message) => Lite.Utils.User32.MessageBox(IntPtr.Zero, message?.ToString() ?? "", "Alert", 0);
     public void setTimeout(Jint.Native.JsValue fn, int delay)
     {
         // Fire immediately (no real async) — good enough for scripting bootstrap code

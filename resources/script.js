@@ -1,7 +1,3 @@
-document.getElementById('btn').addEventListener('click', function () {
-  document.getElementById('output').textContent = 'Hello from JavaScript! Clicks work.';
-});
-
 var count = 0;
 document.getElementById('counter-btn').addEventListener('click', function () {
   count += 1;
