@@ -13,13 +13,56 @@
   </header>
 
   <main>
+
+    <!-- Headings -->
     <section class="card">
-      <h2>Welcome</h2>
-      <p>This page is served locally from the <strong>resources</strong> folder via ASP.NET Core on port 4444.</p>
-      <button id="btn">Click me</button>
-      <p id="output" class="output"></p>
+      <h2>Headings</h2>
+      <h1>Heading 1</h1>
+      <h2>Heading 2</h2>
+      <h3>Heading 3</h3>
+      <h4>Heading 4</h4>
+      <h5>Heading 5</h5>
+      <h6>Heading 6</h6>
     </section>
 
+    <!-- Typography -->
+    <section class="card">
+      <h2>Typography</h2>
+      <p>This is a regular paragraph with some <strong>bold text</strong> and some <em>italic text</em> mixed in.</p>
+      <p class="mt-sm">A second paragraph with a bit of top margin. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+      <p class="mt-sm ml-md">This paragraph has extra left margin applied via class.</p>
+      <p class="my-md mx-lg">This one has vertical and horizontal margin classes.</p>
+    </section>
+
+    <!-- Images -->
+    <section class="card">
+      <h2>Images</h2>
+      <p>A placeholder image below, sized via attributes:</p>
+      <img src="https://placehold.co/300x120" width="300" height="120" alt="Placeholder 300x120" />
+      <p class="mt-sm">A smaller one:</p>
+      <img src="https://placehold.co/100x100" width="100" height="100" alt="Placeholder 100x100" />
+    </section>
+
+    <!-- Buttons with alerts -->
+    <section class="card">
+      <h2>Buttons &amp; Alerts</h2>
+      <p>Each button triggers a JavaScript alert:</p>
+      <button onclick="alert('Hello from Lite Browser!')">Say Hello</button>
+      <button class="ml-sm" onclick="alert('Button 2 clicked!')">Button 2</button>
+      <button class="ml-sm" onclick="alert('The answer is ' + (6 * 7))">Compute 6×7</button>
+    </section>
+
+    <!-- Margins showcase -->
+    <section class="card">
+      <h2>Margins</h2>
+      <div class="box margin-xs">margin: 4px</div>
+      <div class="box margin-sm">margin: 12px</div>
+      <div class="box margin-asymmetric">margin: 4px 32px</div>
+      <div class="box margin-left-lg">margin-left: 48px</div>
+      <div class="box margin-right-lg">margin-right: 48px</div>
+    </section>
+
+    <!-- Interactive form -->
     <section class="card">
       <h2>Form</h2>
       <label for="name">Your name:</label>
@@ -30,6 +73,15 @@
       <button id="submit">Submit</button>
       <p id="result" class="output"></p>
     </section>
+
+    <!-- addEventListener demo -->
+    <section class="card">
+      <h2>addEventListener</h2>
+      <p>Counter updated via JS event listener:</p>
+      <button id="counter-btn">Click to count</button>
+      <p id="counter-out" class="output">Count: 0</p>
+    </section>
+
   </main>
 
   <footer>

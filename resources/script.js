@@ -2,6 +2,12 @@ document.getElementById('btn').addEventListener('click', function () {
   document.getElementById('output').textContent = 'Hello from JavaScript! Clicks work.';
 });
 
+var count = 0;
+document.getElementById('counter-btn').addEventListener('click', function () {
+  count += 1;
+  document.getElementById('counter-out').textContent = 'Count: ' + count;
+});
+
 document.getElementById('submit').addEventListener('click', function () {
   var name = document.getElementById('name').value.trim();
   var agreed = document.getElementById('check').checked;

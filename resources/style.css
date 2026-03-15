@@ -91,3 +91,26 @@ footer {
   color: #a0aec0;
   font-size: 0.85rem;
 }
+
+/* Spacing utilities */
+.mt-sm { margin-top: 12px; }
+.ml-sm { margin-left: 10px; }
+.ml-md { margin-left: 24px; }
+.my-md { margin-top: 20px; margin-bottom: 20px; }
+.mx-lg { margin-left: 40px; margin-right: 40px; }
+
+/* Margin showcase boxes */
+.box {
+  background: #ebf4ff;
+  border: 1px solid #bee3f8;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  color: #2b6cb0;
+}
+
+.margin-xs        { margin: 4px; }
+.margin-sm        { margin: 12px; }
+.margin-asymmetric { margin: 4px 32px; }
+.margin-left-lg   { margin-left: 48px; }
+.margin-right-lg  { margin-right: 48px; }
