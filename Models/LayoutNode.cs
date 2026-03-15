@@ -20,6 +20,10 @@ public class LayoutNode
     public int IntrinsicHeight { get; set; }
     public string? Alt { get; set; }
     public Dictionary<string, string> Attributes { get; } = [];
+    public Dictionary<string, string> StyleOverrides { get; } = [];
+    public string? TextOverride { get; set; }
+    public string DisplayText => TextOverride ?? Text;
+    public List<(string EventType, Action Handler)> EventListeners { get; } = [];
 
     public LayoutNode(string? id, string tagName, string text, ICssStyleDeclaration style, string? href = null)
     {

@@ -196,7 +196,7 @@ internal static class Drawer
             }
             case "BUTTON":
             {
-                var label = node.Text;
+                var label = node.DisplayText;
                 if (string.IsNullOrEmpty(label)) node.Attributes.TryGetValue("value", out label);
                 if (string.IsNullOrEmpty(label)) label = "Button";
 
@@ -240,7 +240,7 @@ internal static class Drawer
                     var maxWidth = width - 64 - padding.Left - padding.Right - border.Left - border.Right;
                     var yBefore  = _y + padding.Top + border.Top;
 
-                    _y = DrawWrappedText(canvas, node.Text, x, yBefore, maxWidth, font, paint, node.IsUnderline());
+                    _y = DrawWrappedText(canvas, node.DisplayText, x, yBefore, maxWidth, font, paint, node.IsUnderline());
                     _y += padding.Bottom + border.Bottom;
 
                     var textCursor = node.GetCursor();

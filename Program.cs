@@ -5,6 +5,7 @@ using Lite.Layout;
 using Lite.Models;
 using Lite.Models.Delegates;
 using Lite.Models.Structs;
+using Lite.Scripting;
 using Lite.Utils;
 
 namespace Lite;
@@ -197,6 +198,20 @@ internal class Program
                     {
                         if (!FormState.CheckedBoxes.Remove(region.NodeKey))
                             FormState.CheckedBoxes.Add(region.NodeKey);
+                        handled = true;
+                        break;
+                    }
+
+                    if (region.InputAction == InputAction.Button)
+                    {
+                        EventDispatcher.Dispatch(region.NodeKey, "click", RootNode);
+                        handled = true;
+                        break;
+                    }
+
+                    // Dispatch click for any element with onclick/addEventListener
+                    if (EventDispatcher.Dispatch(region.NodeKey, "click", RootNode))
+                    {
                         handled = true;
                         break;
                     }

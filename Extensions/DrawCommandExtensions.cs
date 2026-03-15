@@ -71,10 +71,73 @@ public static class StyleExtensions
         return first is "system-ui" or "ui-sans-serif" or "-apple-system" ? "Segoe UI" : first;
     }
 
-    private static SKColor GetColor(LayoutNode node, string propertyName, SKColor defaultColor) =>
-        node.Style.GetProperty(propertyName).RawValue is Color color
+    private static SKColor GetColor(LayoutNode node, string propertyName, SKColor defaultColor)
+    {
+        if (node.StyleOverrides.TryGetValue(propertyName, out var overrideValue))
+        {
+            var parsed = ParseCssColor(overrideValue);
+            if (parsed.HasValue) return parsed.Value;
+        }
+
+        return node.Style.GetProperty(propertyName).RawValue is Color color
             ? new SKColor(color.R, color.G, color.B, color.A)
             : defaultColor;
+    }
+
+    private static SKColor? ParseCssColor(string value)
+    {
+        value = value.Trim();
+        if (string.IsNullOrEmpty(value)) return null;
+
+        // Hex via SkiaSharp (#rgb, #rrggbb, #rgba, #rrggbbaa)
+        if (value.StartsWith('#') && SKColor.TryParse(value, out var hexColor))
+            return hexColor;
+
+        // rgb(r, g, b) / rgba(r, g, b, a)
+        var lower = value.ToLowerInvariant();
+        if (lower.StartsWith("rgb") && lower.Contains('(') && lower.EndsWith(')'))
+        {
+            var inner = lower[(lower.IndexOf('(') + 1)..^1];
+            var parts = inner.Split(',');
+            if (parts.Length >= 3 &&
+                byte.TryParse(parts[0].Trim(), out var r) &&
+                byte.TryParse(parts[1].Trim(), out var g) &&
+                byte.TryParse(parts[2].Trim(), out var b))
+            {
+                byte a = 255;
+                if (parts.Length == 4 && float.TryParse(parts[3].Trim(),
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var alpha))
+                    a = (byte)(alpha * 255);
+                return new SKColor(r, g, b, a);
+            }
+        }
+
+        // Named colours
+        return lower switch
+        {
+            "red"         => SKColors.Red,
+            "green"       => new SKColor(0, 128, 0),
+            "blue"        => SKColors.Blue,
+            "black"       => SKColors.Black,
+            "white"       => SKColors.White,
+            "gray"        => SKColors.Gray,
+            "grey"        => SKColors.Gray,
+            "yellow"      => SKColors.Yellow,
+            "orange"      => new SKColor(255, 165, 0),
+            "purple"      => new SKColor(128, 0, 128),
+            "pink"        => new SKColor(255, 192, 203),
+            "cyan"        => SKColors.Cyan,
+            "magenta"     => SKColors.Magenta,
+            "lime"        => new SKColor(0, 255, 0),
+            "navy"        => new SKColor(0, 0, 128),
+            "teal"        => new SKColor(0, 128, 128),
+            "silver"      => new SKColor(192, 192, 192),
+            "maroon"      => new SKColor(128, 0, 0),
+            "transparent" => SKColors.Transparent,
+            _             => null
+        };
+    }
 
     private static float GetBorderSideWidth(LayoutNode node, string propertyName)
     {

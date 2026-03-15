@@ -1,8 +1,9 @@
-﻿using AngleSharp.Io;
+using AngleSharp.Io;
 using AngleSharp;
 using AngleSharp.Dom;
 using Lite.Models;
 using Lite.Network;
+using Lite.Scripting;
 
 namespace Lite;
 
@@ -26,18 +27,24 @@ internal static class Parser
         button { display: inline-block; cursor: pointer; }
         """;
 
+    // Tags that should not appear in the layout tree
+    private static readonly HashSet<string> SkipTags =
+        ["HEAD", "STYLE", "NOSCRIPT", "META", "LINK", "TITLE", "TEMPLATE"];
+
     private static string? _baseUrl;
+    private static readonly List<string> _pendingScripts = [];
 
     internal static LayoutNode TraverseHtml(string address)
     {
         _baseUrl = address;
+        _pendingScripts.Clear();
 
         var config = Configuration.Default
             .WithDefaultLoader(new LoaderOptions { IsResourceLoadingEnabled = true })
             .WithCss()
             .WithRenderDevice();
 
-        var context = BrowsingContext.New(config);
+        var context  = BrowsingContext.New(config);
         var document = context.OpenAsync(address).Result;
 
         var uaStyle = document.CreateElement("style");
@@ -45,7 +52,17 @@ internal static class Parser
         var head = document.Head ?? document.DocumentElement;
         head.InsertBefore(uaStyle, head.FirstChild);
 
-        return Traverse(document.DocumentElement, 0);
+        var root = Traverse(document.DocumentElement, 0);
+
+        // Execute collected <script> blocks after DOM tree is built
+        if (_pendingScripts.Count > 0)
+        {
+            var engine = JsEngine.Create(root);
+            foreach (var script in _pendingScripts)
+                engine.Execute(script);
+        }
+
+        return root;
     }
 
     private static LayoutNode Traverse(IElement element, int indent)
@@ -62,7 +79,7 @@ internal static class Parser
             var src = element.GetAttribute("src");
             node.Alt = element.GetAttribute("alt") ?? string.Empty;
 
-            if (int.TryParse(element.GetAttribute("width"), out var w)) node.IntrinsicWidth = w;
+            if (int.TryParse(element.GetAttribute("width"),  out var w)) node.IntrinsicWidth  = w;
             if (int.TryParse(element.GetAttribute("height"), out var h)) node.IntrinsicHeight = h;
 
             if (!string.IsNullOrEmpty(src))
@@ -78,8 +95,26 @@ internal static class Parser
             }
         }
 
+        // Capture inline event handlers for any element
+        foreach (var attr in new[] { "onclick", "onchange", "oninput", "onsubmit", "onkeyup", "onkeydown" })
+        {
+            var val = element.GetAttribute(attr);
+            if (val != null) node.Attributes[attr] = val;
+        }
+
         foreach (var child in element.Children)
         {
+            // Collect scripts separately; skip layout-irrelevant tags
+            if (child.TagName == "SCRIPT")
+            {
+                var src = child.GetAttribute("src");
+                if (src == null && !string.IsNullOrWhiteSpace(child.TextContent))
+                    _pendingScripts.Add(child.TextContent);
+                continue;
+            }
+
+            if (SkipTags.Contains(child.TagName)) continue;
+
             node.AddChild(Traverse(child, indent + 1));
         }
 
