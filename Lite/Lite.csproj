@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
 
     <!-- NuGet package metadata -->
-    <PackageId>Lite</PackageId>
+    <PackageId>danisss9.Lite</PackageId>
     <Authors>danisss9</Authors>
     <Description>Lightweight HTML/CSS/JS rendering engine for Windows.</Description>
     <PackageTags>html;css;javascript;renderer;browser;lite;win32</PackageTags>

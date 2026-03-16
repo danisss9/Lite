@@ -31,7 +31,7 @@ jobs:
         run: dotnet pack Lite/Lite.csproj --configuration Release --no-build /p:Version=${{ steps.version.outputs.VERSION }} --output nupkg
 
       - name: Push to NuGet
-        run: dotnet nuget push nupkg/Lite.${{ steps.version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push nupkg/danisss9.Lite.${{ steps.version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
