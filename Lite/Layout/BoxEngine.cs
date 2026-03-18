@@ -84,12 +84,14 @@ internal static class BoxEngine
                 contentW = Math.Max(0, cbRect.Width * 0.5f);
         }
 
-        // Resolve X
+        // Resolve X — §4.1: use FlexStaticX as static position when left/right are both auto
         float contentX;
         if (!float.IsNaN(left))
             contentX = cbRect.Left + left + margin.Left + border.Left + padding.Left;
         else if (!float.IsNaN(right))
             contentX = cbRect.Right - right - margin.Right - border.Right - padding.Right - contentW;
+        else if (node.FlexStaticX.HasValue)
+            contentX = node.FlexStaticX.Value + margin.Left + border.Left + padding.Left;
         else
             contentX = cbRect.Left + margin.Left + border.Left + padding.Left;
 
@@ -117,12 +119,14 @@ internal static class BoxEngine
         else if (!float.IsNaN(top) && !float.IsNaN(bottom))
             contentH = Math.Max(0, cbRect.Height - top - bottom - margin.Top - margin.Bottom - border.Top - border.Bottom - padding.Top - padding.Bottom);
 
-        // Resolve Y
+        // Resolve Y — §4.1: use FlexStaticY as static position when top/bottom are both auto
         float contentY;
         if (!float.IsNaN(top))
             contentY = cbRect.Top + top + margin.Top + border.Top + padding.Top;
         else if (!float.IsNaN(bottom))
             contentY = cbRect.Bottom - bottom - margin.Bottom - border.Bottom - padding.Bottom - contentH;
+        else if (node.FlexStaticY.HasValue)
+            contentY = node.FlexStaticY.Value + margin.Top + border.Top + padding.Top;
         else
             contentY = cbRect.Top + margin.Top + border.Top + padding.Top;
 
@@ -187,7 +191,16 @@ internal static class BoxEngine
         var contentY = y + margin.Top + border.Top + padding.Top;
 
         // Layout children and compute content height
-        var contentH = LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight);
+        var explicitHForFlex = node.GetHeight(viewportHeight);
+        var isBorderBoxForFlex = node.Style.GetPropertyValue("box-sizing") == "border-box";
+        var knownContentH = explicitHForFlex > 0
+            ? (isBorderBoxForFlex ? Math.Max(0f, explicitHForFlex - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitHForFlex)
+            : 0f;
+
+        var nodeDisplay = node.GetDisplay();
+        var contentH = (nodeDisplay == DisplayType.Flex || nodeDisplay == DisplayType.InlineFlex)
+            ? FlexEngine.LayoutFlex(node, contentX, contentY, contentW, knownContentH, viewportWidth, viewportHeight)
+            : LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight);
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
@@ -228,6 +241,14 @@ internal static class BoxEngine
     /// Vertical margins between adjacent block children are collapsed (CSS 2.1 §8.3.1).
     /// Returns total content height consumed.
     /// </summary>
+    /// <summary>Exposed for FlexEngine to lay out flex item children.</summary>
+    internal static float LayoutChildrenPublic(
+        List<LayoutNode> children,
+        float contentX, float contentY,
+        float contentW,
+        float viewportWidth, float viewportHeight)
+        => LayoutChildren(children, contentX, contentY, contentW, viewportWidth, viewportHeight);
+
     private static float LayoutChildren(
         List<LayoutNode> children,
         float contentX, float contentY,
@@ -258,7 +279,7 @@ internal static class BoxEngine
                 continue;
             }
 
-            if (display == DisplayType.Block || display == DisplayType.ListItem)
+            if (display == DisplayType.Block || display == DisplayType.ListItem || display == DisplayType.Flex)
             {
                 var childFontSize   = child.GetFontSize();
                 var childMarginTop  = child.GetMarginTop(total: viewportHeight, size: childFontSize);
@@ -396,6 +417,38 @@ internal static class BoxEngine
                 continue;
             }
 
+            if (display == DisplayType.InlineFlex)
+            {
+                // §5: inline-flex acts as inline-block in the parent, uses flex layout internally.
+                var fontSize  = node.GetFontSize();
+                var margin    = node.GetMargin(0, viewportHeight, fontSize);
+                var padding   = node.GetPadding(0, viewportHeight, fontSize);
+                var border    = node.GetBorderWidth();
+                var explicitW = node.GetWidth(0);
+                var explicitH = node.GetHeight(viewportHeight);
+
+                // Intrinsic width: max-content of flex items (or explicit width)
+                var w = explicitW > 0
+                    ? explicitW
+                    : FlexEngine.MeasureMaxContentMain(node, 0, 0, viewportWidth, viewportHeight);
+                w = Math.Max(w, 0);
+
+                // Intrinsic height: lay out children to compute
+                var contentX2 = margin.Left + border.Left + padding.Left;
+                var contentY2 = margin.Top  + border.Top  + padding.Top;
+                var h = explicitH > 0
+                    ? explicitH
+                    : FlexEngine.LayoutFlex(node, contentX2, contentY2, w, 0, viewportWidth, viewportHeight);
+                h = Math.Max(h, 0);
+
+                var totalW = margin.Left + border.Left + padding.Left + w + padding.Right + border.Right + margin.Right;
+                var totalH = margin.Top  + border.Top  + padding.Top  + h + padding.Bottom + border.Bottom + margin.Bottom;
+
+                items.Add(new InlineItem(InlineItemKind.InlineFlex, node, null, totalW, totalH,
+                           margin, padding, border, w, h));
+                continue;
+            }
+
             if (display == DisplayType.InlineBlock)
             {
                 var fontSize  = node.GetFontSize();
@@ -475,6 +528,25 @@ internal static class BoxEngine
                 };
                 break;
             }
+            case InlineItemKind.InlineFlex:
+            {
+                var m = item.Margin;
+                var p = item.Padding;
+                var b = item.Border;
+                var contentX = absX + m.Left + b.Left + p.Left;
+                var contentY = absY + m.Top  + b.Top  + p.Top;
+                node.Box = new BoxDimensions
+                {
+                    ContentBox = new SKRect(contentX, contentY,
+                                            contentX + item.ContentW, contentY + item.ContentH),
+                    Margin  = m,
+                    Padding = p,
+                    Border  = b,
+                };
+                // Re-invoke flex layout at the resolved position so children get correct boxes
+                FlexEngine.LayoutFlex(node, contentX, contentY, item.ContentW, item.ContentH, 0, 0);
+                break;
+            }
             case InlineItemKind.Image:
             case InlineItemKind.Text:
             case InlineItemKind.LineBreak:
@@ -492,7 +564,7 @@ internal static class BoxEngine
     // Inline item model
     // -------------------------------------------------------------------------
 
-    private enum InlineItemKind { Text, Image, InlineBlock, LineBreak }
+    private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, LineBreak }
 
     private record InlineItem(
         InlineItemKind Kind,

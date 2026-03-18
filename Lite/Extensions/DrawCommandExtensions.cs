@@ -6,11 +6,18 @@ using SkiaSharp;
 
 namespace Lite.Extensions;
 
-public enum DisplayType  { Block, Inline, InlineBlock, ListItem, None }
-public enum TextAlign    { Left, Center, Right, Justify }
-public enum WhiteSpace   { Normal, NoWrap, Pre, PreWrap, PreLine }
-public enum PositionType { Static, Relative, Absolute, Fixed }
-public enum OverflowType { Visible, Hidden, Scroll, Auto }
+public enum DisplayType     { Block, Inline, InlineBlock, ListItem, Flex, InlineFlex, None }
+public enum TextAlign       { Left, Center, Right, Justify }
+public enum WhiteSpace      { Normal, NoWrap, Pre, PreWrap, PreLine }
+public enum PositionType    { Static, Relative, Absolute, Fixed }
+public enum OverflowType    { Visible, Hidden, Scroll, Auto }
+public enum FlexDirection   { Row, RowReverse, Column, ColumnReverse }
+public enum FlexWrap        { NoWrap, Wrap, WrapReverse }
+public enum JustifyContent  { FlexStart, FlexEnd, Center, SpaceBetween, SpaceAround, SpaceEvenly }
+public enum AlignItems      { Stretch, FlexStart, FlexEnd, Center, Baseline }
+public enum AlignSelf       { Auto, Stretch, FlexStart, FlexEnd, Center, Baseline }
+public enum AlignContent    { Stretch, FlexStart, FlexEnd, Center, SpaceBetween, SpaceAround }
+public enum Visibility      { Visible, Hidden, Collapse }
 
 public static class StyleExtensions
 {
@@ -24,9 +31,231 @@ public static class StyleExtensions
             "block"        => DisplayType.Block,
             "inline-block" => DisplayType.InlineBlock,
             "list-item"    => DisplayType.ListItem,
+            "flex"         => DisplayType.Flex,
+            "inline-flex"  => DisplayType.InlineFlex,
             "none"         => DisplayType.None,
             _              => DisplayType.Inline,
         };
+    }
+
+    public static FlexDirection GetFlexDirection(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.FlexDirection, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.FlexDirection);
+        return raw switch
+        {
+            "row-reverse"    => FlexDirection.RowReverse,
+            "column"         => FlexDirection.Column,
+            "column-reverse" => FlexDirection.ColumnReverse,
+            _                => FlexDirection.Row,
+        };
+    }
+
+    public static FlexWrap GetFlexWrap(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.FlexWrap, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.FlexWrap);
+        return raw switch
+        {
+            "wrap"         => FlexWrap.Wrap,
+            "wrap-reverse" => FlexWrap.WrapReverse,
+            _              => FlexWrap.NoWrap,
+        };
+    }
+
+    public static JustifyContent GetJustifyContent(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.JustifyContent, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.JustifyContent);
+        return raw switch
+        {
+            "flex-end"      => JustifyContent.FlexEnd,
+            "center"        => JustifyContent.Center,
+            "space-between" => JustifyContent.SpaceBetween,
+            "space-around"  => JustifyContent.SpaceAround,
+            "space-evenly"  => JustifyContent.SpaceEvenly,
+            _               => JustifyContent.FlexStart,
+        };
+    }
+
+    public static AlignItems GetAlignItems(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.AlignItems, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.AlignItems);
+        return raw switch
+        {
+            "flex-start" => AlignItems.FlexStart,
+            "flex-end"   => AlignItems.FlexEnd,
+            "center"     => AlignItems.Center,
+            "baseline"   => AlignItems.Baseline,
+            _            => AlignItems.Stretch,
+        };
+    }
+
+    public static AlignSelf GetAlignSelf(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.AlignSelf, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.AlignSelf);
+        return raw switch
+        {
+            "flex-start" => AlignSelf.FlexStart,
+            "flex-end"   => AlignSelf.FlexEnd,
+            "center"     => AlignSelf.Center,
+            "baseline"   => AlignSelf.Baseline,
+            "stretch"    => AlignSelf.Stretch,
+            _            => AlignSelf.Auto,
+        };
+    }
+
+    public static AlignContent GetAlignContent(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue("align-content", out var ov)
+            ? ov : node.Style.GetPropertyValue("align-content");
+        return raw switch
+        {
+            "flex-start"    => AlignContent.FlexStart,
+            "flex-end"      => AlignContent.FlexEnd,
+            "center"        => AlignContent.Center,
+            "space-between" => AlignContent.SpaceBetween,
+            "space-around"  => AlignContent.SpaceAround,
+            _               => AlignContent.Stretch,
+        };
+    }
+
+    public static int GetOrder(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue("order", out var ov)
+            ? ov : node.Style.GetPropertyValue("order");
+        return int.TryParse(raw, out var v) ? v : 0;
+    }
+
+    public static Visibility GetVisibility(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.Visibility, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.Visibility);
+        return raw switch
+        {
+            "hidden"   => Visibility.Hidden,
+            "collapse" => Visibility.Collapse,
+            _          => Visibility.Visible,
+        };
+    }
+
+    public static float GetMinWidth(this LayoutNode node, float total = 0, float size = 0)
+        => GetSizeOrDefault(node, PropertyNames.MinWidth, total, size, 0f);
+    public static float GetMaxWidth(this LayoutNode node, float total = 0, float size = 0)
+        => GetSizeOrDefault(node, PropertyNames.MaxWidth, total, size, float.PositiveInfinity);
+    public static float GetMinHeight(this LayoutNode node, float total = 0, float size = 0)
+        => GetSizeOrDefault(node, PropertyNames.MinHeight, total, size, 0f);
+    public static float GetMaxHeight(this LayoutNode node, float total = 0, float size = 0)
+        => GetSizeOrDefault(node, PropertyNames.MaxHeight, total, size, float.PositiveInfinity);
+
+    public static bool IsAutoMarginTop(this LayoutNode node) =>
+        node.Style.GetProperty(PropertyNames.MarginTop).RawValue is Constant<Length>;
+    public static bool IsAutoMarginBottom(this LayoutNode node) =>
+        node.Style.GetProperty(PropertyNames.MarginBottom).RawValue is Constant<Length>;
+
+    /// <summary>Returns true when min-width is auto/unset (not explicitly set to a length).</summary>
+    public static bool IsAutoMinWidth(this LayoutNode node)
+    {
+        if (node.StyleOverrides.TryGetValue("min-width", out var ov) && ov.Trim() is not ("auto" or ""))
+            return false;
+        var raw = node.Style.GetProperty(PropertyNames.MinWidth).RawValue;
+        return raw is null or Constant<Length>;
+    }
+
+    /// <summary>Returns true when min-height is auto/unset (not explicitly set to a length).</summary>
+    public static bool IsAutoMinHeight(this LayoutNode node)
+    {
+        if (node.StyleOverrides.TryGetValue("min-height", out var ov) && ov.Trim() is not ("auto" or ""))
+            return false;
+        var raw = node.Style.GetProperty(PropertyNames.MinHeight).RawValue;
+        return raw is null or Constant<Length>;
+    }
+
+    public static float GetFlexGrow(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.FlexGrow, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.FlexGrow);
+        return float.TryParse(raw, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0f;
+    }
+
+    public static float GetFlexShrink(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.FlexShrink, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.FlexShrink);
+        return float.TryParse(raw, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 1f;
+    }
+
+    /// <summary>Returns flex-basis in px, or float.NaN for 'auto'/'content'.</summary>
+    public static float GetFlexBasis(this LayoutNode node, float containerMain)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.FlexBasis, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.FlexBasis);
+        if (string.IsNullOrEmpty(raw) || raw == "auto" || raw == "content") return float.NaN;
+        if (raw.EndsWith("px") && float.TryParse(raw[..^2],
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
+        if (raw.EndsWith('%') && float.TryParse(raw[..^1],
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var pct))
+        {
+            // Percentage with indefinite container resolves to auto (§9.2)
+            if (float.IsPositiveInfinity(containerMain) || containerMain == float.MaxValue) return float.NaN;
+            return pct / 100f * containerMain;
+        }
+        if (node.Style.GetProperty(PropertyNames.FlexBasis).RawValue is Length l)
+            return l.Type == Length.Unit.Px ? (float)l.Value : float.NaN;
+        return float.NaN;
+    }
+
+    public static float GetGapRow(this LayoutNode node, float containerH, float fontSize)
+        => GetGap(node, PropertyNames.RowGap, "row-gap", containerH, fontSize);
+    public static float GetGapColumn(this LayoutNode node, float containerW, float fontSize)
+        => GetGap(node, PropertyNames.ColumnGap, "column-gap", containerW, fontSize);
+
+    /// <summary>Returns the gap value in px, or 0 when the property is not set.</summary>
+    private static float GetGap(LayoutNode node, string prop, string fallback, float total, float fontSize)
+    {
+        // Check StyleOverrides first (populated from matched CSS rules)
+        foreach (var name in new[] { prop, fallback })
+        {
+            if (node.StyleOverrides.TryGetValue(name, out var ov) && !string.IsNullOrEmpty(ov))
+            {
+                ov = ov.Trim();
+                if (ov.EndsWith("px") && float.TryParse(ov[..^2],
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
+                if (ov.EndsWith("em") && float.TryParse(ov[..^2],
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var em)) return em * fontSize;
+                if (ov.EndsWith('%') && float.TryParse(ov[..^1],
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var pct)) return pct / 100f * total;
+                // Plain number (px assumed)
+                if (float.TryParse(ov, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var plain)) return plain;
+            }
+        }
+
+        // Fallback to AngleSharp computed style
+        foreach (var name in new[] { prop, "grid-row-gap", "grid-column-gap" })
+        {
+            var raw = node.Style.GetProperty(name).RawValue;
+            if (raw is Length l)
+            {
+                return l.Type switch
+                {
+                    Length.Unit.Px      => (float)l.Value,
+                    Length.Unit.Em      => (float)l.Value * fontSize,
+                    Length.Unit.Percent => (float)l.Value / 100f * total,
+                    _                   => 0f,
+                };
+            }
+        }
+        return 0f;
     }
 
     public static bool GetFontBold(this LayoutNode node)
@@ -313,6 +542,40 @@ public static class StyleExtensions
         if (raw is Length borderLength && borderLength.Type == Length.Unit.Px)
             return (float)borderLength.Value;
         return 0f;
+    }
+
+    /// <summary>Returns a size property value or <paramref name="defaultValue"/> when unset/auto/none.</summary>
+    private static float GetSizeOrDefault(LayoutNode node, string propertyName, float total, float size, float defaultValue)
+    {
+        // Check StyleOverrides first
+        if (node.StyleOverrides.TryGetValue(propertyName, out var overrideStr))
+        {
+            overrideStr = overrideStr.Trim();
+            if (overrideStr is "" or "auto" or "none") return defaultValue;
+            if (overrideStr.EndsWith("px") && float.TryParse(overrideStr[..^2],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
+            if (overrideStr.EndsWith("em") && float.TryParse(overrideStr[..^2],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var em)) return em * size;
+            if (overrideStr.EndsWith('%') && float.TryParse(overrideStr[..^1],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var pct)) return pct / 100f * total;
+        }
+
+        var raw = node.Style.GetProperty(propertyName).RawValue;
+        if (raw is null or Constant<Length>) return defaultValue; // auto/none/unset
+        if (raw is not Length length) return defaultValue;
+
+        return length.Type switch
+        {
+            Length.Unit.Px => (float)length.Value,
+            Length.Unit.Em => (float)length.Value * size,
+            Length.Unit.Percent => (float)length.Value / 100f * total,
+            Length.Unit.Vw => (float)length.Value / 100f * total,
+            Length.Unit.Vh => (float)length.Value / 100f * total,
+            _ => defaultValue,
+        };
     }
 
     private static float GetSize(LayoutNode node, string propertyName, float total = 0, float size = 0)

@@ -165,7 +165,7 @@ internal static class Drawer
             return;
         }
 
-        if (display == DisplayType.Block)
+        if (display == DisplayType.Block || display == DisplayType.Flex || display == DisplayType.InlineFlex)
         {
             PaintBlock(canvas, node, viewportWidth);
             return;
@@ -246,20 +246,29 @@ internal static class Drawer
     /// <summary>Paints children sorted by z-index (negative first, then 0+).</summary>
     private static void PaintChildrenSorted(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
+        var display  = node.GetDisplay();
+        var isFlex   = display == DisplayType.Flex || display == DisplayType.InlineFlex;
         var children = node.Children;
 
+        // §5.4: Flex containers paint children in order-modified document order.
+        // Within each order bucket: negative z-index first, then normal, then non-negative stacked.
+        IEnumerable<LayoutNode> orderedChildren = isFlex
+            ? children.OrderBy(c => c.GetOrder())
+            : (IEnumerable<LayoutNode>)children;
+
         // Fast path — no z-sorted children
-        if (!children.Any(NeedsZSort))
+        if (!orderedChildren.Any(NeedsZSort))
         {
-            foreach (var child in children)
+            foreach (var child in orderedChildren)
                 PaintNode(canvas, child, viewportWidth);
             return;
         }
 
+        var childList = orderedChildren.ToList();
         // Negative z-index first, then normal flow (incl. position:relative without z-index), then non-negative stacked
-        var negZ   = children.Where(c => NeedsZSort(c) && c.GetZIndex() < 0).OrderBy(c => c.GetZIndex()).ToList();
-        var normal = children.Where(c => !NeedsZSort(c)).ToList();
-        var posZ   = children.Where(c => NeedsZSort(c) && c.GetZIndex() >= 0).OrderBy(c => c.GetZIndex()).ToList();
+        var negZ   = childList.Where(c => NeedsZSort(c) && c.GetZIndex() < 0).OrderBy(c => c.GetZIndex()).ToList();
+        var normal = childList.Where(c => !NeedsZSort(c)).ToList();
+        var posZ   = childList.Where(c => NeedsZSort(c) && c.GetZIndex() >= 0).OrderBy(c => c.GetZIndex()).ToList();
 
         foreach (var c in negZ)   PaintNode(canvas, c, viewportWidth);
         foreach (var c in normal) PaintNode(canvas, c, viewportWidth);

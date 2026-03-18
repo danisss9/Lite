@@ -1,6 +1,7 @@
 using AngleSharp.Io;
 using AngleSharp;
 using AngleSharp.Dom;
+using AngleSharp.Css.Dom;
 using Lite.Models;
 using Lite.Network;
 using Lite.Scripting;
@@ -129,6 +130,9 @@ internal static class Parser
         var href = element.TagName == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, element.TagName, directText, element.ComputeCurrentStyle(), href);
 
+        // Extract flex-related CSS properties that AngleSharp doesn't cascade
+        ExtractMatchedCssProperties(element, node);
+
         if (element.TagName == "IMG")
         {
             var src = element.GetAttribute("src");
@@ -223,6 +227,193 @@ internal static class Parser
         else if (!string.IsNullOrWhiteSpace(scriptEl.TextContent))
         {
             _pendingScripts.Add(scriptEl.TextContent);
+        }
+    }
+
+    // CSS properties that AngleSharp.Css doesn't reliably cascade via ComputeCurrentStyle()
+    private static readonly string[] s_extraProps =
+    [
+        "flex-direction", "flex-wrap", "justify-content", "align-items",
+        "align-self", "align-content", "flex-grow", "flex-shrink", "flex-basis", "order",
+        "row-gap", "column-gap", "gap",
+        "flex", "flex-flow",
+        "min-width", "max-width", "min-height", "max-height", "visibility"
+    ];
+
+    /// <summary>
+    /// Iterates all stylesheet rules that match <paramref name="element"/> and copies
+    /// flex-related property values into the node's StyleOverrides dictionary.
+    /// This works around AngleSharp.Css not cascading these properties through ComputeCurrentStyle().
+    /// </summary>
+    private static bool _debugCssOnce = false;
+    private static void ExtractMatchedCssProperties(IElement element, LayoutNode node)
+    {
+        if (element.Owner?.StyleSheets is null) return;
+
+        var sheets = element.Owner.StyleSheets.ToList();
+        if (!_debugCssOnce)
+        {
+            _debugCssOnce = true;
+            Console.WriteLine($"[CSS-DEBUG] Total stylesheets: {sheets.Count}");
+            foreach (var s in sheets)
+                Console.WriteLine($"  Sheet type: {s.GetType().FullName}, isCss: {s is ICssStyleSheet}");
+            if (sheets.OfType<ICssStyleSheet>().FirstOrDefault() is { } firstCss)
+            {
+                Console.WriteLine($"  First CSS sheet rules: {firstCss.Rules.Length}");
+                foreach (var r in firstCss.Rules.Take(5))
+                    Console.WriteLine($"    Rule type: {r.GetType().FullName}, isCssStyle: {r is ICssStyleRule}, text: {r.CssText?[..Math.Min(r.CssText?.Length ?? 0, 80)]}");
+            }
+        }
+
+        foreach (var sheet in sheets.OfType<ICssStyleSheet>())
+        {
+            foreach (var rule in sheet.Rules.OfType<ICssStyleRule>())
+            {
+                try
+                {
+                    if (!element.Matches(rule.SelectorText)) continue;
+                }
+                catch { continue; } // malformed selector
+
+                // Try GetPropertyValue first, then fall back to iterating CssText
+                var style = rule.Style;
+                foreach (var prop in s_extraProps)
+                {
+                    var val = style.GetPropertyValue(prop);
+                    if (!string.IsNullOrEmpty(val))
+                    {
+                        StoreProp(node, prop, val);
+                        continue;
+                    }
+                }
+
+                // Some versions of AngleSharp.Css don't expose flex properties via GetPropertyValue
+                // on the rule's style declaration. Fall back to parsing CssText.
+                ParseCssTextForFlexProps(rule.Style.CssText, node);
+            }
+        }
+    }
+
+    private static readonly HashSet<string> s_flexDirectionValues =
+        ["row", "row-reverse", "column", "column-reverse"];
+    private static readonly HashSet<string> s_flexWrapValues =
+        ["nowrap", "wrap", "wrap-reverse"];
+
+    private static void StoreProp(LayoutNode node, string prop, string val)
+    {
+        if (prop == "gap")
+        {
+            var parts = val.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            node.StyleOverrides["row-gap"]    = parts[0];
+            node.StyleOverrides["column-gap"] = parts.Length > 1 ? parts[1] : parts[0];
+            Console.WriteLine($"  [CSS] {node.TagName}#{node.Id}.{node.Text[..Math.Min(node.Text.Length, 20)]}: gap → row-gap={parts[0]}, column-gap={(parts.Length > 1 ? parts[1] : parts[0])}");
+        }
+        else if (prop == "flex")
+        {
+            // Decompose flex shorthand into flex-grow, flex-shrink, flex-basis
+            DecomposeFlexShorthand(node, val);
+        }
+        else if (prop == "flex-flow")
+        {
+            // Decompose flex-flow shorthand into flex-direction + flex-wrap
+            var parts = val.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var p in parts)
+            {
+                var lower = p.ToLowerInvariant();
+                if (s_flexDirectionValues.Contains(lower))
+                    node.StyleOverrides["flex-direction"] = lower;
+                else if (s_flexWrapValues.Contains(lower))
+                    node.StyleOverrides["flex-wrap"] = lower;
+            }
+        }
+        else
+        {
+            node.StyleOverrides[prop] = val;
+            Console.WriteLine($"  [CSS] {node.TagName}#{node.Id}: {prop} = {val}");
+        }
+    }
+
+    private static void DecomposeFlexShorthand(LayoutNode node, string val)
+    {
+        val = val.Trim().ToLowerInvariant();
+        switch (val)
+        {
+            case "none":
+                node.StyleOverrides["flex-grow"]   = "0";
+                node.StyleOverrides["flex-shrink"] = "0";
+                node.StyleOverrides["flex-basis"]  = "auto";
+                return;
+            case "auto":
+                node.StyleOverrides["flex-grow"]   = "1";
+                node.StyleOverrides["flex-shrink"] = "1";
+                node.StyleOverrides["flex-basis"]  = "auto";
+                return;
+        }
+
+        var parts = val.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1)
+        {
+            // Single value: if it's a number → flex: <grow> 1 0px
+            // If it's a length/percent → flex: 1 1 <basis>
+            if (float.TryParse(parts[0], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out _))
+            {
+                node.StyleOverrides["flex-grow"]   = parts[0];
+                node.StyleOverrides["flex-shrink"] = "1";
+                node.StyleOverrides["flex-basis"]  = "0px";
+            }
+            else
+            {
+                node.StyleOverrides["flex-grow"]   = "1";
+                node.StyleOverrides["flex-shrink"] = "1";
+                node.StyleOverrides["flex-basis"]  = parts[0];
+            }
+        }
+        else if (parts.Length == 2)
+        {
+            node.StyleOverrides["flex-grow"]   = parts[0];
+            // Second value: number → shrink, length → basis
+            if (float.TryParse(parts[1], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out _))
+            {
+                node.StyleOverrides["flex-shrink"] = parts[1];
+                node.StyleOverrides["flex-basis"]  = "0px";
+            }
+            else
+            {
+                node.StyleOverrides["flex-shrink"] = "1";
+                node.StyleOverrides["flex-basis"]  = parts[1];
+            }
+        }
+        else if (parts.Length >= 3)
+        {
+            node.StyleOverrides["flex-grow"]   = parts[0];
+            node.StyleOverrides["flex-shrink"] = parts[1];
+            node.StyleOverrides["flex-basis"]  = parts[2];
+        }
+    }
+
+    /// <summary>
+    /// Parses the raw CssText of a rule's style declaration to extract flex properties
+    /// that AngleSharp.Css may not expose via GetPropertyValue.
+    /// </summary>
+    private static void ParseCssTextForFlexProps(string cssText, LayoutNode node)
+    {
+        if (string.IsNullOrEmpty(cssText)) return;
+
+        foreach (var declaration in cssText.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var colonIdx = declaration.IndexOf(':');
+            if (colonIdx < 0) continue;
+
+            var prop = declaration[..colonIdx].Trim().ToLowerInvariant();
+            var val  = declaration[(colonIdx + 1)..].Trim();
+
+            if (string.IsNullOrEmpty(val)) continue;
+
+            // Only extract our target properties
+            if (Array.IndexOf(s_extraProps, prop) >= 0)
+                StoreProp(node, prop, val);
         }
     }
 

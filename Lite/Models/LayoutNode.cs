@@ -24,6 +24,12 @@ public class LayoutNode
     public string? TextOverride { get; set; }
     public string DisplayText => TextOverride ?? Text;
     public List<(string EventType, Action Handler)> EventListeners { get; } = [];
+    /// <summary>
+    /// Static position within a flex container, set by FlexEngine for abs-pos children.
+    /// Used by BoxEngine.ResolveAbsoluteBox when top/left are auto.
+    /// </summary>
+    public float? FlexStaticX { get; set; }
+    public float? FlexStaticY { get; set; }
 
     public LayoutNode(string? id, string tagName, string text, ICssStyleDeclaration style, string? href = null)
     {
