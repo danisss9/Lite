@@ -84,7 +84,13 @@ BrowserWindow
 ├── Drawer              Runs BoxEngine layout, then renders the tree to a SkiaSharp
 │                       bitmap; returns the pixel buffer and hit regions
 │
-├── BoxEngine           Two-pass CSS box model layout (block + inline line boxes)
+├── BoxEngine           Two-pass CSS box model layout (block + inline line boxes,
+│                       absolute/fixed positioning)
+│
+├── FlexEngine          CSS Flexbox Level 1 layout (flex-grow/shrink, wrapping,
+│                       alignment, gap, order, baseline)
+│
+├── TableEngine         Table layout (display:table, tr, td/th — two-pass row sizing)
 │
 ├── JsEngine            Jint-based JavaScript runtime with DOM API
 │   ├── JsDocument      document.getElementById / querySelector / createElement
@@ -105,38 +111,70 @@ BrowserWindow
 
 | Element | Behaviour |
 |---|---|
-| `div`, `section`, `header`, `footer`, `main`, `article`, `nav`, `aside`, `ul`, `ol`, `li`, `form`, `span` | Generic block or inline containers |
-| `h1`–`h6` | Headings with computed font size |
-| `p` | Paragraph |
+| `div`, `section`, `header`, `footer`, `main`, `article`, `nav`, `aside`, `form`, `span` | Generic block or inline containers |
+| `h1`–`h6` | Headings with computed font size and weight |
+| `p` | Paragraph with block layout |
 | `a` | Link — opens in the system browser on click |
-| `img` | Image loaded via HTTP; falls back to a placeholder |
+| `img` | Image loaded via HTTP; falls back to a placeholder with alt text |
 | `input` (text) | Focusable text field with keyboard input and backspace |
 | `input` (checkbox) | Toggle on click |
 | `button`, `input[type=submit]` | Triggers `click` event handlers |
-| `label` | Rendered as text |
+| `label` | Inline by default |
+| `strong`, `b` | Bold text |
+| `em`, `i`, `cite`, `dfn` | Italic text |
+| `u`, `ins` | Underline |
+| `s`, `del`, `strike` | Strikethrough |
+| `small`, `sub`, `sup` | Smaller text / subscript / superscript |
+| `mark` | Yellow highlight |
+| `code`, `kbd`, `samp`, `var`, `tt` | Monospace font |
+| `pre` | Preformatted block with preserved whitespace |
+| `blockquote` | Indented block quote |
+| `hr` | Horizontal rule |
+| `br` | Forced line break |
+| `ul`, `ol`, `li` | Unordered (bullet) and ordered (numbered) lists |
+| `dl`, `dt`, `dd` | Definition lists |
+| `table`, `thead`, `tbody`, `tfoot`, `tr`, `td`, `th` | Table layout |
 | `script` | Inline and `src` scripts executed after parse |
 
 ---
 
 ## Supported CSS Properties
 
-Styles are computed by AngleSharp and read at paint time.
-
-| Property | Notes |
+| Property | Values |
 |---|---|
-| `display` | `block`, `inline`, `inline-block`, `none` |
-| `width`, `height` | `px`, `%`, `auto` |
-| `margin`, `padding` | Shorthand and individual sides; `px`, `%`, `em`, `rem`, `auto` |
-| `border-width` | `px` |
-| `border-color` | Any CSS color |
-| `border-radius` | `px` |
+| `display` | `block`, `inline`, `inline-block`, `list-item`, `flex`, `inline-flex`, `table`, `table-row`, `table-cell`, `none` |
+| `width`, `height` | `px`, `%`, `vh`, `vw`, `auto` |
+| `min-width`, `max-width`, `min-height`, `max-height` | `px`, `%` |
+| `margin`, `padding` | Shorthand and individual sides; `px`, `%`, `em`, `auto` |
+| `border-width` | `px` per side |
+| `border-color` | Any CSS color per side |
+| `box-sizing` | `border-box`, `content-box` |
 | `background-color` | Any CSS color |
 | `color` | Any CSS color |
-| `font-size` | `px`, `em`, `rem`, keyword sizes |
+| `font-size` | `px`, `em`, keyword sizes |
 | `font-weight` | `bold` / normal |
 | `font-style` | `italic` / normal |
-| `text-decoration` | `underline` |
-| `text-align` | `left`, `center`, `right` |
+| `font-family` | Named families; `monospace` → Consolas, `system-ui` → Segoe UI |
+| `line-height` | `px`, `em`, `%`, unitless multiplier |
+| `text-decoration` | `underline`, `line-through` |
+| `text-align` | `left`, `center`, `right`, `justify` |
+| `white-space` | `normal`, `nowrap`, `pre`, `pre-wrap`, `pre-line` |
+| `position` | `static`, `relative`, `absolute`, `fixed` |
+| `top`, `right`, `bottom`, `left` | `px`, `%` |
+| `z-index` | Integer |
+| `overflow` | `visible`, `hidden`, `scroll`, `auto` |
+| `visibility` | `visible`, `hidden`, `collapse` |
+| `flex-direction` | `row`, `row-reverse`, `column`, `column-reverse` |
+| `flex-wrap` | `nowrap`, `wrap`, `wrap-reverse` |
+| `flex-grow`, `flex-shrink` | Number |
+| `flex-basis` | `px`, `%`, `auto` |
+| `flex` | Shorthand |
+| `justify-content` | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `space-evenly` |
+| `align-items`, `align-self` | `stretch`, `flex-start`, `flex-end`, `center`, `baseline` |
+| `align-content` | `stretch`, `flex-start`, `flex-end`, `center`, `space-between`, `space-around` |
+| `flex-flow` | Shorthand |
+| `gap`, `row-gap`, `column-gap` | `px`, `em`, `%` |
+| `order` | Integer |
 | `cursor` | `pointer`, `text`, `default` |
 
 ---
@@ -216,7 +254,7 @@ Standard HTML inline handlers are supported:
 dotnet run --project Example
 ```
 
-The example serves the `Example/resources/` folder on `http://localhost:4444` and opens it in a `BrowserWindow`. The demo page includes typography, buttons, form inputs, a counter, and a todo list.
+The example serves the `Example/resources/` folder on `http://localhost:4444` and opens it in a `BrowserWindow`. The demo page covers typography, inline text elements, lists, forms, flexbox layouts, tables, positioning, z-index, overflow clipping, and percentage sizing.
 
 ---
 
