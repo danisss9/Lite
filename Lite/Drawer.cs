@@ -19,7 +19,11 @@ internal static class Drawer
         var bitmap    = new SKBitmap(imageInfo);
         var canvas    = new SKCanvas(bitmap);
 
-        canvas.Clear(new SKColor(240, 240, 242));
+        // Propagate body background to the viewport canvas (matches browser behaviour)
+        var body      = root.Children.FirstOrDefault(c => c.TagName == "BODY") ?? root;
+        var clearColor = body.GetBackgroundColor();
+        if (clearColor == SKColors.Transparent) clearColor = new SKColor(240, 240, 242);
+        canvas.Clear(clearColor);
         _hitRegions = [];
 
         canvas.Save();
@@ -28,6 +32,9 @@ internal static class Drawer
         PaintNode(canvas, root, width);
 
         canvas.Restore();
+
+        // Paint position:fixed nodes after restoring scroll so they stay on screen
+        PaintFixedNodes(canvas, root, width);
 
         viewport.ContentHeight = root.Box.MarginBox.Bottom;
         DrawScrollbar(canvas, viewport, width, height);
@@ -59,10 +66,68 @@ internal static class Drawer
     // Paint tree
     // -------------------------------------------------------------------------
 
+    private static void PaintFixedNodes(SKCanvas canvas, LayoutNode node, int viewportWidth)
+    {
+        foreach (var child in node.Children)
+        {
+            if (child.GetPosition() == PositionType.Fixed)
+                PaintNode(canvas, child, viewportWidth);
+            else
+                PaintFixedNodes(canvas, child, viewportWidth);
+        }
+    }
+
     private static void PaintNode(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
         var display = node.GetDisplay();
         if (display == DisplayType.None) return;
+
+        // Skip fixed nodes in the normal tree pass — painted separately after scroll restore
+        if (node.GetPosition() == PositionType.Fixed) return;
+
+        // position:relative — translate by offset, paint normally, then restore
+        var pos = node.GetPosition();
+        if (pos == PositionType.Relative)
+        {
+            var fontSize = node.GetFontSize();
+            var t = node.GetOffsetTop   (node.Box.ContentBox.Height, fontSize);
+            var l = node.GetOffsetLeft  (node.Box.ContentBox.Width,  fontSize);
+            var r = node.GetOffsetRight (node.Box.ContentBox.Width,  fontSize);
+            var b = node.GetOffsetBottom(node.Box.ContentBox.Height, fontSize);
+            var dx = !float.IsNaN(l) ? l : !float.IsNaN(r) ? -r : 0f;
+            var dy = !float.IsNaN(t) ? t : !float.IsNaN(b) ? -b : 0f;
+            if (dx != 0f || dy != 0f)
+            {
+                canvas.Save();
+                canvas.Translate(dx, dy);
+                PaintNodeInner(canvas, node, viewportWidth);
+                canvas.Restore();
+                return;
+            }
+        }
+
+        PaintNodeInner(canvas, node, viewportWidth);
+    }
+
+    private static void PaintNodeInner(SKCanvas canvas, LayoutNode node, int viewportWidth)
+    {
+        // overflow:hidden/scroll/auto — clip children to padding box
+        var overflow = node.GetOverflow();
+        var clip     = overflow == OverflowType.Hidden || overflow == OverflowType.Scroll || overflow == OverflowType.Auto;
+        if (clip)
+        {
+            canvas.Save();
+            canvas.ClipRect(node.Box.PaddingBox);
+        }
+
+        PaintNodeContent(canvas, node, viewportWidth);
+
+        if (clip) canvas.Restore();
+    }
+
+    private static void PaintNodeContent(SKCanvas canvas, LayoutNode node, int viewportWidth)
+    {
+        var display = node.GetDisplay();
 
         switch (node.TagName)
         {
@@ -70,8 +135,7 @@ internal static class Drawer
             case "P":
             case "LABEL":
                 PaintTextBlock(canvas, node, viewportWidth);
-                foreach (var child in node.Children)
-                    PaintNode(canvas, child, viewportWidth);
+                PaintChildrenSorted(canvas, node, viewportWidth);
                 return;
 
             case "A":
@@ -95,22 +159,19 @@ internal static class Drawer
                 return;
         }
 
-        // List items: paint bullet/number marker then recurse children as a block
         if (display == DisplayType.ListItem)
         {
             PaintListItem(canvas, node, viewportWidth);
             return;
         }
 
-        // Any block-display element: paint background/border and recurse children
         if (display == DisplayType.Block)
         {
             PaintBlock(canvas, node, viewportWidth);
             return;
         }
 
-        // Generic inline: if this node carries text (e.g. <strong>, <em>, <mark>, <code>, #TEXT),
-        // paint it directly using its own computed style (bold, italic, background, etc.)
+        // Generic inline: if this node carries text (e.g. <strong>, <em>, <mark>, <code>, #TEXT)
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
             var bgColor = node.GetBackgroundColor();
@@ -128,8 +189,7 @@ internal static class Drawer
         }
 
         // Inline container with children (e.g. <span>, <a> wrappers) — recurse
-        foreach (var child in node.Children)
-            PaintNode(canvas, child, viewportWidth);
+        PaintChildrenSorted(canvas, node, viewportWidth);
     }
 
     // -------------------------------------------------------------------------
@@ -163,8 +223,47 @@ internal static class Drawer
                             box.ContentBox.Left, box.ContentBox.Top, box.ContentBox.Width, font, paint);
         }
 
-        foreach (var child in node.Children)
-            PaintNode(canvas, child, viewportWidth);
+        PaintChildrenSorted(canvas, node, viewportWidth);
+    }
+
+    /// <summary>
+    /// Only absolute/fixed nodes (or relative with an explicit z-index) participate in
+    /// z-index stacking. position:relative without z-index paints in normal document order.
+    /// </summary>
+    private static bool NeedsZSort(LayoutNode c)
+    {
+        var p = c.GetPosition();
+        if (p == PositionType.Absolute || p == PositionType.Fixed) return true;
+        if (p == PositionType.Relative)
+        {
+            // Only create stacking context when z-index is explicitly set (not "auto"/unset)
+            var raw = c.Style.GetPropertyValue(AngleSharp.Css.PropertyNames.ZIndex);
+            return !string.IsNullOrEmpty(raw) && raw != "auto" && int.TryParse(raw, out _);
+        }
+        return false;
+    }
+
+    /// <summary>Paints children sorted by z-index (negative first, then 0+).</summary>
+    private static void PaintChildrenSorted(SKCanvas canvas, LayoutNode node, int viewportWidth)
+    {
+        var children = node.Children;
+
+        // Fast path — no z-sorted children
+        if (!children.Any(NeedsZSort))
+        {
+            foreach (var child in children)
+                PaintNode(canvas, child, viewportWidth);
+            return;
+        }
+
+        // Negative z-index first, then normal flow (incl. position:relative without z-index), then non-negative stacked
+        var negZ   = children.Where(c => NeedsZSort(c) && c.GetZIndex() < 0).OrderBy(c => c.GetZIndex()).ToList();
+        var normal = children.Where(c => !NeedsZSort(c)).ToList();
+        var posZ   = children.Where(c => NeedsZSort(c) && c.GetZIndex() >= 0).OrderBy(c => c.GetZIndex()).ToList();
+
+        foreach (var c in negZ)   PaintNode(canvas, c, viewportWidth);
+        foreach (var c in normal) PaintNode(canvas, c, viewportWidth);
+        foreach (var c in posZ)   PaintNode(canvas, c, viewportWidth);
     }
 
     // -------------------------------------------------------------------------
@@ -217,8 +316,7 @@ internal static class Drawer
         }
 
         // Anchor wraps child nodes (e.g. #TEXT created by parser for mixed content)
-        foreach (var child in node.Children)
-            PaintNode(canvas, child, viewportWidth);
+        PaintChildrenSorted(canvas, node, viewportWidth);
     }
 
     // -------------------------------------------------------------------------
@@ -409,8 +507,7 @@ internal static class Drawer
                             box.ContentBox.Left, box.ContentBox.Top, box.ContentBox.Width, font, paint);
         }
 
-        foreach (var child in node.Children)
-            PaintNode(canvas, child, viewportWidth);
+        PaintChildrenSorted(canvas, node, viewportWidth);
     }
 
     private static bool IsInsideOrderedList(LayoutNode node)

@@ -13,6 +13,130 @@ internal static class BoxEngine
     public static void Layout(LayoutNode root, float viewportWidth, float viewportHeight)
     {
         LayoutBlock(root, 0, 0, viewportWidth, viewportWidth, viewportHeight);
+        // Second pass: lay out all absolute/fixed nodes now that normal-flow boxes are finalised
+        LayoutPositioned(root, root.Box, viewportWidth, viewportHeight);
+    }
+
+    /// <summary>
+    /// Walks the tree and resolves position:absolute and position:fixed boxes.
+    /// containingBox is the padding-box of the nearest positioned ancestor.
+    /// viewportBox is the full viewport rect (for position:fixed).
+    /// </summary>
+    private static void LayoutPositioned(LayoutNode node,
+        BoxDimensions containingBox,
+        float viewportWidth, float viewportHeight)
+    {
+        var viewportBox = new BoxDimensions
+        {
+            ContentBox = new SKRect(0, 0, viewportWidth, viewportHeight)
+        };
+
+        foreach (var child in node.Children)
+        {
+            var pos = child.GetPosition();
+
+            if (pos == PositionType.Absolute || pos == PositionType.Fixed)
+            {
+                var cb = pos == PositionType.Fixed ? viewportBox : containingBox;
+                ResolveAbsoluteBox(child, cb, viewportWidth, viewportHeight);
+                // Recurse using this child as the new containing block
+                LayoutPositioned(child, child.Box, viewportWidth, viewportHeight);
+            }
+            else
+            {
+                // Pass down nearest positioned ancestor as containing block
+                var nextCb = child.IsPositioned() ? child.Box : containingBox;
+                LayoutPositioned(child, nextCb, viewportWidth, viewportHeight);
+            }
+        }
+    }
+
+    private static void ResolveAbsoluteBox(LayoutNode node, BoxDimensions cb,
+        float viewportWidth, float viewportHeight)
+    {
+        var cbRect   = cb.PaddingBox;
+        var fontSize = node.GetFontSize();
+        var padding  = node.GetPadding(cbRect.Width, cbRect.Height, fontSize);
+        var border   = node.GetBorderWidth();
+        var margin   = node.GetMargin(cbRect.Width, cbRect.Height, fontSize);
+
+        var top    = node.GetOffsetTop   (cbRect.Height, fontSize);
+        var right  = node.GetOffsetRight (cbRect.Width,  fontSize);
+        var bottom = node.GetOffsetBottom(cbRect.Height, fontSize);
+        var left   = node.GetOffsetLeft  (cbRect.Width,  fontSize);
+
+        // Resolve width
+        var explicitW = node.GetWidth(cbRect.Width);
+        float contentW;
+        if (explicitW > 0)
+            contentW = explicitW;
+        else if (!float.IsNaN(left) && !float.IsNaN(right))
+            contentW = Math.Max(0, cbRect.Width - left - right - margin.Left - margin.Right - border.Left - border.Right - padding.Left - padding.Right);
+        else
+        {
+            // Shrink-wrap to text content; fall back to half container width for block containers
+            if (!string.IsNullOrEmpty(node.DisplayText))
+            {
+                using var shrinkFont = TextMeasure.CreateFont(node);
+                contentW = shrinkFont.MeasureText(node.DisplayText);
+            }
+            else
+                contentW = Math.Max(0, cbRect.Width * 0.5f);
+        }
+
+        // Resolve X
+        float contentX;
+        if (!float.IsNaN(left))
+            contentX = cbRect.Left + left + margin.Left + border.Left + padding.Left;
+        else if (!float.IsNaN(right))
+            contentX = cbRect.Right - right - margin.Right - border.Right - padding.Right - contentW;
+        else
+            contentX = cbRect.Left + margin.Left + border.Left + padding.Left;
+
+        // Lay out children to get content height
+        var contentY0 = cbRect.Top; // temp origin for children layout
+        var contentH  = LayoutChildren(node.Children,
+            contentX, contentY0,
+            contentW, viewportWidth, viewportHeight);
+
+        if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
+        {
+            using var font = TextMeasure.CreateFont(node);
+            var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentW, 1f), font, node.GetWhiteSpace());
+            contentH = lines.Sum(l => l.Height);
+        }
+
+        var explicitH = node.GetHeight(cbRect.Height);
+        if (explicitH > 0)
+        {
+            var isBorderBox = node.Style.GetPropertyValue("box-sizing") == "border-box";
+            contentH = isBorderBox
+                ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
+                : explicitH;
+        }
+        else if (!float.IsNaN(top) && !float.IsNaN(bottom))
+            contentH = Math.Max(0, cbRect.Height - top - bottom - margin.Top - margin.Bottom - border.Top - border.Bottom - padding.Top - padding.Bottom);
+
+        // Resolve Y
+        float contentY;
+        if (!float.IsNaN(top))
+            contentY = cbRect.Top + top + margin.Top + border.Top + padding.Top;
+        else if (!float.IsNaN(bottom))
+            contentY = cbRect.Bottom - bottom - margin.Bottom - border.Bottom - padding.Bottom - contentH;
+        else
+            contentY = cbRect.Top + margin.Top + border.Top + padding.Top;
+
+        // Re-layout children at the correct absolute Y
+        if (contentY != contentY0)
+            LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight);
+
+        node.Box = new BoxDimensions
+        {
+            ContentBox = new SKRect(contentX, contentY, contentX + contentW, contentY + contentH),
+            Padding    = padding,
+            Border     = border,
+            Margin     = margin,
+        };
     }
 
     // -------------------------------------------------------------------------
@@ -74,9 +198,15 @@ internal static class BoxEngine
             contentH = lines.Sum(l => l.Height);
         }
 
-        // Explicit height overrides
+        // Explicit height overrides — respect box-sizing: border-box
         var explicitH = node.GetHeight(viewportHeight);
-        if (explicitH > 0) contentH = explicitH;
+        if (explicitH > 0)
+        {
+            var isBorderBox = node.Style.GetPropertyValue("box-sizing") == "border-box";
+            contentH = isBorderBox
+                ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
+                : explicitH;
+        }
 
         node.Box = new BoxDimensions
         {
@@ -116,6 +246,14 @@ internal static class BoxEngine
             if (display == DisplayType.None)
             {
                 child.Box = default;
+                i++;
+                continue;
+            }
+
+            // Absolute/fixed elements are removed from normal flow
+            var pos = child.GetPosition();
+            if (pos == PositionType.Absolute || pos == PositionType.Fixed)
+            {
                 i++;
                 continue;
             }
@@ -243,6 +381,10 @@ internal static class BoxEngine
         {
             var display = node.GetDisplay();
             if (display == DisplayType.None) continue;
+
+            // Absolute/fixed are out of flow — skip in inline runs
+            var nodePos = node.GetPosition();
+            if (nodePos == PositionType.Absolute || nodePos == PositionType.Fixed) continue;
 
             // <br> → forced line break item
             if (node.TagName == "BR")

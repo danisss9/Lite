@@ -198,6 +198,32 @@ console.log(greet("World"));</pre>
       <div id="todo-list"></div>
     </section>
 
+    <!-- CSS Positioning -->
+    <section class="card">
+      <h2>CSS Positioning</h2>
+
+      <p>position: relative — box shifted 12px right and 8px down from its normal position:</p>
+      <div class="pos-relative-demo">Shifted</div>
+
+      <p>position: absolute — badge anchored to top-right of the container:</p>
+      <div class="pos-container">
+        Container (position: relative)
+        <span class="pos-badge">NEW</span>
+      </div>
+
+      <p>overflow: hidden — content clipped to box:</p>
+      <div class="overflow-hidden-demo">
+        <p>This paragraph is inside an overflow:hidden container that is shorter than the content, so the bottom gets clipped away.</p>
+        <p>This second paragraph should not be visible.</p>
+      </div>
+
+      <p>z-index — red box (z-index: 2) paints on top of blue box (z-index: 1):</p>
+      <div class="zindex-container">
+        <div class="zindex-blue">z:1</div>
+        <div class="zindex-red">z:2</div>
+      </div>
+    </section>
+
   </main>
 
   <footer>

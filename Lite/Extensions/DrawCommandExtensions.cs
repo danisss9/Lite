@@ -9,6 +9,8 @@ namespace Lite.Extensions;
 public enum DisplayType  { Block, Inline, InlineBlock, ListItem, None }
 public enum TextAlign    { Left, Center, Right, Justify }
 public enum WhiteSpace   { Normal, NoWrap, Pre, PreWrap, PreLine }
+public enum PositionType { Static, Relative, Absolute, Fixed }
+public enum OverflowType { Visible, Hidden, Scroll, Auto }
 
 public static class StyleExtensions
 {
@@ -110,6 +112,66 @@ public static class StyleExtensions
             "pre-line" => WhiteSpace.PreLine,
             _          => WhiteSpace.Normal,
         };
+    }
+
+    public static PositionType GetPosition(this LayoutNode node) =>
+        node.Style.GetPropertyValue(PropertyNames.Position) switch
+        {
+            "relative" => PositionType.Relative,
+            "absolute" => PositionType.Absolute,
+            "fixed"    => PositionType.Fixed,
+            _          => PositionType.Static,
+        };
+
+    public static bool IsPositioned(this LayoutNode node) =>
+        node.GetPosition() != PositionType.Static;
+
+    public static OverflowType GetOverflow(this LayoutNode node) =>
+        node.Style.GetPropertyValue(PropertyNames.Overflow) switch
+        {
+            "hidden" => OverflowType.Hidden,
+            "scroll" => OverflowType.Scroll,
+            "auto"   => OverflowType.Auto,
+            _        => OverflowType.Visible,
+        };
+
+    public static int GetZIndex(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.ZIndex, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.ZIndex);
+        return int.TryParse(raw, out var z) ? z : 0;
+    }
+
+    /// <summary>Returns the value of a position offset property (top/right/bottom/left).
+    /// Returns float.NaN when the property is 'auto' or unset.</summary>
+    public static float GetOffsetTop(this LayoutNode node, float total = 0, float size = 0)    => GetOffset(node, PropertyNames.Top,    total, size);
+    public static float GetOffsetRight(this LayoutNode node, float total = 0, float size = 0)  => GetOffset(node, PropertyNames.Right,  total, size);
+    public static float GetOffsetBottom(this LayoutNode node, float total = 0, float size = 0) => GetOffset(node, PropertyNames.Bottom, total, size);
+    public static float GetOffsetLeft(this LayoutNode node, float total = 0, float size = 0)   => GetOffset(node, PropertyNames.Left,   total, size);
+
+    private static float GetOffset(LayoutNode node, string prop, float total, float size)
+    {
+        if (node.StyleOverrides.TryGetValue(prop, out var ov))
+        {
+            ov = ov.Trim();
+            if (ov == "auto") return float.NaN;
+            if (ov.EndsWith("px") && float.TryParse(ov[..^2],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
+            if (ov.EndsWith('%') && float.TryParse(ov[..^1],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var pct)) return pct / 100f * total;
+        }
+        if (node.Style.GetProperty(prop).RawValue is Constant<Length>) return float.NaN; // auto
+        if (node.Style.GetProperty(prop).RawValue is Length l)
+            return l.Type switch
+            {
+                Length.Unit.Px      => (float)l.Value,
+                Length.Unit.Em      => (float)l.Value * size,
+                Length.Unit.Percent => (float)l.Value / 100f * total,
+                _                   => float.NaN,
+            };
+        return float.NaN;
     }
 
     /// <summary>Returns true when the given horizontal margin side is 'auto'.</summary>
