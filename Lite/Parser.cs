@@ -167,10 +167,11 @@ internal static class Parser
                 if (childNode is IText textNode)
                 {
                     var text = CollapseWhitespace(textNode.Data);
-                    // Skip inter-element whitespace (e.g. newlines between block tags),
-                    // but keep text that has real content even if it has surrounding spaces
-                    // (e.g. " and " between two inline elements must not lose its spaces).
-                    if (text.Trim().Length > 0)
+                    // Include any non-empty text — whitespace-only nodes (" ") between
+                    // inline siblings need to produce a space; purely empty strings are skipped.
+                    // Whitespace-only nodes between block siblings are filtered out later in
+                    // LayoutChildren (runs consisting solely of whitespace nodes are skipped).
+                    if (text.Length > 0)
                     {
                         var textChild = new LayoutNode(null, "#TEXT", text, parentStyle);
                         textChild.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "inline";

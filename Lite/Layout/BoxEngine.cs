@@ -146,6 +146,11 @@ internal static class BoxEngine
                     run.Add(children[i]);
                     i++;
                 }
+                // Skip runs that are solely whitespace-only #TEXT nodes — these are
+                // inter-block whitespace artifacts (e.g. newlines between <div>s).
+                if (run.All(n => n.TagName == "#TEXT" && n.DisplayText.Trim().Length == 0))
+                    continue;
+
                 var runH = LayoutInlineRun(run, contentX, cursorY, contentW, viewportWidth, viewportHeight);
                 cursorY         += runH;
                 prevMarginBottom = 0f;
@@ -206,6 +211,11 @@ internal static class BoxEngine
 
             if (lineX > 0 && lineX + item.Width > maxWidth)
                 CommitLine();
+
+            // Skip whitespace-only text at the start of a line
+            if (lineX == 0 && item.Kind == InlineItemKind.Text &&
+                item.Text != null && item.Text.Trim().Length == 0)
+                continue;
 
             placed.Add((item, lineX, lineY));
             lineX     += item.Width;
