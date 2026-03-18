@@ -25,7 +25,6 @@ internal static class Drawer
         canvas.Save();
         canvas.Translate(0, -viewport.ScrollY);
 
-        // Collect content height from root box for scrollbar
         PaintNode(canvas, root, width);
 
         canvas.Restore();
@@ -62,11 +61,12 @@ internal static class Drawer
 
     private static void PaintNode(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
-        if (node.GetDisplay() == DisplayType.None) return;
+        var display = node.GetDisplay();
+        if (display == DisplayType.None) return;
 
         switch (node.TagName)
         {
-            case { } h when h.StartsWith('H') && h.Length == 2:
+            case { } h when h.StartsWith('H') && h.Length == 2 && char.IsDigit(h[1]):
             case "P":
             case "LABEL":
                 PaintTextBlock(canvas, node, viewportWidth);
@@ -89,16 +89,45 @@ internal static class Drawer
             case "BUTTON":
                 PaintButton(canvas, node);
                 return;
+
+            case "HR":
+                PaintHorizontalRule(canvas, node);
+                return;
+        }
+
+        // List items: paint bullet/number marker then recurse children as a block
+        if (display == DisplayType.ListItem)
+        {
+            PaintListItem(canvas, node, viewportWidth);
+            return;
         }
 
         // Any block-display element: paint background/border and recurse children
-        if (node.GetDisplay() == DisplayType.Block)
+        if (display == DisplayType.Block)
         {
             PaintBlock(canvas, node, viewportWidth);
             return;
         }
 
-        // Generic inline fallback: recurse children
+        // Generic inline: if this node carries text (e.g. <strong>, <em>, <mark>, <code>, #TEXT),
+        // paint it directly using its own computed style (bold, italic, background, etc.)
+        if (!string.IsNullOrEmpty(node.DisplayText))
+        {
+            var bgColor = node.GetBackgroundColor();
+            if (bgColor != SKColors.Transparent)
+            {
+                using var bgPaint = new SKPaint { Color = bgColor };
+                canvas.DrawRect(node.Box.ContentBox, bgPaint);
+            }
+            using var font  = TextMeasure.CreateFont(node);
+            using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+            DrawWrappedText(canvas, node, node.DisplayText,
+                node.Box.ContentBox.Left, node.Box.ContentBox.Top,
+                node.Box.ContentBox.Width, font, paint);
+            return;
+        }
+
+        // Inline container with children (e.g. <span>, <a> wrappers) — recurse
         foreach (var child in node.Children)
             PaintNode(canvas, child, viewportWidth);
     }
@@ -130,8 +159,8 @@ internal static class Drawer
         {
             using var font  = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
-            DrawWrappedText(canvas, node.DisplayText, box.ContentBox.Left, box.ContentBox.Top,
-                            box.ContentBox.Width, font, paint, node.IsUnderline());
+            DrawWrappedText(canvas, node, node.DisplayText,
+                            box.ContentBox.Left, box.ContentBox.Top, box.ContentBox.Width, font, paint);
         }
 
         foreach (var child in node.Children)
@@ -144,21 +173,28 @@ internal static class Drawer
 
     private static void PaintTextBlock(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
-        if (string.IsNullOrEmpty(node.DisplayText)) return;
+        var box = node.Box;
 
-        var box     = node.Box;
-        using var font  = TextMeasure.CreateFont(node);
-        using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+        var bgColor = node.GetBackgroundColor();
+        if (bgColor != SKColors.Transparent)
+        {
+            using var bgPaint = new SKPaint { Color = bgColor };
+            canvas.DrawRect(box.PaddingBox, bgPaint);
+        }
 
-        var x        = box.ContentBox.Left;
-        var y        = box.ContentBox.Top;
-        var maxWidth = box.ContentBox.Width;
-
-        DrawWrappedText(canvas, node.DisplayText, x, y, maxWidth, font, paint, node.IsUnderline());
+        DrawBorders(canvas, box, node);
 
         var cursor = node.GetCursor();
         if (cursor != CursorType.Default)
             _hitRegions.Add(new HitRegion(box.MarginBox, cursor, node.Href));
+
+        if (string.IsNullOrEmpty(node.DisplayText)) return;
+
+        using var font  = TextMeasure.CreateFont(node);
+        using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+
+        DrawWrappedText(canvas, node, node.DisplayText,
+                        box.ContentBox.Left, box.ContentBox.Top, box.ContentBox.Width, font, paint);
     }
 
     // -------------------------------------------------------------------------
@@ -167,17 +203,22 @@ internal static class Drawer
 
     private static void PaintAnchor(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
-        if (string.IsNullOrEmpty(node.DisplayText)) return;
-
-        var box     = node.Box;
-        using var font  = TextMeasure.CreateFont(node);
-        using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
-
-        DrawWrappedText(canvas, node.DisplayText, box.ContentBox.Left, box.ContentBox.Top,
-                        box.ContentBox.Width, font, paint, node.IsUnderline());
-
         var cursor = node.GetCursor();
-        _hitRegions.Add(new HitRegion(box.BorderBox, cursor, node.Href));
+        _hitRegions.Add(new HitRegion(node.Box.BorderBox, cursor, node.Href));
+
+        if (!string.IsNullOrEmpty(node.DisplayText))
+        {
+            var box     = node.Box;
+            using var font  = TextMeasure.CreateFont(node);
+            using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+            DrawWrappedText(canvas, node, node.DisplayText, box.ContentBox.Left, box.ContentBox.Top,
+                            box.ContentBox.Width, font, paint);
+            return;
+        }
+
+        // Anchor wraps child nodes (e.g. #TEXT created by parser for mixed content)
+        foreach (var child in node.Children)
+            PaintNode(canvas, child, viewportWidth);
     }
 
     // -------------------------------------------------------------------------
@@ -283,24 +324,117 @@ internal static class Drawer
 
     private static void PaintButton(SKCanvas canvas, LayoutNode node)
     {
-        var rect = node.Box.ContentBox;
+        var box  = node.Box;
+        var rect = box.ContentBox;
 
         var btnLabel = node.DisplayText;
         if (string.IsNullOrEmpty(btnLabel)) node.Attributes.TryGetValue("value", out btnLabel);
         if (string.IsNullOrEmpty(btnLabel)) btnLabel = "Button";
 
-        using var bgPaint     = new SKPaint { Color = new SKColor(225, 225, 225) };
-        canvas.DrawRect(rect, bgPaint);
+        var bgColor = node.GetBackgroundColor();
+        if (bgColor == SKColors.Transparent) bgColor = new SKColor(225, 225, 225);
+        using var bgPaint = new SKPaint { Color = bgColor };
+        canvas.DrawRect(box.PaddingBox, bgPaint);
 
-        using var borderPaint = new SKPaint { Color = new SKColor(173, 173, 173), Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
-        canvas.DrawRect(rect, borderPaint);
+        DrawBorders(canvas, node.Box, node);
 
-        using var btnFont  = new SKFont { Size = 13 };
-        using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
+        using var btnFont   = new SKFont { Size = 13 };
+        var textColor = node.GetColor();
+        using var textPaint = new SKPaint { Color = textColor, IsAntialias = true };
         canvas.DrawText(btnLabel, rect.Left + FormLayout.ButtonPaddingX, rect.Top + FormLayout.ButtonPaddingY + 13,
                         SKTextAlign.Left, btnFont, textPaint);
 
         _hitRegions.Add(new HitRegion(rect, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.Button));
+    }
+
+    // -------------------------------------------------------------------------
+    // Horizontal rule
+    // -------------------------------------------------------------------------
+
+    private static void PaintHorizontalRule(SKCanvas canvas, LayoutNode node)
+    {
+        var box   = node.Box;
+        var y     = box.BorderBox.Top + box.Border.Top / 2f;
+        var color = node.GetBorderTopColor();
+        var thick = box.Border.Top > 0 ? box.Border.Top : 1f;
+
+        using var paint = new SKPaint { Color = color, StrokeWidth = thick, IsAntialias = false };
+        canvas.DrawLine(box.BorderBox.Left, y, box.BorderBox.Right, y, paint);
+    }
+
+    // -------------------------------------------------------------------------
+    // List item
+    // -------------------------------------------------------------------------
+
+    private static void PaintListItem(SKCanvas canvas, LayoutNode node, int viewportWidth)
+    {
+        var box = node.Box;
+
+        // Background
+        var bgColor = node.GetBackgroundColor();
+        if (bgColor != SKColors.Transparent)
+        {
+            using var bgPaint = new SKPaint { Color = bgColor };
+            canvas.DrawRect(box.PaddingBox, bgPaint);
+        }
+
+        // Marker — drawn to the left of the content box
+        var markerX = box.ContentBox.Left - 6f;
+        var markerY = box.ContentBox.Top;
+
+        using var markerFont  = TextMeasure.CreateFont(node);
+        using var markerPaint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+
+        if (IsInsideOrderedList(node))
+        {
+            var index      = GetOrderedIndex(node);
+            var markerText = $"{index}.";
+            var ascent     = -markerFont.Metrics.Ascent;
+            canvas.DrawText(markerText, markerX, markerY + ascent, SKTextAlign.Right, markerFont, markerPaint);
+        }
+        else
+        {
+            var radius  = markerFont.Size * 0.2f;
+            var centerX = markerX - radius * 2;
+            var centerY = markerY + markerFont.Size * 0.55f;
+            canvas.DrawCircle(centerX, centerY, radius, markerPaint);
+        }
+
+        // Paint own text
+        if (!string.IsNullOrEmpty(node.DisplayText) && node.Children.Count == 0)
+        {
+            using var font  = TextMeasure.CreateFont(node);
+            using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+            DrawWrappedText(canvas, node, node.DisplayText,
+                            box.ContentBox.Left, box.ContentBox.Top, box.ContentBox.Width, font, paint);
+        }
+
+        foreach (var child in node.Children)
+            PaintNode(canvas, child, viewportWidth);
+    }
+
+    private static bool IsInsideOrderedList(LayoutNode node)
+    {
+        var p = node.Parent;
+        while (p != null)
+        {
+            if (p.TagName == "OL") return true;
+            if (p.TagName == "UL") return false;
+            p = p.Parent;
+        }
+        return false;
+    }
+
+    private static int GetOrderedIndex(LayoutNode node)
+    {
+        if (node.Parent == null) return 1;
+        var index = 1;
+        foreach (var sibling in node.Parent.Children)
+        {
+            if (sibling == node) break;
+            if (sibling.TagName == "LI") index++;
+        }
+        return index;
     }
 
     // -------------------------------------------------------------------------
@@ -332,25 +466,47 @@ internal static class Drawer
         }
     }
 
-    private static void DrawWrappedText(SKCanvas canvas, string text, float x, float y, float maxWidth,
-                                        SKFont font, SKPaint paint, bool underline = false)
+    private static void DrawWrappedText(SKCanvas canvas, LayoutNode node, string text,
+                                        float x, float y, float maxWidth,
+                                        SKFont font, SKPaint paint)
     {
-        var lines   = TextMeasure.WrapText(text, maxWidth, font);
-        var lineY   = y;
+        var whiteSpace  = node.GetWhiteSpace();
+        var textAlign   = node.GetTextAlign();
+        var underline   = node.IsUnderline();
+        var lineThrough = node.IsLineThrough();
+
+        var lines = TextMeasure.WrapText(text, maxWidth, font, whiteSpace);
+        var lineY = y;
 
         foreach (var line in lines)
         {
+            // Compute x offset for text-align
+            var drawX = textAlign switch
+            {
+                TextAlign.Center => x + (maxWidth - line.Width) / 2f,
+                TextAlign.Right  => x + maxWidth - line.Width,
+                _                => x,
+            };
+
             // SkiaSharp draws at baseline; add ascent to convert top→baseline
             var baseline = lineY + line.Ascent;
-            canvas.DrawText(line.Text, x, baseline, SKTextAlign.Left, font, paint);
+            canvas.DrawText(line.Text, drawX, baseline, SKTextAlign.Left, font, paint);
 
             if (underline)
             {
-                var metrics   = font.Metrics;
-                var uY        = baseline + (metrics.UnderlinePosition ?? font.Size * 0.1f);
-                var uThick    = Math.Max(metrics.UnderlineThickness ?? 1f, 1f);
-                using var lp  = new SKPaint { Color = paint.Color, StrokeWidth = uThick, IsAntialias = true };
-                canvas.DrawLine(x, uY, x + line.Width, uY, lp);
+                var metrics  = font.Metrics;
+                var uY       = baseline + (metrics.UnderlinePosition ?? font.Size * 0.1f);
+                var uThick   = Math.Max(metrics.UnderlineThickness ?? 1f, 1f);
+                using var lp = new SKPaint { Color = paint.Color, StrokeWidth = uThick, IsAntialias = true };
+                canvas.DrawLine(drawX, uY, drawX + line.Width, uY, lp);
+            }
+
+            if (lineThrough)
+            {
+                var strikY   = baseline - font.Size * 0.3f;
+                var uThick   = Math.Max(font.Metrics.UnderlineThickness ?? 1f, 1f);
+                using var lp = new SKPaint { Color = paint.Color, StrokeWidth = uThick, IsAntialias = true };
+                canvas.DrawLine(drawX, strikY, drawX + line.Width, strikY, lp);
             }
 
             lineY += line.Height;

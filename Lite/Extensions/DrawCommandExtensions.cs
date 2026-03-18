@@ -6,7 +6,9 @@ using SkiaSharp;
 
 namespace Lite.Extensions;
 
-public enum DisplayType { Block, Inline, InlineBlock, None }
+public enum DisplayType  { Block, Inline, InlineBlock, ListItem, None }
+public enum TextAlign    { Left, Center, Right, Justify }
+public enum WhiteSpace   { Normal, NoWrap, Pre, PreWrap, PreLine }
 
 public static class StyleExtensions
 {
@@ -19,6 +21,7 @@ public static class StyleExtensions
         {
             "block"        => DisplayType.Block,
             "inline-block" => DisplayType.InlineBlock,
+            "list-item"    => DisplayType.ListItem,
             "none"         => DisplayType.None,
             _              => DisplayType.Inline,
         };
@@ -30,6 +33,91 @@ public static class StyleExtensions
         return weight is "bold" or "bolder" or "700" or "800" or "900";
     }
 
+    public static bool GetFontItalic(this LayoutNode node)
+    {
+        var style = node.StyleOverrides.TryGetValue(PropertyNames.FontStyle, out var ov)
+            ? ov
+            : node.Style.GetPropertyValue(PropertyNames.FontStyle);
+        return style is "italic" or "oblique";
+    }
+
+    public static bool IsLineThrough(this LayoutNode node) =>
+        node.Style.GetPropertyValue(PropertyNames.TextDecorationLine).Contains("line-through", StringComparison.OrdinalIgnoreCase) ||
+        node.Style.GetPropertyValue(PropertyNames.TextDecoration).Contains("line-through", StringComparison.OrdinalIgnoreCase);
+
+    public static TextAlign GetTextAlign(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.TextAlign, out var ov)
+            ? ov
+            : node.Style.GetPropertyValue(PropertyNames.TextAlign);
+        return raw switch
+        {
+            "center"  => TextAlign.Center,
+            "right"   => TextAlign.Right,
+            "justify" => TextAlign.Justify,
+            _         => TextAlign.Left,
+        };
+    }
+
+    /// <summary>Returns the computed line-height in pixels. Falls back to fontSize * 1.4.</summary>
+    public static float GetLineHeight(this LayoutNode node, float fontSize)
+    {
+        if (node.StyleOverrides.TryGetValue(PropertyNames.LineHeight, out var ov))
+        {
+            ov = ov.Trim();
+            if (ov.EndsWith("px") && float.TryParse(ov[..^2],
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var px))
+                return px;
+            if (float.TryParse(ov,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var mult))
+                return mult * fontSize;
+        }
+
+        var raw = node.Style.GetProperty(PropertyNames.LineHeight).RawValue;
+        if (raw is Length lh2)
+        {
+            return lh2.Type switch
+            {
+                Length.Unit.Px      => (float)lh2.Value,
+                Length.Unit.Em      => (float)lh2.Value * fontSize,
+                Length.Unit.Percent => (float)lh2.Value / 100f * fontSize,
+                _                   => fontSize * 1.4f,
+            };
+        }
+
+        // Unitless number (e.g. line-height: 1.5) — try string parse
+        var str = node.Style.GetPropertyValue(PropertyNames.LineHeight);
+        if (!string.IsNullOrEmpty(str) && str != "normal" &&
+            float.TryParse(str, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var num))
+            return num * fontSize;
+
+        return fontSize * 1.4f;
+    }
+
+    public static WhiteSpace GetWhiteSpace(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue(PropertyNames.WhiteSpace, out var ov)
+            ? ov
+            : node.Style.GetPropertyValue(PropertyNames.WhiteSpace);
+        return raw switch
+        {
+            "nowrap"   => WhiteSpace.NoWrap,
+            "pre"      => WhiteSpace.Pre,
+            "pre-wrap" => WhiteSpace.PreWrap,
+            "pre-line" => WhiteSpace.PreLine,
+            _          => WhiteSpace.Normal,
+        };
+    }
+
+    /// <summary>Returns true when the given horizontal margin side is 'auto'.</summary>
+    public static bool IsAutoMarginLeft(this LayoutNode node) =>
+        node.Style.GetProperty(PropertyNames.MarginLeft).RawValue is Constant<Length>;
+
+    public static bool IsAutoMarginRight(this LayoutNode node) =>
+        node.Style.GetProperty(PropertyNames.MarginRight).RawValue is Constant<Length>;
 
     public static SKColor GetBackgroundColor(this LayoutNode node) => GetColor(node, PropertyNames.BackgroundColor, SKColors.Transparent);
     public static SKColor GetColor(this LayoutNode node) => GetColor(node, PropertyNames.Color, SKColors.Black);
@@ -91,7 +179,12 @@ public static class StyleExtensions
         var value = node.Style.GetPropertyValue(PropertyNames.FontFamily);
         if (string.IsNullOrEmpty(value)) return "Arial";
         var first = value.Split(',')[0].Trim().Trim('"', '\'');
-        return first is "system-ui" or "ui-sans-serif" or "-apple-system" ? "Segoe UI" : first;
+        return first switch
+        {
+            "system-ui" or "ui-sans-serif" or "-apple-system" or "BlinkMacSystemFont" => "Segoe UI",
+            "monospace" or "ui-monospace" or "Courier" or "Courier New"               => "Consolas",
+            _                                                                          => first,
+        };
     }
 
     private static SKColor GetColor(LayoutNode node, string propertyName, SKColor defaultColor)

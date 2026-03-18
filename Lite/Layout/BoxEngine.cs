@@ -44,6 +44,20 @@ internal static class BoxEngine
         var explicitW = node.GetWidth(availableWidth);
         var boxWidth  = explicitW > 0 ? explicitW : availableWidth - margin.Left - margin.Right;
 
+        // margin: auto centering — when explicit width is set and one or both horizontal margins are auto
+        if (explicitW > 0)
+        {
+            var leftAuto  = node.IsAutoMarginLeft();
+            var rightAuto = node.IsAutoMarginRight();
+            if (leftAuto || rightAuto)
+            {
+                var remaining = availableWidth - explicitW - border.Left - border.Right - padding.Left - padding.Right;
+                if (leftAuto && rightAuto) { margin.Left = margin.Right = MathF.Max(0, remaining / 2f); }
+                else if (leftAuto)         { margin.Left  = MathF.Max(0, remaining); }
+                else                       { margin.Right = MathF.Max(0, remaining); }
+            }
+        }
+
         var contentW = Math.Max(0f, boxWidth - border.Left - border.Right - padding.Left - padding.Right);
         var contentX = x + margin.Left + border.Left + padding.Left;
         var contentY = y + margin.Top + border.Top + padding.Top;
@@ -52,15 +66,15 @@ internal static class BoxEngine
         var contentH = LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight);
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
-        // compute height from wrapped text so the box isn't zero-sized
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
         {
             using var font = TextMeasure.CreateFont(node);
-            var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentW, 1f), font);
+            var ws    = node.GetWhiteSpace();
+            var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentW, 1f), font, ws);
             contentH = lines.Sum(l => l.Height);
         }
 
-        // Explicit height overrides (pass size=0 so unset height returns 0)
+        // Explicit height overrides
         var explicitH = node.GetHeight(viewportHeight);
         if (explicitH > 0) contentH = explicitH;
 
@@ -81,6 +95,7 @@ internal static class BoxEngine
     /// <summary>
     /// Lays out children of a block container.
     /// Consecutive inline/inline-block children are grouped into inline formatting contexts.
+    /// Vertical margins between adjacent block children are collapsed (CSS 2.1 §8.3.1).
     /// Returns total content height consumed.
     /// </summary>
     private static float LayoutChildren(
@@ -89,8 +104,9 @@ internal static class BoxEngine
         float contentW,
         float viewportWidth, float viewportHeight)
     {
-        var cursorY = contentY;
-        var i       = 0;
+        var cursorY          = contentY;
+        var prevMarginBottom = 0f;
+        var i                = 0;
 
         while (i < children.Count)
         {
@@ -104,25 +120,35 @@ internal static class BoxEngine
                 continue;
             }
 
-            if (display == DisplayType.Block)
+            if (display == DisplayType.Block || display == DisplayType.ListItem)
             {
-                var h = LayoutBlock(child, contentX, cursorY, contentW, viewportWidth, viewportHeight);
-                cursorY += h;
+                var childFontSize   = child.GetFontSize();
+                var childMarginTop  = child.GetMarginTop(total: viewportHeight, size: childFontSize);
+
+                // Collapse adjacent vertical margins: use max, not sum
+                var collapsed = Math.Max(prevMarginBottom, childMarginTop);
+                var adjust    = collapsed - prevMarginBottom - childMarginTop; // ≤ 0
+
+                var h = LayoutBlock(child, contentX, cursorY + adjust, contentW, viewportWidth, viewportHeight);
+                cursorY += h + adjust;
+
+                prevMarginBottom = child.GetMarginBottom(total: viewportHeight, size: childFontSize);
                 i++;
             }
             else
             {
-                // Collect consecutive inline / inline-block children
+                // Collect consecutive inline / inline-block / BR children into a run
                 var run = new List<LayoutNode>();
                 while (i < children.Count)
                 {
                     var d = children[i].GetDisplay();
-                    if (d == DisplayType.Block) break;
+                    if (d == DisplayType.Block || d == DisplayType.ListItem) break;
                     run.Add(children[i]);
                     i++;
                 }
                 var runH = LayoutInlineRun(run, contentX, cursorY, contentW, viewportWidth, viewportHeight);
-                cursorY += runH;
+                cursorY         += runH;
+                prevMarginBottom = 0f;
             }
         }
 
@@ -143,30 +169,26 @@ internal static class BoxEngine
         float maxWidth,
         float viewportWidth, float viewportHeight)
     {
-        // We build a flat list of inline items from all nodes in the run
         var items = new List<InlineItem>();
         CollectInlineItems(nodes, items, viewportWidth, viewportHeight);
 
         if (items.Count == 0) return 0f;
 
-        // Place items into line boxes
         var lineX      = 0f;
         var lineY      = 0f;
         var lineHeight = 0f;
 
-        // First pass: assign positions relative to (originX, originY)
-        var placed = new List<(InlineItem item, float relX, float relY)>();
+        var placed    = new List<(InlineItem item, float relX, float relY)>();
         var lineStart = 0;
 
         void CommitLine()
         {
-            // Go back and assign final Y positions for this line's items
             for (var k = lineStart; k < placed.Count; k++)
             {
                 var (it, rx, _) = placed[k];
                 placed[k] = (it, rx, lineY);
             }
-            lineY += lineHeight;
+            lineY     += lineHeight;
             lineHeight = 0f;
             lineX      = 0f;
             lineStart  = placed.Count;
@@ -174,25 +196,29 @@ internal static class BoxEngine
 
         foreach (var item in items)
         {
-            // Wrap if item doesn't fit (unless it's the only item on the line)
+            if (item.Kind == InlineItemKind.LineBreak)
+            {
+                // Force a new line; ensure minimum height from the <br>'s font
+                if (lineHeight == 0f) lineHeight = item.Height;
+                CommitLine();
+                continue;
+            }
+
             if (lineX > 0 && lineX + item.Width > maxWidth)
                 CommitLine();
 
             placed.Add((item, lineX, lineY));
-            lineX      += item.Width;
-            lineHeight  = Math.Max(lineHeight, item.Height);
+            lineX     += item.Width;
+            lineHeight = Math.Max(lineHeight, item.Height);
         }
         if (placed.Count > lineStart) CommitLine();
 
-        // Apply absolute positions to nodes
         foreach (var (item, relX, relY) in placed)
         {
-            var absX = originX + relX;
-            var absY = originY + relY;
-            ApplyInlineItem(item, absX, absY);
+            ApplyInlineItem(item, originX + relX, originY + relY);
         }
 
-        return lineY; // total height of all lines
+        return lineY;
     }
 
     /// <summary>
@@ -208,30 +234,36 @@ internal static class BoxEngine
             var display = node.GetDisplay();
             if (display == DisplayType.None) continue;
 
+            // <br> → forced line break item
+            if (node.TagName == "BR")
+            {
+                using var brFont = TextMeasure.CreateFont(node);
+                var brH = brFont.Size * 1.4f;
+                items.Add(new InlineItem(InlineItemKind.LineBreak, node, null, 0, brH,
+                           default, default, default, 0, brH));
+                continue;
+            }
+
             if (display == DisplayType.InlineBlock)
             {
-                // Inline-block: treat as atomic inline item but with block-model size
                 var fontSize  = node.GetFontSize();
                 var margin    = node.GetMargin(0, viewportHeight, fontSize);
                 var padding   = node.GetPadding(0, viewportHeight, fontSize);
                 var border    = node.GetBorderWidth();
-                // size=0 default so unset returns 0, not fontSize
                 var explicitW = node.GetWidth(0);
                 var explicitH = node.GetHeight(viewportHeight);
 
-                // Use form defaults when CSS doesn't specify
                 var isCheckbox = node.TagName == "INPUT" &&
                                  node.Attributes.TryGetValue("type", out var iType) &&
                                  iType.Equals("checkbox", StringComparison.OrdinalIgnoreCase);
                 float defaultW, defaultH;
-                if (isCheckbox)       { defaultW = FormLayout.CheckboxSize;    defaultH = FormLayout.CheckboxSize; }
-                else if (node.TagName == "BUTTON") { defaultW = 0f;            defaultH = FormLayout.TextInputHeight; }
-                else                  { defaultW = FormLayout.TextInputWidth;  defaultH = FormLayout.TextInputHeight; }
+                if (isCheckbox)                    { defaultW = FormLayout.CheckboxSize;   defaultH = FormLayout.CheckboxSize; }
+                else if (node.TagName == "BUTTON") { defaultW = 0f;                        defaultH = FormLayout.TextInputHeight; }
+                else                               { defaultW = FormLayout.TextInputWidth; defaultH = FormLayout.TextInputHeight; }
 
                 var w = explicitW > 0 ? explicitW : defaultW;
                 var h = explicitH > 0 ? explicitH : defaultH;
 
-                // For BUTTON, compute width from label text
                 if (node.TagName == "BUTTON" && w <= 0)
                 {
                     var btnLabel = node.DisplayText;
@@ -257,16 +289,13 @@ internal static class BoxEngine
             }
             else if (!string.IsNullOrEmpty(node.DisplayText) && !node.Children.Any())
             {
-                // Leaf inline node with text (e.g. <a>, <span>, <label>)
                 using var font = TextMeasure.CreateFont(node);
-                // We add text as a single item with the total measured width; wrapping is handled by line box
                 var (w, h, _) = TextMeasure.MeasureSingleLine(node.DisplayText, font);
                 items.Add(new InlineItem(InlineItemKind.Text, node, node.DisplayText, w, h,
                            default, default, default, w, h));
             }
             else if (node.Children.Count > 0)
             {
-                // Inline container (e.g. <a> wrapping <span>) — recurse
                 CollectInlineItems(node.Children, items, viewportWidth, viewportHeight);
             }
         }
@@ -296,6 +325,7 @@ internal static class BoxEngine
             }
             case InlineItemKind.Image:
             case InlineItemKind.Text:
+            case InlineItemKind.LineBreak:
             {
                 node.Box = new BoxDimensions
                 {
@@ -310,18 +340,18 @@ internal static class BoxEngine
     // Inline item model
     // -------------------------------------------------------------------------
 
-    private enum InlineItemKind { Text, Image, InlineBlock }
+    private enum InlineItemKind { Text, Image, InlineBlock, LineBreak }
 
     private record InlineItem(
         InlineItemKind Kind,
         LayoutNode     Node,
         string?        Text,
-        float          Width,    // total margin-box width used for line placement
-        float          Height,   // total margin-box height used for line height
+        float          Width,
+        float          Height,
         EdgeSizes      Margin,
         EdgeSizes      Padding,
         EdgeSizes      Border,
-        float          ContentW, // inner content width
-        float          ContentH  // inner content height
+        float          ContentW,
+        float          ContentH
     );
 }

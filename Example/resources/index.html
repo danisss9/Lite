@@ -29,6 +29,98 @@
       <a href="https://github.com/anthropics/claude-code">Visit a link &rarr;</a>
     </section>
 
+    <!-- Inline text elements -->
+    <section class="card">
+      <h2>Inline Text Elements</h2>
+      <p><strong>Bold via strong</strong> and <b>bold via b</b></p>
+      <p><em>Italic via em</em> and <i>italic via i</i></p>
+      <p><u>Underlined text</u> and <s>strikethrough text</s></p>
+      <p>Normal <small>small text</small> and back to normal</p>
+      <p>H<sub>2</sub>O and E = mc<sup>2</sup></p>
+      <p><mark>Highlighted text</mark> stands out from the rest</p>
+      <p>Inline code: <code>console.log("hello")</code></p>
+      <p>First line<br>Second line after a br<br>Third line</p>
+      <p><del>Deleted content</del> replaced by <ins>inserted content</ins></p>
+    </section>
+
+    <!-- Text alignment -->
+    <section class="card">
+      <h2>Text Alignment</h2>
+      <p class="align-left">Left aligned — the default. The quick brown fox jumps over the lazy dog.</p>
+      <p class="align-center">Center aligned. The quick brown fox jumps over the lazy dog.</p>
+      <p class="align-right">Right aligned. The quick brown fox jumps over the lazy dog.</p>
+    </section>
+
+    <!-- White-space -->
+    <section class="card">
+      <h2>White-space &amp; Pre-formatted</h2>
+      <pre class="code-block">function greet(name) {
+    return "Hello, " + name + "!";
+}
+
+console.log(greet("World"));</pre>
+      <p class="nowrap-demo">This paragraph has white-space: nowrap — it will not wrap no matter how long the text gets and overflows its container.</p>
+    </section>
+
+    <!-- Line height -->
+    <section class="card">
+      <h2>Line Height</h2>
+      <p class="line-tight">Tight line-height (1.1). The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</p>
+      <p class="line-normal">Normal line-height (1.4). The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</p>
+      <p class="line-loose">Loose line-height (2.0). The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</p>
+    </section>
+
+    <!-- Margin auto centering -->
+    <section class="card">
+      <h2>Margin: auto Centering</h2>
+      <div class="centered-box">This box is centered with margin: 0 auto</div>
+      <div class="centered-box-narrow">Narrow centered box</div>
+    </section>
+
+    <!-- Horizontal rule -->
+    <section class="card">
+      <h2>Horizontal Rule</h2>
+      <p>Content above the rule.</p>
+      <hr>
+      <p>Content below the rule.</p>
+      <hr class="hr-thick">
+      <p>Content below a thicker rule.</p>
+    </section>
+
+    <!-- Lists -->
+    <section class="card">
+      <h2>Lists</h2>
+      <h3>Unordered list</h3>
+      <ul>
+        <li>Apples</li>
+        <li>Bananas</li>
+        <li>Cherries</li>
+      </ul>
+      <h3>Ordered list</h3>
+      <ol>
+        <li>First step</li>
+        <li>Second step</li>
+        <li>Third step</li>
+      </ol>
+      <h3>Definition list</h3>
+      <dl>
+        <dt>HTML</dt>
+        <dd>HyperText Markup Language — the structure of the web.</dd>
+        <dt>CSS</dt>
+        <dd>Cascading Style Sheets — the presentation of the web.</dd>
+      </dl>
+    </section>
+
+    <!-- Blockquote -->
+    <section class="card">
+      <h2>Blockquote</h2>
+      <p>As someone once said:</p>
+      <blockquote class="quote">
+        The best way to predict the future is to invent it.
+      </blockquote>
+      <p>That's a great quote.</p>
+    </section>
+
     <!-- Colors & Backgrounds -->
     <section class="card">
       <h2>Colors</h2>
@@ -70,12 +162,18 @@
     <!-- Form -->
     <section class="card">
       <h2>Form</h2>
-      <label for="name">Full name</label>
-      <input type="text" id="name" placeholder="Jane Doe" />
-      <label for="email">Email address</label>
-      <input type="text" id="email" placeholder="jane@example.com" />
-      <label for="agree">I agree to the terms</label>
-      <input type="checkbox" id="agree" />
+      <div class="form-row">
+        <label for="name">Full name</label>
+        <input type="text" id="name" placeholder="Jane Doe" />
+      </div>
+      <div class="form-row">
+        <label for="email">Email address</label>
+        <input type="text" id="email" placeholder="jane@example.com" />
+      </div>
+      <div class="form-row">
+        <label for="agree">I agree to the terms</label>
+        <input type="checkbox" id="agree" />
+      </div>
       <div>
         <button type="button" id="submit-btn" class="mt-sm">Submit</button>
       </div>
