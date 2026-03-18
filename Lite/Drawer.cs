@@ -111,18 +111,26 @@ internal static class Drawer
 
     private static void PaintNodeInner(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
-        // overflow:hidden/scroll/auto — clip children to padding box
+        var opacity  = node.GetOpacity();
         var overflow = node.GetOverflow();
         var clip     = overflow == OverflowType.Hidden || overflow == OverflowType.Scroll || overflow == OverflowType.Auto;
-        if (clip)
+
+        // opacity < 1 — composite the subtree into a temporary layer at reduced alpha
+        if (opacity < 1f)
+        {
+            using var alphaPaint = new SKPaint { Color = SKColors.Transparent.WithAlpha((byte)(opacity * 255)) };
+            canvas.SaveLayer(alphaPaint);
+        }
+        else if (clip)
         {
             canvas.Save();
-            canvas.ClipRect(node.Box.PaddingBox);
         }
+
+        if (clip) canvas.ClipRect(node.Box.PaddingBox);
 
         PaintNodeContent(canvas, node, viewportWidth);
 
-        if (clip) canvas.Restore();
+        if (opacity < 1f || clip) canvas.Restore();
     }
 
     private static void PaintNodeContent(SKCanvas canvas, LayoutNode node, int viewportWidth)

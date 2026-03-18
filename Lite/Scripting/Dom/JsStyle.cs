@@ -20,6 +20,12 @@ public class JsStyle
         set => Set("background-color", value);
     }
 
+    public string opacity
+    {
+        get => _node.StyleOverrides.GetValueOrDefault("opacity", string.Empty);
+        set => Set("opacity", value);
+    }
+
     // ---- display / visibility ----
     public string display
     {

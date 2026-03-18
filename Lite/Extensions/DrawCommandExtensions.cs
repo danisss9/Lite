@@ -374,6 +374,15 @@ public static class StyleExtensions
         return int.TryParse(raw, out var z) ? z : 0;
     }
 
+    public static float GetOpacity(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue("opacity", out var ov)
+            ? ov : node.Style.GetPropertyValue("opacity");
+        return float.TryParse(raw, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var f)
+            ? Math.Clamp(f, 0f, 1f) : 1f;
+    }
+
     /// <summary>Returns the value of a position offset property (top/right/bottom/left).
     /// Returns float.NaN when the property is 'auto' or unset.</summary>
     public static float GetOffsetTop(this LayoutNode node, float total = 0, float size = 0)    => GetOffset(node, PropertyNames.Top,    total, size);
