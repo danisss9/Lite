@@ -46,6 +46,11 @@ internal static class Parser
         ul { list-style-type: disc; margin-top: 1em; margin-bottom: 1em; padding-left: 40px; }
         ol { list-style-type: decimal; margin-top: 1em; margin-bottom: 1em; padding-left: 40px; }
         li { display: list-item; }
+        table { display: table; border-collapse: separate; }
+        thead, tbody, tfoot { display: block; }
+        tr { display: table-row; }
+        td { display: table-cell; padding-top: 1px; padding-right: 1px; padding-bottom: 1px; padding-left: 1px; }
+        th { display: table-cell; font-weight: bold; padding-top: 1px; padding-right: 1px; padding-bottom: 1px; padding-left: 1px; }
         """;
 
     // Tags that should not appear in the layout tree

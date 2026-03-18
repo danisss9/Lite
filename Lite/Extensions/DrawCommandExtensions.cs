@@ -6,7 +6,7 @@ using SkiaSharp;
 
 namespace Lite.Extensions;
 
-public enum DisplayType     { Block, Inline, InlineBlock, ListItem, Flex, InlineFlex, None }
+public enum DisplayType     { Block, Inline, InlineBlock, ListItem, Flex, InlineFlex, Table, TableRow, TableCell, None }
 public enum TextAlign       { Left, Center, Right, Justify }
 public enum WhiteSpace      { Normal, NoWrap, Pre, PreWrap, PreLine }
 public enum PositionType    { Static, Relative, Absolute, Fixed }
@@ -33,6 +33,9 @@ public static class StyleExtensions
             "list-item"    => DisplayType.ListItem,
             "flex"         => DisplayType.Flex,
             "inline-flex"  => DisplayType.InlineFlex,
+            "table"        => DisplayType.Table,
+            "table-row"    => DisplayType.TableRow,
+            "table-cell"   => DisplayType.TableCell,
             "none"         => DisplayType.None,
             _              => DisplayType.Inline,
         };

@@ -216,7 +216,9 @@ internal static class BoxEngine
         var nodeDisplay = node.GetDisplay();
         var contentH = (nodeDisplay == DisplayType.Flex || nodeDisplay == DisplayType.InlineFlex)
             ? FlexEngine.LayoutFlex(node, contentX, contentY, contentW, knownContentH, viewportWidth, viewportHeight)
-            : LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight, knownContentH);
+            : nodeDisplay == DisplayType.Table
+                ? TableEngine.LayoutTable(node, contentX, contentY, contentW, viewportWidth, viewportHeight)
+                : LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight, knownContentH);
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
@@ -295,7 +297,7 @@ internal static class BoxEngine
                 continue;
             }
 
-            if (display == DisplayType.Block || display == DisplayType.ListItem || display == DisplayType.Flex)
+            if (display == DisplayType.Block || display == DisplayType.ListItem || display == DisplayType.Flex || display == DisplayType.Table)
             {
                 var childFontSize   = child.GetFontSize();
                 var childMarginTop  = child.GetMarginTop(total: viewportHeight, size: childFontSize);
@@ -317,7 +319,7 @@ internal static class BoxEngine
                 while (i < children.Count)
                 {
                     var d = children[i].GetDisplay();
-                    if (d == DisplayType.Block || d == DisplayType.ListItem) break;
+                    if (d == DisplayType.Block || d == DisplayType.ListItem || d == DisplayType.Flex || d == DisplayType.Table) break;
                     run.Add(children[i]);
                     i++;
                 }

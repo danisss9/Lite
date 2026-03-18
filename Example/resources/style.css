@@ -513,3 +513,43 @@ footer {
   padding: 8px;
   margin-top: 4px;
 }
+
+/* ── Tables ── */
+.demo-table {
+  width: 100%;
+}
+
+.demo-table th,
+.demo-table td {
+  padding-top: 8px;
+  padding-right: 8px;
+  padding-bottom: 8px;
+  padding-left: 8px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+  border-top-color: #d1d5db;
+  border-right-color: #d1d5db;
+  border-bottom-color: #d1d5db;
+  border-left-color: #d1d5db;
+}
+
+.demo-table thead tr {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.demo-table thead th {
+  border-top-color: #2563eb;
+  border-right-color: #2563eb;
+  border-bottom-color: #2563eb;
+  border-left-color: #2563eb;
+}
+
+.demo-table tbody tr.alt {
+  background-color: #f9fafb;
+}
+
+.status-active { color: #16a34a; }
+.status-away   { color: #ef4444; }

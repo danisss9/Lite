@@ -165,7 +165,8 @@ internal static class Drawer
             return;
         }
 
-        if (display == DisplayType.Block || display == DisplayType.Flex || display == DisplayType.InlineFlex)
+        if (display == DisplayType.Block || display == DisplayType.Flex || display == DisplayType.InlineFlex
+            || display == DisplayType.Table || display == DisplayType.TableRow || display == DisplayType.TableCell)
         {
             PaintBlock(canvas, node, viewportWidth);
             return;
