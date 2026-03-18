@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.2] - 2026-03-18
+
+### Added
+- **Inline text elements** — `<strong>`, `<b>`, `<em>`, `<i>`, `<u>`, `<ins>`, `<s>`, `<del>`, `<strike>`, `<small>`, `<sub>`, `<sup>`, `<mark>`, `<code>`, `<kbd>`, `<samp>`, `<var>`, `<tt>` now render correctly via UA stylesheet rules
+- **`font-style: italic`** — rendered using the italic typeface slant via SkiaSharp
+- **`text-decoration: line-through`** — strikethrough line drawn at the correct baseline offset
+- **`text-align`** — `left`, `center`, `right`, and `justify` support for block and inline runs
+- **`line-height`** — configurable via px, em, percentage, or unitless multiplier; falls back to `1.4`
+- **`white-space`** — `normal`, `nowrap`, `pre`, `pre-wrap`, and `pre-line` modes all implemented
+- **`margin: auto` horizontal centering** — fixed-width blocks with `margin-left: auto` / `margin-right: auto` are centered in their container
+- **Vertical margin collapsing** — adjacent block siblings now use `max(marginBottom, marginTop)` instead of summing both margins (CSS 2.1 §8.3.1)
+- **`<br>` line breaks** — forced line break inside inline runs
+- **`<hr>` horizontal rule** — renders as a styled horizontal line respecting `border-top-width` and `border-top-color`
+- **`<pre>` and `<blockquote>`** — block layout with correct UA stylesheet margins and monospace font
+- **`<dl>`, `<dt>`, `<dd>`** — definition list elements with correct block display and indentation
+- **List rendering** — `<ul>` and `<ol>` render bullet (•) and ordered (1.) markers; nested lists supported
+- **Mixed inline content** — text nodes interleaved with element children (e.g. `text <strong>bold</strong> more`) are now preserved in DOM order using synthetic `#TEXT` layout nodes
+- **Inter-element spacing** — whitespace between inline siblings (e.g. `</label> <input>`) correctly produces a single space; whitespace-only nodes between block siblings are suppressed
+- **`label` is inline by default** — matches browser UA stylesheet; `button` gets a default `1px` border
+- **Button CSS** — background color, text color, and border colors are now read from computed styles instead of hardcoded gray values
+- **Background and borders on `<p>`** — `PaintTextBlock` now paints background and borders before text, consistent with block elements
+- **Monospace font mapping** — `monospace`, `ui-monospace`, `Courier`, and `Courier New` map to `Consolas`; `system-ui` variants map to `Segoe UI`
+
+### Fixed
+- `<hr>` was incorrectly matched by the heading paint path (`H` + digit check) and never rendered
+- Inline elements (`<strong>`, `<em>`, `<mark>`, `#TEXT`, etc.) had no paint path and were silently skipped
+- `#TEXT` nodes inherited `display: block` from parent computed style; now forced to `display: inline`
+- `GetLineHeight` switch had an invalid `or` pattern for `Em`/`Percent` units — split into separate cases
+
 ## [0.0.1] - 2026-03-17
 
 ### Added
