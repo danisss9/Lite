@@ -321,6 +321,9 @@ internal static class FlexEngine
                     h    = d.ContentMain;
                 }
 
+                // The cross-axis container size for this item (used for % height resolution)
+                var crossContainerSize = isRow ? containerH : contentW;
+
                 // Lay out children inside this flex item.
                 // If the item is itself a flex/inline-flex container, invoke FlexEngine directly
                 // so inner flex properties (grow, shrink, align-items) are respected.
@@ -328,9 +331,9 @@ internal static class FlexEngine
                 var isInnerFlex = nodeDisplay == DisplayType.Flex || nodeDisplay == DisplayType.InlineFlex;
                 float childH;
                 if (isInnerFlex)
-                    childH = FlexEngine.LayoutFlex(d.Node, absX, absY, w, 0, viewportWidth, viewportHeight);
+                    childH = FlexEngine.LayoutFlex(d.Node, absX, absY, w, h, viewportWidth, viewportHeight);
                 else
-                    childH = BoxEngine.LayoutChildrenPublic(d.Node.Children, absX, absY, w, viewportWidth, viewportHeight);
+                    childH = BoxEngine.LayoutChildrenPublic(d.Node.Children, absX, absY, w, viewportWidth, viewportHeight, h);
 
                 if (childH == 0 && !string.IsNullOrEmpty(d.Node.DisplayText))
                 {
@@ -339,8 +342,8 @@ internal static class FlexEngine
                     childH = lines2.Sum(l => l.Height);
                 }
 
-                // Apply explicit height if present (border-box aware)
-                var explicitH = d.Node.GetHeight(viewportHeight);
+                // Apply explicit height if present (border-box aware), resolving % against cross container
+                var explicitH = d.Node.GetHeight(crossContainerSize, 0, viewportHeight);
                 if (explicitH > 0)
                 {
                     var isBorderBox = d.Node.Style.GetPropertyValue("box-sizing") == "border-box";
@@ -365,9 +368,9 @@ internal static class FlexEngine
                     if (isInnerFlex)
                         FlexEngine.LayoutFlex(d.Node, absX, absY, w, isRow ? h : w, viewportWidth, viewportHeight);
                     else if (isRow)
-                        BoxEngine.LayoutChildrenPublic(d.Node.Children, absX, absY, w, viewportWidth, viewportHeight);
+                        BoxEngine.LayoutChildrenPublic(d.Node.Children, absX, absY, w, viewportWidth, viewportHeight, h);
                     else
-                        BoxEngine.LayoutChildrenPublic(d.Node.Children, absX, absY, w, viewportWidth, viewportHeight);
+                        BoxEngine.LayoutChildrenPublic(d.Node.Children, absX, absY, w, viewportWidth, viewportHeight, h);
                 }
 
                 d.Node.Box = new BoxDimensions

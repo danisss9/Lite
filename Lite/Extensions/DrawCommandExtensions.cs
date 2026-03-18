@@ -413,7 +413,7 @@ public static class StyleExtensions
     public static SKColor GetBackgroundColor(this LayoutNode node) => GetColor(node, PropertyNames.BackgroundColor, SKColors.Transparent);
     public static SKColor GetColor(this LayoutNode node) => GetColor(node, PropertyNames.Color, SKColors.Black);
     public static float GetFontSize(this LayoutNode node) => GetSize(node, PropertyNames.FontSize, size: 16);
-    public static float GetHeight(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.Height, total, size);
+    public static float GetHeight(this LayoutNode node, float total = 0, float size = 0, float viewportHeight = -1f) => GetSize(node, PropertyNames.Height, total, size, viewportHeight);
     public static float GetWidth(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.Width, total, size);
 
     // Margins
@@ -545,7 +545,7 @@ public static class StyleExtensions
     }
 
     /// <summary>Returns a size property value or <paramref name="defaultValue"/> when unset/auto/none.</summary>
-    private static float GetSizeOrDefault(LayoutNode node, string propertyName, float total, float size, float defaultValue)
+    private static float GetSizeOrDefault(LayoutNode node, string propertyName, float total, float size, float defaultValue, float viewportSize = -1f)
     {
         // Check StyleOverrides first
         if (node.StyleOverrides.TryGetValue(propertyName, out var overrideStr))
@@ -567,18 +567,24 @@ public static class StyleExtensions
         if (raw is null or Constant<Length>) return defaultValue; // auto/none/unset
         if (raw is not Length length) return defaultValue;
 
+        var vp = viewportSize >= 0 ? viewportSize : total;
         return length.Type switch
         {
-            Length.Unit.Px => (float)length.Value,
-            Length.Unit.Em => (float)length.Value * size,
+            Length.Unit.Px      => (float)length.Value,
+            Length.Unit.Em      => (float)length.Value * size,
             Length.Unit.Percent => (float)length.Value / 100f * total,
-            Length.Unit.Vw => (float)length.Value / 100f * total,
-            Length.Unit.Vh => (float)length.Value / 100f * total,
+            Length.Unit.Vw      => (float)length.Value / 100f * vp,
+            Length.Unit.Vh      => (float)length.Value / 100f * vp,
             _ => defaultValue,
         };
     }
 
-    private static float GetSize(LayoutNode node, string propertyName, float total = 0, float size = 0)
+    /// <summary>
+    /// Resolves a size CSS property.
+    /// <paramref name="total"/> is used for percentage units (e.g. parent content height).
+    /// <paramref name="viewportSize"/> is used for vh/vw units; falls back to <paramref name="total"/> when -1.
+    /// </summary>
+    private static float GetSize(LayoutNode node, string propertyName, float total = 0, float size = 0, float viewportSize = -1f)
     {
         // Inline style override (e.g. from element.style.setProperty)
         if (node.StyleOverrides.TryGetValue(propertyName, out var overrideStr))
@@ -608,12 +614,13 @@ public static class StyleExtensions
             return size;
         }
 
+        var vp = viewportSize >= 0 ? viewportSize : total;
         return length.Type switch
         {
-            Length.Unit.Em => (float)length.Value * size,
-            Length.Unit.Px => (float)length.Value,
-            Length.Unit.Vw => (float)length.Value / 100f * total,
-            Length.Unit.Vh => (float)length.Value / 100f * total,
+            Length.Unit.Em      => (float)length.Value * size,
+            Length.Unit.Px      => (float)length.Value,
+            Length.Unit.Vw      => (float)length.Value / 100f * vp,
+            Length.Unit.Vh      => (float)length.Value / 100f * vp,
             Length.Unit.Percent => (float)length.Value / 100f * total,
             _ => size
         };

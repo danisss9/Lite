@@ -233,6 +233,28 @@ console.log(greet("World"));</pre>
       </div>
     </section>
 
+    <!-- Percentage Heights -->
+    <section class="card">
+      <h2>Percentage Heights</h2>
+
+      <p>Parent with explicit height: 160px — children use percentage heights relative to it:</p>
+      <div class="pct-parent">
+        <div class="pct-child pct-25">25%</div>
+        <div class="pct-child pct-50">50%</div>
+        <div class="pct-child pct-75">75%</div>
+        <div class="pct-child pct-100">100%</div>
+      </div>
+
+      <p>Nested: outer 200px, inner 50% (=100px), innermost 50% (=50px):</p>
+      <div class="pct-nested-outer">
+        outer 200px
+        <div class="pct-nested-inner">
+          inner 50%
+          <div class="pct-nested-innermost">inner 50%</div>
+        </div>
+      </div>
+    </section>
+
     <!-- CSS Positioning -->
     <section class="card">
       <h2>CSS Positioning</h2>

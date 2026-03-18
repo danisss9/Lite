@@ -12,7 +12,7 @@ internal static class BoxEngine
 {
     public static void Layout(LayoutNode root, float viewportWidth, float viewportHeight)
     {
-        LayoutBlock(root, 0, 0, viewportWidth, viewportWidth, viewportHeight);
+        LayoutBlock(root, 0, 0, viewportWidth, viewportWidth, viewportHeight, viewportHeight);
         // Second pass: lay out all absolute/fixed nodes now that normal-flow boxes are finalised
         LayoutPositioned(root, root.Box, viewportWidth, viewportHeight);
     }
@@ -95,11 +95,26 @@ internal static class BoxEngine
         else
             contentX = cbRect.Left + margin.Left + border.Left + padding.Left;
 
+        // Determine this node's explicit content height so children can resolve % heights
+        var explicitHEarly = node.GetHeight(cbRect.Height, 0, viewportHeight);
+        float selfContentH;
+        if (explicitHEarly > 0)
+        {
+            var isBBEarly = node.Style.GetPropertyValue("box-sizing") == "border-box";
+            selfContentH = isBBEarly
+                ? Math.Max(0f, explicitHEarly - border.Top - border.Bottom - padding.Top - padding.Bottom)
+                : explicitHEarly;
+        }
+        else if (!float.IsNaN(top) && !float.IsNaN(bottom))
+            selfContentH = Math.Max(0, cbRect.Height - top - bottom - margin.Top - margin.Bottom - border.Top - border.Bottom - padding.Top - padding.Bottom);
+        else
+            selfContentH = 0f;
+
         // Lay out children to get content height
         var contentY0 = cbRect.Top; // temp origin for children layout
         var contentH  = LayoutChildren(node.Children,
             contentX, contentY0,
-            contentW, viewportWidth, viewportHeight);
+            contentW, viewportWidth, viewportHeight, selfContentH);
 
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
         {
@@ -108,7 +123,7 @@ internal static class BoxEngine
             contentH = lines.Sum(l => l.Height);
         }
 
-        var explicitH = node.GetHeight(cbRect.Height);
+        var explicitH = node.GetHeight(cbRect.Height, 0, viewportHeight);
         if (explicitH > 0)
         {
             var isBorderBox = node.Style.GetPropertyValue("box-sizing") == "border-box";
@@ -155,7 +170,8 @@ internal static class BoxEngine
         LayoutNode node,
         float x, float y,
         float availableWidth,
-        float viewportWidth, float viewportHeight)
+        float viewportWidth, float viewportHeight,
+        float parentContentHeight = 0)
     {
         if (node.GetDisplay() == DisplayType.None)
         {
@@ -190,17 +206,17 @@ internal static class BoxEngine
         var contentX = x + margin.Left + border.Left + padding.Left;
         var contentY = y + margin.Top + border.Top + padding.Top;
 
-        // Layout children and compute content height
-        var explicitHForFlex = node.GetHeight(viewportHeight);
-        var isBorderBoxForFlex = node.Style.GetPropertyValue("box-sizing") == "border-box";
-        var knownContentH = explicitHForFlex > 0
-            ? (isBorderBoxForFlex ? Math.Max(0f, explicitHForFlex - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitHForFlex)
+        // Resolve this node's explicit height using parentContentHeight for % and viewportHeight for vh/vw
+        var isBorderBox    = node.Style.GetPropertyValue("box-sizing") == "border-box";
+        var explicitH      = node.GetHeight(parentContentHeight, 0, viewportHeight);
+        var knownContentH  = explicitH > 0
+            ? (isBorderBox ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitH)
             : 0f;
 
         var nodeDisplay = node.GetDisplay();
         var contentH = (nodeDisplay == DisplayType.Flex || nodeDisplay == DisplayType.InlineFlex)
             ? FlexEngine.LayoutFlex(node, contentX, contentY, contentW, knownContentH, viewportWidth, viewportHeight)
-            : LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight);
+            : LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight, knownContentH);
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
@@ -212,10 +228,8 @@ internal static class BoxEngine
         }
 
         // Explicit height overrides — respect box-sizing: border-box
-        var explicitH = node.GetHeight(viewportHeight);
         if (explicitH > 0)
         {
-            var isBorderBox = node.Style.GetPropertyValue("box-sizing") == "border-box";
             contentH = isBorderBox
                 ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
                 : explicitH;
@@ -246,14 +260,16 @@ internal static class BoxEngine
         List<LayoutNode> children,
         float contentX, float contentY,
         float contentW,
-        float viewportWidth, float viewportHeight)
-        => LayoutChildren(children, contentX, contentY, contentW, viewportWidth, viewportHeight);
+        float viewportWidth, float viewportHeight,
+        float parentContentHeight = 0)
+        => LayoutChildren(children, contentX, contentY, contentW, viewportWidth, viewportHeight, parentContentHeight);
 
     private static float LayoutChildren(
         List<LayoutNode> children,
         float contentX, float contentY,
         float contentW,
-        float viewportWidth, float viewportHeight)
+        float viewportWidth, float viewportHeight,
+        float parentContentHeight = 0)
     {
         var cursorY          = contentY;
         var prevMarginBottom = 0f;
@@ -288,7 +304,7 @@ internal static class BoxEngine
                 var collapsed = Math.Max(prevMarginBottom, childMarginTop);
                 var adjust    = collapsed - prevMarginBottom - childMarginTop; // ≤ 0
 
-                var h = LayoutBlock(child, contentX, cursorY + adjust, contentW, viewportWidth, viewportHeight);
+                var h = LayoutBlock(child, contentX, cursorY + adjust, contentW, viewportWidth, viewportHeight, parentContentHeight);
                 cursorY += h + adjust;
 
                 prevMarginBottom = child.GetMarginBottom(total: viewportHeight, size: childFontSize);
