@@ -25,6 +25,11 @@ public class JsStyle
         get => _node.StyleOverrides.GetValueOrDefault("opacity", string.Empty);
         set => Set("opacity", value);
     }
+    public string borderRadius
+    {
+        get => _node.StyleOverrides.GetValueOrDefault("border-radius", string.Empty);
+        set => Set("border-radius", value);
+    }
 
     // ---- display / visibility ----
     public string display

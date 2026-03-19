@@ -374,6 +374,34 @@ public static class StyleExtensions
         return int.TryParse(raw, out var z) ? z : 0;
     }
 
+    /// <summary>
+    /// Returns the resolved border-radius as (Rx, Ry) in pixels.
+    /// Rx is relative to the element width, Ry to the element height.
+    /// Returns (0, 0) when unset.
+    /// </summary>
+    public static (float Rx, float Ry) GetBorderRadius(this LayoutNode node, float width, float height)
+    {
+        var raw = node.StyleOverrides.TryGetValue("border-radius", out var ov)
+            ? ov : node.Style.GetPropertyValue("border-radius");
+        if (string.IsNullOrWhiteSpace(raw)) return (0f, 0f);
+        raw = raw.Trim();
+        if (raw.EndsWith("px") && float.TryParse(raw[..^2],
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var px))
+        {
+            var r = Math.Max(0f, px);
+            return (r, r);
+        }
+        if (raw.EndsWith('%') && float.TryParse(raw[..^1],
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var pct))
+        {
+            var f = Math.Clamp(pct / 100f, 0f, 1f);
+            return (f * width, f * height);
+        }
+        return (0f, 0f);
+    }
+
     public static float GetOpacity(this LayoutNode node)
     {
         var raw = node.StyleOverrides.TryGetValue("opacity", out var ov)

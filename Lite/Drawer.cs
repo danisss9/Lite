@@ -115,6 +115,10 @@ internal static class Drawer
         var overflow = node.GetOverflow();
         var clip     = overflow == OverflowType.Hidden || overflow == OverflowType.Scroll || overflow == OverflowType.Auto;
 
+        var (clipRx, clipRy) = clip
+            ? node.GetBorderRadius(node.Box.PaddingBox.Width, node.Box.PaddingBox.Height)
+            : (0f, 0f);
+
         // opacity < 1 — composite the subtree into a temporary layer at reduced alpha
         if (opacity < 1f)
         {
@@ -126,7 +130,18 @@ internal static class Drawer
             canvas.Save();
         }
 
-        if (clip) canvas.ClipRect(node.Box.PaddingBox);
+        if (clip)
+        {
+            if (clipRx > 0 || clipRy > 0)
+            {
+                var rr = new SKRoundRect(node.Box.PaddingBox, clipRx, clipRy);
+                canvas.ClipRoundRect(rr, antialias: true);
+            }
+            else
+            {
+                canvas.ClipRect(node.Box.PaddingBox);
+            }
+        }
 
         PaintNodeContent(canvas, node, viewportWidth);
 
@@ -213,8 +228,10 @@ internal static class Drawer
         var bgColor = node.GetBackgroundColor();
         if (bgColor != SKColors.Transparent)
         {
-            using var bgPaint = new SKPaint { Color = bgColor };
-            canvas.DrawRect(box.PaddingBox, bgPaint);
+            using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
+            var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+            if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
+            else                   canvas.DrawRect(box.PaddingBox, bgPaint);
         }
 
         DrawBorders(canvas, box, node);
@@ -295,8 +312,10 @@ internal static class Drawer
         var bgColor = node.GetBackgroundColor();
         if (bgColor != SKColors.Transparent)
         {
-            using var bgPaint = new SKPaint { Color = bgColor };
-            canvas.DrawRect(box.PaddingBox, bgPaint);
+            using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
+            var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+            if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
+            else                   canvas.DrawRect(box.PaddingBox, bgPaint);
         }
 
         DrawBorders(canvas, box, node);
@@ -449,8 +468,10 @@ internal static class Drawer
 
         var bgColor = node.GetBackgroundColor();
         if (bgColor == SKColors.Transparent) bgColor = new SKColor(225, 225, 225);
-        using var bgPaint = new SKPaint { Color = bgColor };
-        canvas.DrawRect(box.PaddingBox, bgPaint);
+        using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
+        var (brx, bry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+        if (brx > 0 || bry > 0) canvas.DrawRoundRect(box.PaddingBox, brx, bry, bgPaint);
+        else                     canvas.DrawRect(box.PaddingBox, bgPaint);
 
         DrawBorders(canvas, node.Box, node);
 
@@ -490,8 +511,10 @@ internal static class Drawer
         var bgColor = node.GetBackgroundColor();
         if (bgColor != SKColors.Transparent)
         {
-            using var bgPaint = new SKPaint { Color = bgColor };
-            canvas.DrawRect(box.PaddingBox, bgPaint);
+            using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
+            var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+            if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
+            else                   canvas.DrawRect(box.PaddingBox, bgPaint);
         }
 
         // Marker — drawn to the left of the content box
@@ -559,6 +582,27 @@ internal static class Drawer
     private static void DrawBorders(SKCanvas canvas, BoxDimensions box, LayoutNode node)
     {
         var bw = box.Border;
+        var (rx, ry) = node.GetBorderRadius(box.BorderBox.Width, box.BorderBox.Height);
+
+        if (rx > 0 || ry > 0)
+        {
+            // With border-radius draw a single stroked rounded rect using top-border values
+            var maxWidth = Math.Max(Math.Max(bw.Top, bw.Right), Math.Max(bw.Bottom, bw.Left));
+            if (maxWidth <= 0) return;
+            using var p = new SKPaint
+            {
+                Color       = node.GetBorderTopColor(),
+                Style       = SKPaintStyle.Stroke,
+                StrokeWidth = maxWidth,
+                IsAntialias = true,
+            };
+            // Inset the rect by half stroke width so it sits on the border box edge
+            var inset = maxWidth / 2f;
+            var r     = SKRect.Inflate(box.BorderBox, -inset, -inset);
+            canvas.DrawRoundRect(r, Math.Max(0, rx - inset), Math.Max(0, ry - inset), p);
+            return;
+        }
+
         if (bw.Top > 0)
         {
             using var p = new SKPaint { Color = node.GetBorderTopColor(), StrokeWidth = bw.Top, IsAntialias = true };

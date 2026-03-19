@@ -242,7 +242,8 @@ internal static class Parser
         "align-self", "align-content", "flex-grow", "flex-shrink", "flex-basis", "order",
         "row-gap", "column-gap", "gap",
         "flex", "flex-flow",
-        "min-width", "max-width", "min-height", "max-height", "visibility"
+        "min-width", "max-width", "min-height", "max-height", "visibility",
+        "border-radius"
     ];
 
     /// <summary>
