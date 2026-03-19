@@ -266,6 +266,175 @@ internal static class BoxEngine
         float parentContentHeight = 0)
         => LayoutChildren(children, contentX, contentY, contentW, viewportWidth, viewportHeight, parentContentHeight);
 
+    // -------------------------------------------------------------------------
+    // Float tracking
+    // -------------------------------------------------------------------------
+
+    /// <summary>Represents an active float whose occupied area affects subsequent layout.</summary>
+    private record struct ActiveFloat(float Left, float Top, float Right, float Bottom, FloatType Side);
+
+    /// <summary>
+    /// Returns the Y at which an element with the given <paramref name="clear"/> value
+    /// should start, ensuring it is below any relevant active floats.
+    /// </summary>
+    private static float ApplyClear(ClearType clear, List<ActiveFloat> floats, float cursorY)
+    {
+        if (clear == ClearType.None || floats.Count == 0) return cursorY;
+        var y = cursorY;
+        foreach (var f in floats)
+        {
+            if (clear == ClearType.Both ||
+                (clear == ClearType.Left  && f.Side == FloatType.Left) ||
+                (clear == ClearType.Right && f.Side == FloatType.Right))
+            {
+                y = Math.Max(y, f.Bottom);
+            }
+        }
+        return y;
+    }
+
+    /// <summary>
+    /// Computes the available horizontal band at a given Y position,
+    /// narrowed by any active floats that overlap vertically.
+    /// Returns (effectiveX, effectiveWidth).
+    /// </summary>
+    private static (float x, float w) AvailableBand(
+        List<ActiveFloat> floats, float y, float height,
+        float contentX, float contentW)
+    {
+        var left  = contentX;
+        var right = contentX + contentW;
+        foreach (var f in floats)
+        {
+            // Float overlaps vertically with the band [y, y+height)?
+            if (f.Bottom <= y || f.Top >= y + height) continue;
+            if (f.Side == FloatType.Left)
+                left = Math.Max(left, f.Right);
+            else
+                right = Math.Min(right, f.Left);
+        }
+        return (left, Math.Max(0, right - left));
+    }
+
+    /// <summary>Remove floats whose bottom edge is at or above <paramref name="y"/>.</summary>
+    private static void RetireFloats(List<ActiveFloat> floats, float y)
+    {
+        floats.RemoveAll(f => f.Bottom <= y);
+    }
+
+    /// <summary>
+    /// Lays out a single floated child (shrink-to-fit width) and returns the ActiveFloat descriptor.
+    /// </summary>
+    private static ActiveFloat LayoutFloat(
+        LayoutNode child, FloatType side,
+        List<ActiveFloat> floats,
+        float contentX, float cursorY, float contentW,
+        float viewportWidth, float viewportHeight, float parentContentHeight)
+    {
+        var fontSize = child.GetFontSize();
+        var margin   = child.GetMargin(contentW, viewportHeight, fontSize);
+        var padding  = child.GetPadding(contentW, viewportHeight, fontSize);
+        var border   = child.GetBorderWidth();
+
+        // Shrink-to-fit: use explicit width or half container as heuristic
+        var explicitW = child.GetWidth(contentW);
+        var maxAvail  = contentW - margin.Left - margin.Right - border.Left - border.Right - padding.Left - padding.Right;
+        float childContentW;
+        if (explicitW > 0)
+        {
+            var isBB = child.Style.GetPropertyValue("box-sizing") == "border-box";
+            childContentW = isBB
+                ? Math.Max(0, explicitW - border.Left - border.Right - padding.Left - padding.Right)
+                : explicitW;
+        }
+        else
+        {
+            // Shrink-to-fit: measure text or use half container
+            if (!string.IsNullOrEmpty(child.DisplayText) && child.Children.Count == 0)
+            {
+                using var font = TextMeasure.CreateFont(child);
+                childContentW = Math.Min(font.MeasureText(child.DisplayText), maxAvail);
+            }
+            else
+                childContentW = Math.Min(maxAvail, contentW * 0.5f);
+        }
+        childContentW = Math.Max(0, childContentW);
+
+        var outerW = margin.Left + border.Left + padding.Left + childContentW + padding.Right + border.Right + margin.Right;
+
+        // Find placement Y — must not overlap existing floats on the same side
+        var placeY = cursorY;
+        // Determine X based on side, respecting existing floats
+        float placeContentX;
+        // Try to place; if it doesn't fit, slide down
+        for (int attempt = 0; attempt < 50; attempt++)
+        {
+            var (bx, bw) = AvailableBand(floats, placeY, 1, contentX, contentW);
+            if (outerW <= bw + 0.5f)
+            {
+                if (side == FloatType.Left)
+                    placeContentX = bx + margin.Left + border.Left + padding.Left;
+                else
+                    placeContentX = bx + bw - margin.Right - border.Right - padding.Right - childContentW;
+                goto placed;
+            }
+            // Slide down past the nearest float bottom
+            var nearest = float.MaxValue;
+            foreach (var f in floats)
+                if (f.Bottom > placeY) nearest = Math.Min(nearest, f.Bottom);
+            if (nearest == float.MaxValue) break;
+            placeY = nearest;
+        }
+        // Fallback: place at current position
+        placeContentX = side == FloatType.Left
+            ? contentX + margin.Left + border.Left + padding.Left
+            : contentX + contentW - margin.Right - border.Right - padding.Right - childContentW;
+
+        placed:
+        var placeContentY = placeY + margin.Top + border.Top + padding.Top;
+
+        // Lay out children inside the float
+        var isBorderBox = child.Style.GetPropertyValue("box-sizing") == "border-box";
+        var explicitH   = child.GetHeight(parentContentHeight, 0, viewportHeight);
+        var knownH      = explicitH > 0
+            ? (isBorderBox ? Math.Max(0, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitH)
+            : 0f;
+
+        var nodeDisplay = child.GetDisplay();
+        var childContentH = (nodeDisplay == DisplayType.Flex || nodeDisplay == DisplayType.InlineFlex)
+            ? FlexEngine.LayoutFlex(child, placeContentX, placeContentY, childContentW, knownH, viewportWidth, viewportHeight)
+            : nodeDisplay == DisplayType.Table
+                ? TableEngine.LayoutTable(child, placeContentX, placeContentY, childContentW, viewportWidth, viewportHeight)
+                : LayoutChildren(child.Children, placeContentX, placeContentY, childContentW, viewportWidth, viewportHeight, knownH);
+
+        if (childContentH == 0 && !string.IsNullOrEmpty(child.DisplayText))
+        {
+            using var font = TextMeasure.CreateFont(child);
+            var lines = TextMeasure.WrapText(child.DisplayText, Math.Max(childContentW, 1f), font, child.GetWhiteSpace());
+            childContentH = lines.Sum(l => l.Height);
+        }
+        if (explicitH > 0)
+            childContentH = isBorderBox
+                ? Math.Max(0, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
+                : explicitH;
+
+        child.Box = new BoxDimensions
+        {
+            ContentBox = new SKRect(placeContentX, placeContentY,
+                                    placeContentX + childContentW, placeContentY + childContentH),
+            Padding = padding,
+            Border  = border,
+            Margin  = margin,
+        };
+
+        var outerTop    = placeY;
+        var outerBottom = placeY + margin.Top + border.Top + padding.Top + childContentH + padding.Bottom + border.Bottom + margin.Bottom;
+        var outerLeft   = placeContentX - padding.Left - border.Left - margin.Left;
+        var outerRight  = placeContentX + childContentW + padding.Right + border.Right + margin.Right;
+
+        return new ActiveFloat(outerLeft, outerTop, outerRight, outerBottom, side);
+    }
+
     private static float LayoutChildren(
         List<LayoutNode> children,
         float contentX, float contentY,
@@ -276,6 +445,7 @@ internal static class BoxEngine
         var cursorY          = contentY;
         var prevMarginBottom = 0f;
         var i                = 0;
+        var floats           = new List<ActiveFloat>();
 
         while (i < children.Count)
         {
@@ -297,6 +467,25 @@ internal static class BoxEngine
                 continue;
             }
 
+            // Handle clear property — push cursorY below relevant floats
+            var clear = child.GetClear();
+            if (clear != ClearType.None)
+            {
+                cursorY = ApplyClear(clear, floats, cursorY);
+                RetireFloats(floats, cursorY);
+            }
+
+            // Handle floated elements — taken out of normal flow but affect available width
+            var floatSide = child.GetFloat();
+            if (floatSide != FloatType.None)
+            {
+                var af = LayoutFloat(child, floatSide, floats, contentX, cursorY, contentW,
+                                     viewportWidth, viewportHeight, parentContentHeight);
+                floats.Add(af);
+                i++;
+                continue;
+            }
+
             if (display == DisplayType.Block || display == DisplayType.ListItem || display == DisplayType.Flex || display == DisplayType.Table)
             {
                 var childFontSize   = child.GetFontSize();
@@ -306,7 +495,10 @@ internal static class BoxEngine
                 var collapsed = Math.Max(prevMarginBottom, childMarginTop);
                 var adjust    = collapsed - prevMarginBottom - childMarginTop; // ≤ 0
 
-                var h = LayoutBlock(child, contentX, cursorY + adjust, contentW, viewportWidth, viewportHeight, parentContentHeight);
+                // Narrow available width for non-floated blocks when floats are active
+                var (effX, effW) = AvailableBand(floats, cursorY + adjust, 1, contentX, contentW);
+
+                var h = LayoutBlock(child, effX, cursorY + adjust, effW, viewportWidth, viewportHeight, parentContentHeight);
                 cursorY += h + adjust;
 
                 prevMarginBottom = child.GetMarginBottom(total: viewportHeight, size: childFontSize);
@@ -320,6 +512,10 @@ internal static class BoxEngine
                 {
                     var d = children[i].GetDisplay();
                     if (d == DisplayType.Block || d == DisplayType.ListItem || d == DisplayType.Flex || d == DisplayType.Table) break;
+                    // Stop if the next child is floated (it needs separate handling)
+                    if (children[i].GetFloat() != FloatType.None) break;
+                    // Stop if the next child has clear set
+                    if (children[i].GetClear() != ClearType.None) break;
                     run.Add(children[i]);
                     i++;
                 }
@@ -328,11 +524,18 @@ internal static class BoxEngine
                 if (run.All(n => n.TagName == "#TEXT" && n.DisplayText.Trim().Length == 0))
                     continue;
 
-                var runH = LayoutInlineRun(run, contentX, cursorY, contentW, viewportWidth, viewportHeight);
+                // Narrow for floats in inline context too
+                var (effX, effW) = AvailableBand(floats, cursorY, 1, contentX, contentW);
+                var runH = LayoutInlineRun(run, effX, cursorY, effW, viewportWidth, viewportHeight);
                 cursorY         += runH;
                 prevMarginBottom = 0f;
             }
         }
+
+        // Ensure container encompasses all floats (CSS 2.1: floats don't expand parent by default,
+        // but many modern sites expect BFC behavior — expand to contain floats)
+        foreach (var f in floats)
+            cursorY = Math.Max(cursorY, f.Bottom);
 
         return cursorY - contentY;
     }

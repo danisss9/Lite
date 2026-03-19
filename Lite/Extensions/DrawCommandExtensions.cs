@@ -25,6 +25,8 @@ public enum AlignItems      { Stretch, FlexStart, FlexEnd, Center, Baseline }
 public enum AlignSelf       { Auto, Stretch, FlexStart, FlexEnd, Center, Baseline }
 public enum AlignContent    { Stretch, FlexStart, FlexEnd, Center, SpaceBetween, SpaceAround }
 public enum Visibility      { Visible, Hidden, Collapse }
+public enum FloatType       { None, Left, Right }
+public enum ClearType       { None, Left, Right, Both }
 
 public static class StyleExtensions
 {
@@ -416,6 +418,31 @@ public static class StyleExtensions
         return float.TryParse(raw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var f)
             ? Math.Clamp(f, 0f, 1f) : 1f;
+    }
+
+    public static FloatType GetFloat(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue("float", out var ov)
+            ? ov : node.Style.GetPropertyValue("float");
+        return raw switch
+        {
+            "left"  => FloatType.Left,
+            "right" => FloatType.Right,
+            _       => FloatType.None,
+        };
+    }
+
+    public static ClearType GetClear(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue("clear", out var ov)
+            ? ov : node.Style.GetPropertyValue("clear");
+        return raw switch
+        {
+            "left"  => ClearType.Left,
+            "right" => ClearType.Right,
+            "both"  => ClearType.Both,
+            _       => ClearType.None,
+        };
     }
 
     /// <summary>Parses all box-shadow layers. Returns empty list when unset.</summary>

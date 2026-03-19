@@ -617,6 +617,54 @@ footer {
 .text-shadow-hard   { font-size: 1.4em; color: #1d4ed8; text-shadow: 3px 3px 0px rgba(0,0,0,0.4); }
 .text-shadow-glow   { font-size: 1.4em; color: #6366f1; text-shadow: 0px 0px 8px rgba(99,102,241,0.8); }
 
+/* ── Float & Clear ──────────────────────────── */
+.float-container {
+  background-color: #f8fafc;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+  border-top-color: #e2e8f0;
+  border-right-color: #e2e8f0;
+  border-bottom-color: #e2e8f0;
+  border-left-color: #e2e8f0;
+}
+
+.float-left-box {
+  float: left;
+  width: 120px;
+  padding: 16px 0;
+  text-align: center;
+  background-color: #3b82f6;
+  color: #ffffff;
+  margin-right: 12px;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+
+.float-right-box {
+  float: right;
+  width: 120px;
+  padding: 16px 0;
+  text-align: center;
+  background-color: #22c55e;
+  color: #ffffff;
+  margin-left: 12px;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+
+.clear-both-box {
+  clear: both;
+  background-color: #fef9c3;
+  padding: 10px;
+  color: #92400e;
+  border-top-width: 2px;
+  border-top-color: #fbbf24;
+}
+
 /* ── Border Radius ───────────────────────────── */
 .radius-row {
   display: flex;

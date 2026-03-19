@@ -19,7 +19,9 @@ public class BrowserWindow
     private const int WM_DESTROY = 0x0002;
     private const int WM_SIZE = 0x0005;
     private const int WM_CHAR = 0x0102;
+    private const int WM_LBUTTONDOWN = 0x0201;
     private const int WM_LBUTTONUP = 0x0202;
+    private const int WM_MOUSEMOVE = 0x0200;
     private const int WM_MOUSEWHEEL = 0x020A;
     private const int WM_SETCURSOR = 0x0020;
     private const int HTCLIENT = 1;
@@ -41,6 +43,10 @@ public class BrowserWindow
     private List<HitRegion> _hitRegions = [];
     private readonly Viewport _viewport = new();
     private WndProcDelegate? _wndProcDelegate;
+
+    // Scrollbar drag state
+    private bool _draggingScrollbar;
+    private float _scrollbarGrabOffset; // Y offset within thumb where drag started
 
     public BrowserWindow(string url, string title = "Lite Browser", int width = 800, int height = 600)
     {
@@ -172,8 +178,57 @@ public class BrowserWindow
                 break;
             }
 
+            case WM_LBUTTONDOWN:
+            {
+                var x = (short)(lParam.ToInt32() & 0xFFFF);
+                var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+
+                if (_viewport.HitThumb(x, y, _width))
+                {
+                    _draggingScrollbar = true;
+                    _scrollbarGrabOffset = y - _viewport.ThumbTop;
+                    // Capture mouse so we get WM_MOUSEMOVE even outside the window
+                    User32.SetCapture(hWnd);
+                }
+                else if (_viewport.HitTrack(x, _width))
+                {
+                    // Click on track above/below thumb — jump to that position
+                    var targetScrollY = _viewport.ScrollYFromThumbTop(y, _viewport.ThumbHeight / 2f);
+                    _viewport.ScrollTo(targetScrollY);
+                    if (_rootNode != null)
+                    {
+                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    }
+                }
+                break;
+            }
+
+            case WM_MOUSEMOVE:
+            {
+                if (_draggingScrollbar)
+                {
+                    var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+                    var targetScrollY = _viewport.ScrollYFromThumbTop(y, _scrollbarGrabOffset);
+                    _viewport.ScrollTo(targetScrollY);
+                    if (_rootNode != null)
+                    {
+                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    }
+                }
+                break;
+            }
+
             case WM_LBUTTONUP:
             {
+                if (_draggingScrollbar)
+                {
+                    _draggingScrollbar = false;
+                    User32.ReleaseCapture();
+                    break;
+                }
+
                 var x = (short)(lParam.ToInt32() & 0xFFFF);
                 var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
                 var contentY = y + _viewport.ScrollY;

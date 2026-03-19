@@ -72,4 +72,10 @@ internal static class User32
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     internal static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr SetCapture(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    internal static extern bool ReleaseCapture();
 }

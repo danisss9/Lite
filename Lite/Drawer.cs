@@ -247,8 +247,66 @@ internal static class Drawer
         {
             using var font  = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+
+            var textX = box.ContentBox.Left;
+            var textY = box.ContentBox.Top;
+
+            // Flex containers with direct text: apply justify-content / align-items
+            var nodeDisplay = node.GetDisplay();
+            var isFlex = nodeDisplay == DisplayType.Flex || nodeDisplay == DisplayType.InlineFlex;
+            var textMaxW = box.ContentBox.Width;
+            if (isFlex)
+            {
+                var ws    = node.GetWhiteSpace();
+                var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(box.ContentBox.Width, 1f), font, ws);
+                var textH = lines.Sum(l => l.Height);
+                var textW = lines.Count > 0 ? lines.Max(l => l.Width) : 0f;
+
+                var dir   = node.GetFlexDirection();
+                var isRow = dir == FlexDirection.Row || dir == FlexDirection.RowReverse;
+
+                if (isRow)
+                {
+                    // justify-content controls horizontal, align-items controls vertical
+                    textX += node.GetJustifyContent() switch
+                    {
+                        JustifyContent.Center       => (box.ContentBox.Width - textW) / 2f,
+                        JustifyContent.FlexEnd      => box.ContentBox.Width - textW,
+                        JustifyContent.SpaceAround  => (box.ContentBox.Width - textW) / 2f,
+                        JustifyContent.SpaceEvenly   => (box.ContentBox.Width - textW) / 2f,
+                        _ => 0f,
+                    };
+                    textY += node.GetAlignItems() switch
+                    {
+                        AlignItems.Center   => (box.ContentBox.Height - textH) / 2f,
+                        AlignItems.FlexEnd  => box.ContentBox.Height - textH,
+                        _ => 0f,
+                    };
+                }
+                else
+                {
+                    // Column: justify-content controls vertical, align-items controls horizontal
+                    textY += node.GetJustifyContent() switch
+                    {
+                        JustifyContent.Center       => (box.ContentBox.Height - textH) / 2f,
+                        JustifyContent.FlexEnd      => box.ContentBox.Height - textH,
+                        JustifyContent.SpaceAround  => (box.ContentBox.Height - textH) / 2f,
+                        JustifyContent.SpaceEvenly   => (box.ContentBox.Height - textH) / 2f,
+                        _ => 0f,
+                    };
+                    textX += node.GetAlignItems() switch
+                    {
+                        AlignItems.Center   => (box.ContentBox.Width - textW) / 2f,
+                        AlignItems.FlexEnd  => box.ContentBox.Width - textW,
+                        _ => 0f,
+                    };
+                }
+                // Use measured text width so DrawWrappedText doesn't add its own alignment offset
+                textMaxW = textW;
+            }
+
             DrawWrappedText(canvas, node, node.DisplayText,
-                            box.ContentBox.Left, box.ContentBox.Top, box.ContentBox.Width, font, paint);
+                            textX, textY, textMaxW, font, paint);
         }
 
         PaintChildrenSorted(canvas, node, viewportWidth);
