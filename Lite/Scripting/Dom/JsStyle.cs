@@ -30,6 +30,16 @@ public class JsStyle
         get => _node.StyleOverrides.GetValueOrDefault("border-radius", string.Empty);
         set => Set("border-radius", value);
     }
+    public string boxShadow
+    {
+        get => _node.StyleOverrides.GetValueOrDefault("box-shadow", string.Empty);
+        set => Set("box-shadow", value);
+    }
+    public string textShadow
+    {
+        get => _node.StyleOverrides.GetValueOrDefault("text-shadow", string.Empty);
+        set => Set("text-shadow", value);
+    }
 
     // ---- display / visibility ----
     public string display

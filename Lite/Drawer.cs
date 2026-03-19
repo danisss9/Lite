@@ -224,6 +224,8 @@ internal static class Drawer
     {
         var box = node.Box;
 
+        DrawBoxShadows(canvas, box, node);
+
         // Background
         var bgColor = node.GetBackgroundColor();
         if (bgColor != SKColors.Transparent)
@@ -308,6 +310,8 @@ internal static class Drawer
     private static void PaintTextBlock(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
         var box = node.Box;
+
+        DrawBoxShadows(canvas, box, node);
 
         var bgColor = node.GetBackgroundColor();
         if (bgColor != SKColors.Transparent)
@@ -466,6 +470,8 @@ internal static class Drawer
         if (string.IsNullOrEmpty(btnLabel)) node.Attributes.TryGetValue("value", out btnLabel);
         if (string.IsNullOrEmpty(btnLabel)) btnLabel = "Button";
 
+        DrawBoxShadows(canvas, box, node);
+
         var bgColor = node.GetBackgroundColor();
         if (bgColor == SKColors.Transparent) bgColor = new SKColor(225, 225, 225);
         using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
@@ -506,6 +512,8 @@ internal static class Drawer
     private static void PaintListItem(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
         var box = node.Box;
+
+        DrawBoxShadows(canvas, box, node);
 
         // Background
         var bgColor = node.GetBackgroundColor();
@@ -576,6 +584,41 @@ internal static class Drawer
     }
 
     // -------------------------------------------------------------------------
+    // Shadows
+    // -------------------------------------------------------------------------
+
+    private static void DrawBoxShadows(SKCanvas canvas, BoxDimensions box, LayoutNode node)
+    {
+        var shadows = node.GetBoxShadows();
+        if (shadows.Count == 0) return;
+
+        var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+
+        // Paint shadows in reverse order (last layer first, per CSS spec)
+        for (int i = shadows.Count - 1; i >= 0; i--)
+        {
+            var s     = shadows[i];
+            if (s.Inset) continue;   // inset shadows not yet supported
+
+            var sigma = s.Blur / 2f;
+            var shadowRect = SKRect.Inflate(box.PaddingBox, s.Spread, s.Spread);
+            shadowRect.Offset(s.OffsetX, s.OffsetY);
+            var srx = Math.Max(0, rx + s.Spread);
+            var sry = Math.Max(0, ry + s.Spread);
+
+            using var paint = new SKPaint
+            {
+                Color      = s.Color,
+                IsAntialias = true,
+                MaskFilter = sigma > 0 ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma) : null,
+            };
+
+            if (srx > 0 || sry > 0) canvas.DrawRoundRect(shadowRect, srx, sry, paint);
+            else                     canvas.DrawRect(shadowRect, paint);
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Shared helpers
     // -------------------------------------------------------------------------
 
@@ -634,8 +677,9 @@ internal static class Drawer
         var underline   = node.IsUnderline();
         var lineThrough = node.IsLineThrough();
 
-        var lines = TextMeasure.WrapText(text, maxWidth, font, whiteSpace);
-        var lineY = y;
+        var lines      = TextMeasure.WrapText(text, maxWidth, font, whiteSpace);
+        var lineY      = y;
+        var textShadow = node.GetTextShadow();
 
         foreach (var line in lines)
         {
@@ -649,6 +693,21 @@ internal static class Drawer
 
             // SkiaSharp draws at baseline; add ascent to convert top→baseline
             var baseline = lineY + line.Ascent;
+
+            // text-shadow drawn before (behind) the main text
+            if (textShadow.HasValue)
+            {
+                var ts    = textShadow.Value;
+                var sigma = ts.Blur / 2f;
+                using var sp = new SKPaint
+                {
+                    Color      = ts.Color,
+                    IsAntialias = true,
+                    MaskFilter = sigma > 0 ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma) : null,
+                };
+                canvas.DrawText(line.Text, drawX + ts.OffsetX, baseline + ts.OffsetY, SKTextAlign.Left, font, sp);
+            }
+
             canvas.DrawText(line.Text, drawX, baseline, SKTextAlign.Left, font, paint);
 
             if (underline)

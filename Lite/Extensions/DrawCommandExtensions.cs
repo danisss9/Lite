@@ -1,3 +1,4 @@
+using System.Globalization;
 using AngleSharp.Css;
 using AngleSharp.Css.Values;
 using Lite.Layout;
@@ -5,6 +6,12 @@ using Lite.Models;
 using SkiaSharp;
 
 namespace Lite.Extensions;
+
+/// <summary>One layer of a box-shadow declaration.</summary>
+public record struct BoxShadow(float OffsetX, float OffsetY, float Blur, float Spread, SKColor Color, bool Inset);
+
+/// <summary>A text-shadow declaration.</summary>
+public record struct TextShadow(float OffsetX, float OffsetY, float Blur, SKColor Color);
 
 public enum DisplayType     { Block, Inline, InlineBlock, ListItem, Flex, InlineFlex, Table, TableRow, TableCell, None }
 public enum TextAlign       { Left, Center, Right, Justify }
@@ -409,6 +416,113 @@ public static class StyleExtensions
         return float.TryParse(raw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var f)
             ? Math.Clamp(f, 0f, 1f) : 1f;
+    }
+
+    /// <summary>Parses all box-shadow layers. Returns empty list when unset.</summary>
+    public static List<BoxShadow> GetBoxShadows(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue("box-shadow", out var ov)
+            ? ov : node.Style.GetPropertyValue("box-shadow");
+        if (string.IsNullOrWhiteSpace(raw) || raw == "none") return [];
+        var result = new List<BoxShadow>();
+        foreach (var layer in SplitShadowLayers(raw))
+        {
+            if (TryParseShadowLayer(layer, out var s)) result.Add(s);
+        }
+        return result;
+    }
+
+    /// <summary>Parses the text-shadow property. Returns null when unset.</summary>
+    public static TextShadow? GetTextShadow(this LayoutNode node)
+    {
+        var raw = node.StyleOverrides.TryGetValue("text-shadow", out var ov)
+            ? ov : node.Style.GetPropertyValue("text-shadow");
+        if (string.IsNullOrWhiteSpace(raw) || raw == "none") return null;
+        // text-shadow uses same token format as box-shadow but without spread/inset
+        if (TryParseShadowLayer(SplitShadowLayers(raw).FirstOrDefault() ?? "", out var s))
+            return new TextShadow(s.OffsetX, s.OffsetY, s.Blur, s.Color);
+        return null;
+    }
+
+    // ---- shadow parsing helpers ----
+
+    /// <summary>Splits comma-separated shadow layers, keeping commas inside functional notation intact.</summary>
+    private static IEnumerable<string> SplitShadowLayers(string value)
+    {
+        var sb  = new System.Text.StringBuilder();
+        int depth = 0;
+        foreach (var c in value)
+        {
+            if      (c == '(') { depth++;  sb.Append(c); }
+            else if (c == ')') { depth--;  sb.Append(c); }
+            else if (c == ',' && depth == 0)
+            {
+                var layer = sb.ToString().Trim();
+                if (layer.Length > 0) yield return layer;
+                sb.Clear();
+            }
+            else sb.Append(c);
+        }
+        var last = sb.ToString().Trim();
+        if (last.Length > 0) yield return last;
+    }
+
+    /// <summary>Tokenises one shadow layer (spaces as delimiters, functional notation kept intact).</summary>
+    private static IEnumerable<string> ShadowTokens(string layer)
+    {
+        var sb    = new System.Text.StringBuilder();
+        int depth = 0;
+        foreach (var c in layer)
+        {
+            if (c == '(') { depth++; sb.Append(c); }
+            else if (c == ')') { depth--; sb.Append(c); }
+            else if (char.IsWhiteSpace(c) && depth == 0)
+            {
+                if (sb.Length > 0) { yield return sb.ToString(); sb.Clear(); }
+            }
+            else sb.Append(c);
+        }
+        if (sb.Length > 0) yield return sb.ToString();
+    }
+
+    private static bool TryParseLengthPx(string token, out float px)
+    {
+        if (token.EndsWith("px", StringComparison.OrdinalIgnoreCase))
+            return float.TryParse(token[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out px);
+        // Unitless 0 is valid
+        if (float.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out px) && px == 0f)
+            return true;
+        px = 0;
+        return false;
+    }
+
+    private static bool TryParseShadowLayer(string layer, out BoxShadow shadow)
+    {
+        shadow = default;
+        var tokens  = ShadowTokens(layer).ToList();
+        bool inset  = tokens.Remove("inset");
+        var lengths = new List<float>();
+        SKColor color = new SKColor(0, 0, 0, 102); // default: rgba(0,0,0,0.4)
+        bool hasColor = false;
+        foreach (var token in tokens)
+        {
+            if (TryParseLengthPx(token, out var px))
+                lengths.Add(px);
+            else
+            {
+                var c = ParseCssColor(token);
+                if (c.HasValue) { color = c.Value; hasColor = true; }
+            }
+        }
+        if (lengths.Count < 2) return false;
+        shadow = new BoxShadow(
+            OffsetX: lengths[0],
+            OffsetY: lengths[1],
+            Blur:    lengths.Count > 2 ? lengths[2] : 0f,
+            Spread:  lengths.Count > 3 ? lengths[3] : 0f,
+            Color:   color,
+            Inset:   inset);
+        return true;
     }
 
     /// <summary>Returns the value of a position offset property (top/right/bottom/left).
