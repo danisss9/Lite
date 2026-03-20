@@ -61,14 +61,14 @@ internal static class Parser
     private static string? _baseUrl;
     private static readonly List<string> _pendingScripts = [];
     private static readonly HttpClient _httpClient = new();
-    internal static int ViewportWidth  { get; private set; } = 800;
+    internal static int ViewportWidth { get; private set; } = 800;
     internal static int ViewportHeight { get; private set; } = 600;
 
     internal static LayoutNode TraverseHtml(string address, int viewportWidth = 800, int viewportHeight = 600)
     {
         _baseUrl = address;
         _pendingScripts.Clear();
-        ViewportWidth  = viewportWidth;
+        ViewportWidth = viewportWidth;
         ViewportHeight = viewportHeight;
 
         var config = Configuration.Default
@@ -76,7 +76,7 @@ internal static class Parser
             .WithCss()
             .WithRenderDevice();
 
-        var context  = BrowsingContext.New(config);
+        var context = BrowsingContext.New(config);
         var document = context.OpenAsync(address).Result;
 
         var head = document.Head ?? document.DocumentElement;
@@ -96,7 +96,7 @@ internal static class Parser
             if (cssUrl is null) continue;
             try
             {
-                var css     = _httpClient.GetStringAsync(cssUrl).Result;
+                var css = _httpClient.GetStringAsync(cssUrl).Result;
                 var styleEl = document.CreateElement("style");
                 styleEl.TextContent = css;
                 head.AppendChild(styleEl);
@@ -143,7 +143,7 @@ internal static class Parser
                     {
                         float offset;
                         if (key.Equals("from", StringComparison.OrdinalIgnoreCase)) offset = 0f;
-                        else if (key.Equals("to",   StringComparison.OrdinalIgnoreCase)) offset = 1f;
+                        else if (key.Equals("to", StringComparison.OrdinalIgnoreCase)) offset = 1f;
                         else if (key.EndsWith('%') &&
                                  float.TryParse(key[..^1].Trim(),
                                      System.Globalization.NumberStyles.Float,
@@ -199,7 +199,7 @@ internal static class Parser
             var src = element.GetAttribute("src");
             node.Alt = element.GetAttribute("alt") ?? string.Empty;
 
-            if (int.TryParse(element.GetAttribute("width"),  out var w)) node.IntrinsicWidth  = w;
+            if (int.TryParse(element.GetAttribute("width"), out var w)) node.IntrinsicWidth = w;
             if (int.TryParse(element.GetAttribute("height"), out var h)) node.IntrinsicHeight = h;
 
             if (!string.IsNullOrEmpty(src))
@@ -407,7 +407,7 @@ internal static class Parser
                 var colon = decl.IndexOf(':');
                 if (colon < 0) continue;
                 var prop = decl[..colon].Trim().ToLowerInvariant();
-                var val  = decl[(colon + 1)..].Trim().Replace("!important", "").Trim();
+                var val = decl[(colon + 1)..].Trim().Replace("!important", "").Trim();
                 if (!string.IsNullOrEmpty(val))
                     props.TryAdd(prop, val);
             }
@@ -418,10 +418,10 @@ internal static class Parser
         var matches = MediaQueryEvaluator.Matches(mediaText, ViewportWidth, ViewportHeight);
         var targetDict = target switch
         {
-            "hover"  => node.MediaHoverStyles,
-            "focus"  => node.MediaFocusStyles,
+            "hover" => node.MediaHoverStyles,
+            "focus" => node.MediaFocusStyles,
             "active" => node.MediaActiveStyles,
-            _        => node.MediaOverrides,
+            _ => node.MediaOverrides,
         };
 
         foreach (var (prop, val) in props)
@@ -448,14 +448,14 @@ internal static class Parser
     {
         if (prop is "padding" or "margin")
         {
-            node.StyleOverrides[$"{prop}-top"]    = val;
-            node.StyleOverrides[$"{prop}-right"]  = val;
+            node.StyleOverrides[$"{prop}-top"] = val;
+            node.StyleOverrides[$"{prop}-right"] = val;
             node.StyleOverrides[$"{prop}-bottom"] = val;
-            node.StyleOverrides[$"{prop}-left"]   = val;
+            node.StyleOverrides[$"{prop}-left"] = val;
         }
         else if (prop == "gap")
         {
-            node.StyleOverrides["row-gap"]    = val;
+            node.StyleOverrides["row-gap"] = val;
             node.StyleOverrides["column-gap"] = val;
         }
         else
@@ -469,7 +469,7 @@ internal static class Parser
         if (prop == "gap")
         {
             var parts = val.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            node.StyleOverrides["row-gap"]    = parts[0];
+            node.StyleOverrides["row-gap"] = parts[0];
             node.StyleOverrides["column-gap"] = parts.Length > 1 ? parts[1] : parts[0];
             Console.WriteLine($"  [CSS] {node.TagName}#{node.Id}.{node.Text[..Math.Min(node.Text.Length, 20)]}: gap → row-gap={parts[0]}, column-gap={(parts.Length > 1 ? parts[1] : parts[0])}");
         }
@@ -504,14 +504,14 @@ internal static class Parser
         switch (val)
         {
             case "none":
-                node.StyleOverrides["flex-grow"]   = "0";
+                node.StyleOverrides["flex-grow"] = "0";
                 node.StyleOverrides["flex-shrink"] = "0";
-                node.StyleOverrides["flex-basis"]  = "auto";
+                node.StyleOverrides["flex-basis"] = "auto";
                 return;
             case "auto":
-                node.StyleOverrides["flex-grow"]   = "1";
+                node.StyleOverrides["flex-grow"] = "1";
                 node.StyleOverrides["flex-shrink"] = "1";
-                node.StyleOverrides["flex-basis"]  = "auto";
+                node.StyleOverrides["flex-basis"] = "auto";
                 return;
         }
 
@@ -523,38 +523,38 @@ internal static class Parser
             if (float.TryParse(parts[0], System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out _))
             {
-                node.StyleOverrides["flex-grow"]   = parts[0];
+                node.StyleOverrides["flex-grow"] = parts[0];
                 node.StyleOverrides["flex-shrink"] = "1";
-                node.StyleOverrides["flex-basis"]  = "0px";
+                node.StyleOverrides["flex-basis"] = "0px";
             }
             else
             {
-                node.StyleOverrides["flex-grow"]   = "1";
+                node.StyleOverrides["flex-grow"] = "1";
                 node.StyleOverrides["flex-shrink"] = "1";
-                node.StyleOverrides["flex-basis"]  = parts[0];
+                node.StyleOverrides["flex-basis"] = parts[0];
             }
         }
         else if (parts.Length == 2)
         {
-            node.StyleOverrides["flex-grow"]   = parts[0];
+            node.StyleOverrides["flex-grow"] = parts[0];
             // Second value: number → shrink, length → basis
             if (float.TryParse(parts[1], System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out _))
             {
                 node.StyleOverrides["flex-shrink"] = parts[1];
-                node.StyleOverrides["flex-basis"]  = "0px";
+                node.StyleOverrides["flex-basis"] = "0px";
             }
             else
             {
                 node.StyleOverrides["flex-shrink"] = "1";
-                node.StyleOverrides["flex-basis"]  = parts[1];
+                node.StyleOverrides["flex-basis"] = parts[1];
             }
         }
         else if (parts.Length >= 3)
         {
-            node.StyleOverrides["flex-grow"]   = parts[0];
+            node.StyleOverrides["flex-grow"] = parts[0];
             node.StyleOverrides["flex-shrink"] = parts[1];
-            node.StyleOverrides["flex-basis"]  = parts[2];
+            node.StyleOverrides["flex-basis"] = parts[2];
         }
     }
 
@@ -572,7 +572,7 @@ internal static class Parser
             if (colonIdx < 0) continue;
 
             var prop = declaration[..colonIdx].Trim().ToLowerInvariant();
-            var val  = declaration[(colonIdx + 1)..].Trim();
+            var val = declaration[(colonIdx + 1)..].Trim();
 
             if (string.IsNullOrEmpty(val)) continue;
 
@@ -607,12 +607,16 @@ internal static class Parser
         string? mediaText = null)
     {
         var selector = rule.SelectorText;
+
+        if (selector is null)
+            return false;
+
         if (!selector.Contains(":hover") && !selector.Contains(":focus") && !selector.Contains(":active"))
             return false;
 
         // Determine which pseudo-classes are present
-        var hasHover  = selector.Contains(":hover");
-        var hasFocus  = selector.Contains(":focus");
+        var hasHover = selector.Contains(":hover");
+        var hasFocus = selector.Contains(":focus");
         var hasActive = selector.Contains(":active");
 
         // Strip pseudo-classes to get the base selector
@@ -638,7 +642,7 @@ internal static class Parser
             var colon = decl.IndexOf(':');
             if (colon < 0) continue;
             var prop = decl[..colon].Trim().ToLowerInvariant();
-            var val  = decl[(colon + 1)..].Trim().Replace("!important", "").Trim();
+            var val = decl[(colon + 1)..].Trim().Replace("!important", "").Trim();
             if (!string.IsNullOrEmpty(val))
                 props[prop] = val;
         }
@@ -654,8 +658,8 @@ internal static class Parser
         if (mediaText is null)
         {
             // Regular pseudo-class rule
-            if (hasHover)  foreach (var (p, v) in props) node.HoverStyles[p]  = v;
-            if (hasFocus)  foreach (var (p, v) in props) node.FocusStyles[p]  = v;
+            if (hasHover) foreach (var (p, v) in props) node.HoverStyles[p] = v;
+            if (hasFocus) foreach (var (p, v) in props) node.FocusStyles[p] = v;
             if (hasActive) foreach (var (p, v) in props) node.ActiveStyles[p] = v;
         }
         else
@@ -703,10 +707,10 @@ internal static class Parser
             var tokens = segment.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (tokens.Length == 0) continue;
 
-            var property    = tokens[0].ToLowerInvariant();
-            var duration    = tokens.Length > 1 ? ParseSeconds(tokens[1]) : 0f;
-            var timingFunc  = tokens.Length > 2 ? tokens[2] : "ease";
-            var delay       = tokens.Length > 3 ? ParseSeconds(tokens[3]) : 0f;
+            var property = tokens[0].ToLowerInvariant();
+            var duration = tokens.Length > 1 ? ParseSeconds(tokens[1]) : 0f;
+            var timingFunc = tokens.Length > 2 ? tokens[2] : "ease";
+            var delay = tokens.Length > 3 ? ParseSeconds(tokens[3]) : 0f;
 
             if (duration > 0 || delay > 0)
                 yield return new TransitionSpec(property, duration, delay, timingFunc);
@@ -726,24 +730,24 @@ internal static class Parser
 
             // Heuristic token assignment — browsers are flexible about order.
             // We scan tokens to identify each role.
-            string  name          = "none";
-            float   duration      = 0f;
-            float   delay         = 0f;
-            string  timingFunc    = "ease";
-            int     iterations    = 1;
-            bool    alternate     = false;
-            bool    fillForwards  = false;
+            string name = "none";
+            float duration = 0f;
+            float delay = 0f;
+            string timingFunc = "ease";
+            int iterations = 1;
+            bool alternate = false;
+            bool fillForwards = false;
 
             var timesSeen = 0; // first time-value = duration, second = delay
             foreach (var tok in tokens)
             {
                 var t = tok.ToLowerInvariant();
                 if (t == "none") continue;
-                if (t == "infinite")  { iterations = -1; continue; }
+                if (t == "infinite") { iterations = -1; continue; }
                 if (t == "alternate" || t == "alternate-reverse") { alternate = true; continue; }
-                if (t == "reverse")   continue;
+                if (t == "reverse") continue;
                 if (t == "forwards" || t == "both") { fillForwards = true; continue; }
-                if (t is "backwards" or "normal")   continue;
+                if (t is "backwards" or "normal") continue;
                 if (t is "ease" or "linear" or "ease-in" or "ease-out" or "ease-in-out" or
                     "step-start" or "step-end" || t.StartsWith("cubic-bezier("))
                 {
@@ -754,7 +758,7 @@ internal static class Parser
                 {
                     var secs = ParseSeconds(tok);
                     if (timesSeen == 0) duration = secs;
-                    else                delay    = secs;
+                    else delay = secs;
                     timesSeen++;
                     continue;
                 }
@@ -805,7 +809,7 @@ internal static class Parser
             var colon = decl.IndexOf(':');
             if (colon < 0) continue;
             var prop = decl[..colon].Trim().ToLowerInvariant();
-            var val  = decl[(colon + 1)..].Trim().Replace("!important", "").Trim();
+            var val = decl[(colon + 1)..].Trim().Replace("!important", "").Trim();
             if (!string.IsNullOrEmpty(val))
                 dict[prop] = val;
         }
@@ -821,8 +825,8 @@ internal static class Parser
         var start = 0;
         for (int i = 0; i < value.Length; i++)
         {
-            if (value[i] == '(')       depth++;
-            else if (value[i] == ')')  depth--;
+            if (value[i] == '(') depth++;
+            else if (value[i] == ')') depth--;
             else if (value[i] == delimiter && depth == 0)
             {
                 yield return value[start..i];
