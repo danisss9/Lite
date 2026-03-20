@@ -2,6 +2,7 @@ using AngleSharp.Io;
 using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Css.Dom;
+using Lite.Animation;
 using Lite.Models;
 using Lite.Network;
 using Lite.Scripting;
@@ -103,6 +104,10 @@ internal static class Parser
             catch (Exception ex) { Console.WriteLine($"[CSS load error] {cssUrl}: {ex.Message}"); }
         }
 
+        // Collect @keyframes from all stylesheets before traversing the DOM
+        AnimationRegistry.Clear();
+        CollectKeyframes(document);
+
         var root = Traverse(document.DocumentElement, 0);
 
         // Always create the JS engine so inline onclick/on* handlers work,
@@ -112,6 +117,53 @@ internal static class Parser
             jsEngine.Execute(script);
 
         return root;
+    }
+
+    /// <summary>
+    /// Walks all stylesheets and registers every @keyframes rule into <see cref="AnimationRegistry"/>.
+    /// </summary>
+    private static void CollectKeyframes(AngleSharp.Dom.IDocument document)
+    {
+        if (document.StyleSheets is null) return;
+        foreach (var sheet in document.StyleSheets.OfType<ICssStyleSheet>())
+            CollectKeyframesFromRules(sheet.Rules);
+    }
+
+    private static void CollectKeyframesFromRules(ICssRuleList rules)
+    {
+        foreach (var rule in rules)
+        {
+            if (rule is ICssKeyframesRule kfRule)
+            {
+                var frames = new List<(float Offset, Dictionary<string, string> Props)>();
+                foreach (var fr in kfRule.Rules.OfType<ICssKeyframeRule>())
+                {
+                    // KeyText can be "from", "to", "0%", "50%", or comma-separated like "0%, 100%"
+                    foreach (var key in fr.KeyText.Split(',', StringSplitOptions.TrimEntries))
+                    {
+                        float offset;
+                        if (key.Equals("from", StringComparison.OrdinalIgnoreCase)) offset = 0f;
+                        else if (key.Equals("to",   StringComparison.OrdinalIgnoreCase)) offset = 1f;
+                        else if (key.EndsWith('%') &&
+                                 float.TryParse(key[..^1].Trim(),
+                                     System.Globalization.NumberStyles.Float,
+                                     System.Globalization.CultureInfo.InvariantCulture, out var pct))
+                            offset = pct / 100f;
+                        else continue;
+
+                        var props = ParseCssTextToDict(fr.Style.CssText);
+                        frames.Add((offset, props));
+                    }
+                }
+                if (frames.Count > 0)
+                    AnimationRegistry.Register(kfRule.Name, frames);
+                continue;
+            }
+
+            // Descend into @media blocks
+            if (rule is ICssMediaRule mediaRule)
+                CollectKeyframesFromRules(mediaRule.Rules);
+        }
     }
 
     private static string? ResolveUrl(string src)
@@ -319,6 +371,7 @@ internal static class Parser
                         StoreProp(node, prop, val);
                 }
                 ParseCssTextForFlexProps(styleRule.Style.CssText, node);
+                ExtractTransitionAndAnimation(styleRule.Style.CssText, node);
             }
             else
             {
@@ -579,6 +632,169 @@ internal static class Parser
 
         return true;
     }
+
+    // ── Transition / Animation parsing ───────────────────────────────────────
+
+    /// <summary>
+    /// Parses `transition` and `animation` declarations from a rule's CssText
+    /// and stores them on the node so <see cref="AnimationEngine"/> can use them.
+    /// </summary>
+    private static void ExtractTransitionAndAnimation(string cssText, LayoutNode node)
+    {
+        if (string.IsNullOrEmpty(cssText)) return;
+
+        var props = ParseCssTextToDict(cssText);
+
+        if (props.TryGetValue("transition", out var transVal))
+            node.TransitionSpecs.AddRange(ParseTransitionValue(transVal));
+
+        if (props.TryGetValue("animation", out var animVal))
+            node.AnimationSpecs.AddRange(ParseAnimationValue(animVal));
+    }
+
+    /// <summary>
+    /// Parses a `transition` value (possibly comma-separated) into <see cref="TransitionSpec"/> entries.
+    /// Format per entry: property duration timing-function delay
+    /// </summary>
+    private static IEnumerable<TransitionSpec> ParseTransitionValue(string value)
+    {
+        // Split on commas that are NOT inside parentheses
+        foreach (var segment in SplitOutsideParens(value, ','))
+        {
+            var tokens = segment.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (tokens.Length == 0) continue;
+
+            var property    = tokens[0].ToLowerInvariant();
+            var duration    = tokens.Length > 1 ? ParseSeconds(tokens[1]) : 0f;
+            var timingFunc  = tokens.Length > 2 ? tokens[2] : "ease";
+            var delay       = tokens.Length > 3 ? ParseSeconds(tokens[3]) : 0f;
+
+            if (duration > 0 || delay > 0)
+                yield return new TransitionSpec(property, duration, delay, timingFunc);
+        }
+    }
+
+    /// <summary>
+    /// Parses an `animation` value (possibly comma-separated) into <see cref="AnimationSpec"/> entries.
+    /// Format per entry: name duration timing-function delay iteration-count direction fill-mode
+    /// </summary>
+    private static IEnumerable<AnimationSpec> ParseAnimationValue(string value)
+    {
+        foreach (var segment in SplitOutsideParens(value, ','))
+        {
+            var tokens = segment.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (tokens.Length == 0) continue;
+
+            // Heuristic token assignment — browsers are flexible about order.
+            // We scan tokens to identify each role.
+            string  name          = "none";
+            float   duration      = 0f;
+            float   delay         = 0f;
+            string  timingFunc    = "ease";
+            int     iterations    = 1;
+            bool    alternate     = false;
+            bool    fillForwards  = false;
+
+            var timesSeen = 0; // first time-value = duration, second = delay
+            foreach (var tok in tokens)
+            {
+                var t = tok.ToLowerInvariant();
+                if (t == "none") continue;
+                if (t == "infinite")  { iterations = -1; continue; }
+                if (t == "alternate" || t == "alternate-reverse") { alternate = true; continue; }
+                if (t == "reverse")   continue;
+                if (t == "forwards" || t == "both") { fillForwards = true; continue; }
+                if (t is "backwards" or "normal")   continue;
+                if (t is "ease" or "linear" or "ease-in" or "ease-out" or "ease-in-out" or
+                    "step-start" or "step-end" || t.StartsWith("cubic-bezier("))
+                {
+                    timingFunc = t;
+                    continue;
+                }
+                if (IsTimeValue(tok))
+                {
+                    var secs = ParseSeconds(tok);
+                    if (timesSeen == 0) duration = secs;
+                    else                delay    = secs;
+                    timesSeen++;
+                    continue;
+                }
+                if (int.TryParse(t, System.Globalization.NumberStyles.Integer,
+                        System.Globalization.CultureInfo.InvariantCulture, out var n) && n >= 0)
+                {
+                    iterations = n;
+                    continue;
+                }
+                // Anything else is the animation name
+                name = tok;
+            }
+
+            if (name != "none" && duration > 0)
+                yield return new AnimationSpec(name, duration, delay, timingFunc,
+                    iterations, alternate, fillForwards);
+        }
+    }
+
+    private static bool IsTimeValue(string tok)
+    {
+        var t = tok.ToLowerInvariant();
+        return t.EndsWith("ms") || t.EndsWith('s');
+    }
+
+    private static float ParseSeconds(string tok)
+    {
+        tok = tok.Trim().ToLowerInvariant();
+        if (tok.EndsWith("ms") &&
+            float.TryParse(tok[..^2], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var ms))
+            return ms / 1000f;
+        if (tok.EndsWith('s') &&
+            float.TryParse(tok[..^1], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var s))
+            return s;
+        return 0f;
+    }
+
+    /// <summary>Parses a CSS declaration block string into a property→value dictionary.</summary>
+    internal static Dictionary<string, string> ParseCssTextToDict(string cssText)
+    {
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrEmpty(cssText)) return dict;
+
+        foreach (var decl in cssText.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var colon = decl.IndexOf(':');
+            if (colon < 0) continue;
+            var prop = decl[..colon].Trim().ToLowerInvariant();
+            var val  = decl[(colon + 1)..].Trim().Replace("!important", "").Trim();
+            if (!string.IsNullOrEmpty(val))
+                dict[prop] = val;
+        }
+        return dict;
+    }
+
+    /// <summary>
+    /// Splits a CSS value string on a delimiter character, ignoring occurrences inside parentheses.
+    /// </summary>
+    private static IEnumerable<string> SplitOutsideParens(string value, char delimiter)
+    {
+        var depth = 0;
+        var start = 0;
+        for (int i = 0; i < value.Length; i++)
+        {
+            if (value[i] == '(')       depth++;
+            else if (value[i] == ')')  depth--;
+            else if (value[i] == delimiter && depth == 0)
+            {
+                yield return value[start..i];
+                start = i + 1;
+            }
+        }
+        if (start < value.Length)
+            yield return value[start..];
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Collapses runs of whitespace to a single space but does NOT trim boundary spaces.

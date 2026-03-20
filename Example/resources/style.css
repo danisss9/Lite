@@ -914,3 +914,135 @@ footer {
     padding-bottom: 8px;
   }
 }
+
+/* ─── Transitions & Animations Demo ──────────────────────────────────── */
+
+.anim-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.anim-section-label {
+  margin-top: 16px;
+}
+
+/* Transition buttons */
+.btn-transition-color {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
+  border-radius: 6px;
+  background-color: #6366f1;
+  color: #ffffff;
+  border-top-width: 0px;
+  border-right-width: 0px;
+  border-bottom-width: 0px;
+  border-left-width: 0px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.btn-transition-color:hover {
+  background-color: #ec4899;
+}
+
+.btn-transition-scale {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
+  border-radius: 6px;
+  background-color: #10b981;
+  color: #ffffff;
+  border-top-width: 0px;
+  border-right-width: 0px;
+  border-bottom-width: 0px;
+  border-left-width: 0px;
+  cursor: pointer;
+  transition: font-size 0.25s ease-out, border-radius 0.25s ease-out;
+}
+.btn-transition-scale:hover {
+  font-size: 1.2em;
+  border-radius: 20px;
+}
+
+.btn-transition-multi {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
+  border-radius: 6px;
+  background-color: #f59e0b;
+  color: #ffffff;
+  border-top-width: 0px;
+  border-right-width: 0px;
+  border-bottom-width: 0px;
+  border-left-width: 0px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease, border-radius 0.3s ease;
+}
+.btn-transition-multi:hover {
+  background-color: #1e293b;
+  color: #f59e0b;
+  border-radius: 24px;
+}
+
+/* @keyframes animation boxes — all use opacity (compositor-only, no paint/layout cost) */
+.anim-box-base {
+  width: 90px;
+  height: 90px;
+  color: #ffffff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.anim-pulse {
+  background-color: #6366f1;
+  animation: anim-pulse 1.5s ease-in-out infinite;
+}
+
+.anim-spin-border {
+  background-color: #a855f7;
+  animation: anim-flicker 0.6s linear infinite alternate;
+}
+
+.anim-bounce {
+  background-color: #10b981;
+  animation: anim-bounce 0.8s ease-in-out infinite alternate;
+}
+
+.anim-fade {
+  background-color: #f59e0b;
+  animation: anim-fade 2s ease-in-out infinite;
+}
+
+/* Keyframe definitions — opacity only */
+@keyframes anim-pulse {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.35; }
+  100% { opacity: 1; }
+}
+
+@keyframes anim-flicker {
+  from { opacity: 1; }
+  to   { opacity: 0.2; }
+}
+
+@keyframes anim-bounce {
+  from { opacity: 0.25; }
+  to   { opacity: 1; }
+}
+
+@keyframes anim-fade {
+  0%   { opacity: 1; }
+  30%  { opacity: 0.1; }
+  70%  { opacity: 0.1; }
+  100% { opacity: 1; }
+}

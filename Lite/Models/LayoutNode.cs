@@ -1,4 +1,5 @@
 using AngleSharp.Css.Dom;
+using Lite.Animation;
 using Lite.Layout;
 using SkiaSharp;
 
@@ -37,6 +38,12 @@ public class LayoutNode
     public bool IsHovered { get; set; }
     public bool IsFocused { get; set; }
     public bool IsActive { get; set; }
+    /// <summary>Current interpolated animation/transition values. Highest priority in style resolution.</summary>
+    public Dictionary<string, string> AnimationOverrides { get; } = [];
+    /// <summary>Parsed `transition` declarations for this element.</summary>
+    public List<TransitionSpec> TransitionSpecs { get; } = [];
+    /// <summary>Parsed `animation` declarations for this element.</summary>
+    public List<AnimationSpec> AnimationSpecs { get; } = [];
 
     /// <summary>
     /// Resolves a CSS property considering pseudo-class state and media overrides.
@@ -45,6 +52,8 @@ public class LayoutNode
     public bool TryResolveStyle(string prop, out string val)
     {
         val = null!;
+        // Animation/transition overrides have highest priority (live interpolated values)
+        if (AnimationOverrides.TryGetValue(prop, out var va)) { val = va; return true; }
         if (IsActive && MediaActiveStyles.TryGetValue(prop, out var v1m)) { val = v1m; return true; }
         if (IsActive && ActiveStyles.TryGetValue(prop, out var v1))       { val = v1;  return true; }
         if (IsFocused && MediaFocusStyles.TryGetValue(prop, out var v2m)) { val = v2m; return true; }

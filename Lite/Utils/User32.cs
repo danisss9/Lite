@@ -78,4 +78,10 @@ internal static class User32
 
     [DllImport("user32.dll")]
     internal static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern IntPtr SetTimer(IntPtr hWnd, IntPtr nIDEvent, uint uElapse, IntPtr lpTimerFunc);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool KillTimer(IntPtr hWnd, IntPtr uIDEvent);
 }

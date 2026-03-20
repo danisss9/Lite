@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Lite.Animation;
 using Lite.Interaction;
 using Lite.Layout;
 using Lite.Models;
@@ -18,6 +19,7 @@ public class BrowserWindow
     private const int WM_PAINT = 0x000F;
     private const int WM_DESTROY = 0x0002;
     private const int WM_SIZE = 0x0005;
+    private const int WM_TIMER = 0x0113;
     private const int WM_CHAR = 0x0102;
     private const int WM_LBUTTONDOWN = 0x0201;
     private const int WM_LBUTTONUP = 0x0202;
@@ -48,6 +50,11 @@ public class BrowserWindow
     private bool _draggingScrollbar;
     private float _scrollbarGrabOffset; // Y offset within thumb where drag started
 
+    // Animation timer
+    private const uint  AnimationTimerMs = 16; // ~60 fps
+    private static readonly IntPtr AnimationTimerId = new(1);
+    private bool _timerRunning;
+
     public BrowserWindow(string url, string title = "Lite Browser", int width = 800, int height = 600)
     {
         _url = url;
@@ -58,7 +65,9 @@ public class BrowserWindow
 
     public void Run()
     {
+        AnimationEngine.Reset();
         _rootNode = Parser.TraverseHtml(_url, _initialWidth, _initialHeight);
+        AnimationEngine.StartAnimations(_rootNode);
 
         _wndProcDelegate = WndProc;
         var hInstance = Marshal.GetHINSTANCE(typeof(BrowserWindow).Module);
@@ -107,6 +116,13 @@ public class BrowserWindow
         User32.ShowWindow(hWnd, SW_SHOW);
         User32.UpdateWindow(hWnd);
 
+        // Kick off the animation timer if the page has CSS animations
+        if (_rootNode != null)
+        {
+            AnimationEngine.Tick(_rootNode); // initial frame
+            StartAnimationTimer(hWnd);
+        }
+
         while (User32.GetMessage(out var msg, IntPtr.Zero, 0, 0))
         {
             User32.TranslateMessage(ref msg);
@@ -150,6 +166,17 @@ public class BrowserWindow
 
             case WM_DESTROY:
                 User32.PostQuitMessage(0);
+                break;
+
+            case WM_TIMER:
+                if (_rootNode != null)
+                {
+                    var stillRunning = AnimationEngine.Tick(_rootNode);
+                    (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    if (!stillRunning)
+                        StopAnimationTimer(hWnd);
+                }
                 break;
 
             case WM_SIZE:
@@ -205,8 +232,12 @@ public class BrowserWindow
                 {
                     // Set :active on the node under cursor
                     var contentY = y + _viewport.ScrollY;
+                    if (_rootNode != null)
+                        AnimationEngine.SnapshotForTransition(_rootNode);
                     if (PseudoClassState.SetActive(_rootNode, x, contentY) && _rootNode != null)
                     {
+                        if (AnimationEngine.DetectAndStartTransitions(_rootNode))
+                            StartAnimationTimer(hWnd);
                         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                     }
@@ -233,8 +264,14 @@ public class BrowserWindow
                     var mx = (short)(lParam.ToInt32() & 0xFFFF);
                     var my = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
                     var contentY = my + _viewport.ScrollY;
-                    if (PseudoClassState.UpdateHover(_rootNode, mx, contentY) && _rootNode != null)
+
+                    if (_rootNode != null)
+                        AnimationEngine.SnapshotForTransition(_rootNode);
+                    var hoverChanged = PseudoClassState.UpdateHover(_rootNode, mx, contentY);
+                    if (hoverChanged && _rootNode != null)
                     {
+                        if (AnimationEngine.DetectAndStartTransitions(_rootNode))
+                            StartAnimationTimer(hWnd);
                         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                     }
@@ -252,7 +289,11 @@ public class BrowserWindow
                 }
 
                 // Clear :active state
+                if (_rootNode != null)
+                    AnimationEngine.SnapshotForTransition(_rootNode);
                 var activeChanged = PseudoClassState.ClearActive();
+                if (activeChanged && _rootNode != null && AnimationEngine.DetectAndStartTransitions(_rootNode))
+                    StartAnimationTimer(hWnd);
 
                 var x = (short)(lParam.ToInt32() & 0xFFFF);
                 var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
@@ -305,7 +346,13 @@ public class BrowserWindow
 
                 // Update :focus pseudo-class state
                 if (FormState.FocusedInput != prevFocus)
+                {
+                    if (_rootNode != null)
+                        AnimationEngine.SnapshotForTransition(_rootNode);
                     PseudoClassState.UpdateFocus(_rootNode, FormState.FocusedInput);
+                    if (_rootNode != null && AnimationEngine.DetectAndStartTransitions(_rootNode))
+                        StartAnimationTimer(hWnd);
+                }
 
                 if ((handled || focusChanged || activeChanged) && _rootNode != null)
                 {
@@ -364,5 +411,19 @@ public class BrowserWindow
                 return User32.DefWindowProc(hWnd, msg, wParam, lParam);
         }
         return IntPtr.Zero;
+    }
+
+    private void StartAnimationTimer(IntPtr hWnd)
+    {
+        if (_timerRunning) return;
+        User32.SetTimer(hWnd, AnimationTimerId, AnimationTimerMs, IntPtr.Zero);
+        _timerRunning = true;
+    }
+
+    private void StopAnimationTimer(IntPtr hWnd)
+    {
+        if (!_timerRunning) return;
+        User32.KillTimer(hWnd, AnimationTimerId);
+        _timerRunning = false;
     }
 }
