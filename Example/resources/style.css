@@ -811,3 +811,106 @@ footer {
   border-bottom-color: #6366f1;
   border-left-color: #6366f1;
 }
+
+/* ─── Responsive Design Demo ──────────────────────────────────────────── */
+
+.responsive-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+
+.responsive-box {
+  flex-grow: 1;
+  flex-basis: 180px;
+  background-color: #6366f1;
+  color: #ffffff;
+  padding-top: 24px;
+  padding-bottom: 24px;
+  padding-left: 12px;
+  padding-right: 12px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.responsive-text-demo {
+  margin-bottom: 16px;
+}
+
+.responsive-label {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+/* Default: wide — shown when viewport is >= 900px */
+.viewport-size-indicator {
+  background-color: #dcfce7;
+  color: #15803d;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
+  border-radius: 6px;
+}
+
+.responsive-nav {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.nav-item {
+  background-color: #f1f5f9;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  padding-left: 14px;
+  padding-right: 14px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+/* ── Medium viewport  (< 900px) ─────────────────────────────────────── */
+@media (max-width: 900px) {
+  .responsive-box {
+    flex-basis: 120px;
+    background-color: #f59e0b;
+  }
+
+  .viewport-size-indicator {
+    background-color: #fef9c3;
+    color: #854d0e;
+  }
+}
+
+/* ── Narrow viewport  (< 600px) ─────────────────────────────────────── */
+@media (max-width: 600px) {
+  .responsive-grid {
+    flex-direction: column;
+  }
+
+  .responsive-box {
+    flex-basis: auto;
+    background-color: #ef4444;
+  }
+
+  .viewport-size-indicator {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+
+  .responsive-nav {
+    flex-direction: column;
+  }
+}
+
+/* ── Landscape orientation ───────────────────────────────────────────── */
+@media (orientation: landscape) and (max-height: 500px) {
+  .responsive-box {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}

@@ -60,11 +60,15 @@ internal static class Parser
     private static string? _baseUrl;
     private static readonly List<string> _pendingScripts = [];
     private static readonly HttpClient _httpClient = new();
+    internal static int ViewportWidth  { get; private set; } = 800;
+    internal static int ViewportHeight { get; private set; } = 600;
 
-    internal static LayoutNode TraverseHtml(string address)
+    internal static LayoutNode TraverseHtml(string address, int viewportWidth = 800, int viewportHeight = 600)
     {
         _baseUrl = address;
         _pendingScripts.Clear();
+        ViewportWidth  = viewportWidth;
+        ViewportHeight = viewportHeight;
 
         var config = Configuration.Default
             .WithDefaultLoader(new LoaderOptions { IsResourceLoadingEnabled = true })
@@ -274,36 +278,107 @@ internal static class Parser
 
         foreach (var sheet in sheets.OfType<ICssStyleSheet>())
         {
-            foreach (var rule in sheet.Rules.OfType<ICssStyleRule>())
+            ProcessRules(sheet.Rules, element, node, mediaText: null);
+        }
+    }
+
+    /// <summary>
+    /// Recursively processes a rule list, descending into @media blocks.
+    /// <paramref name="mediaText"/> is non-null when inside a media rule.
+    /// </summary>
+    private static void ProcessRules(ICssRuleList rules, IElement element, LayoutNode node, string? mediaText)
+    {
+        foreach (var rule in rules)
+        {
+            if (rule is ICssMediaRule mediaRule)
             {
-                var selectorText = rule.SelectorText;
+                var text = mediaRule.Media.MediaText;
+                // Descend into nested rules, passing the media condition down
+                ProcessRules(mediaRule.Rules, element, node, text);
+                continue;
+            }
 
-                // Handle pseudo-class selectors (:hover, :focus, :active)
-                if (TryExtractPseudoClassRule(element, node, rule))
-                    continue;
+            if (rule is not ICssStyleRule styleRule) continue;
 
-                try
-                {
-                    if (!element.Matches(selectorText)) continue;
-                }
-                catch { continue; } // malformed selector
+            // Handle pseudo-class selectors (:hover, :focus, :active)
+            if (TryExtractPseudoClassRule(element, node, styleRule, mediaText))
+                continue;
 
-                // Try GetPropertyValue first, then fall back to iterating CssText
-                var style = rule.Style;
+            var selectorText = styleRule.SelectorText;
+            try { if (!element.Matches(selectorText)) continue; }
+            catch { continue; } // malformed selector
+
+            if (mediaText is null)
+            {
+                // Regular rule — apply directly to overrides
+                var style = styleRule.Style;
                 foreach (var prop in s_extraProps)
                 {
                     var val = style.GetPropertyValue(prop);
                     if (!string.IsNullOrEmpty(val))
-                    {
                         StoreProp(node, prop, val);
-                        continue;
-                    }
                 }
-
-                // Some versions of AngleSharp.Css don't expose flex properties via GetPropertyValue
-                // on the rule's style declaration. Fall back to parsing CssText.
-                ParseCssTextForFlexProps(rule.Style.CssText, node);
+                ParseCssTextForFlexProps(styleRule.Style.CssText, node);
             }
+            else
+            {
+                // Media-conditional rule — store for deferred evaluation and apply if currently matches
+                StoreMediaProps(node, mediaText, styleRule.Style.CssText, styleRule.Style, target: "override");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Stores all properties from a media-conditional style rule on the node.
+    /// Each property is saved into MediaConditionalStyles so it can be re-evaluated on resize,
+    /// and applied immediately if the media query currently matches.
+    /// </summary>
+    private static void StoreMediaProps(LayoutNode node, string mediaText, string cssText,
+        ICssStyleDeclaration style, string target)
+    {
+        var props = new Dictionary<string, string>();
+
+        // Collect via GetPropertyValue for known extra props
+        foreach (var prop in s_extraProps)
+        {
+            var val = style.GetPropertyValue(prop);
+            if (!string.IsNullOrEmpty(val))
+                props[prop] = val;
+        }
+
+        // Also parse CssText to get all properties (display, color, etc.)
+        if (!string.IsNullOrEmpty(cssText))
+        {
+            foreach (var decl in cssText.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var colon = decl.IndexOf(':');
+                if (colon < 0) continue;
+                var prop = decl[..colon].Trim().ToLowerInvariant();
+                var val  = decl[(colon + 1)..].Trim().Replace("!important", "").Trim();
+                if (!string.IsNullOrEmpty(val))
+                    props.TryAdd(prop, val);
+            }
+        }
+
+        if (props.Count == 0) return;
+
+        var matches = MediaQueryEvaluator.Matches(mediaText, ViewportWidth, ViewportHeight);
+        var targetDict = target switch
+        {
+            "hover"  => node.MediaHoverStyles,
+            "focus"  => node.MediaFocusStyles,
+            "active" => node.MediaActiveStyles,
+            _        => node.MediaOverrides,
+        };
+
+        foreach (var (prop, val) in props)
+        {
+            // Record for future resize re-evaluation
+            node.MediaConditionalStyles.Add(new MediaConditionalStyle(mediaText, prop, val, target));
+
+            // Apply immediately if the query matches at current viewport
+            if (matches)
+                targetDict[prop] = val;
         }
     }
 
@@ -434,8 +509,10 @@ internal static class Parser
     /// Detects pseudo-class selectors (:hover, :focus, :active), strips them,
     /// matches the base selector, and stores properties in the appropriate dict.
     /// Returns true if the rule was a pseudo-class rule (whether matched or not).
+    /// When <paramref name="mediaText"/> is non-null the rule is media-conditional.
     /// </summary>
-    private static bool TryExtractPseudoClassRule(IElement element, LayoutNode node, ICssStyleRule rule)
+    private static bool TryExtractPseudoClassRule(IElement element, LayoutNode node, ICssStyleRule rule,
+        string? mediaText = null)
     {
         var selector = rule.SelectorText;
         if (!selector.Contains(":hover") && !selector.Contains(":focus") && !selector.Contains(":active"))
@@ -482,10 +559,23 @@ internal static class Parser
                 props[prop] = val;
         }
 
-        // Store in the appropriate pseudo-class dict(s)
-        if (hasHover)  foreach (var (p, v) in props) node.HoverStyles[p]  = v;
-        if (hasFocus)  foreach (var (p, v) in props) node.FocusStyles[p]  = v;
-        if (hasActive) foreach (var (p, v) in props) node.ActiveStyles[p] = v;
+        if (mediaText is null)
+        {
+            // Regular pseudo-class rule
+            if (hasHover)  foreach (var (p, v) in props) node.HoverStyles[p]  = v;
+            if (hasFocus)  foreach (var (p, v) in props) node.FocusStyles[p]  = v;
+            if (hasActive) foreach (var (p, v) in props) node.ActiveStyles[p] = v;
+        }
+        else
+        {
+            // Media-conditional pseudo-class rule — store and apply if matching
+            if (hasHover)
+                StoreMediaProps(node, mediaText, cssText, rule.Style, target: "hover");
+            if (hasFocus)
+                StoreMediaProps(node, mediaText, cssText, rule.Style, target: "focus");
+            if (hasActive)
+                StoreMediaProps(node, mediaText, cssText, rule.Style, target: "active");
+        }
 
         return true;
     }

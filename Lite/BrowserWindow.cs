@@ -58,7 +58,7 @@ public class BrowserWindow
 
     public void Run()
     {
-        _rootNode = Parser.TraverseHtml(_url);
+        _rootNode = Parser.TraverseHtml(_url, _initialWidth, _initialHeight);
 
         _wndProcDelegate = WndProc;
         var hInstance = Marshal.GetHINSTANCE(typeof(BrowserWindow).Module);
@@ -160,6 +160,8 @@ public class BrowserWindow
 
                 if (_rootNode != null)
                 {
+                    // Re-evaluate @media queries against the new viewport size
+                    _rootNode.ReapplyMediaStyles(_width, _height);
                     (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                     User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                 }
