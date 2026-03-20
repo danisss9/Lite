@@ -207,6 +207,7 @@ public static class StyleExtensions
         var raw = node.TryResolveStyle(PropertyNames.FlexBasis, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.FlexBasis);
         if (string.IsNullOrEmpty(raw) || raw == "auto" || raw == "content") return float.NaN;
+        if (TryEvalCalc(raw, containerMain, 16f, containerMain, out var calcPx)) return calcPx;
         if (raw.EndsWith("px") && float.TryParse(raw[..^2],
             System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
@@ -237,6 +238,7 @@ public static class StyleExtensions
             if (node.TryResolveStyle(name, out var ov) && !string.IsNullOrEmpty(ov))
             {
                 ov = ov.Trim();
+                if (TryEvalCalc(ov, total, fontSize, total, out var calcPx)) return calcPx;
                 if (ov.EndsWith("px") && float.TryParse(ov[..^2],
                     System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
@@ -315,6 +317,7 @@ public static class StyleExtensions
         if (node.TryResolveStyle(PropertyNames.LineHeight, out var ov))
         {
             ov = ov.Trim();
+            if (TryEvalCalc(ov, fontSize, fontSize, fontSize, out var calcPx)) return calcPx;
             if (ov.EndsWith("px") && float.TryParse(ov[..^2],
                 System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var px))
@@ -409,6 +412,7 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValue("border-radius");
         if (string.IsNullOrWhiteSpace(raw)) return (0f, 0f);
         raw = raw.Trim();
+        if (TryEvalCalc(raw, width, 16f, width, out var calcPx)) { var rc = Math.Max(0f, calcPx); return (rc, rc); }
         if (raw.EndsWith("px") && float.TryParse(raw[..^2],
             System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var px))
@@ -580,6 +584,7 @@ public static class StyleExtensions
         {
             ov = ov.Trim();
             if (ov == "auto") return float.NaN;
+            if (TryEvalCalc(ov, total, size, total, out var calcPx)) return calcPx;
             if (ov.EndsWith("px") && float.TryParse(ov[..^2],
                 System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
@@ -753,11 +758,13 @@ public static class StyleExtensions
     /// <summary>Returns a size property value or <paramref name="defaultValue"/> when unset/auto/none.</summary>
     private static float GetSizeOrDefault(LayoutNode node, string propertyName, float total, float size, float defaultValue, float viewportSize = -1f)
     {
+        var vp = viewportSize >= 0 ? viewportSize : total;
         // Check StyleOverrides first
         if (node.TryResolveStyle(propertyName, out var overrideStr))
         {
             overrideStr = overrideStr.Trim();
             if (overrideStr is "" or "auto" or "none") return defaultValue;
+            if (TryEvalCalc(overrideStr, total, size, vp, out var calcPx)) return calcPx;
             if (overrideStr.EndsWith("px") && float.TryParse(overrideStr[..^2],
                 System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
@@ -773,7 +780,6 @@ public static class StyleExtensions
         if (raw is null or Constant<Length>) return defaultValue; // auto/none/unset
         if (raw is not Length length) return defaultValue;
 
-        var vp = viewportSize >= 0 ? viewportSize : total;
         return length.Type switch
         {
             Length.Unit.Px      => (float)length.Value,
@@ -792,10 +798,13 @@ public static class StyleExtensions
     /// </summary>
     private static float GetSize(LayoutNode node, string propertyName, float total = 0, float size = 0, float viewportSize = -1f)
     {
+        var vp = viewportSize >= 0 ? viewportSize : total;
         // Inline style override (e.g. from element.style.setProperty)
         if (node.TryResolveStyle(propertyName, out var overrideStr))
         {
             overrideStr = overrideStr.Trim();
+            if (TryEvalCalc(overrideStr, total, size, vp, out var calcPx))
+                return calcPx;
             if (overrideStr.EndsWith("px") && float.TryParse(overrideStr[..^2],
                 System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var px))
@@ -820,7 +829,6 @@ public static class StyleExtensions
             return size;
         }
 
-        var vp = viewportSize >= 0 ? viewportSize : total;
         return length.Type switch
         {
             Length.Unit.Em      => (float)length.Value * size,
@@ -830,5 +838,153 @@ public static class StyleExtensions
             Length.Unit.Percent => (float)length.Value / 100f * total,
             _ => size
         };
+    }
+
+    // ── calc() evaluator ──────────────────────────────────────────────────────
+    //
+    // Grammar (recursive descent):
+    //   sum     = product ( ('+' | '-') product )*
+    //   product = unary   ( ('*' | '/') unary   )*
+    //   unary   = '-' unary | '+' unary | primary
+    //   primary = VALUE | '(' sum ')'
+    //
+    // Units resolved at leaf time:  px em rem % vw vh  — and bare numbers (unitless).
+
+    /// <summary>
+    /// Evaluates a CSS <c>calc()</c> expression string to a pixel value.
+    /// Returns false when <paramref name="raw"/> does not start with <c>calc(</c>.
+    /// </summary>
+    internal static bool TryEvalCalc(string raw, float total, float em, float vp, out float result)
+    {
+        result = 0f;
+        if (string.IsNullOrEmpty(raw)) return false;
+        raw = raw.Trim();
+        if (!raw.StartsWith("calc(", StringComparison.OrdinalIgnoreCase)) return false;
+
+        var inner = StripCalcWrapper(raw);
+        if (inner is null) return false;
+
+        // Flatten nested calc() calls into plain parentheses
+        inner = System.Text.RegularExpressions.Regex.Replace(
+            inner, @"calc\s*\(", "(", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        try
+        {
+            var tokens = CalcTokenize(inner);
+            int pos    = 0;
+            result = CalcSum(tokens, ref pos, total, em, vp);
+            return float.IsFinite(result);
+        }
+        catch { return false; }
+    }
+
+    private static string? StripCalcWrapper(string raw)
+    {
+        int start = raw.IndexOf('(');
+        if (start < 0) return null;
+        int depth = 0;
+        for (int i = start; i < raw.Length; i++)
+        {
+            if      (raw[i] == '(') depth++;
+            else if (raw[i] == ')') { depth--; if (depth == 0) return raw[(start + 1)..i].Trim(); }
+        }
+        return null;
+    }
+
+    // ── Tokenizer ─────────────────────────────────────────────────────────────
+
+    private enum CalcTokType { Value, Plus, Minus, Star, Slash, LParen, RParen }
+    private readonly record struct CalcToken(CalcTokType Type, float Number = 0f, string Unit = "");
+
+    private static List<CalcToken> CalcTokenize(string expr)
+    {
+        var tokens = new List<CalcToken>();
+        int i = 0;
+        while (i < expr.Length)
+        {
+            if (char.IsWhiteSpace(expr[i])) { i++; continue; }
+            switch (expr[i])
+            {
+                case '+': tokens.Add(new CalcToken(CalcTokType.Plus));   i++; break;
+                case '-': tokens.Add(new CalcToken(CalcTokType.Minus));  i++; break;
+                case '*': tokens.Add(new CalcToken(CalcTokType.Star));   i++; break;
+                case '/': tokens.Add(new CalcToken(CalcTokType.Slash));  i++; break;
+                case '(': tokens.Add(new CalcToken(CalcTokType.LParen)); i++; break;
+                case ')': tokens.Add(new CalcToken(CalcTokType.RParen)); i++; break;
+                default:
+                    if (char.IsDigit(expr[i]) || expr[i] == '.')
+                    {
+                        int s = i;
+                        while (i < expr.Length && (char.IsDigit(expr[i]) || expr[i] == '.')) i++;
+                        float.TryParse(expr[s..i], NumberStyles.Float, CultureInfo.InvariantCulture, out var num);
+                        int us = i;
+                        while (i < expr.Length && (char.IsLetter(expr[i]) || expr[i] == '%')) i++;
+                        tokens.Add(new CalcToken(CalcTokType.Value, num, expr[us..i].ToLowerInvariant()));
+                    }
+                    else i++;
+                    break;
+            }
+        }
+        return tokens;
+    }
+
+    // ── Recursive descent ─────────────────────────────────────────────────────
+
+    private static float CalcSum(List<CalcToken> t, ref int p, float total, float em, float vp)
+    {
+        var v = CalcProduct(t, ref p, total, em, vp);
+        while (p < t.Count && t[p].Type is CalcTokType.Plus or CalcTokType.Minus)
+        {
+            var op = t[p++].Type;
+            var r  = CalcProduct(t, ref p, total, em, vp);
+            v = op == CalcTokType.Plus ? v + r : v - r;
+        }
+        return v;
+    }
+
+    private static float CalcProduct(List<CalcToken> t, ref int p, float total, float em, float vp)
+    {
+        var v = CalcUnary(t, ref p, total, em, vp);
+        while (p < t.Count && t[p].Type is CalcTokType.Star or CalcTokType.Slash)
+        {
+            var op = t[p++].Type;
+            var r  = CalcUnary(t, ref p, total, em, vp);
+            v = op == CalcTokType.Star ? v * r : (r == 0f ? float.NaN : v / r);
+        }
+        return v;
+    }
+
+    private static float CalcUnary(List<CalcToken> t, ref int p, float total, float em, float vp)
+    {
+        if (p < t.Count && t[p].Type == CalcTokType.Minus) { p++; return -CalcPrimary(t, ref p, total, em, vp); }
+        if (p < t.Count && t[p].Type == CalcTokType.Plus)  { p++; return  CalcPrimary(t, ref p, total, em, vp); }
+        return CalcPrimary(t, ref p, total, em, vp);
+    }
+
+    private static float CalcPrimary(List<CalcToken> t, ref int p, float total, float em, float vp)
+    {
+        if (p >= t.Count) return 0f;
+        if (t[p].Type == CalcTokType.LParen)
+        {
+            p++;
+            var v = CalcSum(t, ref p, total, em, vp);
+            if (p < t.Count && t[p].Type == CalcTokType.RParen) p++;
+            return v;
+        }
+        if (t[p].Type == CalcTokType.Value)
+        {
+            var tok = t[p++];
+            return tok.Unit switch
+            {
+                "px"  or "" => tok.Number,
+                "%"         => tok.Number / 100f * total,
+                "em"        => tok.Number * em,
+                "rem"       => tok.Number * 16f,
+                "vw"        => tok.Number / 100f * vp,
+                "vh"        => tok.Number / 100f * vp,
+                _           => tok.Number,
+            };
+        }
+        return 0f;
     }
 }
