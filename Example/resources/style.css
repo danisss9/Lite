@@ -1076,3 +1076,64 @@ footer {
   70%  { opacity: 0.1; }
   100% { opacity: 1; }
 }
+
+/* ─── CSS Variables Demo ──────────────────────────────────────────────── */
+
+:root {
+  --primary:    #3b82f6;
+  --secondary:  #10b981;
+  --accent:     #8b5cf6;
+  --space-sm:   8px;
+  --space-md:   16px;
+  --space-lg:   32px;
+  --radius-md:  8px;
+  --color-text: var(--primary);
+}
+
+.var-row {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.var-box {
+  flex: 1;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-weight: bold;
+  text-align: center;
+}
+
+.var-primary   { background-color: var(--primary); }
+.var-secondary { background-color: var(--secondary); }
+.var-accent    { background-color: var(--accent); }
+
+.var-card {
+  flex: 1;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background-color: #f1f5f9;
+  color: #334155;
+}
+
+.var-card-large {
+  padding: var(--space-lg);
+}
+
+.var-fallback {
+  flex: 1;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background-color: var(--undefined, #f59e0b);
+  color: #fff;
+}
+
+.var-nested {
+  flex: 1;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background-color: #f1f5f9;
+  color: var(--color-text);
+  font-weight: bold;
+}

@@ -85,12 +85,19 @@ BrowserWindow
 │                       bitmap; returns the pixel buffer and hit regions
 │
 ├── BoxEngine           Two-pass CSS box model layout (block + inline line boxes,
-│                       absolute/fixed positioning)
+│                       absolute/fixed positioning, floats)
 │
 ├── FlexEngine          CSS Flexbox Level 1 layout (flex-grow/shrink, wrapping,
 │                       alignment, gap, order, baseline)
 │
 ├── TableEngine         Table layout (display:table, tr, td/th — two-pass row sizing)
+│
+├── AnimationEngine     CSS transitions and @keyframes animations with easing
+│   └── AnimationRegistry  Global @keyframes store
+│
+├── MediaQueryEvaluator Evaluates @media conditions against viewport size
+│
+├── PseudoClassState    Tracks :hover, :focus, :active state per element
 │
 ├── JsEngine            Jint-based JavaScript runtime with DOM API
 │   ├── JsDocument      document.getElementById / querySelector / createElement
@@ -143,14 +150,18 @@ BrowserWindow
 | Property | Values |
 |---|---|
 | `display` | `block`, `inline`, `inline-block`, `list-item`, `flex`, `inline-flex`, `table`, `table-row`, `table-cell`, `none` |
-| `width`, `height` | `px`, `%`, `vh`, `vw`, `auto` |
-| `min-width`, `max-width`, `min-height`, `max-height` | `px`, `%` |
-| `margin`, `padding` | Shorthand and individual sides; `px`, `%`, `em`, `auto` |
+| `width`, `height` | `px`, `%`, `vh`, `vw`, `auto`, `calc()` |
+| `min-width`, `max-width`, `min-height`, `max-height` | `px`, `%`, `calc()` |
+| `margin`, `padding` | Shorthand and individual sides; `px`, `%`, `em`, `auto`, `calc()` |
 | `border-width` | `px` per side |
 | `border-color` | Any CSS color per side |
+| `border-radius` | `px`, `%` |
 | `box-sizing` | `border-box`, `content-box` |
+| `box-shadow` | Multi-layer; offset, blur, spread, color, `inset` |
+| `text-shadow` | Offset, blur, color |
 | `background-color` | Any CSS color |
 | `color` | Any CSS color |
+| `opacity` | `0`–`1` |
 | `font-size` | `px`, `em`, keyword sizes |
 | `font-weight` | `bold` / normal |
 | `font-style` | `italic` / normal |
@@ -160,22 +171,32 @@ BrowserWindow
 | `text-align` | `left`, `center`, `right`, `justify` |
 | `white-space` | `normal`, `nowrap`, `pre`, `pre-wrap`, `pre-line` |
 | `position` | `static`, `relative`, `absolute`, `fixed` |
-| `top`, `right`, `bottom`, `left` | `px`, `%` |
+| `top`, `right`, `bottom`, `left` | `px`, `%`, `calc()` |
 | `z-index` | Integer |
 | `overflow` | `visible`, `hidden`, `scroll`, `auto` |
 | `visibility` | `visible`, `hidden`, `collapse` |
+| `float` | `none`, `left`, `right` |
+| `clear` | `none`, `left`, `right`, `both` |
 | `flex-direction` | `row`, `row-reverse`, `column`, `column-reverse` |
 | `flex-wrap` | `nowrap`, `wrap`, `wrap-reverse` |
 | `flex-grow`, `flex-shrink` | Number |
-| `flex-basis` | `px`, `%`, `auto` |
+| `flex-basis` | `px`, `%`, `auto`, `calc()` |
 | `flex` | Shorthand |
 | `justify-content` | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `space-evenly` |
 | `align-items`, `align-self` | `stretch`, `flex-start`, `flex-end`, `center`, `baseline` |
 | `align-content` | `stretch`, `flex-start`, `flex-end`, `center`, `space-between`, `space-around` |
 | `flex-flow` | Shorthand |
-| `gap`, `row-gap`, `column-gap` | `px`, `em`, `%` |
+| `gap`, `row-gap`, `column-gap` | `px`, `em`, `%`, `calc()` |
 | `order` | Integer |
 | `cursor` | `pointer`, `text`, `default` |
+| `transition` | `property`, `duration`, `delay`, `timing-function` |
+| `animation` | `name`, `duration`, `delay`, `timing-function`, `iteration-count`, `direction`, `fill-mode` |
+| `calc()` | `+`, `-`, `*`, `/`; `px`, `%`, `em`, `rem`, `vw`, `vh` |
+| `--*` custom properties | Declared on any element; inherited via ancestor chain |
+| `var()` | `var(--name)`, `var(--name, fallback)`; recursive resolution |
+| `@media` | `min-width`, `max-width`, `min-height`, `max-height`, `orientation`; `and`, `not`, comma |
+| `@keyframes` | `from`/`to`, percentage offsets |
+| `:hover`, `:focus`, `:active` | Pseudo-class state with interactive re-render |
 
 ---
 
@@ -254,7 +275,7 @@ Standard HTML inline handlers are supported:
 dotnet run --project Example
 ```
 
-The example serves the `Example/resources/` folder on `http://localhost:4444` and opens it in a `BrowserWindow`. The demo page covers typography, inline text elements, lists, forms, flexbox layouts, tables, positioning, z-index, overflow clipping, and percentage sizing.
+The example serves the `Example/resources/` folder on `http://localhost:4444` and opens it in a `BrowserWindow`. The demo page covers typography, inline text elements, lists, forms, flexbox layouts, tables, positioning, z-index, overflow clipping, percentage sizing, pseudo-classes (:hover/:focus/:active), responsive design (@media), CSS animations/transitions, calc() expressions, and CSS custom properties (var()).
 
 ---
 

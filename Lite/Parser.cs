@@ -440,6 +440,30 @@ internal static class Parser
     private static readonly HashSet<string> s_flexWrapValues =
         ["nowrap", "wrap", "wrap-reverse"];
 
+    /// <summary>
+    /// Stores a property whose value contains <c>var()</c> into StyleOverrides.
+    /// Expands common shorthands (padding, margin) into their longhand forms.
+    /// </summary>
+    private static void StoreVarProp(LayoutNode node, string prop, string val)
+    {
+        if (prop is "padding" or "margin")
+        {
+            node.StyleOverrides[$"{prop}-top"]    = val;
+            node.StyleOverrides[$"{prop}-right"]  = val;
+            node.StyleOverrides[$"{prop}-bottom"] = val;
+            node.StyleOverrides[$"{prop}-left"]   = val;
+        }
+        else if (prop == "gap")
+        {
+            node.StyleOverrides["row-gap"]    = val;
+            node.StyleOverrides["column-gap"] = val;
+        }
+        else
+        {
+            node.StyleOverrides[prop] = val;
+        }
+    }
+
     private static void StoreProp(LayoutNode node, string prop, string val)
     {
         if (prop == "gap")
@@ -551,6 +575,21 @@ internal static class Parser
             var val  = declaration[(colonIdx + 1)..].Trim();
 
             if (string.IsNullOrEmpty(val)) continue;
+
+            // CSS custom properties (--*): store for var() resolution
+            if (prop.StartsWith("--"))
+            {
+                node.CustomProperties[prop] = val;
+                continue;
+            }
+
+            // Properties with var() references must be stored in overrides
+            // because AngleSharp cannot resolve CSS custom properties.
+            if (val.Contains("var(", StringComparison.OrdinalIgnoreCase))
+            {
+                StoreVarProp(node, prop, val);
+                continue;
+            }
 
             // Only extract our target properties
             if (Array.IndexOf(s_extraProps, prop) >= 0)

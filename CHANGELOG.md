@@ -2,7 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.2] - 2026-03-18 (current)
+## [0.0.3] - 2026-03-20 (current)
+
+### Added
+- **`opacity`** — element opacity (0–1) with composited subtree rendering via temporary SkiaSharp layers
+- **`border-radius`** — rounded corners on all box types via `SKRoundRect`; supports `px` and `%` units
+- **`box-shadow`** — multi-layer box shadows with offset, blur, spread, and color; `inset` keyword parsed
+- **`text-shadow`** — single-layer text shadow with offset, blur, and color
+- **`float: left` / `float: right`** — floated elements removed from normal flow with shrink-to-fit sizing; subsequent content narrows around floats
+- **`clear: left` / `right` / `both`** — clears past floated elements
+- **Scrollbar UI** — visual scrollbar track and thumb rendered when content overflows the viewport; thumb draggable with mouse, track click jumps to position
+- **`:hover` pseudo-class** — CSS properties applied on mouse hover with interactive re-render
+- **`:focus` pseudo-class** — CSS properties applied when a form input is focused
+- **`:active` pseudo-class** — CSS properties applied during mouse-down
+- **`@media` queries** — responsive design support with `min-width`, `max-width`, `min-height`, `max-height`, `orientation`; media types `screen`, `all`, `print`; combinators `and`, `not`, comma (OR); re-evaluated on window resize
+- **CSS transitions** — `transition` property with `property`, `duration`, `delay`, and `timing-function`; triggers on pseudo-class state changes; interpolates numeric (px, em, %) and color (rgba) values
+- **CSS `@keyframes` animations** — `animation` shorthand with `name`, `duration`, `delay`, `timing-function`, `iteration-count` (including `infinite`), `direction` (`alternate`, `reverse`), `fill-mode` (`forwards`, `backwards`, `both`); 60fps timer-driven animation loop
+- **Easing functions** — `linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out`, `step-start`, `step-end`, `cubic-bezier(...)` with Newton-Raphson solver
+- **`calc()` expressions** — recursive descent evaluator for `calc()` in all length-resolving properties; supports `+`, `-`, `*`, `/` operators and `px`, `%`, `em`, `rem`, `vw`, `vh` units; nested `calc()` flattened
+- **CSS custom properties (`--*` / `var()`)** — custom properties declared on any element (including `:root`), inherited via ancestor chain walk; `var(--name)` and `var(--name, fallback)` with recursive resolution; nested `var()` in both resolved values and fallbacks; automatic shorthand expansion for `padding`, `margin`, `gap`
+
+### Fixed
+- **Button text wrapping** — added `white-space: nowrap` to prevent "Hover me" button text from wrapping in flex containers
+- **`var()` values in non-override properties** — properties like `background-color`, `color`, `padding` containing `var()` references were silently dropped because AngleSharp cannot resolve custom properties; now any property with a `var()` value is stored in StyleOverrides regardless of the property whitelist
+
+## [0.0.2] - 2026-03-18
 
 ### Added
 - **Inline text elements** — `<strong>`, `<b>`, `<em>`, `<i>`, `<u>`, `<ins>`, `<s>`, `<del>`, `<strike>`, `<small>`, `<sub>`, `<sup>`, `<mark>`, `<code>`, `<kbd>`, `<samp>`, `<var>`, `<tt>` now render correctly via UA stylesheet rules

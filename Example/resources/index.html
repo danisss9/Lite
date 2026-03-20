@@ -497,6 +497,28 @@ console.log(greet("World"));</pre>
       </div>
     </section>
 
+    <!-- CSS Variables -->
+    <section class="card">
+      <h2>CSS Variables</h2>
+      <p>Custom properties defined on <code>:root</code> and consumed with <code>var()</code>.</p>
+
+      <div class="var-row">
+        <div class="var-box var-primary">--primary</div>
+        <div class="var-box var-secondary">--secondary</div>
+        <div class="var-box var-accent">--accent</div>
+      </div>
+
+      <div class="var-row">
+        <div class="var-card">Spacing from <code>var(--space-md)</code></div>
+        <div class="var-card var-card-large">Larger via <code>var(--space-lg)</code></div>
+      </div>
+
+      <div class="var-row">
+        <div class="var-fallback">Fallback: <code>var(--undefined, #f59e0b)</code></div>
+        <div class="var-nested">Nested: <code>var(--color-text)</code> → <code>var(--primary)</code></div>
+      </div>
+    </section>
+
   </main>
 
   <footer>

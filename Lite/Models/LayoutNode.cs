@@ -38,6 +38,8 @@ public class LayoutNode
     public bool IsHovered { get; set; }
     public bool IsFocused { get; set; }
     public bool IsActive { get; set; }
+    /// <summary>CSS custom properties (--*) declared on this element, for var() resolution.</summary>
+    public Dictionary<string, string> CustomProperties { get; } = [];
     /// <summary>Current interpolated animation/transition values. Highest priority in style resolution.</summary>
     public Dictionary<string, string> AnimationOverrides { get; } = [];
     /// <summary>Parsed `transition` declarations for this element.</summary>
@@ -53,16 +55,72 @@ public class LayoutNode
     {
         val = null!;
         // Animation/transition overrides have highest priority (live interpolated values)
-        if (AnimationOverrides.TryGetValue(prop, out var va)) { val = va; return true; }
-        if (IsActive && MediaActiveStyles.TryGetValue(prop, out var v1m)) { val = v1m; return true; }
-        if (IsActive && ActiveStyles.TryGetValue(prop, out var v1))       { val = v1;  return true; }
-        if (IsFocused && MediaFocusStyles.TryGetValue(prop, out var v2m)) { val = v2m; return true; }
-        if (IsFocused && FocusStyles.TryGetValue(prop, out var v2))       { val = v2;  return true; }
-        if (IsHovered && MediaHoverStyles.TryGetValue(prop, out var v3m)) { val = v3m; return true; }
-        if (IsHovered && HoverStyles.TryGetValue(prop, out var v3))       { val = v3;  return true; }
-        if (MediaOverrides.TryGetValue(prop, out var v4m))                { val = v4m; return true; }
-        if (StyleOverrides.TryGetValue(prop, out var v4))                 { val = v4;  return true; }
+        if (AnimationOverrides.TryGetValue(prop, out var va)) { val = ResolveVarRefs(va); return true; }
+        if (IsActive && MediaActiveStyles.TryGetValue(prop, out var v1m)) { val = ResolveVarRefs(v1m); return true; }
+        if (IsActive && ActiveStyles.TryGetValue(prop, out var v1))       { val = ResolveVarRefs(v1);  return true; }
+        if (IsFocused && MediaFocusStyles.TryGetValue(prop, out var v2m)) { val = ResolveVarRefs(v2m); return true; }
+        if (IsFocused && FocusStyles.TryGetValue(prop, out var v2))       { val = ResolveVarRefs(v2);  return true; }
+        if (IsHovered && MediaHoverStyles.TryGetValue(prop, out var v3m)) { val = ResolveVarRefs(v3m); return true; }
+        if (IsHovered && HoverStyles.TryGetValue(prop, out var v3))       { val = ResolveVarRefs(v3);  return true; }
+        if (MediaOverrides.TryGetValue(prop, out var v4m))                { val = ResolveVarRefs(v4m); return true; }
+        if (StyleOverrides.TryGetValue(prop, out var v4))                 { val = ResolveVarRefs(v4);  return true; }
         return false;
+    }
+
+    /// <summary>
+    /// Resolves all <c>var(--name)</c> and <c>var(--name, fallback)</c> references in a value
+    /// by walking up the ancestor chain. Returns the original string if no var() is present.
+    /// </summary>
+    private string ResolveVarRefs(string value)
+    {
+        if (string.IsNullOrEmpty(value) || !value.Contains("var(", StringComparison.OrdinalIgnoreCase))
+            return value;
+
+        var sb = new System.Text.StringBuilder();
+        int i  = 0;
+
+        while (i < value.Length)
+        {
+            int varIdx = value.IndexOf("var(", i, StringComparison.OrdinalIgnoreCase);
+            if (varIdx < 0) { sb.Append(value, i, value.Length - i); break; }
+
+            sb.Append(value, i, varIdx - i);
+
+            int start = varIdx + 4;
+            int depth = 1, j = start;
+            while (j < value.Length && depth > 0)
+            {
+                if      (value[j] == '(') depth++;
+                else if (value[j] == ')') depth--;
+                if (depth > 0) j++;
+                else break;
+            }
+
+            var inner = value[start..j];
+
+            // Split at first top-level comma → name, fallback
+            int commaIdx = -1, d = 0;
+            for (int k = 0; k < inner.Length; k++)
+            {
+                if      (inner[k] == '(') d++;
+                else if (inner[k] == ')') d--;
+                else if (inner[k] == ',' && d == 0) { commaIdx = k; break; }
+            }
+
+            var name     = (commaIdx >= 0 ? inner[..commaIdx] : inner).Trim();
+            var fallback = commaIdx >= 0 ? inner[(commaIdx + 1)..].Trim() : null;
+
+            string? resolved = null;
+            for (var cur = this; cur != null; cur = cur.Parent)
+            {
+                if (cur.CustomProperties.TryGetValue(name, out var v)) { resolved = v.Trim(); break; }
+            }
+
+            sb.Append(resolved != null ? ResolveVarRefs(resolved) : fallback != null ? ResolveVarRefs(fallback) : "");
+            i = j + 1;
+        }
+
+        return sb.ToString();
     }
 
     /// <summary>
