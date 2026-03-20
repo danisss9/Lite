@@ -617,6 +617,113 @@ footer {
 .text-shadow-hard   { font-size: 1.4em; color: #1d4ed8; text-shadow: 3px 3px 0px rgba(0,0,0,0.4); }
 .text-shadow-glow   { font-size: 1.4em; color: #6366f1; text-shadow: 0px 0px 8px rgba(99,102,241,0.8); }
 
+/* ── Pseudo-classes ─────────────────────────── */
+.hover-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.hover-box {
+  padding: 14px 20px;
+  background-color: #3b82f6;
+  color: #ffffff;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.hover-box:hover {
+  background-color: #1d4ed8;
+}
+
+.hover-box-green { background-color: #22c55e; }
+.hover-box-green:hover { background-color: #16a34a; }
+.hover-box-purple { background-color: #a855f7; }
+.hover-box-purple:hover { background-color: #7c3aed; }
+
+.hover-link {
+  color: #2563eb;
+}
+
+.hover-link:hover {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.focus-input {
+  width: 280px;
+}
+
+.focus-input:focus {
+  border-top-color: #3b82f6;
+  border-right-color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  border-left-color: #3b82f6;
+}
+
+.active-btn {
+  background-color: #3b82f6;
+  color: #ffffff;
+  cursor: pointer;
+  border-top-color: #2563eb;
+  border-right-color: #2563eb;
+  border-bottom-color: #2563eb;
+  border-left-color: #2563eb;
+}
+
+.active-btn:hover {
+  background-color: #2563eb;
+}
+
+.active-btn:active {
+  background-color: #1e40af;
+}
+
+.active-btn-red {
+  background-color: #ef4444;
+  border-top-color: #dc2626;
+  border-right-color: #dc2626;
+  border-bottom-color: #dc2626;
+  border-left-color: #dc2626;
+}
+
+.active-btn-red:hover {
+  background-color: #dc2626;
+}
+
+.active-btn-red:active {
+  background-color: #b91c1c;
+}
+
+.state-box {
+  padding: 16px 24px;
+  background-color: #f1f5f9;
+  color: #475569;
+  cursor: pointer;
+  border-top-width: 2px;
+  border-right-width: 2px;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+  border-top-color: #e2e8f0;
+  border-right-color: #e2e8f0;
+  border-bottom-color: #e2e8f0;
+  border-left-color: #e2e8f0;
+}
+
+.state-box:hover {
+  background-color: #dbeafe;
+  border-top-color: #3b82f6;
+  border-right-color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  border-left-color: #3b82f6;
+  color: #1e40af;
+}
+
+.state-box:active {
+  background-color: #bfdbfe;
+  color: #1e3a8a;
+}
+
 /* ── Float & Clear ──────────────────────────── */
 .float-container {
   background-color: #f8fafc;

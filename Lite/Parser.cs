@@ -276,9 +276,15 @@ internal static class Parser
         {
             foreach (var rule in sheet.Rules.OfType<ICssStyleRule>())
             {
+                var selectorText = rule.SelectorText;
+
+                // Handle pseudo-class selectors (:hover, :focus, :active)
+                if (TryExtractPseudoClassRule(element, node, rule))
+                    continue;
+
                 try
                 {
-                    if (!element.Matches(rule.SelectorText)) continue;
+                    if (!element.Matches(selectorText)) continue;
                 }
                 catch { continue; } // malformed selector
 
@@ -422,6 +428,66 @@ internal static class Parser
             if (Array.IndexOf(s_extraProps, prop) >= 0)
                 StoreProp(node, prop, val);
         }
+    }
+
+    /// <summary>
+    /// Detects pseudo-class selectors (:hover, :focus, :active), strips them,
+    /// matches the base selector, and stores properties in the appropriate dict.
+    /// Returns true if the rule was a pseudo-class rule (whether matched or not).
+    /// </summary>
+    private static bool TryExtractPseudoClassRule(IElement element, LayoutNode node, ICssStyleRule rule)
+    {
+        var selector = rule.SelectorText;
+        if (!selector.Contains(":hover") && !selector.Contains(":focus") && !selector.Contains(":active"))
+            return false;
+
+        // Determine which pseudo-classes are present
+        var hasHover  = selector.Contains(":hover");
+        var hasFocus  = selector.Contains(":focus");
+        var hasActive = selector.Contains(":active");
+
+        // Strip pseudo-classes to get the base selector
+        var baseSelector = selector
+            .Replace(":hover", "")
+            .Replace(":focus", "")
+            .Replace(":active", "")
+            .Trim();
+        if (string.IsNullOrEmpty(baseSelector)) return true;
+
+        try { if (!element.Matches(baseSelector)) return true; }
+        catch { return true; }
+
+        // Extract all CSS properties from this rule
+        var cssText = rule.Style.CssText;
+        if (string.IsNullOrEmpty(cssText)) return true;
+
+        var props = new Dictionary<string, string>();
+
+        // Parse from CssText to get all properties
+        foreach (var decl in cssText.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var colon = decl.IndexOf(':');
+            if (colon < 0) continue;
+            var prop = decl[..colon].Trim().ToLowerInvariant();
+            var val  = decl[(colon + 1)..].Trim().Replace("!important", "").Trim();
+            if (!string.IsNullOrEmpty(val))
+                props[prop] = val;
+        }
+
+        // Also try GetPropertyValue for known extra properties
+        foreach (var prop in s_extraProps)
+        {
+            var val = rule.Style.GetPropertyValue(prop);
+            if (!string.IsNullOrEmpty(val) && !props.ContainsKey(prop))
+                props[prop] = val;
+        }
+
+        // Store in the appropriate pseudo-class dict(s)
+        if (hasHover)  foreach (var (p, v) in props) node.HoverStyles[p]  = v;
+        if (hasFocus)  foreach (var (p, v) in props) node.FocusStyles[p]  = v;
+        if (hasActive) foreach (var (p, v) in props) node.ActiveStyles[p] = v;
+
+        return true;
     }
 
     /// <summary>

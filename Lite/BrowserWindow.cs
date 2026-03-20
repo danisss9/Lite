@@ -187,15 +187,23 @@ public class BrowserWindow
                 {
                     _draggingScrollbar = true;
                     _scrollbarGrabOffset = y - _viewport.ThumbTop;
-                    // Capture mouse so we get WM_MOUSEMOVE even outside the window
                     User32.SetCapture(hWnd);
                 }
                 else if (_viewport.HitTrack(x, _width))
                 {
-                    // Click on track above/below thumb — jump to that position
                     var targetScrollY = _viewport.ScrollYFromThumbTop(y, _viewport.ThumbHeight / 2f);
                     _viewport.ScrollTo(targetScrollY);
                     if (_rootNode != null)
+                    {
+                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    }
+                }
+                else
+                {
+                    // Set :active on the node under cursor
+                    var contentY = y + _viewport.ScrollY;
+                    if (PseudoClassState.SetActive(_rootNode, x, contentY) && _rootNode != null)
                     {
                         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
@@ -217,6 +225,18 @@ public class BrowserWindow
                         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                     }
                 }
+                else
+                {
+                    // Update :hover state
+                    var mx = (short)(lParam.ToInt32() & 0xFFFF);
+                    var my = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+                    var contentY = my + _viewport.ScrollY;
+                    if (PseudoClassState.UpdateHover(_rootNode, mx, contentY) && _rootNode != null)
+                    {
+                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    }
+                }
                 break;
             }
 
@@ -229,10 +249,14 @@ public class BrowserWindow
                     break;
                 }
 
+                // Clear :active state
+                var activeChanged = PseudoClassState.ClearActive();
+
                 var x = (short)(lParam.ToInt32() & 0xFFFF);
                 var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
                 var contentY = y + _viewport.ScrollY;
                 var handled = false;
+                var prevFocus = FormState.FocusedInput;
 
                 foreach (var region in _hitRegions)
                 {
@@ -277,7 +301,11 @@ public class BrowserWindow
                 var focusChanged = !handled && FormState.FocusedInput != null;
                 if (focusChanged) FormState.FocusedInput = null;
 
-                if ((handled || focusChanged) && _rootNode != null)
+                // Update :focus pseudo-class state
+                if (FormState.FocusedInput != prevFocus)
+                    PseudoClassState.UpdateFocus(_rootNode, FormState.FocusedInput);
+
+                if ((handled || focusChanged || activeChanged) && _rootNode != null)
                 {
                     (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                     User32.InvalidateRect(hWnd, IntPtr.Zero, false);

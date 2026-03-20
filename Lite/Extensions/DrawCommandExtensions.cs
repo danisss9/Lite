@@ -32,7 +32,7 @@ public static class StyleExtensions
 {
     public static DisplayType GetDisplay(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.Display, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.Display, out var ov)
             ? ov
             : node.Style.GetPropertyValue(PropertyNames.Display);
         return raw switch
@@ -52,7 +52,7 @@ public static class StyleExtensions
 
     public static FlexDirection GetFlexDirection(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.FlexDirection, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.FlexDirection, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.FlexDirection);
         return raw switch
         {
@@ -65,7 +65,7 @@ public static class StyleExtensions
 
     public static FlexWrap GetFlexWrap(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.FlexWrap, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.FlexWrap, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.FlexWrap);
         return raw switch
         {
@@ -77,7 +77,7 @@ public static class StyleExtensions
 
     public static JustifyContent GetJustifyContent(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.JustifyContent, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.JustifyContent, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.JustifyContent);
         return raw switch
         {
@@ -92,7 +92,7 @@ public static class StyleExtensions
 
     public static AlignItems GetAlignItems(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.AlignItems, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.AlignItems, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.AlignItems);
         return raw switch
         {
@@ -106,7 +106,7 @@ public static class StyleExtensions
 
     public static AlignSelf GetAlignSelf(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.AlignSelf, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.AlignSelf, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.AlignSelf);
         return raw switch
         {
@@ -121,7 +121,7 @@ public static class StyleExtensions
 
     public static AlignContent GetAlignContent(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue("align-content", out var ov)
+        var raw = node.TryResolveStyle("align-content", out var ov)
             ? ov : node.Style.GetPropertyValue("align-content");
         return raw switch
         {
@@ -136,14 +136,14 @@ public static class StyleExtensions
 
     public static int GetOrder(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue("order", out var ov)
+        var raw = node.TryResolveStyle("order", out var ov)
             ? ov : node.Style.GetPropertyValue("order");
         return int.TryParse(raw, out var v) ? v : 0;
     }
 
     public static Visibility GetVisibility(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.Visibility, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.Visibility, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.Visibility);
         return raw switch
         {
@@ -170,7 +170,7 @@ public static class StyleExtensions
     /// <summary>Returns true when min-width is auto/unset (not explicitly set to a length).</summary>
     public static bool IsAutoMinWidth(this LayoutNode node)
     {
-        if (node.StyleOverrides.TryGetValue("min-width", out var ov) && ov.Trim() is not ("auto" or ""))
+        if (node.TryResolveStyle("min-width", out var ov) && ov.Trim() is not ("auto" or ""))
             return false;
         var raw = node.Style.GetProperty(PropertyNames.MinWidth).RawValue;
         return raw is null or Constant<Length>;
@@ -179,7 +179,7 @@ public static class StyleExtensions
     /// <summary>Returns true when min-height is auto/unset (not explicitly set to a length).</summary>
     public static bool IsAutoMinHeight(this LayoutNode node)
     {
-        if (node.StyleOverrides.TryGetValue("min-height", out var ov) && ov.Trim() is not ("auto" or ""))
+        if (node.TryResolveStyle("min-height", out var ov) && ov.Trim() is not ("auto" or ""))
             return false;
         var raw = node.Style.GetProperty(PropertyNames.MinHeight).RawValue;
         return raw is null or Constant<Length>;
@@ -187,7 +187,7 @@ public static class StyleExtensions
 
     public static float GetFlexGrow(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.FlexGrow, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.FlexGrow, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.FlexGrow);
         return float.TryParse(raw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0f;
@@ -195,7 +195,7 @@ public static class StyleExtensions
 
     public static float GetFlexShrink(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.FlexShrink, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.FlexShrink, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.FlexShrink);
         return float.TryParse(raw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 1f;
@@ -204,7 +204,7 @@ public static class StyleExtensions
     /// <summary>Returns flex-basis in px, or float.NaN for 'auto'/'content'.</summary>
     public static float GetFlexBasis(this LayoutNode node, float containerMain)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.FlexBasis, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.FlexBasis, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.FlexBasis);
         if (string.IsNullOrEmpty(raw) || raw == "auto" || raw == "content") return float.NaN;
         if (raw.EndsWith("px") && float.TryParse(raw[..^2],
@@ -234,7 +234,7 @@ public static class StyleExtensions
         // Check StyleOverrides first (populated from matched CSS rules)
         foreach (var name in new[] { prop, fallback })
         {
-            if (node.StyleOverrides.TryGetValue(name, out var ov) && !string.IsNullOrEmpty(ov))
+            if (node.TryResolveStyle(name, out var ov) && !string.IsNullOrEmpty(ov))
             {
                 ov = ov.Trim();
                 if (ov.EndsWith("px") && float.TryParse(ov[..^2],
@@ -272,25 +272,32 @@ public static class StyleExtensions
 
     public static bool GetFontBold(this LayoutNode node)
     {
-        var weight = node.Style.GetPropertyValue(PropertyNames.FontWeight);
+        var weight = node.TryResolveStyle(PropertyNames.FontWeight, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.FontWeight);
         return weight is "bold" or "bolder" or "700" or "800" or "900";
     }
 
     public static bool GetFontItalic(this LayoutNode node)
     {
-        var style = node.StyleOverrides.TryGetValue(PropertyNames.FontStyle, out var ov)
+        var style = node.TryResolveStyle(PropertyNames.FontStyle, out var ov)
             ? ov
             : node.Style.GetPropertyValue(PropertyNames.FontStyle);
         return style is "italic" or "oblique";
     }
 
-    public static bool IsLineThrough(this LayoutNode node) =>
-        node.Style.GetPropertyValue(PropertyNames.TextDecorationLine).Contains("line-through", StringComparison.OrdinalIgnoreCase) ||
-        node.Style.GetPropertyValue(PropertyNames.TextDecoration).Contains("line-through", StringComparison.OrdinalIgnoreCase);
+    public static bool IsLineThrough(this LayoutNode node)
+    {
+        var line = node.TryResolveStyle(PropertyNames.TextDecorationLine, out var ov1)
+            ? ov1 : node.Style.GetPropertyValue(PropertyNames.TextDecorationLine);
+        if (line.Contains("line-through", StringComparison.OrdinalIgnoreCase)) return true;
+        var dec = node.TryResolveStyle(PropertyNames.TextDecoration, out var ov2)
+            ? ov2 : node.Style.GetPropertyValue(PropertyNames.TextDecoration);
+        return dec.Contains("line-through", StringComparison.OrdinalIgnoreCase);
+    }
 
     public static TextAlign GetTextAlign(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.TextAlign, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.TextAlign, out var ov)
             ? ov
             : node.Style.GetPropertyValue(PropertyNames.TextAlign);
         return raw switch
@@ -305,7 +312,7 @@ public static class StyleExtensions
     /// <summary>Returns the computed line-height in pixels. Falls back to fontSize * 1.4.</summary>
     public static float GetLineHeight(this LayoutNode node, float fontSize)
     {
-        if (node.StyleOverrides.TryGetValue(PropertyNames.LineHeight, out var ov))
+        if (node.TryResolveStyle(PropertyNames.LineHeight, out var ov))
         {
             ov = ov.Trim();
             if (ov.EndsWith("px") && float.TryParse(ov[..^2],
@@ -342,7 +349,7 @@ public static class StyleExtensions
 
     public static WhiteSpace GetWhiteSpace(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.WhiteSpace, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.WhiteSpace, out var ov)
             ? ov
             : node.Style.GetPropertyValue(PropertyNames.WhiteSpace);
         return raw switch
@@ -355,30 +362,38 @@ public static class StyleExtensions
         };
     }
 
-    public static PositionType GetPosition(this LayoutNode node) =>
-        node.Style.GetPropertyValue(PropertyNames.Position) switch
+    public static PositionType GetPosition(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle(PropertyNames.Position, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.Position);
+        return raw switch
         {
             "relative" => PositionType.Relative,
             "absolute" => PositionType.Absolute,
             "fixed"    => PositionType.Fixed,
             _          => PositionType.Static,
         };
+    }
 
     public static bool IsPositioned(this LayoutNode node) =>
         node.GetPosition() != PositionType.Static;
 
-    public static OverflowType GetOverflow(this LayoutNode node) =>
-        node.Style.GetPropertyValue(PropertyNames.Overflow) switch
+    public static OverflowType GetOverflow(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle(PropertyNames.Overflow, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.Overflow);
+        return raw switch
         {
             "hidden" => OverflowType.Hidden,
             "scroll" => OverflowType.Scroll,
             "auto"   => OverflowType.Auto,
             _        => OverflowType.Visible,
         };
+    }
 
     public static int GetZIndex(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue(PropertyNames.ZIndex, out var ov)
+        var raw = node.TryResolveStyle(PropertyNames.ZIndex, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.ZIndex);
         return int.TryParse(raw, out var z) ? z : 0;
     }
@@ -390,7 +405,7 @@ public static class StyleExtensions
     /// </summary>
     public static (float Rx, float Ry) GetBorderRadius(this LayoutNode node, float width, float height)
     {
-        var raw = node.StyleOverrides.TryGetValue("border-radius", out var ov)
+        var raw = node.TryResolveStyle("border-radius", out var ov)
             ? ov : node.Style.GetPropertyValue("border-radius");
         if (string.IsNullOrWhiteSpace(raw)) return (0f, 0f);
         raw = raw.Trim();
@@ -413,7 +428,7 @@ public static class StyleExtensions
 
     public static float GetOpacity(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue("opacity", out var ov)
+        var raw = node.TryResolveStyle("opacity", out var ov)
             ? ov : node.Style.GetPropertyValue("opacity");
         return float.TryParse(raw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var f)
@@ -422,7 +437,7 @@ public static class StyleExtensions
 
     public static FloatType GetFloat(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue("float", out var ov)
+        var raw = node.TryResolveStyle("float", out var ov)
             ? ov : node.Style.GetPropertyValue("float");
         return raw switch
         {
@@ -434,7 +449,7 @@ public static class StyleExtensions
 
     public static ClearType GetClear(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue("clear", out var ov)
+        var raw = node.TryResolveStyle("clear", out var ov)
             ? ov : node.Style.GetPropertyValue("clear");
         return raw switch
         {
@@ -448,7 +463,7 @@ public static class StyleExtensions
     /// <summary>Parses all box-shadow layers. Returns empty list when unset.</summary>
     public static List<BoxShadow> GetBoxShadows(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue("box-shadow", out var ov)
+        var raw = node.TryResolveStyle("box-shadow", out var ov)
             ? ov : node.Style.GetPropertyValue("box-shadow");
         if (string.IsNullOrWhiteSpace(raw) || raw == "none") return [];
         var result = new List<BoxShadow>();
@@ -462,7 +477,7 @@ public static class StyleExtensions
     /// <summary>Parses the text-shadow property. Returns null when unset.</summary>
     public static TextShadow? GetTextShadow(this LayoutNode node)
     {
-        var raw = node.StyleOverrides.TryGetValue("text-shadow", out var ov)
+        var raw = node.TryResolveStyle("text-shadow", out var ov)
             ? ov : node.Style.GetPropertyValue("text-shadow");
         if (string.IsNullOrWhiteSpace(raw) || raw == "none") return null;
         // text-shadow uses same token format as box-shadow but without spread/inset
@@ -561,7 +576,7 @@ public static class StyleExtensions
 
     private static float GetOffset(LayoutNode node, string prop, float total, float size)
     {
-        if (node.StyleOverrides.TryGetValue(prop, out var ov))
+        if (node.TryResolveStyle(prop, out var ov))
         {
             ov = ov.Trim();
             if (ov == "auto") return float.NaN;
@@ -634,17 +649,27 @@ public static class StyleExtensions
     public static SKColor GetBorderBottomColor(this LayoutNode node)  => GetColor(node, PropertyNames.BorderBottomColor, SKColors.Black);
     public static SKColor GetBorderLeftColor(this LayoutNode node)    => GetColor(node, PropertyNames.BorderLeftColor,   SKColors.Black);
 
-    public static bool IsUnderline(this LayoutNode node) =>
-        node.Style.GetPropertyValue(PropertyNames.TextDecorationLine).Contains("underline", StringComparison.OrdinalIgnoreCase) ||
-        node.Style.GetPropertyValue(PropertyNames.TextDecoration).Contains("underline", StringComparison.OrdinalIgnoreCase);
+    public static bool IsUnderline(this LayoutNode node)
+    {
+        var line = node.TryResolveStyle(PropertyNames.TextDecorationLine, out var ov1)
+            ? ov1 : node.Style.GetPropertyValue(PropertyNames.TextDecorationLine);
+        if (line.Contains("underline", StringComparison.OrdinalIgnoreCase)) return true;
+        var dec = node.TryResolveStyle(PropertyNames.TextDecoration, out var ov2)
+            ? ov2 : node.Style.GetPropertyValue(PropertyNames.TextDecoration);
+        return dec.Contains("underline", StringComparison.OrdinalIgnoreCase);
+    }
 
-    public static CursorType GetCursor(this LayoutNode node) =>
-        node.Style.GetPropertyValue(PropertyNames.Cursor) switch
+    public static CursorType GetCursor(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle(PropertyNames.Cursor, out var ov)
+            ? ov : node.Style.GetPropertyValue(PropertyNames.Cursor);
+        return raw switch
         {
             "pointer" => CursorType.Pointer,
             "text"    => CursorType.Text,
-            _         => CursorType.Default
+            _         => CursorType.Default,
         };
+    }
 
     public static string GetFontFamily(this LayoutNode node)
     {
@@ -661,7 +686,7 @@ public static class StyleExtensions
 
     private static SKColor GetColor(LayoutNode node, string propertyName, SKColor defaultColor)
     {
-        if (node.StyleOverrides.TryGetValue(propertyName, out var overrideValue))
+        if (node.TryResolveStyle(propertyName, out var overrideValue))
         {
             var parsed = ParseCssColor(overrideValue);
             if (parsed.HasValue) return parsed.Value;
@@ -729,7 +754,7 @@ public static class StyleExtensions
     private static float GetSizeOrDefault(LayoutNode node, string propertyName, float total, float size, float defaultValue, float viewportSize = -1f)
     {
         // Check StyleOverrides first
-        if (node.StyleOverrides.TryGetValue(propertyName, out var overrideStr))
+        if (node.TryResolveStyle(propertyName, out var overrideStr))
         {
             overrideStr = overrideStr.Trim();
             if (overrideStr is "" or "auto" or "none") return defaultValue;
@@ -768,7 +793,7 @@ public static class StyleExtensions
     private static float GetSize(LayoutNode node, string propertyName, float total = 0, float size = 0, float viewportSize = -1f)
     {
         // Inline style override (e.g. from element.style.setProperty)
-        if (node.StyleOverrides.TryGetValue(propertyName, out var overrideStr))
+        if (node.TryResolveStyle(propertyName, out var overrideStr))
         {
             overrideStr = overrideStr.Trim();
             if (overrideStr.EndsWith("px") && float.TryParse(overrideStr[..^2],

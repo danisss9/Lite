@@ -21,6 +21,27 @@ public class LayoutNode
     public string? Alt { get; set; }
     public Dictionary<string, string> Attributes { get; } = [];
     public Dictionary<string, string> StyleOverrides { get; } = [];
+    public Dictionary<string, string> HoverStyles { get; } = [];
+    public Dictionary<string, string> FocusStyles { get; } = [];
+    public Dictionary<string, string> ActiveStyles { get; } = [];
+    public bool IsHovered { get; set; }
+    public bool IsFocused { get; set; }
+    public bool IsActive { get; set; }
+
+    /// <summary>
+    /// Resolves a CSS property considering pseudo-class state.
+    /// Priority: :active > :focus > :hover > StyleOverrides.
+    /// </summary>
+    public bool TryResolveStyle(string prop, out string val)
+    {
+        val = null!;
+        if (IsActive && ActiveStyles.TryGetValue(prop, out var v1)) { val = v1; return true; }
+        if (IsFocused && FocusStyles.TryGetValue(prop, out var v2)) { val = v2; return true; }
+        if (IsHovered && HoverStyles.TryGetValue(prop, out var v3)) { val = v3; return true; }
+        if (StyleOverrides.TryGetValue(prop, out var v4)) { val = v4; return true; }
+        return false;
+    }
+
     public string? TextOverride { get; set; }
     public string DisplayText => TextOverride ?? Text;
     public List<(string EventType, Action Handler)> EventListeners { get; } = [];
