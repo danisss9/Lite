@@ -1,4 +1,5 @@
 using AngleSharp.Css.Dom;
+using Jint.Native;
 using Lite.Animation;
 using Lite.Layout;
 using SkiaSharp;
@@ -7,6 +8,9 @@ namespace Lite.Models;
 
 /// <summary>A CSS property/value pair that is conditional on a media query.</summary>
 public record MediaConditionalStyle(string MediaText, string Property, string Value, string Target);
+
+/// <summary>An event listener entry supporting both capture and bubble phases.</summary>
+public record EventListenerEntry(string EventType, JsValue? Handler, Action? LegacyHandler, bool Capture);
 
 public class LayoutNode
 {
@@ -154,7 +158,7 @@ public class LayoutNode
 
     public string? TextOverride { get; set; }
     public string DisplayText => TextOverride ?? Text;
-    public List<(string EventType, Action Handler)> EventListeners { get; } = [];
+    public List<EventListenerEntry> EventListeners { get; } = [];
     /// <summary>
     /// Static position within a flex container, set by FlexEngine for abs-pos children.
     /// Used by BoxEngine.ResolveAbsoluteBox when top/left are auto.

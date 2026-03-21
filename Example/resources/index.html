@@ -519,6 +519,231 @@ console.log(greet("World"));</pre>
       </div>
     </section>
 
+    <!-- ================================================================
+         NEW FEATURE DEMOS (Phases 1–9)
+         ================================================================ -->
+
+    <!-- DOM Events — bubbling & capturing -->
+    <section class="card">
+      <h2>DOM Events — Bubbling</h2>
+      <p>Click the inner box. Events bubble from the target up to its ancestor.</p>
+
+      <div id="ev-outer" class="ev-outer">
+        <div id="ev-inner" class="ev-inner">Click me</div>
+      </div>
+      <div id="ev-log" class="demo-log"></div>
+      <button id="ev-clear" class="mt-sm">Clear log</button>
+    </section>
+
+    <!-- stopPropagation / preventDefault -->
+    <section class="card">
+      <h2>Event Control</h2>
+      <p><code>stopPropagation()</code> prevents the event from reaching the outer box.</p>
+
+      <div id="ec-outer" class="ec-outer">
+        <div id="ec-inner" class="ec-inner">Click — stops at inner</div>
+      </div>
+      <div id="ec-log" class="demo-log"></div>
+    </section>
+
+    <!-- createEvent / dispatchEvent -->
+    <section class="card">
+      <h2>Custom Events</h2>
+      <p><code>createEvent</code> + <code>initEvent</code> + <code>dispatchEvent</code> — fire a synthetic event.</p>
+
+      <div id="ce-target" class="ce-target">Waiting for custom event...</div>
+      <button id="ce-fire" class="mt-sm">Dispatch "hello" event</button>
+    </section>
+
+    <!-- CSS Selectors Level 3 -->
+    <section class="card">
+      <h2>CSS Selectors Level 3</h2>
+      <p><code>querySelectorAll</code> with class, attribute, <code>:nth-child</code>, and combinators.</p>
+
+      <ul id="sel-list" class="sel-list">
+        <li class="fruit" data-color="red">Apple</li>
+        <li class="fruit" data-color="yellow">Banana</li>
+        <li class="veggie" data-color="green">Broccoli</li>
+        <li class="fruit" data-color="orange">Orange</li>
+        <li class="veggie" data-color="red">Tomato</li>
+      </ul>
+      <div class="mt-sm">
+        <button id="sel-fruit">.fruit</button>
+        <button id="sel-nth" class="ml-sm">:nth-child(odd)</button>
+        <button id="sel-attr" class="ml-sm">[data-color="red"]</button>
+        <button id="sel-reset" class="ml-sm">Reset</button>
+      </div>
+    </section>
+
+    <!-- DOM Mutation -->
+    <section class="card">
+      <h2>DOM Mutation</h2>
+      <p><code>createElement</code>, <code>appendChild</code>, <code>cloneNode</code>, <code>insertBefore</code>, <code>removeChild</code>.</p>
+
+      <div id="mut-container" class="mut-container"></div>
+      <div class="mt-sm">
+        <button id="mut-add">Add</button>
+        <button id="mut-clone" class="ml-sm">Clone first</button>
+        <button id="mut-remove" class="ml-sm">Remove last</button>
+        <button id="mut-clear" class="ml-sm">Clear all</button>
+      </div>
+      <p id="mut-count" class="demo-info mt-sm">Items: 0</p>
+    </section>
+
+    <!-- classList API -->
+    <section class="card">
+      <h2>classList API</h2>
+      <p><code>add</code>, <code>remove</code>, <code>toggle</code>, <code>contains</code> on an element's class list.</p>
+
+      <div id="cl-target" class="cl-target">Toggle my class</div>
+      <p id="cl-readout" class="demo-info mt-sm"></p>
+      <div class="mt-sm">
+        <button id="cl-toggle">Toggle .active</button>
+        <button id="cl-check" class="ml-sm">Has .active?</button>
+      </div>
+    </section>
+
+    <!-- Timers (setTimeout / setInterval) -->
+    <section class="card">
+      <h2>Timers</h2>
+      <p>Real <code>setInterval</code> and <code>clearInterval</code>.</p>
+
+      <p id="timer-val" class="timer-value">0</p>
+      <div class="mt-sm">
+        <button id="timer-start">Start</button>
+        <button id="timer-stop" class="ml-sm">Stop</button>
+        <button id="timer-reset" class="ml-sm">Reset</button>
+      </div>
+    </section>
+
+    <!-- SVG Shapes -->
+    <section class="card">
+      <h2>SVG Shapes</h2>
+      <p>rect, circle, ellipse, polygon, path, line, and text rendered via SkiaSharp.</p>
+
+      <svg width="460" height="120" viewBox="0 0 460 120">
+        <rect x="5" y="10" width="50" height="50" rx="8" fill="#1d4ed8" />
+        <circle cx="100" cy="35" r="25" fill="#16a34a" />
+        <ellipse cx="170" cy="35" rx="30" ry="20" fill="#ea580c" />
+        <polygon points="230,10 260,60 200,60" fill="#dc2626" />
+        <path d="M290,10 Q320,10 320,35 T290,60" fill="none" stroke="#7c3aed" stroke-width="3" />
+        <line x1="340" y1="60" x2="440" y2="10" stroke="#64748b" stroke-width="2" />
+        <text x="5" y="95" font-size="14" fill="#1e293b">SVG text rendered inside Lite Browser</text>
+        <line x1="5" y1="110" x2="455" y2="110" stroke="#cbd5e1" stroke-width="1" />
+      </svg>
+    </section>
+
+    <!-- SVG Transforms -->
+    <section class="card">
+      <h2>SVG Transforms</h2>
+      <p><code>translate</code>, <code>rotate</code>, and <code>scale</code> applied to SVG groups.</p>
+
+      <svg width="400" height="110" viewBox="0 0 400 110">
+        <g transform="translate(40,55)">
+          <rect x="-18" y="-18" width="36" height="36" fill="#7c3aed" rx="4" />
+          <text x="-12" y="5" font-size="11" fill="white">base</text>
+        </g>
+        <g transform="translate(130,55) rotate(45)">
+          <rect x="-18" y="-18" width="36" height="36" fill="#0d9488" rx="4" />
+          <text x="-6" y="5" font-size="11" fill="white">45</text>
+        </g>
+        <g transform="translate(220,55) scale(1.4)">
+          <circle cx="0" cy="0" r="18" fill="#db2777" />
+          <text x="-10" y="5" font-size="10" fill="white">1.4x</text>
+        </g>
+        <g transform="translate(330,55) rotate(-30) scale(0.9)">
+          <polygon points="0,-22 20,12 -20,12" fill="#d97706" />
+        </g>
+      </svg>
+    </section>
+
+    <!-- Canvas 2D -->
+    <section class="card">
+      <h2>Canvas 2D</h2>
+      <p>Drawing rectangles, arcs, paths, and text via <code>canvas.getContext("2d")</code>.</p>
+      <canvas id="demo-canvas" width="460" height="130"></canvas>
+    </section>
+
+    <!-- HSL / HSLA Colors -->
+    <section class="card">
+      <h2>HSL / HSLA Colors</h2>
+      <p><code>hsl()</code> and <code>hsla()</code> parsed across the full spectrum.</p>
+
+      <p>Hue sweep (0-330):</p>
+      <div class="hsl-row">
+        <div class="hsl-swatch" style="background: hsl(0, 80%, 55%);"></div>
+        <div class="hsl-swatch" style="background: hsl(30, 80%, 55%);"></div>
+        <div class="hsl-swatch" style="background: hsl(60, 80%, 50%);"></div>
+        <div class="hsl-swatch" style="background: hsl(120, 65%, 45%);"></div>
+        <div class="hsl-swatch" style="background: hsl(180, 65%, 42%);"></div>
+        <div class="hsl-swatch" style="background: hsl(210, 80%, 50%);"></div>
+        <div class="hsl-swatch" style="background: hsl(270, 65%, 55%);"></div>
+        <div class="hsl-swatch" style="background: hsl(330, 75%, 55%);"></div>
+      </div>
+
+      <p>Alpha ramp (hsla at 100%, 75%, 50%, 25%):</p>
+      <div class="hsl-row">
+        <div class="hsl-swatch" style="background: hsla(210, 90%, 50%, 1);"></div>
+        <div class="hsl-swatch" style="background: hsla(210, 90%, 50%, 0.75);"></div>
+        <div class="hsl-swatch" style="background: hsla(210, 90%, 50%, 0.5);"></div>
+        <div class="hsl-swatch" style="background: hsla(210, 90%, 50%, 0.25);"></div>
+      </div>
+    </section>
+
+    <!-- Geometry APIs -->
+    <section class="card">
+      <h2>Geometry APIs</h2>
+      <p><code>getBoundingClientRect()</code>, <code>offsetWidth</code>, <code>offsetHeight</code>.</p>
+
+      <div id="geo-target" class="geo-box">Measure this box</div>
+      <p id="geo-readout" class="demo-info mt-sm"></p>
+      <button id="geo-btn" class="mt-sm">Measure</button>
+    </section>
+
+    <!-- getComputedStyle -->
+    <section class="card">
+      <h2>getComputedStyle</h2>
+      <p>Read resolved CSS values via <code>window.getComputedStyle()</code>.</p>
+
+      <div id="cs-target" class="cs-target">Styled element</div>
+      <p id="cs-readout" class="demo-info mt-sm"></p>
+      <button id="cs-btn" class="mt-sm">Read computed styles</button>
+    </section>
+
+    <!-- Dynamic Styling -->
+    <section class="card">
+      <h2>Dynamic Styling</h2>
+      <p>Modify <code>element.style</code> properties at runtime.</p>
+
+      <div class="ds-center">
+        <div id="ds-box" class="ds-box"></div>
+      </div>
+      <div class="mt-sm">
+        <button id="ds-color">Color</button>
+        <button id="ds-round" class="ml-sm">Round</button>
+        <button id="ds-grow" class="ml-sm">Grow</button>
+        <button id="ds-reset" class="ml-sm">Reset</button>
+      </div>
+    </section>
+
+    <!-- TreeWalker -->
+    <section class="card">
+      <h2>TreeWalker</h2>
+      <p><code>document.createTreeWalker()</code> iterates elements depth-first.</p>
+
+      <div id="tw-tree" class="tw-tree">
+        <div>Section A
+          <div>A-1</div>
+          <div>A-2</div>
+        </div>
+        <div>Section B
+          <div>B-1</div>
+        </div>
+      </div>
+      <button id="tw-btn" class="mt-sm">Walk tree</button>
+      <p id="tw-output" class="demo-info mt-sm"></p>
+    </section>
+
   </main>
 
   <footer>

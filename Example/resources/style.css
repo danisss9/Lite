@@ -1137,3 +1137,166 @@ footer {
   color: var(--color-text);
   font-weight: bold;
 }
+
+/* ================================================================
+   NEW FEATURE DEMOS (Phases 1–9)
+   ================================================================ */
+
+/* ── Shared demo helpers ──────────────────────── */
+.demo-log {
+  background-color: #f8fafc;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-family: monospace;
+  font-size: 0.8em;
+  min-height: 26px;
+  color: #334155;
+  margin-top: 8px;
+}
+
+.demo-info {
+  font-family: monospace;
+  font-size: 0.8em;
+  color: #64748b;
+}
+
+/* ── DOM Events ───────────────────────────────── */
+.ev-outer {
+  background-color: #dbeafe;
+  padding: 14px;
+  border-radius: 6px;
+  cursor: default;
+}
+.ev-inner {
+  background-color: #93c5fd;
+  padding: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  font-weight: bold;
+  color: #1e3a5f;
+}
+
+/* ── Event Control ────────────────────────────── */
+.ec-outer {
+  background-color: #fce7f3;
+  padding: 14px;
+  border-radius: 6px;
+}
+.ec-inner {
+  background-color: #f9a8d4;
+  padding: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  font-weight: bold;
+  color: #831843;
+}
+
+/* ── Custom Events ────────────────────────────── */
+.ce-target {
+  background-color: #f0fdf4;
+  padding: 12px;
+  border-radius: 6px;
+  text-align: center;
+  color: #166534;
+  font-weight: bold;
+}
+
+/* ── Selector demo ────────────────────────────── */
+.sel-list {
+  padding-left: 20px;
+  margin-bottom: 4px;
+}
+.sel-list li {
+  padding: 3px 6px;
+  margin-bottom: 2px;
+  font-size: 0.9em;
+}
+
+/* ── DOM Mutation ─────────────────────────────── */
+.mut-container {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-height: 36px;
+  padding: 8px;
+  background-color: #f8fafc;
+  border-radius: 6px;
+}
+
+/* ── classList ─────────────────────────────────── */
+.cl-target {
+  padding: 14px;
+  border-radius: 6px;
+  text-align: center;
+  background-color: #f1f5f9;
+  font-weight: bold;
+  color: #334155;
+}
+
+/* ── Timers ────────────────────────────────────── */
+.timer-value {
+  font-size: 2em;
+  font-weight: bold;
+  color: #1d4ed8;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+/* ── HSL swatches ─────────────────────────────── */
+.hsl-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.hsl-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+}
+
+/* ── Geometry ─────────────────────────────────── */
+.geo-box {
+  background-color: #e0f2fe;
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+  font-weight: bold;
+  color: #0c4a6e;
+}
+
+/* ── getComputedStyle ─────────────────────────── */
+.cs-target {
+  background-color: #ecfdf5;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #166534;
+  font-weight: bold;
+}
+
+/* ── Dynamic Styling ──────────────────────────── */
+.ds-center {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.ds-box {
+  width: 80px;
+  height: 80px;
+  background-color: #3b82f6;
+  border-radius: 6px;
+}
+
+/* ── TreeWalker ───────────────────────────────── */
+.tw-tree {
+  font-size: 0.85em;
+  padding: 8px;
+  background-color: #f8fafc;
+  border-radius: 4px;
+}
+.tw-tree div {
+  padding-left: 16px;
+}

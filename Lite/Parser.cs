@@ -222,6 +222,26 @@ internal static class Parser
             if (val != null) node.Attributes[attr] = val;
         }
 
+        // Capture HTML class attribute for selector matching
+        if (element.ClassName != null)
+            node.Attributes["class"] = element.ClassName;
+
+        // SVG elements — capture all attributes for rendering
+        if (IsSvgElement(element.TagName))
+        {
+            foreach (var attr in element.Attributes)
+                node.Attributes[attr.Name] = attr.Value;
+        }
+
+        // Canvas element — capture width/height
+        if (element.TagName == "CANVAS")
+        {
+            if (int.TryParse(element.GetAttribute("width"), out var cw)) node.Attributes["width"] = cw.ToString();
+            else node.Attributes["width"] = "300";
+            if (int.TryParse(element.GetAttribute("height"), out var ch)) node.Attributes["height"] = ch.ToString();
+            else node.Attributes["height"] = "150";
+        }
+
         if (hasMixedChildren)
         {
             // Walk ChildNodes in DOM order so text nodes keep their position among element siblings.
@@ -862,4 +882,9 @@ internal static class Parser
         }
         return sb.ToString();
     }
+
+    private static readonly HashSet<string> SvgTags =
+        ["SVG", "RECT", "CIRCLE", "ELLIPSE", "LINE", "POLYLINE", "POLYGON", "PATH", "G", "TEXT", "TSPAN", "DEFS", "USE", "CLIPPATH", "MASK", "PATTERN", "LINEARGRADIENT", "RADIALGRADIENT", "STOP"];
+
+    private static bool IsSvgElement(string tagName) => SvgTags.Contains(tagName);
 }

@@ -2,6 +2,7 @@ using Lite.Extensions;
 using Lite.Interaction;
 using Lite.Layout;
 using Lite.Models;
+using Lite.Rendering;
 using SkiaSharp;
 
 namespace Lite;
@@ -179,6 +180,14 @@ internal static class Drawer
 
             case "HR":
                 PaintHorizontalRule(canvas, node);
+                return;
+
+            case "SVG":
+                SvgRenderer.Render(canvas, node);
+                return;
+
+            case "CANVAS":
+                CanvasRenderer.Render(canvas, node);
                 return;
         }
 

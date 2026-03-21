@@ -3,6 +3,7 @@ using AngleSharp.Css;
 using AngleSharp.Css.Values;
 using Lite.Layout;
 using Lite.Models;
+using Lite.Rendering;
 using SkiaSharp;
 
 namespace Lite.Extensions;
@@ -738,6 +739,12 @@ public static class StyleExtensions
                     a = (byte)(alpha * 255);
                 return new SKColor(r, g, b, a);
             }
+        }
+
+        // hsl(h, s%, l%) / hsla(h, s%, l%, a)
+        if (lower.StartsWith("hsl") && lower.Contains('(') && lower.EndsWith(')'))
+        {
+            return Rendering.SvgRenderer.ParseHsl(lower);
         }
 
         // Hex and named colours — SkiaSharp handles all CSS named colours and hex formats
