@@ -39,7 +39,7 @@ internal static class User32
     [DllImport("user32.dll")]
     internal static extern IntPtr DispatchMessage([In] ref MSG lpMsg);
 
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
     internal static extern IntPtr DefWindowProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll", SetLastError = true)]

@@ -51,11 +51,11 @@ public class BrowserWindow
     private float _scrollbarGrabOffset; // Y offset within thumb where drag started
 
     // Animation timer
-    private const uint  AnimationTimerMs = 16; // ~60 fps
+    private const uint AnimationTimerMs = 16; // ~60 fps
     private static readonly IntPtr AnimationTimerId = new(1);
     private bool _timerRunning;
 
-    public BrowserWindow(string url, string title = "Lite Browser", int width = 800, int height = 600)
+    public BrowserWindow(string url, string title = "Lite", int width = 800, int height = 600)
     {
         _url = url;
         _title = title;
@@ -196,192 +196,192 @@ public class BrowserWindow
                 break;
 
             case WM_MOUSEWHEEL:
-            {
-                var delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
-                _viewport.ScrollBy(-delta / 120f * 60f);
-                if (_rootNode != null)
                 {
-                    (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                }
-                break;
-            }
-
-            case WM_LBUTTONDOWN:
-            {
-                var x = (short)(lParam.ToInt32() & 0xFFFF);
-                var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
-
-                if (_viewport.HitThumb(x, y, _width))
-                {
-                    _draggingScrollbar = true;
-                    _scrollbarGrabOffset = y - _viewport.ThumbTop;
-                    User32.SetCapture(hWnd);
-                }
-                else if (_viewport.HitTrack(x, _width))
-                {
-                    var targetScrollY = _viewport.ScrollYFromThumbTop(y, _viewport.ThumbHeight / 2f);
-                    _viewport.ScrollTo(targetScrollY);
+                    var delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
+                    _viewport.ScrollBy(-delta / 120f * 60f);
                     if (_rootNode != null)
                     {
                         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                     }
-                }
-                else
-                {
-                    // Set :active on the node under cursor
-                    var contentY = y + _viewport.ScrollY;
-                    if (_rootNode != null)
-                        AnimationEngine.SnapshotForTransition(_rootNode);
-                    if (PseudoClassState.SetActive(_rootNode, x, contentY) && _rootNode != null)
-                    {
-                        if (AnimationEngine.DetectAndStartTransitions(_rootNode))
-                            StartAnimationTimer(hWnd);
-                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    }
-                }
-                break;
-            }
-
-            case WM_MOUSEMOVE:
-            {
-                if (_draggingScrollbar)
-                {
-                    var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
-                    var targetScrollY = _viewport.ScrollYFromThumbTop(y, _scrollbarGrabOffset);
-                    _viewport.ScrollTo(targetScrollY);
-                    if (_rootNode != null)
-                    {
-                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    }
-                }
-                else
-                {
-                    // Update :hover state
-                    var mx = (short)(lParam.ToInt32() & 0xFFFF);
-                    var my = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
-                    var contentY = my + _viewport.ScrollY;
-
-                    if (_rootNode != null)
-                        AnimationEngine.SnapshotForTransition(_rootNode);
-                    var hoverChanged = PseudoClassState.UpdateHover(_rootNode, mx, contentY);
-                    if (hoverChanged && _rootNode != null)
-                    {
-                        if (AnimationEngine.DetectAndStartTransitions(_rootNode))
-                            StartAnimationTimer(hWnd);
-                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    }
-                }
-                break;
-            }
-
-            case WM_LBUTTONUP:
-            {
-                if (_draggingScrollbar)
-                {
-                    _draggingScrollbar = false;
-                    User32.ReleaseCapture();
                     break;
                 }
 
-                // Clear :active state
-                if (_rootNode != null)
-                    AnimationEngine.SnapshotForTransition(_rootNode);
-                var activeChanged = PseudoClassState.ClearActive();
-                if (activeChanged && _rootNode != null && AnimationEngine.DetectAndStartTransitions(_rootNode))
-                    StartAnimationTimer(hWnd);
-
-                var x = (short)(lParam.ToInt32() & 0xFFFF);
-                var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
-                var contentY = y + _viewport.ScrollY;
-                var handled = false;
-                var prevFocus = FormState.FocusedInput;
-
-                foreach (var region in _hitRegions)
+            case WM_LBUTTONDOWN:
                 {
-                    if (!region.Bounds.Contains(x, contentY)) continue;
+                    var x = (short)(lParam.ToInt32() & 0xFFFF);
+                    var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
 
-                    if (region.Href != null)
+                    if (_viewport.HitThumb(x, y, _width))
                     {
-                        Process.Start(new ProcessStartInfo(region.Href) { UseShellExecute = true });
-                        handled = true;
-                        break;
+                        _draggingScrollbar = true;
+                        _scrollbarGrabOffset = y - _viewport.ThumbTop;
+                        User32.SetCapture(hWnd);
                     }
-
-                    if (region.InputAction == InputAction.TextInput)
+                    else if (_viewport.HitTrack(x, _width))
                     {
-                        FormState.FocusedInput = region.NodeKey;
-                        handled = true;
-                        break;
+                        var targetScrollY = _viewport.ScrollYFromThumbTop(y, _viewport.ThumbHeight / 2f);
+                        _viewport.ScrollTo(targetScrollY);
+                        if (_rootNode != null)
+                        {
+                            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                            User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                        }
                     }
-
-                    if (region.InputAction == InputAction.Checkbox)
+                    else
                     {
-                        if (!FormState.CheckedBoxes.Remove(region.NodeKey))
-                            FormState.CheckedBoxes.Add(region.NodeKey);
-                        handled = true;
-                        break;
+                        // Set :active on the node under cursor
+                        var contentY = y + _viewport.ScrollY;
+                        if (_rootNode != null)
+                            AnimationEngine.SnapshotForTransition(_rootNode);
+                        if (PseudoClassState.SetActive(_rootNode, x, contentY) && _rootNode != null)
+                        {
+                            if (AnimationEngine.DetectAndStartTransitions(_rootNode))
+                                StartAnimationTimer(hWnd);
+                            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                            User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                        }
                     }
-
-                    if (region.InputAction == InputAction.Button)
-                    {
-                        EventDispatcher.Dispatch(region.NodeKey, "click", _rootNode);
-                        handled = true;
-                        break;
-                    }
-
-                    if (EventDispatcher.Dispatch(region.NodeKey, "click", _rootNode))
-                    {
-                        handled = true;
-                        break;
-                    }
+                    break;
                 }
 
-                var focusChanged = !handled && FormState.FocusedInput != null;
-                if (focusChanged) FormState.FocusedInput = null;
-
-                // Update :focus pseudo-class state
-                if (FormState.FocusedInput != prevFocus)
+            case WM_MOUSEMOVE:
                 {
+                    if (_draggingScrollbar)
+                    {
+                        var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+                        var targetScrollY = _viewport.ScrollYFromThumbTop(y, _scrollbarGrabOffset);
+                        _viewport.ScrollTo(targetScrollY);
+                        if (_rootNode != null)
+                        {
+                            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                            User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                        }
+                    }
+                    else
+                    {
+                        // Update :hover state
+                        var mx = (short)(lParam.ToInt32() & 0xFFFF);
+                        var my = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+                        var contentY = my + _viewport.ScrollY;
+
+                        if (_rootNode != null)
+                            AnimationEngine.SnapshotForTransition(_rootNode);
+                        var hoverChanged = PseudoClassState.UpdateHover(_rootNode, mx, contentY);
+                        if (hoverChanged && _rootNode != null)
+                        {
+                            if (AnimationEngine.DetectAndStartTransitions(_rootNode))
+                                StartAnimationTimer(hWnd);
+                            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                            User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                        }
+                    }
+                    break;
+                }
+
+            case WM_LBUTTONUP:
+                {
+                    if (_draggingScrollbar)
+                    {
+                        _draggingScrollbar = false;
+                        User32.ReleaseCapture();
+                        break;
+                    }
+
+                    // Clear :active state
                     if (_rootNode != null)
                         AnimationEngine.SnapshotForTransition(_rootNode);
-                    PseudoClassState.UpdateFocus(_rootNode, FormState.FocusedInput);
-                    if (_rootNode != null && AnimationEngine.DetectAndStartTransitions(_rootNode))
+                    var activeChanged = PseudoClassState.ClearActive();
+                    if (activeChanged && _rootNode != null && AnimationEngine.DetectAndStartTransitions(_rootNode))
                         StartAnimationTimer(hWnd);
-                }
 
-                if ((handled || focusChanged || activeChanged) && _rootNode != null)
-                {
-                    (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    var x = (short)(lParam.ToInt32() & 0xFFFF);
+                    var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+                    var contentY = y + _viewport.ScrollY;
+                    var handled = false;
+                    var prevFocus = FormState.FocusedInput;
+
+                    foreach (var region in _hitRegions)
+                    {
+                        if (!region.Bounds.Contains(x, contentY)) continue;
+
+                        if (region.Href != null)
+                        {
+                            Process.Start(new ProcessStartInfo(region.Href) { UseShellExecute = true });
+                            handled = true;
+                            break;
+                        }
+
+                        if (region.InputAction == InputAction.TextInput)
+                        {
+                            FormState.FocusedInput = region.NodeKey;
+                            handled = true;
+                            break;
+                        }
+
+                        if (region.InputAction == InputAction.Checkbox)
+                        {
+                            if (!FormState.CheckedBoxes.Remove(region.NodeKey))
+                                FormState.CheckedBoxes.Add(region.NodeKey);
+                            handled = true;
+                            break;
+                        }
+
+                        if (region.InputAction == InputAction.Button)
+                        {
+                            EventDispatcher.Dispatch(region.NodeKey, "click", _rootNode);
+                            handled = true;
+                            break;
+                        }
+
+                        if (EventDispatcher.Dispatch(region.NodeKey, "click", _rootNode))
+                        {
+                            handled = true;
+                            break;
+                        }
+                    }
+
+                    var focusChanged = !handled && FormState.FocusedInput != null;
+                    if (focusChanged) FormState.FocusedInput = null;
+
+                    // Update :focus pseudo-class state
+                    if (FormState.FocusedInput != prevFocus)
+                    {
+                        if (_rootNode != null)
+                            AnimationEngine.SnapshotForTransition(_rootNode);
+                        PseudoClassState.UpdateFocus(_rootNode, FormState.FocusedInput);
+                        if (_rootNode != null && AnimationEngine.DetectAndStartTransitions(_rootNode))
+                            StartAnimationTimer(hWnd);
+                    }
+
+                    if ((handled || focusChanged || activeChanged) && _rootNode != null)
+                    {
+                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    }
+                    break;
                 }
-                break;
-            }
 
             case WM_CHAR:
-            {
-                if (FormState.FocusedInput == null || _rootNode == null) break;
-                var c = (char)wParam.ToInt32();
-                if (c == '\b')
                 {
-                    var key = FormState.FocusedInput.Value;
-                    if (FormState.TextInputValues.TryGetValue(key, out var cur) && cur.Length > 0)
-                        FormState.TextInputValues[key] = cur[..^1];
+                    if (FormState.FocusedInput == null || _rootNode == null) break;
+                    var c = (char)wParam.ToInt32();
+                    if (c == '\b')
+                    {
+                        var key = FormState.FocusedInput.Value;
+                        if (FormState.TextInputValues.TryGetValue(key, out var cur) && cur.Length > 0)
+                            FormState.TextInputValues[key] = cur[..^1];
+                    }
+                    else if (!char.IsControl(c))
+                    {
+                        var key = FormState.FocusedInput.Value;
+                        FormState.TextInputValues.TryGetValue(key, out var cur);
+                        FormState.TextInputValues[key] = (cur ?? string.Empty) + c;
+                    }
+                    (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    break;
                 }
-                else if (!char.IsControl(c))
-                {
-                    var key = FormState.FocusedInput.Value;
-                    FormState.TextInputValues.TryGetValue(key, out var cur);
-                    FormState.TextInputValues[key] = (cur ?? string.Empty) + c;
-                }
-                (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                break;
-            }
 
             case WM_SETCURSOR:
                 if ((lParam.ToInt32() & 0xFFFF) == HTCLIENT)
@@ -397,8 +397,8 @@ public class BrowserWindow
                             cursorId = region.Cursor switch
                             {
                                 CursorType.Pointer => IDC_HAND,
-                                CursorType.Text    => IDC_IBEAM,
-                                _                  => IDC_ARROW
+                                CursorType.Text => IDC_IBEAM,
+                                _ => IDC_ARROW
                             };
                         }
                     }
