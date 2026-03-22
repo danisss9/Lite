@@ -2,7 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.3] - 2026-03-20 (current)
+## [0.0.4] - 2026-03-22 (current)
+
+### Added
+- **SVG rendering** — full `SvgRenderer` supporting `<rect>`, `<circle>`, `<ellipse>`, `<line>`, `<polyline>`, `<polygon>`, `<path>` (via `SKPath.ParseSvgPathData`), `<text>`, and `<g>` grouping; `viewBox` scaling, `transform` attribute (translate, scale, rotate, skewX, skewY, matrix), fill/stroke with opacity, stroke-linecap/linejoin, and HSL color parsing
+- **`<canvas>` element** — `CanvasRenderingContext2D` exposed to JavaScript with rect operations (`fillRect`, `strokeRect`, `clearRect`), path API (`beginPath`, `moveTo`, `lineTo`, `arc`, `arcTo`, `ellipse`, `quadraticCurveTo`, `bezierCurveTo`, `closePath`, `fill`, `stroke`, `clip`), text (`fillText`, `strokeText`, `measureText`), transforms (`save`, `restore`, `translate`, `rotate`, `scale`, `setTransform`, `resetTransform`), `drawImage`, and full paint state (`fillStyle`, `strokeStyle`, `lineWidth`, `globalAlpha`, `lineCap`, `lineJoin`, `font`)
+- **CSS selector engine** — `SelectorEngine` supporting compound selectors: `#id`, `.class`, `tag`, `tag.class`, `tag#id`, attribute selectors (`[attr]`, `[attr=val]`, `[attr^=val]`, `[attr$=val]`, `[attr*=val]`, `[attr~=val]`), combinators (descendant, child `>`, adjacent `+`, general sibling `~`), pseudo-classes (`:first-child`, `:last-child`, `:nth-child()`, `:not()`), and comma-separated selector lists
+- **`document.querySelectorAll`** — now uses the full selector engine for complex queries
+- **`document.createTextNode`** — creates `#text` layout nodes from JavaScript
+- **`document.createDocumentFragment`** — lightweight container for batch DOM mutations
+- **`window.getComputedStyle`** — returns a `JsComputedStyle` proxy that reads resolved CSS values from the layout node
+- **`XMLHttpRequest`** — synchronous `open`/`send` with `responseText`, `status`, `readyState`, and `onload` callback; supports GET requests to the page origin
+- **`TreeWalker`** — `document.createTreeWalker` with `NodeFilter.SHOW_ELEMENT`, `currentNode`, `nextNode()`, `previousNode()`, `parentNode()`, `firstChild()`, `lastChild()`
+- **`JsEvent` object** — `type`, `target`, `currentTarget`, `preventDefault()`, `stopPropagation()` passed to event handlers; `event` global available inside inline handlers
+- **Element DOM API expansions** — `insertBefore`, `replaceChild`, `cloneNode(deep)`, `nextElementSibling`, `previousElementSibling`, `firstElementChild`, `lastElementChild`, `childNodes`, `closest(selector)`, `matches(selector)`, `getBoundingClientRect()`, `contains(node)`, `ownerDocument`, `nodeType`, `nodeName`, `className` (get/set), `dataset` proxy for `data-*` attributes
+- **`element.classList`** — proper `add`, `remove`, `contains`, `toggle` via Jint object property (replaces `classList_add`/`classList_remove` workaround)
+- **`element.style` improvements** — `setProperty`/`getPropertyValue`/`removeProperty` methods; camelCase ↔ kebab-case conversion
+- **`data-*` attributes** — captured during parse and accessible via `element.dataset` and `getAttribute`
+- **Event bubbling** — events now propagate up the DOM tree from target to root, checking handlers at each ancestor; `stopPropagation()` halts the walk
+- **`setTimeout` / `setInterval` / `clearInterval`** — timer APIs via `JsWindow` driving the Win32 animation timer
+- **`window.innerWidth` / `window.innerHeight`** — viewport dimensions accessible from JavaScript
+- **`requestAnimationFrame`** — schedules a callback on the next animation frame tick
+
+### Fixed
+- **Font crash on missing typeface** — `SKTypeface.FromFamilyName` returning `null` for uninstalled fonts now falls back to `SKTypeface.Default` instead of passing `null` to `SKFont` constructor
+- **Animation color parse exceptions** — `SKColor.Parse` in `AnimationEngine.TryParseColor` threw `ArgumentException` for every numeric value (e.g. opacity `"0.35"`) on every animation frame; replaced with `SKColor.TryParse` to avoid first-chance exceptions
+- **SVG zero-dimension guards** — `<rect>` with zero width/height, `<circle>` with zero radius, and `<ellipse>` with zero radii now skip rendering instead of throwing
+- **SVG font size floor** — `<text>` font size clamped to minimum 1px
+- **Canvas arc with zero radius** — `arc()` and `ellipse()` with zero or negative radius no longer throw `ArgumentException` from `SKPath.ArcTo`
+- **Canvas font size floor** — `ParseFont` now clamps parsed size to minimum 1px
+- **Border drawing on tiny elements** — `SKRect.Inflate` with negative inset producing an invalid rect now skips `DrawRoundRect` instead of throwing
+- **Null text in caret measurement** — `MeasureText` for the text input caret now guards against null text value
+- **Font size floor** — `TextMeasure.CreateFont` clamps font size to minimum 1px to prevent zero-size font exceptions
+- **Tag name normalization** — Parser now normalizes all tag names to uppercase via `ToUpperInvariant()`, fixing SVG elements that AngleSharp returns in lowercase
+- **`#text` node tag casing** — synthetic text nodes now use lowercase `#text` consistently across Parser, BoxEngine, and FlexEngine
+- **Window title** — `BrowserWindow` now correctly sets the Win32 window title
+- **Selector null pointer** — fixed null reference in CSS selector matching
+
+## [0.0.3] - 2026-03-20
 
 ### Added
 - **`opacity`** — element opacity (0–1) with composited subtree rendering via temporary SkiaSharp layers
