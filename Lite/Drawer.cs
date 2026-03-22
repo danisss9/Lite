@@ -67,14 +67,21 @@ internal static class Drawer
     // Paint tree
     // -------------------------------------------------------------------------
 
-    private static void PaintFixedNodes(SKCanvas canvas, LayoutNode node, int viewportWidth)
+    private static void PaintFixedNodes(SKCanvas canvas, LayoutNode root, int viewportWidth)
     {
-        foreach (var child in node.Children)
+        var stack = new Stack<LayoutNode>();
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        for (int i = root.Children.Count - 1; i >= 0; i--)
+            stack.Push(root.Children[i]);
+        while (stack.Count > 0)
         {
-            if (child.GetPosition() == PositionType.Fixed)
-                PaintNode(canvas, child, viewportWidth);
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            if (node.GetPosition() == PositionType.Fixed)
+                PaintNode(canvas, node, viewportWidth);
             else
-                PaintFixedNodes(canvas, child, viewportWidth);
+                for (int i = node.Children.Count - 1; i >= 0; i--)
+                    stack.Push(node.Children[i]);
         }
     }
 

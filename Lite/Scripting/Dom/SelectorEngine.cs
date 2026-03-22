@@ -368,22 +368,36 @@ internal static class SelectorEngine
         return null;
     }
 
-    private static LayoutNode? FindFirst(LayoutNode node, Func<LayoutNode, bool> predicate)
+    private static LayoutNode? FindFirst(LayoutNode root, Func<LayoutNode, bool> predicate)
     {
-        if (predicate(node)) return node;
-        foreach (var child in node.Children)
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
         {
-            var result = FindFirst(child, predicate);
-            if (result is not null) return result;
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            if (predicate(node)) return node;
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
         }
         return null;
     }
 
-    private static IEnumerable<LayoutNode> FindAll(LayoutNode node, Func<LayoutNode, bool> predicate)
+    private static List<LayoutNode> FindAll(LayoutNode root, Func<LayoutNode, bool> predicate)
     {
-        if (predicate(node)) yield return node;
-        foreach (var child in node.Children)
-        foreach (var match in FindAll(child, predicate))
-            yield return match;
+        var results = new List<LayoutNode>();
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            if (predicate(node)) results.Add(node);
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
+        }
+        return results;
     }
 }

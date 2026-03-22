@@ -36,6 +36,37 @@ public class JsElement
         set { if (Node.TagName == "#text") Node.TextOverride = value; }
     }
 
+    /// <summary>CharacterData.data — alias for nodeValue on text nodes.</summary>
+    public string? data
+    {
+        get => Node.TagName == "#text" ? Node.DisplayText : null;
+        set { if (Node.TagName == "#text") Node.TextOverride = value; }
+    }
+
+    /// <summary>CharacterData.length — length of text data.</summary>
+    public int length => Node.TagName == "#text" ? (Node.DisplayText?.Length ?? 0) : Node.Children.Count;
+
+    // ---- Node type constants (exposed on every element, like browsers do) ----
+    public int ELEMENT_NODE => 1;
+    public int ATTRIBUTE_NODE => 2;
+    public int TEXT_NODE => 3;
+    public int CDATA_SECTION_NODE => 4;
+    public int COMMENT_NODE => 8;
+    public int DOCUMENT_NODE => 9;
+    public int DOCUMENT_TYPE_NODE => 10;
+    public int DOCUMENT_FRAGMENT_NODE => 11;
+
+    // ---- ownerDocument ----
+    public JsDocument? ownerDocument =>
+        JsEngine.Instance is { } eng ? new JsDocument(eng.RawEngine, GetRootNode()) : null;
+
+    private LayoutNode GetRootNode()
+    {
+        var n = Node;
+        while (n.Parent is not null) n = n.Parent;
+        return n;
+    }
+
     // ---- content ----
     public string textContent
     {
@@ -94,7 +125,64 @@ public class JsElement
     public string className
     {
         get => Node.Attributes.GetValueOrDefault("class", string.Empty);
-        set => Node.Attributes["class"] = value;
+        set
+        {
+            Node.Attributes["class"] = value;
+            ReapplyCssRulesForClass();
+        }
+    }
+
+    /// <summary>
+    /// Re-evaluates stored CSS rules against the element's current class attribute
+    /// and updates StyleOverrides accordingly. This enables dynamic class-based styling
+    /// (e.g. Acid3 bucket color changes via className += 'P').
+    /// </summary>
+    private void ReapplyCssRulesForClass()
+    {
+        var classes = Node.Attributes.GetValueOrDefault("class", "")
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (classes.Length == 0) return;
+
+        foreach (var (selector, props) in Parser.CssRules)
+        {
+            if (MatchesSimpleSelector(selector, classes))
+            {
+                foreach (var (prop, val) in props)
+                    Node.StyleOverrides[prop] = val;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Simple selector matching for class-based rules (.foo, .foo.bar).
+    /// Supports: .class, tag.class, .class1.class2
+    /// </summary>
+    private bool MatchesSimpleSelector(string? selector, string[] classes)
+    {
+        if (string.IsNullOrEmpty(selector)) return false;
+        // Only handle simple class selectors (no combinators, no pseudo-classes)
+        if (selector.Contains(' ') || selector.Contains('>') || selector.Contains('+') || selector.Contains('~'))
+            return false;
+        if (selector.Contains(':') || selector.Contains('['))
+            return false;
+
+        // Extract tag and class parts
+        var parts = selector.Split('.');
+        var tagPart = parts[0]; // may be empty if selector starts with .
+
+        // Check tag if specified
+        if (!string.IsNullOrEmpty(tagPart) &&
+            !tagPart.Equals(Node.TagName, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Check all class parts
+        for (int i = 1; i < parts.Length; i++)
+        {
+            if (!classes.Contains(parts[i]))
+                return false;
+        }
+
+        return parts.Length > 1; // must have at least one class part
     }
 
     // ---- attributes ----
@@ -110,22 +198,56 @@ public class JsElement
     public bool hasAttribute(string name) => Node.Attributes.ContainsKey(name);
 
     // ---- tree navigation ----
+
+    /// <summary>
+    /// Ensures text-only elements have their text represented as a child text node,
+    /// matching real browser DOM behavior. Called lazily when child access is needed.
+    /// </summary>
+    private void EnsureTextChildMaterialized()
+    {
+        if (Node.Children.Count == 0 && !string.IsNullOrEmpty(Node.DisplayText) && Node.TagName != "#text")
+        {
+            var textNode = new LayoutNode(null, "#text", Node.DisplayText, Node.Style);
+            Node.AddChild(textNode);
+            // Clear parent's direct text — it's now in the child
+            Node.TextOverride = "";
+        }
+    }
+
     public JsElement[] children =>
         Node.Children.Where(c => c.TagName != "#text").Select(c => new JsElement(_engine, c)).ToArray();
 
-    public JsElement[] childNodes =>
-        Node.Children.Select(c => new JsElement(_engine, c)).ToArray();
+    public JsElement[] childNodes
+    {
+        get
+        {
+            EnsureTextChildMaterialized();
+            return Node.Children.Select(c => new JsElement(_engine, c)).ToArray();
+        }
+    }
 
     public JsElement? parentElement =>
         Node.Parent is { } p ? new JsElement(_engine, p) : null;
 
     public JsElement? parentNode => parentElement;
 
-    public JsElement? firstChild =>
-        Node.Children.Count > 0 ? new JsElement(_engine, Node.Children[0]) : null;
+    public JsElement? firstChild
+    {
+        get
+        {
+            EnsureTextChildMaterialized();
+            return Node.Children.Count > 0 ? new JsElement(_engine, Node.Children[0]) : null;
+        }
+    }
 
-    public JsElement? lastChild =>
-        Node.Children.Count > 0 ? new JsElement(_engine, Node.Children[^1]) : null;
+    public JsElement? lastChild
+    {
+        get
+        {
+            EnsureTextChildMaterialized();
+            return Node.Children.Count > 0 ? new JsElement(_engine, Node.Children[^1]) : null;
+        }
+    }
 
     public JsElement? firstElementChild =>
         Node.Children.FirstOrDefault(c => c.TagName != "#text") is { } n ? new JsElement(_engine, n) : null;
@@ -184,16 +306,28 @@ public class JsElement
     public int childElementCount => Node.Children.Count(c => c.TagName != "#text");
 
     // ---- tree mutation ----
+
+    /// <summary>Checks if childNode is an ancestor of parentNode (would create a cycle).</summary>
+    private static bool IsAncestor(LayoutNode childNode, LayoutNode parentNode)
+    {
+        for (var n = parentNode; n != null; n = n.Parent)
+            if (n == childNode) return true;
+        return false;
+    }
+
     public JsElement appendChild(JsElement child)
     {
+        if (IsAncestor(child.Node, Node))
+            throw new InvalidOperationException("The new child element contains the parent.");
         // Remove from old parent if attached
         child.Node.Parent?.Children.Remove(child.Node);
         Node.AddChild(child.Node);
         return child;
     }
 
-    public JsElement removeChild(JsElement child)
+    public JsElement removeChild(JsElement? child)
     {
+        if (child is null) throw new InvalidOperationException("The node to be removed is not a child of this node.");
         Node.Children.Remove(child.Node);
         child.Node.Parent = null;
         return child;
@@ -201,6 +335,8 @@ public class JsElement
 
     public JsElement insertBefore(JsElement newNode, JsElement? refNode)
     {
+        if (IsAncestor(newNode.Node, Node))
+            throw new InvalidOperationException("The new child element contains the parent.");
         newNode.Node.Parent?.Children.Remove(newNode.Node);
         if (refNode is null)
         {
@@ -218,9 +354,13 @@ public class JsElement
 
     public JsElement replaceChild(JsElement newNode, JsElement oldNode)
     {
+        if (IsAncestor(newNode.Node, Node))
+            throw new InvalidOperationException("The new child element contains the parent.");
+        // Remove newNode from its old parent first (may shift indices)
+        newNode.Node.Parent?.Children.Remove(newNode.Node);
+        // Re-find idx after potential removal
         var idx = Node.Children.IndexOf(oldNode.Node);
         if (idx < 0) throw new InvalidOperationException("Old node not found");
-        newNode.Node.Parent?.Children.Remove(newNode.Node);
         Node.Children[idx] = newNode.Node;
         newNode.Node.Parent = Node;
         oldNode.Node.Parent = null;
@@ -363,14 +503,22 @@ public class JsElement
     public double scrollHeight => Node.Box.ContentBox.Height;
 
     // ---- helpers ----
-    private static IEnumerable<LayoutNode> FindAll(LayoutNode node, Func<LayoutNode, bool> predicate)
+    private static List<LayoutNode> FindAll(LayoutNode node, Func<LayoutNode, bool> predicate)
     {
-        foreach (var child in node.Children)
+        var results = new List<LayoutNode>();
+        var stack = new Stack<LayoutNode>();
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        for (int i = node.Children.Count - 1; i >= 0; i--)
+            stack.Push(node.Children[i]);
+        while (stack.Count > 0)
         {
-            if (predicate(child)) yield return child;
-            foreach (var match in FindAll(child, predicate))
-                yield return match;
+            var n = stack.Pop();
+            if (!visited.Add(n)) continue;
+            if (predicate(n)) results.Add(n);
+            for (int i = n.Children.Count - 1; i >= 0; i--)
+                stack.Push(n.Children[i]);
         }
+        return results;
     }
 }
 

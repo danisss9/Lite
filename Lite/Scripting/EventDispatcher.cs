@@ -129,14 +129,19 @@ internal static class EventDispatcher
         return handled;
     }
 
-    internal static LayoutNode? Find(LayoutNode? node, Guid key)
+    internal static LayoutNode? Find(LayoutNode? root, Guid key)
     {
-        if (node is null) return null;
-        if (node.NodeKey == key) return node;
-        foreach (var child in node.Children)
+        if (root is null) return null;
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
         {
-            var result = Find(child, key);
-            if (result is not null) return result;
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            if (node.NodeKey == key) return node;
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
         }
         return null;
     }

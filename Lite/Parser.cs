@@ -110,11 +110,19 @@ internal static class Parser
 
         var root = Traverse(document.DocumentElement, 0);
 
+        // Collect all CSS rules for dynamic class-based style re-evaluation
+        CollectCssRules(document);
+
         // Always create the JS engine so inline onclick/on* handlers work,
         // even when there are no external or inline script blocks.
         var jsEngine = JsEngine.Create(root);
         foreach (var script in _pendingScripts)
             jsEngine.Execute(script);
+
+        // Fire body onload handler if present
+        var bodyNode = FindFirst(root, n => n.TagName == "BODY");
+        if (bodyNode?.Attributes.TryGetValue("onload", out var onloadCode) == true)
+            jsEngine.Execute(onloadCode);
 
         return root;
     }
@@ -216,7 +224,7 @@ internal static class Parser
         }
 
         // Capture inline event handlers for any element
-        foreach (var attr in new[] { "onclick", "onchange", "oninput", "onsubmit", "onkeyup", "onkeydown" })
+        foreach (var attr in new[] { "onclick", "onchange", "oninput", "onsubmit", "onkeyup", "onkeydown", "onload" })
         {
             var val = element.GetAttribute(attr);
             if (val != null) node.Attributes[attr] = val;
@@ -270,7 +278,7 @@ internal static class Parser
                         CollectScript(childEl);
                         continue;
                     }
-                    if (SkipTags.Contains(childEl.TagName)) continue;
+                    if (SkipTags.Contains(childEl.TagName)) { CollectScriptsRecursive(childEl); continue; }
                     node.AddChild(Traverse(childEl, indent + 1));
                 }
             }
@@ -280,7 +288,7 @@ internal static class Parser
             foreach (var child in element.Children)
             {
                 if (child.TagName == "SCRIPT") { CollectScript(child); continue; }
-                if (SkipTags.Contains(child.TagName)) continue;
+                if (SkipTags.Contains(child.TagName)) { CollectScriptsRecursive(child); continue; }
                 node.AddChild(Traverse(child, indent + 1));
             }
         }
@@ -288,11 +296,30 @@ internal static class Parser
         return node;
     }
 
+    /// <summary>Recursively collect scripts from elements that are otherwise skipped (e.g. HEAD).</summary>
+    private static void CollectScriptsRecursive(IElement element)
+    {
+        foreach (var child in element.Children)
+        {
+            if (child.TagName == "SCRIPT") CollectScript(child);
+            else CollectScriptsRecursive(child);
+        }
+    }
+
     private static void CollectScript(IElement scriptEl)
     {
         var src = scriptEl.GetAttribute("src");
         if (src != null)
         {
+            // Handle data: URIs inline (HttpClient doesn't support them)
+            if (src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                var code = DecodeDataUri(src);
+                if (!string.IsNullOrWhiteSpace(code))
+                    _pendingScripts.Add(code);
+                return;
+            }
+
             var scriptUrl = ResolveUrl(src);
             if (scriptUrl != null)
             {
@@ -308,6 +335,35 @@ internal static class Parser
         else if (!string.IsNullOrWhiteSpace(scriptEl.TextContent))
         {
             _pendingScripts.Add(scriptEl.TextContent);
+        }
+    }
+
+    /// <summary>Decodes a data: URI and returns the text content.</summary>
+    private static string DecodeDataUri(string dataUri)
+    {
+        // data:[<mediatype>][;base64],<data>
+        var afterScheme = dataUri.AsSpan(5); // skip "data:"
+        var commaIdx = afterScheme.IndexOf(',');
+        if (commaIdx < 0) return string.Empty;
+
+        var meta = afterScheme[..commaIdx].ToString();
+        var data = afterScheme[(commaIdx + 1)..].ToString();
+
+        if (meta.Contains("base64", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                // URL-decode first, then base64-decode, stripping whitespace
+                var urlDecoded = Uri.UnescapeDataString(data);
+                var cleaned = System.Text.RegularExpressions.Regex.Replace(urlDecoded, @"\s+", "");
+                var bytes = Convert.FromBase64String(cleaned);
+                return System.Text.Encoding.UTF8.GetString(bytes);
+            }
+            catch { return string.Empty; }
+        }
+        else
+        {
+            return Uri.UnescapeDataString(data);
         }
     }
 
@@ -887,4 +943,47 @@ internal static class Parser
         ["SVG", "RECT", "CIRCLE", "ELLIPSE", "LINE", "POLYLINE", "POLYGON", "PATH", "G", "TEXT", "TSPAN", "DEFS", "USE", "CLIPPATH", "MASK", "PATTERN", "LINEARGRADIENT", "RADIALGRADIENT", "STOP"];
 
     private static bool IsSvgElement(string tagName) => SvgTags.Contains(tagName);
+
+    // ---- CSS rule storage for dynamic class-based style re-evaluation ----
+    internal static readonly List<(string Selector, Dictionary<string, string> Properties)> CssRules = [];
+
+    /// <summary>
+    /// Collects all CSS style rules from the document's stylesheets for runtime
+    /// class-based style re-evaluation (e.g. when JS changes element.className).
+    /// </summary>
+    private static void CollectCssRules(AngleSharp.Dom.IDocument document)
+    {
+        CssRules.Clear();
+        if (document.StyleSheets is null) return;
+        foreach (var sheet in document.StyleSheets.OfType<ICssStyleSheet>())
+            CollectRulesFromSheet(sheet.Rules);
+    }
+
+    private static void CollectRulesFromSheet(ICssRuleList rules)
+    {
+        foreach (var rule in rules)
+        {
+            if (rule is ICssMediaRule mediaRule)
+            {
+                CollectRulesFromSheet(mediaRule.Rules);
+                continue;
+            }
+            if (rule is not ICssStyleRule styleRule) continue;
+            var props = ParseCssTextToDict(styleRule.Style.CssText);
+            if (props.Count > 0)
+                CssRules.Add((styleRule.SelectorText, props));
+        }
+    }
+
+    // ---- tree helper for LayoutNode trees ----
+    private static LayoutNode? FindFirst(LayoutNode node, Func<LayoutNode, bool> predicate)
+    {
+        if (predicate(node)) return node;
+        foreach (var child in node.Children)
+        {
+            var result = FindFirst(child, predicate);
+            if (result is not null) return result;
+        }
+        return null;
+    }
 }

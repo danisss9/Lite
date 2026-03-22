@@ -160,14 +160,19 @@ internal static class PseudoClassState
         return null;
     }
 
-    /// <summary>Finds a node by its NodeKey (breadth-first).</summary>
+    /// <summary>Finds a node by its NodeKey (iterative, cycle-safe).</summary>
     private static LayoutNode? FindNodeByKey(LayoutNode root, Guid key)
     {
-        if (root.NodeKey == key) return root;
-        foreach (var child in root.Children)
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
         {
-            var found = FindNodeByKey(child, key);
-            if (found != null) return found;
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            if (node.NodeKey == key) return node;
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
         }
         return null;
     }

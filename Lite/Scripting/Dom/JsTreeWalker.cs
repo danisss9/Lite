@@ -162,12 +162,20 @@ public class JsNodeIterator
         return _index >= 0 ? new JsElement(_engine, _flatList[_index]) : null;
     }
 
-    private static List<LayoutNode> Flatten(LayoutNode node, int whatToShow)
+    private static List<LayoutNode> Flatten(LayoutNode root, int whatToShow)
     {
         var list = new List<LayoutNode>();
-        if (AcceptsNode(node, whatToShow)) list.Add(node);
-        foreach (var child in node.Children)
-            list.AddRange(Flatten(child, whatToShow));
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            if (AcceptsNode(node, whatToShow)) list.Add(node);
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
+        }
         return list;
     }
 

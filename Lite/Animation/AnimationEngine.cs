@@ -121,52 +121,70 @@ public static class AnimationEngine
 
     // ── Snapshot / detection ──────────────────────────────────────────────────
 
-    private static void SnapshotTree(LayoutNode node)
+    private static void SnapshotTree(LayoutNode root)
     {
-        if (node.TransitionSpecs.Count > 0)
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
         {
-            var snap = new Dictionary<string, string>();
-            foreach (var spec in node.TransitionSpecs)
-            {
-                var props = IsAll(spec.Property) ? s_allTransitionable : (IEnumerable<string>)[spec.Property];
-                foreach (var p in props)
-                {
-                    var v = GetDisplayedValue(node, p);
-                    if (v != null) snap[p] = v;
-                }
-            }
-            _snapshot[node.NodeKey] = snap;
-        }
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
 
-        foreach (var child in node.Children)
-            SnapshotTree(child);
+            if (node.TransitionSpecs.Count > 0)
+            {
+                var snap = new Dictionary<string, string>();
+                foreach (var spec in node.TransitionSpecs)
+                {
+                    var props = IsAll(spec.Property) ? s_allTransitionable : (IEnumerable<string>)[spec.Property];
+                    foreach (var p in props)
+                    {
+                        var v = GetDisplayedValue(node, p);
+                        if (v != null) snap[p] = v;
+                    }
+                }
+                _snapshot[node.NodeKey] = snap;
+            }
+
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
+        }
     }
 
-    private static void DetectTree(LayoutNode node, ref bool any)
+    private static void DetectTree(LayoutNode root, ref bool any)
     {
-        if (node.TransitionSpecs.Count > 0 &&
-            _snapshot.TryGetValue(node.NodeKey, out var snap))
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
         {
-            foreach (var spec in node.TransitionSpecs)
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+
+            if (node.TransitionSpecs.Count > 0 &&
+                _snapshot.TryGetValue(node.NodeKey, out var snap))
             {
-                var props = IsAll(spec.Property) ? s_allTransitionable : (IEnumerable<string>)[spec.Property];
-                foreach (var p in props)
+                foreach (var spec in node.TransitionSpecs)
                 {
-                    var newVal = GetTargetValue(node, p);
-                    if (newVal == null) continue;
+                    var props = IsAll(spec.Property) ? s_allTransitionable : (IEnumerable<string>)[spec.Property];
+                    foreach (var p in props)
+                    {
+                        var newVal = GetTargetValue(node, p);
+                        if (newVal == null) continue;
 
-                    snap.TryGetValue(p, out var oldVal);
-                    if (oldVal == null || oldVal == newVal) continue;
+                        snap.TryGetValue(p, out var oldVal);
+                        if (oldVal == null || oldVal == newVal) continue;
 
-                    StartTransitionInternal(node, p, oldVal, newVal,
-                        spec.Duration, spec.Delay, spec.TimingFunction);
-                    any = true;
+                        StartTransitionInternal(node, p, oldVal, newVal,
+                            spec.Duration, spec.Delay, spec.TimingFunction);
+                        any = true;
+                    }
                 }
             }
-        }
 
-        foreach (var child in node.Children)
-            DetectTree(child, ref any);
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
+        }
     }
 
     private static void StartTransitionInternal(LayoutNode node, string property,

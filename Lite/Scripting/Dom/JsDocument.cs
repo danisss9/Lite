@@ -20,6 +20,9 @@ public class JsDocument
     public int nodeType => 9;
     public JsElement? documentElement => _root.Children.Count > 0 ? new JsElement(_engine, _root) : null;
 
+    /// <summary>Returns the window object (document.defaultView).</summary>
+    public object? defaultView => JsEngine.Instance?.RawEngine.GetValue("window").ToObject();
+
     public JsElement? body =>
         FindFirst(_root, n => n.TagName == "BODY") is { } b ? new JsElement(_engine, b) : null;
 
@@ -91,6 +94,33 @@ public class JsDocument
         return new JsEvent();
     }
 
+    // ---- document.write / open / close (minimal stubs) ----
+    private string _writeBuffer = "";
+
+    public void open() => _writeBuffer = "";
+
+    public void write(string markup) => _writeBuffer += markup;
+
+    public void writeln(string markup) => _writeBuffer += markup + "\n";
+
+    public void close()
+    {
+        // Stub — in a full implementation this would reparse the document.
+        // For now, just clear the buffer.
+        _writeBuffer = "";
+    }
+
+    // ---- document metadata ----
+    public string title
+    {
+        get => ""; // simplified
+        set { }    // simplified
+    }
+
+    public string URL => "";
+    public string domain => "";
+    public string compatMode => "CSS1Compat";
+
     // ---- DOM Traversal Level 2 (Phase 9) ----
     public JsTreeWalker createTreeWalker(JsElement root, int whatToShow = -1, object? filter = null)
     {
@@ -102,34 +132,53 @@ public class JsDocument
         return new JsNodeIterator(_engine, root.Node, whatToShow);
     }
 
-    // ---- tree helpers ----
-    private static LayoutNode? FindById(LayoutNode node, string id)
+    // ---- tree helpers (iterative to avoid stack overflow from deep/cyclic trees) ----
+    private static LayoutNode? FindById(LayoutNode root, string id)
     {
-        if (node.Id == id) return node;
-        foreach (var child in node.Children)
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
         {
-            var result = FindById(child, id);
-            if (result is not null) return result;
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            if (node.Id == id) return node;
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
         }
         return null;
     }
 
-    private static LayoutNode? FindFirst(LayoutNode node, Func<LayoutNode, bool> predicate)
+    private static LayoutNode? FindFirst(LayoutNode root, Func<LayoutNode, bool> predicate)
     {
-        if (predicate(node)) return node;
-        foreach (var child in node.Children)
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
         {
-            var result = FindFirst(child, predicate);
-            if (result is not null) return result;
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            if (predicate(node)) return node;
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
         }
         return null;
     }
 
-    private static IEnumerable<LayoutNode> FindAll(LayoutNode node, Func<LayoutNode, bool> predicate)
+    private static List<LayoutNode> FindAll(LayoutNode root, Func<LayoutNode, bool> predicate)
     {
-        if (predicate(node)) yield return node;
-        foreach (var child in node.Children)
-        foreach (var match in FindAll(child, predicate))
-            yield return match;
+        var results = new List<LayoutNode>();
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            if (predicate(node)) results.Add(node);
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
+        }
+        return results;
     }
 }
