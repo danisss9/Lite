@@ -93,6 +93,7 @@ public class JsCanvasContext2D
 
     public void arc(double x, double y, double radius, double startAngle, double endAngle, bool counterclockwise = false)
     {
+        if (radius <= 0) return;
         var sweepAngle = (float)((endAngle - startAngle) * 180 / Math.PI);
         if (counterclockwise && sweepAngle > 0) sweepAngle -= 360;
         if (!counterclockwise && sweepAngle < 0) sweepAngle += 360;
@@ -109,6 +110,7 @@ public class JsCanvasContext2D
 
     public void ellipse(double x, double y, double rx, double ry, double rotation, double startAngle, double endAngle, bool counterclockwise = false)
     {
+        if (rx <= 0 || ry <= 0) return;
         _canvas.Save();
         _canvas.Translate((float)x, (float)y);
         _canvas.RotateDegrees((float)(rotation * 180 / Math.PI));
@@ -187,7 +189,7 @@ public class JsCanvasContext2D
             if (float.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var s))
             { size = s; break; }
         }
-        return new SKFont(SKTypeface.Default, size);
+        return new SKFont(SKTypeface.Default, Math.Max(1f, size));
     }
 }
 

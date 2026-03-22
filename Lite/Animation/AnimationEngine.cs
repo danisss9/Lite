@@ -417,8 +417,8 @@ public static class AnimationEngine
         if (val.StartsWith('#') && SKColor.TryParse(val, out color)) return true;
 
         // Named colors
-        try { color = SKColor.Parse(val); return color != SKColors.Empty; }
-        catch { return false; }
+        if (SKColor.TryParse(val, out color)) return color != SKColors.Empty;
+        return false;
     }
 
     // ── Easing ────────────────────────────────────────────────────────────────

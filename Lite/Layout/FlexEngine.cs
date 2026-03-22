@@ -58,7 +58,7 @@ internal static class FlexEngine
             .Where(t => t.child.GetDisplay() != DisplayType.None &&
                         t.child.GetPosition() != PositionType.Absolute &&
                         t.child.GetPosition() != PositionType.Fixed &&
-                        !(t.child.TagName == "#TEXT" && string.IsNullOrWhiteSpace(t.child.DisplayText)))
+                        !(t.child.TagName == "#text" && string.IsNullOrWhiteSpace(t.child.DisplayText)))
             .OrderBy(t => t.child.GetOrder())
             .ThenBy(t => t.index)
             .Select(t => t.child)
@@ -436,7 +436,7 @@ internal static class FlexEngine
             .Where(c => c.GetDisplay() != DisplayType.None &&
                         c.GetPosition() != PositionType.Absolute &&
                         c.GetPosition() != PositionType.Fixed &&
-                        !(c.TagName == "#TEXT" && string.IsNullOrWhiteSpace(c.DisplayText)))
+                        !(c.TagName == "#text" && string.IsNullOrWhiteSpace(c.DisplayText)))
             .Select(c => new FlexItem(c, availableMain, availableCross, viewportWidth, viewportHeight, isRow))
             .ToList();
 

@@ -10,14 +10,15 @@ internal static class TextMeasure
 {
     public static SKFont CreateFont(LayoutNode node)
     {
-        var size     = node.GetFontSize();
+        var size     = Math.Max(1f, node.GetFontSize());
         var family   = node.GetFontFamily();
         var bold     = node.GetFontBold();
         var italic   = node.GetFontItalic();
         var slant    = italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
         var typeface = SKTypeface.FromFamilyName(family,
                            bold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
-                           SKFontStyleWidth.Normal, slant);
+                           SKFontStyleWidth.Normal, slant)
+                       ?? SKTypeface.Default;
         return new SKFont(typeface, size);
     }
 

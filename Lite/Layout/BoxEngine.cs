@@ -521,7 +521,7 @@ internal static class BoxEngine
                 }
                 // Skip runs that are solely whitespace-only #TEXT nodes — these are
                 // inter-block whitespace artifacts (e.g. newlines between <div>s).
-                if (run.All(n => n.TagName == "#TEXT" && n.DisplayText.Trim().Length == 0))
+                if (run.All(n => n.TagName == "#text" && n.DisplayText.Trim().Length == 0))
                     continue;
 
                 // Narrow for floats in inline context too

@@ -255,8 +255,7 @@ internal static class Drawer
         DrawBorders(canvas, box, node);
 
         var cursor = node.GetCursor();
-        if (cursor != CursorType.Default)
-            _hitRegions.Add(new HitRegion(box.BorderBox, cursor));
+        _hitRegions.Add(new HitRegion(box.BorderBox, cursor, NodeKey: node.NodeKey));
 
         // Draw own text content (block elements like <div>Text</div> with no child nodes)
         if (!string.IsNullOrEmpty(node.DisplayText) && node.Children.Count == 0)
@@ -399,8 +398,7 @@ internal static class Drawer
         DrawBorders(canvas, box, node);
 
         var cursor = node.GetCursor();
-        if (cursor != CursorType.Default)
-            _hitRegions.Add(new HitRegion(box.MarginBox, cursor, node.Href));
+        _hitRegions.Add(new HitRegion(box.MarginBox, cursor, node.Href, NodeKey: node.NodeKey));
 
         if (string.IsNullOrEmpty(node.DisplayText)) return;
 
@@ -418,7 +416,7 @@ internal static class Drawer
     private static void PaintAnchor(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
         var cursor = node.GetCursor();
-        _hitRegions.Add(new HitRegion(node.Box.BorderBox, cursor, node.Href));
+        _hitRegions.Add(new HitRegion(node.Box.BorderBox, cursor, node.Href, NodeKey: node.NodeKey));
 
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
@@ -522,7 +520,7 @@ internal static class Drawer
             if (isFocused)
             {
                 using var caretFont  = new SKFont { Size = 12 };
-                var caretX = rect.Left + 4 + caretFont.MeasureText(text);
+                var caretX = rect.Left + 4 + caretFont.MeasureText(text ?? "");
                 using var caretPaint = new SKPaint { Color = SKColors.Black, StrokeWidth = 1 };
                 canvas.DrawLine(caretX, rect.Top + 3, caretX, rect.Bottom - 3, caretPaint);
             }
@@ -716,6 +714,7 @@ internal static class Drawer
             // Inset the rect by half stroke width so it sits on the border box edge
             var inset = maxWidth / 2f;
             var r     = SKRect.Inflate(box.BorderBox, -inset, -inset);
+            if (r.Width <= 0 || r.Height <= 0) return;
             canvas.DrawRoundRect(r, Math.Max(0, rx - inset), Math.Max(0, ry - inset), p);
             return;
         }

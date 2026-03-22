@@ -71,6 +71,7 @@ internal static class SvgRenderer
         var y = GetAttrF(node, "y");
         var w = GetAttrF(node, "width");
         var h = GetAttrF(node, "height");
+        if (w <= 0 || h <= 0) return;
         var rx = GetAttrF(node, "rx");
         var ry = GetAttrF(node, "ry");
         if (ry == 0) ry = rx;
@@ -91,6 +92,7 @@ internal static class SvgRenderer
         var cx = GetAttrF(node, "cx");
         var cy = GetAttrF(node, "cy");
         var r = GetAttrF(node, "r");
+        if (r <= 0) return;
         FillAndStroke(canvas, node, p => canvas.DrawCircle(cx, cy, r, p));
     }
 
@@ -100,6 +102,7 @@ internal static class SvgRenderer
         var cy = GetAttrF(node, "cy");
         var rx = GetAttrF(node, "rx");
         var ry = GetAttrF(node, "ry");
+        if (rx <= 0 || ry <= 0) return;
         FillAndStroke(canvas, node, p => canvas.DrawOval(cx, cy, rx, ry, p));
     }
 
@@ -148,6 +151,7 @@ internal static class SvgRenderer
         var fontSize = 16f;
         if (node.Attributes.TryGetValue("font-size", out var fs) && TryParseF(fs.Replace("px", ""), out var parsedFs))
             fontSize = parsedFs;
+        fontSize = Math.Max(1f, fontSize);
 
         using var font = new SKFont(SKTypeface.Default, fontSize);
         using var paint = new SKPaint { IsAntialias = true };

@@ -301,8 +301,9 @@ public class BrowserWindow
                     var handled = false;
                     var prevFocus = FormState.FocusedInput;
 
-                    foreach (var region in _hitRegions)
+                    for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
                     {
+                        var region = _hitRegions[ri];
                         if (!region.Bounds.Contains(x, contentY)) continue;
 
                         if (region.Href != null)

@@ -184,25 +184,31 @@ internal static class Parser
 
     private static LayoutNode Traverse(IElement element, int indent)
     {
+        // Normalize tag name to uppercase — AngleSharp returns lowercase for SVG namespace elements
+        var tag = element.TagName.ToUpperInvariant();
         var indentSpace = new string(' ', indent * 2);
-        Console.WriteLine($"{indentSpace}Tag: {element.TagName}, ID: {element.Id}, Class: {element.ClassName}");
+        Console.WriteLine($"{indentSpace}Tag: {tag}, ID: {element.Id}, Class: {element.ClassName}");
 
         // Determine whether this element has renderable element children (non-skipped, non-script).
         // If so, we walk ChildNodes in order so that interleaved text nodes (e.g. "text <em>italic</em> more")
         // are preserved as synthetic #TEXT children rather than being collapsed onto the parent.
-        var hasMixedChildren = element.Children.Any(c => c.TagName != "SCRIPT" && !SkipTags.Contains(c.TagName));
+        var hasMixedChildren = element.Children.Any(c =>
+        {
+            var ct = c.TagName.ToUpperInvariant();
+            return ct != "SCRIPT" && !SkipTags.Contains(ct);
+        });
 
         var directText = hasMixedChildren
             ? ""   // text nodes become ordered #TEXT children below
             : string.Concat(element.ChildNodes.OfType<IText>().Select(t => t.Data)).Trim();
 
-        var href = element.TagName == "A" ? element.GetAttribute("href") : null;
-        var node = new LayoutNode(element.Id, element.TagName, directText, element.ComputeCurrentStyle(), href);
+        var href = tag == "A" ? element.GetAttribute("href") : null;
+        var node = new LayoutNode(element.Id, tag, directText, element.ComputeCurrentStyle(), href);
 
         // Extract flex-related CSS properties that AngleSharp doesn't cascade
         ExtractMatchedCssProperties(element, node);
 
-        if (element.TagName == "IMG")
+        if (tag == "IMG")
         {
             var src = element.GetAttribute("src");
             node.Alt = element.GetAttribute("alt") ?? string.Empty;
@@ -214,7 +220,7 @@ internal static class Parser
                 node.Image = ResourceLoader.FetchImage(src, _baseUrl);
         }
 
-        if (element.TagName is "INPUT" or "BUTTON")
+        if (tag is "INPUT" or "BUTTON")
         {
             foreach (var attr in new[] { "type", "value", "placeholder", "checked" })
             {
@@ -234,20 +240,49 @@ internal static class Parser
         if (element.ClassName != null)
             node.Attributes["class"] = element.ClassName;
 
-        // SVG elements — capture all attributes for rendering
-        if (IsSvgElement(element.TagName))
+        // Capture data-* attributes for attribute selectors and getAttribute
+        foreach (var attr in element.Attributes)
         {
-            foreach (var attr in element.Attributes)
+            if (attr.Name.StartsWith("data-"))
                 node.Attributes[attr.Name] = attr.Value;
         }
 
-        // Canvas element — capture width/height
-        if (element.TagName == "CANVAS")
+        // SVG elements — capture all attributes for rendering
+        if (IsSvgElement(tag))
         {
-            if (int.TryParse(element.GetAttribute("width"), out var cw)) node.Attributes["width"] = cw.ToString();
-            else node.Attributes["width"] = "300";
-            if (int.TryParse(element.GetAttribute("height"), out var ch)) node.Attributes["height"] = ch.ToString();
-            else node.Attributes["height"] = "150";
+            foreach (var attr in element.Attributes)
+                node.Attributes[attr.Name] = attr.Value;
+
+            // SVG is a replaced element — give it block display and explicit
+            // width/height so the layout engine creates a proper box for it.
+            if (tag == "SVG")
+            {
+                node.StyleOverrides["display"] = "block";
+                var svgW = element.GetAttribute("width");
+                var svgH = element.GetAttribute("height");
+                if (string.IsNullOrEmpty(svgW)) svgW = "300";
+                if (string.IsNullOrEmpty(svgH)) svgH = "150";
+                if (!svgW.EndsWith("px")) svgW += "px";
+                if (!svgH.EndsWith("px")) svgH += "px";
+                node.StyleOverrides["width"] = svgW;
+                node.StyleOverrides["height"] = svgH;
+            }
+        }
+
+        // Canvas element — capture width/height and set as block with explicit dimensions
+        if (tag == "CANVAS")
+        {
+            var canvasW = element.GetAttribute("width");
+            var canvasH = element.GetAttribute("height");
+            if (string.IsNullOrEmpty(canvasW)) canvasW = "300";
+            if (string.IsNullOrEmpty(canvasH)) canvasH = "150";
+            node.Attributes["width"] = canvasW;
+            node.Attributes["height"] = canvasH;
+            node.StyleOverrides["display"] = "block";
+            if (!canvasW.EndsWith("px")) canvasW += "px";
+            if (!canvasH.EndsWith("px")) canvasH += "px";
+            node.StyleOverrides["width"] = canvasW;
+            node.StyleOverrides["height"] = canvasH;
         }
 
         if (hasMixedChildren)
@@ -266,19 +301,20 @@ internal static class Parser
                     // LayoutChildren (runs consisting solely of whitespace nodes are skipped).
                     if (text.Length > 0)
                     {
-                        var textChild = new LayoutNode(null, "#TEXT", text, parentStyle);
+                        var textChild = new LayoutNode(null, "#text", text, parentStyle);
                         textChild.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "inline";
                         node.AddChild(textChild);
                     }
                 }
                 else if (childNode is IElement childEl)
                 {
-                    if (childEl.TagName == "SCRIPT")
+                    var childTag = childEl.TagName.ToUpperInvariant();
+                    if (childTag == "SCRIPT")
                     {
                         CollectScript(childEl);
                         continue;
                     }
-                    if (SkipTags.Contains(childEl.TagName)) { CollectScriptsRecursive(childEl); continue; }
+                    if (SkipTags.Contains(childTag)) { CollectScriptsRecursive(childEl); continue; }
                     node.AddChild(Traverse(childEl, indent + 1));
                 }
             }
@@ -287,8 +323,9 @@ internal static class Parser
         {
             foreach (var child in element.Children)
             {
-                if (child.TagName == "SCRIPT") { CollectScript(child); continue; }
-                if (SkipTags.Contains(child.TagName)) { CollectScriptsRecursive(child); continue; }
+                var childTag = child.TagName.ToUpperInvariant();
+                if (childTag == "SCRIPT") { CollectScript(child); continue; }
+                if (SkipTags.Contains(childTag)) { CollectScriptsRecursive(child); continue; }
                 node.AddChild(Traverse(child, indent + 1));
             }
         }
