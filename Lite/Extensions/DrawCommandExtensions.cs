@@ -28,6 +28,11 @@ public enum AlignContent    { Stretch, FlexStart, FlexEnd, Center, SpaceBetween,
 public enum Visibility      { Visible, Hidden, Collapse }
 public enum FloatType       { None, Left, Right }
 public enum ClearType       { None, Left, Right, Both }
+public enum TextTransform   { None, Uppercase, Lowercase, Capitalize }
+public enum BorderStyle     { None, Solid, Dotted, Dashed, Double, Groove, Ridge, Inset, Outset, Hidden }
+public enum ListStyleType   { Disc, Circle, Square, Decimal, DecimalLeadingZero, LowerAlpha, UpperAlpha, LowerRoman, UpperRoman, None }
+public enum ListStylePosition { Outside, Inside }
+public enum VerticalAlignType { Baseline, Top, Middle, Bottom, TextTop, TextBottom, Sub, Super }
 
 public static class StyleExtensions
 {
@@ -463,6 +468,256 @@ public static class StyleExtensions
             "both"  => ClearType.Both,
             _       => ClearType.None,
         };
+    }
+
+    public static TextTransform GetTextTransform(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("text-transform", out var ov)
+            ? ov : node.Style.GetPropertyValue("text-transform");
+        return raw switch
+        {
+            "uppercase"  => TextTransform.Uppercase,
+            "lowercase"  => TextTransform.Lowercase,
+            "capitalize" => TextTransform.Capitalize,
+            _            => TextTransform.None,
+        };
+    }
+
+    public static float GetLetterSpacing(this LayoutNode node, float fontSize = 16)
+    {
+        var raw = node.TryResolveStyle("letter-spacing", out var ov)
+            ? ov : node.Style.GetPropertyValue("letter-spacing");
+        if (string.IsNullOrWhiteSpace(raw) || raw == "normal") return 0f;
+        raw = raw.Trim();
+        if (raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px)) return px;
+        if (raw.EndsWith("em") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var em)) return em * fontSize;
+        return 0f;
+    }
+
+    public static float GetWordSpacing(this LayoutNode node, float fontSize = 16)
+    {
+        var raw = node.TryResolveStyle("word-spacing", out var ov)
+            ? ov : node.Style.GetPropertyValue("word-spacing");
+        if (string.IsNullOrWhiteSpace(raw) || raw == "normal") return 0f;
+        raw = raw.Trim();
+        if (raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px)) return px;
+        if (raw.EndsWith("em") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var em)) return em * fontSize;
+        return 0f;
+    }
+
+    public static float GetTextIndent(this LayoutNode node, float totalWidth = 0, float fontSize = 16)
+        => GetSizeOrDefault(node, "text-indent", totalWidth, fontSize, 0f);
+
+    public static BorderStyle GetBorderStyleTop(this LayoutNode node) => GetBorderStyleSide(node, "border-top-style");
+    public static BorderStyle GetBorderStyleRight(this LayoutNode node) => GetBorderStyleSide(node, "border-right-style");
+    public static BorderStyle GetBorderStyleBottom(this LayoutNode node) => GetBorderStyleSide(node, "border-bottom-style");
+    public static BorderStyle GetBorderStyleLeft(this LayoutNode node) => GetBorderStyleSide(node, "border-left-style");
+
+    private static BorderStyle GetBorderStyleSide(LayoutNode node, string prop)
+    {
+        var raw = node.TryResolveStyle(prop, out var ov)
+            ? ov : node.Style.GetPropertyValue(prop);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            // Try shorthand 'border-style'
+            raw = node.TryResolveStyle("border-style", out var ov2)
+                ? ov2 : node.Style.GetPropertyValue("border-style");
+        }
+        return raw?.Trim() switch
+        {
+            "dotted" => BorderStyle.Dotted,
+            "dashed" => BorderStyle.Dashed,
+            "double" => BorderStyle.Double,
+            "groove" => BorderStyle.Groove,
+            "ridge"  => BorderStyle.Ridge,
+            "inset"  => BorderStyle.Inset,
+            "outset" => BorderStyle.Outset,
+            "hidden" => BorderStyle.Hidden,
+            "none"   => BorderStyle.None,
+            "solid"  => BorderStyle.Solid,
+            _        => BorderStyle.Solid,
+        };
+    }
+
+    public static ListStyleType GetListStyleType(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("list-style-type", out var ov)
+            ? ov : node.Style.GetPropertyValue("list-style-type");
+        // Also check parent (UL/OL) if not set on LI
+        if (string.IsNullOrWhiteSpace(raw) && node.Parent != null)
+        {
+            raw = node.Parent.TryResolveStyle("list-style-type", out var ov2)
+                ? ov2 : node.Parent.Style.GetPropertyValue("list-style-type");
+        }
+        return raw?.Trim() switch
+        {
+            "circle"               => ListStyleType.Circle,
+            "square"               => ListStyleType.Square,
+            "decimal"              => ListStyleType.Decimal,
+            "decimal-leading-zero" => ListStyleType.DecimalLeadingZero,
+            "lower-alpha" or "lower-latin" => ListStyleType.LowerAlpha,
+            "upper-alpha" or "upper-latin" => ListStyleType.UpperAlpha,
+            "lower-roman"          => ListStyleType.LowerRoman,
+            "upper-roman"          => ListStyleType.UpperRoman,
+            "none"                 => ListStyleType.None,
+            _                      => ListStyleType.Disc,
+        };
+    }
+
+    public static ListStylePosition GetListStylePosition(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("list-style-position", out var ov)
+            ? ov : node.Style.GetPropertyValue("list-style-position");
+        if (string.IsNullOrWhiteSpace(raw) && node.Parent != null)
+        {
+            raw = node.Parent.TryResolveStyle("list-style-position", out var ov2)
+                ? ov2 : node.Parent.Style.GetPropertyValue("list-style-position");
+        }
+        return raw?.Trim() switch
+        {
+            "inside" => ListStylePosition.Inside,
+            _        => ListStylePosition.Outside,
+        };
+    }
+
+    public static VerticalAlignType GetVerticalAlign(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("vertical-align", out var ov)
+            ? ov : node.Style.GetPropertyValue("vertical-align");
+        return raw?.Trim() switch
+        {
+            "top"         => VerticalAlignType.Top,
+            "middle"      => VerticalAlignType.Middle,
+            "bottom"      => VerticalAlignType.Bottom,
+            "text-top"    => VerticalAlignType.TextTop,
+            "text-bottom" => VerticalAlignType.TextBottom,
+            "sub"         => VerticalAlignType.Sub,
+            "super"       => VerticalAlignType.Super,
+            _             => VerticalAlignType.Baseline,
+        };
+    }
+
+    // ---- Outline properties ----
+
+    public static float GetOutlineWidth(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("outline-width", out var ov)
+            ? ov : node.Style.GetPropertyValue("outline-width");
+        if (string.IsNullOrWhiteSpace(raw)) return 0f;
+        raw = raw.Trim();
+        return raw switch
+        {
+            "thin"   => 1f,
+            "medium" => 3f,
+            "thick"  => 5f,
+            _ => raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px) ? px : 0f,
+        };
+    }
+
+    public static SKColor GetOutlineColor(this LayoutNode node)
+        => GetColor(node, "outline-color", SKColors.Black);
+
+    public static BorderStyle GetOutlineStyle(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("outline-style", out var ov)
+            ? ov : node.Style.GetPropertyValue("outline-style");
+        return raw?.Trim() switch
+        {
+            "dotted" => BorderStyle.Dotted,
+            "dashed" => BorderStyle.Dashed,
+            "double" => BorderStyle.Double,
+            "groove" => BorderStyle.Groove,
+            "ridge"  => BorderStyle.Ridge,
+            "inset"  => BorderStyle.Inset,
+            "outset" => BorderStyle.Outset,
+            "solid"  => BorderStyle.Solid,
+            _        => BorderStyle.None,
+        };
+    }
+
+    public static float GetOutlineOffset(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("outline-offset", out var ov)
+            ? ov : node.Style.GetPropertyValue("outline-offset");
+        if (string.IsNullOrWhiteSpace(raw)) return 0f;
+        raw = raw.Trim();
+        if (raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px)) return px;
+        return 0f;
+    }
+
+    // ---- Background image properties ----
+
+    public static string? GetBackgroundImage(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("background-image", out var ov)
+            ? ov : node.Style.GetPropertyValue("background-image");
+        if (string.IsNullOrWhiteSpace(raw) || raw == "none") return null;
+        // Extract url('...') or url(...)
+        raw = raw.Trim();
+        if (raw.StartsWith("url(", StringComparison.OrdinalIgnoreCase))
+        {
+            var inner = raw[4..];
+            if (inner.EndsWith(')')) inner = inner[..^1];
+            return inner.Trim().Trim('"', '\'');
+        }
+        return null;
+    }
+
+    public static string GetBackgroundRepeat(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("background-repeat", out var ov)
+            ? ov : node.Style.GetPropertyValue("background-repeat");
+        if (string.IsNullOrWhiteSpace(raw)) return "repeat";
+        return raw.Trim();
+    }
+
+    public static (string X, string Y) GetBackgroundPosition(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("background-position", out var ov)
+            ? ov : node.Style.GetPropertyValue("background-position");
+        if (string.IsNullOrWhiteSpace(raw)) return ("0%", "0%");
+        var parts = raw.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var x = parts.Length > 0 ? parts[0] : "0%";
+        var y = parts.Length > 1 ? parts[1] : "50%";
+        return (x, y);
+    }
+
+    public static (string W, string H) GetBackgroundSize(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("background-size", out var ov)
+            ? ov : node.Style.GetPropertyValue("background-size");
+        if (string.IsNullOrWhiteSpace(raw) || raw == "auto") return ("auto", "auto");
+        if (raw.Trim() == "cover") return ("cover", "cover");
+        if (raw.Trim() == "contain") return ("contain", "contain");
+        var parts = raw.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var w = parts.Length > 0 ? parts[0] : "auto";
+        var h = parts.Length > 1 ? parts[1] : "auto";
+        return (w, h);
+    }
+
+    /// <summary>Applies text-transform to a string.</summary>
+    public static string ApplyTextTransform(string text, TextTransform transform)
+    {
+        return transform switch
+        {
+            TextTransform.Uppercase => text.ToUpperInvariant(),
+            TextTransform.Lowercase => text.ToLowerInvariant(),
+            TextTransform.Capitalize => CapitalizeText(text),
+            _ => text,
+        };
+    }
+
+    private static string CapitalizeText(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        var chars = text.ToCharArray();
+        bool newWord = true;
+        for (int i = 0; i < chars.Length; i++)
+        {
+            if (char.IsWhiteSpace(chars[i])) { newWord = true; }
+            else if (newWord) { chars[i] = char.ToUpperInvariant(chars[i]); newWord = false; }
+        }
+        return new string(chars);
     }
 
     /// <summary>Parses all box-shadow layers. Returns empty list when unset.</summary>

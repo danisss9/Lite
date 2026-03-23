@@ -16,6 +16,31 @@ internal static class TableEngine
     /// Lays out all rows and cells of a table within the given content area.
     /// Returns the total height consumed.
     /// </summary>
+    /// <summary>Returns true if the table uses border-collapse: collapse.</summary>
+    private static bool IsBorderCollapse(LayoutNode table)
+    {
+        var raw = table.TryResolveStyle("border-collapse", out var ov)
+            ? ov : table.Style.GetPropertyValue("border-collapse");
+        return raw?.Trim() == "collapse";
+    }
+
+    /// <summary>Returns the border-spacing value in px (default 2px).</summary>
+    private static float GetBorderSpacing(LayoutNode table)
+    {
+        var raw = table.TryResolveStyle("border-spacing", out var ov)
+            ? ov : table.Style.GetPropertyValue("border-spacing");
+        if (string.IsNullOrWhiteSpace(raw)) return 2f;
+        raw = raw.Trim().Split(' ')[0]; // Use first value (horizontal)
+        if (raw.EndsWith("px") && float.TryParse(raw[..^2],
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var px))
+            return px;
+        if (float.TryParse(raw, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var plain))
+            return plain;
+        return 2f;
+    }
+
     public static float LayoutTable(
         LayoutNode table,
         float contentX, float contentY,
@@ -28,9 +53,12 @@ internal static class TableEngine
         var colCount = rows.Max(r => r.Cells.Count);
         if (colCount == 0) return 0f;
 
-        var colWidths = ComputeColumnWidths(rows, colCount, contentW, viewportW, viewportH);
+        var collapse = IsBorderCollapse(table);
+        var spacing = collapse ? 0f : GetBorderSpacing(table);
 
-        var cursorY = contentY;
+        var colWidths = ComputeColumnWidths(rows, colCount, contentW - spacing * (colCount + 1), viewportW, viewportH);
+
+        var cursorY = contentY + spacing;
 
         foreach (var (rowNode, cells) in rows)
         {
@@ -46,7 +74,7 @@ internal static class TableEngine
             float maxCellContrib = 0f;
             var n = Math.Min(cells.Count, colWidths.Length);
             var pass1 = new CellData[n];
-            var cursorX = contentX;
+            var cursorX = contentX + spacing;
 
             for (var c = 0; c < n; c++)
             {
@@ -80,7 +108,7 @@ internal static class TableEngine
                 maxCellContrib = Math.Max(maxCellContrib, cellContrib);
 
                 pass1[c] = new CellData(cell, cx, cy, cw, cellPad, cellBord, cellMarg);
-                cursorX += colWidths[c];
+                cursorX += colWidths[c] + spacing;
             }
 
             // Honour explicit height on the row (e.g. tr { height: 40px })
@@ -129,7 +157,7 @@ internal static class TableEngine
                 Margin     = rowMarg,
             };
 
-            cursorY += rowH_outer;
+            cursorY += rowH_outer + spacing;
         }
 
         return cursorY - contentY;

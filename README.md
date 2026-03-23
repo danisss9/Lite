@@ -117,7 +117,7 @@ BrowserWindow
 │   ├── JsWindow        window.alert / setTimeout / setInterval / requestAnimationFrame
 │   └── SelectorEngine  CSS selector matching (compound, combinators, pseudo-classes)
 │
-├── FormState           Tracks text input values, checkbox state, and focused element
+├── FormState           Tracks text input values, checkbox/radio state, dropdowns, and focus
 ├── EventDispatcher     Dispatches click/change/input events to JS handlers
 ├── ResourceLoader      HTTP image fetching with bitmap cache
 └── StaticFileServer    (Example project) ASP.NET Core Kestrel server for local files
@@ -135,7 +135,13 @@ BrowserWindow
 | `a` | Link — opens in the system browser on click |
 | `img` | Image loaded via HTTP; falls back to a placeholder with alt text |
 | `input` (text) | Focusable text field with keyboard input and backspace |
+| `input` (password) | Masked text field with bullet characters |
+| `input` (number) | Numeric input with up/down stepper arrows; `min`, `max`, `step` |
+| `input` (range) | Range slider with click and drag support; `min`, `max`, `step` |
 | `input` (checkbox) | Toggle on click |
+| `input` (radio) | Radio button with group selection logic by `name` attribute |
+| `textarea` | Multi-line text input with placeholder, Enter key, monospace font |
+| `select` | Dropdown with option list overlay, click to select |
 | `button`, `input[type=submit]` | Triggers `click` event handlers |
 | `label` | Inline by default |
 | `strong`, `b` | Bold text |
@@ -168,11 +174,16 @@ BrowserWindow
 | `margin`, `padding` | Shorthand and individual sides; `px`, `%`, `em`, `auto`, `calc()` |
 | `border-width` | `px` per side |
 | `border-color` | Any CSS color per side |
+| `border-style` | `solid`, `dotted`, `dashed`, `double`, `groove`, `ridge`, `inset`, `outset`, `none` per side |
 | `border-radius` | `px`, `%` |
 | `box-sizing` | `border-box`, `content-box` |
 | `box-shadow` | Multi-layer; offset, blur, spread, color, `inset` |
 | `text-shadow` | Offset, blur, color |
 | `background-color` | Any CSS color |
+| `background-image` | `url()`; raster formats (PNG, JPEG) |
+| `background-repeat` | `repeat`, `repeat-x`, `repeat-y`, `no-repeat` |
+| `background-position` | Keywords, `px`, `%` |
+| `background-size` | `cover`, `contain`, `auto`, `px`, `%` |
 | `color` | Any CSS color |
 | `opacity` | `0`–`1` |
 | `font-size` | `px`, `em`, keyword sizes |
@@ -181,7 +192,12 @@ BrowserWindow
 | `font-family` | Named families; `monospace` → Consolas, `system-ui` → Segoe UI |
 | `line-height` | `px`, `em`, `%`, unitless multiplier |
 | `text-decoration` | `underline`, `line-through` |
+| `text-transform` | `uppercase`, `lowercase`, `capitalize`, `none` |
 | `text-align` | `left`, `center`, `right`, `justify` |
+| `text-indent` | `px`, `em`, `%` |
+| `letter-spacing` | `px`, `em` |
+| `word-spacing` | `px`, `em` |
+| `vertical-align` | `baseline`, `top`, `middle`, `bottom`, `text-top`, `text-bottom`, `sub`, `super` |
 | `white-space` | `normal`, `nowrap`, `pre`, `pre-wrap`, `pre-line` |
 | `position` | `static`, `relative`, `absolute`, `fixed` |
 | `top`, `right`, `bottom`, `left` | `px`, `%`, `calc()` |
@@ -201,6 +217,11 @@ BrowserWindow
 | `flex-flow` | Shorthand |
 | `gap`, `row-gap`, `column-gap` | `px`, `em`, `%`, `calc()` |
 | `order` | Integer |
+| `outline` | `outline-width`, `outline-color`, `outline-style`, `outline-offset` |
+| `list-style-type` | `disc`, `circle`, `square`, `decimal`, `lower-alpha`, `upper-alpha`, `lower-roman`, `upper-roman`, `none` |
+| `list-style-position` | `outside`, `inside` |
+| `border-collapse` | `collapse`, `separate` |
+| `border-spacing` | `px` |
 | `cursor` | `pointer`, `text`, `default` |
 | `transition` | `property`, `duration`, `delay`, `timing-function` |
 | `animation` | `name`, `duration`, `delay`, `timing-function`, `iteration-count`, `direction`, `fill-mode` |
@@ -210,6 +231,7 @@ BrowserWindow
 | `@media` | `min-width`, `max-width`, `min-height`, `max-height`, `orientation`; `and`, `not`, comma |
 | `@keyframes` | `from`/`to`, percentage offsets |
 | `:hover`, `:focus`, `:active` | Pseudo-class state with interactive re-render |
+| `::before`, `::after` | Pseudo-elements with `content` property (strings, `open-quote`/`close-quote`, unicode escapes) |
 
 ---
 
@@ -357,7 +379,7 @@ Standard HTML inline handlers are supported:
 dotnet run --project Example
 ```
 
-The example serves the `Example/resources/` folder on `http://localhost:4444` and opens it in a `BrowserWindow`. The demo page covers typography, inline text elements, lists, forms, flexbox layouts, tables, positioning, z-index, overflow clipping, percentage sizing, pseudo-classes (:hover/:focus/:active), responsive design (@media), CSS animations/transitions, calc() expressions, and CSS custom properties (var()).
+The example serves the `Example/resources/` folder on `http://localhost:4444` and opens it in a `BrowserWindow`. The demo page covers typography, inline text elements, lists, forms (text, password, number, range, radio, checkbox, textarea, select), flexbox layouts, tables, positioning, z-index, overflow clipping, percentage sizing, pseudo-classes (:hover/:focus/:active), pseudo-elements (::before/::after), responsive design (@media), CSS animations/transitions, calc() expressions, CSS custom properties (var()), text transforms, letter/word spacing, border styles, outlines, background images, vertical alignment, and table border collapse.
 
 ---
 

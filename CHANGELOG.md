@@ -2,7 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.4] - 2026-03-22 (current)
+## [0.0.5] - 2026-03-23 (current)
+
+### Added
+- **`text-transform`** — `uppercase`, `lowercase`, `capitalize`, `none`
+- **`letter-spacing`** — character-level spacing with custom draw/measure routines
+- **`word-spacing`** — additional space between words
+- **`text-indent`** — first-line indent for block text
+- **`border-style`** — `solid`, `dotted`, `dashed`, `double`, `groove`, `ridge`, `inset`, `outset`, `none` per side
+- **`list-style-type`** — `disc`, `circle`, `square`, `decimal`, `lower-alpha`, `upper-alpha`, `lower-roman`, `upper-roman`, `none`
+- **`list-style-position`** — `outside` (default) and `inside` with proper text offset
+- **`outline`** — `outline-width`, `outline-color`, `outline-style`, `outline-offset` shorthand and individual properties
+- **`background-image`** — `url()` references to raster images (PNG, JPEG) with `background-repeat` (`repeat`, `repeat-x`, `repeat-y`, `no-repeat`), `background-position`, and `background-size` (`cover`, `contain`, `auto`, px/%)
+- **`vertical-align`** — `baseline`, `top`, `middle`, `bottom`, `text-top`, `text-bottom`, `sub`, `super` for inline elements
+- **`::before` / `::after` pseudo-elements** — CSS `content` property with quoted strings, `open-quote`/`close-quote`, and CSS unicode escape sequences (`\201C`, `\25B6`, etc.); pseudo-element styles (color, font-weight, font-size, display) applied via `StyleOverrides`
+- **`border-collapse`** — `collapse` and `separate` on tables
+- **`border-spacing`** — horizontal and vertical spacing between table cells
+- **Form: `input[type=password]`** — masked text display with bullet characters
+- **Form: `input[type=number]`** — numeric input with clickable up/down stepper arrows; respects `min`, `max`, `step` attributes
+- **Form: `input[type=range]`** — range slider with click-to-set and mouse drag support; respects `min`, `max`, `step`
+- **Form: `input[type=radio]`** — radio button circles with group selection logic (only one per `name` group); proper intrinsic sizing in both inline and flex layout
+- **Form: `<textarea>`** — multi-line text input with placeholder, monospace font, word wrapping, and Enter key support for new lines
+- **Form: `<select>`** — dropdown select with option list overlay drawn on top of all content; click to open/close; option selection updates displayed value
+- **CSS shorthand parsing** — `border-style`, `outline`, `list-style` shorthands decomposed into individual properties
+
+### Fixed
+- **Pseudo-element text overlap** — `::before`/`::after` content was drawn on top of the parent's text; now the parent's text is moved into a `#text` child node so all content flows together as inline children
+- **CSS unicode escapes** — `ParseContentValue` now decodes CSS escape sequences like `\201C` (left quote) and `\25B6` (triangle) into actual characters via `DecodeCssEscapes`
+- **Background image loading** — `DrawBackgroundImage` passed `null` as the base URL to `ResourceLoader.FetchImage`, so relative image paths couldn't resolve; now passes `Parser.BaseUrl`
+- **Number input steppers** — click hit region for the text area covered the entire input including the arrow buttons; now the text hit region excludes the 16px arrow zone
+- **Range slider stuck dragging** — drag was initiated on mouse-up instead of mouse-down, causing the slider to follow the mouse until the next click; moved drag initiation to `WM_LBUTTONDOWN`
+- **Radio button sizing in flex containers** — `FlexEngine.MeasureIntrinsicMain/Cross` returned 0 for form elements with no text/children; added `GetFormIntrinsicSize` to return correct intrinsic dimensions for all form element types
+- **Select dropdown z-order** — dropdown overlay was drawn during normal tree traversal and could be covered by later-painted elements; now deferred and drawn after all content
+- **List inside position** — `list-style-position: inside` marker was drawn at the content edge causing text overlap; now tracks marker width and offsets the text
+
+## [0.0.4] - 2026-03-22
 
 ### Added
 - **SVG rendering** — full `SvgRenderer` supporting `<rect>`, `<circle>`, `<ellipse>`, `<line>`, `<polyline>`, `<polygon>`, `<path>` (via `SKPath.ParseSvgPathData`), `<text>`, and `<g>` grouping; `viewBox` scaling, `transform` attribute (translate, scale, rotate, skewX, skewY, matrix), fill/stroke with opacity, stroke-linecap/linejoin, and HSL color parsing

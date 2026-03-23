@@ -744,6 +744,197 @@ console.log(greet("World"));</pre>
       <p id="tw-output" class="demo-info mt-sm"></p>
     </section>
 
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- NEW CSS2 / HTML5 FEATURES                                      -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- Text Transform -->
+    <section class="card">
+      <h2>Text Transform</h2>
+      <p class="tt-upper">this text is uppercase</p>
+      <p class="tt-lower">THIS TEXT IS LOWERCASE</p>
+      <p class="tt-cap">this text is capitalized</p>
+    </section>
+
+    <!-- Letter Spacing & Word Spacing -->
+    <section class="card">
+      <h2>Letter &amp; Word Spacing</h2>
+      <p class="ls-tight">Tight letter-spacing (-0.5px)</p>
+      <p>Normal letter-spacing (default)</p>
+      <p class="ls-wide">Wide letter-spacing (3px)</p>
+      <p class="ls-ultra">Ultra-wide letter-spacing (8px)</p>
+      <p class="ws-wide">Wide word spacing applied to this sentence.</p>
+    </section>
+
+    <!-- Text Indent -->
+    <section class="card">
+      <h2>Text Indent</h2>
+      <p class="text-indent">This paragraph has a 40px first-line indent, which is a common typographic convention in printed material. The remaining lines wrap normally without indentation.</p>
+      <p class="text-indent-pct">This paragraph uses a 10% text-indent relative to its container width. This is useful for responsive layouts.</p>
+    </section>
+
+    <!-- Border Styles -->
+    <section class="card">
+      <h2>Border Styles</h2>
+      <div class="border-demo-grid">
+        <div class="bd-solid">solid</div>
+        <div class="bd-dotted">dotted</div>
+        <div class="bd-dashed">dashed</div>
+        <div class="bd-double">double</div>
+        <div class="bd-groove">groove</div>
+        <div class="bd-ridge">ridge</div>
+        <div class="bd-inset">inset</div>
+        <div class="bd-outset">outset</div>
+      </div>
+    </section>
+
+    <!-- List Style Types -->
+    <section class="card">
+      <h2>List Style Types</h2>
+      <div class="list-demo-row">
+        <div>
+          <h3>disc (default)</h3>
+          <ul class="lst-disc"><li>Alpha</li><li>Beta</li><li>Gamma</li></ul>
+        </div>
+        <div>
+          <h3>circle</h3>
+          <ul class="lst-circle"><li>Alpha</li><li>Beta</li><li>Gamma</li></ul>
+        </div>
+        <div>
+          <h3>square</h3>
+          <ul class="lst-square"><li>Alpha</li><li>Beta</li><li>Gamma</li></ul>
+        </div>
+        <div>
+          <h3>none</h3>
+          <ul class="lst-none"><li>Alpha</li><li>Beta</li><li>Gamma</li></ul>
+        </div>
+      </div>
+      <div class="list-demo-row">
+        <div>
+          <h3>decimal</h3>
+          <ol class="lst-decimal"><li>First</li><li>Second</li><li>Third</li></ol>
+        </div>
+        <div>
+          <h3>lower-alpha</h3>
+          <ol class="lst-lower-alpha"><li>First</li><li>Second</li><li>Third</li></ol>
+        </div>
+        <div>
+          <h3>upper-roman</h3>
+          <ol class="lst-upper-roman"><li>First</li><li>Second</li><li>Third</li></ol>
+        </div>
+        <div>
+          <h3>inside position</h3>
+          <ul class="lst-inside"><li>Item flows inline with the marker text here</li><li>Second item</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Outline -->
+    <section class="card">
+      <h2>Outline</h2>
+      <p>Outlines are drawn outside the border and don't affect layout.</p>
+      <div class="outline-demo-row">
+        <div class="ol-solid">solid</div>
+        <div class="ol-dotted">dotted</div>
+        <div class="ol-dashed">dashed</div>
+        <div class="ol-double">double</div>
+        <div class="ol-offset">offset 4px</div>
+      </div>
+    </section>
+
+    <!-- Background Image -->
+    <section class="card">
+      <h2>Background Image</h2>
+      <div class="bgimg-demo-row">
+        <div class="bgimg-norepeat">
+          <p>no-repeat, center</p>
+        </div>
+        <div class="bgimg-repeat">
+          <p>repeat (tiled)</p>
+        </div>
+        <div class="bgimg-cover">
+          <p>cover</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pseudo-elements ::before / ::after -->
+    <section class="card">
+      <h2>Pseudo-elements</h2>
+      <p class="pe-quote">This paragraph has quotation marks added via ::before and ::after pseudo-elements.</p>
+      <p class="pe-label">This paragraph has a "Note:" label prepended via ::before.</p>
+      <ul>
+        <li class="pe-arrow">Custom arrow marker via ::before</li>
+        <li class="pe-arrow">Another item with arrow</li>
+      </ul>
+    </section>
+
+    <!-- Table Properties -->
+    <section class="card">
+      <h2>Table: Border Collapse</h2>
+      <h3>Separate borders (with spacing)</h3>
+      <table class="tbl-separate">
+        <tr><th>Name</th><th>Role</th><th>Status</th></tr>
+        <tr><td>Alice</td><td>Engineer</td><td>Active</td></tr>
+        <tr><td>Bob</td><td>Designer</td><td>Away</td></tr>
+      </table>
+      <h3>Collapsed borders</h3>
+      <table class="tbl-collapse">
+        <tr><th>Name</th><th>Role</th><th>Status</th></tr>
+        <tr><td>Alice</td><td>Engineer</td><td>Active</td></tr>
+        <tr><td>Bob</td><td>Designer</td><td>Away</td></tr>
+      </table>
+    </section>
+
+    <!-- New Form Elements -->
+    <section class="card">
+      <h2>Form Elements</h2>
+
+      <h3>Password Input</h3>
+      <label>Password:</label>
+      <input type="password" placeholder="Enter password" title="Password" />
+
+      <h3>Number Input</h3>
+      <label>Quantity:</label>
+      <input type="number" value="5" min="0" max="100" title="Quantity" />
+
+      <h3>Range Slider</h3>
+      <label>Volume:</label>
+      <input type="range" min="0" max="100" value="60" title="Volume" />
+
+      <h3>Radio Buttons</h3>
+      <div class="radio-group">
+        <input type="radio" name="color" checked title="Red" /> <label>Red</label>
+        <input type="radio" name="color" title="Green" /> <label>Green</label>
+        <input type="radio" name="color" title="Blue" /> <label>Blue</label>
+      </div>
+
+      <h3>Textarea</h3>
+      <textarea placeholder="Write something here..." rows="4" cols="40" title="Message"></textarea>
+
+      <h3>Select Dropdown</h3>
+      <select title="Language">
+        <option value="html">HTML</option>
+        <option value="css" selected>CSS</option>
+        <option value="js">JavaScript</option>
+      </select>
+    </section>
+
+    <!-- Vertical Align -->
+    <section class="card">
+      <h2>Vertical Align</h2>
+      <p class="va-demo">
+        Normal text
+        <span class="va-super">superscript</span>
+        then normal
+        <span class="va-sub">subscript</span>
+        then normal
+        <span class="va-top">top</span>
+        <span class="va-middle">middle</span>
+        <span class="va-bottom">bottom</span>
+      </p>
+    </section>
+
   </main>
 
   <footer>

@@ -8,6 +8,7 @@ using Lite.Models.Delegates;
 using Lite.Models.Structs;
 using Lite.Scripting;
 using Lite.Utils;
+using SkiaSharp;
 
 namespace Lite;
 
@@ -49,6 +50,11 @@ public class BrowserWindow
     // Scrollbar drag state
     private bool _draggingScrollbar;
     private float _scrollbarGrabOffset; // Y offset within thumb where drag started
+
+    // Range slider drag state
+    private Guid? _draggingRange;
+    private SKRect _draggingRangeRect;
+    private float _rangeMin, _rangeMax, _rangeStep;
 
     // Animation timer
     private const uint AnimationTimerMs = 16; // ~60 fps
@@ -241,6 +247,49 @@ public class BrowserWindow
                             (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                             User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                         }
+
+                        // Start range drag if clicking on a range slider
+                        if (_rootNode != null)
+                        {
+                            for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
+                            {
+                                var region = _hitRegions[ri];
+                                if (!region.Bounds.Contains(x, contentY)) continue;
+                                if (region.InputAction == InputAction.Range)
+                                {
+                                    var node = FindNodeByKey(_rootNode, region.NodeKey);
+                                    if (node != null)
+                                    {
+                                        node.Attributes.TryGetValue("min", out var minStr);
+                                        node.Attributes.TryGetValue("max", out var maxStr);
+                                        node.Attributes.TryGetValue("step", out var stepStr);
+                                        float.TryParse(minStr ?? "0", System.Globalization.NumberStyles.Float,
+                                            System.Globalization.CultureInfo.InvariantCulture, out var minV);
+                                        float.TryParse(maxStr ?? "100", System.Globalization.NumberStyles.Float,
+                                            System.Globalization.CultureInfo.InvariantCulture, out var maxV);
+                                        float.TryParse(stepStr ?? "1", System.Globalization.NumberStyles.Float,
+                                            System.Globalization.CultureInfo.InvariantCulture, out var step);
+                                        _draggingRange = node.NodeKey;
+                                        _draggingRangeRect = region.Bounds;
+                                        _rangeMin = minV;
+                                        _rangeMax = maxV;
+                                        _rangeStep = step;
+                                        // Set initial value at click position
+                                        var ratio = Math.Clamp((x - region.Bounds.Left) / region.Bounds.Width, 0f, 1f);
+                                        var newVal = minV + ratio * (maxV - minV);
+                                        newVal = (float)(Math.Round(newVal / step) * step);
+                                        newVal = Math.Clamp(newVal, minV, maxV);
+                                        FormState.TextInputValues[node.NodeKey] =
+                                            newVal == Math.Floor(newVal)
+                                                ? ((int)newVal).ToString()
+                                                : newVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                                    }
+                                }
+                                break;
+                            }
+                        }
                     }
                     break;
                 }
@@ -257,6 +306,20 @@ public class BrowserWindow
                             (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                             User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                         }
+                    }
+                    else if (_draggingRange != null && _rootNode != null)
+                    {
+                        var mx = (short)(lParam.ToInt32() & 0xFFFF);
+                        var ratio = Math.Clamp((mx - _draggingRangeRect.Left) / _draggingRangeRect.Width, 0f, 1f);
+                        var newVal = _rangeMin + ratio * (_rangeMax - _rangeMin);
+                        newVal = (float)(Math.Round(newVal / _rangeStep) * _rangeStep);
+                        newVal = Math.Clamp(newVal, _rangeMin, _rangeMax);
+                        FormState.TextInputValues[_draggingRange.Value] =
+                            newVal == Math.Floor(newVal)
+                                ? ((int)newVal).ToString()
+                                : newVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                     }
                     else
                     {
@@ -281,6 +344,9 @@ public class BrowserWindow
 
             case WM_LBUTTONUP:
                 {
+                    // Release range drag
+                    _draggingRange = null;
+
                     if (_draggingScrollbar)
                     {
                         _draggingScrollbar = false;
@@ -300,6 +366,9 @@ public class BrowserWindow
                     var contentY = y + _viewport.ScrollY;
                     var handled = false;
                     var prevFocus = FormState.FocusedInput;
+
+                    // Close any open dropdown if clicking outside it
+                    var clickedOnDropdown = false;
 
                     for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
                     {
@@ -328,6 +397,85 @@ public class BrowserWindow
                             break;
                         }
 
+                        if (region.InputAction == InputAction.Radio)
+                        {
+                            FormState.SelectRadio(region.NodeKey);
+                            handled = true;
+                            break;
+                        }
+
+                        if (region.InputAction == InputAction.NumberUp || region.InputAction == InputAction.NumberDown)
+                        {
+                            var node = FindNodeByKey(_rootNode, region.NodeKey);
+                            if (node != null)
+                            {
+                                node.Attributes.TryGetValue("step", out var stepStr);
+                                node.Attributes.TryGetValue("min", out var minStr);
+                                node.Attributes.TryGetValue("max", out var maxStr);
+                                node.Attributes.TryGetValue("value", out var defVal);
+                                float.TryParse(stepStr ?? "1", System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out var step);
+                                float.TryParse(minStr, System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out var minV);
+                                float.TryParse(maxStr, System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out var maxV);
+                                var hasMin = !string.IsNullOrEmpty(minStr);
+                                var hasMax = !string.IsNullOrEmpty(maxStr);
+                                var curText = FormState.GetTextValue(node.NodeKey, defVal ?? "0");
+                                float.TryParse(curText, System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out var curVal);
+                                curVal += region.InputAction == InputAction.NumberUp ? step : -step;
+                                if (hasMin && curVal < minV) curVal = minV;
+                                if (hasMax && curVal > maxV) curVal = maxV;
+                                FormState.TextInputValues[node.NodeKey] =
+                                    curVal == Math.Floor(curVal)
+                                        ? ((int)curVal).ToString()
+                                        : curVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                            }
+                            handled = true;
+                            break;
+                        }
+
+                        if (region.InputAction == InputAction.Range)
+                        {
+                            // Range click is handled in WM_LBUTTONDOWN; just consume
+                            handled = true;
+                            break;
+                        }
+
+                        if (region.InputAction == InputAction.SelectDropdown)
+                        {
+                            clickedOnDropdown = true;
+                            // Check if this is a dropdown option click
+                            if (FormState.OpenDropdown == region.NodeKey && Drawer.SelectOptionMap.TryGetValue(ri, out var optIdx))
+                            {
+                                var node = FindNodeByKey(_rootNode, region.NodeKey);
+                                if (node != null)
+                                {
+                                    node.Attributes.TryGetValue("_optionValues", out var optValStr);
+                                    if (optValStr != null)
+                                    {
+                                        var vals = optValStr.Split('|');
+                                        if (optIdx < vals.Length)
+                                            FormState.TextInputValues[node.NodeKey] = vals[optIdx];
+                                    }
+                                }
+                                FormState.OpenDropdown = null;
+                            }
+                            else if (FormState.OpenDropdown == region.NodeKey)
+                            {
+                                // Clicking the select again closes it
+                                FormState.OpenDropdown = null;
+                            }
+                            else
+                            {
+                                // Open dropdown
+                                FormState.OpenDropdown = region.NodeKey;
+                            }
+                            handled = true;
+                            break;
+                        }
+
                         if (region.InputAction == InputAction.Button)
                         {
                             EventDispatcher.Dispatch(region.NodeKey, "click", _rootNode);
@@ -340,6 +488,13 @@ public class BrowserWindow
                             handled = true;
                             break;
                         }
+                    }
+
+                    // Close dropdown if clicked elsewhere
+                    if (!clickedOnDropdown && FormState.OpenDropdown != null)
+                    {
+                        FormState.OpenDropdown = null;
+                        handled = true;
                     }
 
                     var focusChanged = !handled && FormState.FocusedInput != null;
@@ -372,6 +527,17 @@ public class BrowserWindow
                         var key = FormState.FocusedInput.Value;
                         if (FormState.TextInputValues.TryGetValue(key, out var cur) && cur.Length > 0)
                             FormState.TextInputValues[key] = cur[..^1];
+                    }
+                    else if (c == '\r')
+                    {
+                        // Enter key — only allow in textareas
+                        var focusedNode = FindNodeByKey(_rootNode, FormState.FocusedInput.Value);
+                        if (focusedNode?.TagName == "TEXTAREA")
+                        {
+                            var key = FormState.FocusedInput.Value;
+                            FormState.TextInputValues.TryGetValue(key, out var cur);
+                            FormState.TextInputValues[key] = (cur ?? string.Empty) + '\n';
+                        }
                     }
                     else if (!char.IsControl(c))
                     {
@@ -426,5 +592,17 @@ public class BrowserWindow
         if (!_timerRunning) return;
         User32.KillTimer(hWnd, AnimationTimerId);
         _timerRunning = false;
+    }
+
+    private static LayoutNode? FindNodeByKey(LayoutNode? root, Guid key)
+    {
+        if (root == null) return null;
+        if (root.NodeKey == key) return root;
+        foreach (var child in root.Children)
+        {
+            var result = FindNodeByKey(child, key);
+            if (result != null) return result;
+        }
+        return null;
     }
 }

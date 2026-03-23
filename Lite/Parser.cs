@@ -52,6 +52,16 @@ internal static class Parser
         tr { display: table-row; }
         td { display: table-cell; padding-top: 1px; padding-right: 1px; padding-bottom: 1px; padding-left: 1px; }
         th { display: table-cell; font-weight: bold; padding-top: 1px; padding-right: 1px; padding-bottom: 1px; padding-left: 1px; }
+        textarea { display: inline-block; cursor: text; font-family: monospace; font-size: 13px; }
+        select { display: inline-block; cursor: pointer; }
+        input[type="radio"] { cursor: pointer; }
+        input[type="password"] { cursor: text; }
+        input[type="number"] { cursor: text; }
+        input[type="range"] { cursor: pointer; }
+        abbr { text-decoration: underline; }
+        address { display: block; font-style: italic; }
+        q::before { content: open-quote; }
+        q::after { content: close-quote; }
         """;
 
     // Tags that should not appear in the layout tree
@@ -59,6 +69,7 @@ internal static class Parser
         ["HEAD", "STYLE", "NOSCRIPT", "META", "LINK", "TITLE", "TEMPLATE"];
 
     private static string? _baseUrl;
+    internal static string? BaseUrl => _baseUrl;
     private static readonly List<string> _pendingScripts = [];
     private static readonly HttpClient _httpClient = new();
     internal static int ViewportWidth { get; private set; } = 800;
@@ -222,11 +233,51 @@ internal static class Parser
 
         if (tag is "INPUT" or "BUTTON")
         {
-            foreach (var attr in new[] { "type", "value", "placeholder", "checked" })
+            foreach (var attr in new[] { "type", "value", "placeholder", "checked", "min", "max", "step", "name", "disabled", "readonly", "required", "maxlength" })
             {
                 var val = element.GetAttribute(attr);
                 if (val != null) node.Attributes[attr] = val;
             }
+        }
+
+        if (tag == "TEXTAREA")
+        {
+            foreach (var attr in new[] { "placeholder", "rows", "cols", "name", "disabled", "readonly", "required", "maxlength" })
+            {
+                var val = element.GetAttribute(attr);
+                if (val != null) node.Attributes[attr] = val;
+            }
+            // Capture textarea content as its value
+            var textContent = element.TextContent;
+            if (!string.IsNullOrEmpty(textContent))
+                node.Attributes["value"] = textContent;
+        }
+
+        if (tag == "SELECT")
+        {
+            foreach (var attr in new[] { "name", "disabled", "multiple", "size" })
+            {
+                var val = element.GetAttribute(attr);
+                if (val != null) node.Attributes[attr] = val;
+            }
+            // Collect options
+            var options = element.QuerySelectorAll("option");
+            var optionTexts = new List<string>();
+            var optionValues = new List<string>();
+            string? selectedValue = null;
+            foreach (var opt in options)
+            {
+                var optText = opt.TextContent.Trim();
+                var optVal = opt.GetAttribute("value") ?? optText;
+                optionTexts.Add(optText);
+                optionValues.Add(optVal);
+                if (opt.HasAttribute("selected"))
+                    selectedValue = optVal;
+            }
+            node.Attributes["_options"] = string.Join("|", optionTexts);
+            node.Attributes["_optionValues"] = string.Join("|", optionValues);
+            if (selectedValue != null) node.Attributes["value"] = selectedValue;
+            else if (optionValues.Count > 0) node.Attributes["value"] = optionValues[0];
         }
 
         // Capture inline event handlers for any element
@@ -330,7 +381,118 @@ internal static class Parser
             }
         }
 
+        // Create ::before and ::after pseudo-element children
+        CreatePseudoElementChildren(node);
+
         return node;
+    }
+
+    /// <summary>
+    /// If the node has ::before or ::after styles with a content property,
+    /// creates synthetic inline children at the start/end of the children list.
+    /// </summary>
+    private static void CreatePseudoElementChildren(LayoutNode node)
+    {
+        bool hasBefore = node.BeforeStyles != null && node.BeforeStyles.TryGetValue("content", out var beforeContent)
+                         && ParseContentValue(beforeContent!) != null;
+        bool hasAfter = node.AfterStyles != null && node.AfterStyles.TryGetValue("content", out var afterContent)
+                        && ParseContentValue(afterContent!) != null;
+
+        if (!hasBefore && !hasAfter) return;
+
+        // If the parent node has its own text, move it into a #text child so that
+        // pseudo-elements and the original text flow together as inline children.
+        if (!string.IsNullOrEmpty(node.DisplayText))
+        {
+            var textChild = new LayoutNode(null, "#text", node.DisplayText, node.Style);
+            textChild.Parent = node;
+            node.Children.Add(textChild);
+            node.TextOverride = "";
+        }
+
+        if (hasBefore)
+        {
+            var text = ParseContentValue(node.BeforeStyles!["content"]);
+            var pseudoNode = new LayoutNode(null, "#pseudo-before", text!, node.Style);
+            pseudoNode.StyleOverrides["display"] = node.BeforeStyles!.GetValueOrDefault("display", "inline");
+            foreach (var (p, v) in node.BeforeStyles!)
+            {
+                if (p != "content") pseudoNode.StyleOverrides[p] = v;
+            }
+            pseudoNode.Parent = node;
+            node.Children.Insert(0, pseudoNode);
+        }
+
+        if (hasAfter)
+        {
+            var text = ParseContentValue(node.AfterStyles!["content"]);
+            var pseudoNode = new LayoutNode(null, "#pseudo-after", text!, node.Style);
+            pseudoNode.StyleOverrides["display"] = node.AfterStyles!.GetValueOrDefault("display", "inline");
+            foreach (var (p, v) in node.AfterStyles!)
+            {
+                if (p != "content") pseudoNode.StyleOverrides[p] = v;
+            }
+            pseudoNode.Parent = node;
+            node.Children.Add(pseudoNode);
+        }
+    }
+
+    /// <summary>Parses a CSS content property value, stripping quotes and handling basic values.</summary>
+    private static string? ParseContentValue(string value)
+    {
+        value = value.Trim();
+        if (value is "none" or "normal" or "") return null;
+        // Strip surrounding quotes and decode CSS unicode escapes
+        if ((value.StartsWith('"') && value.EndsWith('"')) ||
+            (value.StartsWith('\'') && value.EndsWith('\'')))
+        {
+            var inner = value[1..^1];
+            return DecodeCssEscapes(inner);
+        }
+        // Handle attr() — not supported yet, return the raw value
+        if (value.StartsWith("attr(")) return null;
+        // Handle counter() — not supported yet
+        if (value.StartsWith("counter(")) return null;
+        // open-quote / close-quote
+        if (value == "open-quote") return "\u201C";
+        if (value == "close-quote") return "\u201D";
+        return value;
+    }
+
+    /// <summary>Decodes CSS unicode escape sequences like \201C into actual characters.</summary>
+    private static string DecodeCssEscapes(string s)
+    {
+        if (!s.Contains('\\')) return s;
+        var sb = new System.Text.StringBuilder(s.Length);
+        for (int i = 0; i < s.Length; i++)
+        {
+            if (s[i] == '\\' && i + 1 < s.Length)
+            {
+                // Collect up to 6 hex digits
+                int start = i + 1;
+                int end = start;
+                while (end < s.Length && end - start < 6 && Uri.IsHexDigit(s[end])) end++;
+                if (end > start)
+                {
+                    var codePoint = Convert.ToInt32(s[start..end], 16);
+                    sb.Append(char.ConvertFromUtf32(codePoint));
+                    i = end - 1;
+                    // Skip optional single trailing space after hex escape
+                    if (i + 1 < s.Length && s[i + 1] == ' ') i++;
+                }
+                else
+                {
+                    // Not a hex escape — literal escaped char
+                    sb.Append(s[i + 1]);
+                    i++;
+                }
+            }
+            else
+            {
+                sb.Append(s[i]);
+            }
+        }
+        return sb.ToString();
     }
 
     /// <summary>Recursively collect scripts from elements that are otherwise skipped (e.g. HEAD).</summary>
@@ -413,7 +575,21 @@ internal static class Parser
         "flex", "flex-flow",
         "min-width", "max-width", "min-height", "max-height", "visibility",
         "border-radius", "box-shadow", "text-shadow",
-        "float", "clear"
+        "float", "clear",
+        // CSS2 text properties
+        "text-transform", "letter-spacing", "word-spacing", "text-indent",
+        // CSS2 border style
+        "border-style", "border-top-style", "border-right-style", "border-bottom-style", "border-left-style",
+        // CSS2 list properties
+        "list-style-type", "list-style-position", "list-style",
+        // CSS2 outline
+        "outline", "outline-width", "outline-style", "outline-color", "outline-offset",
+        // CSS2 vertical-align
+        "vertical-align",
+        // CSS2 background image
+        "background-image", "background-repeat", "background-position", "background-size",
+        // CSS2 table properties
+        "border-collapse", "border-spacing", "table-layout", "caption-side", "empty-cells"
     ];
 
     /// <summary>
@@ -464,6 +640,10 @@ internal static class Parser
             }
 
             if (rule is not ICssStyleRule styleRule) continue;
+
+            // Handle ::before / ::after pseudo-element selectors
+            if (TryExtractPseudoElementRule(element, node, styleRule))
+                continue;
 
             // Handle pseudo-class selectors (:hover, :focus, :active)
             if (TryExtractPseudoClassRule(element, node, styleRule, mediaText))
@@ -604,6 +784,69 @@ internal static class Parser
                     node.StyleOverrides["flex-wrap"] = lower;
             }
         }
+        else if (prop == "border-style")
+        {
+            // Expand shorthand to individual sides
+            var parts = val.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1)
+            {
+                node.StyleOverrides["border-top-style"] = parts[0];
+                node.StyleOverrides["border-right-style"] = parts[0];
+                node.StyleOverrides["border-bottom-style"] = parts[0];
+                node.StyleOverrides["border-left-style"] = parts[0];
+            }
+            else if (parts.Length == 2)
+            {
+                node.StyleOverrides["border-top-style"] = parts[0];
+                node.StyleOverrides["border-bottom-style"] = parts[0];
+                node.StyleOverrides["border-right-style"] = parts[1];
+                node.StyleOverrides["border-left-style"] = parts[1];
+            }
+            else if (parts.Length == 3)
+            {
+                node.StyleOverrides["border-top-style"] = parts[0];
+                node.StyleOverrides["border-right-style"] = parts[1];
+                node.StyleOverrides["border-left-style"] = parts[1];
+                node.StyleOverrides["border-bottom-style"] = parts[2];
+            }
+            else if (parts.Length >= 4)
+            {
+                node.StyleOverrides["border-top-style"] = parts[0];
+                node.StyleOverrides["border-right-style"] = parts[1];
+                node.StyleOverrides["border-bottom-style"] = parts[2];
+                node.StyleOverrides["border-left-style"] = parts[3];
+            }
+        }
+        else if (prop == "outline")
+        {
+            // outline shorthand: [width] [style] [color]
+            var parts = val.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var p in parts)
+            {
+                var lower = p.ToLowerInvariant();
+                if (lower is "solid" or "dotted" or "dashed" or "double" or "groove" or "ridge" or "inset" or "outset" or "none")
+                    node.StyleOverrides["outline-style"] = lower;
+                else if (lower is "thin" or "medium" or "thick" || lower.EndsWith("px"))
+                    node.StyleOverrides["outline-width"] = lower;
+                else
+                    node.StyleOverrides["outline-color"] = lower;
+            }
+        }
+        else if (prop == "list-style")
+        {
+            // list-style shorthand: [type] [position] [image]
+            var parts = val.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var p in parts)
+            {
+                var lower = p.ToLowerInvariant();
+                if (lower is "inside" or "outside")
+                    node.StyleOverrides["list-style-position"] = lower;
+                else if (lower is "none" or "disc" or "circle" or "square" or "decimal"
+                    or "decimal-leading-zero" or "lower-alpha" or "upper-alpha" or "lower-latin"
+                    or "upper-latin" or "lower-roman" or "upper-roman")
+                    node.StyleOverrides["list-style-type"] = lower;
+            }
+        }
         else
         {
             node.StyleOverrides[prop] = val;
@@ -711,6 +954,48 @@ internal static class Parser
     }
 
     /// <summary>
+    /// Detects ::before / ::after pseudo-element selectors, strips them,
+    /// matches the base selector, and stores all properties for later synthetic child creation.
+    /// </summary>
+    private static bool TryExtractPseudoElementRule(IElement element, LayoutNode node, ICssStyleRule rule)
+    {
+        var selector = rule.SelectorText;
+        if (selector is null) return false;
+
+        bool isBefore = selector.Contains("::before") || selector.Contains(":before");
+        bool isAfter = selector.Contains("::after") || selector.Contains(":after");
+        if (!isBefore && !isAfter) return false;
+
+        // Strip pseudo-element to get base selector
+        var baseSelector = selector
+            .Replace("::before", "").Replace(":before", "")
+            .Replace("::after", "").Replace(":after", "")
+            .Trim();
+        if (string.IsNullOrEmpty(baseSelector)) return true;
+
+        try { if (!element.Matches(baseSelector)) return true; }
+        catch { return true; }
+
+        var cssText = rule.Style.CssText;
+        if (string.IsNullOrEmpty(cssText)) return true;
+
+        var props = ParseCssTextToDict(cssText);
+
+        if (isBefore)
+        {
+            node.BeforeStyles ??= new Dictionary<string, string>();
+            foreach (var (p, v) in props) node.BeforeStyles[p] = v;
+        }
+        if (isAfter)
+        {
+            node.AfterStyles ??= new Dictionary<string, string>();
+            foreach (var (p, v) in props) node.AfterStyles[p] = v;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Detects pseudo-class selectors (:hover, :focus, :active), strips them,
     /// matches the base selector, and stores properties in the appropriate dict.
     /// Returns true if the rule was a pseudo-class rule (whether matched or not).
@@ -724,19 +1009,27 @@ internal static class Parser
         if (selector is null)
             return false;
 
-        if (!selector.Contains(":hover") && !selector.Contains(":focus") && !selector.Contains(":active"))
+        // Only intercept dynamic pseudo-classes (not structural ones)
+        if (!selector.Contains(":hover") && !selector.Contains(":focus") && !selector.Contains(":active")
+            && !selector.Contains(":link") && !selector.Contains(":visited"))
             return false;
 
-        // Determine which pseudo-classes are present
-        var hasHover = selector.Contains(":hover");
-        var hasFocus = selector.Contains(":focus");
+        // Skip if this contains structural pseudo-classes (handled by AngleSharp Matches)
+        // but no dynamic ones
+        var hasHover  = selector.Contains(":hover");
+        var hasFocus  = selector.Contains(":focus");
         var hasActive = selector.Contains(":active");
+        var hasLink   = selector.Contains(":link");
+        var hasVisited = selector.Contains(":visited");
+        if (!hasHover && !hasFocus && !hasActive && !hasLink && !hasVisited) return false;
 
         // Strip pseudo-classes to get the base selector
         var baseSelector = selector
             .Replace(":hover", "")
             .Replace(":focus", "")
             .Replace(":active", "")
+            .Replace(":visited", "")
+            .Replace(":link", "")
             .Trim();
         if (string.IsNullOrEmpty(baseSelector)) return true;
 
@@ -774,6 +1067,9 @@ internal static class Parser
             if (hasHover) foreach (var (p, v) in props) node.HoverStyles[p] = v;
             if (hasFocus) foreach (var (p, v) in props) node.FocusStyles[p] = v;
             if (hasActive) foreach (var (p, v) in props) node.ActiveStyles[p] = v;
+            // :link applies immediately to unvisited anchors (we treat all as unvisited)
+            if (hasLink) foreach (var (p, v) in props) node.StyleOverrides.TryAdd(p, v);
+            // :visited is ignored (privacy) — no styles applied
         }
         else
         {

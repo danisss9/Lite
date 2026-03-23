@@ -50,6 +50,10 @@ public class LayoutNode
     public List<TransitionSpec> TransitionSpecs { get; } = [];
     /// <summary>Parsed `animation` declarations for this element.</summary>
     public List<AnimationSpec> AnimationSpecs { get; } = [];
+    /// <summary>Styles for ::before pseudo-element. Null if no ::before rule matched.</summary>
+    public Dictionary<string, string>? BeforeStyles { get; set; }
+    /// <summary>Styles for ::after pseudo-element. Null if no ::after rule matched.</summary>
+    public Dictionary<string, string>? AfterStyles { get; set; }
 
     /// <summary>
     /// Resolves a CSS property considering pseudo-class state and media overrides.

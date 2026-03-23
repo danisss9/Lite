@@ -571,7 +571,19 @@ internal static class BoxEngine
             for (var k = lineStart; k < placed.Count; k++)
             {
                 var (it, rx, _) = placed[k];
-                placed[k] = (it, rx, lineY);
+                var vAlign = it.Node.GetVerticalAlign();
+                float yOffset = vAlign switch
+                {
+                    VerticalAlignType.Top       => 0f,
+                    VerticalAlignType.Bottom     => lineHeight - it.Height,
+                    VerticalAlignType.Middle     => (lineHeight - it.Height) / 2f,
+                    VerticalAlignType.Sub        => lineHeight - it.Height + it.Height * 0.15f,
+                    VerticalAlignType.Super      => -it.Height * 0.15f,
+                    VerticalAlignType.TextTop    => 0f,
+                    VerticalAlignType.TextBottom => lineHeight - it.Height,
+                    _                            => lineHeight - it.Height, // baseline: align bottoms
+                };
+                placed[k] = (it, rx, lineY + yOffset);
             }
             lineY     += lineHeight;
             lineHeight = 0f;
@@ -679,13 +691,19 @@ internal static class BoxEngine
                 var explicitW = node.GetWidth(0);
                 var explicitH = node.GetHeight(viewportHeight);
 
-                var isCheckbox = node.TagName == "INPUT" &&
-                                 node.Attributes.TryGetValue("type", out var iType) &&
-                                 iType.Equals("checkbox", StringComparison.OrdinalIgnoreCase);
+                node.Attributes.TryGetValue("type", out var iType);
+                var inputType = iType?.ToLowerInvariant() ?? "text";
+                var isCheckbox = node.TagName == "INPUT" && inputType == "checkbox";
+                var isRadio    = node.TagName == "INPUT" && inputType == "radio";
+                var isRange    = node.TagName == "INPUT" && inputType == "range";
                 float defaultW, defaultH;
-                if (isCheckbox)                    { defaultW = FormLayout.CheckboxSize;   defaultH = FormLayout.CheckboxSize; }
-                else if (node.TagName == "BUTTON") { defaultW = 0f;                        defaultH = FormLayout.TextInputHeight; }
-                else                               { defaultW = FormLayout.TextInputWidth; defaultH = FormLayout.TextInputHeight; }
+                if (isCheckbox)                      { defaultW = FormLayout.CheckboxSize;   defaultH = FormLayout.CheckboxSize; }
+                else if (isRadio)                    { defaultW = FormLayout.RadioSize;       defaultH = FormLayout.RadioSize; }
+                else if (isRange)                    { defaultW = FormLayout.RangeWidth;      defaultH = FormLayout.RangeHeight; }
+                else if (node.TagName == "BUTTON")   { defaultW = 0f;                        defaultH = FormLayout.TextInputHeight; }
+                else if (node.TagName == "TEXTAREA") { defaultW = FormLayout.TextareaWidth;  defaultH = FormLayout.TextareaHeight; }
+                else if (node.TagName == "SELECT")   { defaultW = FormLayout.SelectWidth;    defaultH = FormLayout.SelectHeight; }
+                else                                 { defaultW = FormLayout.TextInputWidth; defaultH = FormLayout.TextInputHeight; }
 
                 var w = explicitW > 0 ? explicitW : defaultW;
                 var h = explicitH > 0 ? explicitH : defaultH;

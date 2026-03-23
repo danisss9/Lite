@@ -822,6 +822,11 @@ internal static class FlexEngine
         private static float MeasureIntrinsicMain(LayoutNode node, bool isRow,
             float containerW, float viewportWidth, float viewportHeight)
         {
+            // Form elements have intrinsic sizes
+            var (formW, formH) = GetFormIntrinsicSize(node);
+            if (formW > 0 || formH > 0)
+                return isRow ? formW : formH;
+
             if (!string.IsNullOrEmpty(node.DisplayText) && !node.Children.Any())
             {
                 using var font = TextMeasure.CreateFont(node);
@@ -840,6 +845,11 @@ internal static class FlexEngine
         private static float MeasureIntrinsicCross(LayoutNode node, bool isRow,
             float contentMain, float viewportWidth, float viewportHeight)
         {
+            // Form elements have intrinsic sizes
+            var (formW, formH) = GetFormIntrinsicSize(node);
+            if (formW > 0 || formH > 0)
+                return isRow ? formH : formW;
+
             if (!string.IsNullOrEmpty(node.DisplayText) && !node.Children.Any())
             {
                 using var font = TextMeasure.CreateFont(node);
@@ -885,6 +895,26 @@ internal static class FlexEngine
                 return f.Size * 1.4f;
             }
             return 0f;
+        }
+
+        /// <summary>Returns intrinsic (width, height) for form elements, or (0,0) if not a form element.</summary>
+        private static (float w, float h) GetFormIntrinsicSize(LayoutNode node)
+        {
+            if (node.TagName == "INPUT")
+            {
+                node.Attributes.TryGetValue("type", out var iType);
+                var inputType = iType?.ToLowerInvariant() ?? "text";
+                return inputType switch
+                {
+                    "checkbox" => (FormLayout.CheckboxSize, FormLayout.CheckboxSize),
+                    "radio"    => (FormLayout.RadioSize, FormLayout.RadioSize),
+                    "range"    => (FormLayout.RangeWidth, FormLayout.RangeHeight),
+                    _          => (FormLayout.TextInputWidth, FormLayout.TextInputHeight),
+                };
+            }
+            if (node.TagName == "TEXTAREA") return (FormLayout.TextareaWidth, FormLayout.TextareaHeight);
+            if (node.TagName == "SELECT") return (FormLayout.SelectWidth, FormLayout.SelectHeight);
+            return (0f, 0f);
         }
     }
 
