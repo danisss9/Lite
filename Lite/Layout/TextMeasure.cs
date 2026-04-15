@@ -10,16 +10,48 @@ internal static class TextMeasure
 {
     public static SKFont CreateFont(LayoutNode node)
     {
-        var size     = Math.Max(1f, node.GetFontSize());
-        var family   = node.GetFontFamily();
-        var bold     = node.GetFontBold();
-        var italic   = node.GetFontItalic();
-        var slant    = italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
-        var typeface = SKTypeface.FromFamilyName(family,
-                           bold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
-                           SKFontStyleWidth.Normal, slant)
+        var size = Math.Max(1f, node.GetFontSize());
+        var family = node.GetFontFamily();
+        var bold = node.GetFontBold();
+        var italic = node.GetFontItalic();
+        var slant = italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
+        var weight = bold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
+        var typeface = SKTypeface.FromFamilyName(family, weight, SKFontStyleWidth.Normal, slant)
                        ?? SKTypeface.Default;
+
+        // If the node has short text (pseudo-element content), check for missing glyphs
+        // and fall back to a typeface with broader Unicode coverage.
+        var text = node.DisplayText;
+        if (!string.IsNullOrEmpty(text) && text.Length <= 20 && !ContainsAllGlyphs(typeface, text))
+        {
+            foreach (var fallback in _symbolFallbacks)
+            {
+                var fb = SKTypeface.FromFamilyName(fallback, weight, SKFontStyleWidth.Normal, slant);
+                if (fb != null && ContainsAllGlyphs(fb, text))
+                {
+                    typeface = fb;
+                    break;
+                }
+                fb?.Dispose();
+            }
+        }
+
         return new SKFont(typeface, size);
+    }
+
+    private static readonly string[] _symbolFallbacks =
+        ["Segoe UI Symbol", "Segoe UI Emoji", "Arial Unicode MS", "Lucida Sans Unicode"];
+
+    private static bool ContainsAllGlyphs(SKTypeface typeface, string text)
+    {
+        foreach (var c in text)
+        {
+            if (c == ' ') continue;
+            if (typeface.GetGlyphs(c.ToString()) is ushort[] glyphs
+                && glyphs.Length > 0 && glyphs[0] == 0)
+                return false;
+        }
+        return true;
     }
 
     /// <summary>
@@ -30,11 +62,11 @@ internal static class TextMeasure
     {
         return whiteSpace switch
         {
-            WhiteSpace.Pre     => SplitPreserved(text, font, wrap: false),
+            WhiteSpace.Pre => SplitPreserved(text, font, wrap: false),
             WhiteSpace.PreWrap => SplitPreserved(text, font, wrap: true, maxWidth),
             WhiteSpace.PreLine => SplitPreLine(text, maxWidth, font),
-            WhiteSpace.NoWrap  => WrapCollapsed(text, float.MaxValue, font),
-            _                  => WrapCollapsed(text, maxWidth, font),
+            WhiteSpace.NoWrap => WrapCollapsed(text, float.MaxValue, font),
+            _ => WrapCollapsed(text, maxWidth, font),
         };
     }
 
@@ -54,9 +86,9 @@ internal static class TextMeasure
     /// <summary>Collapse whitespace and word-wrap at maxWidth (normal / nowrap).</summary>
     private static List<TextLine> WrapCollapsed(string text, float maxWidth, SKFont font)
     {
-        var lines      = new List<TextLine>();
+        var lines = new List<TextLine>();
         var lineHeight = font.Size * 1.4f;
-        var ascent     = -font.Metrics.Ascent;
+        var ascent = -font.Metrics.Ascent;
 
         // Fast path: text already fits — return it verbatim so that leading/trailing
         // spaces (significant in inline runs like " and ") are preserved.
@@ -67,7 +99,7 @@ internal static class TextMeasure
         }
 
         var words = text.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var sb    = new System.Text.StringBuilder();
+        var sb = new System.Text.StringBuilder();
 
         foreach (var word in words)
         {
@@ -98,9 +130,9 @@ internal static class TextMeasure
     /// <summary>Preserve whitespace and newlines; optionally wrap long lines (pre / pre-wrap).</summary>
     private static List<TextLine> SplitPreserved(string text, SKFont font, bool wrap, float maxWidth = float.MaxValue)
     {
-        var lines      = new List<TextLine>();
+        var lines = new List<TextLine>();
         var lineHeight = font.Size * 1.4f;
-        var ascent     = -font.Metrics.Ascent;
+        var ascent = -font.Metrics.Ascent;
 
         var rawLines = text.Split('\n');
         foreach (var raw in rawLines)

@@ -405,6 +405,7 @@ internal static class Parser
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
             var textChild = new LayoutNode(null, "#text", node.DisplayText, node.Style);
+            textChild.StyleOverrides["display"] = "inline";
             textChild.Parent = node;
             node.Children.Add(textChild);
             node.TextOverride = "";
@@ -1016,10 +1017,10 @@ internal static class Parser
 
         // Skip if this contains structural pseudo-classes (handled by AngleSharp Matches)
         // but no dynamic ones
-        var hasHover  = selector.Contains(":hover");
-        var hasFocus  = selector.Contains(":focus");
+        var hasHover = selector.Contains(":hover");
+        var hasFocus = selector.Contains(":focus");
         var hasActive = selector.Contains(":active");
-        var hasLink   = selector.Contains(":link");
+        var hasLink = selector.Contains(":link");
         var hasVisited = selector.Contains(":visited");
         if (!hasHover && !hasFocus && !hasActive && !hasLink && !hasVisited) return false;
 

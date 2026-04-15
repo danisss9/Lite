@@ -14,23 +14,23 @@ public record struct BoxShadow(float OffsetX, float OffsetY, float Blur, float S
 /// <summary>A text-shadow declaration.</summary>
 public record struct TextShadow(float OffsetX, float OffsetY, float Blur, SKColor Color);
 
-public enum DisplayType     { Block, Inline, InlineBlock, ListItem, Flex, InlineFlex, Table, TableRow, TableCell, None }
-public enum TextAlign       { Left, Center, Right, Justify }
-public enum WhiteSpace      { Normal, NoWrap, Pre, PreWrap, PreLine }
-public enum PositionType    { Static, Relative, Absolute, Fixed }
-public enum OverflowType    { Visible, Hidden, Scroll, Auto }
-public enum FlexDirection   { Row, RowReverse, Column, ColumnReverse }
-public enum FlexWrap        { NoWrap, Wrap, WrapReverse }
-public enum JustifyContent  { FlexStart, FlexEnd, Center, SpaceBetween, SpaceAround, SpaceEvenly }
-public enum AlignItems      { Stretch, FlexStart, FlexEnd, Center, Baseline }
-public enum AlignSelf       { Auto, Stretch, FlexStart, FlexEnd, Center, Baseline }
-public enum AlignContent    { Stretch, FlexStart, FlexEnd, Center, SpaceBetween, SpaceAround }
-public enum Visibility      { Visible, Hidden, Collapse }
-public enum FloatType       { None, Left, Right }
-public enum ClearType       { None, Left, Right, Both }
-public enum TextTransform   { None, Uppercase, Lowercase, Capitalize }
-public enum BorderStyle     { None, Solid, Dotted, Dashed, Double, Groove, Ridge, Inset, Outset, Hidden }
-public enum ListStyleType   { Disc, Circle, Square, Decimal, DecimalLeadingZero, LowerAlpha, UpperAlpha, LowerRoman, UpperRoman, None }
+public enum DisplayType { Block, Inline, InlineBlock, ListItem, Flex, InlineFlex, Table, TableRow, TableCell, None }
+public enum TextAlign { Left, Center, Right, Justify }
+public enum WhiteSpace { Normal, NoWrap, Pre, PreWrap, PreLine }
+public enum PositionType { Static, Relative, Absolute, Fixed }
+public enum OverflowType { Visible, Hidden, Scroll, Auto }
+public enum FlexDirection { Row, RowReverse, Column, ColumnReverse }
+public enum FlexWrap { NoWrap, Wrap, WrapReverse }
+public enum JustifyContent { FlexStart, FlexEnd, Center, SpaceBetween, SpaceAround, SpaceEvenly }
+public enum AlignItems { Stretch, FlexStart, FlexEnd, Center, Baseline }
+public enum AlignSelf { Auto, Stretch, FlexStart, FlexEnd, Center, Baseline }
+public enum AlignContent { Stretch, FlexStart, FlexEnd, Center, SpaceBetween, SpaceAround }
+public enum Visibility { Visible, Hidden, Collapse }
+public enum FloatType { None, Left, Right }
+public enum ClearType { None, Left, Right, Both }
+public enum TextTransform { None, Uppercase, Lowercase, Capitalize }
+public enum BorderStyle { None, Solid, Dotted, Dashed, Double, Groove, Ridge, Inset, Outset, Hidden }
+public enum ListStyleType { Disc, Circle, Square, Decimal, DecimalLeadingZero, LowerAlpha, UpperAlpha, LowerRoman, UpperRoman, None }
 public enum ListStylePosition { Outside, Inside }
 public enum VerticalAlignType { Baseline, Top, Middle, Bottom, TextTop, TextBottom, Sub, Super }
 
@@ -43,16 +43,16 @@ public static class StyleExtensions
             : node.Style.GetPropertyValue(PropertyNames.Display);
         return raw switch
         {
-            "block"        => DisplayType.Block,
+            "block" => DisplayType.Block,
             "inline-block" => DisplayType.InlineBlock,
-            "list-item"    => DisplayType.ListItem,
-            "flex"         => DisplayType.Flex,
-            "inline-flex"  => DisplayType.InlineFlex,
-            "table"        => DisplayType.Table,
-            "table-row"    => DisplayType.TableRow,
-            "table-cell"   => DisplayType.TableCell,
-            "none"         => DisplayType.None,
-            _              => DisplayType.Inline,
+            "list-item" => DisplayType.ListItem,
+            "flex" => DisplayType.Flex,
+            "inline-flex" => DisplayType.InlineFlex,
+            "table" => DisplayType.Table,
+            "table-row" => DisplayType.TableRow,
+            "table-cell" => DisplayType.TableCell,
+            "none" => DisplayType.None,
+            _ => DisplayType.Inline,
         };
     }
 
@@ -62,10 +62,10 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValue(PropertyNames.FlexDirection);
         return raw switch
         {
-            "row-reverse"    => FlexDirection.RowReverse,
-            "column"         => FlexDirection.Column,
+            "row-reverse" => FlexDirection.RowReverse,
+            "column" => FlexDirection.Column,
             "column-reverse" => FlexDirection.ColumnReverse,
-            _                => FlexDirection.Row,
+            _ => FlexDirection.Row,
         };
     }
 
@@ -75,9 +75,9 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValue(PropertyNames.FlexWrap);
         return raw switch
         {
-            "wrap"         => FlexWrap.Wrap,
+            "wrap" => FlexWrap.Wrap,
             "wrap-reverse" => FlexWrap.WrapReverse,
-            _              => FlexWrap.NoWrap,
+            _ => FlexWrap.NoWrap,
         };
     }
 
@@ -87,12 +87,12 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValue(PropertyNames.JustifyContent);
         return raw switch
         {
-            "flex-end"      => JustifyContent.FlexEnd,
-            "center"        => JustifyContent.Center,
+            "flex-end" => JustifyContent.FlexEnd,
+            "center" => JustifyContent.Center,
             "space-between" => JustifyContent.SpaceBetween,
-            "space-around"  => JustifyContent.SpaceAround,
-            "space-evenly"  => JustifyContent.SpaceEvenly,
-            _               => JustifyContent.FlexStart,
+            "space-around" => JustifyContent.SpaceAround,
+            "space-evenly" => JustifyContent.SpaceEvenly,
+            _ => JustifyContent.FlexStart,
         };
     }
 
@@ -103,10 +103,10 @@ public static class StyleExtensions
         return raw switch
         {
             "flex-start" => AlignItems.FlexStart,
-            "flex-end"   => AlignItems.FlexEnd,
-            "center"     => AlignItems.Center,
-            "baseline"   => AlignItems.Baseline,
-            _            => AlignItems.Stretch,
+            "flex-end" => AlignItems.FlexEnd,
+            "center" => AlignItems.Center,
+            "baseline" => AlignItems.Baseline,
+            _ => AlignItems.Stretch,
         };
     }
 
@@ -117,11 +117,11 @@ public static class StyleExtensions
         return raw switch
         {
             "flex-start" => AlignSelf.FlexStart,
-            "flex-end"   => AlignSelf.FlexEnd,
-            "center"     => AlignSelf.Center,
-            "baseline"   => AlignSelf.Baseline,
-            "stretch"    => AlignSelf.Stretch,
-            _            => AlignSelf.Auto,
+            "flex-end" => AlignSelf.FlexEnd,
+            "center" => AlignSelf.Center,
+            "baseline" => AlignSelf.Baseline,
+            "stretch" => AlignSelf.Stretch,
+            _ => AlignSelf.Auto,
         };
     }
 
@@ -131,12 +131,12 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValue("align-content");
         return raw switch
         {
-            "flex-start"    => AlignContent.FlexStart,
-            "flex-end"      => AlignContent.FlexEnd,
-            "center"        => AlignContent.Center,
+            "flex-start" => AlignContent.FlexStart,
+            "flex-end" => AlignContent.FlexEnd,
+            "center" => AlignContent.Center,
             "space-between" => AlignContent.SpaceBetween,
-            "space-around"  => AlignContent.SpaceAround,
-            _               => AlignContent.Stretch,
+            "space-around" => AlignContent.SpaceAround,
+            _ => AlignContent.Stretch,
         };
     }
 
@@ -153,9 +153,9 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValue(PropertyNames.Visibility);
         return raw switch
         {
-            "hidden"   => Visibility.Hidden,
+            "hidden" => Visibility.Hidden,
             "collapse" => Visibility.Collapse,
-            _          => Visibility.Visible,
+            _ => Visibility.Visible,
         };
     }
 
@@ -268,10 +268,10 @@ public static class StyleExtensions
             {
                 return l.Type switch
                 {
-                    Length.Unit.Px      => (float)l.Value,
-                    Length.Unit.Em      => (float)l.Value * fontSize,
+                    Length.Unit.Px => (float)l.Value,
+                    Length.Unit.Em => (float)l.Value * fontSize,
                     Length.Unit.Percent => (float)l.Value / 100f * total,
-                    _                   => 0f,
+                    _ => 0f,
                 };
             }
         }
@@ -310,10 +310,10 @@ public static class StyleExtensions
             : node.Style.GetPropertyValue(PropertyNames.TextAlign);
         return raw switch
         {
-            "center"  => TextAlign.Center,
-            "right"   => TextAlign.Right,
+            "center" => TextAlign.Center,
+            "right" => TextAlign.Right,
             "justify" => TextAlign.Justify,
-            _         => TextAlign.Left,
+            _ => TextAlign.Left,
         };
     }
 
@@ -339,10 +339,10 @@ public static class StyleExtensions
         {
             return lh2.Type switch
             {
-                Length.Unit.Px      => (float)lh2.Value,
-                Length.Unit.Em      => (float)lh2.Value * fontSize,
+                Length.Unit.Px => (float)lh2.Value,
+                Length.Unit.Em => (float)lh2.Value * fontSize,
                 Length.Unit.Percent => (float)lh2.Value / 100f * fontSize,
-                _                   => fontSize * 1.4f,
+                _ => fontSize * 1.4f,
             };
         }
 
@@ -363,11 +363,11 @@ public static class StyleExtensions
             : node.Style.GetPropertyValue(PropertyNames.WhiteSpace);
         return raw switch
         {
-            "nowrap"   => WhiteSpace.NoWrap,
-            "pre"      => WhiteSpace.Pre,
+            "nowrap" => WhiteSpace.NoWrap,
+            "pre" => WhiteSpace.Pre,
             "pre-wrap" => WhiteSpace.PreWrap,
             "pre-line" => WhiteSpace.PreLine,
-            _          => WhiteSpace.Normal,
+            _ => WhiteSpace.Normal,
         };
     }
 
@@ -379,8 +379,8 @@ public static class StyleExtensions
         {
             "relative" => PositionType.Relative,
             "absolute" => PositionType.Absolute,
-            "fixed"    => PositionType.Fixed,
-            _          => PositionType.Static,
+            "fixed" => PositionType.Fixed,
+            _ => PositionType.Static,
         };
     }
 
@@ -395,8 +395,8 @@ public static class StyleExtensions
         {
             "hidden" => OverflowType.Hidden,
             "scroll" => OverflowType.Scroll,
-            "auto"   => OverflowType.Auto,
-            _        => OverflowType.Visible,
+            "auto" => OverflowType.Auto,
+            _ => OverflowType.Visible,
         };
     }
 
@@ -451,9 +451,9 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValue("float");
         return raw switch
         {
-            "left"  => FloatType.Left,
+            "left" => FloatType.Left,
             "right" => FloatType.Right,
-            _       => FloatType.None,
+            _ => FloatType.None,
         };
     }
 
@@ -463,10 +463,10 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValue("clear");
         return raw switch
         {
-            "left"  => ClearType.Left,
+            "left" => ClearType.Left,
             "right" => ClearType.Right,
-            "both"  => ClearType.Both,
-            _       => ClearType.None,
+            "both" => ClearType.Both,
+            _ => ClearType.None,
         };
     }
 
@@ -476,10 +476,10 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValue("text-transform");
         return raw switch
         {
-            "uppercase"  => TextTransform.Uppercase,
-            "lowercase"  => TextTransform.Lowercase,
+            "uppercase" => TextTransform.Uppercase,
+            "lowercase" => TextTransform.Lowercase,
             "capitalize" => TextTransform.Capitalize,
-            _            => TextTransform.None,
+            _ => TextTransform.None,
         };
     }
 
@@ -529,13 +529,13 @@ public static class StyleExtensions
             "dashed" => BorderStyle.Dashed,
             "double" => BorderStyle.Double,
             "groove" => BorderStyle.Groove,
-            "ridge"  => BorderStyle.Ridge,
-            "inset"  => BorderStyle.Inset,
+            "ridge" => BorderStyle.Ridge,
+            "inset" => BorderStyle.Inset,
             "outset" => BorderStyle.Outset,
             "hidden" => BorderStyle.Hidden,
-            "none"   => BorderStyle.None,
-            "solid"  => BorderStyle.Solid,
-            _        => BorderStyle.Solid,
+            "none" => BorderStyle.None,
+            "solid" => BorderStyle.Solid,
+            _ => BorderStyle.Solid,
         };
     }
 
@@ -551,16 +551,16 @@ public static class StyleExtensions
         }
         return raw?.Trim() switch
         {
-            "circle"               => ListStyleType.Circle,
-            "square"               => ListStyleType.Square,
-            "decimal"              => ListStyleType.Decimal,
+            "circle" => ListStyleType.Circle,
+            "square" => ListStyleType.Square,
+            "decimal" => ListStyleType.Decimal,
             "decimal-leading-zero" => ListStyleType.DecimalLeadingZero,
             "lower-alpha" or "lower-latin" => ListStyleType.LowerAlpha,
             "upper-alpha" or "upper-latin" => ListStyleType.UpperAlpha,
-            "lower-roman"          => ListStyleType.LowerRoman,
-            "upper-roman"          => ListStyleType.UpperRoman,
-            "none"                 => ListStyleType.None,
-            _                      => ListStyleType.Disc,
+            "lower-roman" => ListStyleType.LowerRoman,
+            "upper-roman" => ListStyleType.UpperRoman,
+            "none" => ListStyleType.None,
+            _ => ListStyleType.Disc,
         };
     }
 
@@ -576,7 +576,7 @@ public static class StyleExtensions
         return raw?.Trim() switch
         {
             "inside" => ListStylePosition.Inside,
-            _        => ListStylePosition.Outside,
+            _ => ListStylePosition.Outside,
         };
     }
 
@@ -586,14 +586,14 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValue("vertical-align");
         return raw?.Trim() switch
         {
-            "top"         => VerticalAlignType.Top,
-            "middle"      => VerticalAlignType.Middle,
-            "bottom"      => VerticalAlignType.Bottom,
-            "text-top"    => VerticalAlignType.TextTop,
+            "top" => VerticalAlignType.Top,
+            "middle" => VerticalAlignType.Middle,
+            "bottom" => VerticalAlignType.Bottom,
+            "text-top" => VerticalAlignType.TextTop,
             "text-bottom" => VerticalAlignType.TextBottom,
-            "sub"         => VerticalAlignType.Sub,
-            "super"       => VerticalAlignType.Super,
-            _             => VerticalAlignType.Baseline,
+            "sub" => VerticalAlignType.Sub,
+            "super" => VerticalAlignType.Super,
+            _ => VerticalAlignType.Baseline,
         };
     }
 
@@ -607,9 +607,9 @@ public static class StyleExtensions
         raw = raw.Trim();
         return raw switch
         {
-            "thin"   => 1f,
+            "thin" => 1f,
             "medium" => 3f,
-            "thick"  => 5f,
+            "thick" => 5f,
             _ => raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px) ? px : 0f,
         };
     }
@@ -627,11 +627,11 @@ public static class StyleExtensions
             "dashed" => BorderStyle.Dashed,
             "double" => BorderStyle.Double,
             "groove" => BorderStyle.Groove,
-            "ridge"  => BorderStyle.Ridge,
-            "inset"  => BorderStyle.Inset,
+            "ridge" => BorderStyle.Ridge,
+            "inset" => BorderStyle.Inset,
             "outset" => BorderStyle.Outset,
-            "solid"  => BorderStyle.Solid,
-            _        => BorderStyle.None,
+            "solid" => BorderStyle.Solid,
+            _ => BorderStyle.None,
         };
     }
 
@@ -751,12 +751,12 @@ public static class StyleExtensions
     /// <summary>Splits comma-separated shadow layers, keeping commas inside functional notation intact.</summary>
     private static IEnumerable<string> SplitShadowLayers(string value)
     {
-        var sb  = new System.Text.StringBuilder();
+        var sb = new System.Text.StringBuilder();
         int depth = 0;
         foreach (var c in value)
         {
-            if      (c == '(') { depth++;  sb.Append(c); }
-            else if (c == ')') { depth--;  sb.Append(c); }
+            if (c == '(') { depth++; sb.Append(c); }
+            else if (c == ')') { depth--; sb.Append(c); }
             else if (c == ',' && depth == 0)
             {
                 var layer = sb.ToString().Trim();
@@ -772,7 +772,7 @@ public static class StyleExtensions
     /// <summary>Tokenises one shadow layer (spaces as delimiters, functional notation kept intact).</summary>
     private static IEnumerable<string> ShadowTokens(string layer)
     {
-        var sb    = new System.Text.StringBuilder();
+        var sb = new System.Text.StringBuilder();
         int depth = 0;
         foreach (var c in layer)
         {
@@ -801,8 +801,8 @@ public static class StyleExtensions
     private static bool TryParseShadowLayer(string layer, out BoxShadow shadow)
     {
         shadow = default;
-        var tokens  = ShadowTokens(layer).ToList();
-        bool inset  = tokens.Remove("inset");
+        var tokens = ShadowTokens(layer).ToList();
+        bool inset = tokens.Remove("inset");
         var lengths = new List<float>();
         SKColor color = new SKColor(0, 0, 0, 102); // default: rgba(0,0,0,0.4)
         bool hasColor = false;
@@ -820,19 +820,19 @@ public static class StyleExtensions
         shadow = new BoxShadow(
             OffsetX: lengths[0],
             OffsetY: lengths[1],
-            Blur:    lengths.Count > 2 ? lengths[2] : 0f,
-            Spread:  lengths.Count > 3 ? lengths[3] : 0f,
-            Color:   color,
-            Inset:   inset);
+            Blur: lengths.Count > 2 ? lengths[2] : 0f,
+            Spread: lengths.Count > 3 ? lengths[3] : 0f,
+            Color: color,
+            Inset: inset);
         return true;
     }
 
     /// <summary>Returns the value of a position offset property (top/right/bottom/left).
     /// Returns float.NaN when the property is 'auto' or unset.</summary>
-    public static float GetOffsetTop(this LayoutNode node, float total = 0, float size = 0)    => GetOffset(node, PropertyNames.Top,    total, size);
-    public static float GetOffsetRight(this LayoutNode node, float total = 0, float size = 0)  => GetOffset(node, PropertyNames.Right,  total, size);
+    public static float GetOffsetTop(this LayoutNode node, float total = 0, float size = 0) => GetOffset(node, PropertyNames.Top, total, size);
+    public static float GetOffsetRight(this LayoutNode node, float total = 0, float size = 0) => GetOffset(node, PropertyNames.Right, total, size);
     public static float GetOffsetBottom(this LayoutNode node, float total = 0, float size = 0) => GetOffset(node, PropertyNames.Bottom, total, size);
-    public static float GetOffsetLeft(this LayoutNode node, float total = 0, float size = 0)   => GetOffset(node, PropertyNames.Left,   total, size);
+    public static float GetOffsetLeft(this LayoutNode node, float total = 0, float size = 0) => GetOffset(node, PropertyNames.Left, total, size);
 
     private static float GetOffset(LayoutNode node, string prop, float total, float size)
     {
@@ -852,10 +852,10 @@ public static class StyleExtensions
         if (node.Style.GetProperty(prop).RawValue is Length l)
             return l.Type switch
             {
-                Length.Unit.Px      => (float)l.Value,
-                Length.Unit.Em      => (float)l.Value * size,
+                Length.Unit.Px => (float)l.Value,
+                Length.Unit.Em => (float)l.Value * size,
                 Length.Unit.Percent => (float)l.Value / 100f * total,
-                _                   => float.NaN,
+                _ => float.NaN,
             };
         return float.NaN;
     }
@@ -881,34 +881,34 @@ public static class StyleExtensions
 
     public static EdgeSizes GetMargin(this LayoutNode node, float totalWidth = 0, float totalHeight = 0, float fontSize = 16) => new()
     {
-        Top    = GetSize(node, PropertyNames.MarginTop,    totalHeight, fontSize),
-        Right  = GetSize(node, PropertyNames.MarginRight,  totalWidth,  fontSize),
+        Top = GetSize(node, PropertyNames.MarginTop, totalHeight, fontSize),
+        Right = GetSize(node, PropertyNames.MarginRight, totalWidth, fontSize),
         Bottom = GetSize(node, PropertyNames.MarginBottom, totalHeight, fontSize),
-        Left   = GetSize(node, PropertyNames.MarginLeft,   totalWidth,  fontSize),
+        Left = GetSize(node, PropertyNames.MarginLeft, totalWidth, fontSize),
     };
 
     // Padding
     public static EdgeSizes GetPadding(this LayoutNode node, float totalWidth = 0, float totalHeight = 0, float fontSize = 16) => new()
     {
-        Top    = GetSize(node, PropertyNames.PaddingTop,    totalHeight, fontSize),
-        Right  = GetSize(node, PropertyNames.PaddingRight,  totalWidth,  fontSize),
+        Top = GetSize(node, PropertyNames.PaddingTop, totalHeight, fontSize),
+        Right = GetSize(node, PropertyNames.PaddingRight, totalWidth, fontSize),
         Bottom = GetSize(node, PropertyNames.PaddingBottom, totalHeight, fontSize),
-        Left   = GetSize(node, PropertyNames.PaddingLeft,   totalWidth,  fontSize),
+        Left = GetSize(node, PropertyNames.PaddingLeft, totalWidth, fontSize),
     };
 
     // Border widths
     public static EdgeSizes GetBorderWidth(this LayoutNode node) => new()
     {
-        Top    = GetBorderSideWidth(node, PropertyNames.BorderTopWidth),
-        Right  = GetBorderSideWidth(node, PropertyNames.BorderRightWidth),
+        Top = GetBorderSideWidth(node, PropertyNames.BorderTopWidth),
+        Right = GetBorderSideWidth(node, PropertyNames.BorderRightWidth),
         Bottom = GetBorderSideWidth(node, PropertyNames.BorderBottomWidth),
-        Left   = GetBorderSideWidth(node, PropertyNames.BorderLeftWidth),
+        Left = GetBorderSideWidth(node, PropertyNames.BorderLeftWidth),
     };
 
-    public static SKColor GetBorderTopColor(this LayoutNode node)    => GetColor(node, PropertyNames.BorderTopColor,    SKColors.Black);
-    public static SKColor GetBorderRightColor(this LayoutNode node)   => GetColor(node, PropertyNames.BorderRightColor,  SKColors.Black);
-    public static SKColor GetBorderBottomColor(this LayoutNode node)  => GetColor(node, PropertyNames.BorderBottomColor, SKColors.Black);
-    public static SKColor GetBorderLeftColor(this LayoutNode node)    => GetColor(node, PropertyNames.BorderLeftColor,   SKColors.Black);
+    public static SKColor GetBorderTopColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderTopColor, SKColors.Black);
+    public static SKColor GetBorderRightColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderRightColor, SKColors.Black);
+    public static SKColor GetBorderBottomColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderBottomColor, SKColors.Black);
+    public static SKColor GetBorderLeftColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderLeftColor, SKColors.Black);
 
     public static bool IsUnderline(this LayoutNode node)
     {
@@ -927,21 +927,23 @@ public static class StyleExtensions
         return raw switch
         {
             "pointer" => CursorType.Pointer,
-            "text"    => CursorType.Text,
-            _         => CursorType.Default,
+            "text" => CursorType.Text,
+            _ => CursorType.Default,
         };
     }
 
     public static string GetFontFamily(this LayoutNode node)
     {
-        var value = node.Style.GetPropertyValue(PropertyNames.FontFamily);
+        var value = node.TryResolveStyle(PropertyNames.FontFamily, out var ov)
+            ? ov
+            : node.Style.GetPropertyValue(PropertyNames.FontFamily);
         if (string.IsNullOrEmpty(value)) return "Arial";
         var first = value.Split(',')[0].Trim().Trim('"', '\'');
         return first switch
         {
             "system-ui" or "ui-sans-serif" or "-apple-system" or "BlinkMacSystemFont" => "Segoe UI",
-            "monospace" or "ui-monospace" or "Courier" or "Courier New"               => "Consolas",
-            _                                                                          => first,
+            "monospace" or "ui-monospace" or "Courier" or "Courier New" => "Consolas",
+            _ => first,
         };
     }
 
@@ -1044,11 +1046,11 @@ public static class StyleExtensions
 
         return length.Type switch
         {
-            Length.Unit.Px      => (float)length.Value,
-            Length.Unit.Em      => (float)length.Value * size,
+            Length.Unit.Px => (float)length.Value,
+            Length.Unit.Em => (float)length.Value * size,
             Length.Unit.Percent => (float)length.Value / 100f * total,
-            Length.Unit.Vw      => (float)length.Value / 100f * vp,
-            Length.Unit.Vh      => (float)length.Value / 100f * vp,
+            Length.Unit.Vw => (float)length.Value / 100f * vp,
+            Length.Unit.Vh => (float)length.Value / 100f * vp,
             _ => defaultValue,
         };
     }
@@ -1093,10 +1095,10 @@ public static class StyleExtensions
 
         return length.Type switch
         {
-            Length.Unit.Em      => (float)length.Value * size,
-            Length.Unit.Px      => (float)length.Value,
-            Length.Unit.Vw      => (float)length.Value / 100f * vp,
-            Length.Unit.Vh      => (float)length.Value / 100f * vp,
+            Length.Unit.Em => (float)length.Value * size,
+            Length.Unit.Px => (float)length.Value,
+            Length.Unit.Vw => (float)length.Value / 100f * vp,
+            Length.Unit.Vh => (float)length.Value / 100f * vp,
             Length.Unit.Percent => (float)length.Value / 100f * total,
             _ => size
         };
@@ -1133,7 +1135,7 @@ public static class StyleExtensions
         try
         {
             var tokens = CalcTokenize(inner);
-            int pos    = 0;
+            int pos = 0;
             result = CalcSum(tokens, ref pos, total, em, vp);
             return float.IsFinite(result);
         }
@@ -1147,7 +1149,7 @@ public static class StyleExtensions
         int depth = 0;
         for (int i = start; i < raw.Length; i++)
         {
-            if      (raw[i] == '(') depth++;
+            if (raw[i] == '(') depth++;
             else if (raw[i] == ')') { depth--; if (depth == 0) return raw[(start + 1)..i].Trim(); }
         }
         return null;
@@ -1167,10 +1169,10 @@ public static class StyleExtensions
             if (char.IsWhiteSpace(expr[i])) { i++; continue; }
             switch (expr[i])
             {
-                case '+': tokens.Add(new CalcToken(CalcTokType.Plus));   i++; break;
-                case '-': tokens.Add(new CalcToken(CalcTokType.Minus));  i++; break;
-                case '*': tokens.Add(new CalcToken(CalcTokType.Star));   i++; break;
-                case '/': tokens.Add(new CalcToken(CalcTokType.Slash));  i++; break;
+                case '+': tokens.Add(new CalcToken(CalcTokType.Plus)); i++; break;
+                case '-': tokens.Add(new CalcToken(CalcTokType.Minus)); i++; break;
+                case '*': tokens.Add(new CalcToken(CalcTokType.Star)); i++; break;
+                case '/': tokens.Add(new CalcToken(CalcTokType.Slash)); i++; break;
                 case '(': tokens.Add(new CalcToken(CalcTokType.LParen)); i++; break;
                 case ')': tokens.Add(new CalcToken(CalcTokType.RParen)); i++; break;
                 default:
@@ -1198,7 +1200,7 @@ public static class StyleExtensions
         while (p < t.Count && t[p].Type is CalcTokType.Plus or CalcTokType.Minus)
         {
             var op = t[p++].Type;
-            var r  = CalcProduct(t, ref p, total, em, vp);
+            var r = CalcProduct(t, ref p, total, em, vp);
             v = op == CalcTokType.Plus ? v + r : v - r;
         }
         return v;
@@ -1210,7 +1212,7 @@ public static class StyleExtensions
         while (p < t.Count && t[p].Type is CalcTokType.Star or CalcTokType.Slash)
         {
             var op = t[p++].Type;
-            var r  = CalcUnary(t, ref p, total, em, vp);
+            var r = CalcUnary(t, ref p, total, em, vp);
             v = op == CalcTokType.Star ? v * r : (r == 0f ? float.NaN : v / r);
         }
         return v;
@@ -1219,7 +1221,7 @@ public static class StyleExtensions
     private static float CalcUnary(List<CalcToken> t, ref int p, float total, float em, float vp)
     {
         if (p < t.Count && t[p].Type == CalcTokType.Minus) { p++; return -CalcPrimary(t, ref p, total, em, vp); }
-        if (p < t.Count && t[p].Type == CalcTokType.Plus)  { p++; return  CalcPrimary(t, ref p, total, em, vp); }
+        if (p < t.Count && t[p].Type == CalcTokType.Plus) { p++; return CalcPrimary(t, ref p, total, em, vp); }
         return CalcPrimary(t, ref p, total, em, vp);
     }
 
@@ -1238,13 +1240,13 @@ public static class StyleExtensions
             var tok = t[p++];
             return tok.Unit switch
             {
-                "px"  or "" => tok.Number,
-                "%"         => tok.Number / 100f * total,
-                "em"        => tok.Number * em,
-                "rem"       => tok.Number * 16f,
-                "vw"        => tok.Number / 100f * vp,
-                "vh"        => tok.Number / 100f * vp,
-                _           => tok.Number,
+                "px" or "" => tok.Number,
+                "%" => tok.Number / 100f * total,
+                "em" => tok.Number * em,
+                "rem" => tok.Number * 16f,
+                "vw" => tok.Number / 100f * vp,
+                "vh" => tok.Number / 100f * vp,
+                _ => tok.Number,
             };
         }
         return 0f;

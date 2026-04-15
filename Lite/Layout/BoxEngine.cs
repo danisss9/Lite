@@ -54,16 +54,16 @@ internal static class BoxEngine
     private static void ResolveAbsoluteBox(LayoutNode node, BoxDimensions cb,
         float viewportWidth, float viewportHeight)
     {
-        var cbRect   = cb.PaddingBox;
+        var cbRect = cb.PaddingBox;
         var fontSize = node.GetFontSize();
-        var padding  = node.GetPadding(cbRect.Width, cbRect.Height, fontSize);
-        var border   = node.GetBorderWidth();
-        var margin   = node.GetMargin(cbRect.Width, cbRect.Height, fontSize);
+        var padding = node.GetPadding(cbRect.Width, cbRect.Height, fontSize);
+        var border = node.GetBorderWidth();
+        var margin = node.GetMargin(cbRect.Width, cbRect.Height, fontSize);
 
-        var top    = node.GetOffsetTop   (cbRect.Height, fontSize);
-        var right  = node.GetOffsetRight (cbRect.Width,  fontSize);
+        var top = node.GetOffsetTop(cbRect.Height, fontSize);
+        var right = node.GetOffsetRight(cbRect.Width, fontSize);
         var bottom = node.GetOffsetBottom(cbRect.Height, fontSize);
-        var left   = node.GetOffsetLeft  (cbRect.Width,  fontSize);
+        var left = node.GetOffsetLeft(cbRect.Width, fontSize);
 
         // Resolve width
         var explicitW = node.GetWidth(cbRect.Width);
@@ -112,7 +112,7 @@ internal static class BoxEngine
 
         // Lay out children to get content height
         var contentY0 = cbRect.Top; // temp origin for children layout
-        var contentH  = LayoutChildren(node.Children,
+        var contentH = LayoutChildren(node.Children,
             contentX, contentY0,
             contentW, viewportWidth, viewportHeight, selfContentH);
 
@@ -152,9 +152,9 @@ internal static class BoxEngine
         node.Box = new BoxDimensions
         {
             ContentBox = new SKRect(contentX, contentY, contentX + contentW, contentY + contentH),
-            Padding    = padding,
-            Border     = border,
-            Margin     = margin,
+            Padding = padding,
+            Border = border,
+            Margin = margin,
         };
     }
 
@@ -180,25 +180,25 @@ internal static class BoxEngine
         }
 
         var fontSize = node.GetFontSize();
-        var margin   = node.GetMargin(availableWidth, viewportHeight, fontSize);
-        var padding  = node.GetPadding(availableWidth, viewportHeight, fontSize);
-        var border   = node.GetBorderWidth();
+        var margin = node.GetMargin(availableWidth, viewportHeight, fontSize);
+        var padding = node.GetPadding(availableWidth, viewportHeight, fontSize);
+        var border = node.GetBorderWidth();
 
         // Explicit width or fill available (pass size=0 so unset width returns 0, not fontSize)
         var explicitW = node.GetWidth(availableWidth);
-        var boxWidth  = explicitW > 0 ? explicitW : availableWidth - margin.Left - margin.Right;
+        var boxWidth = explicitW > 0 ? explicitW : availableWidth - margin.Left - margin.Right;
 
         // margin: auto centering — when explicit width is set and one or both horizontal margins are auto
         if (explicitW > 0)
         {
-            var leftAuto  = node.IsAutoMarginLeft();
+            var leftAuto = node.IsAutoMarginLeft();
             var rightAuto = node.IsAutoMarginRight();
             if (leftAuto || rightAuto)
             {
                 var remaining = availableWidth - explicitW - border.Left - border.Right - padding.Left - padding.Right;
                 if (leftAuto && rightAuto) { margin.Left = margin.Right = MathF.Max(0, remaining / 2f); }
-                else if (leftAuto)         { margin.Left  = MathF.Max(0, remaining); }
-                else                       { margin.Right = MathF.Max(0, remaining); }
+                else if (leftAuto) { margin.Left = MathF.Max(0, remaining); }
+                else { margin.Right = MathF.Max(0, remaining); }
             }
         }
 
@@ -207,9 +207,9 @@ internal static class BoxEngine
         var contentY = y + margin.Top + border.Top + padding.Top;
 
         // Resolve this node's explicit height using parentContentHeight for % and viewportHeight for vh/vw
-        var isBorderBox    = node.Style.GetPropertyValue("box-sizing") == "border-box";
-        var explicitH      = node.GetHeight(parentContentHeight, 0, viewportHeight);
-        var knownContentH  = explicitH > 0
+        var isBorderBox = node.Style.GetPropertyValue("box-sizing") == "border-box";
+        var explicitH = node.GetHeight(parentContentHeight, 0, viewportHeight);
+        var knownContentH = explicitH > 0
             ? (isBorderBox ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitH)
             : 0f;
 
@@ -224,7 +224,7 @@ internal static class BoxEngine
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
         {
             using var font = TextMeasure.CreateFont(node);
-            var ws    = node.GetWhiteSpace();
+            var ws = node.GetWhiteSpace();
             var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentW, 1f), font, ws);
             contentH = lines.Sum(l => l.Height);
         }
@@ -240,9 +240,9 @@ internal static class BoxEngine
         node.Box = new BoxDimensions
         {
             ContentBox = new SKRect(contentX, contentY, contentX + contentW, contentY + contentH),
-            Padding    = padding,
-            Border     = border,
-            Margin     = margin,
+            Padding = padding,
+            Border = border,
+            Margin = margin,
         };
 
         var totalH = margin.Top + border.Top + padding.Top
@@ -284,7 +284,7 @@ internal static class BoxEngine
         foreach (var f in floats)
         {
             if (clear == ClearType.Both ||
-                (clear == ClearType.Left  && f.Side == FloatType.Left) ||
+                (clear == ClearType.Left && f.Side == FloatType.Left) ||
                 (clear == ClearType.Right && f.Side == FloatType.Right))
             {
                 y = Math.Max(y, f.Bottom);
@@ -302,7 +302,7 @@ internal static class BoxEngine
         List<ActiveFloat> floats, float y, float height,
         float contentX, float contentW)
     {
-        var left  = contentX;
+        var left = contentX;
         var right = contentX + contentW;
         foreach (var f in floats)
         {
@@ -332,13 +332,13 @@ internal static class BoxEngine
         float viewportWidth, float viewportHeight, float parentContentHeight)
     {
         var fontSize = child.GetFontSize();
-        var margin   = child.GetMargin(contentW, viewportHeight, fontSize);
-        var padding  = child.GetPadding(contentW, viewportHeight, fontSize);
-        var border   = child.GetBorderWidth();
+        var margin = child.GetMargin(contentW, viewportHeight, fontSize);
+        var padding = child.GetPadding(contentW, viewportHeight, fontSize);
+        var border = child.GetBorderWidth();
 
         // Shrink-to-fit: use explicit width or half container as heuristic
         var explicitW = child.GetWidth(contentW);
-        var maxAvail  = contentW - margin.Left - margin.Right - border.Left - border.Right - padding.Left - padding.Right;
+        var maxAvail = contentW - margin.Left - margin.Right - border.Left - border.Right - padding.Left - padding.Right;
         float childContentW;
         if (explicitW > 0)
         {
@@ -390,13 +390,13 @@ internal static class BoxEngine
             ? contentX + margin.Left + border.Left + padding.Left
             : contentX + contentW - margin.Right - border.Right - padding.Right - childContentW;
 
-        placed:
+    placed:
         var placeContentY = placeY + margin.Top + border.Top + padding.Top;
 
         // Lay out children inside the float
         var isBorderBox = child.Style.GetPropertyValue("box-sizing") == "border-box";
-        var explicitH   = child.GetHeight(parentContentHeight, 0, viewportHeight);
-        var knownH      = explicitH > 0
+        var explicitH = child.GetHeight(parentContentHeight, 0, viewportHeight);
+        var knownH = explicitH > 0
             ? (isBorderBox ? Math.Max(0, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitH)
             : 0f;
 
@@ -423,14 +423,14 @@ internal static class BoxEngine
             ContentBox = new SKRect(placeContentX, placeContentY,
                                     placeContentX + childContentW, placeContentY + childContentH),
             Padding = padding,
-            Border  = border,
-            Margin  = margin,
+            Border = border,
+            Margin = margin,
         };
 
-        var outerTop    = placeY;
+        var outerTop = placeY;
         var outerBottom = placeY + margin.Top + border.Top + padding.Top + childContentH + padding.Bottom + border.Bottom + margin.Bottom;
-        var outerLeft   = placeContentX - padding.Left - border.Left - margin.Left;
-        var outerRight  = placeContentX + childContentW + padding.Right + border.Right + margin.Right;
+        var outerLeft = placeContentX - padding.Left - border.Left - margin.Left;
+        var outerRight = placeContentX + childContentW + padding.Right + border.Right + margin.Right;
 
         return new ActiveFloat(outerLeft, outerTop, outerRight, outerBottom, side);
     }
@@ -442,14 +442,14 @@ internal static class BoxEngine
         float viewportWidth, float viewportHeight,
         float parentContentHeight = 0)
     {
-        var cursorY          = contentY;
+        var cursorY = contentY;
         var prevMarginBottom = 0f;
-        var i                = 0;
-        var floats           = new List<ActiveFloat>();
+        var i = 0;
+        var floats = new List<ActiveFloat>();
 
         while (i < children.Count)
         {
-            var child   = children[i];
+            var child = children[i];
             var display = child.GetDisplay();
 
             if (display == DisplayType.None)
@@ -488,12 +488,12 @@ internal static class BoxEngine
 
             if (display == DisplayType.Block || display == DisplayType.ListItem || display == DisplayType.Flex || display == DisplayType.Table)
             {
-                var childFontSize   = child.GetFontSize();
-                var childMarginTop  = child.GetMarginTop(total: viewportHeight, size: childFontSize);
+                var childFontSize = child.GetFontSize();
+                var childMarginTop = child.GetMarginTop(total: viewportHeight, size: childFontSize);
 
                 // Collapse adjacent vertical margins: use max, not sum
                 var collapsed = Math.Max(prevMarginBottom, childMarginTop);
-                var adjust    = collapsed - prevMarginBottom - childMarginTop; // ≤ 0
+                var adjust = collapsed - prevMarginBottom - childMarginTop; // ≤ 0
 
                 // Narrow available width for non-floated blocks when floats are active
                 var (effX, effW) = AvailableBand(floats, cursorY + adjust, 1, contentX, contentW);
@@ -527,7 +527,7 @@ internal static class BoxEngine
                 // Narrow for floats in inline context too
                 var (effX, effW) = AvailableBand(floats, cursorY, 1, contentX, contentW);
                 var runH = LayoutInlineRun(run, effX, cursorY, effW, viewportWidth, viewportHeight);
-                cursorY         += runH;
+                cursorY += runH;
                 prevMarginBottom = 0f;
             }
         }
@@ -559,11 +559,11 @@ internal static class BoxEngine
 
         if (items.Count == 0) return 0f;
 
-        var lineX      = 0f;
-        var lineY      = 0f;
+        var lineX = 0f;
+        var lineY = 0f;
         var lineHeight = 0f;
 
-        var placed    = new List<(InlineItem item, float relX, float relY)>();
+        var placed = new List<(InlineItem item, float relX, float relY)>();
         var lineStart = 0;
 
         void CommitLine()
@@ -574,21 +574,21 @@ internal static class BoxEngine
                 var vAlign = it.Node.GetVerticalAlign();
                 float yOffset = vAlign switch
                 {
-                    VerticalAlignType.Top       => 0f,
-                    VerticalAlignType.Bottom     => lineHeight - it.Height,
-                    VerticalAlignType.Middle     => (lineHeight - it.Height) / 2f,
-                    VerticalAlignType.Sub        => lineHeight - it.Height + it.Height * 0.15f,
-                    VerticalAlignType.Super      => -it.Height * 0.15f,
-                    VerticalAlignType.TextTop    => 0f,
+                    VerticalAlignType.Top => 0f,
+                    VerticalAlignType.Bottom => lineHeight - it.Height,
+                    VerticalAlignType.Middle => (lineHeight - it.Height) / 2f,
+                    VerticalAlignType.Sub => lineHeight - it.Height + it.Height * 0.15f,
+                    VerticalAlignType.Super => -it.Height * 0.15f,
+                    VerticalAlignType.TextTop => 0f,
                     VerticalAlignType.TextBottom => lineHeight - it.Height,
-                    _                            => lineHeight - it.Height, // baseline: align bottoms
+                    _ => lineHeight - it.Height, // baseline: align bottoms
                 };
                 placed[k] = (it, rx, lineY + yOffset);
             }
-            lineY     += lineHeight;
+            lineY += lineHeight;
             lineHeight = 0f;
-            lineX      = 0f;
-            lineStart  = placed.Count;
+            lineX = 0f;
+            lineStart = placed.Count;
         }
 
         foreach (var item in items)
@@ -609,9 +609,24 @@ internal static class BoxEngine
                 item.Text != null && item.Text.Trim().Length == 0)
                 continue;
 
-            placed.Add((item, lineX, lineY));
-            lineX     += item.Width;
-            lineHeight = Math.Max(lineHeight, item.Height);
+            // For text items wider than the available space, re-measure with wrapping
+            var effectiveItem = item;
+            if (item.Kind == InlineItemKind.Text && item.Text != null)
+            {
+                var availW = maxWidth - lineX;
+                if (availW > 0 && item.Width > availW)
+                {
+                    using var font = TextMeasure.CreateFont(item.Node);
+                    var ws = item.Node.GetWhiteSpace();
+                    var wrapLines = TextMeasure.WrapText(item.Text, Math.Max(availW, 1f), font, ws);
+                    var wrappedH = wrapLines.Sum(l => l.Height);
+                    effectiveItem = item with { Width = availW, Height = wrappedH, ContentW = availW, ContentH = wrappedH };
+                }
+            }
+
+            placed.Add((effectiveItem, lineX, lineY));
+            lineX += effectiveItem.Width;
+            lineHeight = Math.Max(lineHeight, effectiveItem.Height);
         }
         if (placed.Count > lineStart) CommitLine();
 
@@ -653,10 +668,10 @@ internal static class BoxEngine
             if (display == DisplayType.InlineFlex)
             {
                 // §5: inline-flex acts as inline-block in the parent, uses flex layout internally.
-                var fontSize  = node.GetFontSize();
-                var margin    = node.GetMargin(0, viewportHeight, fontSize);
-                var padding   = node.GetPadding(0, viewportHeight, fontSize);
-                var border    = node.GetBorderWidth();
+                var fontSize = node.GetFontSize();
+                var margin = node.GetMargin(0, viewportHeight, fontSize);
+                var padding = node.GetPadding(0, viewportHeight, fontSize);
+                var border = node.GetBorderWidth();
                 var explicitW = node.GetWidth(0);
                 var explicitH = node.GetHeight(viewportHeight);
 
@@ -668,14 +683,14 @@ internal static class BoxEngine
 
                 // Intrinsic height: lay out children to compute
                 var contentX2 = margin.Left + border.Left + padding.Left;
-                var contentY2 = margin.Top  + border.Top  + padding.Top;
+                var contentY2 = margin.Top + border.Top + padding.Top;
                 var h = explicitH > 0
                     ? explicitH
                     : FlexEngine.LayoutFlex(node, contentX2, contentY2, w, 0, viewportWidth, viewportHeight);
                 h = Math.Max(h, 0);
 
                 var totalW = margin.Left + border.Left + padding.Left + w + padding.Right + border.Right + margin.Right;
-                var totalH = margin.Top  + border.Top  + padding.Top  + h + padding.Bottom + border.Bottom + margin.Bottom;
+                var totalH = margin.Top + border.Top + padding.Top + h + padding.Bottom + border.Bottom + margin.Bottom;
 
                 items.Add(new InlineItem(InlineItemKind.InlineFlex, node, null, totalW, totalH,
                            margin, padding, border, w, h));
@@ -684,26 +699,26 @@ internal static class BoxEngine
 
             if (display == DisplayType.InlineBlock)
             {
-                var fontSize  = node.GetFontSize();
-                var margin    = node.GetMargin(0, viewportHeight, fontSize);
-                var padding   = node.GetPadding(0, viewportHeight, fontSize);
-                var border    = node.GetBorderWidth();
+                var fontSize = node.GetFontSize();
+                var margin = node.GetMargin(0, viewportHeight, fontSize);
+                var padding = node.GetPadding(0, viewportHeight, fontSize);
+                var border = node.GetBorderWidth();
                 var explicitW = node.GetWidth(0);
                 var explicitH = node.GetHeight(viewportHeight);
 
                 node.Attributes.TryGetValue("type", out var iType);
                 var inputType = iType?.ToLowerInvariant() ?? "text";
                 var isCheckbox = node.TagName == "INPUT" && inputType == "checkbox";
-                var isRadio    = node.TagName == "INPUT" && inputType == "radio";
-                var isRange    = node.TagName == "INPUT" && inputType == "range";
+                var isRadio = node.TagName == "INPUT" && inputType == "radio";
+                var isRange = node.TagName == "INPUT" && inputType == "range";
                 float defaultW, defaultH;
-                if (isCheckbox)                      { defaultW = FormLayout.CheckboxSize;   defaultH = FormLayout.CheckboxSize; }
-                else if (isRadio)                    { defaultW = FormLayout.RadioSize;       defaultH = FormLayout.RadioSize; }
-                else if (isRange)                    { defaultW = FormLayout.RangeWidth;      defaultH = FormLayout.RangeHeight; }
-                else if (node.TagName == "BUTTON")   { defaultW = 0f;                        defaultH = FormLayout.TextInputHeight; }
-                else if (node.TagName == "TEXTAREA") { defaultW = FormLayout.TextareaWidth;  defaultH = FormLayout.TextareaHeight; }
-                else if (node.TagName == "SELECT")   { defaultW = FormLayout.SelectWidth;    defaultH = FormLayout.SelectHeight; }
-                else                                 { defaultW = FormLayout.TextInputWidth; defaultH = FormLayout.TextInputHeight; }
+                if (isCheckbox) { defaultW = FormLayout.CheckboxSize; defaultH = FormLayout.CheckboxSize; }
+                else if (isRadio) { defaultW = FormLayout.RadioSize; defaultH = FormLayout.RadioSize; }
+                else if (isRange) { defaultW = FormLayout.RangeWidth; defaultH = FormLayout.RangeHeight; }
+                else if (node.TagName == "BUTTON") { defaultW = 0f; defaultH = FormLayout.TextInputHeight; }
+                else if (node.TagName == "TEXTAREA") { defaultW = FormLayout.TextareaWidth; defaultH = FormLayout.TextareaHeight; }
+                else if (node.TagName == "SELECT") { defaultW = FormLayout.SelectWidth; defaultH = FormLayout.SelectHeight; }
+                else { defaultW = FormLayout.TextInputWidth; defaultH = FormLayout.TextInputHeight; }
 
                 var w = explicitW > 0 ? explicitW : defaultW;
                 var h = explicitH > 0 ? explicitH : defaultH;
@@ -726,7 +741,7 @@ internal static class BoxEngine
             }
             else if (node.TagName == "IMG")
             {
-                var w = node.IntrinsicWidth  > 0 ? (float)node.IntrinsicWidth  : node.Image?.Width  ?? 100f;
+                var w = node.IntrinsicWidth > 0 ? (float)node.IntrinsicWidth : node.Image?.Width ?? 100f;
                 var h = node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight : node.Image?.Height ?? 100f;
                 items.Add(new InlineItem(InlineItemKind.Image, node, null, w, h,
                            default, default, default, w, h));
@@ -751,51 +766,51 @@ internal static class BoxEngine
         switch (item.Kind)
         {
             case InlineItemKind.InlineBlock:
-            {
-                var m = item.Margin;
-                var p = item.Padding;
-                var b = item.Border;
-                var contentX = absX + m.Left + b.Left + p.Left;
-                var contentY = absY + m.Top  + b.Top  + p.Top;
-                node.Box = new BoxDimensions
                 {
-                    ContentBox = new SKRect(contentX, contentY,
-                                            contentX + item.ContentW, contentY + item.ContentH),
-                    Margin  = m,
-                    Padding = p,
-                    Border  = b,
-                };
-                break;
-            }
+                    var m = item.Margin;
+                    var p = item.Padding;
+                    var b = item.Border;
+                    var contentX = absX + m.Left + b.Left + p.Left;
+                    var contentY = absY + m.Top + b.Top + p.Top;
+                    node.Box = new BoxDimensions
+                    {
+                        ContentBox = new SKRect(contentX, contentY,
+                                                contentX + item.ContentW, contentY + item.ContentH),
+                        Margin = m,
+                        Padding = p,
+                        Border = b,
+                    };
+                    break;
+                }
             case InlineItemKind.InlineFlex:
-            {
-                var m = item.Margin;
-                var p = item.Padding;
-                var b = item.Border;
-                var contentX = absX + m.Left + b.Left + p.Left;
-                var contentY = absY + m.Top  + b.Top  + p.Top;
-                node.Box = new BoxDimensions
                 {
-                    ContentBox = new SKRect(contentX, contentY,
-                                            contentX + item.ContentW, contentY + item.ContentH),
-                    Margin  = m,
-                    Padding = p,
-                    Border  = b,
-                };
-                // Re-invoke flex layout at the resolved position so children get correct boxes
-                FlexEngine.LayoutFlex(node, contentX, contentY, item.ContentW, item.ContentH, 0, 0);
-                break;
-            }
+                    var m = item.Margin;
+                    var p = item.Padding;
+                    var b = item.Border;
+                    var contentX = absX + m.Left + b.Left + p.Left;
+                    var contentY = absY + m.Top + b.Top + p.Top;
+                    node.Box = new BoxDimensions
+                    {
+                        ContentBox = new SKRect(contentX, contentY,
+                                                contentX + item.ContentW, contentY + item.ContentH),
+                        Margin = m,
+                        Padding = p,
+                        Border = b,
+                    };
+                    // Re-invoke flex layout at the resolved position so children get correct boxes
+                    FlexEngine.LayoutFlex(node, contentX, contentY, item.ContentW, item.ContentH, 0, 0);
+                    break;
+                }
             case InlineItemKind.Image:
             case InlineItemKind.Text:
             case InlineItemKind.LineBreak:
-            {
-                node.Box = new BoxDimensions
                 {
-                    ContentBox = new SKRect(absX, absY, absX + item.ContentW, absY + item.ContentH),
-                };
-                break;
-            }
+                    node.Box = new BoxDimensions
+                    {
+                        ContentBox = new SKRect(absX, absY, absX + item.ContentW, absY + item.ContentH),
+                    };
+                    break;
+                }
         }
     }
 
@@ -807,14 +822,14 @@ internal static class BoxEngine
 
     private record InlineItem(
         InlineItemKind Kind,
-        LayoutNode     Node,
-        string?        Text,
-        float          Width,
-        float          Height,
-        EdgeSizes      Margin,
-        EdgeSizes      Padding,
-        EdgeSizes      Border,
-        float          ContentW,
-        float          ContentH
+        LayoutNode Node,
+        string? Text,
+        float Width,
+        float Height,
+        EdgeSizes Margin,
+        EdgeSizes Padding,
+        EdgeSizes Border,
+        float ContentW,
+        float ContentH
     );
 }
