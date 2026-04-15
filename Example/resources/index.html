@@ -935,6 +935,218 @@ console.log(greet("World"));</pre>
       </p>
     </section>
 
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TIER 1 FEATURE DEMOS                                          -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- CSS Counters -->
+    <section class="card">
+      <h2>CSS Counters</h2>
+      <p>Automatic numbering via <code>counter-reset</code>, <code>counter-increment</code>, and <code>counter()</code> in <code>::before</code> content.</p>
+
+      <div class="counter-steps">
+        <div class="counter-step">Set up the project</div>
+        <div class="counter-step">Install dependencies</div>
+        <div class="counter-step">Write the code</div>
+        <div class="counter-step">Run the tests</div>
+        <div class="counter-step">Deploy to production</div>
+      </div>
+
+      <h3>Nested counters</h3>
+      <div class="counter-chapters">
+        <div class="counter-chapter">Introduction
+          <div class="counter-sections">
+            <div class="counter-section">Overview</div>
+            <div class="counter-section">Background</div>
+          </div>
+        </div>
+        <div class="counter-chapter">Methods
+          <div class="counter-sections">
+            <div class="counter-section">Approach</div>
+            <div class="counter-section">Data collection</div>
+            <div class="counter-section">Analysis</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table Colspan / Rowspan -->
+    <section class="card">
+      <h2>Table Colspan &amp; Rowspan</h2>
+      <p>Cells spanning multiple columns and rows.</p>
+
+      <table class="tbl-span">
+        <thead>
+          <tr>
+            <th colspan="3">Q1 2024 Report</th>
+          </tr>
+          <tr>
+            <th>Month</th>
+            <th>Revenue</th>
+            <th>Expenses</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>January</td>
+            <td>$12,000</td>
+            <td>$8,500</td>
+          </tr>
+          <tr>
+            <td>February</td>
+            <td>$14,200</td>
+            <td>$9,100</td>
+          </tr>
+          <tr>
+            <td>March</td>
+            <td>$11,800</td>
+            <td>$7,900</td>
+          </tr>
+          <tr>
+            <td colspan="2">Total expenses</td>
+            <td>$25,500</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Rowspan example</h3>
+      <table class="tbl-span">
+        <tr>
+          <th>Team</th>
+          <th>Member</th>
+          <th>Role</th>
+        </tr>
+        <tr>
+          <td rowspan="2">Frontend</td>
+          <td>Alice</td>
+          <td>Lead</td>
+        </tr>
+        <tr>
+          <td>Bob</td>
+          <td>Developer</td>
+        </tr>
+        <tr>
+          <td rowspan="3">Backend</td>
+          <td>Carol</td>
+          <td>Lead</td>
+        </tr>
+        <tr>
+          <td>Dave</td>
+          <td>Developer</td>
+        </tr>
+        <tr>
+          <td>Eve</td>
+          <td>DBA</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- Per-element Overflow Scroll -->
+    <section class="card">
+      <h2>Per-element Overflow Scroll</h2>
+      <p>Containers with fixed height and <code>overflow: auto</code> gain independent scrollbars.</p>
+
+      <div class="scroll-demo">
+        <div class="scroll-box">
+          <p>Line 1: The quick brown fox jumps over the lazy dog.</p>
+          <p>Line 2: Pack my box with five dozen liquor jugs.</p>
+          <p>Line 3: How vexingly quick daft zebras jump.</p>
+          <p>Line 4: The five boxing wizards jump quickly.</p>
+          <p>Line 5: Jackdaws love my big sphinx of quartz.</p>
+          <p>Line 6: Bright vixens jump; dozy fowl quack.</p>
+          <p>Line 7: Quick zephyrs blow, vexing daft Jim.</p>
+          <p>Line 8: Two driven jocks help fax my big quiz.</p>
+          <p>Line 9: The jay, pig, fox, zebra and my wolves quack!</p>
+          <p>Line 10: Sympathizing would fix Quaker objectives.</p>
+          <p>Line 11: A wizard's job is to vex chumps quickly in fog.</p>
+          <p>Line 12: Watch Jeopardy!, Alex Trebek's fun TV quiz game.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ::first-letter & ::first-line -->
+    <section class="card">
+      <h2>::first-letter &amp; ::first-line</h2>
+      <p>Decorative drop caps and styled first lines for typographic effects.</p>
+
+      <p class="fl-dropcap">Once upon a time in a land far away, there lived a curious developer who spent their days building browser engines from scratch. Each line of code brought the digital world closer to rendering the beauty of the web.</p>
+
+      <p class="fl-firstline">This paragraph demonstrates the ::first-line pseudo-element. The first line of text is rendered in a different color and weight, while subsequent lines use normal styling. Resize the window to see the first-line boundary change.</p>
+    </section>
+
+    <!-- Keyboard Events -->
+    <section class="card">
+      <h2>Keyboard Events</h2>
+      <p>Press keys while the input is focused to see <code>keydown</code> / <code>keyup</code> events.</p>
+
+      <input id="kb-input" type="text" placeholder="Type here..." title="Keyboard test" />
+      <div id="kb-log" class="demo-log">Waiting for key press...</div>
+    </section>
+
+    <!-- Mouse Coordinates -->
+    <section class="card">
+      <h2>Mouse Event Coordinates</h2>
+      <p>Click inside the box to see <code>clientX</code>, <code>clientY</code>, and <code>button</code> values.</p>
+
+      <div id="mouse-area" class="mouse-area">Click anywhere in this box</div>
+      <div id="mouse-log" class="demo-log">Waiting for click...</div>
+    </section>
+
+    <!-- requestAnimationFrame -->
+    <section class="card">
+      <h2>requestAnimationFrame</h2>
+      <p>Smooth animation powered by <code>requestAnimationFrame</code>.</p>
+
+      <div class="raf-track">
+        <div id="raf-ball" class="raf-ball"></div>
+      </div>
+      <div class="mt-sm">
+        <button id="raf-start">Start</button>
+        <button id="raf-stop" class="ml-sm">Stop</button>
+        <button id="raf-reset" class="ml-sm">Reset</button>
+      </div>
+    </section>
+
+    <!-- Form Events (input / change / submit) -->
+    <section class="card">
+      <h2>Form Events</h2>
+      <p>Live <code>input</code>, <code>change</code>, and <code>submit</code> events from form controls.</p>
+
+      <form id="fe-form">
+        <label>Name:</label>
+        <input id="fe-name" type="text" placeholder="Type your name..." title="Name" />
+        <p id="fe-live" class="demo-info">Live input: (none)</p>
+
+        <label>Mood:</label>
+        <input id="fe-range" type="range" min="1" max="10" value="5" title="Mood" />
+        <p id="fe-range-val" class="demo-info">Range value: 5</p>
+
+        <button type="submit">Submit form</button>
+      </form>
+      <div id="fe-log" class="demo-log">Waiting for events...</div>
+    </section>
+
+    <!-- Line-height Variations -->
+    <section class="card">
+      <h2>Line-height Variations</h2>
+      <p>Different <code>line-height</code> values affect vertical rhythm.</p>
+
+      <div class="lh-demos">
+        <div class="lh-box lh-tight">
+          <strong>line-height: 1.0</strong><br/>
+          Text is tightly packed with minimal spacing between lines. This makes for compact paragraphs.
+        </div>
+        <div class="lh-box lh-normal">
+          <strong>line-height: 1.5</strong><br/>
+          Standard readable spacing commonly used for body text. Comfortable for extended reading.
+        </div>
+        <div class="lh-box lh-loose">
+          <strong>line-height: 2.2</strong><br/>
+          Very generous spacing between lines. Often used for legal text or draft documents.
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <footer>

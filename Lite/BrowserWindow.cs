@@ -22,6 +22,8 @@ public class BrowserWindow
     private const int WM_SIZE = 0x0005;
     private const int WM_TIMER = 0x0113;
     private const int WM_CHAR = 0x0102;
+    private const int WM_KEYDOWN = 0x0100;
+    private const int WM_KEYUP = 0x0101;
     private const int WM_LBUTTONDOWN = 0x0201;
     private const int WM_LBUTTONUP = 0x0202;
     private const int WM_MOUSEMOVE = 0x0200;
@@ -60,6 +62,12 @@ public class BrowserWindow
     private const uint AnimationTimerMs = 16; // ~60 fps
     private static readonly IntPtr AnimationTimerId = new(1);
     private bool _timerRunning;
+
+    // Change event: snapshot value on focus for comparison on blur
+    private string? _focusedValueSnapshot;
+
+    // RAF timing
+    private readonly Stopwatch _rafStopwatch = Stopwatch.StartNew();
 
     public BrowserWindow(string url, string title = "Lite", int width = 800, int height = 600)
     {
@@ -178,9 +186,14 @@ public class BrowserWindow
                 if (_rootNode != null)
                 {
                     var stillRunning = AnimationEngine.Tick(_rootNode);
+
+                    // Flush requestAnimationFrame callbacks
+                    var engine = JsEngine.Instance;
+                    var rafRan = engine?.FlushRAF(_rafStopwatch.Elapsed.TotalMilliseconds) ?? false;
+
                     (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                     User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    if (!stillRunning)
+                    if (!stillRunning && !(engine?.HasPendingRAF ?? false))
                         StopAnimationTimer(hWnd);
                 }
                 break;
@@ -190,6 +203,9 @@ public class BrowserWindow
                 _width = clientRect.right - clientRect.left;
                 _height = clientRect.bottom - clientRect.top;
                 _viewport.ViewportHeight = _height;
+
+                // Update JS window.innerWidth / innerHeight
+                JsEngine.Instance?.UpdateViewportSize(_width, _height);
 
                 if (_rootNode != null)
                 {
@@ -204,7 +220,25 @@ public class BrowserWindow
             case WM_MOUSEWHEEL:
                 {
                     var delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
-                    _viewport.ScrollBy(-delta / 120f * 60f);
+                    var scrollAmount = -delta / 120f * 60f;
+
+                    // Try scrolling a per-element scrollable container first
+                    User32.GetCursorPos(out var wheelPt);
+                    User32.ScreenToClient(hWnd, ref wheelPt);
+                    var contentPtY = wheelPt.Y + _viewport.ScrollY;
+                    var scrollTarget = _rootNode != null
+                        ? FindScrollableAncestor(_rootNode, wheelPt.X, contentPtY)
+                        : null;
+
+                    if (scrollTarget?.ScrollState != null)
+                    {
+                        scrollTarget.ScrollState.ScrollBy(scrollAmount);
+                    }
+                    else
+                    {
+                        _viewport.ScrollBy(scrollAmount);
+                    }
+
                     if (_rootNode != null)
                     {
                         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
@@ -248,6 +282,24 @@ public class BrowserWindow
                             User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                         }
 
+                        // Dispatch mousedown event with coordinates
+                        if (_rootNode != null)
+                        {
+                            var jsEngine = JsEngine.Instance;
+                            for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
+                            {
+                                var region = _hitRegions[ri];
+                                if (!region.Bounds.Contains(x, contentY)) continue;
+                                if (jsEngine != null)
+                                {
+                                    var mdNode = FindNodeByKey(_rootNode, region.NodeKey);
+                                    if (mdNode != null)
+                                        DispatchMouseEvent("mousedown", mdNode, x, y, contentY, jsEngine);
+                                }
+                                break;
+                            }
+                        }
+
                         // Start range drag if clicking on a range slider
                         if (_rootNode != null)
                         {
@@ -283,6 +335,7 @@ public class BrowserWindow
                                             newVal == Math.Floor(newVal)
                                                 ? ((int)newVal).ToString()
                                                 : newVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                        EventDispatcher.Dispatch(node.NodeKey, "input", _rootNode);
                                         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                                         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                                     }
@@ -318,6 +371,7 @@ public class BrowserWindow
                             newVal == Math.Floor(newVal)
                                 ? ((int)newVal).ToString()
                                 : newVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        EventDispatcher.Dispatch(_draggingRange.Value, "input", _rootNode);
                         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                     }
@@ -369,6 +423,24 @@ public class BrowserWindow
 
                     // Close any open dropdown if clicking outside it
                     var clickedOnDropdown = false;
+
+                    // Dispatch mouseup event with coordinates
+                    if (_rootNode != null)
+                    {
+                        var jsEngine = JsEngine.Instance;
+                        for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
+                        {
+                            var region = _hitRegions[ri];
+                            if (!region.Bounds.Contains(x, contentY)) continue;
+                            if (jsEngine != null)
+                            {
+                                var node = FindNodeByKey(_rootNode, region.NodeKey);
+                                if (node != null)
+                                    DispatchMouseEvent("mouseup", node, x, y, contentY, jsEngine);
+                            }
+                            break;
+                        }
+                    }
 
                     for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
                     {
@@ -431,6 +503,7 @@ public class BrowserWindow
                                     curVal == Math.Floor(curVal)
                                         ? ((int)curVal).ToString()
                                         : curVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                EventDispatcher.Dispatch(node.NodeKey, "input", _rootNode);
                             }
                             handled = true;
                             break;
@@ -478,12 +551,12 @@ public class BrowserWindow
 
                         if (region.InputAction == InputAction.Button)
                         {
-                            EventDispatcher.Dispatch(region.NodeKey, "click", _rootNode);
+                            DispatchClickWithCoords(region.NodeKey, x, y, contentY);
                             handled = true;
                             break;
                         }
 
-                        if (EventDispatcher.Dispatch(region.NodeKey, "click", _rootNode))
+                        if (DispatchClickWithCoords(region.NodeKey, x, y, contentY))
                         {
                             handled = true;
                             break;
@@ -500,6 +573,20 @@ public class BrowserWindow
                     var focusChanged = !handled && FormState.FocusedInput != null;
                     if (focusChanged) FormState.FocusedInput = null;
 
+                    // Fire "change" event if value changed since focus
+                    if (prevFocus != null && prevFocus != FormState.FocusedInput && _rootNode != null)
+                    {
+                        var currentVal = FormState.TextInputValues.GetValueOrDefault(prevFocus.Value, "");
+                        if (currentVal != (_focusedValueSnapshot ?? ""))
+                            EventDispatcher.Dispatch(prevFocus.Value, "change", _rootNode);
+                    }
+
+                    // Snapshot value for newly focused input
+                    if (FormState.FocusedInput != null && FormState.FocusedInput != prevFocus)
+                        _focusedValueSnapshot = FormState.TextInputValues.GetValueOrDefault(FormState.FocusedInput.Value, "");
+                    else if (FormState.FocusedInput == null)
+                        _focusedValueSnapshot = null;
+
                     // Update :focus pseudo-class state
                     if (FormState.FocusedInput != prevFocus)
                     {
@@ -514,6 +601,58 @@ public class BrowserWindow
                     {
                         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    }
+                    break;
+                }
+
+            case WM_KEYDOWN:
+            case WM_KEYUP:
+                {
+                    if (_rootNode == null) break;
+                    var vk = (int)wParam.ToInt64();
+                    var keyName = MapVirtualKey(vk);
+                    var eventType = msg == WM_KEYDOWN ? "keydown" : "keyup";
+                    var modifiers = GetKeyModifiers();
+
+                    // Dispatch to focused element or body
+                    var targetNode = FormState.FocusedInput != null
+                        ? FindNodeByKey(_rootNode, FormState.FocusedInput.Value)
+                        : FindFirst(_rootNode, n => n.TagName == "BODY");
+                    if (targetNode != null)
+                    {
+                        var jsEngine = JsEngine.Instance;
+                        if (jsEngine != null)
+                        {
+                            var evt = new Scripting.Dom.JsEvent();
+                            evt.initEvent(eventType, true, true);
+                            evt.key = keyName;
+                            evt.keyCode = vk;
+                            evt.code = MapVirtualKeyToCode(vk);
+                            evt.ctrlKey = modifiers.ctrl;
+                            evt.shiftKey = modifiers.shift;
+                            evt.altKey = modifiers.alt;
+                            evt.metaKey = modifiers.meta;
+                            evt.target = new Scripting.Dom.JsElement(jsEngine.RawEngine, targetNode);
+                            EventDispatcher.DispatchEvent(targetNode, evt, jsEngine);
+                        }
+                    }
+
+                    // Handle Enter in single-line input → submit
+                    if (msg == WM_KEYDOWN && vk == 0x0D && FormState.FocusedInput != null)
+                    {
+                        var focNode = FindNodeByKey(_rootNode, FormState.FocusedInput.Value);
+                        if (focNode != null && focNode.TagName == "INPUT")
+                        {
+                            // Walk up to find <form>
+                            for (var p = focNode.Parent; p != null; p = p.Parent)
+                            {
+                                if (p.TagName == "FORM")
+                                {
+                                    EventDispatcher.Dispatch(p.NodeKey, "submit", _rootNode);
+                                    break;
+                                }
+                            }
+                        }
                     }
                     break;
                 }
@@ -545,6 +684,10 @@ public class BrowserWindow
                         FormState.TextInputValues.TryGetValue(key, out var cur);
                         FormState.TextInputValues[key] = (cur ?? string.Empty) + c;
                     }
+
+                    // Fire "input" event on the focused element
+                    EventDispatcher.Dispatch(FormState.FocusedInput.Value, "input", _rootNode);
+
                     (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                     User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                     break;
@@ -604,5 +747,173 @@ public class BrowserWindow
             if (result != null) return result;
         }
         return null;
+    }
+
+    private static LayoutNode? FindFirst(LayoutNode root, Func<LayoutNode, bool> predicate)
+    {
+        if (predicate(root)) return root;
+        foreach (var child in root.Children)
+        {
+            var result = FindFirst(child, predicate);
+            if (result != null) return result;
+        }
+        return null;
+    }
+
+    private void DispatchMouseEvent(string eventType, LayoutNode node, int x, int y, float contentY, JsEngine engine)
+    {
+        var evt = new Scripting.Dom.JsEvent();
+        evt.initEvent(eventType, true, true);
+        evt.clientX = x;
+        evt.clientY = y;
+        evt.pageX = x;
+        evt.pageY = (int)contentY;
+        evt.button = 0;
+        evt.target = new Scripting.Dom.JsElement(engine.RawEngine, node);
+        EventDispatcher.DispatchEvent(node, evt, engine);
+    }
+
+    private bool DispatchClickWithCoords(Guid nodeKey, int x, int y, float contentY)
+    {
+        if (_rootNode == null) return false;
+        var node = FindNodeByKey(_rootNode, nodeKey);
+        if (node == null) return false;
+        var engine = JsEngine.Instance;
+        if (engine == null) return false;
+
+        var evt = new Scripting.Dom.JsEvent();
+        evt.initEvent("click", true, true);
+        evt.clientX = x;
+        evt.clientY = y;
+        evt.pageX = x;
+        evt.pageY = (int)contentY;
+        evt.button = 0;
+        evt.target = new Scripting.Dom.JsElement(engine.RawEngine, node);
+        return EventDispatcher.DispatchEvent(node, evt, engine);
+    }
+
+    private static string MapVirtualKey(int vk) => vk switch
+    {
+        0x08 => "Backspace",
+        0x09 => "Tab",
+        0x0D => "Enter",
+        0x10 => "Shift",
+        0x11 => "Control",
+        0x12 => "Alt",
+        0x13 => "Pause",
+        0x14 => "CapsLock",
+        0x1B => "Escape",
+        0x20 => " ",
+        0x21 => "PageUp",
+        0x22 => "PageDown",
+        0x23 => "End",
+        0x24 => "Home",
+        0x25 => "ArrowLeft",
+        0x26 => "ArrowUp",
+        0x27 => "ArrowRight",
+        0x28 => "ArrowDown",
+        0x2D => "Insert",
+        0x2E => "Delete",
+        >= 0x30 and <= 0x39 => ((char)vk).ToString(),
+        >= 0x41 and <= 0x5A => ((char)vk).ToString().ToLower(),
+        >= 0x60 and <= 0x69 => (vk - 0x60).ToString(),
+        0x6A => "*",
+        0x6B => "+",
+        0x6D => "-",
+        0x6E => ".",
+        0x6F => "/",
+        >= 0x70 and <= 0x7B => "F" + (vk - 0x70 + 1),
+        0xBA => ";",
+        0xBB => "=",
+        0xBC => ",",
+        0xBD => "-",
+        0xBE => ".",
+        0xBF => "/",
+        0xC0 => "`",
+        0xDB => "[",
+        0xDC => "\\",
+        0xDD => "]",
+        0xDE => "'",
+        _ => "Unidentified"
+    };
+
+    private static string MapVirtualKeyToCode(int vk) => vk switch
+    {
+        0x08 => "Backspace",
+        0x09 => "Tab",
+        0x0D => "Enter",
+        0x10 => "ShiftLeft",
+        0x11 => "ControlLeft",
+        0x12 => "AltLeft",
+        0x13 => "Pause",
+        0x14 => "CapsLock",
+        0x1B => "Escape",
+        0x20 => "Space",
+        0x21 => "PageUp",
+        0x22 => "PageDown",
+        0x23 => "End",
+        0x24 => "Home",
+        0x25 => "ArrowLeft",
+        0x26 => "ArrowUp",
+        0x27 => "ArrowRight",
+        0x28 => "ArrowDown",
+        0x2D => "Insert",
+        0x2E => "Delete",
+        >= 0x30 and <= 0x39 => "Digit" + (char)vk,
+        >= 0x41 and <= 0x5A => "Key" + (char)vk,
+        >= 0x60 and <= 0x69 => "Numpad" + (vk - 0x60),
+        0x6A => "NumpadMultiply",
+        0x6B => "NumpadAdd",
+        0x6D => "NumpadSubtract",
+        0x6E => "NumpadDecimal",
+        0x6F => "NumpadDivide",
+        >= 0x70 and <= 0x7B => "F" + (vk - 0x70 + 1),
+        0xBA => "Semicolon",
+        0xBB => "Equal",
+        0xBC => "Comma",
+        0xBD => "Minus",
+        0xBE => "Period",
+        0xBF => "Slash",
+        0xC0 => "Backquote",
+        0xDB => "BracketLeft",
+        0xDC => "Backslash",
+        0xDD => "BracketRight",
+        0xDE => "Quote",
+        _ => "Unidentified"
+    };
+
+    private static (bool ctrl, bool shift, bool alt, bool meta) GetKeyModifiers()
+    {
+        return (
+            ctrl: (User32.GetKeyState(0x11) & 0x8000) != 0,
+            shift: (User32.GetKeyState(0x10) & 0x8000) != 0,
+            alt: (User32.GetKeyState(0x12) & 0x8000) != 0,
+            meta: (User32.GetKeyState(0x5B) & 0x8000) != 0 || (User32.GetKeyState(0x5C) & 0x8000) != 0
+        );
+    }
+
+    /// <summary>
+    /// Finds the innermost scrollable ancestor at the given content-space coordinates.
+    /// Returns null if no scrollable element contains the point.
+    /// </summary>
+    private static LayoutNode? FindScrollableAncestor(LayoutNode root, float x, float contentY)
+    {
+        LayoutNode? best = null;
+        FindScrollableAt(root, x, contentY, ref best);
+        return best;
+    }
+
+    private static void FindScrollableAt(LayoutNode node, float x, float contentY, ref LayoutNode? best)
+    {
+        var box = node.Box.BorderBox;
+        if (box.Width <= 0 || box.Height <= 0) goto children;
+        if (!box.Contains(x, contentY)) return;
+
+        if (node.ScrollState != null && node.ScrollState.NeedsScrollbar)
+            best = node;
+
+    children:
+        foreach (var child in node.Children)
+            FindScrollableAt(child, x, contentY, ref best);
     }
 }

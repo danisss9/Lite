@@ -16,7 +16,11 @@ internal static class TextMeasure
         var italic = node.GetFontItalic();
         var slant = italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
         var weight = bold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
-        var typeface = SKTypeface.FromFamilyName(family, weight, SKFontStyleWidth.Normal, slant)
+
+        // Check @font-face registry before falling back to system fonts
+        var customTypeface = FontRegistry.Resolve(family, bold, italic);
+        var typeface = customTypeface
+                       ?? SKTypeface.FromFamilyName(family, weight, SKFontStyleWidth.Normal, slant)
                        ?? SKTypeface.Default;
 
         // If the node has short text (pseudo-element content), check for missing glyphs
@@ -58,25 +62,27 @@ internal static class TextMeasure
     /// Wraps text into lines that fit within maxWidth, respecting the node's white-space mode.
     /// Each TextLine carries the text, measured width, line height, and baseline ascent.
     /// </summary>
-    public static List<TextLine> WrapText(string text, float maxWidth, SKFont font, WhiteSpace whiteSpace = WhiteSpace.Normal)
+    public static List<TextLine> WrapText(string text, float maxWidth, SKFont font, WhiteSpace whiteSpace = WhiteSpace.Normal, float lineHeight = 0f)
     {
+        if (lineHeight <= 0f) lineHeight = font.Size * 1.4f;
         return whiteSpace switch
         {
-            WhiteSpace.Pre => SplitPreserved(text, font, wrap: false),
-            WhiteSpace.PreWrap => SplitPreserved(text, font, wrap: true, maxWidth),
-            WhiteSpace.PreLine => SplitPreLine(text, maxWidth, font),
-            WhiteSpace.NoWrap => WrapCollapsed(text, float.MaxValue, font),
-            _ => WrapCollapsed(text, maxWidth, font),
+            WhiteSpace.Pre => SplitPreserved(text, font, wrap: false, lineHeight: lineHeight),
+            WhiteSpace.PreWrap => SplitPreserved(text, font, wrap: true, maxWidth, lineHeight),
+            WhiteSpace.PreLine => SplitPreLine(text, maxWidth, font, lineHeight),
+            WhiteSpace.NoWrap => WrapCollapsed(text, float.MaxValue, font, lineHeight),
+            _ => WrapCollapsed(text, maxWidth, font, lineHeight),
         };
     }
 
     /// <summary>
     /// Measures text without wrapping — returns total width and single-line height.
     /// </summary>
-    public static (float Width, float Height, float Ascent) MeasureSingleLine(string text, SKFont font)
+    public static (float Width, float Height, float Ascent) MeasureSingleLine(string text, SKFont font, float lineHeight = 0f)
     {
+        if (lineHeight <= 0f) lineHeight = font.Size * 1.4f;
         var ascent = -font.Metrics.Ascent;
-        return (font.MeasureText(text), font.Size * 1.4f, ascent);
+        return (font.MeasureText(text), lineHeight, ascent);
     }
 
     // -------------------------------------------------------------------------
@@ -84,10 +90,9 @@ internal static class TextMeasure
     // -------------------------------------------------------------------------
 
     /// <summary>Collapse whitespace and word-wrap at maxWidth (normal / nowrap).</summary>
-    private static List<TextLine> WrapCollapsed(string text, float maxWidth, SKFont font)
+    private static List<TextLine> WrapCollapsed(string text, float maxWidth, SKFont font, float lineHeight)
     {
         var lines = new List<TextLine>();
-        var lineHeight = font.Size * 1.4f;
         var ascent = -font.Metrics.Ascent;
 
         // Fast path: text already fits — return it verbatim so that leading/trailing
@@ -128,10 +133,10 @@ internal static class TextMeasure
     }
 
     /// <summary>Preserve whitespace and newlines; optionally wrap long lines (pre / pre-wrap).</summary>
-    private static List<TextLine> SplitPreserved(string text, SKFont font, bool wrap, float maxWidth = float.MaxValue)
+    private static List<TextLine> SplitPreserved(string text, SKFont font, bool wrap, float maxWidth = float.MaxValue, float lineHeight = 0f)
     {
         var lines = new List<TextLine>();
-        var lineHeight = font.Size * 1.4f;
+        if (lineHeight <= 0f) lineHeight = font.Size * 1.4f;
         var ascent = -font.Metrics.Ascent;
 
         var rawLines = text.Split('\n');
@@ -168,11 +173,11 @@ internal static class TextMeasure
     }
 
     /// <summary>Collapse spaces but preserve newlines; word-wrap at maxWidth (pre-line).</summary>
-    private static List<TextLine> SplitPreLine(string text, float maxWidth, SKFont font)
+    private static List<TextLine> SplitPreLine(string text, float maxWidth, SKFont font, float lineHeight)
     {
         var lines = new List<TextLine>();
         foreach (var rawLine in text.Split('\n'))
-            lines.AddRange(WrapCollapsed(rawLine, maxWidth, font));
+            lines.AddRange(WrapCollapsed(rawLine, maxWidth, font, lineHeight));
         return lines;
     }
 }

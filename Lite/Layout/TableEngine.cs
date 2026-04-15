@@ -6,16 +6,12 @@ namespace Lite.Layout;
 
 /// <summary>
 /// Lays out CSS tables: TABLE, TR, TD/TH.
-/// Implements a simplified fixed-layout table model:
-///   - Column widths: explicit px width on any cell wins; remaining columns share space evenly.
-///   - Row heights: max cell outer height, then all cells in the row stretch to that height.
+/// Supports colspan and rowspan via a 2D grid placement model.
+///   - Column widths: explicit px width on any cell (colspan=1) wins; remaining columns share space evenly.
+///   - Row heights: max cell outer height per row, cells with rowspan stretch across multiple rows.
 /// </summary>
 internal static class TableEngine
 {
-    /// <summary>
-    /// Lays out all rows and cells of a table within the given content area.
-    /// Returns the total height consumed.
-    /// </summary>
     /// <summary>Returns true if the table uses border-collapse: collapse.</summary>
     private static bool IsBorderCollapse(LayoutNode table)
     {
@@ -50,129 +46,253 @@ internal static class TableEngine
         var rows = CollectRows(table);
         if (rows.Count == 0) return 0f;
 
-        var colCount = rows.Max(r => r.Cells.Count);
-        if (colCount == 0) return 0f;
-
         var collapse = IsBorderCollapse(table);
         var spacing = collapse ? 0f : GetBorderSpacing(table);
 
-        var colWidths = ComputeColumnWidths(rows, colCount, contentW - spacing * (colCount + 1), viewportW, viewportH);
+        // Build 2D grid placement with colspan/rowspan support
+        var placements = BuildGrid(rows, out var colCount, out var rowCount);
+        if (colCount == 0) return 0f;
+
+        var colWidths = ComputeColumnWidths(placements, colCount, contentW - spacing * (colCount + 1), viewportW, viewportH);
+        var rowHeights = new float[rowCount];
 
         var cursorY = contentY + spacing;
 
-        foreach (var (rowNode, cells) in rows)
+        // ── Pass 1: measure each cell's natural content height ──────────────
+        foreach (var p in placements)
         {
+            var cell = p.Cell;
+            var cellFontSize = cell.GetFontSize();
+            var cellW = CellSpanWidth(colWidths, p.Col, p.ColSpan, spacing);
+            var cellPad = cell.GetPadding(cellW, viewportH, cellFontSize);
+            var cellBord = cell.GetBorderWidth();
+            var cellMarg = cell.GetMargin(cellW, viewportH, cellFontSize);
+
+            var cx = CellX(contentX, colWidths, p.Col, spacing) + cellMarg.Left + cellBord.Left + cellPad.Left;
+            var cw = Math.Max(0f, cellW
+                - cellMarg.Left - cellMarg.Right
+                - cellBord.Left - cellBord.Right
+                - cellPad.Left - cellPad.Right);
+            var cy = 0f; // Temporary, will be set in pass 2
+
+            var contentH = BoxEngine.LayoutChildrenPublic(cell.Children, cx, cy, cw, viewportW, viewportH);
+
+            if (contentH == 0f && !string.IsNullOrEmpty(cell.DisplayText))
+            {
+                using var font = TextMeasure.CreateFont(cell);
+                var lh = cell.GetLineHeight(cell.GetFontSize());
+                var lines = TextMeasure.WrapText(cell.DisplayText, Math.Max(cw, 1f), font, cell.GetWhiteSpace(), lh);
+                contentH = lines.Sum(l => l.Height);
+            }
+
+            var cellOuterH = cellMarg.Top + cellBord.Top + cellPad.Top
+                           + contentH
+                           + cellPad.Bottom + cellBord.Bottom + cellMarg.Bottom;
+
+            p.MeasuredOuterH = cellOuterH;
+            p.Pad = cellPad;
+            p.Bord = cellBord;
+            p.Marg = cellMarg;
+            p.MeasuredCW = cw;
+
+            // Cells with rowspan=1 contribute to their row's height
+            if (p.RowSpan == 1)
+                rowHeights[p.Row] = Math.Max(rowHeights[p.Row], cellOuterH);
+        }
+
+        // Honour explicit row heights
+        for (int r = 0; r < rowCount; r++)
+        {
+            if (r < rows.Count)
+            {
+                var explicitH = rows[r].Row.GetHeight(0f, 0f, viewportH);
+                if (explicitH > 0f) rowHeights[r] = Math.Max(rowHeights[r], explicitH);
+            }
+        }
+
+        // Distribute rowspan cells: if their measured height exceeds the sum of spanned rows, grow last row
+        foreach (var p in placements)
+        {
+            if (p.RowSpan <= 1) continue;
+            var spannedH = 0f;
+            for (int r = p.Row; r < p.Row + p.RowSpan && r < rowCount; r++)
+                spannedH += rowHeights[r] + (r > p.Row ? spacing : 0f);
+            if (p.MeasuredOuterH > spannedH)
+            {
+                var lastRow = Math.Min(p.Row + p.RowSpan - 1, rowCount - 1);
+                rowHeights[lastRow] += p.MeasuredOuterH - spannedH;
+            }
+        }
+
+        // ── Compute row Y positions ──────────────────────────────────────
+        var rowYs = new float[rowCount];
+        var ry = cursorY;
+        for (int r = 0; r < rowCount; r++)
+        {
+            rowYs[r] = ry;
+            ry += rowHeights[r] + spacing;
+        }
+
+        // ── Pass 2: commit final positions to every cell ──────────────────
+        foreach (var p in placements)
+        {
+            var cell = p.Cell;
+            var cellW = CellSpanWidth(colWidths, p.Col, p.ColSpan, spacing);
+            var cellH = 0f;
+            for (int r = p.Row; r < p.Row + p.RowSpan && r < rowCount; r++)
+                cellH += rowHeights[r] + (r > p.Row ? spacing : 0f);
+
+            var cx = CellX(contentX, colWidths, p.Col, spacing) + p.Marg.Left + p.Bord.Left + p.Pad.Left;
+            var cy = rowYs[p.Row] + p.Marg.Top + p.Bord.Top + p.Pad.Top;
+            var cw = p.MeasuredCW;
+            var finalH = Math.Max(0f,
+                cellH - p.Marg.Top - p.Bord.Top - p.Pad.Top
+                      - p.Pad.Bottom - p.Bord.Bottom - p.Marg.Bottom);
+
+            BoxEngine.LayoutChildrenPublic(cell.Children, cx, cy, cw, viewportW, viewportH, finalH);
+
+            cell.Box = new BoxDimensions
+            {
+                ContentBox = new SKRect(cx, cy, cx + cw, cy + finalH),
+                Padding = p.Pad,
+                Border = p.Bord,
+                Margin = p.Marg,
+            };
+        }
+
+        // ── Row boxes ──────────────────────────────────────────────────────
+        for (int r = 0; r < rows.Count && r < rowCount; r++)
+        {
+            var rowNode = rows[r].Row;
             var rowFontSize = rowNode.GetFontSize();
-            var rowPad  = rowNode.GetPadding(contentW, viewportH, rowFontSize);
+            var rowPad = rowNode.GetPadding(contentW, viewportH, rowFontSize);
             var rowBord = rowNode.GetBorderWidth();
             var rowMarg = rowNode.GetMargin(contentW, viewportH, rowFontSize);
 
-            // Y of the cells' outer margin-top inside this row
-            var rowInnerTop = cursorY + rowMarg.Top + rowBord.Top + rowPad.Top;
-
-            // ── Pass 1: measure each cell's natural content height ──────────────
-            float maxCellContrib = 0f;
-            var n = Math.Min(cells.Count, colWidths.Length);
-            var pass1 = new CellData[n];
-            var cursorX = contentX + spacing;
-
-            for (var c = 0; c < n; c++)
-            {
-                var cell         = cells[c];
-                var cellFontSize = cell.GetFontSize();
-                var cellPad      = cell.GetPadding(colWidths[c], viewportH, cellFontSize);
-                var cellBord     = cell.GetBorderWidth();
-                var cellMarg     = cell.GetMargin(colWidths[c], viewportH, cellFontSize);
-
-                var cx = cursorX + cellMarg.Left + cellBord.Left + cellPad.Left;
-                var cw = Math.Max(0f, colWidths[c]
-                    - cellMarg.Left - cellMarg.Right
-                    - cellBord.Left - cellBord.Right
-                    - cellPad.Left  - cellPad.Right);
-                var cy = rowInnerTop + cellMarg.Top + cellBord.Top + cellPad.Top;
-
-                var contentH = BoxEngine.LayoutChildrenPublic(cell.Children, cx, cy, cw, viewportW, viewportH);
-
-                // Cells with direct text (no element children)
-                if (contentH == 0f && !string.IsNullOrEmpty(cell.DisplayText))
-                {
-                    using var font = TextMeasure.CreateFont(cell);
-                    var lines = TextMeasure.WrapText(cell.DisplayText, Math.Max(cw, 1f), font, cell.GetWhiteSpace());
-                    contentH = lines.Sum(l => l.Height);
-                }
-
-                // Cell's outer height contribution to the row
-                var cellContrib = cellMarg.Top + cellBord.Top + cellPad.Top
-                                + contentH
-                                + cellPad.Bottom + cellBord.Bottom + cellMarg.Bottom;
-                maxCellContrib = Math.Max(maxCellContrib, cellContrib);
-
-                pass1[c] = new CellData(cell, cx, cy, cw, cellPad, cellBord, cellMarg);
-                cursorX += colWidths[c] + spacing;
-            }
-
-            // Honour explicit height on the row (e.g. tr { height: 40px })
-            var explicitRowH = rowNode.GetHeight(0f, 0f, viewportH);
-            if (explicitRowH > 0f) maxCellContrib = Math.Max(maxCellContrib, explicitRowH);
-
-            var rowH_outer = rowMarg.Top + rowBord.Top + rowPad.Top
-                           + maxCellContrib
-                           + rowPad.Bottom + rowBord.Bottom + rowMarg.Bottom;
-
-            // ── Pass 2: commit uniform row height to every cell ──────────────────
-            for (var c = 0; c < n; c++)
-            {
-                var (cell, cx, cy, cw, cellPad, cellBord, cellMarg) = pass1[c];
-
-                var finalH = Math.Max(0f,
-                    maxCellContrib
-                    - cellMarg.Top - cellBord.Top - cellPad.Top
-                    - cellPad.Bottom - cellBord.Bottom - cellMarg.Bottom);
-
-                // Re-layout children so % heights resolve correctly at the final size
-                BoxEngine.LayoutChildrenPublic(cell.Children, cx, cy, cw, viewportW, viewportH, finalH);
-
-                cell.Box = new BoxDimensions
-                {
-                    ContentBox = new SKRect(cx, cy, cx + cw, cy + finalH),
-                    Padding    = cellPad,
-                    Border     = cellBord,
-                    Margin     = cellMarg,
-                };
-            }
-
-            // ── Row box ──────────────────────────────────────────────────────────
             var rowCX = contentX + rowMarg.Left + rowBord.Left + rowPad.Left;
-            var rowCY = cursorY  + rowMarg.Top  + rowBord.Top  + rowPad.Top;
+            var rowCY = rowYs[r] + rowMarg.Top + rowBord.Top + rowPad.Top;
             var rowCW = Math.Max(0f,
                 contentW - rowMarg.Left - rowMarg.Right
                          - rowBord.Left - rowBord.Right
-                         - rowPad.Left  - rowPad.Right);
+                         - rowPad.Left - rowPad.Right);
 
             rowNode.Box = new BoxDimensions
             {
-                ContentBox = new SKRect(rowCX, rowCY, rowCX + rowCW, rowCY + maxCellContrib),
-                Padding    = rowPad,
-                Border     = rowBord,
-                Margin     = rowMarg,
+                ContentBox = new SKRect(rowCX, rowCY, rowCX + rowCW, rowCY + rowHeights[r]),
+                Padding = rowPad,
+                Border = rowBord,
+                Margin = rowMarg,
             };
-
-            cursorY += rowH_outer + spacing;
         }
 
-        return cursorY - contentY;
+        return ry - contentY;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    private record struct CellData(
-        LayoutNode Cell,
-        float CX, float CY, float CW,
-        EdgeSizes Pad, EdgeSizes Bord, EdgeSizes Marg);
+    private class CellPlacement
+    {
+        public LayoutNode Cell;
+        public int Row, Col, ColSpan, RowSpan;
+        public float MeasuredOuterH;
+        public float MeasuredCW;
+        public EdgeSizes Pad, Bord, Marg;
+    }
 
     private record RowInfo(LayoutNode Row, List<LayoutNode> Cells);
+
+    /// <summary>
+    /// Builds a 2D grid placement list, handling colspan and rowspan.
+    /// </summary>
+    private static List<CellPlacement> BuildGrid(List<RowInfo> rows, out int colCount, out int rowCount)
+    {
+        rowCount = rows.Count;
+        // First pass: determine column count considering colspan
+        var maxCol = 0;
+        foreach (var r in rows)
+        {
+            var cols = 0;
+            foreach (var cell in r.Cells)
+            {
+                cell.Attributes.TryGetValue("colspan", out var csStr);
+                int cs = 1;
+                if (csStr != null) int.TryParse(csStr, out cs);
+                if (cs < 1) cs = 1;
+                cols += cs;
+            }
+            maxCol = Math.Max(maxCol, cols);
+        }
+        colCount = maxCol;
+        if (colCount == 0) return [];
+
+        // 2D occupied grid (grown as rowspan might extend beyond initial row count)
+        var occupied = new bool[rowCount + 20, colCount];
+        var placements = new List<CellPlacement>();
+
+        for (int r = 0; r < rows.Count; r++)
+        {
+            int col = 0;
+            foreach (var cell in rows[r].Cells)
+            {
+                // Skip occupied slots (from previous rowspan)
+                while (col < colCount && occupied[r, col]) col++;
+                if (col >= colCount) break;
+
+                cell.Attributes.TryGetValue("colspan", out var csStr);
+                cell.Attributes.TryGetValue("rowspan", out var rsStr);
+                int cs = 1, rs = 1;
+                if (csStr != null) int.TryParse(csStr, out cs);
+                if (rsStr != null) int.TryParse(rsStr, out rs);
+                if (cs < 1) cs = 1;
+                if (rs < 1) rs = 1;
+
+                // Clamp to available
+                if (col + cs > colCount) cs = colCount - col;
+
+                // Extend rowCount if needed
+                if (r + rs > rowCount)
+                    rowCount = r + rs;
+
+                // Mark occupied
+                for (int dr = 0; dr < rs; dr++)
+                    for (int dc = 0; dc < cs; dc++)
+                    {
+                        var gr = r + dr;
+                        var gc = col + dc;
+                        if (gr < occupied.GetLength(0) && gc < occupied.GetLength(1))
+                            occupied[gr, gc] = true;
+                    }
+
+                placements.Add(new CellPlacement { Cell = cell, Row = r, Col = col, ColSpan = cs, RowSpan = rs });
+                col += cs;
+            }
+        }
+
+        return placements;
+    }
+
+    /// <summary>Computes the X position for a cell starting at column col.</summary>
+    private static float CellX(float contentX, float[] colWidths, int col, float spacing)
+    {
+        var x = contentX + spacing;
+        for (int c = 0; c < col; c++)
+            x += colWidths[c] + spacing;
+        return x;
+    }
+
+    /// <summary>Computes the total width for a cell spanning colSpan columns.</summary>
+    private static float CellSpanWidth(float[] colWidths, int startCol, int colSpan, float spacing)
+    {
+        float w = 0f;
+        for (int c = startCol; c < startCol + colSpan && c < colWidths.Length; c++)
+        {
+            w += colWidths[c];
+            if (c > startCol) w += spacing;
+        }
+        return w;
+    }
 
     private static List<RowInfo> CollectRows(LayoutNode table)
     {
@@ -194,7 +314,6 @@ internal static class TableEngine
             }
             else if (child.TagName is "TBODY" or "THEAD" or "TFOOT")
             {
-                // Transparent row-group containers — look inside for rows
                 CollectRowsFrom(child.Children, rows);
             }
         }
@@ -202,34 +321,32 @@ internal static class TableEngine
 
     /// <summary>
     /// Determines pixel width for each column.
-    /// Explicit widths on any cell in the column take priority;
+    /// Only cells with colspan=1 contribute explicit widths;
     /// remaining space is divided evenly among auto columns.
     /// </summary>
     private static float[] ComputeColumnWidths(
-        List<RowInfo> rows,
+        List<CellPlacement> placements,
         int colCount,
         float availableW,
         float viewportW, float viewportH)
     {
         var widths = new float[colCount];
 
-        // Gather explicit widths (first row wins per column)
-        foreach (var (_, cells) in rows)
+        // Gather explicit widths from cells with colspan=1
+        foreach (var p in placements)
         {
-            for (var c = 0; c < cells.Count && c < colCount; c++)
+            if (p.ColSpan != 1) continue;
+            if (widths[p.Col] == 0f)
             {
-                if (widths[c] == 0f)
-                {
-                    var w = cells[c].GetWidth(availableW);
-                    if (w > 0f) widths[c] = w;
-                }
+                var w = p.Cell.GetWidth(availableW);
+                if (w > 0f) widths[p.Col] = w;
             }
         }
 
         // Evenly distribute remaining width among auto columns
         var fixedSum = widths.Sum();
-        var autoCnt  = widths.Count(w => w == 0f);
-        var autoW    = autoCnt > 0 ? Math.Max(0f, availableW - fixedSum) / autoCnt : 0f;
+        var autoCnt = widths.Count(w => w == 0f);
+        var autoW = autoCnt > 0 ? Math.Max(0f, availableW - fixedSum) / autoCnt : 0f;
 
         for (var c = 0; c < colCount; c++)
             if (widths[c] == 0f) widths[c] = autoW;

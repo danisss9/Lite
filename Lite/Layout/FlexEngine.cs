@@ -21,20 +21,20 @@ internal static class FlexEngine
         float contentW, float containerH,
         float viewportWidth, float viewportHeight)
     {
-        var dir       = container.GetFlexDirection();
-        var wrap      = container.GetFlexWrap();
-        var justify   = container.GetJustifyContent();
-        var alignI    = container.GetAlignItems();
-        var alignC    = container.GetAlignContent();
-        var fontSize  = container.GetFontSize();
+        var dir = container.GetFlexDirection();
+        var wrap = container.GetFlexWrap();
+        var justify = container.GetJustifyContent();
+        var alignI = container.GetAlignItems();
+        var alignC = container.GetAlignContent();
+        var fontSize = container.GetFontSize();
 
-        var isRow     = dir == FlexDirection.Row    || dir == FlexDirection.RowReverse;
+        var isRow = dir == FlexDirection.Row || dir == FlexDirection.RowReverse;
         var isReverse = dir == FlexDirection.RowReverse || dir == FlexDirection.ColumnReverse;
 
-        var gapMain  = isRow ? container.GetGapColumn(contentW, fontSize) : container.GetGapRow(containerH, fontSize);
-        var gapCross = isRow ? container.GetGapRow(containerH, fontSize)  : container.GetGapColumn(contentW, fontSize);
+        var gapMain = isRow ? container.GetGapColumn(contentW, fontSize) : container.GetGapRow(containerH, fontSize);
+        var gapCross = isRow ? container.GetGapRow(containerH, fontSize) : container.GetGapColumn(contentW, fontSize);
 
-        var mainSize  = isRow ? contentW : (containerH > 0 ? containerH : float.MaxValue);
+        var mainSize = isRow ? contentW : (containerH > 0 ? containerH : float.MaxValue);
         var crossSize = isRow ? (containerH > 0 ? containerH : 0f) : contentW;
 
         // ── §9.1 Collect in-flow items ──────────────────────────────────────
@@ -111,12 +111,12 @@ internal static class FlexEngine
             {
                 ComputeJustify(alignC switch
                 {
-                    AlignContent.FlexStart    => JustifyContent.FlexStart,
-                    AlignContent.FlexEnd      => JustifyContent.FlexEnd,
-                    AlignContent.Center       => JustifyContent.Center,
+                    AlignContent.FlexStart => JustifyContent.FlexStart,
+                    AlignContent.FlexEnd => JustifyContent.FlexEnd,
+                    AlignContent.Center => JustifyContent.Center,
                     AlignContent.SpaceBetween => JustifyContent.SpaceBetween,
-                    AlignContent.SpaceAround  => JustifyContent.SpaceAround,
-                    _                         => JustifyContent.FlexStart,
+                    AlignContent.SpaceAround => JustifyContent.SpaceAround,
+                    _ => JustifyContent.FlexStart,
                 }, lines.Count, freeCross, out crossOffset, out crossSpacing);
             }
         }
@@ -145,12 +145,12 @@ internal static class FlexEngine
             {
                 if (isRow)
                 {
-                    if (d.Node.IsAutoMarginLeft())  autoMainMarginCount++;
+                    if (d.Node.IsAutoMarginLeft()) autoMainMarginCount++;
                     if (d.Node.IsAutoMarginRight()) autoMainMarginCount++;
                 }
                 else
                 {
-                    if (d.Node.IsAutoMarginTop())    autoMainMarginCount++;
+                    if (d.Node.IsAutoMarginTop()) autoMainMarginCount++;
                     if (d.Node.IsAutoMarginBottom()) autoMainMarginCount++;
                 }
             }
@@ -164,13 +164,13 @@ internal static class FlexEngine
                     float addStart = 0, addEnd = 0;
                     if (isRow)
                     {
-                        if (d.Node.IsAutoMarginLeft())  addStart = perAutoMargin;
-                        if (d.Node.IsAutoMarginRight()) addEnd   = perAutoMargin;
+                        if (d.Node.IsAutoMarginLeft()) addStart = perAutoMargin;
+                        if (d.Node.IsAutoMarginRight()) addEnd = perAutoMargin;
                     }
                     else
                     {
-                        if (d.Node.IsAutoMarginTop())    addStart = perAutoMargin;
-                        if (d.Node.IsAutoMarginBottom()) addEnd   = perAutoMargin;
+                        if (d.Node.IsAutoMarginTop()) addStart = perAutoMargin;
+                        if (d.Node.IsAutoMarginBottom()) addEnd = perAutoMargin;
                     }
                     d.Margin = new FlexEdge(
                         d.Margin.MainStart + addStart, d.Margin.MainEnd + addEnd,
@@ -188,7 +188,7 @@ internal static class FlexEngine
 
             if (isReverse)
             {
-                mainOffset2  = (isRow ? contentX : contentY) + mainSize - mainOffset2 - line[0].OuterMain;
+                mainOffset2 = (isRow ? contentX : contentY) + mainSize - mainOffset2 - line[0].OuterMain;
                 mainSpacing = -mainSpacing;
             }
             else
@@ -221,12 +221,12 @@ internal static class FlexEngine
                 if (isRow)
                 {
                     crossAutoStart = d.Node.IsAutoMarginTop();
-                    crossAutoEnd   = d.Node.IsAutoMarginBottom();
+                    crossAutoEnd = d.Node.IsAutoMarginBottom();
                 }
                 else
                 {
                     crossAutoStart = d.Node.IsAutoMarginLeft();
-                    crossAutoEnd   = d.Node.IsAutoMarginRight();
+                    crossAutoEnd = d.Node.IsAutoMarginRight();
                 }
 
                 // Cross-axis alignment
@@ -242,10 +242,10 @@ internal static class FlexEngine
                     effectiveAlign = alignI switch
                     {
                         AlignItems.FlexStart => AlignSelf.FlexStart,
-                        AlignItems.FlexEnd   => AlignSelf.FlexEnd,
-                        AlignItems.Center    => AlignSelf.Center,
-                        AlignItems.Baseline  => AlignSelf.Baseline,
-                        _                    => AlignSelf.Stretch,
+                        AlignItems.FlexEnd => AlignSelf.FlexEnd,
+                        AlignItems.Center => AlignSelf.Center,
+                        AlignItems.Baseline => AlignSelf.Baseline,
+                        _ => AlignSelf.Stretch,
                     };
                 }
                 else
@@ -295,9 +295,9 @@ internal static class FlexEngine
                         {
                             AlignSelf.FlexEnd => crossCursor + lineCrossSize - d.OuterCross
                                                 + d.Margin.CrossStart + d.Border.CrossStart + d.Padding.CrossStart,
-                            AlignSelf.Center  => crossCursor + (lineCrossSize - d.OuterCross) / 2f
+                            AlignSelf.Center => crossCursor + (lineCrossSize - d.OuterCross) / 2f
                                                 + d.Margin.CrossStart + d.Border.CrossStart + d.Padding.CrossStart,
-                            _                 => crossCursor + d.Margin.CrossStart + d.Border.CrossStart + d.Padding.CrossStart,
+                            _ => crossCursor + d.Margin.CrossStart + d.Border.CrossStart + d.Padding.CrossStart,
                         };
                     }
                 }
@@ -310,15 +310,15 @@ internal static class FlexEngine
                 {
                     absX = mainOffset2 + d.Margin.MainStart + d.Border.MainStart + d.Padding.MainStart;
                     absY = itemCrossOffset;
-                    w    = d.ContentMain;
-                    h    = itemCrossSize;
+                    w = d.ContentMain;
+                    h = itemCrossSize;
                 }
                 else
                 {
                     absX = itemCrossOffset;
                     absY = mainOffset2 + d.Margin.MainStart + d.Border.MainStart + d.Padding.MainStart;
-                    w    = itemCrossSize;
-                    h    = d.ContentMain;
+                    w = itemCrossSize;
+                    h = d.ContentMain;
                 }
 
                 // The cross-axis container size for this item (used for % height resolution)
@@ -338,7 +338,8 @@ internal static class FlexEngine
                 if (childH == 0 && !string.IsNullOrEmpty(d.Node.DisplayText))
                 {
                     using var font = TextMeasure.CreateFont(d.Node);
-                    var lines2 = TextMeasure.WrapText(d.Node.DisplayText, Math.Max(w, 1f), font, d.Node.GetWhiteSpace());
+                    var lh = d.Node.GetLineHeight(d.Node.GetFontSize());
+                    var lines2 = TextMeasure.WrapText(d.Node.DisplayText, Math.Max(w, 1f), font, d.Node.GetWhiteSpace(), lh);
                     childH = lines2.Sum(l => l.Height);
                 }
 
@@ -355,7 +356,7 @@ internal static class FlexEngine
                 else if (effectiveAlign != AlignSelf.Stretch || !d.CrossSizeAuto)
                 {
                     if (!isRow) h = d.ContentMain;
-                    else        h = childH > 0 ? Math.Max(d.ContentCross, childH) : d.ContentCross;
+                    else h = childH > 0 ? Math.Max(d.ContentCross, childH) : d.ContentCross;
                 }
 
                 // §9.4 Re-layout after stretch: if item cross size changed (was stretched),
@@ -376,9 +377,9 @@ internal static class FlexEngine
                 d.Node.Box = new BoxDimensions
                 {
                     ContentBox = new SKRect(absX, absY, absX + w, absY + (isRow ? h : d.ContentMain)),
-                    Margin     = EdgeFromFlex(d.Margin,  isRow),
-                    Padding    = EdgeFromFlex(d.Padding, isRow),
-                    Border     = EdgeFromFlex(d.Border,  isRow),
+                    Margin = EdgeFromFlex(d.Margin, isRow),
+                    Padding = EdgeFromFlex(d.Padding, isRow),
+                    Border = EdgeFromFlex(d.Border, isRow),
                 };
 
                 // Advance main-axis cursor
@@ -425,10 +426,10 @@ internal static class FlexEngine
         float availableMain, float availableCross,
         float viewportWidth, float viewportHeight)
     {
-        var dir   = container.GetFlexDirection();
+        var dir = container.GetFlexDirection();
         var isRow = dir == FlexDirection.Row || dir == FlexDirection.RowReverse;
         var fontSize = container.GetFontSize();
-        var gap   = isRow
+        var gap = isRow
             ? container.GetGapColumn(availableMain, fontSize)
             : container.GetGapRow(availableCross, fontSize);
 
@@ -457,7 +458,7 @@ internal static class FlexEngine
         }
 
         var current = new List<FlexItem>();
-        var used    = 0f;
+        var used = 0f;
         foreach (var d in data)
         {
             var needed = d.OuterMain + (current.Count > 0 ? gap : 0);
@@ -465,7 +466,7 @@ internal static class FlexEngine
             {
                 lines.Add(current);
                 current = [];
-                used    = 0;
+                used = 0;
             }
             current.Add(d);
             used += d.OuterMain + (current.Count > 1 ? gap : 0);
@@ -587,21 +588,21 @@ internal static class FlexEngine
     private static void ComputeJustify(JustifyContent justify, int count, float free,
         out float offset, out float spacing)
     {
-        offset  = 0;
+        offset = 0;
         spacing = 0;
         if (free <= 0) return;
         switch (justify)
         {
-            case JustifyContent.FlexEnd:      offset  = free; break;
-            case JustifyContent.Center:       offset  = free / 2f; break;
+            case JustifyContent.FlexEnd: offset = free; break;
+            case JustifyContent.Center: offset = free / 2f; break;
             case JustifyContent.SpaceBetween: spacing = count > 1 ? free / (count - 1) : 0; break;
             case JustifyContent.SpaceAround:
                 spacing = free / count;
-                offset  = spacing / 2f;
+                offset = spacing / 2f;
                 break;
             case JustifyContent.SpaceEvenly:
                 spacing = free / (count + 1);
-                offset  = spacing;
+                offset = spacing;
                 break;
         }
     }
@@ -637,7 +638,7 @@ internal static class FlexEngine
         public LayoutNode Node;
         public float ContentMain;   // mutable — updated by grow/shrink
         public float ContentCross;
-        public bool  CrossSizeAuto;
+        public bool CrossSizeAuto;
         public float Grow;
         public float Shrink;
         public FlexEdge Margin;
@@ -648,10 +649,10 @@ internal static class FlexEngine
         public float MaxMain;       // max-width (row) or max-height (column)
         public float MinCross;
         public float MaxCross;
-        public bool  Frozen;        // used by iterative resolve algorithm
-        public bool  IsCollapsed;   // visibility: collapse
+        public bool Frozen;        // used by iterative resolve algorithm
+        public bool IsCollapsed;   // visibility: collapse
 
-        public float OuterMain  => Margin.MainStart + Border.MainStart + Padding.MainStart
+        public float OuterMain => Margin.MainStart + Border.MainStart + Padding.MainStart
                                  + ContentMain
                                  + Padding.MainEnd + Border.MainEnd + Margin.MainEnd;
         public float OuterCross => Margin.CrossStart + Border.CrossStart + Padding.CrossStart
@@ -661,8 +662,8 @@ internal static class FlexEngine
         public FlexItem(LayoutNode node, float containerW, float containerH,
                         float viewportWidth, float viewportHeight, bool isRow)
         {
-            Node   = node;
-            Grow   = node.GetFlexGrow();
+            Node = node;
+            Grow = node.GetFlexGrow();
             Shrink = node.GetFlexShrink();
             IsCollapsed = node.GetVisibility() == Visibility.Collapse;
 
@@ -671,31 +672,31 @@ internal static class FlexEngine
             var p = node.GetPadding(containerW, containerH, fontSize);
             var b = node.GetBorderWidth();
 
-            Margin  = isRow ? new FlexEdge(m.Left, m.Right, m.Top, m.Bottom)
+            Margin = isRow ? new FlexEdge(m.Left, m.Right, m.Top, m.Bottom)
                             : new FlexEdge(m.Top, m.Bottom, m.Left, m.Right);
             Padding = isRow ? new FlexEdge(p.Left, p.Right, p.Top, p.Bottom)
                             : new FlexEdge(p.Top, p.Bottom, p.Left, p.Right);
-            Border  = isRow ? new FlexEdge(b.Left, b.Right, b.Top, b.Bottom)
+            Border = isRow ? new FlexEdge(b.Left, b.Right, b.Top, b.Bottom)
                             : new FlexEdge(b.Top, b.Bottom, b.Left, b.Right);
 
-            var mainContainer  = isRow ? containerW : containerH;
+            var mainContainer = isRow ? containerW : containerH;
             var crossContainer = isRow ? containerH : containerW;
 
             // Compute min/max constraints (content-box values)
-            float rawMinMain  = isRow ? node.GetMinWidth(containerW, fontSize)  : node.GetMinHeight(containerH, fontSize);
-            float rawMaxMain  = isRow ? node.GetMaxWidth(containerW, fontSize)  : node.GetMaxHeight(containerH, fontSize);
+            float rawMinMain = isRow ? node.GetMinWidth(containerW, fontSize) : node.GetMinHeight(containerH, fontSize);
+            float rawMaxMain = isRow ? node.GetMaxWidth(containerW, fontSize) : node.GetMaxHeight(containerH, fontSize);
             float rawMinCross = isRow ? node.GetMinHeight(containerH, fontSize) : node.GetMinWidth(containerW, fontSize);
             float rawMaxCross = isRow ? node.GetMaxHeight(containerH, fontSize) : node.GetMaxWidth(containerW, fontSize);
 
             var isBorderBoxNode = node.Style.GetPropertyValue("box-sizing") == "border-box";
-            var mainPB  = Border.MainStart + Border.MainEnd + Padding.MainStart + Padding.MainEnd;
+            var mainPB = Border.MainStart + Border.MainEnd + Padding.MainStart + Padding.MainEnd;
             var crossPB = Border.CrossStart + Border.CrossEnd + Padding.CrossStart + Padding.CrossEnd;
 
-            MinMain  = isBorderBoxNode && rawMinMain > 0  ? Math.Max(0, rawMinMain - mainPB) : rawMinMain;
-            MaxMain  = isBorderBoxNode && !float.IsPositiveInfinity(rawMaxMain) ? Math.Max(0, rawMaxMain - mainPB) : rawMaxMain;
+            MinMain = isBorderBoxNode && rawMinMain > 0 ? Math.Max(0, rawMinMain - mainPB) : rawMinMain;
+            MaxMain = isBorderBoxNode && !float.IsPositiveInfinity(rawMaxMain) ? Math.Max(0, rawMaxMain - mainPB) : rawMaxMain;
             MinCross = isBorderBoxNode && rawMinCross > 0 ? Math.Max(0, rawMinCross - crossPB) : rawMinCross;
             MaxCross = isBorderBoxNode && !float.IsPositiveInfinity(rawMaxCross) ? Math.Max(0, rawMaxCross - crossPB) : rawMaxCross;
-            if (MaxMain < MinMain)   MaxMain  = MinMain;
+            if (MaxMain < MinMain) MaxMain = MinMain;
             if (MaxCross < MinCross) MaxCross = MinCross;
 
             // flex-basis → main size
@@ -762,7 +763,7 @@ internal static class FlexEngine
             // compute cross size from main size via the ratio when cross is auto.
             if (CrossSizeAuto && node.TagName == "IMG")
             {
-                var iW = node.IntrinsicWidth  > 0 ? (float)node.IntrinsicWidth  : node.Image?.Width  ?? 0f;
+                var iW = node.IntrinsicWidth > 0 ? (float)node.IntrinsicWidth : node.Image?.Width ?? 0f;
                 var iH = node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight : node.Image?.Height ?? 0f;
                 if (iW > 0 && iH > 0)
                 {
@@ -794,7 +795,7 @@ internal static class FlexEngine
             if (node.TagName == "IMG")
             {
                 return isRow
-                    ? (node.IntrinsicWidth  > 0 ? node.IntrinsicWidth  : node.Image?.Width  ?? 0f)
+                    ? (node.IntrinsicWidth > 0 ? node.IntrinsicWidth : node.Image?.Width ?? 0f)
                     : (node.IntrinsicHeight > 0 ? node.IntrinsicHeight : node.Image?.Height ?? 0f);
             }
 
@@ -855,7 +856,7 @@ internal static class FlexEngine
                 using var font = TextMeasure.CreateFont(node);
                 if (isRow)
                 {
-                    var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentMain, 1f), font);
+                    var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentMain, 1f), font, WhiteSpace.Normal, node.GetLineHeight(node.GetFontSize()));
                     return lines.Sum(l => l.Height);
                 }
                 return font.MeasureText(node.DisplayText);
@@ -907,9 +908,9 @@ internal static class FlexEngine
                 return inputType switch
                 {
                     "checkbox" => (FormLayout.CheckboxSize, FormLayout.CheckboxSize),
-                    "radio"    => (FormLayout.RadioSize, FormLayout.RadioSize),
-                    "range"    => (FormLayout.RangeWidth, FormLayout.RangeHeight),
-                    _          => (FormLayout.TextInputWidth, FormLayout.TextInputHeight),
+                    "radio" => (FormLayout.RadioSize, FormLayout.RadioSize),
+                    "range" => (FormLayout.RangeWidth, FormLayout.RangeHeight),
+                    _ => (FormLayout.TextInputWidth, FormLayout.TextInputHeight),
                 };
             }
             if (node.TagName == "TEXTAREA") return (FormLayout.TextareaWidth, FormLayout.TextareaHeight);
@@ -920,9 +921,9 @@ internal static class FlexEngine
 
     private readonly struct FlexEdge(float mainStart, float mainEnd, float crossStart, float crossEnd)
     {
-        public readonly float MainStart  = mainStart;
-        public readonly float MainEnd    = mainEnd;
+        public readonly float MainStart = mainStart;
+        public readonly float MainEnd = mainEnd;
         public readonly float CrossStart = crossStart;
-        public readonly float CrossEnd   = crossEnd;
+        public readonly float CrossEnd = crossEnd;
     }
 }

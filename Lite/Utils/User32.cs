@@ -84,4 +84,7 @@ internal static class User32
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern bool KillTimer(IntPtr hWnd, IntPtr uIDEvent);
+
+    [DllImport("user32.dll")]
+    internal static extern short GetKeyState(int nVirtKey);
 }

@@ -119,7 +119,8 @@ internal static class BoxEngine
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
         {
             using var font = TextMeasure.CreateFont(node);
-            var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentW, 1f), font, node.GetWhiteSpace());
+            var lh = node.GetLineHeight(node.GetFontSize());
+            var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentW, 1f), font, node.GetWhiteSpace(), lh);
             contentH = lines.Sum(l => l.Height);
         }
 
@@ -218,23 +219,45 @@ internal static class BoxEngine
             ? FlexEngine.LayoutFlex(node, contentX, contentY, contentW, knownContentH, viewportWidth, viewportHeight)
             : nodeDisplay == DisplayType.Table
                 ? TableEngine.LayoutTable(node, contentX, contentY, contentW, viewportWidth, viewportHeight)
-                : LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight, knownContentH);
+                : LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight, knownContentH,
+                                 border.Top + padding.Top);
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
         {
             using var font = TextMeasure.CreateFont(node);
             var ws = node.GetWhiteSpace();
-            var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentW, 1f), font, ws);
+            var lh = node.GetLineHeight(node.GetFontSize());
+            var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentW, 1f), font, ws, lh);
             contentH = lines.Sum(l => l.Height);
         }
 
         // Explicit height overrides — respect box-sizing: border-box
         if (explicitH > 0)
         {
-            contentH = isBorderBox
+            var clampedH = isBorderBox
                 ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
                 : explicitH;
+
+            // Per-element overflow scroll: track natural content vs. constrained height
+            var overflow = node.GetOverflow();
+            if ((overflow == OverflowType.Scroll || overflow == OverflowType.Auto) && contentH > clampedH)
+            {
+                var ss = node.ScrollState ?? new ElementScrollState();
+                ss.ContentHeight = contentH;
+                ss.ContainerHeight = clampedH;
+                node.ScrollState = ss;
+            }
+            else
+            {
+                node.ScrollState = null;
+            }
+
+            contentH = clampedH;
+        }
+        else
+        {
+            node.ScrollState = null;
         }
 
         node.Box = new BoxDimensions
@@ -410,7 +433,8 @@ internal static class BoxEngine
         if (childContentH == 0 && !string.IsNullOrEmpty(child.DisplayText))
         {
             using var font = TextMeasure.CreateFont(child);
-            var lines = TextMeasure.WrapText(child.DisplayText, Math.Max(childContentW, 1f), font, child.GetWhiteSpace());
+            var lh = child.GetLineHeight(child.GetFontSize());
+            var lines = TextMeasure.WrapText(child.DisplayText, Math.Max(childContentW, 1f), font, child.GetWhiteSpace(), lh);
             childContentH = lines.Sum(l => l.Height);
         }
         if (explicitH > 0)
@@ -440,10 +464,12 @@ internal static class BoxEngine
         float contentX, float contentY,
         float contentW,
         float viewportWidth, float viewportHeight,
-        float parentContentHeight = 0)
+        float parentContentHeight = 0,
+        float parentBorderPaddingTop = -1f)
     {
         var cursorY = contentY;
         var prevMarginBottom = 0f;
+        var firstBlockSeen = false;
         var i = 0;
         var floats = new List<ActiveFloat>();
 
@@ -491,9 +517,21 @@ internal static class BoxEngine
                 var childFontSize = child.GetFontSize();
                 var childMarginTop = child.GetMarginTop(total: viewportHeight, size: childFontSize);
 
-                // Collapse adjacent vertical margins: use max, not sum
-                var collapsed = Math.Max(prevMarginBottom, childMarginTop);
-                var adjust = collapsed - prevMarginBottom - childMarginTop; // ≤ 0
+                float adjust;
+                if (!firstBlockSeen && parentBorderPaddingTop == 0f)
+                {
+                    // Parent-child margin collapsing: first child's top margin collapses
+                    // with parent's top margin when parent has no border/padding top.
+                    adjust = -childMarginTop;
+                    firstBlockSeen = true;
+                }
+                else
+                {
+                    // Collapse adjacent vertical margins: use max, not sum
+                    var collapsed = Math.Max(prevMarginBottom, childMarginTop);
+                    adjust = collapsed - prevMarginBottom - childMarginTop; // ≤ 0
+                    firstBlockSeen = true;
+                }
 
                 // Narrow available width for non-floated blocks when floats are active
                 var (effX, effW) = AvailableBand(floats, cursorY + adjust, 1, contentX, contentW);
@@ -618,7 +656,8 @@ internal static class BoxEngine
                 {
                     using var font = TextMeasure.CreateFont(item.Node);
                     var ws = item.Node.GetWhiteSpace();
-                    var wrapLines = TextMeasure.WrapText(item.Text, Math.Max(availW, 1f), font, ws);
+                    var lh = item.Node.GetLineHeight(item.Node.GetFontSize());
+                    var wrapLines = TextMeasure.WrapText(item.Text, Math.Max(availW, 1f), font, ws, lh);
                     var wrappedH = wrapLines.Sum(l => l.Height);
                     effectiveItem = item with { Width = availW, Height = wrappedH, ContentW = availW, ContentH = wrappedH };
                 }
@@ -749,7 +788,8 @@ internal static class BoxEngine
             else if (!string.IsNullOrEmpty(node.DisplayText) && !node.Children.Any())
             {
                 using var font = TextMeasure.CreateFont(node);
-                var (w, h, _) = TextMeasure.MeasureSingleLine(node.DisplayText, font);
+                var lh = node.GetLineHeight(node.GetFontSize());
+                var (w, h, _) = TextMeasure.MeasureSingleLine(node.DisplayText, font, lh);
                 items.Add(new InlineItem(InlineItemKind.Text, node, node.DisplayText, w, h,
                            default, default, default, w, h));
             }

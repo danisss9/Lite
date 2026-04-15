@@ -3,6 +3,7 @@ using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Css.Dom;
 using Lite.Animation;
+using Lite.Layout;
 using Lite.Models;
 using Lite.Network;
 using Lite.Scripting;
@@ -75,10 +76,14 @@ internal static class Parser
     internal static int ViewportWidth { get; private set; } = 800;
     internal static int ViewportHeight { get; private set; } = 600;
 
+    // CSS counter state maintained during document-order traversal
+    private static readonly Dictionary<string, int> _counters = new();
+
     internal static LayoutNode TraverseHtml(string address, int viewportWidth = 800, int viewportHeight = 600)
     {
         _baseUrl = address;
         _pendingScripts.Clear();
+        _counters.Clear();
         ViewportWidth = viewportWidth;
         ViewportHeight = viewportHeight;
 
@@ -119,6 +124,10 @@ internal static class Parser
         AnimationRegistry.Clear();
         CollectKeyframes(document);
 
+        // Collect @font-face rules and load custom fonts
+        FontRegistry.Clear();
+        CollectFontFaces(document);
+
         var root = Traverse(document.DocumentElement, 0);
 
         // Collect all CSS rules for dynamic class-based style re-evaluation
@@ -126,7 +135,7 @@ internal static class Parser
 
         // Always create the JS engine so inline onclick/on* handlers work,
         // even when there are no external or inline script blocks.
-        var jsEngine = JsEngine.Create(root);
+        var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight);
         foreach (var script in _pendingScripts)
             jsEngine.Execute(script);
 
@@ -193,6 +202,69 @@ internal static class Parser
         return null;
     }
 
+    /// <summary>Walks all stylesheets and loads @font-face rules into <see cref="FontRegistry"/>.</summary>
+    private static void CollectFontFaces(AngleSharp.Dom.IDocument document)
+    {
+        if (document.StyleSheets is null) return;
+        foreach (var sheet in document.StyleSheets.OfType<ICssStyleSheet>())
+            CollectFontFacesFromRules(sheet.Rules);
+    }
+
+    private static void CollectFontFacesFromRules(ICssRuleList rules)
+    {
+        foreach (var rule in rules)
+        {
+            if (rule is ICssFontFaceRule ffRule)
+            {
+                var family = ffRule.Family?.Trim().Trim('"', '\'');
+                var srcRaw = ffRule.Source;
+                if (string.IsNullOrWhiteSpace(family) || string.IsNullOrWhiteSpace(srcRaw)) continue;
+
+                // Parse font-weight and font-style
+                var weightStr = ffRule.Weight?.Trim().ToLowerInvariant() ?? "normal";
+                var styleStr = ffRule.Style?.Trim().ToLowerInvariant() ?? "normal";
+                var bold = weightStr is "bold" or "700" or "800" or "900";
+                var italic = styleStr is "italic" or "oblique";
+
+                // Extract URL from src: url("path") format
+                var url = ExtractFontUrl(srcRaw);
+                if (url == null) continue;
+
+                var resolved = ResolveUrl(url);
+                if (resolved == null) continue;
+
+                try
+                {
+                    var fontBytes = ResourceLoader.FetchBytes(resolved, _baseUrl);
+                    if (fontBytes != null && fontBytes.Length > 0)
+                        FontRegistry.Register(family, bold, italic, fontBytes);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[FontFace] Failed to load '{family}' from {resolved}: {ex.Message}");
+                }
+                continue;
+            }
+
+            if (rule is ICssMediaRule mediaRule)
+                CollectFontFacesFromRules(mediaRule.Rules);
+        }
+    }
+
+    private static string? ExtractFontUrl(string src)
+    {
+        // Match url("...") or url('...') or url(...)
+        var idx = src.IndexOf("url(", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return null;
+        var start = idx + 4;
+        if (start >= src.Length) return null;
+        char? quote = null;
+        if (src[start] == '"' || src[start] == '\'') { quote = src[start]; start++; }
+        var end = quote.HasValue ? src.IndexOf(quote.Value, start) : src.IndexOf(')', start);
+        if (end < 0) return null;
+        return src[start..end].Trim();
+    }
+
     private static LayoutNode Traverse(IElement element, int indent)
     {
         // Normalize tag name to uppercase — AngleSharp returns lowercase for SVG namespace elements
@@ -229,6 +301,15 @@ internal static class Parser
 
             if (!string.IsNullOrEmpty(src))
                 node.Image = ResourceLoader.FetchImage(src, _baseUrl);
+        }
+
+        if (tag is "TD" or "TH")
+        {
+            foreach (var attr in new[] { "colspan", "rowspan" })
+            {
+                var val = element.GetAttribute(attr);
+                if (val != null) node.Attributes[attr] = val;
+            }
         }
 
         if (tag is "INPUT" or "BUTTON")
@@ -381,6 +462,24 @@ internal static class Parser
             }
         }
 
+        // Process CSS counters (counter-reset, counter-increment) before pseudo-elements
+        if (node.StyleOverrides.TryGetValue("counter-reset", out var crReset))
+        {
+            foreach (var part in ParseCounterSpec(crReset))
+                _counters[part.Name] = part.Value;
+        }
+        if (node.StyleOverrides.TryGetValue("counter-increment", out var crInc))
+        {
+            foreach (var part in ParseCounterSpec(crInc))
+            {
+                _counters.TryGetValue(part.Name, out var cur);
+                _counters[part.Name] = cur + (part.Value == 0 ? 1 : part.Value);
+            }
+        }
+        // Snapshot current counter state on the node for counter() resolution
+        if (_counters.Count > 0)
+            node.CounterValues = new Dictionary<string, int>(_counters);
+
         // Create ::before and ::after pseudo-element children
         CreatePseudoElementChildren(node);
 
@@ -394,9 +493,9 @@ internal static class Parser
     private static void CreatePseudoElementChildren(LayoutNode node)
     {
         bool hasBefore = node.BeforeStyles != null && node.BeforeStyles.TryGetValue("content", out var beforeContent)
-                         && ParseContentValue(beforeContent!) != null;
+                         && ParseContentValue(beforeContent!, node) != null;
         bool hasAfter = node.AfterStyles != null && node.AfterStyles.TryGetValue("content", out var afterContent)
-                        && ParseContentValue(afterContent!) != null;
+                        && ParseContentValue(afterContent!, node) != null;
 
         if (!hasBefore && !hasAfter) return;
 
@@ -413,7 +512,7 @@ internal static class Parser
 
         if (hasBefore)
         {
-            var text = ParseContentValue(node.BeforeStyles!["content"]);
+            var text = ParseContentValue(node.BeforeStyles!["content"], node);
             var pseudoNode = new LayoutNode(null, "#pseudo-before", text!, node.Style);
             pseudoNode.StyleOverrides["display"] = node.BeforeStyles!.GetValueOrDefault("display", "inline");
             foreach (var (p, v) in node.BeforeStyles!)
@@ -426,7 +525,7 @@ internal static class Parser
 
         if (hasAfter)
         {
-            var text = ParseContentValue(node.AfterStyles!["content"]);
+            var text = ParseContentValue(node.AfterStyles!["content"], node);
             var pseudoNode = new LayoutNode(null, "#pseudo-after", text!, node.Style);
             pseudoNode.StyleOverrides["display"] = node.AfterStyles!.GetValueOrDefault("display", "inline");
             foreach (var (p, v) in node.AfterStyles!)
@@ -438,26 +537,133 @@ internal static class Parser
         }
     }
 
-    /// <summary>Parses a CSS content property value, stripping quotes and handling basic values.</summary>
-    private static string? ParseContentValue(string value)
+    /// <summary>Parses a CSS content property value, stripping quotes and handling basic values.
+    /// Supports concatenated tokens like: "Chapter " counter(section) ". "</summary>
+    private static string? ParseContentValue(string value, LayoutNode? node = null)
     {
         value = value.Trim();
         if (value is "none" or "normal" or "") return null;
-        // Strip surrounding quotes and decode CSS unicode escapes
-        if ((value.StartsWith('"') && value.EndsWith('"')) ||
-            (value.StartsWith('\'') && value.EndsWith('\'')))
+
+        // Check if this is a simple single-token value
+        if (!value.Contains("counter(") && !value.Contains("counters("))
         {
-            var inner = value[1..^1];
-            return DecodeCssEscapes(inner);
+            // Simple single value
+            if ((value.StartsWith('"') && value.EndsWith('"')) ||
+                (value.StartsWith('\'') && value.EndsWith('\'')))
+            {
+                var inner = value[1..^1];
+                return DecodeCssEscapes(inner);
+            }
+            if (value.StartsWith("attr(")) return null;
+            if (value == "open-quote") return "\u201C";
+            if (value == "close-quote") return "\u201D";
+            return value;
         }
-        // Handle attr() — not supported yet, return the raw value
-        if (value.StartsWith("attr(")) return null;
-        // Handle counter() — not supported yet
-        if (value.StartsWith("counter(")) return null;
-        // open-quote / close-quote
-        if (value == "open-quote") return "\u201C";
-        if (value == "close-quote") return "\u201D";
-        return value;
+
+        // Tokenize concatenated content value: "text" counter(name) "more"
+        var sb = new System.Text.StringBuilder();
+        int i = 0;
+        while (i < value.Length)
+        {
+            if (char.IsWhiteSpace(value[i])) { i++; continue; }
+
+            // Quoted string
+            if (value[i] == '"' || value[i] == '\'')
+            {
+                var quote = value[i];
+                int end = value.IndexOf(quote, i + 1);
+                if (end < 0) break;
+                sb.Append(DecodeCssEscapes(value[(i + 1)..end]));
+                i = end + 1;
+                continue;
+            }
+
+            // counter(name) or counter(name, style)
+            if (value[i..].StartsWith("counter("))
+            {
+                var paren = value.IndexOf(')', i);
+                if (paren < 0) break;
+                var args = value[(i + 8)..paren].Split(',', StringSplitOptions.TrimEntries);
+                var counterName = args[0];
+                var counterVal = 0;
+                node?.CounterValues?.TryGetValue(counterName, out counterVal);
+                if (args.Length > 1)
+                    sb.Append(FormatCounter(counterVal, args[1]));
+                else
+                    sb.Append(counterVal);
+                i = paren + 1;
+                continue;
+            }
+
+            // counters(name, separator) or counters(name, separator, style)
+            if (value[i..].StartsWith("counters("))
+            {
+                var paren = value.IndexOf(')', i);
+                if (paren < 0) break;
+                var args = value[(i + 9)..paren].Split(',', StringSplitOptions.TrimEntries);
+                var counterName = args[0];
+                var counterVal = 0;
+                node?.CounterValues?.TryGetValue(counterName, out counterVal);
+                sb.Append(counterVal);
+                i = paren + 1;
+                continue;
+            }
+
+            // open-quote / close-quote
+            if (value[i..].StartsWith("open-quote")) { sb.Append('\u201C'); i += 10; continue; }
+            if (value[i..].StartsWith("close-quote")) { sb.Append('\u201D'); i += 11; continue; }
+
+            // Skip unknown token until whitespace
+            while (i < value.Length && !char.IsWhiteSpace(value[i])) i++;
+        }
+
+        return sb.Length > 0 ? sb.ToString() : null;
+    }
+
+    private static string FormatCounter(int value, string style) => style switch
+    {
+        "lower-alpha" or "lower-latin" => value >= 1 && value <= 26 ? ((char)('a' + value - 1)).ToString() : value.ToString(),
+        "upper-alpha" or "upper-latin" => value >= 1 && value <= 26 ? ((char)('A' + value - 1)).ToString() : value.ToString(),
+        "lower-roman" => ToRomanLower(value),
+        "upper-roman" => ToRomanUpper(value),
+        _ => value.ToString(),
+    };
+
+    private static string ToRomanLower(int num) => ToRomanUpper(num).ToLowerInvariant();
+
+    private static string ToRomanUpper(int num)
+    {
+        if (num <= 0 || num > 3999) return num.ToString();
+        string[] thousands = ["", "M", "MM", "MMM"];
+        string[] hundreds = ["", "C", "CC", "CCC", "CD", "D", "DC", "DCC", "DCCC", "CM"];
+        string[] tens = ["", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC"];
+        string[] ones = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
+        return thousands[num / 1000] + hundreds[num % 1000 / 100] + tens[num % 100 / 10] + ones[num % 10];
+    }
+
+    /// <summary>Parses "counter-reset: name value name2 value2" or "counter-increment: name value" specs.</summary>
+    private static List<(string Name, int Value)> ParseCounterSpec(string spec)
+    {
+        var result = new List<(string, int)>();
+        var tokens = spec.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        int i = 0;
+        while (i < tokens.Length)
+        {
+            if (tokens[i] == "none") break;
+            var name = tokens[i];
+            int val = 0;
+            if (i + 1 < tokens.Length && int.TryParse(tokens[i + 1], out var parsed))
+            {
+                val = parsed;
+                i += 2;
+            }
+            else
+            {
+                i++;
+            }
+            result.Add((name, val));
+        }
+        return result;
     }
 
     /// <summary>Decodes CSS unicode escape sequences like \201C into actual characters.</summary>
@@ -590,7 +796,9 @@ internal static class Parser
         // CSS2 background image
         "background-image", "background-repeat", "background-position", "background-size",
         // CSS2 table properties
-        "border-collapse", "border-spacing", "table-layout", "caption-side", "empty-cells"
+        "border-collapse", "border-spacing", "table-layout", "caption-side", "empty-cells",
+        // CSS2 counter properties
+        "counter-reset", "counter-increment"
     ];
 
     /// <summary>
@@ -965,12 +1173,16 @@ internal static class Parser
 
         bool isBefore = selector.Contains("::before") || selector.Contains(":before");
         bool isAfter = selector.Contains("::after") || selector.Contains(":after");
-        if (!isBefore && !isAfter) return false;
+        bool isFirstLetter = selector.Contains("::first-letter") || selector.Contains(":first-letter");
+        bool isFirstLine = selector.Contains("::first-line") || selector.Contains(":first-line");
+        if (!isBefore && !isAfter && !isFirstLetter && !isFirstLine) return false;
 
         // Strip pseudo-element to get base selector
         var baseSelector = selector
             .Replace("::before", "").Replace(":before", "")
             .Replace("::after", "").Replace(":after", "")
+            .Replace("::first-letter", "").Replace(":first-letter", "")
+            .Replace("::first-line", "").Replace(":first-line", "")
             .Trim();
         if (string.IsNullOrEmpty(baseSelector)) return true;
 
@@ -991,6 +1203,16 @@ internal static class Parser
         {
             node.AfterStyles ??= new Dictionary<string, string>();
             foreach (var (p, v) in props) node.AfterStyles[p] = v;
+        }
+        if (isFirstLetter)
+        {
+            node.FirstLetterStyles ??= new Dictionary<string, string>();
+            foreach (var (p, v) in props) node.FirstLetterStyles[p] = v;
+        }
+        if (isFirstLine)
+        {
+            node.FirstLineStyles ??= new Dictionary<string, string>();
+            foreach (var (p, v) in props) node.FirstLineStyles[p] = v;
         }
 
         return true;

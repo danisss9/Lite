@@ -1467,3 +1467,189 @@ footer {
 .tw-tree div {
   padding-left: 16px;
 }
+
+/* ================================================================
+   TIER 1 FEATURE DEMOS
+   ================================================================ */
+
+/* ── CSS Counters ─────────────────────────────── */
+.counter-steps {
+  counter-reset: step;
+  margin-bottom: 16px;
+}
+.counter-step {
+  counter-increment: step;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 8px;
+  font-size: 0.95em;
+  color: #334155;
+}
+.counter-step::before {
+  content: counter(step) ". ";
+  font-weight: bold;
+  color: #1d4ed8;
+}
+
+.counter-chapters {
+  counter-reset: chapter;
+}
+.counter-chapter {
+  counter-increment: chapter;
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: #0f172a;
+}
+.counter-chapter::before {
+  content: counter(chapter) ". ";
+  color: #dc2626;
+}
+.counter-sections {
+  counter-reset: section;
+  padding-left: 20px;
+}
+.counter-section {
+  counter-increment: section;
+  font-weight: normal;
+  color: #475569;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+.counter-section::before {
+  content: counter(chapter) "." counter(section) " ";
+  color: #7c3aed;
+  font-weight: bold;
+}
+
+/* ── Table Colspan / Rowspan ──────────────────── */
+.tbl-span {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 16px;
+}
+.tbl-span th, .tbl-span td {
+  border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;
+  border-top-color: #cbd5e1; border-right-color: #cbd5e1; border-bottom-color: #cbd5e1; border-left-color: #cbd5e1;
+  padding-top: 8px; padding-right: 12px; padding-bottom: 8px; padding-left: 12px;
+  text-align: left;
+}
+.tbl-span th {
+  background-color: #1e40af;
+  color: #ffffff;
+  font-weight: bold;
+}
+.tbl-span td {
+  background-color: #f8fafc;
+}
+
+/* ── Per-element Overflow Scroll ──────────────── */
+.scroll-demo {
+  margin-top: 8px;
+}
+.scroll-box {
+  height: 140px;
+  overflow: auto;
+  background-color: #f8fafc;
+  padding-top: 10px;
+  padding-right: 14px;
+  padding-bottom: 10px;
+  padding-left: 14px;
+  border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;
+  border-top-color: #e2e8f0; border-right-color: #e2e8f0; border-bottom-color: #e2e8f0; border-left-color: #e2e8f0;
+  border-radius: 6px;
+}
+.scroll-box p {
+  margin-bottom: 6px;
+  font-size: 0.9em;
+  color: #334155;
+}
+
+/* ── ::first-letter & ::first-line ────────────── */
+.fl-dropcap {
+  margin-bottom: 12px;
+  line-height: 1.6;
+  color: #334155;
+}
+.fl-dropcap::first-letter {
+  font-size: 2.5em;
+  font-weight: bold;
+  color: #1d4ed8;
+}
+.fl-firstline {
+  line-height: 1.6;
+  color: #334155;
+}
+.fl-firstline::first-line {
+  font-weight: bold;
+  color: #b91c1c;
+}
+
+/* ── Keyboard Events ──────────────────────────── */
+#kb-input {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+/* ── Mouse Coordinates ────────────────────────── */
+.mouse-area {
+  height: 100px;
+  background-color: #ede9fe;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #5b21b6;
+  cursor: crosshair;
+}
+
+/* ── requestAnimationFrame ────────────────────── */
+.raf-track {
+  height: 40px;
+  background-color: #f1f5f9;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.raf-ball {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background-color: #ef4444;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+}
+
+/* ── Form Events ──────────────────────────────── */
+#fe-form label {
+  margin-top: 8px;
+  margin-bottom: 2px;
+  font-weight: bold;
+  font-size: 0.9em;
+  color: #475569;
+}
+#fe-form input {
+  margin-bottom: 4px;
+}
+
+/* ── Line-height Variations ───────────────────── */
+.lh-demos {
+  display: flex;
+  gap: 12px;
+}
+.lh-box {
+  flex: 1;
+  padding-top: 10px;
+  padding-right: 12px;
+  padding-bottom: 10px;
+  padding-left: 12px;
+  background-color: #f8fafc;
+  border-radius: 6px;
+  font-size: 0.85em;
+  color: #334155;
+}
+.lh-tight  { line-height: 1.0; }
+.lh-normal { line-height: 1.5; }
+.lh-loose  { line-height: 2.2; }

@@ -1,13 +1,22 @@
 // ── Form ──────────────────────────────────────────────────────────────────
 document.getElementById('submit-btn').addEventListener('click', function () {
-  var name   = document.getElementById('name').value.trim();
-  var email  = document.getElementById('email').value.trim();
+  var name = document.getElementById('name').value.trim();
+  var email = document.getElementById('email').value.trim();
   var agreed = document.getElementById('agree').checked;
   var result = document.getElementById('form-result');
 
-  if (!name)   { result.textContent = 'Please enter your name.'; return; }
-  if (!email)  { result.textContent = 'Please enter your email.'; return; }
-  if (!agreed) { result.textContent = 'Please agree to the terms.'; return; }
+  if (!name) {
+    result.textContent = 'Please enter your name.';
+    return;
+  }
+  if (!email) {
+    result.textContent = 'Please enter your email.';
+    return;
+  }
+  if (!agreed) {
+    result.textContent = 'Please agree to the terms.';
+    return;
+  }
 
   result.textContent = 'Submitted! Hello, ' + name + ' (' + email + ')';
 });
@@ -39,7 +48,7 @@ var todoCount = 0;
 
 document.getElementById('todo-add').addEventListener('click', function () {
   var input = document.getElementById('todo-input');
-  var text  = input.value.trim();
+  var text = input.value.trim();
   if (!text) return;
 
   todoCount += 1;
@@ -60,7 +69,7 @@ document.getElementById('todo-add').addEventListener('click', function () {
 
 // ── DOM Events — bubbling ────────────────────────────────────────────────
 (function () {
-  var log   = document.getElementById('ev-log');
+  var log = document.getElementById('ev-log');
   var outer = document.getElementById('ev-outer');
   var inner = document.getElementById('ev-inner');
 
@@ -77,7 +86,7 @@ document.getElementById('todo-add').addEventListener('click', function () {
 
 // ── Event Control — stopPropagation ──────────────────────────────────────
 (function () {
-  var log   = document.getElementById('ec-log');
+  var log = document.getElementById('ec-log');
   var outer = document.getElementById('ec-outer');
   var inner = document.getElementById('ec-inner');
 
@@ -108,13 +117,13 @@ document.getElementById('todo-add').addEventListener('click', function () {
 
 // ── CSS Selectors Level 3 ────────────────────────────────────────────────
 (function () {
-  function clearHighlight () {
+  function clearHighlight() {
     var items = document.querySelectorAll('#sel-list li');
     for (var i = 0; i < items.length; i++) {
       items[i].style.backgroundColor = '';
     }
   }
-  function highlight (sel) {
+  function highlight(sel) {
     clearHighlight();
     var matches = document.querySelectorAll(sel);
     for (var i = 0; i < matches.length; i++) {
@@ -139,19 +148,28 @@ document.getElementById('todo-add').addEventListener('click', function () {
 // ── DOM Mutation ─────────────────────────────────────────────────────────
 (function () {
   var container = document.getElementById('mut-container');
-  var countEl   = document.getElementById('mut-count');
-  var colors    = ['#ef4444','#3b82f6','#22c55e','#f59e0b','#8b5cf6','#14b8a6','#ec4899','#6366f1'];
-  var nextId    = 0;
+  var countEl = document.getElementById('mut-count');
+  var colors = [
+    '#ef4444',
+    '#3b82f6',
+    '#22c55e',
+    '#f59e0b',
+    '#8b5cf6',
+    '#14b8a6',
+    '#ec4899',
+    '#6366f1',
+  ];
+  var nextId = 0;
 
-  function updateMutCount () {
+  function updateMutCount() {
     countEl.textContent = 'Items: ' + container.children.length;
   }
 
   document.getElementById('mut-add').addEventListener('click', function () {
     var el = document.createElement('div');
-    el.style.width           = '30px';
-    el.style.height          = '30px';
-    el.style.borderRadius    = '4px';
+    el.style.width = '30px';
+    el.style.height = '30px';
+    el.style.borderRadius = '4px';
     el.style.backgroundColor = colors[nextId % colors.length];
     nextId++;
     container.appendChild(el);
@@ -184,10 +202,10 @@ document.getElementById('todo-add').addEventListener('click', function () {
 
 // ── classList API ────────────────────────────────────────────────────────
 (function () {
-  var target  = document.getElementById('cl-target');
+  var target = document.getElementById('cl-target');
   var readout = document.getElementById('cl-readout');
 
-  function showClass () {
+  function showClass() {
     readout.textContent = 'class="' + target.className + '"';
   }
   showClass();
@@ -196,10 +214,10 @@ document.getElementById('todo-add').addEventListener('click', function () {
     target.classList.toggle('active');
     if (target.classList.contains('active')) {
       target.style.backgroundColor = '#bbf7d0';
-      target.style.color           = '#166534';
+      target.style.color = '#166534';
     } else {
       target.style.backgroundColor = '#f1f5f9';
-      target.style.color           = '#334155';
+      target.style.color = '#334155';
     }
     showClass();
   });
@@ -211,7 +229,7 @@ document.getElementById('todo-add').addEventListener('click', function () {
 
 // ── Timers ───────────────────────────────────────────────────────────────
 (function () {
-  var valEl      = document.getElementById('timer-val');
+  var valEl = document.getElementById('timer-val');
   var timerCount = 0;
   var intervalId = null;
 
@@ -224,11 +242,17 @@ document.getElementById('todo-add').addEventListener('click', function () {
   });
 
   document.getElementById('timer-stop').addEventListener('click', function () {
-    if (intervalId !== null) { clearInterval(intervalId); intervalId = null; }
+    if (intervalId !== null) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
   });
 
   document.getElementById('timer-reset').addEventListener('click', function () {
-    if (intervalId !== null) { clearInterval(intervalId); intervalId = null; }
+    if (intervalId !== null) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
     timerCount = 0;
     valEl.textContent = '0';
   });
@@ -302,15 +326,22 @@ document.getElementById('todo-add').addEventListener('click', function () {
 // ── Geometry APIs ────────────────────────────────────────────────────────
 (function () {
   document.getElementById('geo-btn').addEventListener('click', function () {
-    var el   = document.getElementById('geo-target');
+    var el = document.getElementById('geo-target');
     var rect = el.getBoundingClientRect();
-    var out  = document.getElementById('geo-readout');
+    var out = document.getElementById('geo-readout');
     out.textContent =
-      'top=' + Math.round(rect.top) +
-      '  left=' + Math.round(rect.left) +
-      '  w=' + Math.round(rect.width) +
-      '  h=' + Math.round(rect.height) +
-      '  |  offset: ' + Math.round(el.offsetWidth) + 'x' + Math.round(el.offsetHeight);
+      'top=' +
+      Math.round(rect.top) +
+      '  left=' +
+      Math.round(rect.left) +
+      '  w=' +
+      Math.round(rect.width) +
+      '  h=' +
+      Math.round(rect.height) +
+      '  |  offset: ' +
+      Math.round(el.offsetWidth) +
+      'x' +
+      Math.round(el.offsetHeight);
   });
 })();
 
@@ -321,18 +352,22 @@ document.getElementById('todo-add').addEventListener('click', function () {
     var cs = getComputedStyle(el);
     var out = document.getElementById('cs-readout');
     out.textContent =
-      'bg=' + cs.backgroundColor +
-      '  color=' + cs.color +
-      '  fontSize=' + cs.fontSize +
-      '  w=' + cs.width;
+      'bg=' +
+      cs.backgroundColor +
+      '  color=' +
+      cs.color +
+      '  fontSize=' +
+      cs.fontSize +
+      '  w=' +
+      cs.width;
   });
 })();
 
 // ── Dynamic Styling ──────────────────────────────────────────────────────
 (function () {
-  var box    = document.getElementById('ds-box');
-  var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
-  var ci     = 0;
+  var box = document.getElementById('ds-box');
+  var colors = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899'];
+  var ci = 0;
 
   document.getElementById('ds-color').addEventListener('click', function () {
     ci = (ci + 1) % colors.length;
@@ -345,14 +380,14 @@ document.getElementById('todo-add').addEventListener('click', function () {
 
   document.getElementById('ds-grow').addEventListener('click', function () {
     var w = parseInt(box.style.width) || 80;
-    box.style.width  = (w + 20) + 'px';
-    box.style.height = (w + 20) + 'px';
+    box.style.width = w + 20 + 'px';
+    box.style.height = w + 20 + 'px';
   });
 
   document.getElementById('ds-reset').addEventListener('click', function () {
-    box.style.width           = '80px';
-    box.style.height          = '80px';
-    box.style.borderRadius    = '6px';
+    box.style.width = '80px';
+    box.style.height = '80px';
+    box.style.borderRadius = '6px';
     box.style.backgroundColor = '#3b82f6';
     ci = 0;
   });
@@ -361,11 +396,11 @@ document.getElementById('todo-add').addEventListener('click', function () {
 // ── TreeWalker ───────────────────────────────────────────────────────────
 (function () {
   document.getElementById('tw-btn').addEventListener('click', function () {
-    var root   = document.getElementById('tw-tree');
+    var root = document.getElementById('tw-tree');
     var walker = document.createTreeWalker(root, 1); // SHOW_ELEMENT
-    var out    = document.getElementById('tw-output');
-    var names  = [];
-    var node   = walker.nextNode();
+    var out = document.getElementById('tw-output');
+    var names = [];
+    var node = walker.nextNode();
     while (node !== null) {
       var t = node.textContent;
       if (t.length > 12) t = t.substring(0, 12);
@@ -373,5 +408,117 @@ document.getElementById('todo-add').addEventListener('click', function () {
       node = walker.nextNode();
     }
     out.textContent = names.join(' > ');
+  });
+})();
+
+// ================================================================
+// TIER 1 FEATURE DEMOS
+// ================================================================
+
+// ── Keyboard Events ──────────────────────────────────────────────────────
+(function () {
+  var input = document.getElementById('kb-input');
+  var log = document.getElementById('kb-log');
+
+  input.addEventListener('keydown', function (e) {
+    log.textContent =
+      'keydown  key="' +
+      e.key +
+      '"  code=' +
+      e.code +
+      '  keyCode=' +
+      e.keyCode +
+      (e.ctrlKey ? '  +Ctrl' : '') +
+      (e.shiftKey ? '  +Shift' : '') +
+      (e.altKey ? '  +Alt' : '');
+  });
+  input.addEventListener('keyup', function (e) {
+    log.textContent = 'keyup    key="' + e.key + '"  code=' + e.code;
+  });
+})();
+
+// ── Mouse Coordinates ────────────────────────────────────────────────────
+(function () {
+  var area = document.getElementById('mouse-area');
+  var log = document.getElementById('mouse-log');
+
+  area.addEventListener('click', function (e) {
+    log.textContent =
+      'click  clientX=' + e.clientX + '  clientY=' + e.clientY + '  button=' + e.button;
+  });
+  area.addEventListener('mousedown', function (e) {
+    log.textContent = 'mousedown  clientX=' + e.clientX + '  clientY=' + e.clientY;
+  });
+  area.addEventListener('mouseup', function (e) {
+    log.textContent = 'mouseup  clientX=' + e.clientX + '  clientY=' + e.clientY;
+  });
+})();
+
+// ── requestAnimationFrame ────────────────────────────────────────────────
+(function () {
+  var ball = document.getElementById('raf-ball');
+  var pos = 2;
+  var dir = 1;
+  var rafId = null;
+  var running = false;
+
+  function animate() {
+    pos += dir * 3;
+    if (pos > 420) dir = -1;
+    if (pos < 2) dir = 1;
+    ball.style.left = pos + 'px';
+    if (running) {
+      rafId = requestAnimationFrame(animate);
+    }
+  }
+
+  document.getElementById('raf-start').addEventListener('click', function () {
+    if (running) return;
+    running = true;
+    rafId = requestAnimationFrame(animate);
+  });
+  document.getElementById('raf-stop').addEventListener('click', function () {
+    running = false;
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  });
+  document.getElementById('raf-reset').addEventListener('click', function () {
+    running = false;
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    pos = 2;
+    dir = 1;
+    ball.style.left = '2px';
+  });
+})();
+
+// ── Form Events ──────────────────────────────────────────────────────────
+(function () {
+  var nameInput = document.getElementById('fe-name');
+  var rangeInput = document.getElementById('fe-range');
+  var live = document.getElementById('fe-live');
+  var rangeVal = document.getElementById('fe-range-val');
+  var log = document.getElementById('fe-log');
+  var form = document.getElementById('fe-form');
+
+  nameInput.addEventListener('input', function () {
+    live.textContent = 'Live input: ' + nameInput.value;
+  });
+
+  nameInput.addEventListener('change', function () {
+    log.textContent = 'change event: name="' + nameInput.value + '"';
+  });
+
+  rangeInput.addEventListener('input', function () {
+    rangeVal.textContent = 'Range value: ' + rangeInput.value;
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    log.textContent = 'submit! name="' + nameInput.value + '" mood=' + rangeInput.value;
   });
 })();

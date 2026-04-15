@@ -54,6 +54,14 @@ public class LayoutNode
     public Dictionary<string, string>? BeforeStyles { get; set; }
     /// <summary>Styles for ::after pseudo-element. Null if no ::after rule matched.</summary>
     public Dictionary<string, string>? AfterStyles { get; set; }
+    /// <summary>Styles for ::first-letter pseudo-element.</summary>
+    public Dictionary<string, string>? FirstLetterStyles { get; set; }
+    /// <summary>Styles for ::first-line pseudo-element.</summary>
+    public Dictionary<string, string>? FirstLineStyles { get; set; }
+    /// <summary>Snapshot of CSS counter values at this node's position in the tree (for counter() resolution).</summary>
+    public Dictionary<string, int>? CounterValues { get; set; }
+    /// <summary>Per-element scroll state for overflow:scroll/auto elements.</summary>
+    public ElementScrollState? ScrollState { get; set; }
 
     /// <summary>
     /// Resolves a CSS property considering pseudo-class state and media overrides.
@@ -65,13 +73,13 @@ public class LayoutNode
         // Animation/transition overrides have highest priority (live interpolated values)
         if (AnimationOverrides.TryGetValue(prop, out var va)) { val = ResolveVarRefs(va); return true; }
         if (IsActive && MediaActiveStyles.TryGetValue(prop, out var v1m)) { val = ResolveVarRefs(v1m); return true; }
-        if (IsActive && ActiveStyles.TryGetValue(prop, out var v1))       { val = ResolveVarRefs(v1);  return true; }
+        if (IsActive && ActiveStyles.TryGetValue(prop, out var v1)) { val = ResolveVarRefs(v1); return true; }
         if (IsFocused && MediaFocusStyles.TryGetValue(prop, out var v2m)) { val = ResolveVarRefs(v2m); return true; }
-        if (IsFocused && FocusStyles.TryGetValue(prop, out var v2))       { val = ResolveVarRefs(v2);  return true; }
+        if (IsFocused && FocusStyles.TryGetValue(prop, out var v2)) { val = ResolveVarRefs(v2); return true; }
         if (IsHovered && MediaHoverStyles.TryGetValue(prop, out var v3m)) { val = ResolveVarRefs(v3m); return true; }
-        if (IsHovered && HoverStyles.TryGetValue(prop, out var v3))       { val = ResolveVarRefs(v3);  return true; }
-        if (MediaOverrides.TryGetValue(prop, out var v4m))                { val = ResolveVarRefs(v4m); return true; }
-        if (StyleOverrides.TryGetValue(prop, out var v4))                 { val = ResolveVarRefs(v4);  return true; }
+        if (IsHovered && HoverStyles.TryGetValue(prop, out var v3)) { val = ResolveVarRefs(v3); return true; }
+        if (MediaOverrides.TryGetValue(prop, out var v4m)) { val = ResolveVarRefs(v4m); return true; }
+        if (StyleOverrides.TryGetValue(prop, out var v4)) { val = ResolveVarRefs(v4); return true; }
         return false;
     }
 
@@ -85,7 +93,7 @@ public class LayoutNode
             return value;
 
         var sb = new System.Text.StringBuilder();
-        int i  = 0;
+        int i = 0;
 
         while (i < value.Length)
         {
@@ -98,7 +106,7 @@ public class LayoutNode
             int depth = 1, j = start;
             while (j < value.Length && depth > 0)
             {
-                if      (value[j] == '(') depth++;
+                if (value[j] == '(') depth++;
                 else if (value[j] == ')') depth--;
                 if (depth > 0) j++;
                 else break;
@@ -110,12 +118,12 @@ public class LayoutNode
             int commaIdx = -1, d = 0;
             for (int k = 0; k < inner.Length; k++)
             {
-                if      (inner[k] == '(') d++;
+                if (inner[k] == '(') d++;
                 else if (inner[k] == ')') d--;
                 else if (inner[k] == ',' && d == 0) { commaIdx = k; break; }
             }
 
-            var name     = (commaIdx >= 0 ? inner[..commaIdx] : inner).Trim();
+            var name = (commaIdx >= 0 ? inner[..commaIdx] : inner).Trim();
             var fallback = commaIdx >= 0 ? inner[(commaIdx + 1)..].Trim() : null;
 
             string? resolved = null;
@@ -148,10 +156,10 @@ public class LayoutNode
 
             var dict = ms.Target switch
             {
-                "hover"  => MediaHoverStyles,
-                "focus"  => MediaFocusStyles,
+                "hover" => MediaHoverStyles,
+                "focus" => MediaFocusStyles,
                 "active" => MediaActiveStyles,
-                _        => MediaOverrides,
+                _ => MediaOverrides,
             };
             dict[ms.Property] = ms.Value;
         }

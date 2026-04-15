@@ -22,11 +22,11 @@ internal static class Drawer
         BoxEngine.Layout(root, width, height);
 
         var imageInfo = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
-        var bitmap    = new SKBitmap(imageInfo);
-        var canvas    = new SKCanvas(bitmap);
+        var bitmap = new SKBitmap(imageInfo);
+        var canvas = new SKCanvas(bitmap);
 
         // Propagate body background to the viewport canvas (matches browser behaviour)
-        var body      = root.Children.FirstOrDefault(c => c.TagName == "BODY") ?? root;
+        var body = root.Children.FirstOrDefault(c => c.TagName == "BODY") ?? root;
         var clearColor = body.GetBackgroundColor();
         if (clearColor == SKColors.Transparent) clearColor = new SKColor(240, 240, 242);
         canvas.Clear(clearColor);
@@ -63,15 +63,28 @@ internal static class Drawer
         if (viewport.ContentHeight <= viewport.ViewportHeight) return;
 
         const float barWidth = 6f;
-        const float margin   = 2f;
-        var ratio    = viewport.ViewportHeight / viewport.ContentHeight;
-        var trackH   = viewport.ViewportHeight;
-        var thumbH   = Math.Max(trackH * ratio, 24f);
+        const float margin = 2f;
+        var ratio = viewport.ViewportHeight / viewport.ContentHeight;
+        var trackH = viewport.ViewportHeight;
+        var thumbH = Math.Max(trackH * ratio, 24f);
         var thumbTop = viewport.ScrollY / viewport.ContentHeight * trackH;
-        var x        = width - barWidth - margin;
+        var x = width - barWidth - margin;
 
         using var paint = new SKPaint { Color = new SKColor(0, 0, 0, 80), IsAntialias = true };
         canvas.DrawRoundRect(x, thumbTop + margin, barWidth, thumbH - margin * 2, 3, 3, paint);
+    }
+
+    private static void DrawElementScrollbar(SKCanvas canvas, LayoutNode node, ElementScrollState ss)
+    {
+        var box = node.Box.PaddingBox;
+        var barW = ElementScrollState.BarWidth;
+        var barM = ElementScrollState.BarMargin;
+        var x = box.Right - barW - barM;
+        var thumbH = ss.ThumbHeight;
+        var thumbTop = ss.ThumbTop(box.Top);
+
+        using var paint = new SKPaint { Color = new SKColor(0, 0, 0, 80), IsAntialias = true };
+        canvas.DrawRoundRect(x, thumbTop + barM, barW, thumbH - barM * 2, 3, 3, paint);
     }
 
     // -------------------------------------------------------------------------
@@ -109,9 +122,9 @@ internal static class Drawer
         if (pos == PositionType.Relative)
         {
             var fontSize = node.GetFontSize();
-            var t = node.GetOffsetTop   (node.Box.ContentBox.Height, fontSize);
-            var l = node.GetOffsetLeft  (node.Box.ContentBox.Width,  fontSize);
-            var r = node.GetOffsetRight (node.Box.ContentBox.Width,  fontSize);
+            var t = node.GetOffsetTop(node.Box.ContentBox.Height, fontSize);
+            var l = node.GetOffsetLeft(node.Box.ContentBox.Width, fontSize);
+            var r = node.GetOffsetRight(node.Box.ContentBox.Width, fontSize);
             var b = node.GetOffsetBottom(node.Box.ContentBox.Height, fontSize);
             var dx = !float.IsNaN(l) ? l : !float.IsNaN(r) ? -r : 0f;
             var dy = !float.IsNaN(t) ? t : !float.IsNaN(b) ? -b : 0f;
@@ -130,9 +143,9 @@ internal static class Drawer
 
     private static void PaintNodeInner(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
-        var opacity  = node.GetOpacity();
+        var opacity = node.GetOpacity();
         var overflow = node.GetOverflow();
-        var clip     = overflow == OverflowType.Hidden || overflow == OverflowType.Scroll || overflow == OverflowType.Auto;
+        var clip = overflow == OverflowType.Hidden || overflow == OverflowType.Scroll || overflow == OverflowType.Auto;
 
         var (clipRx, clipRy) = clip
             ? node.GetBorderRadius(node.Box.PaddingBox.Width, node.Box.PaddingBox.Height)
@@ -162,7 +175,19 @@ internal static class Drawer
             }
         }
 
+        // Apply per-element scroll offset
+        var scrollState = node.ScrollState;
+        if (scrollState != null && scrollState.NeedsScrollbar)
+            canvas.Translate(0, -scrollState.ScrollY);
+
         PaintNodeContent(canvas, node, viewportWidth);
+
+        // Draw per-element scrollbar (inside the clip, after restoring scroll translate)
+        if (scrollState != null && scrollState.NeedsScrollbar)
+        {
+            canvas.Translate(0, scrollState.ScrollY); // Undo scroll offset for scrollbar
+            DrawElementScrollbar(canvas, node, scrollState);
+        }
 
         if (opacity < 1f || clip) canvas.Restore();
     }
@@ -239,7 +264,7 @@ internal static class Drawer
                 using var bgPaint = new SKPaint { Color = bgColor };
                 canvas.DrawRect(node.Box.ContentBox, bgPaint);
             }
-            using var font  = TextMeasure.CreateFont(node);
+            using var font = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
             DrawWrappedText(canvas, node, node.DisplayText,
                 node.Box.ContentBox.Left, node.Box.ContentBox.Top,
@@ -268,7 +293,7 @@ internal static class Drawer
             using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
             var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
             if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
-            else                   canvas.DrawRect(box.PaddingBox, bgPaint);
+            else canvas.DrawRect(box.PaddingBox, bgPaint);
         }
 
         // Background image
@@ -283,7 +308,7 @@ internal static class Drawer
         // Draw own text content (block elements like <div>Text</div> with no child nodes)
         if (!string.IsNullOrEmpty(node.DisplayText) && node.Children.Count == 0)
         {
-            using var font  = TextMeasure.CreateFont(node);
+            using var font = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
 
             var textX = box.ContentBox.Left;
@@ -295,12 +320,13 @@ internal static class Drawer
             var textMaxW = box.ContentBox.Width;
             if (isFlex)
             {
-                var ws    = node.GetWhiteSpace();
-                var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(box.ContentBox.Width, 1f), font, ws);
+                var ws = node.GetWhiteSpace();
+                var lh = node.GetLineHeight(node.GetFontSize());
+                var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(box.ContentBox.Width, 1f), font, ws, lh);
                 var textH = lines.Sum(l => l.Height);
                 var textW = lines.Count > 0 ? lines.Max(l => l.Width) : 0f;
 
-                var dir   = node.GetFlexDirection();
+                var dir = node.GetFlexDirection();
                 var isRow = dir == FlexDirection.Row || dir == FlexDirection.RowReverse;
 
                 if (isRow)
@@ -308,16 +334,16 @@ internal static class Drawer
                     // justify-content controls horizontal, align-items controls vertical
                     textX += node.GetJustifyContent() switch
                     {
-                        JustifyContent.Center       => (box.ContentBox.Width - textW) / 2f,
-                        JustifyContent.FlexEnd      => box.ContentBox.Width - textW,
-                        JustifyContent.SpaceAround  => (box.ContentBox.Width - textW) / 2f,
-                        JustifyContent.SpaceEvenly   => (box.ContentBox.Width - textW) / 2f,
+                        JustifyContent.Center => (box.ContentBox.Width - textW) / 2f,
+                        JustifyContent.FlexEnd => box.ContentBox.Width - textW,
+                        JustifyContent.SpaceAround => (box.ContentBox.Width - textW) / 2f,
+                        JustifyContent.SpaceEvenly => (box.ContentBox.Width - textW) / 2f,
                         _ => 0f,
                     };
                     textY += node.GetAlignItems() switch
                     {
-                        AlignItems.Center   => (box.ContentBox.Height - textH) / 2f,
-                        AlignItems.FlexEnd  => box.ContentBox.Height - textH,
+                        AlignItems.Center => (box.ContentBox.Height - textH) / 2f,
+                        AlignItems.FlexEnd => box.ContentBox.Height - textH,
                         _ => 0f,
                     };
                 }
@@ -326,16 +352,16 @@ internal static class Drawer
                     // Column: justify-content controls vertical, align-items controls horizontal
                     textY += node.GetJustifyContent() switch
                     {
-                        JustifyContent.Center       => (box.ContentBox.Height - textH) / 2f,
-                        JustifyContent.FlexEnd      => box.ContentBox.Height - textH,
-                        JustifyContent.SpaceAround  => (box.ContentBox.Height - textH) / 2f,
-                        JustifyContent.SpaceEvenly   => (box.ContentBox.Height - textH) / 2f,
+                        JustifyContent.Center => (box.ContentBox.Height - textH) / 2f,
+                        JustifyContent.FlexEnd => box.ContentBox.Height - textH,
+                        JustifyContent.SpaceAround => (box.ContentBox.Height - textH) / 2f,
+                        JustifyContent.SpaceEvenly => (box.ContentBox.Height - textH) / 2f,
                         _ => 0f,
                     };
                     textX += node.GetAlignItems() switch
                     {
-                        AlignItems.Center   => (box.ContentBox.Width - textW) / 2f,
-                        AlignItems.FlexEnd  => box.ContentBox.Width - textW,
+                        AlignItems.Center => (box.ContentBox.Width - textW) / 2f,
+                        AlignItems.FlexEnd => box.ContentBox.Width - textW,
                         _ => 0f,
                     };
                 }
@@ -370,8 +396,8 @@ internal static class Drawer
     /// <summary>Paints children sorted by z-index (negative first, then 0+).</summary>
     private static void PaintChildrenSorted(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
-        var display  = node.GetDisplay();
-        var isFlex   = display == DisplayType.Flex || display == DisplayType.InlineFlex;
+        var display = node.GetDisplay();
+        var isFlex = display == DisplayType.Flex || display == DisplayType.InlineFlex;
         var children = node.Children;
 
         // §5.4: Flex containers paint children in order-modified document order.
@@ -390,13 +416,13 @@ internal static class Drawer
 
         var childList = orderedChildren.ToList();
         // Negative z-index first, then normal flow (incl. position:relative without z-index), then non-negative stacked
-        var negZ   = childList.Where(c => NeedsZSort(c) && c.GetZIndex() < 0).OrderBy(c => c.GetZIndex()).ToList();
+        var negZ = childList.Where(c => NeedsZSort(c) && c.GetZIndex() < 0).OrderBy(c => c.GetZIndex()).ToList();
         var normal = childList.Where(c => !NeedsZSort(c)).ToList();
-        var posZ   = childList.Where(c => NeedsZSort(c) && c.GetZIndex() >= 0).OrderBy(c => c.GetZIndex()).ToList();
+        var posZ = childList.Where(c => NeedsZSort(c) && c.GetZIndex() >= 0).OrderBy(c => c.GetZIndex()).ToList();
 
-        foreach (var c in negZ)   PaintNode(canvas, c, viewportWidth);
+        foreach (var c in negZ) PaintNode(canvas, c, viewportWidth);
         foreach (var c in normal) PaintNode(canvas, c, viewportWidth);
-        foreach (var c in posZ)   PaintNode(canvas, c, viewportWidth);
+        foreach (var c in posZ) PaintNode(canvas, c, viewportWidth);
     }
 
     // -------------------------------------------------------------------------
@@ -415,7 +441,7 @@ internal static class Drawer
             using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
             var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
             if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
-            else                   canvas.DrawRect(box.PaddingBox, bgPaint);
+            else canvas.DrawRect(box.PaddingBox, bgPaint);
         }
 
         DrawBorders(canvas, box, node);
@@ -426,7 +452,7 @@ internal static class Drawer
 
         if (string.IsNullOrEmpty(node.DisplayText)) return;
 
-        using var font  = TextMeasure.CreateFont(node);
+        using var font = TextMeasure.CreateFont(node);
         using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
 
         DrawWrappedText(canvas, node, node.DisplayText,
@@ -444,8 +470,8 @@ internal static class Drawer
 
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
-            var box     = node.Box;
-            using var font  = TextMeasure.CreateFont(node);
+            var box = node.Box;
+            using var font = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
             DrawWrappedText(canvas, node, node.DisplayText, box.ContentBox.Left, box.ContentBox.Top,
                             box.ContentBox.Width, font, paint);
@@ -476,7 +502,7 @@ internal static class Drawer
             if (!string.IsNullOrEmpty(node.Alt))
             {
                 using var altPaint = new SKPaint { Color = SKColors.Gray, IsAntialias = true };
-                using var altFont  = new SKFont { Size = 12 };
+                using var altFont = new SKFont { Size = 12 };
                 canvas.DrawText(node.Alt, destRect.Left + 4, destRect.Top + 14, SKTextAlign.Left, altFont, altPaint);
             }
         }
@@ -488,7 +514,7 @@ internal static class Drawer
 
     private static void PaintInput(SKCanvas canvas, LayoutNode node)
     {
-        var rect      = node.Box.ContentBox;
+        var rect = node.Box.ContentBox;
         var inputType = node.Attributes.TryGetValue("type", out var t) ? t.ToLowerInvariant() : "text";
 
         switch (inputType)
@@ -513,8 +539,8 @@ internal static class Drawer
 
         using var borderPaint = new SKPaint
         {
-            Color       = isFocused ? new SKColor(0, 120, 215) : new SKColor(150, 150, 150),
-            Style       = SKPaintStyle.Stroke,
+            Color = isFocused ? new SKColor(0, 120, 215) : new SKColor(150, 150, 150),
+            Style = SKPaintStyle.Stroke,
             StrokeWidth = isFocused ? 2f : 1f,
             IsAntialias = true,
         };
@@ -529,13 +555,13 @@ internal static class Drawer
         if (string.IsNullOrEmpty(text) && node.Attributes.TryGetValue("placeholder", out var ph))
         {
             using var phPaint = new SKPaint { Color = new SKColor(170, 170, 170), IsAntialias = true };
-            using var phFont  = new SKFont { Size = 12 };
+            using var phFont = new SKFont { Size = 12 };
             canvas.DrawText(ph, rect.Left + 4, rect.Top + 14, SKTextAlign.Left, phFont, phPaint);
         }
         else if (!string.IsNullOrEmpty(displayText))
         {
             using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
-            using var textFont  = new SKFont { Size = 12 };
+            using var textFont = new SKFont { Size = 12 };
             canvas.DrawText(displayText, rect.Left + 4, rect.Top + 14, SKTextAlign.Left, textFont, textPaint);
         }
 
@@ -575,7 +601,7 @@ internal static class Drawer
 
         if (isFocused)
         {
-            using var caretFont  = new SKFont { Size = 12 };
+            using var caretFont = new SKFont { Size = 12 };
             var caretX = rect.Left + 4 + caretFont.MeasureText(displayText ?? "");
             using var caretPaint = new SKPaint { Color = SKColors.Black, StrokeWidth = 1 };
             canvas.DrawLine(caretX, rect.Top + 3, caretX, rect.Bottom - 3, caretPaint);
@@ -676,8 +702,8 @@ internal static class Drawer
 
         using var borderPaint = new SKPaint
         {
-            Color       = isFocused ? new SKColor(0, 120, 215) : new SKColor(150, 150, 150),
-            Style       = SKPaintStyle.Stroke,
+            Color = isFocused ? new SKColor(0, 120, 215) : new SKColor(150, 150, 150),
+            Style = SKPaintStyle.Stroke,
             StrokeWidth = isFocused ? 2f : 1f,
             IsAntialias = true,
         };
@@ -689,13 +715,13 @@ internal static class Drawer
         if (string.IsNullOrEmpty(text) && node.Attributes.TryGetValue("placeholder", out var ph))
         {
             using var phPaint = new SKPaint { Color = new SKColor(170, 170, 170), IsAntialias = true };
-            using var phFont  = new SKFont(SKTypeface.FromFamilyName("Consolas"), 13);
+            using var phFont = new SKFont(SKTypeface.FromFamilyName("Consolas"), 13);
             canvas.DrawText(ph, rect.Left + 4, rect.Top + 16, SKTextAlign.Left, phFont, phPaint);
         }
         else if (!string.IsNullOrEmpty(text))
         {
             using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
-            using var textFont  = new SKFont(SKTypeface.FromFamilyName("Consolas"), 13);
+            using var textFont = new SKFont(SKTypeface.FromFamilyName("Consolas"), 13);
             var lines = text.Split('\n');
             var lineY = rect.Top + 16;
             foreach (var line in lines)
@@ -718,8 +744,8 @@ internal static class Drawer
 
         using var borderPaint = new SKPaint
         {
-            Color       = new SKColor(150, 150, 150),
-            Style       = SKPaintStyle.Stroke,
+            Color = new SKColor(150, 150, 150),
+            Style = SKPaintStyle.Stroke,
             StrokeWidth = 1f,
             IsAntialias = true,
         };
@@ -743,7 +769,7 @@ internal static class Drawer
         }
 
         using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
-        using var textFont  = new SKFont { Size = 13 };
+        using var textFont = new SKFont { Size = 13 };
         canvas.DrawText(displayText, rect.Left + 4, rect.MidY + 5, SKTextAlign.Left, textFont, textPaint);
 
         // Drop-down arrow
@@ -815,7 +841,7 @@ internal static class Drawer
 
     private static void PaintButton(SKCanvas canvas, LayoutNode node)
     {
-        var box  = node.Box;
+        var box = node.Box;
         var rect = box.ContentBox;
 
         var btnLabel = node.DisplayText;
@@ -829,11 +855,11 @@ internal static class Drawer
         using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
         var (brx, bry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
         if (brx > 0 || bry > 0) canvas.DrawRoundRect(box.PaddingBox, brx, bry, bgPaint);
-        else                     canvas.DrawRect(box.PaddingBox, bgPaint);
+        else canvas.DrawRect(box.PaddingBox, bgPaint);
 
         DrawBorders(canvas, node.Box, node);
 
-        using var btnFont   = new SKFont { Size = 13 };
+        using var btnFont = new SKFont { Size = 13 };
         var textColor = node.GetColor();
         using var textPaint = new SKPaint { Color = textColor, IsAntialias = true };
         canvas.DrawText(btnLabel, rect.Left + FormLayout.ButtonPaddingX, rect.Top + FormLayout.ButtonPaddingY + 13,
@@ -848,8 +874,8 @@ internal static class Drawer
 
     private static void PaintHorizontalRule(SKCanvas canvas, LayoutNode node)
     {
-        var box   = node.Box;
-        var y     = box.BorderBox.Top + box.Border.Top / 2f;
+        var box = node.Box;
+        var y = box.BorderBox.Top + box.Border.Top / 2f;
         var color = node.GetBorderTopColor();
         var thick = box.Border.Top > 0 ? box.Border.Top : 1f;
 
@@ -874,22 +900,22 @@ internal static class Drawer
             using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
             var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
             if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
-            else                   canvas.DrawRect(box.PaddingBox, bgPaint);
+            else canvas.DrawRect(box.PaddingBox, bgPaint);
         }
 
         DrawBorders(canvas, box, node);
 
         var listStyleType = node.GetListStyleType();
-        var listStylePos  = node.GetListStylePosition();
+        var listStylePos = node.GetListStylePosition();
         float insideMarkerWidth = 0f; // track width consumed by inside marker
 
         if (listStyleType != ListStyleType.None)
         {
-            using var markerFont  = TextMeasure.CreateFont(node);
+            using var markerFont = TextMeasure.CreateFont(node);
             using var markerPaint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
 
             var markerText = GetMarkerText(listStyleType, node);
-            var ascent     = -markerFont.Metrics.Ascent;
+            var ascent = -markerFont.Metrics.Ascent;
 
             if (listStylePos == ListStylePosition.Inside)
             {
@@ -931,7 +957,7 @@ internal static class Drawer
         // Paint own text — offset by inside marker width if applicable
         if (!string.IsNullOrEmpty(node.DisplayText) && node.Children.Count == 0)
         {
-            using var font  = TextMeasure.CreateFont(node);
+            using var font = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
             DrawWrappedText(canvas, node, node.DisplayText,
                             box.ContentBox.Left + insideMarkerWidth, box.ContentBox.Top,
@@ -946,12 +972,12 @@ internal static class Drawer
         var index = GetOrderedIndex(node);
         return type switch
         {
-            ListStyleType.Decimal            => $"{index}.",
+            ListStyleType.Decimal => $"{index}.",
             ListStyleType.DecimalLeadingZero => $"{index:D2}.",
-            ListStyleType.LowerAlpha         => $"{(char)('a' + (index - 1) % 26)}.",
-            ListStyleType.UpperAlpha         => $"{(char)('A' + (index - 1) % 26)}.",
-            ListStyleType.LowerRoman         => $"{ToRoman(index).ToLowerInvariant()}.",
-            ListStyleType.UpperRoman         => $"{ToRoman(index)}.",
+            ListStyleType.LowerAlpha => $"{(char)('a' + (index - 1) % 26)}.",
+            ListStyleType.UpperAlpha => $"{(char)('A' + (index - 1) % 26)}.",
+            ListStyleType.LowerRoman => $"{ToRoman(index).ToLowerInvariant()}.",
+            ListStyleType.UpperRoman => $"{ToRoman(index)}.",
             _ => null, // bullet types return null
         };
     }
@@ -978,8 +1004,8 @@ internal static class Drawer
     {
         if (number <= 0 || number > 3999) return number.ToString();
         var sb = new System.Text.StringBuilder();
-        int[] values   = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
-        string[] syms  = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"];
+        int[] values = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+        string[] syms = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"];
         for (int i = 0; i < values.Length; i++)
         {
             while (number >= values[i]) { sb.Append(syms[i]); number -= values[i]; }
@@ -1025,7 +1051,7 @@ internal static class Drawer
         // Paint shadows in reverse order (last layer first, per CSS spec)
         for (int i = shadows.Count - 1; i >= 0; i--)
         {
-            var s     = shadows[i];
+            var s = shadows[i];
             if (s.Inset) continue;   // inset shadows not yet supported
 
             var sigma = s.Blur / 2f;
@@ -1036,13 +1062,13 @@ internal static class Drawer
 
             using var paint = new SKPaint
             {
-                Color      = s.Color,
+                Color = s.Color,
                 IsAntialias = true,
                 MaskFilter = sigma > 0 ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma) : null,
             };
 
             if (srx > 0 || sry > 0) canvas.DrawRoundRect(shadowRect, srx, sry, paint);
-            else                     canvas.DrawRect(shadowRect, paint);
+            else canvas.DrawRect(shadowRect, paint);
         }
     }
 
@@ -1064,14 +1090,14 @@ internal static class Drawer
             if (style == BorderStyle.None || style == BorderStyle.Hidden) return;
             using var p = new SKPaint
             {
-                Color       = node.GetBorderTopColor(),
-                Style       = SKPaintStyle.Stroke,
+                Color = node.GetBorderTopColor(),
+                Style = SKPaintStyle.Stroke,
                 StrokeWidth = maxWidth,
                 IsAntialias = true,
             };
             ApplyBorderStyle(p, style);
             var inset = maxWidth / 2f;
-            var r     = SKRect.Inflate(box.BorderBox, -inset, -inset);
+            var r = SKRect.Inflate(box.BorderBox, -inset, -inset);
             if (r.Width <= 0 || r.Height <= 0) return;
             canvas.DrawRoundRect(r, Math.Max(0, rx - inset), Math.Max(0, ry - inset), p);
             return;
@@ -1141,7 +1167,7 @@ internal static class Drawer
 
         if (style == BorderStyle.Inset || style == BorderStyle.Outset)
         {
-            var isTop  = Math.Abs(y1 - y2) < 0.01f && y1 < (y1 + y2) / 2f + 1; // approximate
+            var isTop = Math.Abs(y1 - y2) < 0.01f && y1 < (y1 + y2) / 2f + 1; // approximate
             var isLeft = Math.Abs(x1 - x2) < 0.01f && x1 < (x1 + x2) / 2f + 1;
             bool darken = style == BorderStyle.Inset ? (isTop || isLeft) : !(isTop || isLeft);
             var c = darken ? DarkenColor(color, 0.6f) : LightenColor(color, 1.4f);
@@ -1309,22 +1335,27 @@ internal static class Drawer
                                         float x, float y, float maxWidth,
                                         SKFont font, SKPaint paint)
     {
-        var whiteSpace     = node.GetWhiteSpace();
-        var textAlign      = node.GetTextAlign();
-        var underline      = node.IsUnderline();
-        var lineThrough    = node.IsLineThrough();
-        var textTransform  = node.GetTextTransform();
-        var letterSpacing  = node.GetLetterSpacing(font.Size);
-        var wordSpacing    = node.GetWordSpacing(font.Size);
-        var textIndent     = node.GetTextIndent(maxWidth, font.Size);
+        var whiteSpace = node.GetWhiteSpace();
+        var textAlign = node.GetTextAlign();
+        var underline = node.IsUnderline();
+        var lineThrough = node.IsLineThrough();
+        var textTransform = node.GetTextTransform();
+        var letterSpacing = node.GetLetterSpacing(font.Size);
+        var wordSpacing = node.GetWordSpacing(font.Size);
+        var textIndent = node.GetTextIndent(maxWidth, font.Size);
+
+        // Resolve ::first-letter and ::first-line styles from node or parent
+        var firstLetterStyles = node.FirstLetterStyles ?? node.Parent?.FirstLetterStyles;
+        var firstLineStyles = node.FirstLineStyles ?? node.Parent?.FirstLineStyles;
 
         // Apply text-transform
         text = StyleExtensions.ApplyTextTransform(text, textTransform);
 
-        var lines      = TextMeasure.WrapText(text, maxWidth, font, whiteSpace);
-        var lineY      = y;
+        var lines = TextMeasure.WrapText(text, maxWidth, font, whiteSpace, node.GetLineHeight(node.GetFontSize()));
+        var lineY = y;
         var textShadow = node.GetTextShadow();
         var isFirstLine = true;
+        var firstLetterDrawn = false;
 
         foreach (var line in lines)
         {
@@ -1337,57 +1368,129 @@ internal static class Drawer
             var drawX = textAlign switch
             {
                 TextAlign.Center => x + (maxWidth - lineWidth) / 2f,
-                TextAlign.Right  => x + maxWidth - lineWidth,
-                _                => x,
+                TextAlign.Right => x + maxWidth - lineWidth,
+                _ => x,
             };
 
             // Apply text-indent on first line
             if (isFirstLine && textIndent != 0f)
             {
                 drawX += textIndent;
-                isFirstLine = false;
-            }
-            else
-            {
-                isFirstLine = false;
             }
 
             // SkiaSharp draws at baseline; add ascent to convert top→baseline
             var baseline = lineY + line.Ascent;
 
+            // Determine paint/font for this line (::first-line override)
+            var linePaint = paint;
+            var lineFont = font;
+            SKPaint? tempPaint = null;
+            SKFont? tempFont = null;
+
+            if (isFirstLine && firstLineStyles != null)
+            {
+                tempPaint = new SKPaint { Color = paint.Color, IsAntialias = true };
+                if (firstLineStyles.TryGetValue("color", out var flColor))
+                    tempPaint.Color = Rendering.SvgRenderer.ParseColor(flColor);
+                if (firstLineStyles.TryGetValue("font-weight", out var flWeight) && flWeight == "bold")
+                {
+                    var tf = font.Typeface;
+                    var boldTf = SKTypeface.FromFamilyName(tf.FamilyName, (int)SKFontStyleWeight.Bold,
+                        (int)tf.FontStyle.Width, tf.FontStyle.Slant) ?? tf;
+                    tempFont = new SKFont(boldTf, font.Size);
+                    lineFont = tempFont;
+                }
+                if (firstLineStyles.TryGetValue("font-size", out var flSize))
+                {
+                    if (flSize.EndsWith("em") && float.TryParse(flSize[..^2],
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var em))
+                    {
+                        tempFont?.Dispose();
+                        tempFont = new SKFont(lineFont.Typeface, font.Size * em);
+                        lineFont = tempFont;
+                    }
+                }
+                linePaint = tempPaint;
+            }
+
             // text-shadow drawn before (behind) the main text
             if (textShadow.HasValue)
             {
-                var ts    = textShadow.Value;
+                var ts = textShadow.Value;
                 var sigma = ts.Blur / 2f;
                 using var sp = new SKPaint
                 {
-                    Color      = ts.Color,
+                    Color = ts.Color,
                     IsAntialias = true,
                     MaskFilter = sigma > 0 ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma) : null,
                 };
-                DrawTextWithSpacing(canvas, line.Text, drawX + ts.OffsetX, baseline + ts.OffsetY, font, sp, letterSpacing, wordSpacing);
+                DrawTextWithSpacing(canvas, line.Text, drawX + ts.OffsetX, baseline + ts.OffsetY, lineFont, sp, letterSpacing, wordSpacing);
             }
 
-            DrawTextWithSpacing(canvas, line.Text, drawX, baseline, font, paint, letterSpacing, wordSpacing);
+            // Handle ::first-letter on the first character of the first line
+            if (isFirstLine && !firstLetterDrawn && firstLetterStyles != null && line.Text.Length > 0)
+            {
+                firstLetterDrawn = true;
+                var firstChar = line.Text[0..1];
+                var restText = line.Text[1..];
+
+                // Create first-letter font/paint
+                using var flPaint = new SKPaint { Color = linePaint.Color, IsAntialias = true };
+                var flFontSize = lineFont.Size;
+                var flTypeface = lineFont.Typeface;
+
+                if (firstLetterStyles.TryGetValue("color", out var flcColor))
+                    flPaint.Color = Rendering.SvgRenderer.ParseColor(flcColor);
+                if (firstLetterStyles.TryGetValue("font-size", out var flcSize))
+                {
+                    if (flcSize.EndsWith("em") && float.TryParse(flcSize[..^2],
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var em))
+                        flFontSize = lineFont.Size * em;
+                    else if (flcSize.EndsWith("px") && float.TryParse(flcSize[..^2],
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var px))
+                        flFontSize = px;
+                }
+                if (firstLetterStyles.TryGetValue("font-weight", out var flcWeight) && flcWeight == "bold")
+                {
+                    flTypeface = SKTypeface.FromFamilyName(flTypeface.FamilyName, (int)SKFontStyleWeight.Bold,
+                        (int)flTypeface.FontStyle.Width, flTypeface.FontStyle.Slant) ?? flTypeface;
+                }
+
+                using var flFont = new SKFont(flTypeface, flFontSize);
+                var flWidth = flFont.MeasureText(firstChar, out _);
+
+                DrawTextWithSpacing(canvas, firstChar, drawX, baseline, flFont, flPaint, 0, 0);
+                if (restText.Length > 0)
+                    DrawTextWithSpacing(canvas, restText, drawX + flWidth, baseline, lineFont, linePaint, letterSpacing, wordSpacing);
+            }
+            else
+            {
+                DrawTextWithSpacing(canvas, line.Text, drawX, baseline, lineFont, linePaint, letterSpacing, wordSpacing);
+            }
 
             if (underline)
             {
-                var metrics  = font.Metrics;
-                var uY       = baseline + (metrics.UnderlinePosition ?? font.Size * 0.1f);
-                var uThick   = Math.Max(metrics.UnderlineThickness ?? 1f, 1f);
-                using var lp = new SKPaint { Color = paint.Color, StrokeWidth = uThick, IsAntialias = true };
+                var metrics = lineFont.Metrics;
+                var uY = baseline + (metrics.UnderlinePosition ?? lineFont.Size * 0.1f);
+                var uThick = Math.Max(metrics.UnderlineThickness ?? 1f, 1f);
+                using var lp = new SKPaint { Color = linePaint.Color, StrokeWidth = uThick, IsAntialias = true };
                 canvas.DrawLine(drawX, uY, drawX + lineWidth, uY, lp);
             }
 
             if (lineThrough)
             {
-                var strikY   = baseline - font.Size * 0.3f;
-                var uThick   = Math.Max(font.Metrics.UnderlineThickness ?? 1f, 1f);
-                using var lp = new SKPaint { Color = paint.Color, StrokeWidth = uThick, IsAntialias = true };
+                var strikY = baseline - lineFont.Size * 0.3f;
+                var uThick = Math.Max(lineFont.Metrics.UnderlineThickness ?? 1f, 1f);
+                using var lp = new SKPaint { Color = linePaint.Color, StrokeWidth = uThick, IsAntialias = true };
                 canvas.DrawLine(drawX, strikY, drawX + lineWidth, strikY, lp);
             }
 
+            isFirstLine = false;
+            tempPaint?.Dispose();
+            tempFont?.Dispose();
             lineY += line.Height;
         }
     }

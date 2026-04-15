@@ -9,7 +9,21 @@ internal class JsWindow
     private int _nextTimerId = 1;
     private readonly Dictionary<int, System.Threading.Timer> _timers = [];
 
-    public JsWindow(JsEngine engine) => _engine = engine;
+    // Viewport dimensions
+    public int innerWidth { get; set; }
+    public int innerHeight { get; set; }
+
+    // requestAnimationFrame
+    private int _nextRafId = 1;
+    private readonly List<(int Id, JsValue Fn)> _rafCallbacks = [];
+    internal bool HasPendingRAF => _rafCallbacks.Count > 0;
+
+    public JsWindow(JsEngine engine, int viewportWidth = 800, int viewportHeight = 600)
+    {
+        _engine = engine;
+        innerWidth = viewportWidth;
+        innerHeight = viewportHeight;
+    }
 
     public void alert(object? message) => Lite.Utils.User32.MessageBox(IntPtr.Zero, message?.ToString() ?? "", "Alert", 0);
 
@@ -61,5 +75,31 @@ internal class JsWindow
     public JsComputedStyle getComputedStyle(JsElement element, string? pseudoElement = null)
     {
         return new JsComputedStyle(element.Node);
+    }
+
+    // ---- requestAnimationFrame / cancelAnimationFrame ----
+    public int requestAnimationFrame(JsValue fn)
+    {
+        var id = _nextRafId++;
+        _rafCallbacks.Add((id, fn));
+        return id;
+    }
+
+    public void cancelAnimationFrame(int id)
+    {
+        _rafCallbacks.RemoveAll(r => r.Id == id);
+    }
+
+    /// <summary>Invokes all pending RAF callbacks with the given timestamp and clears the queue.</summary>
+    internal void FlushRAF(double timestamp)
+    {
+        if (_rafCallbacks.Count == 0) return;
+        var callbacks = _rafCallbacks.ToList();
+        _rafCallbacks.Clear();
+        foreach (var (_, fn) in callbacks)
+        {
+            try { _engine.RawEngine.Invoke(fn, timestamp); }
+            catch (Exception ex) { Console.WriteLine($"[JS RAF] {ex.Message}"); }
+        }
     }
 }

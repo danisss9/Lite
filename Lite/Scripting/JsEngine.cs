@@ -10,28 +10,33 @@ internal class JsEngine
     public static JsEngine? Instance { get; private set; }
 
     private readonly Engine _engine;
+    private readonly JsWindow _jsWindow;
 
-    private JsEngine(LayoutNode root)
+    private JsEngine(LayoutNode root, int viewportWidth = 800, int viewportHeight = 600)
     {
         _engine = new Engine(opts => opts.CatchClrExceptions());
 
-        var jsWindow = new JsWindow(this);
+        _jsWindow = new JsWindow(this, viewportWidth, viewportHeight);
         var jsDocument = new JsDocument(_engine, root);
 
-        _engine.SetValue("console",  new JsConsole());
-        _engine.SetValue("window",   jsWindow);
+        _engine.SetValue("console", new JsConsole());
+        _engine.SetValue("window", _jsWindow);
         _engine.SetValue("document", jsDocument);
-        _engine.SetValue("alert",    new Action<object?>(msg => jsWindow.alert(msg)));
+        _engine.SetValue("alert", new Action<object?>(msg => _jsWindow.alert(msg)));
 
         // Timers
-        _engine.SetValue("setTimeout",    new Func<JsValue, int, int>((fn, delay) => jsWindow.setTimeout(fn, delay)));
-        _engine.SetValue("setInterval",   new Func<JsValue, int, int>((fn, delay) => jsWindow.setInterval(fn, delay)));
-        _engine.SetValue("clearTimeout",  new Action<int>(id => jsWindow.clearTimeout(id)));
-        _engine.SetValue("clearInterval", new Action<int>(id => jsWindow.clearInterval(id)));
+        _engine.SetValue("setTimeout", new Func<JsValue, int, int>((fn, delay) => _jsWindow.setTimeout(fn, delay)));
+        _engine.SetValue("setInterval", new Func<JsValue, int, int>((fn, delay) => _jsWindow.setInterval(fn, delay)));
+        _engine.SetValue("clearTimeout", new Action<int>(id => _jsWindow.clearTimeout(id)));
+        _engine.SetValue("clearInterval", new Action<int>(id => _jsWindow.clearInterval(id)));
+
+        // requestAnimationFrame / cancelAnimationFrame
+        _engine.SetValue("requestAnimationFrame", new Func<JsValue, int>(fn => _jsWindow.requestAnimationFrame(fn)));
+        _engine.SetValue("cancelAnimationFrame", new Action<int>(id => _jsWindow.cancelAnimationFrame(id)));
 
         // getComputedStyle
         _engine.SetValue("getComputedStyle", new Func<JsElement, string?, JsComputedStyle>(
-            (el, pseudo) => jsWindow.getComputedStyle(el, pseudo)));
+            (el, pseudo) => _jsWindow.getComputedStyle(el, pseudo)));
 
         // XMLHttpRequest constructor
         _engine.SetValue("XMLHttpRequest", typeof(JsXmlHttpRequest));
@@ -62,9 +67,9 @@ internal class JsEngine
         });
     }
 
-    public static JsEngine Create(LayoutNode root)
+    public static JsEngine Create(LayoutNode root, int viewportWidth = 800, int viewportHeight = 600)
     {
-        Instance = new JsEngine(root);
+        Instance = new JsEngine(root, viewportWidth, viewportHeight);
         return Instance;
     }
 
@@ -73,6 +78,24 @@ internal class JsEngine
         if (string.IsNullOrWhiteSpace(script)) return;
         try { _engine.Execute(script); }
         catch (Exception ex) { Console.WriteLine($"[JS Error] {ex.Message}"); }
+    }
+
+    /// <summary>Flushes pending requestAnimationFrame callbacks. Returns true if any were invoked.</summary>
+    internal bool FlushRAF(double timestamp)
+    {
+        if (!_jsWindow.HasPendingRAF) return false;
+        _jsWindow.FlushRAF(timestamp);
+        return true;
+    }
+
+    /// <summary>Returns true if there are pending requestAnimationFrame callbacks.</summary>
+    internal bool HasPendingRAF => _jsWindow.HasPendingRAF;
+
+    /// <summary>Updates window.innerWidth/innerHeight.</summary>
+    internal void UpdateViewportSize(int width, int height)
+    {
+        _jsWindow.innerWidth = width;
+        _jsWindow.innerHeight = height;
     }
 
     internal Engine RawEngine => _engine;
