@@ -8,10 +8,10 @@ Lite is a lightweight HTML/CSS/JS rendering engine for Windows, written in C#. I
 
 ## Projects
 
-| Project | Type | Description |
-|---|---|---|
-| `Lite/` | Class library | The rendering engine and `BrowserWindow` API |
-| `Example/` | Executable | Demo app using the library with a local HTML/CSS/JS site |
+| Project    | Type          | Description                                              |
+| ---------- | ------------- | -------------------------------------------------------- |
+| `Lite/`    | Class library | The rendering engine and `BrowserWindow` API             |
+| `Example/` | Executable    | Demo app using the library with a local HTML/CSS/JS site |
 
 ---
 
@@ -56,12 +56,12 @@ public class BrowserWindow
 public BrowserWindow(string url, string title = "Lite Browser", int width = 800, int height = 600)
 ```
 
-| Parameter | Description |
-|---|---|
-| `url` | The URL to load and render (e.g. `"http://localhost:4444"`) |
-| `title` | Window title bar text |
-| `width` | Initial window width in pixels |
-| `height` | Initial window height in pixels |
+| Parameter | Description                                                 |
+| --------- | ----------------------------------------------------------- |
+| `url`     | The URL to load and render (e.g. `"http://localhost:4444"`) |
+| `title`   | Window title bar text                                       |
+| `width`   | Initial window width in pixels                              |
+| `height`  | Initial window height in pixels                             |
 
 #### Methods
 
@@ -127,118 +127,118 @@ BrowserWindow
 
 ## Supported HTML Elements
 
-| Element | Behaviour |
-|---|---|
-| `div`, `section`, `header`, `footer`, `main`, `article`, `nav`, `aside`, `form`, `span` | Generic block or inline containers |
-| `h1`–`h6` | Headings with computed font size and weight |
-| `p` | Paragraph with block layout |
-| `a` | Link — opens in the system browser on click |
-| `img` | Image loaded via HTTP; falls back to a placeholder with alt text |
-| `input` (text) | Focusable text field with keyboard input and backspace |
-| `input` (password) | Masked text field with bullet characters |
-| `input` (number) | Numeric input with up/down stepper arrows; `min`, `max`, `step` |
-| `input` (range) | Range slider with click and drag support; `min`, `max`, `step` |
-| `input` (checkbox) | Toggle on click |
-| `input` (radio) | Radio button with group selection logic by `name` attribute |
-| `textarea` | Multi-line text input with placeholder, Enter key, monospace font |
-| `select` | Dropdown with option list overlay, click to select |
-| `button`, `input[type=submit]` | Triggers `click` event handlers |
-| `label` | Inline by default |
-| `strong`, `b` | Bold text |
-| `em`, `i`, `cite`, `dfn` | Italic text |
-| `u`, `ins` | Underline |
-| `s`, `del`, `strike` | Strikethrough |
-| `small`, `sub`, `sup` | Smaller text / subscript / superscript |
-| `mark` | Yellow highlight |
-| `code`, `kbd`, `samp`, `var`, `tt` | Monospace font |
-| `pre` | Preformatted block with preserved whitespace |
-| `blockquote` | Indented block quote |
-| `hr` | Horizontal rule |
-| `br` | Forced line break |
-| `ul`, `ol`, `li` | Unordered (bullet) and ordered (numbered) lists |
-| `dl`, `dt`, `dd` | Definition lists |
-| `table`, `thead`, `tbody`, `tfoot`, `tr`, `td`, `th` | Table layout |
-| `svg` | Inline SVG with `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`, `path`, `text`, `g`; viewBox, transforms |
-| `canvas` | HTML5 Canvas with `CanvasRenderingContext2D` via JavaScript |
-| `script` | Inline and `src` scripts executed after parse |
+| Element                                                                                 | Behaviour                                                                                                            |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `div`, `section`, `header`, `footer`, `main`, `article`, `nav`, `aside`, `form`, `span` | Generic block or inline containers                                                                                   |
+| `h1`–`h6`                                                                               | Headings with computed font size and weight                                                                          |
+| `p`                                                                                     | Paragraph with block layout                                                                                          |
+| `a`                                                                                     | Link — opens in the system browser on click                                                                          |
+| `img`                                                                                   | Image loaded via HTTP; falls back to a placeholder with alt text                                                     |
+| `input` (text)                                                                          | Focusable text field with keyboard input and backspace                                                               |
+| `input` (password)                                                                      | Masked text field with bullet characters                                                                             |
+| `input` (number)                                                                        | Numeric input with up/down stepper arrows; `min`, `max`, `step`                                                      |
+| `input` (range)                                                                         | Range slider with click and drag support; `min`, `max`, `step`                                                       |
+| `input` (checkbox)                                                                      | Toggle on click                                                                                                      |
+| `input` (radio)                                                                         | Radio button with group selection logic by `name` attribute                                                          |
+| `textarea`                                                                              | Multi-line text input with placeholder, Enter key, monospace font                                                    |
+| `select`                                                                                | Dropdown with option list overlay, click to select                                                                   |
+| `button`, `input[type=submit]`                                                          | Triggers `click` event handlers                                                                                      |
+| `label`                                                                                 | Inline by default                                                                                                    |
+| `strong`, `b`                                                                           | Bold text                                                                                                            |
+| `em`, `i`, `cite`, `dfn`                                                                | Italic text                                                                                                          |
+| `u`, `ins`                                                                              | Underline                                                                                                            |
+| `s`, `del`, `strike`                                                                    | Strikethrough                                                                                                        |
+| `small`, `sub`, `sup`                                                                   | Smaller text / subscript / superscript                                                                               |
+| `mark`                                                                                  | Yellow highlight                                                                                                     |
+| `code`, `kbd`, `samp`, `var`, `tt`                                                      | Monospace font                                                                                                       |
+| `pre`                                                                                   | Preformatted block with preserved whitespace                                                                         |
+| `blockquote`                                                                            | Indented block quote                                                                                                 |
+| `hr`                                                                                    | Horizontal rule                                                                                                      |
+| `br`                                                                                    | Forced line break                                                                                                    |
+| `ul`, `ol`, `li`                                                                        | Unordered (bullet) and ordered (numbered) lists                                                                      |
+| `dl`, `dt`, `dd`                                                                        | Definition lists                                                                                                     |
+| `table`, `thead`, `tbody`, `tfoot`, `tr`, `td`, `th`                                    | Table layout                                                                                                         |
+| `svg`                                                                                   | Inline SVG with `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`, `path`, `text`, `g`; viewBox, transforms |
+| `canvas`                                                                                | HTML5 Canvas with `CanvasRenderingContext2D` via JavaScript                                                          |
+| `script`                                                                                | Inline and `src` scripts executed after parse                                                                        |
 
 ---
 
 ## Supported CSS Properties
 
-| Property | Values |
-|---|---|
-| `display` | `block`, `inline`, `inline-block`, `list-item`, `flex`, `inline-flex`, `table`, `table-row`, `table-cell`, `none` |
-| `width`, `height` | `px`, `%`, `vh`, `vw`, `auto`, `calc()` |
-| `min-width`, `max-width`, `min-height`, `max-height` | `px`, `%`, `calc()` |
-| `margin`, `padding` | Shorthand and individual sides; `px`, `%`, `em`, `auto`, `calc()` |
-| `border-width` | `px` per side |
-| `border-color` | Any CSS color per side |
-| `border-style` | `solid`, `dotted`, `dashed`, `double`, `groove`, `ridge`, `inset`, `outset`, `none` per side |
-| `border-radius` | `px`, `%` |
-| `box-sizing` | `border-box`, `content-box` |
-| `box-shadow` | Multi-layer; offset, blur, spread, color, `inset` |
-| `text-shadow` | Offset, blur, color |
-| `background-color` | Any CSS color |
-| `background-image` | `url()`; raster formats (PNG, JPEG) |
-| `background-repeat` | `repeat`, `repeat-x`, `repeat-y`, `no-repeat` |
-| `background-position` | Keywords, `px`, `%` |
-| `background-size` | `cover`, `contain`, `auto`, `px`, `%` |
-| `color` | Any CSS color |
-| `opacity` | `0`–`1` |
-| `font-size` | `px`, `em`, keyword sizes |
-| `font-weight` | `bold` / normal |
-| `font-style` | `italic` / normal |
-| `font-family` | Named families; `monospace` → Consolas, `system-ui` → Segoe UI |
-| `line-height` | `px`, `em`, `%`, unitless multiplier |
-| `text-decoration` | `underline`, `line-through` |
-| `text-transform` | `uppercase`, `lowercase`, `capitalize`, `none` |
-| `text-align` | `left`, `center`, `right`, `justify` |
-| `text-indent` | `px`, `em`, `%` |
-| `letter-spacing` | `px`, `em` |
-| `word-spacing` | `px`, `em` |
-| `vertical-align` | `baseline`, `top`, `middle`, `bottom`, `text-top`, `text-bottom`, `sub`, `super` |
-| `white-space` | `normal`, `nowrap`, `pre`, `pre-wrap`, `pre-line` |
-| `position` | `static`, `relative`, `absolute`, `fixed`, `sticky` |
-| `top`, `right`, `bottom`, `left` | `px`, `%`, `calc()` |
-| `z-index` | Integer |
-| `overflow` | `visible`, `hidden`, `scroll`, `auto` |
-| `visibility` | `visible`, `hidden`, `collapse` |
-| `float` | `none`, `left`, `right` |
-| `clear` | `none`, `left`, `right`, `both` |
-| `flex-direction` | `row`, `row-reverse`, `column`, `column-reverse` |
-| `flex-wrap` | `nowrap`, `wrap`, `wrap-reverse` |
-| `flex-grow`, `flex-shrink` | Number |
-| `flex-basis` | `px`, `%`, `auto`, `calc()` |
-| `flex` | Shorthand |
-| `justify-content` | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `space-evenly` |
-| `align-items`, `align-self` | `stretch`, `flex-start`, `flex-end`, `center`, `baseline` |
-| `align-content` | `stretch`, `flex-start`, `flex-end`, `center`, `space-between`, `space-around` |
-| `flex-flow` | Shorthand |
-| `gap`, `row-gap`, `column-gap` | `px`, `em`, `%`, `calc()` |
-| `order` | Integer |
-| `outline` | `outline-width`, `outline-color`, `outline-style`, `outline-offset` |
-| `list-style-type` | `disc`, `circle`, `square`, `decimal`, `lower-alpha`, `upper-alpha`, `lower-roman`, `upper-roman`, `none` |
-| `list-style-position` | `outside`, `inside` |
-| `border-collapse` | `collapse`, `separate` |
-| `border-spacing` | `px` |
-| `cursor` | `pointer`, `text`, `default` |
-| `text-overflow` | `ellipsis`, `clip` |
-| `aspect-ratio` | `width / height`, single value |
-| `pointer-events` | `none`, `auto` |
-| `transform` | `rotate()`, `scale()`, `scaleX/Y()`, `translate()`, `translateX/Y()`, `skew()`, `skewX/Y()`; deg/rad/turn |
-| `filter` | `blur()`, `grayscale()`, `sepia()`, `brightness()`, `contrast()`, `saturate()`, `hue-rotate()`, `invert()`, `opacity()` |
-| `background-image` (gradient) | `linear-gradient()` with angle keywords, `Ndeg`, and multi-stop color lists |
-| `animation-play-state` | `running`, `paused` |
-| `transition` | `property`, `duration`, `delay`, `timing-function` |
-| `animation` | `name`, `duration`, `delay`, `timing-function`, `iteration-count`, `direction`, `fill-mode` |
-| `calc()` | `+`, `-`, `*`, `/`; `px`, `%`, `em`, `rem`, `vw`, `vh` |
-| `--*` custom properties | Declared on any element; inherited via ancestor chain |
-| `var()` | `var(--name)`, `var(--name, fallback)`; recursive resolution |
-| `@media` | `min-width`, `max-width`, `min-height`, `max-height`, `orientation`; `and`, `not`, comma |
-| `@keyframes` | `from`/`to`, percentage offsets |
-| `:hover`, `:focus`, `:active` | Pseudo-class state with interactive re-render |
-| `::before`, `::after` | Pseudo-elements with `content` property (strings, `open-quote`/`close-quote`, unicode escapes) |
+| Property                                             | Values                                                                                                                  |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `display`                                            | `block`, `inline`, `inline-block`, `list-item`, `flex`, `inline-flex`, `table`, `table-row`, `table-cell`, `none`       |
+| `width`, `height`                                    | `px`, `%`, `vh`, `vw`, `auto`, `calc()`                                                                                 |
+| `min-width`, `max-width`, `min-height`, `max-height` | `px`, `%`, `calc()`                                                                                                     |
+| `margin`, `padding`                                  | Shorthand and individual sides; `px`, `%`, `em`, `auto`, `calc()`                                                       |
+| `border-width`                                       | `px` per side                                                                                                           |
+| `border-color`                                       | Any CSS color per side                                                                                                  |
+| `border-style`                                       | `solid`, `dotted`, `dashed`, `double`, `groove`, `ridge`, `inset`, `outset`, `none` per side                            |
+| `border-radius`                                      | `px`, `%`                                                                                                               |
+| `box-sizing`                                         | `border-box`, `content-box`                                                                                             |
+| `box-shadow`                                         | Multi-layer; offset, blur, spread, color, `inset`                                                                       |
+| `text-shadow`                                        | Offset, blur, color                                                                                                     |
+| `background-color`                                   | Any CSS color                                                                                                           |
+| `background-image`                                   | `url()`; raster formats (PNG, JPEG)                                                                                     |
+| `background-repeat`                                  | `repeat`, `repeat-x`, `repeat-y`, `no-repeat`                                                                           |
+| `background-position`                                | Keywords, `px`, `%`                                                                                                     |
+| `background-size`                                    | `cover`, `contain`, `auto`, `px`, `%`                                                                                   |
+| `color`                                              | Any CSS color                                                                                                           |
+| `opacity`                                            | `0`–`1`                                                                                                                 |
+| `font-size`                                          | `px`, `em`, keyword sizes                                                                                               |
+| `font-weight`                                        | `bold` / normal                                                                                                         |
+| `font-style`                                         | `italic` / normal                                                                                                       |
+| `font-family`                                        | Named families; `monospace` → Consolas, `system-ui` → Segoe UI                                                          |
+| `line-height`                                        | `px`, `em`, `%`, unitless multiplier                                                                                    |
+| `text-decoration`                                    | `underline`, `line-through`                                                                                             |
+| `text-transform`                                     | `uppercase`, `lowercase`, `capitalize`, `none`                                                                          |
+| `text-align`                                         | `left`, `center`, `right`, `justify`                                                                                    |
+| `text-indent`                                        | `px`, `em`, `%`                                                                                                         |
+| `letter-spacing`                                     | `px`, `em`                                                                                                              |
+| `word-spacing`                                       | `px`, `em`                                                                                                              |
+| `vertical-align`                                     | `baseline`, `top`, `middle`, `bottom`, `text-top`, `text-bottom`, `sub`, `super`                                        |
+| `white-space`                                        | `normal`, `nowrap`, `pre`, `pre-wrap`, `pre-line`                                                                       |
+| `position`                                           | `static`, `relative`, `absolute`, `fixed`, `sticky`                                                                     |
+| `top`, `right`, `bottom`, `left`                     | `px`, `%`, `calc()`                                                                                                     |
+| `z-index`                                            | Integer                                                                                                                 |
+| `overflow`                                           | `visible`, `hidden`, `scroll`, `auto`                                                                                   |
+| `visibility`                                         | `visible`, `hidden`, `collapse`                                                                                         |
+| `float`                                              | `none`, `left`, `right`                                                                                                 |
+| `clear`                                              | `none`, `left`, `right`, `both`                                                                                         |
+| `flex-direction`                                     | `row`, `row-reverse`, `column`, `column-reverse`                                                                        |
+| `flex-wrap`                                          | `nowrap`, `wrap`, `wrap-reverse`                                                                                        |
+| `flex-grow`, `flex-shrink`                           | Number                                                                                                                  |
+| `flex-basis`                                         | `px`, `%`, `auto`, `calc()`                                                                                             |
+| `flex`                                               | Shorthand                                                                                                               |
+| `justify-content`                                    | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `space-evenly`                                     |
+| `align-items`, `align-self`                          | `stretch`, `flex-start`, `flex-end`, `center`, `baseline`                                                               |
+| `align-content`                                      | `stretch`, `flex-start`, `flex-end`, `center`, `space-between`, `space-around`                                          |
+| `flex-flow`                                          | Shorthand                                                                                                               |
+| `gap`, `row-gap`, `column-gap`                       | `px`, `em`, `%`, `calc()`                                                                                               |
+| `order`                                              | Integer                                                                                                                 |
+| `outline`                                            | `outline-width`, `outline-color`, `outline-style`, `outline-offset`                                                     |
+| `list-style-type`                                    | `disc`, `circle`, `square`, `decimal`, `lower-alpha`, `upper-alpha`, `lower-roman`, `upper-roman`, `none`               |
+| `list-style-position`                                | `outside`, `inside`                                                                                                     |
+| `border-collapse`                                    | `collapse`, `separate`                                                                                                  |
+| `border-spacing`                                     | `px`                                                                                                                    |
+| `cursor`                                             | `pointer`, `text`, `default`                                                                                            |
+| `text-overflow`                                      | `ellipsis`, `clip`                                                                                                      |
+| `aspect-ratio`                                       | `width / height`, single value                                                                                          |
+| `pointer-events`                                     | `none`, `auto`                                                                                                          |
+| `transform`                                          | `rotate()`, `scale()`, `scaleX/Y()`, `translate()`, `translateX/Y()`, `skew()`, `skewX/Y()`; deg/rad/turn               |
+| `filter`                                             | `blur()`, `grayscale()`, `sepia()`, `brightness()`, `contrast()`, `saturate()`, `hue-rotate()`, `invert()`, `opacity()` |
+| `background-image` (gradient)                        | `linear-gradient()` with angle keywords, `Ndeg`, and multi-stop color lists                                             |
+| `animation-play-state`                               | `running`, `paused`                                                                                                     |
+| `transition`                                         | `property`, `duration`, `delay`, `timing-function`                                                                      |
+| `animation`                                          | `name`, `duration`, `delay`, `timing-function`, `iteration-count`, `direction`, `fill-mode`                             |
+| `calc()`                                             | `+`, `-`, `*`, `/`; `px`, `%`, `em`, `rem`, `vw`, `vh`                                                                  |
+| `--*` custom properties                              | Declared on any element; inherited via ancestor chain                                                                   |
+| `var()`                                              | `var(--name)`, `var(--name, fallback)`; recursive resolution                                                            |
+| `@media`                                             | `min-width`, `max-width`, `min-height`, `max-height`, `orientation`; `and`, `not`, comma                                |
+| `@keyframes`                                         | `from`/`to`, percentage offsets                                                                                         |
+| `:hover`, `:focus`, `:active`                        | Pseudo-class state with interactive re-render                                                                           |
+| `::before`, `::after`                                | Pseudo-elements with `content` property (strings, `open-quote`/`close-quote`, unicode escapes)                          |
 
 ---
 
@@ -249,13 +249,13 @@ Scripts run in a Jint sandbox with a minimal browser-compatible API.
 ### `document`
 
 ```js
-document.getElementById(id)          // → Element | null
-document.querySelector(selector)     // → Element | null
-document.querySelectorAll(selector)  // → Element[]
-document.createElement(tagName)      // → Element
-document.createTextNode(text)        // → Element (#text node)
-document.createDocumentFragment()    // → Element (lightweight container)
-document.createTreeWalker(root, whatToShow) // → TreeWalker
+document.getElementById(id); // → Element | null
+document.querySelector(selector); // → Element | null
+document.querySelectorAll(selector); // → Element[]
+document.createElement(tagName); // → Element
+document.createTextNode(text); // → Element (#text node)
+document.createDocumentFragment(); // → Element (lightweight container)
+document.createTreeWalker(root, whatToShow); // → TreeWalker
 ```
 
 Selectors support: `#id`, `.class`, `tag`, compound (`tag.class#id`), attribute (`[attr=val]`, `[attr^=val]`, `[attr$=val]`, `[attr*=val]`, `[attr~=val]`), combinators (descendant, `>`, `+`, `~`), pseudo-classes (`:first-child`, `:last-child`, `:nth-child()`, `:not()`), and comma-separated lists.
@@ -263,59 +263,59 @@ Selectors support: `#id`, `.class`, `tag`, compound (`tag.class#id`), attribute 
 ### Element
 
 ```js
-element.id                           // string (read-only)
-element.tagName                      // string (read-only)
-element.className                    // get/set class attribute
-element.textContent                  // get/set displayed text
-element.innerHTML                    // get/set (simplified — same as textContent)
-element.value                        // get/set text input value
-element.checked                      // get/set checkbox state
-element.nodeType                     // 1 (Element)
-element.nodeName                     // same as tagName
-element.ownerDocument                // → document
-element.dataset                      // proxy for data-* attributes
+element.id; // string (read-only)
+element.tagName; // string (read-only)
+element.className; // get/set class attribute
+element.textContent; // get/set displayed text
+element.innerHTML; // get/set (simplified — same as textContent)
+element.value; // get/set text input value
+element.checked; // get/set checkbox state
+element.nodeType; // 1 (Element)
+element.nodeName; // same as tagName
+element.ownerDocument; // → document
+element.dataset; // proxy for data-* attributes
 
-element.style.color = "red"          // set any CSS property as camelCase or kebab-case
-element.style.setProperty(name, val)
-element.style.getPropertyValue(name)
-element.style.removeProperty(name)
+element.style.color = 'red'; // set any CSS property as camelCase or kebab-case
+element.style.setProperty(name, val);
+element.style.getPropertyValue(name);
+element.style.removeProperty(name);
 
-element.getAttribute(name)           // → string | null
-element.setAttribute(name, value)
-element.hasAttribute(name)           // → boolean
+element.getAttribute(name); // → string | null
+element.setAttribute(name, value);
+element.hasAttribute(name); // → boolean
 
-element.children                     // → Element[]
-element.childNodes                   // → Element[]
-element.parentElement                // → Element | null
-element.firstElementChild            // → Element | null
-element.lastElementChild             // → Element | null
-element.nextElementSibling           // → Element | null
-element.previousElementSibling       // → Element | null
-element.appendChild(child)           // → child
-element.removeChild(child)           // → child
-element.insertBefore(newNode, ref)   // → newNode
-element.replaceChild(newNode, old)   // → old
-element.cloneNode(deep)              // → Element
-element.contains(node)               // → boolean
-element.closest(selector)            // → Element | null
-element.matches(selector)            // → boolean
-element.getBoundingClientRect()       // → { x, y, width, height, top, left, right, bottom }
+element.children; // → Element[]
+element.childNodes; // → Element[]
+element.parentElement; // → Element | null
+element.firstElementChild; // → Element | null
+element.lastElementChild; // → Element | null
+element.nextElementSibling; // → Element | null
+element.previousElementSibling; // → Element | null
+element.appendChild(child); // → child
+element.removeChild(child); // → child
+element.insertBefore(newNode, ref); // → newNode
+element.replaceChild(newNode, old); // → old
+element.cloneNode(deep); // → Element
+element.contains(node); // → boolean
+element.closest(selector); // → Element | null
+element.matches(selector); // → boolean
+element.getBoundingClientRect(); // → { x, y, width, height, top, left, right, bottom }
 
-element.classList.add(cls)
-element.classList.remove(cls)
-element.classList.contains(cls)      // → boolean
-element.classList.toggle(cls)
+element.classList.add(cls);
+element.classList.remove(cls);
+element.classList.contains(cls); // → boolean
+element.classList.toggle(cls);
 
-element.addEventListener(type, fn)
-element.removeEventListener(type, fn)
-element.click()
+element.addEventListener(type, fn);
+element.removeEventListener(type, fn);
+element.click();
 ```
 
 ### Canvas
 
 ```js
-var canvas = document.getElementById("myCanvas");
-var ctx = canvas.getContext("2d");
+var canvas = document.getElementById('myCanvas');
+var ctx = canvas.getContext('2d');
 
 // Drawing: fillRect, strokeRect, clearRect, fillText, strokeText, measureText
 // Paths: beginPath, moveTo, lineTo, arc, arcTo, ellipse, quadraticCurveTo,
@@ -336,29 +336,31 @@ console.warn(...)
 ### `window`
 
 ```js
-window.alert(message)
-alert(message)                       // shorthand
-window.getComputedStyle(element)     // → CSSStyleDeclaration proxy
-window.innerWidth                    // viewport width
-window.innerHeight                   // viewport height
-window.scrollTo(x, y)               // scroll viewport to absolute position
-window.scrollBy(dx, dy)             // scroll viewport by relative amount
-window.scrollY                       // current vertical scroll offset (read-only)
-window.scrollX                       // current horizontal scroll offset (read-only)
-window.pageXOffset                   // alias for scrollX
-window.pageYOffset                   // alias for scrollY
-setTimeout(fn, ms)
-setInterval(fn, ms)
-clearInterval(id)
-requestAnimationFrame(fn)
+window.alert(message);
+alert(message); // shorthand
+window.getComputedStyle(element); // → CSSStyleDeclaration proxy
+window.innerWidth; // viewport width
+window.innerHeight; // viewport height
+window.scrollTo(x, y); // scroll viewport to absolute position
+window.scrollBy(dx, dy); // scroll viewport by relative amount
+window.scrollY; // current vertical scroll offset (read-only)
+window.scrollX; // current horizontal scroll offset (read-only)
+window.pageXOffset; // alias for scrollX
+window.pageYOffset; // alias for scrollY
+setTimeout(fn, ms);
+setInterval(fn, ms);
+clearInterval(id);
+requestAnimationFrame(fn);
 ```
 
 ### `XMLHttpRequest`
 
 ```js
 var xhr = new XMLHttpRequest();
-xhr.open("GET", "/api/data");
-xhr.onload = function() { console.log(xhr.responseText); };
+xhr.open('GET', '/api/data');
+xhr.onload = function () {
+  console.log(xhr.responseText);
+};
 xhr.send();
 // Properties: responseText, status, readyState
 ```
@@ -366,12 +368,12 @@ xhr.send();
 ### Event object
 
 ```js
-element.addEventListener("click", function(event) {
-    event.type              // "click"
-    event.target            // Element that triggered the event
-    event.currentTarget     // Element the handler is attached to
-    event.preventDefault()
-    event.stopPropagation() // stop bubbling up the DOM tree
+element.addEventListener('click', function (event) {
+  event.type; // "click"
+  event.target; // Element that triggered the event
+  event.currentTarget; // Element the handler is attached to
+  event.preventDefault();
+  event.stopPropagation(); // stop bubbling up the DOM tree
 });
 ```
 
@@ -398,14 +400,14 @@ The example serves the `Example/resources/` folder on `http://localhost:4444` an
 
 ## Dependencies
 
-| Package | Purpose |
-|---|---|
-| [AngleSharp](https://github.com/AngleSharp/AngleSharp) | HTML parsing and CSS style computation |
-| [AngleSharp.Css](https://github.com/AngleSharp/AngleSharp.Css) | CSS extension for AngleSharp |
-| [Jint](https://github.com/sebastienros/jint) | JavaScript engine |
-| [Esprima](https://github.com/sebastienros/esprima-dotnet) | JavaScript parser (used by Jint) |
-| [SkiaSharp](https://github.com/mono/SkiaSharp) | 2D rendering |
-| Microsoft.AspNetCore.App | Static file server *(Example project only)* |
+| Package                                                        | Purpose                                     |
+| -------------------------------------------------------------- | ------------------------------------------- |
+| [AngleSharp](https://github.com/AngleSharp/AngleSharp)         | HTML parsing and CSS style computation      |
+| [AngleSharp.Css](https://github.com/AngleSharp/AngleSharp.Css) | CSS extension for AngleSharp                |
+| [Jint](https://github.com/sebastienros/jint)                   | JavaScript engine                           |
+| [Esprima](https://github.com/sebastienros/esprima-dotnet)      | JavaScript parser (used by Jint)            |
+| [SkiaSharp](https://github.com/mono/SkiaSharp)                 | 2D rendering                                |
+| Microsoft.AspNetCore.App                                       | Static file server _(Example project only)_ |
 
 ---
 
