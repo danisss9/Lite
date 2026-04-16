@@ -1,5 +1,6 @@
 using Jint;
 using Jint.Native;
+using Lite.Layout;
 using Lite.Models;
 using Lite.Scripting.Dom;
 
@@ -11,6 +12,7 @@ internal class JsEngine
 
     private readonly Engine _engine;
     private readonly JsWindow _jsWindow;
+    private Viewport? _viewport;
 
     private JsEngine(LayoutNode root, int viewportWidth = 800, int viewportHeight = 600)
     {
@@ -97,6 +99,13 @@ internal class JsEngine
         _jsWindow.innerWidth = width;
         _jsWindow.innerHeight = height;
     }
+
+    /// <summary>Binds a viewport for window.scrollTo/scrollBy support.</summary>
+    internal void SetViewport(Viewport viewport) => _viewport = viewport;
+
+    internal void ScrollTo(float y) => _viewport?.ScrollTo(y);
+    internal void ScrollBy(float delta) => _viewport?.ScrollBy(delta);
+    internal float GetScrollY() => _viewport?.ScrollY ?? 0f;
 
     internal Engine RawEngine => _engine;
 }

@@ -83,6 +83,9 @@ public class BrowserWindow
         _rootNode = Parser.TraverseHtml(_url, _initialWidth, _initialHeight);
         AnimationEngine.StartAnimations(_rootNode);
 
+        // Bind viewport to JS engine for window.scrollTo/scrollBy
+        JsEngine.Instance?.SetViewport(_viewport);
+
         _wndProcDelegate = WndProc;
         var hInstance = Marshal.GetHINSTANCE(typeof(BrowserWindow).Module);
 
@@ -129,6 +132,13 @@ public class BrowserWindow
 
         User32.ShowWindow(hWnd, SW_SHOW);
         User32.UpdateWindow(hWnd);
+
+        // autofocus: focus first element with the attribute
+        if (_rootNode != null)
+        {
+            var af = FindFirst(_rootNode, n => n.Attributes.ContainsKey("autofocus"));
+            if (af != null) FormState.FocusedInput = af.NodeKey;
+        }
 
         // Kick off the animation timer if the page has CSS animations
         if (_rootNode != null)
@@ -186,6 +196,10 @@ public class BrowserWindow
                 if (_rootNode != null)
                 {
                     var stillRunning = AnimationEngine.Tick(_rootNode);
+
+                    // Dispatch animation/transition lifecycle events
+                    foreach (var ev in AnimationEngine.DrainEvents())
+                        EventDispatcher.Dispatch(ev.Node.NodeKey, ev.EventType, _rootNode);
 
                     // Flush requestAnimationFrame callbacks
                     var engine = JsEngine.Instance;

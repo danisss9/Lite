@@ -90,6 +90,22 @@ internal class JsWindow
         _rafCallbacks.RemoveAll(r => r.Id == id);
     }
 
+    // ---- scroll methods ----
+    public void scrollTo(int x, int y)
+    {
+        _engine.ScrollTo(y);
+    }
+
+    public void scrollBy(int x, int y)
+    {
+        _engine.ScrollBy(y);
+    }
+
+    public double scrollX => 0;
+    public double scrollY => _engine.GetScrollY();
+    public double pageXOffset => 0;
+    public double pageYOffset => _engine.GetScrollY();
+
     /// <summary>Invokes all pending RAF callbacks with the given timestamp and clears the queue.</summary>
     internal void FlushRAF(double timestamp)
     {

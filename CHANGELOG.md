@@ -2,9 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.5] - 2026-03-23 (current)
+## [0.0.6] - 2026-04-16 (current)
 
 ### Added
+
+- **`linear-gradient()`** — `background-image: linear-gradient()` support with angle keywords (`to top/right/bottom/left`, diagonals), degree values, and multi-stop color lists; rendered via `SKShader.CreateLinearGradient` with correct CSS angle convention
+- **CSS `transform`** — `rotate()`, `scale()`, `scaleX()`, `scaleY()`, `translate()`, `translateX()`, `translateY()`, `skew()`, `skewX()`, `skewY()` parsed into a composed `SKMatrix`; applied around the element's center (transform-origin: center); deg/rad/turn units supported
+- **CSS `filter`** — `blur()` (via `SKImageFilter`), `grayscale()`, `sepia()`, `brightness()`, `contrast()`, `saturate()`, `hue-rotate()`, `invert()`, `opacity()` (all via `SKColorFilter` color matrices); multiple filters composed; applied as a `SaveLayer` paint
+- **`text-overflow: ellipsis`** — single-line overflow text truncated with `…` when `overflow: hidden` and `white-space: nowrap`; truncation point found via binary search in `TextMeasure`
+- **`position: sticky`** — element sticks at its `top` offset within the viewport while remaining within its parent container; sub-pixel clamping prevents sticking beyond the container bottom
+- **`aspect-ratio`** — `width / height` and single-value (`1.5`) syntax; height is derived from content width when no explicit height is set
+- **`pointer-events: none`** — hit regions are not registered for the element; mouse events pass through to elements underneath
+- **`element.dataset`** — `JsDataset` proxy reads and writes `data-*` attributes with camelCase ↔ kebab-case conversion
+- **`animation-play-state`** — `running` / `paused`; pausing freezes elapsed time; resuming continues from the frozen point; toggling via JavaScript works correctly
+- **`window.scrollTo(x, y)` / `window.scrollBy(dx, dy)`** — programmatic viewport scrolling; `window.scrollY`, `window.scrollX`, `window.pageXOffset`, `window.pageYOffset` read-only properties
+- **`autofocus` attribute** — first element with `autofocus` receives focus automatically after page load
+- **Animation lifecycle events** — `animationstart`, `animationend`, `animationiteration` fired on the element; `transitionend` fired when a CSS transition completes; events dispatched through the full capture/bubble chain via `EventDispatcher`
+
+## [0.0.5] - 2026-03-23
+
+### Added
+
 - **`text-transform`** — `uppercase`, `lowercase`, `capitalize`, `none`
 - **`letter-spacing`** — character-level spacing with custom draw/measure routines
 - **`word-spacing`** — additional space between words
@@ -27,6 +45,7 @@ All notable changes to this project will be documented in this file.
 - **CSS shorthand parsing** — `border-style`, `outline`, `list-style` shorthands decomposed into individual properties
 
 ### Fixed
+
 - **Pseudo-element text overlap** — `::before`/`::after` content was drawn on top of the parent's text; now the parent's text is moved into a `#text` child node so all content flows together as inline children
 - **CSS unicode escapes** — `ParseContentValue` now decodes CSS escape sequences like `\201C` (left quote) and `\25B6` (triangle) into actual characters via `DecodeCssEscapes`
 - **Background image loading** — `DrawBackgroundImage` passed `null` as the base URL to `ResourceLoader.FetchImage`, so relative image paths couldn't resolve; now passes `Parser.BaseUrl`
@@ -39,6 +58,7 @@ All notable changes to this project will be documented in this file.
 ## [0.0.4] - 2026-03-22
 
 ### Added
+
 - **SVG rendering** — full `SvgRenderer` supporting `<rect>`, `<circle>`, `<ellipse>`, `<line>`, `<polyline>`, `<polygon>`, `<path>` (via `SKPath.ParseSvgPathData`), `<text>`, and `<g>` grouping; `viewBox` scaling, `transform` attribute (translate, scale, rotate, skewX, skewY, matrix), fill/stroke with opacity, stroke-linecap/linejoin, and HSL color parsing
 - **`<canvas>` element** — `CanvasRenderingContext2D` exposed to JavaScript with rect operations (`fillRect`, `strokeRect`, `clearRect`), path API (`beginPath`, `moveTo`, `lineTo`, `arc`, `arcTo`, `ellipse`, `quadraticCurveTo`, `bezierCurveTo`, `closePath`, `fill`, `stroke`, `clip`), text (`fillText`, `strokeText`, `measureText`), transforms (`save`, `restore`, `translate`, `rotate`, `scale`, `setTransform`, `resetTransform`), `drawImage`, and full paint state (`fillStyle`, `strokeStyle`, `lineWidth`, `globalAlpha`, `lineCap`, `lineJoin`, `font`)
 - **CSS selector engine** — `SelectorEngine` supporting compound selectors: `#id`, `.class`, `tag`, `tag.class`, `tag#id`, attribute selectors (`[attr]`, `[attr=val]`, `[attr^=val]`, `[attr$=val]`, `[attr*=val]`, `[attr~=val]`), combinators (descendant, child `>`, adjacent `+`, general sibling `~`), pseudo-classes (`:first-child`, `:last-child`, `:nth-child()`, `:not()`), and comma-separated selector lists
@@ -59,6 +79,7 @@ All notable changes to this project will be documented in this file.
 - **`requestAnimationFrame`** — schedules a callback on the next animation frame tick
 
 ### Fixed
+
 - **Font crash on missing typeface** — `SKTypeface.FromFamilyName` returning `null` for uninstalled fonts now falls back to `SKTypeface.Default` instead of passing `null` to `SKFont` constructor
 - **Animation color parse exceptions** — `SKColor.Parse` in `AnimationEngine.TryParseColor` threw `ArgumentException` for every numeric value (e.g. opacity `"0.35"`) on every animation frame; replaced with `SKColor.TryParse` to avoid first-chance exceptions
 - **SVG zero-dimension guards** — `<rect>` with zero width/height, `<circle>` with zero radius, and `<ellipse>` with zero radii now skip rendering instead of throwing
@@ -76,6 +97,7 @@ All notable changes to this project will be documented in this file.
 ## [0.0.3] - 2026-03-20
 
 ### Added
+
 - **`opacity`** — element opacity (0–1) with composited subtree rendering via temporary SkiaSharp layers
 - **`border-radius`** — rounded corners on all box types via `SKRoundRect`; supports `px` and `%` units
 - **`box-shadow`** — multi-layer box shadows with offset, blur, spread, and color; `inset` keyword parsed
@@ -94,12 +116,14 @@ All notable changes to this project will be documented in this file.
 - **CSS custom properties (`--*` / `var()`)** — custom properties declared on any element (including `:root`), inherited via ancestor chain walk; `var(--name)` and `var(--name, fallback)` with recursive resolution; nested `var()` in both resolved values and fallbacks; automatic shorthand expansion for `padding`, `margin`, `gap`
 
 ### Fixed
+
 - **Button text wrapping** — added `white-space: nowrap` to prevent "Hover me" button text from wrapping in flex containers
 - **`var()` values in non-override properties** — properties like `background-color`, `color`, `padding` containing `var()` references were silently dropped because AngleSharp cannot resolve custom properties; now any property with a `var()` value is stored in StyleOverrides regardless of the property whitelist
 
 ## [0.0.2] - 2026-03-18
 
 ### Added
+
 - **Inline text elements** — `<strong>`, `<b>`, `<em>`, `<i>`, `<u>`, `<ins>`, `<s>`, `<del>`, `<strike>`, `<small>`, `<sub>`, `<sup>`, `<mark>`, `<code>`, `<kbd>`, `<samp>`, `<var>`, `<tt>` now render correctly via UA stylesheet rules
 - **`font-style: italic`** — rendered using the italic typeface slant via SkiaSharp
 - **`text-decoration: line-through`** — strikethrough line drawn at the correct baseline offset
@@ -157,6 +181,7 @@ All notable changes to this project will be documented in this file.
 - **`inline-flex` in inline runs** — `display: inline-flex` elements participate in inline formatting contexts as inline-block equivalents, with intrinsic sizing from max-content measurement
 
 ### Fixed
+
 - `<hr>` was incorrectly matched by the heading paint path (`H` + digit check) and never rendered
 - Inline elements (`<strong>`, `<em>`, `<mark>`, `#TEXT`, etc.) had no paint path and were silently skipped
 - `#TEXT` nodes inherited `display: block` from parent computed style; now forced to `display: inline`
@@ -169,6 +194,7 @@ All notable changes to this project will be documented in this file.
 ## [0.0.1] - 2026-03-17
 
 ### Added
+
 - `BrowserWindow` API — create a native Win32 window that renders a web page from a URL
 - HTML parser using AngleSharp with CSS style computation
 - Custom two-pass CSS box model layout engine (`BoxEngine`) supporting block and inline line boxes

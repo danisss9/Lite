@@ -14,10 +14,17 @@ public record struct BoxShadow(float OffsetX, float OffsetY, float Blur, float S
 /// <summary>A text-shadow declaration.</summary>
 public record struct TextShadow(float OffsetX, float OffsetY, float Blur, SKColor Color);
 
+/// <summary>A parsed linear-gradient with angle and color stops.</summary>
+public sealed class LinearGradient
+{
+    public float AngleDeg { get; set; } = 180; // default: to bottom
+    public List<(SKColor Color, float? Position)> Stops { get; set; } = [];
+}
+
 public enum DisplayType { Block, Inline, InlineBlock, ListItem, Flex, InlineFlex, Table, TableRow, TableCell, None }
 public enum TextAlign { Left, Center, Right, Justify }
 public enum WhiteSpace { Normal, NoWrap, Pre, PreWrap, PreLine }
-public enum PositionType { Static, Relative, Absolute, Fixed }
+public enum PositionType { Static, Relative, Absolute, Fixed, Sticky }
 public enum OverflowType { Visible, Hidden, Scroll, Auto }
 public enum FlexDirection { Row, RowReverse, Column, ColumnReverse }
 public enum FlexWrap { NoWrap, Wrap, WrapReverse }
@@ -380,6 +387,7 @@ public static class StyleExtensions
             "relative" => PositionType.Relative,
             "absolute" => PositionType.Absolute,
             "fixed" => PositionType.Fixed,
+            "sticky" => PositionType.Sticky,
             _ => PositionType.Static,
         };
     }
@@ -405,6 +413,26 @@ public static class StyleExtensions
         var raw = node.TryResolveStyle(PropertyNames.ZIndex, out var ov)
             ? ov : node.Style.GetPropertyValue(PropertyNames.ZIndex);
         return int.TryParse(raw, out var z) ? z : 0;
+    }
+
+    /// <summary>Returns aspect-ratio as width/height (e.g. 16/9 → 1.777), or 0 if unset.</summary>
+    public static float GetAspectRatio(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("aspect-ratio", out var ov)
+            ? ov : node.Style.GetPropertyValue("aspect-ratio");
+        if (string.IsNullOrWhiteSpace(raw) || raw == "auto") return 0f;
+        // "16 / 9" or "16/9" or "1.5"
+        raw = raw.Replace(" ", "");
+        var slash = raw.IndexOf('/');
+        if (slash > 0)
+        {
+            if (float.TryParse(raw[..slash], NumberStyles.Float, CultureInfo.InvariantCulture, out var w) &&
+                float.TryParse(raw[(slash + 1)..], NumberStyles.Float, CultureInfo.InvariantCulture, out var h) && h > 0)
+                return w / h;
+        }
+        else if (float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var val) && val > 0)
+            return val;
+        return 0f;
     }
 
     /// <summary>
@@ -455,6 +483,14 @@ public static class StyleExtensions
             "right" => FloatType.Right,
             _ => FloatType.None,
         };
+    }
+
+    /// <summary>Returns true if text-overflow is "ellipsis".</summary>
+    public static bool IsTextOverflowEllipsis(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("text-overflow", out var ov)
+            ? ov : node.Style.GetPropertyValue("text-overflow");
+        return raw == "ellipsis";
     }
 
     public static ClearType GetClear(this LayoutNode node)
@@ -652,6 +688,8 @@ public static class StyleExtensions
         var raw = node.TryResolveStyle("background-image", out var ov)
             ? ov : node.Style.GetPropertyValue("background-image");
         if (string.IsNullOrWhiteSpace(raw) || raw == "none") return null;
+        // If it's a gradient, return null — handled by GetLinearGradient
+        if (raw.Contains("gradient", StringComparison.OrdinalIgnoreCase)) return null;
         // Extract url('...') or url(...)
         raw = raw.Trim();
         if (raw.StartsWith("url(", StringComparison.OrdinalIgnoreCase))
@@ -661,6 +699,137 @@ public static class StyleExtensions
             return inner.Trim().Trim('"', '\'');
         }
         return null;
+    }
+
+    /// <summary>Parses a linear-gradient() from background-image or background.</summary>
+    public static LinearGradient? GetLinearGradient(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("background-image", out var ov)
+            ? ov : node.Style.GetPropertyValue("background-image");
+        if (string.IsNullOrWhiteSpace(raw) || raw == "none")
+        {
+            // Also check shorthand "background" property
+            raw = node.TryResolveStyle("background", out var bg)
+                ? bg : node.Style.GetPropertyValue("background");
+        }
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        return ParseLinearGradient(raw);
+    }
+
+    /// <summary>Parses CSS linear-gradient() syntax.</summary>
+    private static LinearGradient? ParseLinearGradient(string value)
+    {
+        value = value.Trim();
+        var idx = value.IndexOf("linear-gradient(", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return null;
+        var start = idx + "linear-gradient(".Length;
+        // Find matching closing paren
+        var depth = 1;
+        var end = start;
+        for (; end < value.Length && depth > 0; end++)
+        {
+            if (value[end] == '(') depth++;
+            else if (value[end] == ')') depth--;
+        }
+        if (depth != 0) return null;
+        var inner = value[start..(end - 1)].Trim();
+
+        var grad = new LinearGradient();
+
+        // Split on commas, but respect parentheses (for rgb()/hsl() color functions)
+        var parts = SplitGradientArgs(inner);
+        if (parts.Count == 0) return null;
+
+        var stopStart = 0;
+        var first = parts[0].Trim();
+
+        // Check if first part is an angle or direction keyword
+        if (first.EndsWith("deg", StringComparison.OrdinalIgnoreCase) &&
+            float.TryParse(first[..^3].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var deg))
+        {
+            grad.AngleDeg = deg;
+            stopStart = 1;
+        }
+        else if (first.StartsWith("to ", StringComparison.OrdinalIgnoreCase))
+        {
+            grad.AngleDeg = ParseDirectionAngle(first[3..].Trim());
+            stopStart = 1;
+        }
+
+        // Parse color stops
+        for (var i = stopStart; i < parts.Count; i++)
+        {
+            var stop = parts[i].Trim();
+            var tokens = stop.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            // Last token might be a percentage
+            float? position = null;
+            var colorStr = stop;
+            if (tokens.Length >= 2)
+            {
+                var last = tokens[^1];
+                if (last.EndsWith('%') && float.TryParse(last[..^1].Trim(),
+                    NumberStyles.Float, CultureInfo.InvariantCulture, out var pct))
+                {
+                    position = pct / 100f;
+                    colorStr = stop[..stop.LastIndexOf(last, StringComparison.Ordinal)].Trim();
+                }
+                else if (last.EndsWith("px", StringComparison.OrdinalIgnoreCase))
+                {
+                    // px position — just store raw for now, resolve at render time
+                    colorStr = stop[..stop.LastIndexOf(last, StringComparison.Ordinal)].Trim();
+                }
+            }
+
+            // Handle rgb()/rgba()/hsl()/hsla() where the color part may contain commas
+            // The colorStr might include function parens already since we split by commas within those
+            var color = ParseCssColor(colorStr);
+            if (color.HasValue)
+                grad.Stops.Add((color.Value, position));
+        }
+
+        return grad.Stops.Count >= 2 ? grad : null;
+    }
+
+    /// <summary>Split gradient arguments on commas, respecting parentheses.</summary>
+    private static List<string> SplitGradientArgs(string input)
+    {
+        var result = new List<string>();
+        var depth = 0;
+        var start = 0;
+        for (var i = 0; i < input.Length; i++)
+        {
+            if (input[i] == '(') depth++;
+            else if (input[i] == ')') depth--;
+            else if (input[i] == ',' && depth == 0)
+            {
+                result.Add(input[start..i]);
+                start = i + 1;
+            }
+        }
+        result.Add(input[start..]);
+        return result;
+    }
+
+    /// <summary>Converts "to bottom", "to right", "to top left" etc. to degrees.</summary>
+    private static float ParseDirectionAngle(string direction)
+    {
+        return direction.ToLowerInvariant().Trim() switch
+        {
+            "top" => 0f,
+            "right" => 90f,
+            "bottom" => 180f,
+            "left" => 270f,
+            "top right" => 45f,
+            "right top" => 45f,
+            "bottom right" => 135f,
+            "right bottom" => 135f,
+            "bottom left" => 225f,
+            "left bottom" => 225f,
+            "top left" => 315f,
+            "left top" => 315f,
+            _ => 180f,
+        };
     }
 
     public static string GetBackgroundRepeat(this LayoutNode node)
@@ -787,7 +956,7 @@ public static class StyleExtensions
         if (sb.Length > 0) yield return sb.ToString();
     }
 
-    private static bool TryParseLengthPx(string token, out float px)
+    internal static bool TryParseLengthPx(string token, out float px)
     {
         if (token.EndsWith("px", StringComparison.OrdinalIgnoreCase))
             return float.TryParse(token[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out px);
@@ -930,6 +1099,128 @@ public static class StyleExtensions
             "text" => CursorType.Text,
             _ => CursorType.Default,
         };
+    }
+
+    public static bool GetPointerEventsNone(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("pointer-events", out var ov)
+            ? ov : node.Style.GetPropertyValue("pointer-events");
+        return raw == "none";
+    }
+
+    /// <summary>Parses the CSS transform property into an SKMatrix. Returns null if none/unset.</summary>
+    public static SKMatrix? GetTransform(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("transform", out var ov)
+            ? ov : node.Style.GetPropertyValue("transform");
+        if (string.IsNullOrWhiteSpace(raw) || raw == "none") return null;
+
+        var result = SKMatrix.Identity;
+
+        // Parse each transform function: rotate(), scale(), translate(), skew(), etc.
+        var span = raw.AsSpan();
+        while (span.Length > 0)
+        {
+            span = span.TrimStart();
+            var parenIdx = span.IndexOf('(');
+            if (parenIdx < 0) break;
+            var funcName = span[..parenIdx].Trim().ToString().ToLowerInvariant();
+            var closeIdx = span.IndexOf(')');
+            if (closeIdx < 0) break;
+            var argsStr = span[(parenIdx + 1)..closeIdx].ToString();
+            span = span[(closeIdx + 1)..];
+
+            var args = argsStr.Split(',', StringSplitOptions.TrimEntries);
+
+            switch (funcName)
+            {
+                case "rotate":
+                    if (TryParseAngle(args[0], out var deg))
+                        result = result.PostConcat(SKMatrix.CreateRotationDegrees(deg));
+                    break;
+                case "scale":
+                    if (float.TryParse(args[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var sx))
+                    {
+                        var sy = args.Length > 1 && float.TryParse(args[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var sy2)
+                            ? sy2 : sx;
+                        result = result.PostConcat(SKMatrix.CreateScale(sx, sy));
+                    }
+                    break;
+                case "scalex":
+                    if (float.TryParse(args[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var sxOnly))
+                        result = result.PostConcat(SKMatrix.CreateScale(sxOnly, 1f));
+                    break;
+                case "scaley":
+                    if (float.TryParse(args[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var syOnly))
+                        result = result.PostConcat(SKMatrix.CreateScale(1f, syOnly));
+                    break;
+                case "translate":
+                    if (TryParseLengthPx(args[0], out var tx))
+                    {
+                        var ty = args.Length > 1 && TryParseLengthPx(args[1], out var ty2) ? ty2 : 0f;
+                        result = result.PostConcat(SKMatrix.CreateTranslation(tx, ty));
+                    }
+                    break;
+                case "translatex":
+                    if (TryParseLengthPx(args[0], out var txOnly))
+                        result = result.PostConcat(SKMatrix.CreateTranslation(txOnly, 0f));
+                    break;
+                case "translatey":
+                    if (TryParseLengthPx(args[0], out var tyOnly))
+                        result = result.PostConcat(SKMatrix.CreateTranslation(0f, tyOnly));
+                    break;
+                case "skew":
+                    if (TryParseAngle(args[0], out var skewX))
+                    {
+                        var skewY = args.Length > 1 && TryParseAngle(args[1], out var sky) ? sky : 0f;
+                        result = result.PostConcat(SKMatrix.CreateSkew(
+                            (float)Math.Tan(skewX * Math.PI / 180),
+                            (float)Math.Tan(skewY * Math.PI / 180)));
+                    }
+                    break;
+                case "skewx":
+                    if (TryParseAngle(args[0], out var skx))
+                        result = result.PostConcat(SKMatrix.CreateSkew((float)Math.Tan(skx * Math.PI / 180), 0f));
+                    break;
+                case "skewy":
+                    if (TryParseAngle(args[0], out var sky2))
+                        result = result.PostConcat(SKMatrix.CreateSkew(0f, (float)Math.Tan(sky2 * Math.PI / 180)));
+                    break;
+            }
+        }
+
+        return result == SKMatrix.Identity ? null : result;
+    }
+
+    internal static bool TryParseAngle(string value, out float degrees)
+    {
+        degrees = 0f;
+        value = value.Trim();
+        if (value.EndsWith("deg", StringComparison.OrdinalIgnoreCase))
+            return float.TryParse(value[..^3].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out degrees);
+        if (value.EndsWith("rad", StringComparison.OrdinalIgnoreCase) &&
+            float.TryParse(value[..^3].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var rad))
+        {
+            degrees = (float)(rad * 180.0 / Math.PI);
+            return true;
+        }
+        if (value.EndsWith("turn", StringComparison.OrdinalIgnoreCase) &&
+            float.TryParse(value[..^4].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var turn))
+        {
+            degrees = turn * 360f;
+            return true;
+        }
+        // Bare number → degrees
+        return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out degrees);
+    }
+
+    /// <summary>Returns the raw CSS filter property value, or null if none/unset.</summary>
+    public static string? GetFilter(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("filter", out var ov)
+            ? ov : node.Style.GetPropertyValue("filter");
+        if (string.IsNullOrWhiteSpace(raw) || raw == "none") return null;
+        return raw.Trim();
     }
 
     public static string GetFontFamily(this LayoutNode node)

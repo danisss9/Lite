@@ -15,6 +15,10 @@ internal static class Drawer
     internal static Dictionary<int, int> SelectOptionMap { get; } = [];
     /// <summary>Deferred dropdown to draw on top of everything.</summary>
     private static (LayoutNode node, SKRect rect, string selectedVal)? _pendingDropdown;
+    /// <summary>Current viewport scroll Y — used for position:sticky calculations.</summary>
+    private static float _viewportScrollY;
+    /// <summary>Current viewport height — used for position:sticky calculations.</summary>
+    private static float _viewportHeight;
 
     public static (IntPtr Pixels, List<HitRegion> HitRegions) Draw(int width, int height, LayoutNode root, Viewport viewport)
     {
@@ -33,6 +37,8 @@ internal static class Drawer
         _hitRegions = [];
         SelectOptionMap.Clear();
         _pendingDropdown = null;
+        _viewportScrollY = viewport.ScrollY;
+        _viewportHeight = height;
 
         canvas.Save();
         canvas.Translate(0, -viewport.ScrollY);
@@ -138,6 +144,40 @@ internal static class Drawer
             }
         }
 
+        // position:sticky — behaves like relative but offset is clamped to viewport scroll
+        if (pos == PositionType.Sticky)
+        {
+            var fontSize = node.GetFontSize();
+            var stickyTop = node.GetOffsetTop(node.Box.ContentBox.Height, fontSize);
+            if (!float.IsNaN(stickyTop))
+            {
+                // Node's layout position in content coordinates
+                var nodeY = node.Box.MarginBox.Top;
+                // Target position in viewport: viewportScrollY + stickyTop
+                var targetY = _viewportScrollY + stickyTop;
+                var dy = 0f;
+                if (nodeY < targetY)
+                {
+                    // Node has scrolled above its sticky threshold — push it down
+                    dy = targetY - nodeY;
+                    // Clamp to parent's bottom edge so sticky doesn't escape its container
+                    if (node.Parent != null)
+                    {
+                        var parentBottom = node.Parent.Box.ContentBox.Bottom - node.Box.MarginBox.Height;
+                        if (nodeY + dy > parentBottom) dy = Math.Max(0, parentBottom - nodeY);
+                    }
+                }
+                if (dy > 0)
+                {
+                    canvas.Save();
+                    canvas.Translate(0, dy);
+                    PaintNodeInner(canvas, node, viewportWidth);
+                    canvas.Restore();
+                    return;
+                }
+            }
+        }
+
         PaintNodeInner(canvas, node, viewportWidth);
     }
 
@@ -146,6 +186,25 @@ internal static class Drawer
         var opacity = node.GetOpacity();
         var overflow = node.GetOverflow();
         var clip = overflow == OverflowType.Hidden || overflow == OverflowType.Scroll || overflow == OverflowType.Auto;
+
+        // CSS transform — apply around the node's transform-origin (default: center)
+        var transform = node.GetTransform();
+        if (transform != null)
+        {
+            canvas.Save();
+            var box = node.Box.BorderBox;
+            var ox = box.Left + box.Width / 2f;
+            var oy = box.Top + box.Height / 2f;
+            var m = SKMatrix.CreateTranslation(ox, oy);
+            m = m.PostConcat(transform.Value);
+            m = m.PostConcat(SKMatrix.CreateTranslation(-ox, -oy));
+            canvas.Concat(ref m);
+        }
+
+        // CSS filter — applied as a layer effect
+        var filterPaint = BuildFilterPaint(node);
+        if (filterPaint != null)
+            canvas.SaveLayer(filterPaint);
 
         var (clipRx, clipRy) = clip
             ? node.GetBorderRadius(node.Box.PaddingBox.Width, node.Box.PaddingBox.Height)
@@ -190,6 +249,8 @@ internal static class Drawer
         }
 
         if (opacity < 1f || clip) canvas.Restore();
+        if (filterPaint != null) { canvas.Restore(); filterPaint.Dispose(); }
+        if (transform != null) canvas.Restore();
     }
 
     private static void PaintNodeContent(SKCanvas canvas, LayoutNode node, int viewportWidth)
@@ -296,14 +357,22 @@ internal static class Drawer
             else canvas.DrawRect(box.PaddingBox, bgPaint);
         }
 
+        // Linear gradient background
+        var gradient = node.GetLinearGradient();
+        if (gradient != null)
+            DrawLinearGradient(canvas, box, node, gradient);
+
         // Background image
         DrawBackgroundImage(canvas, node, box);
 
         DrawBorders(canvas, box, node);
         DrawOutline(canvas, box, node);
 
-        var cursor = node.GetCursor();
-        _hitRegions.Add(new HitRegion(box.BorderBox, cursor, NodeKey: node.NodeKey));
+        if (!node.GetPointerEventsNone())
+        {
+            var cursor = node.GetCursor();
+            _hitRegions.Add(new HitRegion(box.BorderBox, cursor, NodeKey: node.NodeKey));
+        }
 
         // Draw own text content (block elements like <div>Text</div> with no child nodes)
         if (!string.IsNullOrEmpty(node.DisplayText) && node.Children.Count == 0)
@@ -1212,6 +1281,221 @@ internal static class Drawer
             c.Alpha);
     }
 
+    // ---- CSS filter ----
+
+    private static SKPaint? BuildFilterPaint(LayoutNode node)
+    {
+        var raw = node.GetFilter();
+        if (raw == null) return null;
+
+        SKImageFilter? imageFilter = null;
+        SKColorFilter? colorFilter = null;
+
+        // Parse each filter function
+        var span = raw.AsSpan();
+        while (span.Length > 0)
+        {
+            span = span.TrimStart();
+            var parenIdx = span.IndexOf('(');
+            if (parenIdx < 0) break;
+            var funcName = span[..parenIdx].Trim().ToString().ToLowerInvariant();
+            var closeIdx = span.IndexOf(')');
+            if (closeIdx < 0) break;
+            var argStr = span[(parenIdx + 1)..closeIdx].ToString().Trim();
+            span = span[(closeIdx + 1)..];
+
+            switch (funcName)
+            {
+                case "blur":
+                    if (StyleExtensions.TryParseLengthPx(argStr, out var sigma))
+                    {
+                        var blur = SKImageFilter.CreateBlur(sigma, sigma);
+                        imageFilter = imageFilter != null ? SKImageFilter.CreateCompose(imageFilter, blur) : blur;
+                    }
+                    break;
+                case "grayscale":
+                    {
+                        var amt = ParseFilterAmount(argStr, 1f);
+                        amt = Math.Clamp(amt, 0f, 1f);
+                        var inv = 1f - amt;
+                        var cf = SKColorFilter.CreateColorMatrix([
+                            0.2126f + 0.7874f * inv, 0.7152f - 0.7152f * inv, 0.0722f - 0.0722f * inv, 0, 0,
+                            0.2126f - 0.2126f * inv, 0.7152f + 0.2848f * inv, 0.0722f - 0.0722f * inv, 0, 0,
+                            0.2126f - 0.2126f * inv, 0.7152f - 0.7152f * inv, 0.0722f + 0.9278f * inv, 0, 0,
+                            0, 0, 0, 1, 0
+                        ]);
+                        colorFilter = colorFilter != null ? SKColorFilter.CreateCompose(cf, colorFilter) : cf;
+                    }
+                    break;
+                case "sepia":
+                    {
+                        var amt = ParseFilterAmount(argStr, 1f);
+                        amt = Math.Clamp(amt, 0f, 1f);
+                        var inv = 1f - amt;
+                        var cf = SKColorFilter.CreateColorMatrix([
+                            0.393f + 0.607f * inv, 0.769f - 0.769f * inv, 0.189f - 0.189f * inv, 0, 0,
+                            0.349f - 0.349f * inv, 0.686f + 0.314f * inv, 0.168f - 0.168f * inv, 0, 0,
+                            0.272f - 0.272f * inv, 0.534f - 0.534f * inv, 0.131f + 0.869f * inv, 0, 0,
+                            0, 0, 0, 1, 0
+                        ]);
+                        colorFilter = colorFilter != null ? SKColorFilter.CreateCompose(cf, colorFilter) : cf;
+                    }
+                    break;
+                case "brightness":
+                    {
+                        var b = ParseFilterAmount(argStr, 1f);
+                        var cf = SKColorFilter.CreateColorMatrix([
+                            b, 0, 0, 0, 0,
+                            0, b, 0, 0, 0,
+                            0, 0, b, 0, 0,
+                            0, 0, 0, 1, 0
+                        ]);
+                        colorFilter = colorFilter != null ? SKColorFilter.CreateCompose(cf, colorFilter) : cf;
+                    }
+                    break;
+                case "contrast":
+                    {
+                        var c = ParseFilterAmount(argStr, 1f);
+                        var t = (1f - c) / 2f;
+                        var cf = SKColorFilter.CreateColorMatrix([
+                            c, 0, 0, 0, t,
+                            0, c, 0, 0, t,
+                            0, 0, c, 0, t,
+                            0, 0, 0, 1, 0
+                        ]);
+                        colorFilter = colorFilter != null ? SKColorFilter.CreateCompose(cf, colorFilter) : cf;
+                    }
+                    break;
+                case "saturate":
+                    {
+                        var s = ParseFilterAmount(argStr, 1f);
+                        var inv = 1f - s;
+                        var cf = SKColorFilter.CreateColorMatrix([
+                            0.2126f + 0.7874f * s, 0.7152f - 0.7152f * s, 0.0722f - 0.0722f * s, 0, 0,
+                            0.2126f - 0.2126f * s, 0.7152f + 0.2848f * s, 0.0722f - 0.0722f * s, 0, 0,
+                            0.2126f - 0.2126f * s, 0.7152f - 0.7152f * s, 0.0722f + 0.9278f * s, 0, 0,
+                            0, 0, 0, 1, 0
+                        ]);
+                        colorFilter = colorFilter != null ? SKColorFilter.CreateCompose(cf, colorFilter) : cf;
+                    }
+                    break;
+                case "hue-rotate":
+                    {
+                        if (StyleExtensions.TryParseAngle(argStr, out var deg2))
+                        {
+                            var rad = deg2 * MathF.PI / 180f;
+                            var cos = MathF.Cos(rad);
+                            var sin = MathF.Sin(rad);
+                            var cf = SKColorFilter.CreateColorMatrix([
+                                0.213f + cos * 0.787f - sin * 0.213f, 0.715f - cos * 0.715f - sin * 0.715f, 0.072f - cos * 0.072f + sin * 0.928f, 0, 0,
+                                0.213f - cos * 0.213f + sin * 0.143f, 0.715f + cos * 0.285f + sin * 0.140f, 0.072f - cos * 0.072f - sin * 0.283f, 0, 0,
+                                0.213f - cos * 0.213f - sin * 0.787f, 0.715f - cos * 0.715f + sin * 0.715f, 0.072f + cos * 0.928f + sin * 0.072f, 0, 0,
+                                0, 0, 0, 1, 0
+                            ]);
+                            colorFilter = colorFilter != null ? SKColorFilter.CreateCompose(cf, colorFilter) : cf;
+                        }
+                    }
+                    break;
+                case "invert":
+                    {
+                        var amt = ParseFilterAmount(argStr, 1f);
+                        amt = Math.Clamp(amt, 0f, 1f);
+                        var cf = SKColorFilter.CreateColorMatrix([
+                            1f - 2f * amt, 0, 0, 0, amt,
+                            0, 1f - 2f * amt, 0, 0, amt,
+                            0, 0, 1f - 2f * amt, 0, amt,
+                            0, 0, 0, 1, 0
+                        ]);
+                        colorFilter = colorFilter != null ? SKColorFilter.CreateCompose(cf, colorFilter) : cf;
+                    }
+                    break;
+                case "opacity":
+                    {
+                        var a = ParseFilterAmount(argStr, 1f);
+                        a = Math.Clamp(a, 0f, 1f);
+                        var cf = SKColorFilter.CreateColorMatrix([
+                            1, 0, 0, 0, 0,
+                            0, 1, 0, 0, 0,
+                            0, 0, 1, 0, 0,
+                            0, 0, 0, a, 0
+                        ]);
+                        colorFilter = colorFilter != null ? SKColorFilter.CreateCompose(cf, colorFilter) : cf;
+                    }
+                    break;
+            }
+        }
+
+        if (imageFilter == null && colorFilter == null) return null;
+
+        var paint = new SKPaint { IsAntialias = true };
+        if (colorFilter != null)
+        {
+            var cfImage = SKImageFilter.CreateColorFilter(colorFilter);
+            imageFilter = imageFilter != null ? SKImageFilter.CreateCompose(imageFilter, cfImage) : cfImage;
+        }
+        paint.ImageFilter = imageFilter;
+        return paint;
+    }
+
+    private static float ParseFilterAmount(string arg, float defaultIfEmpty)
+    {
+        arg = arg.Trim();
+        if (string.IsNullOrEmpty(arg)) return defaultIfEmpty;
+        if (arg.EndsWith('%'))
+        {
+            if (float.TryParse(arg[..^1].Trim(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var pct))
+                return pct / 100f;
+        }
+        if (float.TryParse(arg, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var val))
+            return val;
+        return defaultIfEmpty;
+    }
+
+    // ---- Linear gradient ----
+
+    private static void DrawLinearGradient(SKCanvas canvas, BoxDimensions box, LayoutNode node, LinearGradient gradient)
+    {
+        var rect = box.PaddingBox;
+        var cx = rect.MidX;
+        var cy = rect.MidY;
+        var w = rect.Width;
+        var h = rect.Height;
+
+        // Convert CSS angle to radians (CSS 0deg = to top, clockwise)
+        var rad = (float)((gradient.AngleDeg - 90) * Math.PI / 180.0);
+        // Gradient line length: project the box diagonal onto the gradient direction
+        var diagLen = (float)(Math.Abs(w * Math.Cos(rad)) + Math.Abs(h * Math.Sin(rad))) / 2f;
+
+        var startX = cx - diagLen * (float)Math.Cos(rad);
+        var startY = cy - diagLen * (float)Math.Sin(rad);
+        var endX = cx + diagLen * (float)Math.Cos(rad);
+        var endY = cy + diagLen * (float)Math.Sin(rad);
+
+        // Resolve stop positions (evenly distribute missing positions)
+        var count = gradient.Stops.Count;
+        var colors = new SKColor[count];
+        var positions = new float[count];
+        for (var i = 0; i < count; i++)
+        {
+            colors[i] = gradient.Stops[i].Color;
+            positions[i] = gradient.Stops[i].Position ?? (count > 1 ? (float)i / (count - 1) : 0f);
+        }
+
+        using var shader = SKShader.CreateLinearGradient(
+            new SKPoint(startX, startY),
+            new SKPoint(endX, endY),
+            colors,
+            positions,
+            SKShaderTileMode.Clamp);
+
+        using var paint = new SKPaint { Shader = shader, IsAntialias = true };
+        var (rx, ry) = node.GetBorderRadius(w, h);
+        if (rx > 0 || ry > 0) canvas.DrawRoundRect(rect, rx, ry, paint);
+        else canvas.DrawRect(rect, paint);
+    }
+
     // ---- Background image ----
 
     private static readonly Dictionary<string, SKBitmap?> _bgImageCache = new();
@@ -1352,6 +1636,15 @@ internal static class Drawer
         text = StyleExtensions.ApplyTextTransform(text, textTransform);
 
         var lines = TextMeasure.WrapText(text, maxWidth, font, whiteSpace, node.GetLineHeight(node.GetFontSize()));
+
+        // text-overflow: ellipsis — when overflow is clipped and only one line, truncate with "…"
+        var useEllipsis = node.IsTextOverflowEllipsis() && node.GetOverflow() != OverflowType.Visible;
+        if (useEllipsis && lines.Count == 1 && lines[0].Width > maxWidth)
+        {
+            var (truncText, truncW) = TextMeasure.TruncateWithEllipsis(lines[0].Text, maxWidth, font);
+            lines = [new TextLine(truncText, truncW, lines[0].Height, lines[0].Ascent)];
+        }
+
         var lineY = y;
         var textShadow = node.GetTextShadow();
         var isFirstLine = true;

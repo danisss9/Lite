@@ -257,6 +257,11 @@ internal static class BoxEngine
         }
         else
         {
+            // aspect-ratio: derive height from width when no explicit height
+            var ar = node.GetAspectRatio();
+            if (ar > 0)
+                contentH = contentW / ar;
+
             node.ScrollState = null;
         }
 

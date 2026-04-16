@@ -1149,6 +1149,147 @@ console.log(greet("World"));</pre>
 
   </main>
 
+  <!-- ═══════════════════════════════════════════════════ TIER 2 FEATURES ═══ -->
+  <main id="tier2">
+
+    <!-- Linear Gradients -->
+    <section class="card">
+      <h2>Linear Gradients</h2>
+      <p>CSS <code>linear-gradient()</code> backgrounds with different angles and stops.</p>
+      <div class="gradient-demos">
+        <div class="grad grad-lr">left → right</div>
+        <div class="grad grad-tb">top → bottom</div>
+        <div class="grad grad-diag">diagonal</div>
+        <div class="grad grad-multi">multi-stop</div>
+        <div class="grad grad-angle">135deg</div>
+      </div>
+    </section>
+
+    <!-- CSS 2D Transforms -->
+    <section class="card">
+      <h2>CSS 2D Transforms</h2>
+      <p>The <code>transform</code> property: rotate, scale, translate, skew.</p>
+      <div class="transform-demos">
+        <div class="tfm tfm-rotate">rotate(30deg)</div>
+        <div class="tfm tfm-scale">scale(1.4)</div>
+        <div class="tfm tfm-translate">translate(20px, -10px)</div>
+        <div class="tfm tfm-skew">skew(15deg, 5deg)</div>
+        <div class="tfm tfm-combined">rotate + scale</div>
+      </div>
+    </section>
+
+    <!-- CSS Filters -->
+    <section class="card">
+      <h2>CSS Filters</h2>
+      <p>The <code>filter</code> property: blur, grayscale, sepia, brightness, contrast, saturate, hue-rotate, invert.</p>
+      <div class="filter-demos">
+        <div class="fil fil-none">none</div>
+        <div class="fil fil-blur">blur(4px)</div>
+        <div class="fil fil-gray">grayscale(100%)</div>
+        <div class="fil fil-sepia">sepia(100%)</div>
+        <div class="fil fil-bright">brightness(1.8)</div>
+        <div class="fil fil-contrast">contrast(2)</div>
+        <div class="fil fil-sat">saturate(3)</div>
+        <div class="fil fil-hue">hue-rotate(120deg)</div>
+        <div class="fil fil-invert">invert(100%)</div>
+      </div>
+    </section>
+
+    <!-- Text Overflow Ellipsis -->
+    <section class="card">
+      <h2>Text Overflow: Ellipsis</h2>
+      <p>Long text is truncated with <code>…</code> when it overflows its container.</p>
+      <div class="ellipsis-demos">
+        <div class="ellipsis-box">The quick brown fox jumps over the lazy dog and keeps running through the forest.</div>
+        <div class="ellipsis-box" style="width: 180px;">A narrower container clips sooner with an ellipsis.</div>
+        <div class="ellipsis-box" style="width: 300px;"><strong>Bold:</strong> Pack my box with five dozen liquor jugs from the cellar.</div>
+      </div>
+    </section>
+
+    <!-- Position: Sticky -->
+    <section class="card">
+      <h2>Position: Sticky</h2>
+      <p>The header below sticks to the top of the viewport while scrolling inside the container.</p>
+      <div class="sticky-container">
+        <div class="sticky-header">🔒 Sticky Header — sticks at top: 8px</div>
+        <p>Scroll this page down. The header above will stick near the top of the viewport once its normal position scrolls past it.</p>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+      </div>
+    </section>
+
+    <!-- Aspect Ratio -->
+    <section class="card">
+      <h2>Aspect Ratio</h2>
+      <p>Boxes with <code>aspect-ratio</code> maintain their proportions when only width is set.</p>
+      <div class="aspect-demos">
+        <div class="aspect-box aspect-16-9">16 / 9</div>
+        <div class="aspect-box aspect-1-1">1 / 1</div>
+        <div class="aspect-box aspect-4-3">4 / 3</div>
+        <div class="aspect-box aspect-2-1">2 / 1</div>
+      </div>
+    </section>
+
+    <!-- Pointer Events: None -->
+    <section class="card">
+      <h2>Pointer Events: None</h2>
+      <p>The red overlay below has <code>pointer-events: none</code> — hover and click pass through to the button underneath.</p>
+      <div class="pe-wrapper">
+        <button class="pe-btn" onclick="this.textContent = 'Clicked! ✓'">Click me through the overlay</button>
+        <div class="pe-overlay">pointer-events: none overlay</div>
+      </div>
+    </section>
+
+    <!-- Dataset -->
+    <section class="card">
+      <h2>Element.dataset</h2>
+      <p>Custom <code>data-*</code> attributes read and written via <code>element.dataset</code>.</p>
+      <div id="ds-el" data-user-name="Alice" data-score="42" data-active="true" class="demo-box"></div>
+      <p id="ds-out" class="muted">Loading dataset…</p>
+      <button onclick="
+        var el = document.getElementById('ds-el');
+        el.dataset.score = parseInt(el.dataset.score) + 10;
+        document.getElementById('ds-out').textContent =
+          'name=' + el.dataset.userName +
+          ', score=' + el.dataset.score +
+          ', active=' + el.dataset.active;
+      ">Increment Score</button>
+    </section>
+
+    <!-- Window scroll -->
+    <section class="card">
+      <h2>window.scrollTo / scrollBy</h2>
+      <p>Programmatic scrolling via <code>window.scrollTo()</code> and <code>window.scrollBy()</code>.</p>
+      <div class="btn-row">
+        <button onclick="window.scrollTo(0, 0)">Scroll to Top</button>
+        <button onclick="window.scrollBy(0, 200)">Scroll Down 200px</button>
+        <button onclick="window.scrollBy(0, -200)">Scroll Up 200px</button>
+        <button onclick="document.getElementById('scroll-pos').textContent = 'scrollY = ' + window.scrollY">Read scrollY</button>
+      </div>
+      <p id="scroll-pos" class="muted">scrollY = (not read yet)</p>
+    </section>
+
+    <!-- Animation events -->
+    <section class="card">
+      <h2>Animation &amp; Transition Events</h2>
+      <p>Events: <code>animationstart</code>, <code>animationend</code>, <code>transitionend</code>.</p>
+      <div id="anim-evt-box" class="anim-evt-box">Hover me</div>
+      <p id="anim-evt-log" class="muted">Event log: (none yet)</p>
+    </section>
+
+    <!-- Animation play state -->
+    <section class="card">
+      <h2>Animation Play State</h2>
+      <p>Toggle <code>animation-play-state: paused / running</code>.</p>
+      <div id="spin-box" class="spin-box">⚙</div>
+      <div class="btn-row">
+        <button onclick="document.getElementById('spin-box').style.animationPlayState='running'">Resume</button>
+        <button onclick="document.getElementById('spin-box').style.animationPlayState='paused'">Pause</button>
+      </div>
+    </section>
+
+  </main>
+
   <footer>
     <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
   </footer>

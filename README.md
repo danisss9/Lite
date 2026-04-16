@@ -199,7 +199,7 @@ BrowserWindow
 | `word-spacing` | `px`, `em` |
 | `vertical-align` | `baseline`, `top`, `middle`, `bottom`, `text-top`, `text-bottom`, `sub`, `super` |
 | `white-space` | `normal`, `nowrap`, `pre`, `pre-wrap`, `pre-line` |
-| `position` | `static`, `relative`, `absolute`, `fixed` |
+| `position` | `static`, `relative`, `absolute`, `fixed`, `sticky` |
 | `top`, `right`, `bottom`, `left` | `px`, `%`, `calc()` |
 | `z-index` | Integer |
 | `overflow` | `visible`, `hidden`, `scroll`, `auto` |
@@ -223,6 +223,13 @@ BrowserWindow
 | `border-collapse` | `collapse`, `separate` |
 | `border-spacing` | `px` |
 | `cursor` | `pointer`, `text`, `default` |
+| `text-overflow` | `ellipsis`, `clip` |
+| `aspect-ratio` | `width / height`, single value |
+| `pointer-events` | `none`, `auto` |
+| `transform` | `rotate()`, `scale()`, `scaleX/Y()`, `translate()`, `translateX/Y()`, `skew()`, `skewX/Y()`; deg/rad/turn |
+| `filter` | `blur()`, `grayscale()`, `sepia()`, `brightness()`, `contrast()`, `saturate()`, `hue-rotate()`, `invert()`, `opacity()` |
+| `background-image` (gradient) | `linear-gradient()` with angle keywords, `Ndeg`, and multi-stop color lists |
+| `animation-play-state` | `running`, `paused` |
 | `transition` | `property`, `duration`, `delay`, `timing-function` |
 | `animation` | `name`, `duration`, `delay`, `timing-function`, `iteration-count`, `direction`, `fill-mode` |
 | `calc()` | `+`, `-`, `*`, `/`; `px`, `%`, `em`, `rem`, `vw`, `vh` |
@@ -334,6 +341,12 @@ alert(message)                       // shorthand
 window.getComputedStyle(element)     // → CSSStyleDeclaration proxy
 window.innerWidth                    // viewport width
 window.innerHeight                   // viewport height
+window.scrollTo(x, y)               // scroll viewport to absolute position
+window.scrollBy(dx, dy)             // scroll viewport by relative amount
+window.scrollY                       // current vertical scroll offset (read-only)
+window.scrollX                       // current horizontal scroll offset (read-only)
+window.pageXOffset                   // alias for scrollX
+window.pageYOffset                   // alias for scrollY
 setTimeout(fn, ms)
 setInterval(fn, ms)
 clearInterval(id)
@@ -379,7 +392,7 @@ Standard HTML inline handlers are supported:
 dotnet run --project Example
 ```
 
-The example serves the `Example/resources/` folder on `http://localhost:4444` and opens it in a `BrowserWindow`. The demo page covers typography, inline text elements, lists, forms (text, password, number, range, radio, checkbox, textarea, select), flexbox layouts, tables, positioning, z-index, overflow clipping, percentage sizing, pseudo-classes (:hover/:focus/:active), pseudo-elements (::before/::after), responsive design (@media), CSS animations/transitions, calc() expressions, CSS custom properties (var()), text transforms, letter/word spacing, border styles, outlines, background images, vertical alignment, and table border collapse.
+The example serves the `Example/resources/` folder on `http://localhost:4444` and opens it in a `BrowserWindow`. The demo page covers typography, inline text elements, lists, forms (text, password, number, range, radio, checkbox, textarea, select), flexbox layouts, tables, positioning, z-index, overflow clipping, percentage sizing, pseudo-classes (:hover/:focus/:active), pseudo-elements (::before/::after), responsive design (@media), CSS animations/transitions (with lifecycle events), calc() expressions, CSS custom properties (var()), text transforms, letter/word spacing, border styles, outlines, background images, vertical alignment, table border collapse, linear gradients, CSS 2D transforms, CSS filters, text-overflow ellipsis, position:sticky, aspect-ratio, pointer-events, dataset, animation-play-state, and programmatic scrolling.
 
 ---
 

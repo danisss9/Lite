@@ -85,6 +85,32 @@ internal static class TextMeasure
         return (font.MeasureText(text), lineHeight, ascent);
     }
 
+    /// <summary>
+    /// Truncates text to fit within maxWidth, appending "…" if truncated.
+    /// Returns the truncated string and its measured width.
+    /// </summary>
+    public static (string Text, float Width) TruncateWithEllipsis(string text, float maxWidth, SKFont font)
+    {
+        var fullWidth = font.MeasureText(text);
+        if (fullWidth <= maxWidth) return (text, fullWidth);
+
+        var ellipsis = "\u2026"; // …
+        var ellipsisW = font.MeasureText(ellipsis);
+        var available = maxWidth - ellipsisW;
+        if (available <= 0) return (ellipsis, ellipsisW);
+
+        // Binary search for the longest prefix that fits
+        int lo = 0, hi = text.Length;
+        while (lo < hi)
+        {
+            var mid = (lo + hi + 1) / 2;
+            if (font.MeasureText(text[..mid]) <= available) lo = mid;
+            else hi = mid - 1;
+        }
+        var truncated = text[..lo] + ellipsis;
+        return (truncated, font.MeasureText(truncated));
+    }
+
     // -------------------------------------------------------------------------
     // white-space modes
     // -------------------------------------------------------------------------

@@ -522,3 +522,29 @@ document.getElementById('todo-add').addEventListener('click', function () {
     log.textContent = 'submit! name="' + nameInput.value + '" mood=' + rangeInput.value;
   });
 })();
+
+// ---------------------------------- TIER 2 DEMOS ---------------------------
+
+// -- Animation / Transition events ----------------------------------------
+(function () {
+  var box = document.getElementById('anim-evt-box');
+  var log = document.getElementById('anim-evt-log');
+  if (!box || !log) return;
+
+  function append(msg) {
+    var ts = (Date.now() % 100000).toString();
+    log.textContent = '[' + ts + '] ' + msg;
+  }
+
+  box.addEventListener('transitionend', function (e) {
+    append('transitionend: ' + e.propertyName);
+  });
+})();
+
+// -- Dataset init display --------------------------------------------------
+(function () {
+  var el = document.getElementById('ds-el');
+  var out = document.getElementById('ds-out');
+  if (!el || !out) return;
+  out.textContent = 'name=' + el.dataset.userName + ', score=' + el.dataset.score + ', active=' + el.dataset.active;
+})();

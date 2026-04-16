@@ -15,7 +15,7 @@ public class JsElement
     public JsElement(Engine engine, LayoutNode node)
     {
         _engine = engine;
-        Node    = node;
+        Node = node;
     }
 
     // ---- identity ----
@@ -110,7 +110,7 @@ public class JsElement
         set
         {
             if (value) FormState.CheckedBoxes.Add(Node.NodeKey);
-            else       FormState.CheckedBoxes.Remove(Node.NodeKey);
+            else FormState.CheckedBoxes.Remove(Node.NodeKey);
         }
     }
 
@@ -396,6 +396,9 @@ public class JsElement
     // ---- class list (minimal) ----
     public JsClassList classList => new(Node);
 
+    // ---- dataset (data-* attributes) ----
+    public JsDataset dataset => new(Node);
+
     // ---- events ----
     public void addEventListener(string type, JsValue handler, JsValue? options = null)
     {
@@ -550,6 +553,38 @@ public class JsClassList
         return true;
     }
     public int length => GetClasses().Length;
+}
+
+/// <summary>Proxy for element.dataset — maps data-* attributes to camelCase properties.</summary>
+public class JsDataset
+{
+    private readonly LayoutNode _node;
+    public JsDataset(LayoutNode node) => _node = node;
+
+    /// <summary>Gets a data-* attribute value by camelCase key.</summary>
+    public string? get(string key)
+    {
+        var attrName = "data-" + CamelToKebab(key);
+        return _node.Attributes.GetValueOrDefault(attrName);
+    }
+
+    /// <summary>Sets a data-* attribute value by camelCase key.</summary>
+    public void set(string key, string value)
+    {
+        var attrName = "data-" + CamelToKebab(key);
+        _node.Attributes[attrName] = value;
+    }
+
+    private static string CamelToKebab(string s)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in s)
+        {
+            if (char.IsUpper(c)) { sb.Append('-'); sb.Append(char.ToLowerInvariant(c)); }
+            else sb.Append(c);
+        }
+        return sb.ToString();
+    }
 }
 
 /// <summary>DOMRect returned by getBoundingClientRect().</summary>

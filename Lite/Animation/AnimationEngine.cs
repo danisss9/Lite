@@ -19,9 +19,22 @@ public static class AnimationEngine
     // Per-node active transitions (NodeKey → list)
     private static readonly Dictionary<Guid, List<ActiveTransition>> _transitions = [];
     // Per-node active animations (NodeKey → list)
-    private static readonly Dictionary<Guid, List<ActiveAnimation>>  _animations  = [];
+    private static readonly Dictionary<Guid, List<ActiveAnimation>> _animations = [];
     // Pre-change value snapshot for transition detection
     private static readonly Dictionary<Guid, Dictionary<string, string>> _snapshot = [];
+
+    /// <summary>Pending animation/transition lifecycle events to dispatch after tick.</summary>
+    public record AnimLifecycleEvent(LayoutNode Node, string EventType, string AnimationOrProperty, float ElapsedTime);
+    private static readonly List<AnimLifecycleEvent> _pendingEvents = [];
+
+    /// <summary>Drains and returns all pending lifecycle events (animationstart/end/iteration, transitionend).</summary>
+    public static List<AnimLifecycleEvent> DrainEvents()
+    {
+        if (_pendingEvents.Count == 0) return [];
+        var result = new List<AnimLifecycleEvent>(_pendingEvents);
+        _pendingEvents.Clear();
+        return result;
+    }
 
     // ── Property sets ─────────────────────────────────────────────────────────
 
@@ -209,17 +222,61 @@ public static class AnimationEngine
         // @keyframes animations (lower layer — transitions win on conflict)
         if (_animations.TryGetValue(node.NodeKey, out var anims))
         {
+            // Check animation-play-state CSS property
+            var playState = node.TryResolveStyle("animation-play-state", out var ps) ? ps : "running";
+            var wantPaused = playState == "paused";
+
             foreach (var anim in anims)
             {
                 if (anim.IsComplete) continue;
+
+                // Handle pause/resume transitions
+                if (wantPaused && !anim.IsPaused)
+                {
+                    anim.PausedElapsed += now - anim.ResumeTimeMs;
+                    anim.IsPaused = true;
+                }
+                else if (!wantPaused && anim.IsPaused)
+                {
+                    anim.ResumeTimeMs = now;
+                    anim.IsPaused = false;
+                }
+
                 var (offset, done) = anim.GetOffset(now);
                 if (done)
                 {
                     anim.IsComplete = true;
+                    _pendingEvents.Add(new AnimLifecycleEvent(node, "animationend", anim.Name,
+                        anim.Duration * Math.Max(1, anim.IterationCount)));
                     if (offset < 0) continue;  // fill-mode: none → leave nothing
                     ApplyKeyframeAt(node, anim.Name, offset, anim.TimingFunc);
                     continue;
                 }
+
+                // Detect animationstart on first meaningful frame
+                if (!anim.HasStarted && offset >= 0)
+                {
+                    anim.HasStarted = true;
+                    _pendingEvents.Add(new AnimLifecycleEvent(node, "animationstart", anim.Name, 0));
+                }
+
+                // Detect iteration boundary
+                if (anim.Duration > 0 && offset >= 0)
+                {
+                    float elapsed;
+                    if (anim.IsPaused)
+                        elapsed = anim.PausedElapsed / 1000f - anim.Delay;
+                    else
+                        elapsed = (anim.PausedElapsed + (now - anim.ResumeTimeMs)) / 1000f - anim.Delay;
+                    var curIter = (int)MathF.Floor(elapsed / anim.Duration);
+                    if (curIter > anim.LastIteration && anim.LastIteration >= 0)
+                    {
+                        _pendingEvents.Add(new AnimLifecycleEvent(node, "animationiteration", anim.Name,
+                            curIter * anim.Duration));
+                    }
+                    anim.LastIteration = curIter;
+                }
+
                 if (offset >= 0)
                     ApplyKeyframeAt(node, anim.Name, offset, anim.TimingFunc);
                 anyActive = true;
@@ -234,13 +291,16 @@ public static class AnimationEngine
             {
                 if (t.IsComplete) continue;
                 var progress = t.Progress(now);
-                var eased    = Ease(progress, t.TimingFunc);
-                var current  = Interpolate(t.FromValue, t.ToValue, eased);
+                var eased = Ease(progress, t.TimingFunc);
+                var current = Interpolate(t.FromValue, t.ToValue, eased);
                 if (current != null)
                     node.AnimationOverrides[t.Property] = current;
 
                 if (progress >= 1f)
+                {
                     t.IsComplete = true;
+                    _pendingEvents.Add(new AnimLifecycleEvent(node, "transitionend", t.Property, t.Duration));
+                }
                 else
                     anyActive = true;
             }
@@ -271,14 +331,14 @@ public static class AnimationEngine
         }
 
         var fromFrame = frames[fromIdx];
-        var toFrame   = frames[toIdx];
+        var toFrame = frames[toIdx];
 
         // Collect every property that appears in either keyframe
         var allProps = fromFrame.Props.Keys.Union(toFrame.Props.Keys);
         foreach (var prop in allProps)
         {
             fromFrame.Props.TryGetValue(prop, out var fv);
-            toFrame.Props.TryGetValue(prop,   out var tv);
+            toFrame.Props.TryGetValue(prop, out var tv);
 
             if (fv == null || tv == null)
             {
@@ -292,9 +352,9 @@ public static class AnimationEngine
                 continue;
             }
 
-            var localT    = (offset - fromFrame.Offset) / (toFrame.Offset - fromFrame.Offset);
-            var easedT    = Ease(localT, defaultEasing);
-            var interp    = Interpolate(fv, tv, easedT);
+            var localT = (offset - fromFrame.Offset) / (toFrame.Offset - fromFrame.Offset);
+            var easedT = Ease(localT, defaultEasing);
+            var interp = Interpolate(fv, tv, easedT);
             if (interp != null)
                 node.AnimationOverrides[prop] = interp;
         }
@@ -320,14 +380,14 @@ public static class AnimationEngine
     /// </summary>
     private static string? GetTargetValue(LayoutNode node, string prop)
     {
-        if (node.IsActive  && node.MediaActiveStyles.TryGetValue(prop, out var v1m)) return v1m;
-        if (node.IsActive  && node.ActiveStyles.TryGetValue(prop,      out var v1))  return v1;
-        if (node.IsFocused && node.MediaFocusStyles.TryGetValue(prop,  out var v2m)) return v2m;
-        if (node.IsFocused && node.FocusStyles.TryGetValue(prop,       out var v2))  return v2;
-        if (node.IsHovered && node.MediaHoverStyles.TryGetValue(prop,  out var v3m)) return v3m;
-        if (node.IsHovered && node.HoverStyles.TryGetValue(prop,       out var v3))  return v3;
-        if (node.MediaOverrides.TryGetValue(prop,                      out var v4m)) return v4m;
-        if (node.StyleOverrides.TryGetValue(prop,                      out var v4))  return v4;
+        if (node.IsActive && node.MediaActiveStyles.TryGetValue(prop, out var v1m)) return v1m;
+        if (node.IsActive && node.ActiveStyles.TryGetValue(prop, out var v1)) return v1;
+        if (node.IsFocused && node.MediaFocusStyles.TryGetValue(prop, out var v2m)) return v2m;
+        if (node.IsFocused && node.FocusStyles.TryGetValue(prop, out var v2)) return v2;
+        if (node.IsHovered && node.MediaHoverStyles.TryGetValue(prop, out var v3m)) return v3m;
+        if (node.IsHovered && node.HoverStyles.TryGetValue(prop, out var v3)) return v3;
+        if (node.MediaOverrides.TryGetValue(prop, out var v4m)) return v4m;
+        if (node.StyleOverrides.TryGetValue(prop, out var v4)) return v4;
         var sv = node.Style.GetPropertyValue(prop);
         return string.IsNullOrEmpty(sv) ? null : sv;
     }
@@ -343,16 +403,16 @@ public static class AnimationEngine
         // Color
         if (TryParseColor(from, out var fc) && TryParseColor(to, out var tc))
         {
-            var r = (int)(fc.Red   + (tc.Red   - fc.Red)   * t);
+            var r = (int)(fc.Red + (tc.Red - fc.Red) * t);
             var g = (int)(fc.Green + (tc.Green - fc.Green) * t);
-            var b = (int)(fc.Blue  + (tc.Blue  - fc.Blue)  * t);
+            var b = (int)(fc.Blue + (tc.Blue - fc.Blue) * t);
             var a = (int)(fc.Alpha + (tc.Alpha - fc.Alpha) * t);
             return $"rgba({r},{g},{b},{Math.Clamp(a, 0, 255) / 255f:F3})";
         }
 
         // Numeric with unit
         if (TryParseNumeric(from, out var fv, out var unit) &&
-            TryParseNumeric(to,   out var tv, out _))
+            TryParseNumeric(to, out var tv, out _))
         {
             var v = fv + (tv - fv) * t;
             return unit.Length > 0
@@ -378,7 +438,7 @@ public static class AnimationEngine
     private static bool TryParseColor(string val, out SKColor color)
     {
         color = SKColors.Transparent;
-        val   = val.Trim();
+        val = val.Trim();
 
         if (val.StartsWith("rgba(", StringComparison.OrdinalIgnoreCase) && val.EndsWith(')'))
         {
@@ -425,14 +485,14 @@ public static class AnimationEngine
 
     private static float Ease(float t, string func) => func.Trim().ToLowerInvariant() switch
     {
-        "linear"       => t,
-        "ease"         => CubicBezier(t, 0.25f, 0.10f, 0.25f, 1.00f),
-        "ease-in"      => CubicBezier(t, 0.42f, 0.00f, 1.00f, 1.00f),
-        "ease-out"     => CubicBezier(t, 0.00f, 0.00f, 0.58f, 1.00f),
-        "ease-in-out"  => CubicBezier(t, 0.42f, 0.00f, 0.58f, 1.00f),
-        "step-start"   => t <= 0f ? 0f : 1f,
-        "step-end"     => t >= 1f ? 1f : 0f,
-        _              => TryParseCubicBezier(func, out var p) ? CubicBezier(t, p[0], p[1], p[2], p[3]) : t,
+        "linear" => t,
+        "ease" => CubicBezier(t, 0.25f, 0.10f, 0.25f, 1.00f),
+        "ease-in" => CubicBezier(t, 0.42f, 0.00f, 1.00f, 1.00f),
+        "ease-out" => CubicBezier(t, 0.00f, 0.00f, 0.58f, 1.00f),
+        "ease-in-out" => CubicBezier(t, 0.42f, 0.00f, 0.58f, 1.00f),
+        "step-start" => t <= 0f ? 0f : 1f,
+        "step-end" => t >= 1f ? 1f : 0f,
+        _ => TryParseCubicBezier(func, out var p) ? CubicBezier(t, p[0], p[1], p[2], p[3]) : t,
     };
 
     private static bool TryParseCubicBezier(string func, out float[] p)
@@ -457,7 +517,7 @@ public static class AnimationEngine
         var t = x;
         for (int i = 0; i < 8; i++)
         {
-            var bx  = Bez(t, 0, p1x, p2x, 1) - x;
+            var bx = Bez(t, 0, p1x, p2x, 1) - x;
             var dbx = BezD(t, 0, p1x, p2x, 1);
             if (MathF.Abs(dbx) < 1e-6f) break;
             t -= bx / dbx;
@@ -468,13 +528,13 @@ public static class AnimationEngine
     private static float Bez(float t, float p0, float p1, float p2, float p3)
     {
         var m = 1 - t;
-        return m*m*m*p0 + 3*m*m*t*p1 + 3*m*t*t*p2 + t*t*t*p3;
+        return m * m * m * p0 + 3 * m * m * t * p1 + 3 * m * t * t * p2 + t * t * t * p3;
     }
 
     private static float BezD(float t, float p0, float p1, float p2, float p3)
     {
         var m = 1 - t;
-        return 3*m*m*(p1-p0) + 6*m*t*(p2-p1) + 3*t*t*(p3-p2);
+        return 3 * m * m * (p1 - p0) + 6 * m * t * (p2 - p1) + 3 * t * t * (p3 - p2);
     }
 
     private static bool IsAll(string property) =>
