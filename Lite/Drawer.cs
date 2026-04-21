@@ -237,7 +237,12 @@ internal static class Drawer
         // Apply per-element scroll offset
         var scrollState = node.ScrollState;
         if (scrollState != null && scrollState.NeedsScrollbar)
+        {
+            // Draw background, borders, and shadows at their fixed layout position
+            // before the scroll translate so they don't scroll away with the content.
+            PaintBlockDecorations(canvas, node);
             canvas.Translate(0, -scrollState.ScrollY);
+        }
 
         PaintNodeContent(canvas, node, viewportWidth);
 
@@ -341,13 +346,10 @@ internal static class Drawer
     // Block containers
     // -------------------------------------------------------------------------
 
-    private static void PaintBlock(SKCanvas canvas, LayoutNode node, int viewportWidth)
+    private static void PaintBlockDecorations(SKCanvas canvas, LayoutNode node)
     {
         var box = node.Box;
-
         DrawBoxShadows(canvas, box, node);
-
-        // Background
         var bgColor = node.GetBackgroundColor();
         if (bgColor != SKColors.Transparent)
         {
@@ -356,17 +358,45 @@ internal static class Drawer
             if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
             else canvas.DrawRect(box.PaddingBox, bgPaint);
         }
-
-        // Linear gradient background
         var gradient = node.GetLinearGradient();
         if (gradient != null)
             DrawLinearGradient(canvas, box, node, gradient);
-
-        // Background image
         DrawBackgroundImage(canvas, node, box);
-
         DrawBorders(canvas, box, node);
         DrawOutline(canvas, box, node);
+    }
+
+    private static void PaintBlock(SKCanvas canvas, LayoutNode node, int viewportWidth)
+    {
+        var box = node.Box;
+
+        // Decorations are drawn before the scroll translate for scrollable elements;
+        // skip them here to avoid painting them twice.
+        if (node.ScrollState?.NeedsScrollbar != true)
+        {
+            DrawBoxShadows(canvas, box, node);
+
+            // Background
+            var bgColor = node.GetBackgroundColor();
+            if (bgColor != SKColors.Transparent)
+            {
+                using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
+                var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+                if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
+                else canvas.DrawRect(box.PaddingBox, bgPaint);
+            }
+
+            // Linear gradient background
+            var gradient = node.GetLinearGradient();
+            if (gradient != null)
+                DrawLinearGradient(canvas, box, node, gradient);
+
+            // Background image
+            DrawBackgroundImage(canvas, node, box);
+
+            DrawBorders(canvas, box, node);
+            DrawOutline(canvas, box, node);
+        }
 
         if (!node.GetPointerEventsNone())
         {
@@ -1638,7 +1668,12 @@ internal static class Drawer
         var lines = TextMeasure.WrapText(text, maxWidth, font, whiteSpace, node.GetLineHeight(node.GetFontSize()));
 
         // text-overflow: ellipsis — when overflow is clipped and only one line, truncate with "…"
-        var useEllipsis = node.IsTextOverflowEllipsis() && node.GetOverflow() != OverflowType.Visible;
+        // Check node itself OR its parent block (text-overflow is non-inherited; inline children
+        // get the visual effect from the nearest clipping ancestor).
+        static bool HasEllipsisClip(LayoutNode n) =>
+            n.IsTextOverflowEllipsis() && n.GetOverflow() != OverflowType.Visible;
+        var useEllipsis = HasEllipsisClip(node)
+            || (node.Parent != null && HasEllipsisClip(node.Parent));
         if (useEllipsis && lines.Count == 1 && lines[0].Width > maxWidth)
         {
             var (truncText, truncW) = TextMeasure.TruncateWithEllipsis(lines[0].Text, maxWidth, font);

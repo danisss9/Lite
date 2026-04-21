@@ -798,7 +798,11 @@ internal static class Parser
         // CSS2 table properties
         "border-collapse", "border-spacing", "table-layout", "caption-side", "empty-cells",
         // CSS2 counter properties
-        "counter-reset", "counter-increment"
+        "counter-reset", "counter-increment",
+        // CSS3 text overflow
+        "text-overflow",
+        // CSS3 filter
+        "filter"
     ];
 
     /// <summary>
