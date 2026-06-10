@@ -29,6 +29,8 @@ public class BrowserWindow
     private const int WM_MOUSEMOVE = 0x0200;
     private const int WM_MOUSEWHEEL = 0x020A;
     private const int WM_SETCURSOR = 0x0020;
+    // Custom message posted (thread-safely) when the JS event loop has work to drain.
+    private const uint WM_APP_TASK = 0x8000; // WM_APP
     private const int HTCLIENT = 1;
     private const int IDC_ARROW = 32512;
     private const int IDC_IBEAM = 32513;
@@ -36,7 +38,7 @@ public class BrowserWindow
     private const uint BI_RGB = 0;
     private const uint DIB_RGB_COLORS = 0;
 
-    private readonly string _url;
+    private string _url;
     private readonly string _title;
     private readonly int _initialWidth;
     private readonly int _initialHeight;
@@ -147,6 +149,18 @@ public class BrowserWindow
             StartAnimationTimer(hWnd);
         }
 
+        // Wake the message loop whenever the JS event loop queues work (timers, fetch, etc.).
+        // PostMessage is thread-safe, so this is safe to call from background timer threads.
+        if (JsEngine.Instance is { } jsEngine)
+        {
+            jsEngine.TaskEnqueued += () => User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
+            // Form submission (and other JS-driven navigation) routes through here.
+            jsEngine.OnNavigate = url => Navigate(url, hWnd);
+            // Flush any tasks already queued during initial script execution.
+            if (jsEngine.HasPendingTasks)
+                User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
+        }
+
         while (User32.GetMessage(out var msg, IntPtr.Zero, 0, 0))
         {
             User32.TranslateMessage(ref msg);
@@ -190,6 +204,20 @@ public class BrowserWindow
 
             case WM_DESTROY:
                 User32.PostQuitMessage(0);
+                break;
+
+            case WM_APP_TASK:
+                if (_rootNode != null && JsEngine.Instance is { } taskEngine)
+                {
+                    if (taskEngine.DrainTasks())
+                    {
+                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    }
+                    // If a drained task queued more work, make sure we come back for it.
+                    if (taskEngine.HasPendingTasks)
+                        User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
+                }
                 break;
 
             case WM_TIMER:
@@ -463,7 +491,7 @@ public class BrowserWindow
 
                         if (region.Href != null)
                         {
-                            Process.Start(new ProcessStartInfo(region.Href) { UseShellExecute = true });
+                            Navigate(region.Href, hWnd);
                             handled = true;
                             break;
                         }
@@ -566,6 +594,9 @@ public class BrowserWindow
                         if (region.InputAction == InputAction.Button)
                         {
                             DispatchClickWithCoords(region.NodeKey, x, y, contentY);
+                            var btn = FindNodeByKey(_rootNode, region.NodeKey);
+                            if (btn != null && IsSubmitControl(btn) && FindAncestorForm(btn) is { } submitForm)
+                                SubmitForm(submitForm, hWnd);
                             handled = true;
                             break;
                         }
@@ -657,15 +688,9 @@ public class BrowserWindow
                         var focNode = FindNodeByKey(_rootNode, FormState.FocusedInput.Value);
                         if (focNode != null && focNode.TagName == "INPUT")
                         {
-                            // Walk up to find <form>
-                            for (var p = focNode.Parent; p != null; p = p.Parent)
-                            {
-                                if (p.TagName == "FORM")
-                                {
-                                    EventDispatcher.Dispatch(p.NodeKey, "submit", _rootNode);
-                                    break;
-                                }
-                            }
+                            // Walk up to find <form>, then submit (dispatch + navigate).
+                            if (FindAncestorForm(focNode) is { } formNode)
+                                SubmitForm(formNode, hWnd);
                         }
                     }
                     break;
@@ -737,6 +762,46 @@ public class BrowserWindow
         return IntPtr.Zero;
     }
 
+    /// <summary>
+    /// Handles a link click. Same-origin links reload the document inside this window;
+    /// links to a different host (or scheme) are opened in the OS default browser.
+    /// Pure fragment links (e.g. "#") are ignored.
+    /// </summary>
+    private void Navigate(string href, IntPtr hWnd)
+    {
+        if (string.IsNullOrWhiteSpace(href) || href.StartsWith('#')) return;
+
+        if (!Uri.TryCreate(new Uri(_url), href, out var target)) return;
+
+        // External link: open in the OS default browser, leaving this window untouched.
+        if (target.Authority != new Uri(_url).Authority)
+        {
+            Process.Start(new ProcessStartInfo(target.ToString()) { UseShellExecute = true });
+            return;
+        }
+
+        // Internal link: reload the document in place (mirrors the setup in Run()).
+        _url = target.ToString();
+        FormState.FocusedInput = null;
+        FormState.OpenDropdown = null;
+        _viewport.ScrollTo(0);
+
+        AnimationEngine.Reset();
+        _rootNode = Parser.TraverseHtml(_url, _width, _height);
+        AnimationEngine.StartAnimations(_rootNode);
+        JsEngine.Instance?.SetViewport(_viewport);
+
+        // Re-apply autofocus for the freshly loaded page.
+        var af = FindFirst(_rootNode, n => n.Attributes.ContainsKey("autofocus"));
+        if (af != null) FormState.FocusedInput = af.NodeKey;
+
+        AnimationEngine.Tick(_rootNode); // initial frame
+        StartAnimationTimer(hWnd);
+
+        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+    }
+
     private void StartAnimationTimer(IntPtr hWnd)
     {
         if (_timerRunning) return;
@@ -772,6 +837,41 @@ public class BrowserWindow
             if (result != null) return result;
         }
         return null;
+    }
+
+    /// <summary>Dispatches a submit event for the form; if not prevented, navigates to the action URL.</summary>
+    private void SubmitForm(LayoutNode form, IntPtr hWnd)
+    {
+        var engine = JsEngine.Instance;
+        if (engine == null || _rootNode == null) return;
+
+        var evt = new Scripting.Dom.JsEvent();
+        evt.initEvent("submit", true, true);
+        evt.target = new Scripting.Dom.JsElement(engine.RawEngine, form);
+        EventDispatcher.DispatchEvent(form, evt, engine);
+
+        if (!evt.defaultPrevented)
+            Navigate(Interaction.FormSubmitter.BuildActionUrl(form, Parser.BaseUrl), hWnd);
+    }
+
+    /// <summary>Walks up from a node to find its containing &lt;form&gt;.</summary>
+    private static LayoutNode? FindAncestorForm(LayoutNode? node)
+    {
+        for (var p = node?.Parent; p != null; p = p.Parent)
+            if (p.TagName == "FORM") return p;
+        return null;
+    }
+
+    /// <summary>Whether a control submits its form when activated (button/input submit types).</summary>
+    private static bool IsSubmitControl(LayoutNode node)
+    {
+        var type = node.Attributes.GetValueOrDefault("type", "").ToLowerInvariant();
+        return node.TagName switch
+        {
+            "BUTTON" => type is "" or "submit",
+            "INPUT" => type is "submit" or "image",
+            _ => false,
+        };
     }
 
     private void DispatchMouseEvent(string eventType, LayoutNode node, int x, int y, float contentY, JsEngine engine)

@@ -63,14 +63,20 @@ public class JsDocument
     public JsElement createElement(string tagName)
     {
         var style = _root.Style;
-        var node  = new LayoutNode(null, tagName.ToUpperInvariant(), string.Empty, style);
+        var node  = new LayoutNode(null, tagName.ToUpperInvariant(), string.Empty, style)
+        {
+            NeedsStyleResolution = true, // cascade applied when inserted into the live tree
+        };
         return new JsElement(_engine, node);
     }
 
     public JsElement createElementNS(string ns, string tagName)
     {
         var style = _root.Style;
-        var node = new LayoutNode(null, tagName.ToUpperInvariant(), string.Empty, style);
+        var node = new LayoutNode(null, tagName.ToUpperInvariant(), string.Empty, style)
+        {
+            NeedsStyleResolution = true,
+        };
         node.Attributes["xmlns"] = ns;
         return new JsElement(_engine, node);
     }
@@ -117,9 +123,35 @@ public class JsDocument
         set { }    // simplified
     }
 
-    public string URL => "";
-    public string domain => "";
+    public string URL => Parser.BaseUrl ?? "";
+    public string domain
+    {
+        get
+        {
+            try { return Parser.BaseUrl is { } b && Uri.TryCreate(b, UriKind.Absolute, out var u) ? u.Host : ""; }
+            catch { return ""; }
+        }
+    }
     public string compatMode => "CSS1Compat";
+
+    // ---- cookies (single in-memory jar for the current document) ----
+    private static readonly Dictionary<string, string> _cookies = new(StringComparer.Ordinal);
+
+    public string cookie
+    {
+        get => string.Join("; ", _cookies.Select(kv => $"{kv.Key}={kv.Value}"));
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value)) return;
+            // Only the first "name=value" segment is the cookie; attributes (path, expires…) are ignored.
+            var pair = value.Split(';')[0];
+            var eq = pair.IndexOf('=');
+            if (eq < 0) return;
+            var name = pair[..eq].Trim();
+            var val = pair[(eq + 1)..].Trim();
+            if (name.Length > 0) _cookies[name] = val;
+        }
+    }
 
     // ---- DOM Traversal Level 2 (Phase 9) ----
     public JsTreeWalker createTreeWalker(JsElement root, int whatToShow = -1, object? filter = null)

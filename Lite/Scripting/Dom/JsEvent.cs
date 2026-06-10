@@ -3,12 +3,34 @@ using Jint.Native;
 
 namespace Lite.Scripting.Dom;
 
-/// <summary>DOM Event object exposed to JavaScript.</summary>
+/// <summary>DOM Event object exposed to JavaScript. Also serves as MouseEvent /
+/// KeyboardEvent / CustomEvent (a superset of their properties).</summary>
 public class JsEvent
 {
+    public JsEvent() { }
+
+    /// <summary>new Event(type) / new CustomEvent(type).</summary>
+    public JsEvent(string type) => this.type = type;
+
+    /// <summary>new Event(type, { bubbles, cancelable }) / new CustomEvent(type, { detail }).</summary>
+    public JsEvent(string type, JsValue options)
+    {
+        this.type = type;
+        if (options.IsObject())
+        {
+            var o = options.AsObject();
+            var b = o.Get("bubbles"); if (b.IsBoolean()) bubbles = b.AsBoolean();
+            var c = o.Get("cancelable"); if (c.IsBoolean()) cancelable = c.AsBoolean();
+            var d = o.Get("detail"); if (!d.IsUndefined() && !d.IsNull()) detail = d;
+        }
+    }
+
     public string type { get; internal set; } = string.Empty;
     public bool bubbles { get; internal set; }
     public bool cancelable { get; internal set; }
+
+    /// <summary>CustomEvent payload.</summary>
+    public object? detail { get; internal set; }
     public JsElement? target { get; internal set; }
     public JsElement? currentTarget { get; internal set; }
     public int eventPhase { get; internal set; } // 0=NONE, 1=CAPTURING, 2=AT_TARGET, 3=BUBBLING

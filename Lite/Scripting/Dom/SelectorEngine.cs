@@ -1,4 +1,5 @@
 using Jint;
+using Lite.Interaction;
 using Lite.Models;
 
 namespace Lite.Scripting.Dom;
@@ -122,6 +123,29 @@ internal static class SelectorEngine
 
     private static bool MatchPseudoClass(LayoutNode node, string pseudo)
     {
+        // Non-structural pseudo-classes — valid even on a parentless (detached) element.
+        switch (pseudo)
+        {
+            case ":empty": return node.Children.Count == 0 && string.IsNullOrEmpty(node.Text);
+            case ":checked": return node.Attributes.ContainsKey("checked");
+            case ":disabled": return node.Attributes.ContainsKey("disabled");
+            case ":enabled":
+                return !node.Attributes.ContainsKey("disabled") &&
+                       node.TagName is "INPUT" or "BUTTON" or "SELECT" or "TEXTAREA";
+            case ":hover": return node.IsHovered;
+            case ":focus": return node.IsFocused;
+            case ":active": return node.IsActive;
+            // Links: :link = unvisited hyperlink; :visited is never matched (no history tracking).
+            case ":link": return node.TagName == "A" && node.Attributes.ContainsKey("href");
+            case ":visited": return false;
+            case ":required": return node.Attributes.ContainsKey("required");
+            case ":optional":
+                return node.TagName is "INPUT" or "SELECT" or "TEXTAREA" && !node.Attributes.ContainsKey("required");
+            case ":valid": return FormValidation.IsCandidate(node) && FormValidation.GetValidity(node).valid;
+            case ":invalid": return FormValidation.IsCandidate(node) && !FormValidation.GetValidity(node).valid;
+        }
+
+        // Structural pseudo-classes — require a parent to inspect siblings.
         if (node.Parent == null) return false;
         var siblings = node.Parent.Children.Where(c => c.TagName != "#text").ToList();
         var sameType = siblings.Where(c => c.TagName == node.TagName).ToList();
@@ -136,14 +160,6 @@ internal static class SelectorEngine
             ":first-of-type" => typeIndex == 0,
             ":last-of-type" => typeIndex == sameType.Count - 1,
             ":only-of-type" => sameType.Count == 1,
-            ":empty" => node.Children.Count == 0 && string.IsNullOrEmpty(node.Text),
-            ":checked" => node.Attributes.ContainsKey("checked"),
-            ":disabled" => node.Attributes.ContainsKey("disabled"),
-            ":enabled" => !node.Attributes.ContainsKey("disabled") &&
-                          (node.TagName is "INPUT" or "BUTTON" or "SELECT" or "TEXTAREA"),
-            ":hover" => node.IsHovered,
-            ":focus" => node.IsFocused,
-            ":active" => node.IsActive,
             _ when pseudo.StartsWith(":nth-child(") => MatchNth(pseudo[11..^1], index + 1),
             _ when pseudo.StartsWith(":nth-last-child(") => MatchNth(pseudo[16..^1], siblings.Count - index),
             _ when pseudo.StartsWith(":nth-of-type(") => MatchNth(pseudo[13..^1], typeIndex + 1),

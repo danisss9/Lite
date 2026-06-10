@@ -87,4 +87,7 @@ internal static class User32
 
     [DllImport("user32.dll")]
     internal static extern short GetKeyState(int nVirtKey);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 }

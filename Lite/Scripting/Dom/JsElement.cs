@@ -1,7 +1,9 @@
 using Jint;
 using Jint.Native;
 using Lite.Interaction;
+using Lite.Layout;
 using Lite.Models;
+using Lite.Rendering;
 
 namespace Lite.Scripting.Dom;
 
@@ -87,11 +89,85 @@ public class JsElement
 
     public string innerHTML
     {
-        get => Node.DisplayText;      // simplified — no child serialisation
-        set => Node.TextOverride = value;
+        get => HtmlSerializer.SerializeChildren(Node);
+        set
+        {
+            Node.Children.Clear();
+            Node.TextOverride = string.Empty;
+            foreach (var child in Parser.ParseFragment(value ?? string.Empty, Node.TagName))
+                Node.AddChild(child);
+        }
     }
 
-    public string outerHTML => innerHTML; // simplified
+    public string outerHTML
+    {
+        get => HtmlSerializer.SerializeOuter(Node);
+        set => ReplaceSelfWithFragment(value ?? string.Empty);
+    }
+
+    /// <summary>
+    /// Parses <paramref name="html"/> and inserts the resulting nodes relative to this
+    /// element. position is one of beforebegin, afterbegin, beforeend, afterend.
+    /// </summary>
+    public void insertAdjacentHTML(string position, string html)
+    {
+        var nodes = Parser.ParseFragment(html ?? string.Empty, Node.Parent?.TagName ?? Node.TagName);
+        switch (position?.ToLowerInvariant())
+        {
+            case "beforebegin":
+                InsertNodesBefore(nodes, Node);
+                break;
+            case "afterbegin":
+                for (int i = nodes.Count - 1; i >= 0; i--)
+                {
+                    nodes[i].Parent = Node;
+                    Node.Children.Insert(0, nodes[i]);
+                }
+                break;
+            case "beforeend":
+                foreach (var n in nodes) Node.AddChild(n);
+                break;
+            case "afterend":
+                InsertNodesAfter(nodes, Node);
+                break;
+        }
+    }
+
+    private void ReplaceSelfWithFragment(string html)
+    {
+        if (Node.Parent is null) return;
+        var nodes = Parser.ParseFragment(html, Node.Parent.TagName);
+        InsertNodesBefore(nodes, Node);
+        Node.Parent.Children.Remove(Node);
+        Node.Parent = null;
+    }
+
+    private static void InsertNodesBefore(List<LayoutNode> nodes, LayoutNode reference)
+    {
+        var parent = reference.Parent;
+        if (parent is null) return;
+        var idx = parent.Children.IndexOf(reference);
+        if (idx < 0) idx = parent.Children.Count;
+        foreach (var n in nodes)
+        {
+            n.Parent = parent;
+            parent.Children.Insert(idx++, n);
+        }
+    }
+
+    private static void InsertNodesAfter(List<LayoutNode> nodes, LayoutNode reference)
+    {
+        var parent = reference.Parent;
+        if (parent is null) return;
+        var idx = parent.Children.IndexOf(reference);
+        if (idx < 0) idx = parent.Children.Count - 1;
+        idx++;
+        foreach (var n in nodes)
+        {
+            n.Parent = parent;
+            parent.Children.Insert(idx++, n);
+        }
+    }
 
     // ---- form value / checked ----
     public string value
@@ -120,6 +196,49 @@ public class JsElement
         set { if (value) Node.Attributes["disabled"] = ""; else Node.Attributes.Remove("disabled"); }
     }
 
+    public string type
+    {
+        get => Node.Attributes.GetValueOrDefault("type", Node.TagName == "INPUT" ? "text" : string.Empty);
+        set => Node.Attributes["type"] = value;
+    }
+
+    public string name
+    {
+        get => Node.Attributes.GetValueOrDefault("name", string.Empty);
+        set => Node.Attributes["name"] = value;
+    }
+
+    // ---- form association & constraint validation ----
+
+    /// <summary>The containing &lt;form&gt;, or null.</summary>
+    public JsElement? form
+    {
+        get
+        {
+            for (var p = Node.Parent; p != null; p = p.Parent)
+                if (p.TagName == "FORM") return new JsElement(_engine, p);
+            return null;
+        }
+    }
+
+    public bool willValidate => FormValidation.IsCandidate(Node);
+    public ValidityState validity => FormValidation.GetValidity(Node);
+    public bool checkValidity() => !willValidate || validity.valid;
+    public bool reportValidity() => checkValidity();
+
+    /// <summary>Submits the form (HTMLFormElement.submit). No-op on non-form elements.</summary>
+    public void submit()
+    {
+        if (Node.TagName != "FORM") return;
+        JsEngine.Instance?.RequestNavigation(FormSubmitter.BuildActionUrl(Node, Parser.BaseUrl));
+    }
+
+    /// <summary>Resets the form's controls to their defaults (HTMLFormElement.reset).</summary>
+    public void reset()
+    {
+        if (Node.TagName == "FORM") FormSubmitter.Reset(Node);
+    }
+
     // ---- style ----
     public JsStyle style => _style ??= new JsStyle(Node);
     public string className
@@ -143,11 +262,11 @@ public class JsElement
             .Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (classes.Length == 0) return;
 
-        foreach (var (selector, props) in Parser.CssRules)
+        foreach (var rule in Parser.CssRules)
         {
-            if (MatchesSimpleSelector(selector, classes))
+            if (MatchesSimpleSelector(rule.Selector, classes))
             {
-                foreach (var (prop, val) in props)
+                foreach (var (prop, val) in rule.Properties)
                     Node.StyleOverrides[prop] = val;
             }
         }
@@ -322,6 +441,7 @@ public class JsElement
         // Remove from old parent if attached
         child.Node.Parent?.Children.Remove(child.Node);
         Node.AddChild(child.Node);
+        StyleResolver.ApplyTree(child.Node);
         return child;
     }
 
@@ -349,6 +469,7 @@ public class JsElement
             newNode.Node.Parent = Node;
             Node.Children.Insert(idx, newNode.Node);
         }
+        StyleResolver.ApplyTree(newNode.Node);
         return newNode;
     }
 
@@ -364,7 +485,91 @@ public class JsElement
         Node.Children[idx] = newNode.Node;
         newNode.Node.Parent = Node;
         oldNode.Node.Parent = null;
+        StyleResolver.ApplyTree(newNode.Node);
         return oldNode;
+    }
+
+    // ---- modern mutation convenience methods (DOM Living Standard) ----
+
+    /// <summary>Appends nodes/strings as the last children of this element.</summary>
+    public void append(params JsValue[] items)
+    {
+        foreach (var node in ToNodes(items))
+        {
+            node.Parent?.Children.Remove(node);
+            Node.AddChild(node);
+            StyleResolver.ApplyTree(node);
+        }
+    }
+
+    /// <summary>Inserts nodes/strings as the first children of this element.</summary>
+    public void prepend(params JsValue[] items)
+    {
+        var nodes = ToNodes(items);
+        for (int i = nodes.Count - 1; i >= 0; i--)
+        {
+            nodes[i].Parent?.Children.Remove(nodes[i]);
+            nodes[i].Parent = Node;
+            Node.Children.Insert(0, nodes[i]);
+            StyleResolver.ApplyTree(nodes[i]);
+        }
+    }
+
+    /// <summary>Inserts nodes/strings into this element's parent, just before it.</summary>
+    public void before(params JsValue[] items)
+    {
+        var nodes = ToNodes(items);
+        foreach (var n in nodes) n.Parent?.Children.Remove(n);
+        InsertNodesBefore(nodes, Node);
+        foreach (var n in nodes) StyleResolver.ApplyTree(n);
+    }
+
+    /// <summary>Inserts nodes/strings into this element's parent, just after it.</summary>
+    public void after(params JsValue[] items)
+    {
+        var nodes = ToNodes(items);
+        foreach (var n in nodes) n.Parent?.Children.Remove(n);
+        InsertNodesAfter(nodes, Node);
+        foreach (var n in nodes) StyleResolver.ApplyTree(n);
+    }
+
+    /// <summary>Replaces this element with the given nodes/strings.</summary>
+    public void replaceWith(params JsValue[] items)
+    {
+        if (Node.Parent is null) return;
+        var nodes = ToNodes(items);
+        foreach (var n in nodes) n.Parent?.Children.Remove(n);
+        InsertNodesBefore(nodes, Node);
+        Node.Parent.Children.Remove(Node);
+        Node.Parent = null;
+        foreach (var n in nodes) StyleResolver.ApplyTree(n);
+    }
+
+    /// <summary>Removes this element from its parent.</summary>
+    public void remove()
+    {
+        Node.Parent?.Children.Remove(Node);
+        Node.Parent = null;
+    }
+
+    /// <summary>Coerces append/before/after arguments (JsElement or string) into LayoutNodes.</summary>
+    private List<LayoutNode> ToNodes(JsValue[] items)
+    {
+        var result = new List<LayoutNode>();
+        foreach (var item in items)
+        {
+            if (item.IsString())
+            {
+                var textNode = new LayoutNode(null, "#text", item.AsString(), Node.Style);
+                textNode.StyleOverrides["display"] = "inline";
+                result.Add(textNode);
+            }
+            else if (item.ToObject() is JsElement el)
+            {
+                result.Add(el.Node);
+            }
+        }
+        return result;
     }
 
     public JsElement cloneNode(bool deep = false)

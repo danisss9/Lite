@@ -101,6 +101,8 @@ internal static class EventDispatcher
         }
 
         evt.eventPhase = 0;
+        // Run Promise continuations scheduled by the handlers (microtask checkpoint).
+        engine.FlushMicrotasks();
         return handled;
     }
 

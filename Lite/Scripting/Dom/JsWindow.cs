@@ -30,17 +30,11 @@ internal class JsWindow
     public int setTimeout(JsValue fn, int delay = 0)
     {
         var id = _nextTimerId++;
-        if (delay <= 0)
-        {
-            // Fire immediately for backwards compatibility with bootstrap scripts
-            try { _engine.RawEngine.Invoke(fn); }
-            catch (Exception ex) { Console.WriteLine($"[JS setTimeout] {ex.Message}"); }
-            return id;
-        }
+        if (delay < 0) delay = 0;
         var timer = new System.Threading.Timer(_ =>
         {
-            try { _engine.RawEngine.Invoke(fn); }
-            catch (Exception ex) { Console.WriteLine($"[JS setTimeout] {ex.Message}"); }
+            // Marshal the callback onto the UI thread's event loop — Jint is not thread-safe.
+            _engine.EnqueueMacrotask(() => _engine.RawEngine.Invoke(fn));
             lock (_timers) { _timers.Remove(id); }
         }, null, delay, Timeout.Infinite);
         lock (_timers) { _timers[id] = timer; }
@@ -53,8 +47,7 @@ internal class JsWindow
         if (delay <= 0) delay = 1;
         var timer = new System.Threading.Timer(_ =>
         {
-            try { _engine.RawEngine.Invoke(fn); }
-            catch (Exception ex) { Console.WriteLine($"[JS setInterval] {ex.Message}"); }
+            _engine.EnqueueMacrotask(() => _engine.RawEngine.Invoke(fn));
         }, null, delay, delay);
         lock (_timers) { _timers[id] = timer; }
         return id;

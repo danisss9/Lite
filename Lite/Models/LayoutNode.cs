@@ -64,6 +64,14 @@ public class LayoutNode
     public ElementScrollState? ScrollState { get; set; }
 
     /// <summary>
+    /// True for nodes created via document.createElement that have not yet had the
+    /// stylesheet cascade applied. <see cref="Lite.Layout.StyleResolver"/> resolves and
+    /// clears this when the node is inserted into the live tree. Nodes produced by HTML
+    /// parsing (page load or innerHTML) are already fully cascaded and leave this false.
+    /// </summary>
+    public bool NeedsStyleResolution { get; set; }
+
+    /// <summary>
     /// Resolves a CSS property considering pseudo-class state and media overrides.
     /// Priority: :active (media > base) > :focus (media > base) > :hover (media > base) > media overrides > style overrides.
     /// </summary>

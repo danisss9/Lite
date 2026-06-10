@@ -72,7 +72,17 @@ internal static class Parser
     private static string? _baseUrl;
     internal static string? BaseUrl => _baseUrl;
     private static readonly List<string> _pendingScripts = [];
+    // ES modules to import after the engine is created: (specifier, code) — code is null for src modules.
+    private static readonly List<(string Specifier, string? Code)> _pendingModules = [];
+    private static int _inlineModuleCounter;
     private static readonly HttpClient _httpClient = new();
+
+    /// <summary>The live AngleSharp document from the last page load, kept alive so that
+    /// innerHTML fragments can be parsed with the page's full stylesheet cascade.</summary>
+    internal static IDocument? Document { get; private set; }
+
+    /// <summary>Suppresses per-element debug logging during fragment (innerHTML) parsing.</summary>
+    private static bool _verbose = true;
     internal static int ViewportWidth { get; private set; } = 800;
     internal static int ViewportHeight { get; private set; } = 600;
 
@@ -83,6 +93,8 @@ internal static class Parser
     {
         _baseUrl = address;
         _pendingScripts.Clear();
+        _pendingModules.Clear();
+        _inlineModuleCounter = 0;
         _counters.Clear();
         ViewportWidth = viewportWidth;
         ViewportHeight = viewportHeight;
@@ -94,6 +106,7 @@ internal static class Parser
 
         var context = BrowsingContext.New(config);
         var document = context.OpenAsync(address).Result;
+        Document = document;
 
         var head = document.Head ?? document.DocumentElement;
 
@@ -138,6 +151,13 @@ internal static class Parser
         var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight);
         foreach (var script in _pendingScripts)
             jsEngine.Execute(script);
+
+        // Evaluate ES modules after classic scripts (modules are deferred by spec).
+        foreach (var (specifier, code) in _pendingModules)
+        {
+            if (code is not null) jsEngine.AddModule(specifier, code);
+            jsEngine.ImportModule(specifier);
+        }
 
         // Fire body onload handler if present
         var bodyNode = FindFirst(root, n => n.TagName == "BODY");
@@ -269,8 +289,11 @@ internal static class Parser
     {
         // Normalize tag name to uppercase — AngleSharp returns lowercase for SVG namespace elements
         var tag = element.TagName.ToUpperInvariant();
-        var indentSpace = new string(' ', indent * 2);
-        Console.WriteLine($"{indentSpace}Tag: {tag}, ID: {element.Id}, Class: {element.ClassName}");
+        if (_verbose)
+        {
+            var indentSpace = new string(' ', indent * 2);
+            Console.WriteLine($"{indentSpace}Tag: {tag}, ID: {element.Id}, Class: {element.ClassName}");
+        }
 
         // Determine whether this element has renderable element children (non-skipped, non-script).
         // If so, we walk ChildNodes in order so that interleaved text nodes (e.g. "text <em>italic</em> more")
@@ -312,13 +335,25 @@ internal static class Parser
             }
         }
 
-        if (tag is "INPUT" or "BUTTON")
+        if (tag == "FORM")
         {
-            foreach (var attr in new[] { "type", "value", "placeholder", "checked", "min", "max", "step", "name", "disabled", "readonly", "required", "maxlength" })
+            foreach (var attr in new[] { "action", "method", "name", "enctype", "target", "novalidate" })
             {
                 var val = element.GetAttribute(attr);
                 if (val != null) node.Attributes[attr] = val;
             }
+        }
+
+        if (tag is "INPUT" or "BUTTON")
+        {
+            foreach (var attr in new[] { "type", "value", "placeholder", "checked", "min", "max", "step", "name", "disabled", "readonly", "required", "maxlength", "pattern" })
+            {
+                var val = element.GetAttribute(attr);
+                if (val != null) node.Attributes[attr] = val;
+            }
+            // Hidden inputs participate in submission but are not rendered.
+            if (tag == "INPUT" && string.Equals(element.GetAttribute("type"), "hidden", StringComparison.OrdinalIgnoreCase))
+                node.StyleOverrides["display"] = "none";
         }
 
         if (tag == "TEXTAREA")
@@ -714,6 +749,8 @@ internal static class Parser
 
     private static void CollectScript(IElement scriptEl)
     {
+        var type = scriptEl.GetAttribute("type");
+        bool isModule = string.Equals(type, "module", StringComparison.OrdinalIgnoreCase);
         var src = scriptEl.GetAttribute("src");
         if (src != null)
         {
@@ -721,14 +758,21 @@ internal static class Parser
             if (src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
             {
                 var code = DecodeDataUri(src);
-                if (!string.IsNullOrWhiteSpace(code))
-                    _pendingScripts.Add(code);
+                if (string.IsNullOrWhiteSpace(code)) return;
+                if (isModule) _pendingModules.Add((NextInlineModuleSpecifier(), code));
+                else _pendingScripts.Add(code);
                 return;
             }
 
             var scriptUrl = ResolveUrl(src);
             if (scriptUrl != null)
             {
+                if (isModule)
+                {
+                    // Let the module loader fetch it on import (so its own imports resolve).
+                    _pendingModules.Add((scriptUrl, null));
+                    return;
+                }
                 try
                 {
                     var code = _httpClient.GetStringAsync(scriptUrl).Result;
@@ -740,8 +784,19 @@ internal static class Parser
         }
         else if (!string.IsNullOrWhiteSpace(scriptEl.TextContent))
         {
-            _pendingScripts.Add(scriptEl.TextContent);
+            if (isModule) _pendingModules.Add((NextInlineModuleSpecifier(), scriptEl.TextContent));
+            else _pendingScripts.Add(scriptEl.TextContent);
         }
+    }
+
+    /// <summary>Builds a unique absolute specifier for an inline module so its relative
+    /// imports resolve against the page's base URL.</summary>
+    private static string NextInlineModuleSpecifier()
+    {
+        var name = $"__inline_module_{_inlineModuleCounter++}.js";
+        if (_baseUrl is not null && Uri.TryCreate(new Uri(_baseUrl), name, out var uri))
+            return uri.AbsoluteUri;
+        return name;
     }
 
     /// <summary>Decodes a data: URI and returns the text content.</summary>
@@ -1504,12 +1559,85 @@ internal static class Parser
 
     private static bool IsSvgElement(string tagName) => SvgTags.Contains(tagName);
 
-    // ---- CSS rule storage for dynamic class-based style re-evaluation ----
-    internal static readonly List<(string Selector, Dictionary<string, string> Properties)> CssRules = [];
+    /// <summary>
+    /// Parses an HTML fragment string into a list of <see cref="LayoutNode"/>s, cascaded
+    /// against the current page's stylesheets. Used by Element.innerHTML / insertAdjacentHTML.
+    /// Per HTML semantics, &lt;script&gt; elements in the fragment are parsed but not executed.
+    /// </summary>
+    internal static List<LayoutNode> ParseFragment(string html, string contextTag = "DIV")
+    {
+        var result = new List<LayoutNode>();
+        if (string.IsNullOrEmpty(html)) return result;
+
+        var doc = Document;
+        if (doc is null)
+        {
+            var cfg = Configuration.Default.WithCss();
+            doc = BrowsingContext.New(cfg).OpenNewAsync().Result;
+            Document = doc;
+        }
+
+        var container = doc.CreateElement(string.IsNullOrEmpty(contextTag) ? "div" : contextTag.ToLowerInvariant());
+        // Attach under <body> so contextual selectors (e.g. "body .foo") cascade correctly,
+        // then detach again so the live document is left untouched.
+        var attached = doc.Body;
+        attached?.AppendChild(container);
+
+        // Preserve the document-global counter state — fragment parsing must not corrupt it.
+        var savedCounters = new Dictionary<string, int>(_counters);
+        var savedVerbose = _verbose;
+        _verbose = false;
+        try
+        {
+            container.InnerHtml = html;
+            foreach (var childNode in container.ChildNodes)
+            {
+                if (childNode is IText textNode)
+                {
+                    var text = CollapseWhitespace(textNode.Data);
+                    if (text.Length == 0) continue;
+                    var tn = new LayoutNode(null, "#text", text, container.ComputeCurrentStyle());
+                    tn.StyleOverrides["display"] = "inline";
+                    result.Add(tn);
+                }
+                else if (childNode is IElement childEl)
+                {
+                    var ct = childEl.TagName.ToUpperInvariant();
+                    if (ct == "SCRIPT") continue;          // innerHTML never runs scripts
+                    if (SkipTags.Contains(ct)) continue;
+                    result.Add(Traverse(childEl, 0));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[innerHTML parse error] {ex.Message}");
+        }
+        finally
+        {
+            container.Remove();
+            _verbose = savedVerbose;
+            _counters.Clear();
+            foreach (var kv in savedCounters) _counters[kv.Key] = kv.Value;
+        }
+        return result;
+    }
+
+    // ---- CSS rule storage for the LayoutNode-based cascade (StyleResolver) ----
+
+    /// <summary>A collected author style rule with the data needed for a correct cascade.</summary>
+    internal sealed record CssRule(
+        string Selector,
+        int Specificity,
+        int Order,
+        Dictionary<string, string> Properties,
+        HashSet<string> ImportantProps);
+
+    internal static readonly List<CssRule> CssRules = [];
 
     /// <summary>
-    /// Collects all CSS style rules from the document's stylesheets for runtime
-    /// class-based style re-evaluation (e.g. when JS changes element.className).
+    /// Collects all CSS style rules from the document's stylesheets for the runtime cascade
+    /// (StyleResolver) used by dynamically created elements and className changes.
     /// </summary>
     private static void CollectCssRules(AngleSharp.Dom.IDocument document)
     {
@@ -1529,10 +1657,90 @@ internal static class Parser
                 continue;
             }
             if (rule is not ICssStyleRule styleRule) continue;
-            var props = ParseCssTextToDict(styleRule.Style.CssText);
-            if (props.Count > 0)
-                CssRules.Add((styleRule.SelectorText, props));
+
+            var (props, important) = ParseDeclarations(styleRule.Style.CssText);
+            if (props.Count == 0) continue;
+
+            // A selector list ("a, b") gets one entry per selector so each keeps its own specificity.
+            foreach (var sel in SplitSelectorList(styleRule.SelectorText))
+            {
+                var s = sel.Trim();
+                if (s.Length == 0) continue;
+                CssRules.Add(new CssRule(s, ComputeSpecificity(s), CssRules.Count, props, important));
+            }
         }
+    }
+
+    /// <summary>Parses a declaration block, separating normal and !important declarations.</summary>
+    private static (Dictionary<string, string> Props, HashSet<string> Important) ParseDeclarations(string cssText)
+    {
+        var props = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var important = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrEmpty(cssText)) return (props, important);
+
+        foreach (var decl in cssText.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var colon = decl.IndexOf(':');
+            if (colon < 0) continue;
+            var prop = decl[..colon].Trim().ToLowerInvariant();
+            var raw = decl[(colon + 1)..].Trim();
+            if (raw.EndsWith("!important", StringComparison.OrdinalIgnoreCase))
+            {
+                raw = raw[..^"!important".Length].Trim();
+                important.Add(prop);
+            }
+            if (!string.IsNullOrEmpty(raw)) props[prop] = raw;
+        }
+        return (props, important);
+    }
+
+    /// <summary>Computes a CSS specificity score (a*100 + b*10 + c) for a compound/complex selector.</summary>
+    internal static int ComputeSpecificity(string selector)
+    {
+        int a = 0, b = 0, c = 0;
+        int i = 0;
+        while (i < selector.Length)
+        {
+            var ch = selector[i];
+            if (ch == '#') { a++; i++; SkipIdent(selector, ref i); }
+            else if (ch == '.' || ch == '[') { b++; i++; if (ch == '[') SkipTo(selector, ref i, ']'); else SkipIdent(selector, ref i); }
+            else if (ch == ':')
+            {
+                i++;
+                if (i < selector.Length && selector[i] == ':') { c++; i++; SkipIdent(selector, ref i); } // ::pseudo-element
+                else { b++; SkipIdent(selector, ref i); if (i < selector.Length && selector[i] == '(') SkipTo(selector, ref i, ')'); }
+            }
+            else if (char.IsLetter(ch)) { c++; SkipIdent(selector, ref i); } // type selector
+            else i++; // combinators, '*', whitespace
+        }
+        return a * 100 + b * 10 + c;
+    }
+
+    private static void SkipIdent(string s, ref int i)
+    {
+        while (i < s.Length && (char.IsLetterOrDigit(s[i]) || s[i] == '-' || s[i] == '_')) i++;
+    }
+
+    private static void SkipTo(string s, ref int i, char end)
+    {
+        while (i < s.Length && s[i] != end) i++;
+        if (i < s.Length) i++;
+    }
+
+    private static IEnumerable<string> SplitSelectorList(string selectorText)
+    {
+        int depth = 0, start = 0;
+        for (int i = 0; i < selectorText.Length; i++)
+        {
+            if (selectorText[i] == '(') depth++;
+            else if (selectorText[i] == ')') depth--;
+            else if (selectorText[i] == ',' && depth == 0)
+            {
+                yield return selectorText[start..i];
+                start = i + 1;
+            }
+        }
+        yield return selectorText[start..];
     }
 
     // ---- tree helper for LayoutNode trees ----
