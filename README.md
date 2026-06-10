@@ -1,6 +1,6 @@
 # Lite
 
-Lite is a lightweight HTML/CSS/JS rendering engine for Windows, written in C#. It parses HTML and CSS, runs a custom layout engine, renders to a native Win32 window using SkiaSharp, and executes JavaScript via Jint.
+Lite is a lightweight HTML/CSS/JS rendering engine for Windows, written in C#. It parses HTML and CSS, runs a custom layout engine, renders to a native Win32 window using SkiaSharp, and executes JavaScript via Jint. Same-origin links and form submissions navigate in-page — complete with a browser-style loading animation — backed by an event loop with `fetch`, Web Storage, and ES module support.
 
 ![Lite App Demo](https://github.com/user-attachments/assets/994d4334-e96a-483a-94c6-b23fc5f0454b)
 
@@ -76,10 +76,20 @@ Loads the URL, creates the window, and starts the message loop. Blocks until the
 ## Architecture
 
 ```
-BrowserWindow
+BrowserWindow          Native window + message loop; in-page navigation (background-thread
+│                       document load), keyboard/mouse event dispatch, and the JS event loop pump
+│   ├── LoadingAnimation   Indeterminate loading bar shown while the next page loads
+│   └── PageTransition     Cross-fade + slide-up reveal of the loaded page
 │
 ├── Parser              Fetches HTML, parses via AngleSharp, builds LayoutNode tree,
-│                       loads external CSS, executes scripts via JsEngine
+│                       loads external CSS/modules, executes scripts via JsEngine;
+│                       ParseFragment() backs innerHTML/insertAdjacentHTML
+│
+├── StyleResolver       Re-applies the stylesheet cascade to nodes inserted at runtime
+│
+├── FormSubmitter       Builds the submission query + action URL for form navigation
+├── FormValidation      HTML5 constraint validation (required, email/url, pattern)
+├── HtmlSerializer      Serializes a node subtree for innerHTML/outerHTML
 │
 ├── Drawer              Runs BoxEngine layout, then renders the tree to a SkiaSharp
 │                       bitmap; returns the pixel buffer and hit regions
@@ -102,17 +112,24 @@ BrowserWindow
 ├── SvgRenderer         Inline SVG rendering (rect, circle, path, text, etc.)
 ├── CanvasRenderer      Blits Canvas2D bitmaps onto the page
 │
-├── JsEngine            Jint-based JavaScript runtime with DOM API
+├── JsEngine            Jint-based JavaScript runtime with DOM API; macrotask event loop
+│   │                   (timers/fetch) + Promise microtask checkpoint; ES module host
 │   ├── JsDocument      document.getElementById / querySelector / createElement /
-│   │                   createTextNode / createDocumentFragment / createTreeWalker
-│   ├── JsElement       Element proxy: textContent, value, style, events, classList,
-│   │                   DOM traversal, cloneNode, closest, matches, getBoundingClientRect
+│   │                   createTextNode / createDocumentFragment / createTreeWalker;
+│   │                   URL / domain / cookie
+│   ├── JsElement       Element proxy: textContent, innerHTML/outerHTML, value, style,
+│   │                   events, classList, DOM traversal + mutation (append/before/after),
+│   │                   form association, validity
 │   ├── JsStyle         Inline style property get/set / setProperty / removeProperty
 │   ├── JsComputedStyle Read-only computed style proxy for getComputedStyle()
 │   ├── JsCanvasContext2D  CanvasRenderingContext2D (paths, rects, text, transforms)
-│   ├── JsEvent         Event object with target, bubbling, preventDefault
+│   ├── JsEvent         Event / MouseEvent / KeyboardEvent / CustomEvent (target,
+│   │                   bubbling, preventDefault, coordinates, key/modifiers, detail)
 │   ├── JsTreeWalker    DOM tree traversal (nextNode, previousNode, parentNode)
 │   ├── JsXmlHttpRequest  Synchronous XMLHttpRequest (GET)
+│   ├── JsFetch         fetch() backing — background HTTP, resolved on the event loop
+│   ├── JsStorage       localStorage (persisted) / sessionStorage (in-memory)
+│   ├── HttpModuleLoader  Resolves & fetches ES modules over http(s)
 │   ├── JsConsole       console.log / error / warn
 │   ├── JsWindow        window.alert / setTimeout / setInterval / requestAnimationFrame
 │   └── SelectorEngine  CSS selector matching (compound, combinators, pseudo-classes)
@@ -132,7 +149,7 @@ BrowserWindow
 | `div`, `section`, `header`, `footer`, `main`, `article`, `nav`, `aside`, `form`, `span` | Generic block or inline containers                                                                                   |
 | `h1`–`h6`                                                                               | Headings with computed font size and weight                                                                          |
 | `p`                                                                                     | Paragraph with block layout                                                                                          |
-| `a`                                                                                     | Link — opens in the system browser on click                                                                          |
+| `a`                                                                                     | Link — same-origin links navigate in-page (with a loading animation); cross-origin links open in the system browser  |
 | `img`                                                                                   | Image loaded via HTTP; falls back to a placeholder with alt text                                                     |
 | `input` (text)                                                                          | Focusable text field with keyboard input and backspace                                                               |
 | `input` (password)                                                                      | Masked text field with bullet characters                                                                             |
@@ -142,7 +159,8 @@ BrowserWindow
 | `input` (radio)                                                                         | Radio button with group selection logic by `name` attribute                                                          |
 | `textarea`                                                                              | Multi-line text input with placeholder, Enter key, monospace font                                                    |
 | `select`                                                                                | Dropdown with option list overlay, click to select                                                                   |
-| `button`, `input[type=submit]`                                                          | Triggers `click` event handlers                                                                                      |
+| `button`, `input[type=submit]`                                                          | Triggers `click` handlers; submit controls submit the containing `<form>`                                            |
+| `form`                                                                                  | Submits on Enter / submit button — builds a query and navigates to `action` (cancelable `submit` event)             |
 | `label`                                                                                 | Inline by default                                                                                                    |
 | `strong`, `b`                                                                           | Bold text                                                                                                            |
 | `em`, `i`, `cite`, `dfn`                                                                | Italic text                                                                                                          |
@@ -238,6 +256,7 @@ BrowserWindow
 | `@media`                                             | `min-width`, `max-width`, `min-height`, `max-height`, `orientation`; `and`, `not`, comma                                |
 | `@keyframes`                                         | `from`/`to`, percentage offsets                                                                                         |
 | `:hover`, `:focus`, `:active`                        | Pseudo-class state with interactive re-render                                                                           |
+| Structural / form pseudo-classes                     | `:first-child`, `:last-child`, `:nth-child()`, `:not()`, `:empty`, `:checked`, `:disabled`, `:enabled`, `:link`, `:required`, `:optional`, `:valid`, `:invalid` |
 | `::before`, `::after`                                | Pseudo-elements with `content` property (strings, `open-quote`/`close-quote`, unicode escapes)                          |
 
 ---
@@ -253,12 +272,17 @@ document.getElementById(id); // → Element | null
 document.querySelector(selector); // → Element | null
 document.querySelectorAll(selector); // → Element[]
 document.createElement(tagName); // → Element
+document.createElementNS(ns, tagName); // → Element
 document.createTextNode(text); // → Element (#text node)
 document.createDocumentFragment(); // → Element (lightweight container)
 document.createTreeWalker(root, whatToShow); // → TreeWalker
+
+document.URL; // current page URL
+document.domain; // host of the current page
+document.cookie; // get/set (single in-memory cookie jar)
 ```
 
-Selectors support: `#id`, `.class`, `tag`, compound (`tag.class#id`), attribute (`[attr=val]`, `[attr^=val]`, `[attr$=val]`, `[attr*=val]`, `[attr~=val]`), combinators (descendant, `>`, `+`, `~`), pseudo-classes (`:first-child`, `:last-child`, `:nth-child()`, `:not()`), and comma-separated lists.
+Selectors support: `#id`, `.class`, `tag`, compound (`tag.class#id`), attribute (`[attr=val]`, `[attr^=val]`, `[attr$=val]`, `[attr*=val]`, `[attr~=val]`), combinators (descendant, `>`, `+`, `~`), pseudo-classes (`:first-child`, `:last-child`, `:nth-child()`, `:not()`, `:empty`, `:checked`, `:disabled`, `:enabled`, `:required`, `:optional`, `:valid`, `:invalid`, `:hover`, `:focus`, `:active`), and comma-separated lists.
 
 ### Element
 
@@ -267,9 +291,13 @@ element.id; // string (read-only)
 element.tagName; // string (read-only)
 element.className; // get/set class attribute
 element.textContent; // get/set displayed text
-element.innerHTML; // get/set (simplified — same as textContent)
+element.innerHTML; // get serializes the subtree; set parses an HTML fragment
+element.outerHTML; // get/set including the element's own tag
+element.insertAdjacentHTML(position, html); // beforebegin | afterbegin | beforeend | afterend
 element.value; // get/set text input value
 element.checked; // get/set checkbox state
+element.type; // get/set (input type; "text" default for <input>)
+element.name; // get/set name attribute
 element.nodeType; // 1 (Element)
 element.nodeName; // same as tagName
 element.ownerDocument; // → document
@@ -295,11 +323,26 @@ element.appendChild(child); // → child
 element.removeChild(child); // → child
 element.insertBefore(newNode, ref); // → newNode
 element.replaceChild(newNode, old); // → old
+element.append(...nodesOrStrings); // append children
+element.prepend(...nodesOrStrings); // prepend children
+element.before(...nodesOrStrings); // insert into parent before this
+element.after(...nodesOrStrings); // insert into parent after this
+element.replaceWith(...nodesOrStrings); // replace this element
+element.remove(); // detach from parent
 element.cloneNode(deep); // → Element
 element.contains(node); // → boolean
 element.closest(selector); // → Element | null
 element.matches(selector); // → boolean
 element.getBoundingClientRect(); // → { x, y, width, height, top, left, right, bottom }
+
+// Form association & constraint validation
+element.form; // → containing <form> | null
+element.willValidate; // → boolean
+element.validity; // → { valueMissing, typeMismatch, patternMismatch, valid }
+element.checkValidity(); // → boolean
+element.reportValidity(); // → boolean
+form.submit(); // submit the form (navigates to its action)
+form.reset(); // reset controls to defaults
 
 element.classList.add(cls);
 element.classList.remove(cls);
@@ -365,6 +408,47 @@ xhr.send();
 // Properties: responseText, status, readyState
 ```
 
+### `fetch`
+
+```js
+fetch('/api/data', { method: 'GET' })
+  .then(function (res) {
+    // res.ok, res.status, res.statusText, res.url
+    return res.json(); // or res.text()
+  })
+  .then(function (data) {
+    console.log(data);
+  });
+```
+
+The request runs on a background thread and the Promise resolves on the event loop. `http(s)` and `data:` URLs are supported. `queueMicrotask(fn)` is also available.
+
+### Web Storage
+
+```js
+localStorage.setItem('key', 'value'); // persisted per-origin to disk
+localStorage.getItem('key'); // → "value" | null
+localStorage.removeItem('key');
+localStorage.clear();
+localStorage.key(0); // → key name at index | null
+localStorage.length; // → number
+
+sessionStorage.setItem('key', 'value'); // in-memory for the process
+```
+
+> Property-style access (`localStorage.foo`) is not supported — use `getItem` / `setItem`.
+
+### ES Modules
+
+```html
+<script type="module">
+  import { greet } from './greet.js';
+  greet('world');
+</script>
+```
+
+`import` / `export` work for inline and `src` modules. Specifiers resolve relative to the page URL and are fetched over `http(s)`. Classic scripts run first; modules are deferred.
+
 ### Event object
 
 ```js
@@ -374,8 +458,19 @@ element.addEventListener('click', function (event) {
   event.currentTarget; // Element the handler is attached to
   event.preventDefault();
   event.stopPropagation(); // stop bubbling up the DOM tree
+  event.stopImmediatePropagation();
+
+  // MouseEvent: event.clientX/clientY, event.pageX/pageY, event.button
+  // KeyboardEvent: event.key, event.keyCode, event.code,
+  //                event.ctrlKey/shiftKey/altKey/metaKey
 });
+
+// Constructors
+new Event('my-event', { bubbles: true, cancelable: true });
+new CustomEvent('my-event', { detail: { count: 1 } }); // event.detail
 ```
+
+Dispatched DOM events include `click`, `mousedown` / `mouseup` / `mousemove`, `keydown` / `keyup`, `input`, `change`, and `submit`.
 
 ### Inline event attributes
 
@@ -394,7 +489,7 @@ Standard HTML inline handlers are supported:
 dotnet run --project Example
 ```
 
-The example serves the `Example/resources/` folder on `http://localhost:4444` and opens it in a `BrowserWindow`. The demo page covers typography, inline text elements, lists, forms (text, password, number, range, radio, checkbox, textarea, select), flexbox layouts, tables, positioning, z-index, overflow clipping, percentage sizing, pseudo-classes (:hover/:focus/:active), pseudo-elements (::before/::after), responsive design (@media), CSS animations/transitions (with lifecycle events), calc() expressions, CSS custom properties (var()), text transforms, letter/word spacing, border styles, outlines, background images, vertical alignment, table border collapse, linear gradients, CSS 2D transforms, CSS filters, text-overflow ellipsis, position:sticky, aspect-ratio, pointer-events, dataset, animation-play-state, and programmatic scrolling.
+The example serves the `Example/resources/` folder on `http://localhost:4444` and opens it in a `BrowserWindow`. It is a multi-page site — typography, colors, layout, lists & tables, forms, graphics, transforms & animations, and JavaScript DOM — linked by an in-app nav bar, so clicking through it exercises in-page navigation and the loading animation. Between them the pages cover inline text elements, lists, forms (text, password, number, range, radio, checkbox, textarea, select) with submission and validation, flexbox layouts, tables, positioning, z-index, overflow clipping, percentage sizing, pseudo-classes (:hover/:focus/:active and structural/form), pseudo-elements (::before/::after), responsive design (@media), CSS animations/transitions (with lifecycle events), calc() expressions, CSS custom properties (var()), text transforms, letter/word spacing, border styles, outlines, background images, vertical alignment, table border collapse, linear gradients, CSS 2D transforms, CSS filters, text-overflow ellipsis, position:sticky, aspect-ratio, pointer-events, dataset, animation-play-state, programmatic scrolling, fetch, Web Storage, and ES modules.
 
 ---
 

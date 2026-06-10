@@ -2,7 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.6] - 2026-04-16 (current)
+## [0.0.7] - 2026-06-10 (current)
+
+### Added
+
+- **In-page navigation** — clicking a same-origin `<a href>` (and submitting a form) now loads the target document _in place_ instead of opening the OS browser; links to a different origin still open in the system default browser, and pure `#` fragment links are ignored. The document load runs on a background thread so the UI stays responsive
+- **Navigation loading animation** — a browser-style indeterminate progress bar sweeps across the top of the window over a dimmed snapshot of the outgoing page while the next page is fetched/parsed/rendered; the page is then revealed with a short cross-fade + slide-up. Interaction is frozen for the duration so the (single-threaded) JS engine is never touched concurrently (`LoadingAnimation`, `PageTransition`)
+- **`fetch()`** — Promise-based `fetch(url, options)` with `method` and `body`; the response exposes `ok`, `status`, `statusText`, `url`, `.text()`, and `.json()`. The HTTP request runs on a background thread and the callback is marshaled back onto the event loop; `http(s)` and `data:` URLs supported (`JsFetch`)
+- **Web Storage** — `localStorage` (persisted per-origin under `%LocalAppData%/Lite/Storage`) and `sessionStorage` (in-memory for the process); `getItem`, `setItem`, `removeItem`, `clear`, `key(i)`, `length` (`JsStorage`)
+- **ES modules** — `<script type="module">`, `import` / `export`, for both inline and `src` modules; specifiers resolved relative to the page base URL and fetched over `http(s)` (`HttpModuleLoader`); classic scripts run first, modules deferred per spec
+- **JavaScript event loop** — a macrotask queue drained on the UI thread so timers and `fetch` callbacks never touch Jint off-thread; a Promise microtask checkpoint runs after each task (so `.then()` continuations fire); `queueMicrotask` polyfill installed
+- **Form submission** — a `<form>` submits on Enter (from a text input) or when a submit control is activated; a cancelable `submit` event is dispatched first, then an `application/x-www-form-urlencoded` query is built from the form's successful controls and the engine navigates to the resolved `action` (GET query appended). `form.submit()` / `form.reset()` from JavaScript (`FormSubmitter`)
+- **Constraint validation** — `required`, `type="email"` / `type="url"`, and `pattern` are validated; `element.validity` (`ValidityState` with `valueMissing` / `typeMismatch` / `patternMismatch` / `valid`), `willValidate`, `checkValidity()`, `reportValidity()` (`FormValidation`)
+- **Keyboard events** — `keydown` / `keyup` dispatched to the focused element (or `<body>`) with `key`, `keyCode`, `code`, and `ctrlKey` / `shiftKey` / `altKey` / `metaKey` modifiers
+- **Mouse events** — `mousedown` / `mouseup` / `mousemove` dispatched with `clientX/Y`, `pageX/Y`, and `button`
+- **Real `innerHTML` / `outerHTML`** — the getters serialize the live node subtree (`HtmlSerializer`, with HTML escaping and void-element handling); the setters parse an HTML fragment (`Parser.ParseFragment`) against the page's full stylesheet cascade and rebuild the children. Added **`insertAdjacentHTML(position, html)`** (`beforebegin` / `afterbegin` / `beforeend` / `afterend`)
+- **DOM mutation convenience methods** — `append`, `prepend`, `before`, `after`, `replaceWith`, `remove` (accepting `Element`s or strings), with stylesheet cascade re-resolution applied to inserted subtrees via `StyleResolver`
+- **`MouseEvent` / `KeyboardEvent` / `CustomEvent` constructors** — `new CustomEvent(type, { detail })`, `new Event(type, { bubbles, cancelable })`; `event.detail` payload
+- **Element form members** — `element.type`, `element.name`, and `element.form` (nearest ancestor `<form>`)
+- **Document additions** — `document.URL`, `document.domain`, `document.cookie` (single in-memory jar), `createElementNS`
+- **Expanded CSS selectors** — `:empty`, `:checked`, `:disabled`, `:enabled`, `:link`, `:visited` (never matched — no history), `:required`, `:optional`, `:valid`, `:invalid`; the dynamic `:hover` / `:focus` / `:active` classes now also match on detached (parentless) elements
+- **Tests** — new `Lite.Tests` project with a lightweight probe/runner and cascade, DOM, event-loop, and form suites (`InternalsVisibleTo` granted to the test project)
+- **Multi-page Example site** — the single demo page is split into a navigable site (typography, colors, layout, lists & tables, forms, graphics, transforms & animations, JavaScript DOM) that exercises in-page navigation, the loading animation, `fetch`, Web Storage, modules, form submission, and validation
+
+### Fixed
+
+- **Timer thread-safety** — `setTimeout` / `setInterval` previously invoked the JS callback directly from a `System.Threading.Timer` background thread (and `setTimeout(fn, 0)` fired synchronously during bootstrap); callbacks are now queued onto the UI event loop, since Jint is not thread-safe
+- **`Jint` version pinned** — the package reference moved from `3.*` to `3.1.6` for reproducible builds
+
+## [0.0.6] - 2026-04-16
 
 ### Added
 
