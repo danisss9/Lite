@@ -65,6 +65,20 @@ public class BrowserWindow
     private static readonly IntPtr AnimationTimerId = new(1);
     private bool _timerRunning;
 
+    // Browser-style loading indicator shown while a navigation loads on a background thread,
+    // followed by a short cross-fade that reveals the rendered page.
+    private LoadingAnimation? _loading;
+    private PageTransition? _pageTransition;
+    private SKBitmap? _transitionFrame; // keeps the on-screen composite's pixels alive
+
+    // Background navigation handoff: written by the load task, read on the UI thread.
+    // _loadReady is volatile so the non-volatile fields written before it are visible once set.
+    private volatile bool _loadReady;
+    private LayoutNode? _loadedRoot;
+    private Exception? _loadError;
+    private string? _pendingUrl;
+    private const long MinLoadingMs = 450; // keep the loading indicator visible at least this long
+
     // Change event: snapshot value on focus for comparison on blur
     private string? _focusedValueSnapshot;
 
@@ -170,6 +184,13 @@ public class BrowserWindow
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
+        // While a navigation is loading, freeze interaction with the (soon-to-be-replaced)
+        // page and its JS engine. Paint, sizing, the timer (which drives the loading
+        // animation) and destroy still run.
+        if (_loading != null && msg is WM_LBUTTONDOWN or WM_LBUTTONUP or WM_MOUSEMOVE
+            or WM_MOUSEWHEEL or WM_CHAR or WM_KEYDOWN or WM_KEYUP or WM_APP_TASK)
+            return IntPtr.Zero;
+
         switch (msg)
         {
             case WM_PAINT:
@@ -209,7 +230,10 @@ public class BrowserWindow
             case WM_APP_TASK:
                 if (_rootNode != null && JsEngine.Instance is { } taskEngine)
                 {
-                    if (taskEngine.DrainTasks())
+                    // A drained task may itself start a navigation (e.g. location.href = …).
+                    // Skip the live redraw while a loading/reveal overlay owns the screen so we
+                    // don't clobber its frame; the animation timer keeps it updated instead.
+                    if (taskEngine.DrainTasks() && _loading == null && _pageTransition == null)
                     {
                         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
@@ -221,6 +245,44 @@ public class BrowserWindow
                 break;
 
             case WM_TIMER:
+                // Phase 1: a navigation is loading on a background thread. Animate the loading
+                // indicator and commit the new page once it's ready (and has shown long enough).
+                if (_loading != null)
+                {
+                    if (_loadReady && _loading.ElapsedMs >= MinLoadingMs)
+                    {
+                        FinalizeNavigation(hWnd);
+                    }
+                    else
+                    {
+                        var prevFrame = _transitionFrame;
+                        _pixels = _loading.RenderFrame(_width, _height, out _transitionFrame);
+                        prevFrame?.Dispose();
+                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    }
+                    break;
+                }
+
+                // Phase 2: reveal cross-fade out of the loading screen after a load completed.
+                if (_pageTransition != null)
+                {
+                    if (!_pageTransition.IsComplete)
+                    {
+                        var prevFrame = _transitionFrame;
+                        _pixels = _pageTransition.RenderFrame(_width, _height, out _transitionFrame);
+                        prevFrame?.Dispose();
+                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                        break;
+                    }
+
+                    // Reveal finished — drop the snapshots and resume live rendering below.
+                    _pageTransition.Dispose();
+                    _pageTransition = null;
+                    _transitionFrame?.Dispose();
+                    _transitionFrame = null;
+                }
+
+                // Phase 3: normal CSS animation / requestAnimationFrame tick.
                 if (_rootNode != null)
                 {
                     var stillRunning = AnimationEngine.Tick(_rootNode);
@@ -246,8 +308,28 @@ public class BrowserWindow
                 _height = clientRect.bottom - clientRect.top;
                 _viewport.ViewportHeight = _height;
 
+                // While loading, only re-render the loading frame at the new size (re-sizing the
+                // pixel buffer to match the client area) and leave the in-flight engine untouched.
+                if (_loading != null)
+                {
+                    var prevFrame = _transitionFrame;
+                    _pixels = _loading.RenderFrame(_width, _height, out _transitionFrame);
+                    prevFrame?.Dispose();
+                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    break;
+                }
+
                 // Update JS window.innerWidth / innerHeight
                 JsEngine.Instance?.UpdateViewportSize(_width, _height);
+
+                if (_pageTransition != null)
+                {
+                    var prevFrame = _transitionFrame;
+                    _pixels = _pageTransition.RenderFrame(_width, _height, out _transitionFrame);
+                    prevFrame?.Dispose();
+                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    break;
+                }
 
                 if (_rootNode != null)
                 {
@@ -780,26 +862,125 @@ public class BrowserWindow
             return;
         }
 
-        // Internal link: reload the document in place (mirrors the setup in Run()).
-        _url = target.ToString();
+        // A navigation is already in flight — ignore re-entrant requests until it settles.
+        if (_loading != null) return;
+
+        // Internal link: load the new document on a background thread so the UI thread stays
+        // free to animate a browser-style loading indicator while it fetches/parses/renders.
+        var url = target.ToString();
+        var w = _width;
+        var h = _height;
+
+        _pendingUrl = url;
+        _loadedRoot = null;
+        _loadError = null;
+        _loadReady = false;
+
+        // Freeze the page we're leaving as a dimmed backdrop behind the loading bar, and show
+        // the first loading frame immediately so there's no flash of the old page.
+        _loading = new LoadingAnimation(CaptureFrame());
+        _transitionFrame?.Dispose();
+        _pixels = _loading.RenderFrame(w, h, out _transitionFrame);
+
+        StartAnimationTimer(hWnd); // drives the loading animation + the completion check
+        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+
+        Task.Run(() =>
+        {
+            try { _loadedRoot = Parser.TraverseHtml(url, w, h); }
+            catch (Exception ex) { _loadError = ex; }
+            finally { _loadReady = true; } // volatile write — publishes the fields above
+        });
+    }
+
+    /// <summary>
+    /// Commits a finished background navigation: swaps in the new document, rebinds the JS
+    /// engine to this window, and reveals the page with a short cross-fade out of the loading
+    /// screen. Runs on the UI thread (from the animation timer) once the load is ready and the
+    /// loading indicator has been shown for at least <see cref="MinLoadingMs"/>.
+    /// </summary>
+    private void FinalizeNavigation(IntPtr hWnd)
+    {
+        // The last loading frame doubles as the "from" image for the reveal fade.
+        var fromImage = CaptureFrame();
+        var newRoot = _loadedRoot;
+        var error = _loadError;
+
+        _loading?.Dispose();
+        _loading = null;
+        _loadedRoot = null;
+        _loadError = null;
+        _loadReady = false;
+
+        if (error != null || newRoot == null)
+        {
+            Console.WriteLine($"[Navigation] failed to load {_pendingUrl}: {error?.Message}");
+            // Keep the page we were on; just repaint it live.
+            if (_rootNode != null)
+                (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+            fromImage?.Dispose();
+            User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+            return;
+        }
+
+        // Commit the new document (mirrors the setup in Run()).
+        _url = _pendingUrl!;
         FormState.FocusedInput = null;
         FormState.OpenDropdown = null;
         _viewport.ScrollTo(0);
 
+        _rootNode = newRoot;
         AnimationEngine.Reset();
-        _rootNode = Parser.TraverseHtml(_url, _width, _height);
         AnimationEngine.StartAnimations(_rootNode);
-        JsEngine.Instance?.SetViewport(_viewport);
+
+        // Rebind the freshly created JS engine (Parser.TraverseHtml replaced JsEngine.Instance).
+        if (JsEngine.Instance is { } engine)
+        {
+            engine.SetViewport(_viewport);
+            engine.UpdateViewportSize(_width, _height);
+            engine.TaskEnqueued += () => User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
+            engine.OnNavigate = u => Navigate(u, hWnd);
+        }
 
         // Re-apply autofocus for the freshly loaded page.
         var af = FindFirst(_rootNode, n => n.Attributes.ContainsKey("autofocus"));
         if (af != null) FormState.FocusedInput = af.NodeKey;
 
         AnimationEngine.Tick(_rootNode); // initial frame
-        StartAnimationTimer(hWnd);
-
         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+
+        // Reveal the rendered page by fading out of the loading screen.
+        var toImage = CaptureFrame();
+        _pageTransition?.Dispose();
+        _pageTransition = null;
+        if (fromImage != null && toImage != null)
+        {
+            _pageTransition = new PageTransition(fromImage, toImage);
+            _transitionFrame?.Dispose();
+            _pixels = _pageTransition.RenderFrame(_width, _height, out _transitionFrame);
+        }
+        else
+        {
+            fromImage?.Dispose();
+            toImage?.Dispose();
+        }
+
+        // Run any tasks queued while scripts executed during the load.
+        if (JsEngine.Instance is { HasPendingTasks: true })
+            User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
+
         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+    }
+
+    /// <summary>
+    /// Copies the currently rendered pixel buffer into a standalone <see cref="SKImage"/>
+    /// for use as a navigation snapshot. Returns null if nothing is drawn yet.
+    /// </summary>
+    private SKImage? CaptureFrame()
+    {
+        if (_pixels == IntPtr.Zero || _width <= 0 || _height <= 0) return null;
+        var info = new SKImageInfo(_width, _height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        return SKImage.FromPixelCopy(info, _pixels, _width * 4);
     }
 
     private void StartAnimationTimer(IntPtr hWnd)
