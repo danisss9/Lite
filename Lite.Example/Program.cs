@@ -1,4 +1,4 @@
-using Example;
+using Lite.Example;
 using Lite;
 
 var resourcesPath = Path.GetFullPath("resources");

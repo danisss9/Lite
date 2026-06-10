@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 
-namespace Example;
+namespace Lite.Example;
 
 internal static class StaticFileServer
 {
