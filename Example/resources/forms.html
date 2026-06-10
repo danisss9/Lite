@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forms &amp; Buttons — Lite Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="back-btn">&larr; Back to index</a>
+    <h1>Forms &amp; Buttons</h1>
+    <p class="subtitle">Buttons, inputs, form controls, and interactive form behavior</p>
+  </header>
+
+  <main>
+
+    <!-- Buttons -->
+    <section class="card">
+      <h2>Buttons</h2>
+      <button onclick="alert('Primary clicked!')">Primary</button>
+      <button class="btn-success ml-sm" onclick="alert('Success!')">Success</button>
+      <button class="btn-danger ml-sm" onclick="alert('Danger!')">Danger</button>
+      <button class="btn-ghost ml-sm" onclick="alert('Ghost!')">Ghost</button>
+    </section>
+
+    <!-- Form -->
+    <section class="card">
+      <h2>Form</h2>
+      <div class="form-row">
+        <label for="name">Full name</label>
+        <input type="text" id="name" placeholder="Jane Doe" />
+      </div>
+      <div class="form-row">
+        <label for="email">Email address</label>
+        <input type="text" id="email" placeholder="jane@example.com" />
+      </div>
+      <div class="form-row">
+        <label for="agree">I agree to the terms</label>
+        <input type="checkbox" id="agree" />
+      </div>
+      <div>
+        <button type="button" id="submit-btn" class="mt-sm">Submit</button>
+      </div>
+      <p id="form-result" class="output"></p>
+    </section>
+
+    <!-- Counter -->
+    <section class="card">
+      <h2>Interactive Counter</h2>
+      <p>Click the button to increment. The count is tracked in JavaScript.</p>
+      <button id="dec-btn">-</button>
+      <button id="inc-btn" class="ml-sm">+</button>
+      <button id="reset-btn" class="ml-sm">Reset</button>
+      <p id="count-display" class="counter-display">0</p>
+    </section>
+
+    <!-- Todo list -->
+    <section class="card">
+      <h2>Todo List</h2>
+      <input type="text" id="todo-input" placeholder="Add a task..." />
+      <button id="todo-add" class="ml-sm">Add</button>
+      <div id="todo-list"></div>
+    </section>
+
+    <!-- New Form Elements -->
+    <section class="card">
+      <h2>Form Elements</h2>
+
+      <h3>Password Input</h3>
+      <label>Password:</label>
+      <input type="password" placeholder="Enter password" title="Password" />
+
+      <h3>Number Input</h3>
+      <label>Quantity:</label>
+      <input type="number" value="5" min="0" max="100" title="Quantity" />
+
+      <h3>Range Slider</h3>
+      <label>Volume:</label>
+      <input type="range" min="0" max="100" value="60" title="Volume" />
+
+      <h3>Radio Buttons</h3>
+      <div class="radio-group">
+        <input type="radio" name="color" checked title="Red" /> <label>Red</label>
+        <input type="radio" name="color" title="Green" /> <label>Green</label>
+        <input type="radio" name="color" title="Blue" /> <label>Blue</label>
+      </div>
+
+      <h3>Textarea</h3>
+      <textarea placeholder="Write something here..." rows="4" cols="40" title="Message"></textarea>
+
+      <h3>Select Dropdown</h3>
+      <select title="Language">
+        <option value="html">HTML</option>
+        <option value="css" selected>CSS</option>
+        <option value="js">JavaScript</option>
+      </select>
+    </section>
+
+    <!-- Form Events (input / change / submit) -->
+    <section class="card">
+      <h2>Form Events</h2>
+      <p>Live <code>input</code>, <code>change</code>, and <code>submit</code> events from form controls.</p>
+
+      <form id="fe-form">
+        <label>Name:</label>
+        <input id="fe-name" type="text" placeholder="Type your name..." title="Name" />
+        <p id="fe-live" class="demo-info">Live input: (none)</p>
+
+        <label>Mood:</label>
+        <input id="fe-range" type="range" min="1" max="10" value="5" title="Mood" />
+        <p id="fe-range-val" class="demo-info">Range value: 5</p>
+
+        <button type="submit">Submit form</button>
+      </form>
+      <div id="fe-log" class="demo-log">Waiting for events...</div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
+  </footer>
+
+  <script src="forms.js"></script>
+</body>
+</html>

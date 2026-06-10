@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Colors, Backgrounds &amp; Effects — Lite Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="back-btn">&larr; Back to index</a>
+    <h1>Colors, Backgrounds &amp; Effects</h1>
+    <p class="subtitle">Color models, opacity, shadows, gradients, filters, and variables</p>
+  </header>
+
+  <main>
+
+    <!-- Colors & Backgrounds -->
+    <section class="card">
+      <h2>Colors</h2>
+      <div class="color-row">
+        <div class="swatch swatch-blue">Blue</div>
+        <div class="swatch swatch-green">Green</div>
+        <div class="swatch swatch-red">Red</div>
+        <div class="swatch swatch-orange">Orange</div>
+        <div class="swatch swatch-purple">Purple</div>
+      </div>
+    </section>
+
+    <!-- HSL / HSLA Colors -->
+    <section class="card">
+      <h2>HSL / HSLA Colors</h2>
+      <p><code>hsl()</code> and <code>hsla()</code> parsed across the full spectrum.</p>
+
+      <p>Hue sweep (0-330):</p>
+      <div class="hsl-row">
+        <div class="hsl-swatch" style="background: hsl(0, 80%, 55%);"></div>
+        <div class="hsl-swatch" style="background: hsl(30, 80%, 55%);"></div>
+        <div class="hsl-swatch" style="background: hsl(60, 80%, 50%);"></div>
+        <div class="hsl-swatch" style="background: hsl(120, 65%, 45%);"></div>
+        <div class="hsl-swatch" style="background: hsl(180, 65%, 42%);"></div>
+        <div class="hsl-swatch" style="background: hsl(210, 80%, 50%);"></div>
+        <div class="hsl-swatch" style="background: hsl(270, 65%, 55%);"></div>
+        <div class="hsl-swatch" style="background: hsl(330, 75%, 55%);"></div>
+      </div>
+
+      <p>Alpha ramp (hsla at 100%, 75%, 50%, 25%):</p>
+      <div class="hsl-row">
+        <div class="hsl-swatch" style="background: hsla(210, 90%, 50%, 1);"></div>
+        <div class="hsl-swatch" style="background: hsla(210, 90%, 50%, 0.75);"></div>
+        <div class="hsl-swatch" style="background: hsla(210, 90%, 50%, 0.5);"></div>
+        <div class="hsl-swatch" style="background: hsla(210, 90%, 50%, 0.25);"></div>
+      </div>
+    </section>
+
+    <!-- Opacity -->
+    <section class="card">
+      <h2>Opacity</h2>
+      <p>Boxes rendered at decreasing opacity levels:</p>
+      <div class="opacity-row">
+        <div class="opacity-box opacity-100">100%</div>
+        <div class="opacity-box opacity-75">75%</div>
+        <div class="opacity-box opacity-50">50%</div>
+        <div class="opacity-box opacity-25">25%</div>
+        <div class="opacity-box opacity-10">10%</div>
+      </div>
+      <p>Opacity applies to the entire subtree — text and background fade together:</p>
+      <div class="opacity-card opacity-60">
+        <strong>60% opacity</strong>
+        <p>This card, including its text and border, is rendered at 60% opacity.</p>
+      </div>
+    </section>
+
+    <!-- Box Shadow & Text Shadow -->
+    <section class="card">
+      <h2>Box Shadow</h2>
+      <p>Various shadow styles:</p>
+      <div class="shadow-row">
+        <div class="shadow-box shadow-sm">Small</div>
+        <div class="shadow-box shadow-md">Medium</div>
+        <div class="shadow-box shadow-lg">Large</div>
+        <div class="shadow-box shadow-colored">Colored</div>
+        <div class="shadow-box shadow-multi">Multi</div>
+      </div>
+      <h2>Text Shadow</h2>
+      <p class="text-shadow-subtle">Subtle text shadow</p>
+      <p class="text-shadow-hard">Hard offset shadow</p>
+      <p class="text-shadow-glow">Glow effect</p>
+    </section>
+
+    <!-- Linear Gradients -->
+    <section class="card">
+      <h2>Linear Gradients</h2>
+      <p>CSS <code>linear-gradient()</code> backgrounds with different angles and stops.</p>
+      <div class="gradient-demos">
+        <div class="grad grad-lr">left → right</div>
+        <div class="grad grad-tb">top → bottom</div>
+        <div class="grad grad-diag">diagonal</div>
+        <div class="grad grad-multi">multi-stop</div>
+        <div class="grad grad-angle">135deg</div>
+      </div>
+    </section>
+
+    <!-- CSS Filters -->
+    <section class="card">
+      <h2>CSS Filters</h2>
+      <p>The <code>filter</code> property: blur, grayscale, sepia, brightness, contrast, saturate, hue-rotate, invert.</p>
+      <div class="filter-demos">
+        <div class="fil fil-none">none</div>
+        <div class="fil fil-blur">blur(4px)</div>
+        <div class="fil fil-gray">grayscale(100%)</div>
+        <div class="fil fil-sepia">sepia(100%)</div>
+        <div class="fil fil-bright">brightness(1.8)</div>
+        <div class="fil fil-contrast">contrast(2)</div>
+        <div class="fil fil-sat">saturate(3)</div>
+        <div class="fil fil-hue">hue-rotate(120deg)</div>
+        <div class="fil fil-invert">invert(100%)</div>
+      </div>
+    </section>
+
+    <!-- Background Image -->
+    <section class="card">
+      <h2>Background Image</h2>
+      <div class="bgimg-demo-row">
+        <div class="bgimg-norepeat">
+          <p>no-repeat, center</p>
+        </div>
+        <div class="bgimg-repeat">
+          <p>repeat (tiled)</p>
+        </div>
+        <div class="bgimg-cover">
+          <p>cover</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CSS Variables -->
+    <section class="card">
+      <h2>CSS Variables</h2>
+      <p>Custom properties defined on <code>:root</code> and consumed with <code>var()</code>.</p>
+
+      <div class="var-row">
+        <div class="var-box var-primary">--primary</div>
+        <div class="var-box var-secondary">--secondary</div>
+        <div class="var-box var-accent">--accent</div>
+      </div>
+
+      <div class="var-row">
+        <div class="var-card">Spacing from <code>var(--space-md)</code></div>
+        <div class="var-card var-card-large">Larger via <code>var(--space-lg)</code></div>
+      </div>
+
+      <div class="var-row">
+        <div class="var-fallback">Fallback: <code>var(--undefined, #f59e0b)</code></div>
+        <div class="var-nested">Nested: <code>var(--color-text)</code> → <code>var(--primary)</code></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
+  </footer>
+
+</body>
+</html>

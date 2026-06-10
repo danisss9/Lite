@@ -1863,3 +1863,57 @@ footer {
   animation: spin 1.2s linear infinite;
   margin-bottom: 14px;
 }
+
+/* ── Navigation: back button ─────────────────── */
+.back-btn {
+  display: inline-block;
+  margin-bottom: 14px;
+  padding: 6px 14px;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 0.9em;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.back-btn:hover {
+  background-color: #dbeafe;
+}
+
+/* ── Index hub ───────────────────────────────── */
+.index-intro {
+  color: #64748b;
+  margin-bottom: 18px;
+}
+
+.index-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.index-card {
+  display: block;
+  flex-grow: 1;
+  flex-basis: 300px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 18px 20px;
+  text-decoration: none;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.index-card:hover {
+  border-color: #1d4ed8;
+  background-color: #f8fafc;
+}
+
+.index-card h3 {
+  color: #1d4ed8;
+  font-size: 1.05em;
+  margin-bottom: 6px;
+}

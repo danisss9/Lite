@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transforms, Transitions &amp; Animations — Lite Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="back-btn">&larr; Back to index</a>
+    <h1>Transforms, Transitions &amp; Animations</h1>
+    <p class="subtitle">2D transforms, transitions, keyframe animations, pseudo-class states, and animation events</p>
+  </header>
+
+  <main>
+
+    <!-- CSS 2D Transforms -->
+    <section class="card">
+      <h2>CSS 2D Transforms</h2>
+      <p>The <code>transform</code> property: rotate, scale, translate, skew.</p>
+      <div class="transform-demos">
+        <div class="tfm tfm-rotate">rotate(30deg)</div>
+        <div class="tfm tfm-scale">scale(1.4)</div>
+        <div class="tfm tfm-translate">translate(20px, -10px)</div>
+        <div class="tfm tfm-skew">skew(15deg, 5deg)</div>
+        <div class="tfm tfm-combined">rotate + scale</div>
+      </div>
+    </section>
+
+    <!-- Transitions & Animations -->
+    <section class="card">
+      <h2>Transitions &amp; Animations</h2>
+
+      <p>Hover the buttons to see CSS transitions.</p>
+      <div class="anim-row">
+        <button type="button" class="btn-transition-color">Color transition</button>
+        <button type="button" class="btn-transition-scale">Size transition</button>
+        <button type="button" class="btn-transition-multi">Multi-property</button>
+      </div>
+
+      <p class="anim-section-label">Continuous @keyframes animations:</p>
+      <div class="anim-row">
+        <div class="anim-pulse">Pulse</div>
+        <div class="anim-spin-border">Spin</div>
+        <div class="anim-bounce">Bounce</div>
+        <div class="anim-fade">Fade</div>
+      </div>
+    </section>
+
+    <!-- Pseudo-classes -->
+    <section class="card">
+      <h2>Pseudo-classes</h2>
+
+      <p>:hover — background and color change on hover:</p>
+      <div class="hover-row">
+        <div class="hover-box">Hover me</div>
+        <div class="hover-box hover-box-green">Hover me</div>
+        <div class="hover-box hover-box-purple">Hover me</div>
+      </div>
+
+      <p>:hover on links — underline disappears on hover:</p>
+      <p><a href="#" class="hover-link">Hover this link</a></p>
+
+      <p>:focus — input border highlights on focus (click to focus):</p>
+      <div class="form-row">
+        <input type="text" class="focus-input" placeholder="Click to focus..." />
+      </div>
+
+      <p>:active — button darkens while pressed:</p>
+      <div>
+        <button class="active-btn">Press and hold</button>
+        <button class="active-btn active-btn-red ml-sm">Press me too</button>
+      </div>
+
+      <p>Combined :hover + :active — different states:</p>
+      <div class="state-box">Hover, then click me</div>
+    </section>
+
+    <!-- Animation play state -->
+    <section class="card">
+      <h2>Animation Play State</h2>
+      <p>Toggle <code>animation-play-state: paused / running</code>.</p>
+      <div id="spin-box" class="spin-box">⚙</div>
+      <div class="btn-row">
+        <button onclick="document.getElementById('spin-box').style.animationPlayState='running'">Resume</button>
+        <button onclick="document.getElementById('spin-box').style.animationPlayState='paused'">Pause</button>
+      </div>
+    </section>
+
+    <!-- Animation events -->
+    <section class="card">
+      <h2>Animation &amp; Transition Events</h2>
+      <p>Events: <code>animationstart</code>, <code>animationend</code>, <code>transitionend</code>.</p>
+      <div id="anim-evt-box" class="anim-evt-box">Hover me</div>
+      <p id="anim-evt-log" class="muted">Event log: (none yet)</p>
+    </section>
+
+    <!-- requestAnimationFrame -->
+    <section class="card">
+      <h2>requestAnimationFrame</h2>
+      <p>Smooth animation powered by <code>requestAnimationFrame</code>.</p>
+
+      <div class="raf-track">
+        <div id="raf-ball" class="raf-ball"></div>
+      </div>
+      <div class="mt-sm">
+        <button id="raf-start">Start</button>
+        <button id="raf-stop" class="ml-sm">Stop</button>
+        <button id="raf-reset" class="ml-sm">Reset</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
+  </footer>
+
+  <script src="animations.js"></script>
+</body>
+</html>

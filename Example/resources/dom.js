@@ -1,72 +1,3 @@
-// ── Form ──────────────────────────────────────────────────────────────────
-document.getElementById('submit-btn').addEventListener('click', function () {
-  var name = document.getElementById('name').value.trim();
-  var email = document.getElementById('email').value.trim();
-  var agreed = document.getElementById('agree').checked;
-  var result = document.getElementById('form-result');
-
-  if (!name) {
-    result.textContent = 'Please enter your name.';
-    return;
-  }
-  if (!email) {
-    result.textContent = 'Please enter your email.';
-    return;
-  }
-  if (!agreed) {
-    result.textContent = 'Please agree to the terms.';
-    return;
-  }
-
-  result.textContent = 'Submitted! Hello, ' + name + ' (' + email + ')';
-});
-
-// ── Counter ───────────────────────────────────────────────────────────────
-var count = 0;
-
-function updateCount() {
-  document.getElementById('count-display').textContent = String(count);
-}
-
-document.getElementById('inc-btn').addEventListener('click', function () {
-  count += 1;
-  updateCount();
-});
-
-document.getElementById('dec-btn').addEventListener('click', function () {
-  count -= 1;
-  updateCount();
-});
-
-document.getElementById('reset-btn').addEventListener('click', function () {
-  count = 0;
-  updateCount();
-});
-
-// ── Todo list ─────────────────────────────────────────────────────────────
-var todoCount = 0;
-
-document.getElementById('todo-add').addEventListener('click', function () {
-  var input = document.getElementById('todo-input');
-  var text = input.value.trim();
-  if (!text) return;
-
-  todoCount += 1;
-  var list = document.getElementById('todo-list');
-  var item = document.createElement('p');
-  item.setAttribute('id', 'todo-' + todoCount);
-  item.style.setProperty('margin-top', '6px');
-  item.style.setProperty('color', '#334155');
-  item.textContent = todoCount + '. ' + text;
-  list.appendChild(item);
-
-  input.value = '';
-});
-
-// ================================================================
-// NEW FEATURE DEMOS (Phases 1–9)
-// ================================================================
-
 // ── DOM Events — bubbling ────────────────────────────────────────────────
 (function () {
   var log = document.getElementById('ev-log');
@@ -258,71 +189,6 @@ document.getElementById('todo-add').addEventListener('click', function () {
   });
 })();
 
-// ── Canvas 2D ────────────────────────────────────────────────────────────
-(function () {
-  var canvas = document.getElementById('demo-canvas');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  // background
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillRect(0, 0, 460, 130);
-
-  // filled rectangles
-  ctx.fillStyle = '#3b82f6';
-  ctx.fillRect(12, 12, 44, 44);
-  ctx.fillStyle = '#22c55e';
-  ctx.fillRect(66, 12, 44, 44);
-  ctx.strokeStyle = '#ef4444';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(120, 12, 44, 44);
-
-  // circle (arc)
-  ctx.beginPath();
-  ctx.arc(200, 34, 22, 0, 2 * 3.14159);
-  ctx.fillStyle = '#f59e0b';
-  ctx.fill();
-
-  // triangle path
-  ctx.beginPath();
-  ctx.moveTo(240, 12);
-  ctx.lineTo(280, 56);
-  ctx.lineTo(240, 56);
-  ctx.closePath();
-  ctx.fillStyle = '#8b5cf6';
-  ctx.fill();
-
-  // bezier curve
-  ctx.beginPath();
-  ctx.moveTo(300, 56);
-  ctx.bezierCurveTo(320, 0, 360, 0, 380, 56);
-  ctx.strokeStyle = '#ec4899';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // text
-  ctx.fillStyle = '#1e293b';
-  ctx.font = '13px sans-serif';
-  ctx.fillText('Canvas 2D rendered inside Lite Browser', 12, 90);
-
-  // divider line
-  ctx.beginPath();
-  ctx.moveTo(12, 108);
-  ctx.lineTo(448, 108);
-  ctx.strokeStyle = '#cbd5e1';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // gradient bar via filled rects
-  var barY = 115;
-  for (var i = 0; i < 20; i++) {
-    var hue = Math.round(i * 18);
-    ctx.fillStyle = 'hsl(' + hue + ', 70%, 55%)';
-    ctx.fillRect(12 + i * 22, barY, 20, 8);
-  }
-})();
-
 // ── Geometry APIs ────────────────────────────────────────────────────────
 (function () {
   document.getElementById('geo-btn').addEventListener('click', function () {
@@ -411,10 +277,6 @@ document.getElementById('todo-add').addEventListener('click', function () {
   });
 })();
 
-// ================================================================
-// TIER 1 FEATURE DEMOS
-// ================================================================
-
 // ── Keyboard Events ──────────────────────────────────────────────────────
 (function () {
   var input = document.getElementById('kb-input');
@@ -454,94 +316,7 @@ document.getElementById('todo-add').addEventListener('click', function () {
   });
 })();
 
-// ── requestAnimationFrame ────────────────────────────────────────────────
-(function () {
-  var ball = document.getElementById('raf-ball');
-  var pos = 2;
-  var dir = 1;
-  var rafId = null;
-  var running = false;
-
-  function animate() {
-    pos += dir * 3;
-    if (pos > 420) dir = -1;
-    if (pos < 2) dir = 1;
-    ball.style.left = pos + 'px';
-    if (running) {
-      rafId = requestAnimationFrame(animate);
-    }
-  }
-
-  document.getElementById('raf-start').addEventListener('click', function () {
-    if (running) return;
-    running = true;
-    rafId = requestAnimationFrame(animate);
-  });
-  document.getElementById('raf-stop').addEventListener('click', function () {
-    running = false;
-    if (rafId !== null) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
-    }
-  });
-  document.getElementById('raf-reset').addEventListener('click', function () {
-    running = false;
-    if (rafId !== null) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
-    }
-    pos = 2;
-    dir = 1;
-    ball.style.left = '2px';
-  });
-})();
-
-// ── Form Events ──────────────────────────────────────────────────────────
-(function () {
-  var nameInput = document.getElementById('fe-name');
-  var rangeInput = document.getElementById('fe-range');
-  var live = document.getElementById('fe-live');
-  var rangeVal = document.getElementById('fe-range-val');
-  var log = document.getElementById('fe-log');
-  var form = document.getElementById('fe-form');
-
-  nameInput.addEventListener('input', function () {
-    live.textContent = 'Live input: ' + nameInput.value;
-  });
-
-  nameInput.addEventListener('change', function () {
-    log.textContent = 'change event: name="' + nameInput.value + '"';
-  });
-
-  rangeInput.addEventListener('input', function () {
-    rangeVal.textContent = 'Range value: ' + rangeInput.value;
-  });
-
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    log.textContent = 'submit! name="' + nameInput.value + '" mood=' + rangeInput.value;
-  });
-})();
-
-// ---------------------------------- TIER 2 DEMOS ---------------------------
-
-// -- Animation / Transition events ----------------------------------------
-(function () {
-  var box = document.getElementById('anim-evt-box');
-  var log = document.getElementById('anim-evt-log');
-  if (!box || !log) return;
-
-  function append(msg) {
-    var ts = (Date.now() % 100000).toString();
-    log.textContent = '[' + ts + '] ' + msg;
-  }
-
-  box.addEventListener('transitionend', function (e) {
-    append('transitionend: ' + e.propertyName);
-  });
-})();
-
-// -- Dataset init display --------------------------------------------------
+// ── Dataset init display ─────────────────────────────────────────────────
 (function () {
   var el = document.getElementById('ds-el');
   var out = document.getElementById('ds-out');

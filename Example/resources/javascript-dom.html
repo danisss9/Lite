@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JavaScript &amp; DOM APIs — Lite Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="back-btn">&larr; Back to index</a>
+    <h1>JavaScript &amp; DOM APIs</h1>
+    <p class="subtitle">Events, DOM mutation, selectors, timers, geometry, and dynamic styling</p>
+  </header>
+
+  <main>
+
+    <!-- DOM Events — bubbling & capturing -->
+    <section class="card">
+      <h2>DOM Events — Bubbling</h2>
+      <p>Click the inner box. Events bubble from the target up to its ancestor.</p>
+
+      <div id="ev-outer" class="ev-outer">
+        <div id="ev-inner" class="ev-inner">Click me</div>
+      </div>
+      <div id="ev-log" class="demo-log"></div>
+      <button id="ev-clear" class="mt-sm">Clear log</button>
+    </section>
+
+    <!-- stopPropagation / preventDefault -->
+    <section class="card">
+      <h2>Event Control</h2>
+      <p><code>stopPropagation()</code> prevents the event from reaching the outer box.</p>
+
+      <div id="ec-outer" class="ec-outer">
+        <div id="ec-inner" class="ec-inner">Click — stops at inner</div>
+      </div>
+      <div id="ec-log" class="demo-log"></div>
+    </section>
+
+    <!-- createEvent / dispatchEvent -->
+    <section class="card">
+      <h2>Custom Events</h2>
+      <p><code>createEvent</code> + <code>initEvent</code> + <code>dispatchEvent</code> — fire a synthetic event.</p>
+
+      <div id="ce-target" class="ce-target">Waiting for custom event...</div>
+      <button id="ce-fire" class="mt-sm">Dispatch "hello" event</button>
+    </section>
+
+    <!-- CSS Selectors Level 3 -->
+    <section class="card">
+      <h2>CSS Selectors Level 3</h2>
+      <p><code>querySelectorAll</code> with class, attribute, <code>:nth-child</code>, and combinators.</p>
+
+      <ul id="sel-list" class="sel-list">
+        <li class="fruit" data-color="red">Apple</li>
+        <li class="fruit" data-color="yellow">Banana</li>
+        <li class="veggie" data-color="green">Broccoli</li>
+        <li class="fruit" data-color="orange">Orange</li>
+        <li class="veggie" data-color="red">Tomato</li>
+      </ul>
+      <div class="mt-sm">
+        <button id="sel-fruit">.fruit</button>
+        <button id="sel-nth" class="ml-sm">:nth-child(odd)</button>
+        <button id="sel-attr" class="ml-sm">[data-color="red"]</button>
+        <button id="sel-reset" class="ml-sm">Reset</button>
+      </div>
+    </section>
+
+    <!-- DOM Mutation -->
+    <section class="card">
+      <h2>DOM Mutation</h2>
+      <p><code>createElement</code>, <code>appendChild</code>, <code>cloneNode</code>, <code>insertBefore</code>, <code>removeChild</code>.</p>
+
+      <div id="mut-container" class="mut-container"></div>
+      <div class="mt-sm">
+        <button id="mut-add">Add</button>
+        <button id="mut-clone" class="ml-sm">Clone first</button>
+        <button id="mut-remove" class="ml-sm">Remove last</button>
+        <button id="mut-clear" class="ml-sm">Clear all</button>
+      </div>
+      <p id="mut-count" class="demo-info mt-sm">Items: 0</p>
+    </section>
+
+    <!-- classList API -->
+    <section class="card">
+      <h2>classList API</h2>
+      <p><code>add</code>, <code>remove</code>, <code>toggle</code>, <code>contains</code> on an element's class list.</p>
+
+      <div id="cl-target" class="cl-target">Toggle my class</div>
+      <p id="cl-readout" class="demo-info mt-sm"></p>
+      <div class="mt-sm">
+        <button id="cl-toggle">Toggle .active</button>
+        <button id="cl-check" class="ml-sm">Has .active?</button>
+      </div>
+    </section>
+
+    <!-- Timers (setTimeout / setInterval) -->
+    <section class="card">
+      <h2>Timers</h2>
+      <p>Real <code>setInterval</code> and <code>clearInterval</code>.</p>
+
+      <p id="timer-val" class="timer-value">0</p>
+      <div class="mt-sm">
+        <button id="timer-start">Start</button>
+        <button id="timer-stop" class="ml-sm">Stop</button>
+        <button id="timer-reset" class="ml-sm">Reset</button>
+      </div>
+    </section>
+
+    <!-- Geometry APIs -->
+    <section class="card">
+      <h2>Geometry APIs</h2>
+      <p><code>getBoundingClientRect()</code>, <code>offsetWidth</code>, <code>offsetHeight</code>.</p>
+
+      <div id="geo-target" class="geo-box">Measure this box</div>
+      <p id="geo-readout" class="demo-info mt-sm"></p>
+      <button id="geo-btn" class="mt-sm">Measure</button>
+    </section>
+
+    <!-- getComputedStyle -->
+    <section class="card">
+      <h2>getComputedStyle</h2>
+      <p>Read resolved CSS values via <code>window.getComputedStyle()</code>.</p>
+
+      <div id="cs-target" class="cs-target">Styled element</div>
+      <p id="cs-readout" class="demo-info mt-sm"></p>
+      <button id="cs-btn" class="mt-sm">Read computed styles</button>
+    </section>
+
+    <!-- Dynamic Styling -->
+    <section class="card">
+      <h2>Dynamic Styling</h2>
+      <p>Modify <code>element.style</code> properties at runtime.</p>
+
+      <div class="ds-center">
+        <div id="ds-box" class="ds-box"></div>
+      </div>
+      <div class="mt-sm">
+        <button id="ds-color">Color</button>
+        <button id="ds-round" class="ml-sm">Round</button>
+        <button id="ds-grow" class="ml-sm">Grow</button>
+        <button id="ds-reset" class="ml-sm">Reset</button>
+      </div>
+    </section>
+
+    <!-- TreeWalker -->
+    <section class="card">
+      <h2>TreeWalker</h2>
+      <p><code>document.createTreeWalker()</code> iterates elements depth-first.</p>
+
+      <div id="tw-tree" class="tw-tree">
+        <div>Section A
+          <div>A-1</div>
+          <div>A-2</div>
+        </div>
+        <div>Section B
+          <div>B-1</div>
+        </div>
+      </div>
+      <button id="tw-btn" class="mt-sm">Walk tree</button>
+      <p id="tw-output" class="demo-info mt-sm"></p>
+    </section>
+
+    <!-- Keyboard Events -->
+    <section class="card">
+      <h2>Keyboard Events</h2>
+      <p>Press keys while the input is focused to see <code>keydown</code> / <code>keyup</code> events.</p>
+
+      <input id="kb-input" type="text" placeholder="Type here..." title="Keyboard test" />
+      <div id="kb-log" class="demo-log">Waiting for key press...</div>
+    </section>
+
+    <!-- Mouse Coordinates -->
+    <section class="card">
+      <h2>Mouse Event Coordinates</h2>
+      <p>Click inside the box to see <code>clientX</code>, <code>clientY</code>, and <code>button</code> values.</p>
+
+      <div id="mouse-area" class="mouse-area">Click anywhere in this box</div>
+      <div id="mouse-log" class="demo-log">Waiting for click...</div>
+    </section>
+
+    <!-- Dataset -->
+    <section class="card">
+      <h2>Element.dataset</h2>
+      <p>Custom <code>data-*</code> attributes read and written via <code>element.dataset</code>.</p>
+      <div id="ds-el" data-user-name="Alice" data-score="42" data-active="true" class="demo-box"></div>
+      <p id="ds-out" class="muted">Loading dataset…</p>
+      <button onclick="
+        var el = document.getElementById('ds-el');
+        el.dataset.score = parseInt(el.dataset.score) + 10;
+        document.getElementById('ds-out').textContent =
+          'name=' + el.dataset.userName +
+          ', score=' + el.dataset.score +
+          ', active=' + el.dataset.active;
+      ">Increment Score</button>
+    </section>
+
+    <!-- Window scroll -->
+    <section class="card">
+      <h2>window.scrollTo / scrollBy</h2>
+      <p>Programmatic scrolling via <code>window.scrollTo()</code> and <code>window.scrollBy()</code>.</p>
+      <div class="btn-row">
+        <button onclick="window.scrollTo(0, 0)">Scroll to Top</button>
+        <button onclick="window.scrollBy(0, 200)">Scroll Down 200px</button>
+        <button onclick="window.scrollBy(0, -200)">Scroll Up 200px</button>
+        <button onclick="document.getElementById('scroll-pos').textContent = 'scrollY = ' + window.scrollY">Read scrollY</button>
+      </div>
+      <p id="scroll-pos" class="muted">scrollY = (not read yet)</p>
+    </section>
+
+    <!-- Pointer Events: None -->
+    <section class="card">
+      <h2>Pointer Events: None</h2>
+      <p>The red overlay below has <code>pointer-events: none</code> — hover and click pass through to the button underneath.</p>
+      <div class="pe-wrapper">
+        <button class="pe-btn" onclick="this.textContent = 'Clicked! ✓'">Click me through the overlay</button>
+        <div class="pe-overlay">pointer-events: none overlay</div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
+  </footer>
+
+  <script src="dom.js"></script>
+</body>
+</html>

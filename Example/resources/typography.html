@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typography &amp; Text — Lite Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="back-btn">&larr; Back to index</a>
+    <h1>Typography &amp; Text</h1>
+    <p class="subtitle">Headings, inline elements, alignment, spacing, and text styling</p>
+  </header>
+
+  <main>
+
+    <!-- Typography -->
+    <section class="card">
+      <h2>Typography</h2>
+      <h1>Heading 1</h1>
+      <h2>Heading 2</h2>
+      <h3>Heading 3</h3>
+      <h4>Heading 4</h4>
+      <h5>Heading 5</h5>
+      <h6>Heading 6</h6>
+      <p>A regular paragraph. The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</p>
+      <p class="muted">A muted paragraph used for secondary information or captions.</p>
+      <a href="https://github.com/anthropics/claude-code">Visit a link &rarr;</a>
+    </section>
+
+    <!-- Inline text elements -->
+    <section class="card">
+      <h2>Inline Text Elements</h2>
+      <p><strong>Bold via strong</strong> and <b>bold via b</b></p>
+      <p><em>Italic via em</em> and <i>italic via i</i></p>
+      <p><u>Underlined text</u> and <s>strikethrough text</s></p>
+      <p>Normal <small>small text</small> and back to normal</p>
+      <p>H<sub>2</sub>O and E = mc<sup>2</sup></p>
+      <p><mark>Highlighted text</mark> stands out from the rest</p>
+      <p>Inline code: <code>console.log("hello")</code></p>
+      <p>First line<br>Second line after a br<br>Third line</p>
+      <p><del>Deleted content</del> replaced by <ins>inserted content</ins></p>
+    </section>
+
+    <!-- Text alignment -->
+    <section class="card">
+      <h2>Text Alignment</h2>
+      <p class="align-left">Left aligned — the default. The quick brown fox jumps over the lazy dog.</p>
+      <p class="align-center">Center aligned. The quick brown fox jumps over the lazy dog.</p>
+      <p class="align-right">Right aligned. The quick brown fox jumps over the lazy dog.</p>
+    </section>
+
+    <!-- White-space -->
+    <section class="card">
+      <h2>White-space &amp; Pre-formatted</h2>
+      <pre class="code-block">function greet(name) {
+    return "Hello, " + name + "!";
+}
+
+console.log(greet("World"));</pre>
+      <p class="nowrap-demo">This paragraph has white-space: nowrap — it will not wrap no matter how long the text gets and overflows its container.</p>
+    </section>
+
+    <!-- Line height -->
+    <section class="card">
+      <h2>Line Height</h2>
+      <p class="line-tight">Tight line-height (1.1). The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</p>
+      <p class="line-normal">Normal line-height (1.4). The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</p>
+      <p class="line-loose">Loose line-height (2.0). The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</p>
+    </section>
+
+    <!-- Line-height Variations -->
+    <section class="card">
+      <h2>Line-height Variations</h2>
+      <p>Different <code>line-height</code> values affect vertical rhythm.</p>
+
+      <div class="lh-demos">
+        <div class="lh-box lh-tight">
+          <strong>line-height: 1.0</strong><br/>
+          Text is tightly packed with minimal spacing between lines. This makes for compact paragraphs.
+        </div>
+        <div class="lh-box lh-normal">
+          <strong>line-height: 1.5</strong><br/>
+          Standard readable spacing commonly used for body text. Comfortable for extended reading.
+        </div>
+        <div class="lh-box lh-loose">
+          <strong>line-height: 2.2</strong><br/>
+          Very generous spacing between lines. Often used for legal text or draft documents.
+        </div>
+      </div>
+    </section>
+
+    <!-- Text Transform -->
+    <section class="card">
+      <h2>Text Transform</h2>
+      <p class="tt-upper">this text is uppercase</p>
+      <p class="tt-lower">THIS TEXT IS LOWERCASE</p>
+      <p class="tt-cap">this text is capitalized</p>
+    </section>
+
+    <!-- Letter Spacing & Word Spacing -->
+    <section class="card">
+      <h2>Letter &amp; Word Spacing</h2>
+      <p class="ls-tight">Tight letter-spacing (-0.5px)</p>
+      <p>Normal letter-spacing (default)</p>
+      <p class="ls-wide">Wide letter-spacing (3px)</p>
+      <p class="ls-ultra">Ultra-wide letter-spacing (8px)</p>
+      <p class="ws-wide">Wide word spacing applied to this sentence.</p>
+    </section>
+
+    <!-- Text Indent -->
+    <section class="card">
+      <h2>Text Indent</h2>
+      <p class="text-indent">This paragraph has a 40px first-line indent, which is a common typographic convention in printed material. The remaining lines wrap normally without indentation.</p>
+      <p class="text-indent-pct">This paragraph uses a 10% text-indent relative to its container width. This is useful for responsive layouts.</p>
+    </section>
+
+    <!-- Vertical Align -->
+    <section class="card">
+      <h2>Vertical Align</h2>
+      <p class="va-demo">
+        Normal text
+        <span class="va-super">superscript</span>
+        then normal
+        <span class="va-sub">subscript</span>
+        then normal
+        <span class="va-top">top</span>
+        <span class="va-middle">middle</span>
+        <span class="va-bottom">bottom</span>
+      </p>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
+  </footer>
+
+</body>
+</html>

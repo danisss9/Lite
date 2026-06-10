@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lists, Tables &amp; Generated Content — Lite Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="back-btn">&larr; Back to index</a>
+    <h1>Lists, Tables &amp; Generated Content</h1>
+    <p class="subtitle">Lists, tables, spanning cells, counters, and pseudo-elements</p>
+  </header>
+
+  <main>
+
+    <!-- Lists -->
+    <section class="card">
+      <h2>Lists</h2>
+      <h3>Unordered list</h3>
+      <ul>
+        <li>Apples</li>
+        <li>Bananas</li>
+        <li>Cherries</li>
+      </ul>
+      <h3>Ordered list</h3>
+      <ol>
+        <li>First step</li>
+        <li>Second step</li>
+        <li>Third step</li>
+      </ol>
+      <h3>Definition list</h3>
+      <dl>
+        <dt>HTML</dt>
+        <dd>HyperText Markup Language — the structure of the web.</dd>
+        <dt>CSS</dt>
+        <dd>Cascading Style Sheets — the presentation of the web.</dd>
+      </dl>
+    </section>
+
+    <!-- Blockquote -->
+    <section class="card">
+      <h2>Blockquote</h2>
+      <p>As someone once said:</p>
+      <blockquote class="quote">
+        The best way to predict the future is to invent it.
+      </blockquote>
+      <p>That's a great quote.</p>
+    </section>
+
+    <!-- List Style Types -->
+    <section class="card">
+      <h2>List Style Types</h2>
+      <div class="list-demo-row">
+        <div>
+          <h3>disc (default)</h3>
+          <ul class="lst-disc"><li>Alpha</li><li>Beta</li><li>Gamma</li></ul>
+        </div>
+        <div>
+          <h3>circle</h3>
+          <ul class="lst-circle"><li>Alpha</li><li>Beta</li><li>Gamma</li></ul>
+        </div>
+        <div>
+          <h3>square</h3>
+          <ul class="lst-square"><li>Alpha</li><li>Beta</li><li>Gamma</li></ul>
+        </div>
+        <div>
+          <h3>none</h3>
+          <ul class="lst-none"><li>Alpha</li><li>Beta</li><li>Gamma</li></ul>
+        </div>
+      </div>
+      <div class="list-demo-row">
+        <div>
+          <h3>decimal</h3>
+          <ol class="lst-decimal"><li>First</li><li>Second</li><li>Third</li></ol>
+        </div>
+        <div>
+          <h3>lower-alpha</h3>
+          <ol class="lst-lower-alpha"><li>First</li><li>Second</li><li>Third</li></ol>
+        </div>
+        <div>
+          <h3>upper-roman</h3>
+          <ol class="lst-upper-roman"><li>First</li><li>Second</li><li>Third</li></ol>
+        </div>
+        <div>
+          <h3>inside position</h3>
+          <ul class="lst-inside"><li>Item flows inline with the marker text here</li><li>Second item</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tables -->
+    <section class="card">
+      <h2>Tables</h2>
+      <table class="demo-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Alice</td>
+            <td>Engineer</td>
+            <td class="status-active">Active</td>
+          </tr>
+          <tr class="alt">
+            <td>Bob</td>
+            <td>Designer</td>
+            <td class="status-active">Active</td>
+          </tr>
+          <tr>
+            <td>Carol</td>
+            <td>Manager</td>
+            <td class="status-away">Away</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Table Properties -->
+    <section class="card">
+      <h2>Table: Border Collapse</h2>
+      <h3>Separate borders (with spacing)</h3>
+      <table class="tbl-separate">
+        <tr><th>Name</th><th>Role</th><th>Status</th></tr>
+        <tr><td>Alice</td><td>Engineer</td><td>Active</td></tr>
+        <tr><td>Bob</td><td>Designer</td><td>Away</td></tr>
+      </table>
+      <h3>Collapsed borders</h3>
+      <table class="tbl-collapse">
+        <tr><th>Name</th><th>Role</th><th>Status</th></tr>
+        <tr><td>Alice</td><td>Engineer</td><td>Active</td></tr>
+        <tr><td>Bob</td><td>Designer</td><td>Away</td></tr>
+      </table>
+    </section>
+
+    <!-- Table Colspan / Rowspan -->
+    <section class="card">
+      <h2>Table Colspan &amp; Rowspan</h2>
+      <p>Cells spanning multiple columns and rows.</p>
+
+      <table class="tbl-span">
+        <thead>
+          <tr>
+            <th colspan="3">Q1 2024 Report</th>
+          </tr>
+          <tr>
+            <th>Month</th>
+            <th>Revenue</th>
+            <th>Expenses</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>January</td>
+            <td>$12,000</td>
+            <td>$8,500</td>
+          </tr>
+          <tr>
+            <td>February</td>
+            <td>$14,200</td>
+            <td>$9,100</td>
+          </tr>
+          <tr>
+            <td>March</td>
+            <td>$11,800</td>
+            <td>$7,900</td>
+          </tr>
+          <tr>
+            <td colspan="2">Total expenses</td>
+            <td>$25,500</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Rowspan example</h3>
+      <table class="tbl-span">
+        <tr>
+          <th>Team</th>
+          <th>Member</th>
+          <th>Role</th>
+        </tr>
+        <tr>
+          <td rowspan="2">Frontend</td>
+          <td>Alice</td>
+          <td>Lead</td>
+        </tr>
+        <tr>
+          <td>Bob</td>
+          <td>Developer</td>
+        </tr>
+        <tr>
+          <td rowspan="3">Backend</td>
+          <td>Carol</td>
+          <td>Lead</td>
+        </tr>
+        <tr>
+          <td>Dave</td>
+          <td>Developer</td>
+        </tr>
+        <tr>
+          <td>Eve</td>
+          <td>DBA</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- CSS Counters -->
+    <section class="card">
+      <h2>CSS Counters</h2>
+      <p>Automatic numbering via <code>counter-reset</code>, <code>counter-increment</code>, and <code>counter()</code> in <code>::before</code> content.</p>
+
+      <div class="counter-steps">
+        <div class="counter-step">Set up the project</div>
+        <div class="counter-step">Install dependencies</div>
+        <div class="counter-step">Write the code</div>
+        <div class="counter-step">Run the tests</div>
+        <div class="counter-step">Deploy to production</div>
+      </div>
+
+      <h3>Nested counters</h3>
+      <div class="counter-chapters">
+        <div class="counter-chapter">Introduction
+          <div class="counter-sections">
+            <div class="counter-section">Overview</div>
+            <div class="counter-section">Background</div>
+          </div>
+        </div>
+        <div class="counter-chapter">Methods
+          <div class="counter-sections">
+            <div class="counter-section">Approach</div>
+            <div class="counter-section">Data collection</div>
+            <div class="counter-section">Analysis</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pseudo-elements ::before / ::after -->
+    <section class="card">
+      <h2>Pseudo-elements</h2>
+      <p class="pe-quote">This paragraph has quotation marks added via ::before and ::after pseudo-elements.</p>
+      <p class="pe-label">This paragraph has a "Note:" label prepended via ::before.</p>
+      <ul>
+        <li class="pe-arrow">Custom arrow marker via ::before</li>
+        <li class="pe-arrow">Another item with arrow</li>
+      </ul>
+    </section>
+
+    <!-- ::first-letter & ::first-line -->
+    <section class="card">
+      <h2>::first-letter &amp; ::first-line</h2>
+      <p>Decorative drop caps and styled first lines for typographic effects.</p>
+
+      <p class="fl-dropcap">Once upon a time in a land far away, there lived a curious developer who spent their days building browser engines from scratch. Each line of code brought the digital world closer to rendering the beauty of the web.</p>
+
+      <p class="fl-firstline">This paragraph demonstrates the ::first-line pseudo-element. The first line of text is rendered in a different color and weight, while subsequent lines use normal styling. Resize the window to see the first-line boundary change.</p>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Box Model &amp; Layout — Lite Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="back-btn">&larr; Back to index</a>
+    <h1>Box Model &amp; Layout</h1>
+    <p class="subtitle">Box model, flexbox, positioning, floats, borders, overflow, and responsive design</p>
+  </header>
+
+  <main>
+
+    <!-- Margin auto centering -->
+    <section class="card">
+      <h2>Margin: auto Centering</h2>
+      <div class="centered-box">This box is centered with margin: 0 auto</div>
+      <div class="centered-box-narrow">Narrow centered box</div>
+    </section>
+
+    <!-- Horizontal rule -->
+    <section class="card">
+      <h2>Horizontal Rule</h2>
+      <p>Content above the rule.</p>
+      <hr>
+      <p>Content below the rule.</p>
+      <hr class="hr-thick">
+      <p>Content below a thicker rule.</p>
+    </section>
+
+    <!-- Boxes: padding & margin -->
+    <section class="card">
+      <h2>Box Model</h2>
+      <div class="box-demo">
+        <div class="demo-outer">
+          <p class="demo-label">margin</p>
+          <div class="demo-border">
+            <p class="demo-label">border</p>
+            <div class="demo-padding">
+              <p class="demo-label">padding</p>
+              <div class="demo-content">content</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Flexbox -->
+    <section class="card">
+      <h2>Flexbox</h2>
+
+      <p>Row — justify-content: space-between, align-items: center:</p>
+      <div class="flex-row-demo">
+        <div class="flex-box flex-blue">A</div>
+        <div class="flex-box flex-green">B</div>
+        <div class="flex-box flex-red">C</div>
+      </div>
+
+      <p>Row — flex-grow (middle item grows):</p>
+      <div class="flex-grow-demo">
+        <div class="flex-box flex-blue">Fixed</div>
+        <div class="flex-box flex-green flex-grow-1">Grows</div>
+        <div class="flex-box flex-red">Fixed</div>
+      </div>
+
+      <p>Column — justify-content: flex-start, gap: 8px:</p>
+      <div class="flex-col-demo">
+        <div class="flex-box flex-blue">Top</div>
+        <div class="flex-box flex-green">Middle</div>
+        <div class="flex-box flex-red">Bottom</div>
+      </div>
+
+      <p>Wrap — items wrap onto next line:</p>
+      <div class="flex-wrap-demo">
+        <div class="flex-box flex-blue">One</div>
+        <div class="flex-box flex-green">Two</div>
+        <div class="flex-box flex-red">Three</div>
+        <div class="flex-box flex-orange">Four</div>
+        <div class="flex-box flex-purple">Five</div>
+      </div>
+    </section>
+
+    <!-- Percentage Heights -->
+    <section class="card">
+      <h2>Percentage Heights</h2>
+
+      <p>Parent with explicit height: 160px — children use percentage heights relative to it:</p>
+      <div class="pct-parent">
+        <div class="pct-child pct-25">25%</div>
+        <div class="pct-child pct-50">50%</div>
+        <div class="pct-child pct-75">75%</div>
+        <div class="pct-child pct-100">100%</div>
+      </div>
+
+      <p>Nested: outer 200px, inner 50% (=100px), innermost 50% (=50px):</p>
+      <div class="pct-nested-outer">
+        outer 200px
+        <div class="pct-nested-inner">
+          inner 50%
+          <div class="pct-nested-innermost">inner 50%</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CSS Positioning -->
+    <section class="card">
+      <h2>CSS Positioning</h2>
+
+      <p>position: relative — box shifted 12px right and 8px down from its normal position:</p>
+      <div class="pos-relative-demo">Shifted</div>
+
+      <p>position: absolute — badge anchored to top-right of the container:</p>
+      <div class="pos-container">
+        Container (position: relative)
+        <span class="pos-badge">NEW</span>
+      </div>
+
+      <p>overflow: hidden — content clipped to box:</p>
+      <div class="overflow-hidden-demo">
+        <p>This paragraph is inside an overflow:hidden container that is shorter than the content, so the bottom gets clipped away.</p>
+        <p>This second paragraph should not be visible.</p>
+      </div>
+
+      <p>z-index — red box (z-index: 2) paints on top of blue box (z-index: 1):</p>
+      <div class="zindex-container">
+        <div class="zindex-blue">z:1</div>
+        <div class="zindex-red">z:2</div>
+      </div>
+    </section>
+
+    <!-- Per-element Overflow Scroll -->
+    <section class="card">
+      <h2>Per-element Overflow Scroll</h2>
+      <p>Containers with fixed height and <code>overflow: auto</code> gain independent scrollbars.</p>
+
+      <div class="scroll-demo">
+        <div class="scroll-box">
+          <p>Line 1: The quick brown fox jumps over the lazy dog.</p>
+          <p>Line 2: Pack my box with five dozen liquor jugs.</p>
+          <p>Line 3: How vexingly quick daft zebras jump.</p>
+          <p>Line 4: The five boxing wizards jump quickly.</p>
+          <p>Line 5: Jackdaws love my big sphinx of quartz.</p>
+          <p>Line 6: Bright vixens jump; dozy fowl quack.</p>
+          <p>Line 7: Quick zephyrs blow, vexing daft Jim.</p>
+          <p>Line 8: Two driven jocks help fax my big quiz.</p>
+          <p>Line 9: The jay, pig, fox, zebra and my wolves quack!</p>
+          <p>Line 10: Sympathizing would fix Quaker objectives.</p>
+          <p>Line 11: A wizard's job is to vex chumps quickly in fog.</p>
+          <p>Line 12: Watch Jeopardy!, Alex Trebek's fun TV quiz game.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Float & Clear -->
+    <section class="card">
+      <h2>Float &amp; Clear</h2>
+
+      <p>float: left — text wraps around the floated box:</p>
+      <div class="float-container">
+        <div class="float-left-box">Float Left</div>
+        <p>This paragraph flows around the floated box on the left. The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. The remaining text wraps beneath once it passes the float.</p>
+      </div>
+
+      <p>float: right — text wraps on the other side:</p>
+      <div class="float-container">
+        <div class="float-right-box">Float Right</div>
+        <p>This paragraph flows around the floated box on the right. The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. The remaining text wraps beneath once it passes the float.</p>
+      </div>
+
+      <p>Two floats side by side:</p>
+      <div class="float-container">
+        <div class="float-left-box">Left</div>
+        <div class="float-right-box">Right</div>
+        <p>Content flows between the two floated boxes. The quick brown fox jumps over the lazy dog.</p>
+      </div>
+
+      <p>clear: both — the cleared element drops below all floats:</p>
+      <div class="float-container">
+        <div class="float-left-box">Floated</div>
+        <p>This text wraps around the float as expected.</p>
+        <div class="clear-both-box">clear: both — I appear below the float</div>
+      </div>
+    </section>
+
+    <!-- Position: Sticky -->
+    <section class="card">
+      <h2>Position: Sticky</h2>
+      <p>The header below sticks to the top of the viewport while scrolling inside the container.</p>
+      <div class="sticky-container">
+        <div class="sticky-header">🔒 Sticky Header — sticks at top: 8px</div>
+        <p>Scroll this page down. The header above will stick near the top of the viewport once its normal position scrolls past it.</p>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+      </div>
+    </section>
+
+    <!-- Aspect Ratio -->
+    <section class="card">
+      <h2>Aspect Ratio</h2>
+      <p>Boxes with <code>aspect-ratio</code> maintain their proportions when only width is set.</p>
+      <div class="aspect-demos">
+        <div class="aspect-box aspect-16-9">16 / 9</div>
+        <div class="aspect-box aspect-1-1">1 / 1</div>
+        <div class="aspect-box aspect-4-3">4 / 3</div>
+        <div class="aspect-box aspect-2-1">2 / 1</div>
+      </div>
+    </section>
+
+    <!-- calc() expressions -->
+    <section class="card">
+      <h2>calc() Expressions</h2>
+      <p>Widths, gaps, and padding computed with <code>calc()</code>.</p>
+
+      <div class="calc-demo-row">
+        <div class="calc-box calc-half">calc(50% - 8px)</div>
+        <div class="calc-box calc-half">calc(50% - 8px)</div>
+      </div>
+
+      <div class="calc-demo-row">
+        <div class="calc-box calc-third">calc(100% / 3 - 8px)</div>
+        <div class="calc-box calc-third">calc(100% / 3 - 8px)</div>
+        <div class="calc-box calc-third">calc(100% / 3 - 8px)</div>
+      </div>
+
+      <div class="calc-nested">
+        <p>Nested: <code>calc((100% - 48px) / 4)</code> per column</p>
+        <div class="calc-demo-row">
+          <div class="calc-box calc-quarter">¼</div>
+          <div class="calc-box calc-quarter">¼</div>
+          <div class="calc-box calc-quarter">¼</div>
+          <div class="calc-box calc-quarter">¼</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Outline -->
+    <section class="card">
+      <h2>Outline</h2>
+      <p>Outlines are drawn outside the border and don't affect layout.</p>
+      <div class="outline-demo-row">
+        <div class="ol-solid">solid</div>
+        <div class="ol-dotted">dotted</div>
+        <div class="ol-dashed">dashed</div>
+        <div class="ol-double">double</div>
+        <div class="ol-offset">offset 4px</div>
+      </div>
+    </section>
+
+    <!-- Border Styles -->
+    <section class="card">
+      <h2>Border Styles</h2>
+      <div class="border-demo-grid">
+        <div class="bd-solid">solid</div>
+        <div class="bd-dotted">dotted</div>
+        <div class="bd-dashed">dashed</div>
+        <div class="bd-double">double</div>
+        <div class="bd-groove">groove</div>
+        <div class="bd-ridge">ridge</div>
+        <div class="bd-inset">inset</div>
+        <div class="bd-outset">outset</div>
+      </div>
+    </section>
+
+    <!-- Border Radius -->
+    <section class="card">
+      <h2>Border Radius</h2>
+      <p>Fixed pixel radii:</p>
+      <div class="radius-row">
+        <div class="radius-box radius-0">0px</div>
+        <div class="radius-box radius-4">4px</div>
+        <div class="radius-box radius-8">8px</div>
+        <div class="radius-box radius-16">16px</div>
+        <div class="radius-box radius-50pct">50%</div>
+      </div>
+      <p>Rounded card with border:</p>
+      <div class="radius-card">
+        <strong>Rounded card</strong>
+        <p>This card has border-radius: 12px applied to both background and border.</p>
+      </div>
+    </section>
+
+    <!-- Text Overflow Ellipsis -->
+    <section class="card">
+      <h2>Text Overflow: Ellipsis</h2>
+      <p>Long text is truncated with <code>…</code> when it overflows its container.</p>
+      <div class="ellipsis-demos">
+        <div class="ellipsis-box">The quick brown fox jumps over the lazy dog and keeps running through the forest.</div>
+        <div class="ellipsis-box" style="width: 180px;">A narrower container clips sooner with an ellipsis.</div>
+        <div class="ellipsis-box" style="width: 300px;"><strong>Bold:</strong> Pack my box with five dozen liquor jugs from the cellar.</div>
+      </div>
+    </section>
+
+    <!-- Responsive Design / @media queries -->
+    <section class="card">
+      <h2>Responsive Design</h2>
+      <p>Resize the window to see styles respond to breakpoints.</p>
+
+      <div class="responsive-grid">
+        <div class="responsive-box">Box 1</div>
+        <div class="responsive-box">Box 2</div>
+        <div class="responsive-box">Box 3</div>
+        <div class="responsive-box">Box 4</div>
+      </div>
+
+      <div class="responsive-text-demo">
+        <p class="responsive-label">Viewport label:</p>
+        <p class="viewport-size-indicator">Wide (≥ 900px)</p>
+      </div>
+
+      <div class="responsive-nav">
+        <span class="nav-item">Home</span>
+        <span class="nav-item">About</span>
+        <span class="nav-item">Work</span>
+        <span class="nav-item">Contact</span>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
+  </footer>
+
+</body>
+</html>

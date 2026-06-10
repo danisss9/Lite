@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SVG &amp; Canvas — Lite Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="back-btn">&larr; Back to index</a>
+    <h1>SVG &amp; Canvas</h1>
+    <p class="subtitle">Vector shapes, SVG transforms, and the Canvas 2D drawing API</p>
+  </header>
+
+  <main>
+
+    <!-- SVG Shapes -->
+    <section class="card">
+      <h2>SVG Shapes</h2>
+      <p>rect, circle, ellipse, polygon, path, line, and text rendered via SkiaSharp.</p>
+
+      <svg width="460" height="120" viewBox="0 0 460 120">
+        <rect x="5" y="10" width="50" height="50" rx="8" fill="#1d4ed8" />
+        <circle cx="100" cy="35" r="25" fill="#16a34a" />
+        <ellipse cx="170" cy="35" rx="30" ry="20" fill="#ea580c" />
+        <polygon points="230,10 260,60 200,60" fill="#dc2626" />
+        <path d="M290,10 Q320,10 320,35 T290,60" fill="none" stroke="#7c3aed" stroke-width="3" />
+        <line x1="340" y1="60" x2="440" y2="10" stroke="#64748b" stroke-width="2" />
+        <text x="5" y="95" font-size="14" fill="#1e293b">SVG text rendered inside Lite Browser</text>
+        <line x1="5" y1="110" x2="455" y2="110" stroke="#cbd5e1" stroke-width="1" />
+      </svg>
+    </section>
+
+    <!-- SVG Transforms -->
+    <section class="card">
+      <h2>SVG Transforms</h2>
+      <p><code>translate</code>, <code>rotate</code>, and <code>scale</code> applied to SVG groups.</p>
+
+      <svg width="400" height="110" viewBox="0 0 400 110">
+        <g transform="translate(40,55)">
+          <rect x="-18" y="-18" width="36" height="36" fill="#7c3aed" rx="4" />
+          <text x="-12" y="5" font-size="11" fill="white">base</text>
+        </g>
+        <g transform="translate(130,55) rotate(45)">
+          <rect x="-18" y="-18" width="36" height="36" fill="#0d9488" rx="4" />
+          <text x="-6" y="5" font-size="11" fill="white">45</text>
+        </g>
+        <g transform="translate(220,55) scale(1.4)">
+          <circle cx="0" cy="0" r="18" fill="#db2777" />
+          <text x="-10" y="5" font-size="10" fill="white">1.4x</text>
+        </g>
+        <g transform="translate(330,55) rotate(-30) scale(0.9)">
+          <polygon points="0,-22 20,12 -20,12" fill="#d97706" />
+        </g>
+      </svg>
+    </section>
+
+    <!-- Canvas 2D -->
+    <section class="card">
+      <h2>Canvas 2D</h2>
+      <p>Drawing rectangles, arcs, paths, and text via <code>canvas.getContext("2d")</code>.</p>
+      <canvas id="demo-canvas" width="460" height="130"></canvas>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
+  </footer>
+
+  <script src="graphics.js"></script>
+</body>
+</html>
