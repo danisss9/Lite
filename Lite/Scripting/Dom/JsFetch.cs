@@ -80,14 +80,8 @@ internal static class JsFetch
 
     private static FetchResult FromDataUri(string dataUri)
     {
-        // data:[<mediatype>][;base64],<data>
-        var comma = dataUri.IndexOf(',');
-        if (comma < 0) return new FetchResult { error = "malformed data URI" };
-        var meta = dataUri[5..comma];
-        var data = dataUri[(comma + 1)..];
-        string text = meta.Contains("base64", StringComparison.OrdinalIgnoreCase)
-            ? System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(data))
-            : Uri.UnescapeDataString(data);
+        if (!Lite.Network.DataUri.TryDecodeText(dataUri, out var text, out _))
+            return new FetchResult { error = "malformed data URI" };
         return new FetchResult { ok = true, status = 200, statusText = "OK", body = text };
     }
 

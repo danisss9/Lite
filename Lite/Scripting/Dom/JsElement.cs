@@ -133,6 +133,36 @@ public class JsElement
         }
     }
 
+    /// <summary>Inserts plain text at the given position relative to this element.</summary>
+    public void insertAdjacentText(string position, string text)
+    {
+        var textNode = new LayoutNode(null, "#text", text ?? string.Empty, Node.Style);
+        InsertAdjacentNode(position, textNode);
+    }
+
+    /// <summary>Inserts an element at the given position relative to this element.</summary>
+    public JsElement? insertAdjacentElement(string position, JsElement element)
+    {
+        element.Node.Parent?.Children.Remove(element.Node);
+        InsertAdjacentNode(position, element.Node);
+        StyleResolver.ApplyTree(element.Node);
+        return element;
+    }
+
+    private void InsertAdjacentNode(string? position, LayoutNode node)
+    {
+        switch (position?.ToLowerInvariant())
+        {
+            case "beforebegin": InsertNodesBefore([node], Node); break;
+            case "afterbegin":
+                node.Parent = Node;
+                Node.Children.Insert(0, node);
+                break;
+            case "beforeend": Node.AddChild(node); break;
+            case "afterend": InsertNodesAfter([node], Node); break;
+        }
+    }
+
     private void ReplaceSelfWithFragment(string html)
     {
         if (Node.Parent is null) return;
@@ -247,61 +277,10 @@ public class JsElement
         set
         {
             Node.Attributes["class"] = value;
-            ReapplyCssRulesForClass();
+            // Re-run the full, idempotent cascade so rules that no longer match are retracted
+            // and higher-specificity rules win (enables dynamic class-based styling).
+            StyleResolver.Apply(Node);
         }
-    }
-
-    /// <summary>
-    /// Re-evaluates stored CSS rules against the element's current class attribute
-    /// and updates StyleOverrides accordingly. This enables dynamic class-based styling
-    /// (e.g. Acid3 bucket color changes via className += 'P').
-    /// </summary>
-    private void ReapplyCssRulesForClass()
-    {
-        var classes = Node.Attributes.GetValueOrDefault("class", "")
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (classes.Length == 0) return;
-
-        foreach (var rule in Parser.CssRules)
-        {
-            if (MatchesSimpleSelector(rule.Selector, classes))
-            {
-                foreach (var (prop, val) in rule.Properties)
-                    Node.StyleOverrides[prop] = val;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Simple selector matching for class-based rules (.foo, .foo.bar).
-    /// Supports: .class, tag.class, .class1.class2
-    /// </summary>
-    private bool MatchesSimpleSelector(string? selector, string[] classes)
-    {
-        if (string.IsNullOrEmpty(selector)) return false;
-        // Only handle simple class selectors (no combinators, no pseudo-classes)
-        if (selector.Contains(' ') || selector.Contains('>') || selector.Contains('+') || selector.Contains('~'))
-            return false;
-        if (selector.Contains(':') || selector.Contains('['))
-            return false;
-
-        // Extract tag and class parts
-        var parts = selector.Split('.');
-        var tagPart = parts[0]; // may be empty if selector starts with .
-
-        // Check tag if specified
-        if (!string.IsNullOrEmpty(tagPart) &&
-            !tagPart.Equals(Node.TagName, StringComparison.OrdinalIgnoreCase))
-            return false;
-
-        // Check all class parts
-        for (int i = 1; i < parts.Length; i++)
-        {
-            if (!classes.Contains(parts[i]))
-                return false;
-        }
-
-        return parts.Length > 1; // must have at least one class part
     }
 
     // ---- attributes ----
@@ -737,7 +716,12 @@ public class JsClassList
     public JsClassList(LayoutNode node) => _node = node;
 
     private string[] GetClasses() => _node.Attributes.GetValueOrDefault("class", "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-    private void SetClasses(IEnumerable<string> classes) => _node.Attributes["class"] = string.Join(" ", classes);
+    private void SetClasses(IEnumerable<string> classes)
+    {
+        _node.Attributes["class"] = string.Join(" ", classes);
+        // Re-run the cascade so class-dependent rules apply/retract immediately.
+        Lite.Layout.StyleResolver.Apply(_node);
+    }
 
     public void add(string cls)
     {

@@ -102,6 +102,7 @@ public class JsStyle
         set
         {
             _node.StyleOverrides.Clear();
+            _node.CascadeAppliedProps.Clear();
             foreach (var declaration in value.Split(';', StringSplitOptions.RemoveEmptyEntries))
             {
                 var parts = declaration.Split(':', 2);
@@ -120,6 +121,7 @@ public class JsStyle
     {
         var old = Get(property);
         _node.StyleOverrides.Remove(property);
+        _node.CascadeAppliedProps.Remove(property);
         return old;
     }
 
@@ -131,5 +133,9 @@ public class JsStyle
             _node.StyleOverrides.Remove(property);
         else
             _node.StyleOverrides[property] = value;
+        // This is now an author *inline* style: drop any cascade marking so a later
+        // re-resolution treats it as inline (normal rules can't override it; it isn't
+        // retracted) per CSS 2.1 §6.4.3.
+        _node.CascadeAppliedProps.Remove(property);
     }
 }

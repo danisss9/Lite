@@ -1,3 +1,4 @@
+using Jint;
 using Jint.Native;
 using Lite.Models;
 
@@ -18,6 +19,9 @@ internal class JsWindow
     private readonly List<(int Id, JsValue Fn)> _rafCallbacks = [];
     internal bool HasPendingRAF => _rafCallbacks.Count > 0;
 
+    // Window-level event listeners (load, hashchange, popstate, message, error, ...).
+    private readonly List<(string Type, JsValue Fn)> _listeners = [];
+
     public JsWindow(JsEngine engine, int viewportWidth = 800, int viewportHeight = 600)
     {
         _engine = engine;
@@ -26,6 +30,47 @@ internal class JsWindow
     }
 
     public void alert(object? message) => Lite.Utils.User32.MessageBox(IntPtr.Zero, message?.ToString() ?? "", "Alert", 0);
+
+    // ---- window-level events ----
+    public void addEventListener(string type, JsValue fn, JsValue? options = null)
+    {
+        if (fn is not null && !fn.IsUndefined()) _listeners.Add((type, fn));
+    }
+
+    public void removeEventListener(string type, JsValue fn, JsValue? options = null)
+    {
+        _listeners.RemoveAll(l => l.Type == type && Equals(l.Fn, fn));
+    }
+
+    /// <summary>Dispatches a window-level event to registered listeners and to the
+    /// matching <c>on{type}</c> property if set. <paramref name="evt"/> is the event object
+    /// passed to handlers (a JsEvent or plain object).</summary>
+    public bool dispatchEvent(JsValue evt)
+    {
+        var type = evt.IsObject() && evt.AsObject().Get("type") is { } t && !t.IsUndefined()
+            ? t.AsString() : "";
+        DispatchInternal(type, evt);
+        return true;
+    }
+
+    /// <summary>Fires a window event by name, building a minimal event object for handlers.</summary>
+    internal void DispatchEvent(string type)
+    {
+        var evt = JsValue.FromObject(_engine.RawEngine, new { type, target = (object?)null });
+        DispatchInternal(type, evt);
+    }
+
+    private void DispatchInternal(string type, JsValue evt)
+    {
+        foreach (var (t, fn) in _listeners.ToList())
+        {
+            if (t != type) continue;
+            try { _engine.RawEngine.Invoke(fn, evt); }
+            catch (Exception ex) { Console.WriteLine($"[JS window {type}] {ex.Message}"); }
+        }
+    }
+
+    internal bool HasListener(string type) => _listeners.Any(l => l.Type == type);
 
     public int setTimeout(JsValue fn, int delay = 0)
     {

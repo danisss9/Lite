@@ -1,0 +1,22 @@
+# test262 paths (substring match) to skip, with reasons.
+# Tests requiring $262.createRealm / agents are not supported by the harness.
+
+# Tail-call optimization: Jint does not implement proper tail calls, so these tests
+# recurse millions of deep and overflow the CLR stack (uncatchable, kills the process).
+tco-pos
+tco-call
+tco-member
+tco-non-eval
+tco-eval
+
+# Realms / cross-agent tests need $262.createRealm / agent which the harness lacks.
+createRealm
+$262.agent
+cross-realm
+proto-from-ctor-realm
+
+# import('') with an empty/invalid specifier: the spec requires import() to REJECT the
+# returned promise; Jint throws the ModuleResolutionException synchronously instead. The
+# syntax these tests target does parse correctly (a Jint runtime quirk, not a parse gap).
+empty-str-is-valid
+new-covered-expression-is-valid

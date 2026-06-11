@@ -164,6 +164,9 @@ internal static class Parser
         if (bodyNode?.Attributes.TryGetValue("onload", out var onloadCode) == true)
             jsEngine.Execute(onloadCode);
 
+        // Fire the window 'load' event for listeners registered via addEventListener.
+        jsEngine.DispatchLoad();
+
         return root;
     }
 

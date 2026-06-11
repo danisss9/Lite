@@ -1,8 +1,15 @@
+using Jint;
 using Jint.Native;
+using Lite.Network;
 
 namespace Lite.Scripting.Dom;
 
-/// <summary>XMLHttpRequest implementation for JavaScript.</summary>
+/// <summary>
+/// XMLHttpRequest. Async requests run the HTTP call on a background thread but marshal every
+/// readyState transition and event callback back onto the engine's event loop via
+/// <see cref="JsEngine.EnqueueMacrotask"/>, so Jint (which is not thread-safe) is only ever
+/// touched from the UI/drain thread. Synchronous requests (async=false) run inline.
+/// </summary>
 public class JsXmlHttpRequest
 {
     private static readonly HttpClient _client = new();
@@ -26,11 +33,21 @@ public class JsXmlHttpRequest
     public JsValue? onerror { get; set; }
     public JsValue? onprogress { get; set; }
 
+    private readonly List<(string Type, JsValue Fn)> _listeners = [];
+
     private string _method = "GET";
     private string _url = "";
     private bool _async = true;
     private readonly Dictionary<string, string> _requestHeaders = [];
     private readonly Dictionary<string, string> _responseHeaders = [];
+
+    public void addEventListener(string type, JsValue fn, JsValue? options = null)
+    {
+        if (fn is not null && !fn.IsUndefined() && !fn.IsNull()) _listeners.Add((type, fn));
+    }
+
+    public void removeEventListener(string type, JsValue fn, JsValue? options = null) =>
+        _listeners.RemoveAll(l => l.Type == type && Equals(l.Fn, fn));
 
     public void open(string method, string url, bool async = true, string? user = null, string? password = null)
     {
@@ -45,18 +62,34 @@ public class JsXmlHttpRequest
     {
         if (_async)
         {
-            Task.Run(() => DoSend(body));
+            // HTTP on a pool thread; all engine interaction is marshalled back via the macrotask queue.
+            Task.Run(() =>
+            {
+                var result = DoHttp(body);
+                JsEngine.Instance?.EnqueueMacrotask(() => Deliver(result));
+            });
         }
         else
         {
-            DoSend(body);
+            Deliver(DoHttp(body));
         }
     }
 
-    private void DoSend(string? body)
+    private sealed record HttpResult(bool Ok, int Status, string StatusText, string Body,
+        Dictionary<string, string> Headers, string? Error);
+
+    /// <summary>Performs the HTTP request off the engine thread. No Jint interaction here.</summary>
+    private HttpResult DoHttp(string? body)
     {
         try
         {
+            if (DataUri.IsDataUri(_url))
+            {
+                if (DataUri.TryDecodeText(_url, out var dataText, out _))
+                    return new HttpResult(true, 200, "OK", dataText, [], null);
+                return new HttpResult(false, 0, "", "", [], "malformed data URI");
+            }
+
             var request = new HttpRequestMessage(new HttpMethod(_method), _url);
             foreach (var h in _requestHeaders)
                 request.Headers.TryAddWithoutValidation(h.Key, h.Value);
@@ -64,34 +97,43 @@ public class JsXmlHttpRequest
                 request.Content = new StringContent(body);
 
             var response = _client.Send(request);
-            status = (int)response.StatusCode;
-            statusText = response.ReasonPhrase ?? "";
-
-            _responseHeaders.Clear();
+            var headers = new Dictionary<string, string>();
             foreach (var h in response.Headers)
-                _responseHeaders[h.Key.ToLowerInvariant()] = string.Join(", ", h.Value);
+                headers[h.Key.ToLowerInvariant()] = string.Join(", ", h.Value);
             foreach (var h in response.Content.Headers)
-                _responseHeaders[h.Key.ToLowerInvariant()] = string.Join(", ", h.Value);
+                headers[h.Key.ToLowerInvariant()] = string.Join(", ", h.Value);
 
-            readyState = 2; // HEADERS_RECEIVED
-            FireReadyStateChange();
-
-            readyState = 3; // LOADING
-            FireReadyStateChange();
-
-            responseText = response.Content.ReadAsStringAsync().Result;
-
-            readyState = 4; // DONE
-            FireReadyStateChange();
-            FireEvent(onload);
+            var text = response.Content.ReadAsStringAsync().Result;
+            return new HttpResult(true, (int)response.StatusCode, response.ReasonPhrase ?? "", text, headers, null);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[XHR Error] {ex.Message}");
+            return new HttpResult(false, 0, "", "", [], ex.Message);
+        }
+    }
+
+    /// <summary>Applies the result and fires events. Runs on the engine thread.</summary>
+    private void Deliver(HttpResult result)
+    {
+        if (!result.Ok)
+        {
+            Console.WriteLine($"[XHR Error] {result.Error}");
             readyState = 4;
             FireReadyStateChange();
-            FireEvent(onerror);
+            FireEvent(onerror, "error");
+            return;
         }
+
+        status = result.Status;
+        statusText = result.StatusText;
+        _responseHeaders.Clear();
+        foreach (var kv in result.Headers) _responseHeaders[kv.Key] = kv.Value;
+
+        readyState = 2; FireReadyStateChange();   // HEADERS_RECEIVED
+        readyState = 3; FireReadyStateChange();   // LOADING
+        responseText = result.Body;
+        readyState = 4; FireReadyStateChange();    // DONE
+        FireEvent(onload, "load");
     }
 
     public void setRequestHeader(string name, string value) => _requestHeaders[name] = value;
@@ -102,22 +144,23 @@ public class JsXmlHttpRequest
     public string getAllResponseHeaders() =>
         string.Join("\r\n", _responseHeaders.Select(h => $"{h.Key}: {h.Value}"));
 
-    public void abort()
-    {
-        readyState = 0;
-    }
+    public void abort() => readyState = 0;
 
     private void FireReadyStateChange()
     {
-        FireEvent(onreadystatechange);
+        FireEvent(onreadystatechange, "readystatechange");
     }
 
-    private void FireEvent(JsValue? handler)
+    private void FireEvent(JsValue? handler, string type)
     {
-        if (handler is null || handler.Type == Jint.Runtime.Types.Undefined || handler.Type == Jint.Runtime.Types.Null) return;
+        var engine = JsEngine.Instance?.RawEngine;
+        if (engine is null) return;
         try
         {
-            Scripting.JsEngine.Instance?.RawEngine.Invoke(handler);
+            if (handler is not null && !handler.IsUndefined() && !handler.IsNull())
+                engine.Invoke(handler);
+            foreach (var (t, fn) in _listeners.ToList())
+                if (t == type) engine.Invoke(fn);
         }
         catch (Exception ex)
         {

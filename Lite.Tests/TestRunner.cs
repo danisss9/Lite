@@ -67,6 +67,12 @@ public static class TestRunner
             throw new Exception($"Expected {expected} but got {actual}");
     }
 
+    public static void Equal(bool expected, bool actual)
+    {
+        if (expected != actual)
+            throw new Exception($"Expected {expected} but got {actual}");
+    }
+
     public static void Contains(string needle, string? haystack)
     {
         if (haystack is null || !haystack.Contains(needle))

@@ -15,11 +15,14 @@ public record EventListenerEntry(string EventType, JsValue? Handler, Action? Leg
 public class LayoutNode
 {
     public Guid NodeKey { get; } = Guid.NewGuid();
-    public string? Id { get; }
+    /// <summary>The element's id. Backed by <see cref="Attributes"/> so parser-built and
+    /// JS-mutated ids stay in sync (selector matching reads one source of truth).</summary>
+    public string? Id => Attributes.GetValueOrDefault("id");
     public string TagName { get; }
     public string Text { get; }
     public ICssStyleDeclaration Style { get; }
-    public string? Href { get; }
+    /// <summary>The element's href. Backed by <see cref="Attributes"/> (see <see cref="Id"/>).</summary>
+    public string? Href => Attributes.GetValueOrDefault("href");
     public LayoutNode? Parent { get; set; }
     public List<LayoutNode> Children { get; } = [];
     public BoxDimensions Box { get; set; }
@@ -29,6 +32,10 @@ public class LayoutNode
     public string? Alt { get; set; }
     public Dictionary<string, string> Attributes { get; } = [];
     public Dictionary<string, string> StyleOverrides { get; } = [];
+    /// <summary>Keys in <see cref="StyleOverrides"/> that were written by the stylesheet
+    /// cascade (StyleResolver) rather than inline styles. Cleared and re-stamped on each
+    /// re-resolution so class/id changes can retract stale rule-applied values.</summary>
+    public HashSet<string> CascadeAppliedProps { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, string> HoverStyles { get; } = [];
     public Dictionary<string, string> FocusStyles { get; } = [];
     public Dictionary<string, string> ActiveStyles { get; } = [];
@@ -188,11 +195,11 @@ public class LayoutNode
 
     public LayoutNode(string? id, string tagName, string text, ICssStyleDeclaration style, string? href = null)
     {
-        Id = id;
+        if (!string.IsNullOrEmpty(id)) Attributes["id"] = id;
         TagName = tagName;
         Text = text;
         Style = style;
-        Href = href;
+        if (href is not null) Attributes["href"] = href;
     }
 
     public void AddChild(LayoutNode child)

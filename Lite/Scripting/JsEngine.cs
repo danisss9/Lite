@@ -93,11 +93,12 @@ internal class JsEngine
         _engine.SetValue("document", jsDocument);
         _engine.SetValue("alert", new Action<object?>(msg => _jsWindow.alert(msg)));
 
-        // Timers
-        _engine.SetValue("setTimeout", new Func<JsValue, int, int>((fn, delay) => _jsWindow.setTimeout(fn, delay)));
-        _engine.SetValue("setInterval", new Func<JsValue, int, int>((fn, delay) => _jsWindow.setInterval(fn, delay)));
-        _engine.SetValue("clearTimeout", new Action<int>(id => _jsWindow.clearTimeout(id)));
-        _engine.SetValue("clearInterval", new Action<int>(id => _jsWindow.clearInterval(id)));
+        // Timers — delay/id come in as JsValue so a missing/undefined arg (e.g. setTimeout(fn))
+        // coerces to 0 instead of throwing a CLR conversion error.
+        _engine.SetValue("setTimeout", new Func<JsValue, JsValue, int>((fn, delay) => _jsWindow.setTimeout(fn, ToInt(delay))));
+        _engine.SetValue("setInterval", new Func<JsValue, JsValue, int>((fn, delay) => _jsWindow.setInterval(fn, ToInt(delay))));
+        _engine.SetValue("clearTimeout", new Action<JsValue>(id => _jsWindow.clearTimeout(ToInt(id))));
+        _engine.SetValue("clearInterval", new Action<JsValue>(id => _jsWindow.clearInterval(ToInt(id))));
 
         // requestAnimationFrame / cancelAnimationFrame
         _engine.SetValue("requestAnimationFrame", new Func<JsValue, int>(fn => _jsWindow.requestAnimationFrame(fn)));
@@ -109,6 +110,13 @@ internal class JsEngine
 
         // XMLHttpRequest constructor
         _engine.SetValue("XMLHttpRequest", typeof(JsXmlHttpRequest));
+
+        // URL / URLSearchParams constructors
+        _engine.SetValue("URL", typeof(JsUrl));
+        _engine.SetValue("URLSearchParams", typeof(JsUrlSearchParams));
+
+        // navigator
+        _engine.SetValue("navigator", new JsNavigator());
 
         // Event / CustomEvent constructors (JsEvent is a superset of both)
         _engine.SetValue("Event", typeof(JsEvent));
@@ -169,6 +177,19 @@ internal class JsEngine
           if (typeof globalThis.queueMicrotask !== 'function') {
             globalThis.queueMicrotask = function (cb) { Promise.resolve().then(cb); };
           }
+          // Browser globals expected by test harnesses and real pages.
+          globalThis.self = globalThis;
+          // Top-level browsing context: parent/top/self all reference this context, so
+          // frame-detection (self !== self.parent) correctly resolves to "not framed".
+          // (Real nested contexts arrive with iframe support in a later phase.)
+          if (!('parent' in globalThis)) globalThis.parent = globalThis;
+          if (!('top' in globalThis)) globalThis.top = globalThis;
+          if (!('frames' in globalThis)) globalThis.frames = globalThis;
+          if (!('length' in globalThis)) globalThis.length = 0;
+          if (!('name' in globalThis)) globalThis.name = '';
+          globalThis.addEventListener = function (t, fn, o) { return window.addEventListener(t, fn, o); };
+          globalThis.removeEventListener = function (t, fn, o) { return window.removeEventListener(t, fn, o); };
+          globalThis.dispatchEvent = function (e) { return window.dispatchEvent(e); };
           globalThis.fetch = function (url, options) {
             return new Promise(function (resolve, reject) {
               __nativeFetch(String(url), options || null, function (r) {
@@ -184,9 +205,14 @@ internal class JsEngine
         })();
         """;
 
+    /// <summary>Raised after an engine is created but before any page scripts execute.
+    /// Lets a host (e.g. the conformance harness) install globals like result reporters.</summary>
+    internal static event Action<JsEngine>? OnCreated;
+
     public static JsEngine Create(LayoutNode root, int viewportWidth = 800, int viewportHeight = 600)
     {
         Instance = new JsEngine(root, viewportWidth, viewportHeight);
+        OnCreated?.Invoke(Instance);
         return Instance;
     }
 
@@ -206,6 +232,13 @@ internal class JsEngine
         try { _engine.Modules.Import(specifier); }
         catch (Exception ex) { Console.WriteLine($"[JS Module] {ex.Message}"); }
     }
+
+    /// <summary>Dispatches the window <c>load</c> event to listeners registered via
+    /// addEventListener. Fired once after all page scripts have executed.</summary>
+    internal void DispatchLoad() => _jsWindow.DispatchEvent("load");
+
+    /// <summary>Dispatches a named window-level event (e.g. hashchange, popstate).</summary>
+    internal void DispatchWindowEvent(string type) => _jsWindow.DispatchEvent(type);
 
     /// <summary>Flushes pending requestAnimationFrame callbacks. Returns true if any were invoked.</summary>
     internal bool FlushRAF(double timestamp)
@@ -233,4 +266,17 @@ internal class JsEngine
     internal float GetScrollY() => _viewport?.ScrollY ?? 0f;
 
     internal Engine RawEngine => _engine;
+
+    /// <summary>Coerces a JS value to an int, treating null/undefined/NaN as 0 (matches the
+    /// way browsers coerce timer delays and ids).</summary>
+    private static int ToInt(JsValue v)
+    {
+        if (v is null || v.IsUndefined() || v.IsNull()) return 0;
+        try
+        {
+            var d = v.IsNumber() ? v.AsNumber() : v.ToObject() is { } o ? Convert.ToDouble(o) : 0;
+            return double.IsNaN(d) ? 0 : (int)d;
+        }
+        catch { return 0; }
+    }
 }

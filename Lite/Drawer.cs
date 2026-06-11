@@ -20,7 +20,20 @@ internal static class Drawer
     /// <summary>Current viewport height — used for position:sticky calculations.</summary>
     private static float _viewportHeight;
 
+    /// <summary>Bitmap backing the pixel pointer returned by <see cref="Draw"/>; kept alive
+    /// until the next Draw call so the Win32 blit never reads freed memory.</summary>
+    private static SKBitmap? _lastBitmap;
+
     public static (IntPtr Pixels, List<HitRegion> HitRegions) Draw(int width, int height, LayoutNode root, Viewport viewport)
+    {
+        _lastBitmap?.Dispose();
+        _lastBitmap = DrawToBitmap(width, height, root, viewport);
+        return (_lastBitmap.GetPixels(), _hitRegions);
+    }
+
+    /// <summary>Renders the page to a bitmap the caller owns. Used by the conformance
+    /// harness for reftest pixel comparison.</summary>
+    internal static SKBitmap DrawToBitmap(int width, int height, LayoutNode root, Viewport viewport)
     {
         // Layout pass — compute node.Box for every node
         BoxEngine.Layout(root, width, height);
@@ -57,7 +70,7 @@ internal static class Drawer
         viewport.ContentHeight = root.Box.MarginBox.Bottom;
         DrawScrollbar(canvas, viewport, width, height);
 
-        return (bitmap.GetPixels(), _hitRegions);
+        return bitmap;
     }
 
     // -------------------------------------------------------------------------

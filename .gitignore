@@ -397,6 +397,10 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
+# Lite.Conformance: fetched test suites and failure artifacts (baselines ARE checked in)
+Lite.Conformance/vendor/
+Lite.Conformance/artifacts/
+
 # JetBrains Rider
 *.sln.iml
 

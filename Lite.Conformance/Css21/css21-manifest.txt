@@ -1,0 +1,7 @@
+# Curated CSS 2.1 reftest manifest: <test path> | <reference path> [expected-fail: reason]
+# Both sides are rendered by Lite at 600x600 and pixel-compared.
+
+# ---- harness sanity (Phase 0 gate) ----
+css21/sanity.html | css21/sanity-ref.html
+
+# ---- Phase 3 additions (margin collapsing, anonymous boxes, stacking, units...) ----

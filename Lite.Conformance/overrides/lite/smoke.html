@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Lite harness smoke test</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+</head>
+<body>
+<div id="log"></div>
+<script>
+test(function () { assert_true(true, "truth holds"); }, "sync test passes");
+test(function () { assert_equals(1 + 1, 2); }, "arithmetic");
+test(function () {
+  var el = document.createElement("div");
+  el.id = "made";
+  el.textContent = "hi";
+  document.body.appendChild(el);
+  var found = document.getElementById("made");
+  assert_true(found !== null, "element should be found by id");
+  assert_equals(found.id, "made");
+  assert_equals(found.textContent, "hi");
+}, "DOM createElement/getElementById round-trip");
+async_test(function (t) {
+  setTimeout(t.step_func_done(function () { assert_true(true); }), 10);
+}, "async test with timer");
+promise_test(function () {
+  return Promise.resolve(42).then(function (v) { assert_equals(v, 42); });
+}, "promise test");
+</script>
+</body>
+</html>

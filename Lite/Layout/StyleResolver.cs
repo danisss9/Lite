@@ -46,10 +46,16 @@ internal static class StyleResolver
         }
     }
 
-    /// <summary>Applies matching author rules + inheritance to a single node.</summary>
+    /// <summary>Applies matching author rules + inheritance to a single node. Idempotent:
+    /// values stamped by a previous resolution are retracted first, so this can re-run
+    /// after a class/id change without stale rule values masquerading as inline styles.</summary>
     internal static void Apply(LayoutNode node)
     {
         if (node.TagName.StartsWith('#')) return; // text / fragment / document nodes
+
+        foreach (var prop in node.CascadeAppliedProps)
+            node.StyleOverrides.Remove(prop);
+        node.CascadeAppliedProps.Clear();
 
         // Gather matching rules, then order them: importance is decided per-property below,
         // so first sort all matches by (specificity, source order).
@@ -79,11 +85,15 @@ internal static class StyleResolver
 
         // Normal author rules: fill in only where no inline style is already present.
         foreach (var (prop, val) in normal)
-            node.StyleOverrides.TryAdd(prop, val);
+            if (node.StyleOverrides.TryAdd(prop, val))
+                node.CascadeAppliedProps.Add(prop);
 
         // !important author rules: override even inline styles.
         foreach (var (prop, val) in important)
+        {
             node.StyleOverrides[prop] = val;
+            node.CascadeAppliedProps.Add(prop);
+        }
 
         // Inheritance: for inherited properties still unset, take the parent's resolved value.
         if (node.Parent is { } parent)
@@ -92,7 +102,10 @@ internal static class StyleResolver
             {
                 if (node.StyleOverrides.ContainsKey(prop)) continue;
                 if (parent.TryResolveStyle(prop, out var inherited) && !string.IsNullOrEmpty(inherited))
+                {
                     node.StyleOverrides[prop] = inherited;
+                    node.CascadeAppliedProps.Add(prop);
+                }
             }
         }
     }
