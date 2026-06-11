@@ -13,7 +13,18 @@ internal class JsEngine
 
     private readonly Engine _engine;
     private readonly JsWindow _jsWindow;
+    private readonly LayoutNode _root;
     private Viewport? _viewport;
+
+    // ---- navigation state (Phase 2) ----
+    /// <summary>The document's current URL. Mutated by location/history without reload for
+    /// same-document changes, and tracked across cross-document navigations.</summary>
+    public string CurrentUrl { get; private set; }
+    public Dom.JsHistory History { get; }
+    public Dom.JsLocation Location { get; }
+
+    /// <summary>Set by the host to update the window title bar when document.title changes.</summary>
+    internal Action<string>? OnTitleChange { get; set; }
 
     // ---- event loop ----
     // Macrotasks queued by timers/fetch/etc. They are drained on the UI thread so that
@@ -76,6 +87,110 @@ internal class JsEngine
             EnqueueMacrotask(() => nav(url));
     }
 
+    /// <summary>Resolves a (possibly relative) URL against the current document URL.
+    /// Returns null when <paramref name="url"/> is null.</summary>
+    internal string? ResolveAgainstCurrent(string? url)
+    {
+        if (url is null) return null;
+        if (Uri.TryCreate(url, UriKind.Absolute, out var abs)) return abs.AbsoluteUri;
+        if (Uri.TryCreate(CurrentUrl, UriKind.Absolute, out var baseUri) &&
+            Uri.TryCreate(baseUri, url, out var resolved))
+            return resolved.AbsoluteUri;
+        return url;
+    }
+
+    /// <summary>Updates the current URL without firing events or reloading (used by
+    /// history.pushState/replaceState).</summary>
+    internal void SetCurrentUrl(string url) => CurrentUrl = url;
+
+    /// <summary>Core navigation entry point used by location setters and assign/replace.
+    /// Same-document (fragment-only) changes scroll + fire hashchange and push a history
+    /// entry; cross-document changes push a history entry and ask the host to load.</summary>
+    internal void Navigate(string url, bool replace)
+    {
+        var resolved = ResolveAgainstCurrent(url) ?? url;
+        var oldUrl = CurrentUrl;
+
+        if (DiffersOnlyByFragment(oldUrl, resolved))
+        {
+            if (replace) History.replaceState(JsValue.Null, null, resolved);
+            else History.pushState(JsValue.Null, null, resolved);
+            CurrentUrl = resolved;
+            if (!string.Equals(oldUrl, resolved, StringComparison.Ordinal))
+            {
+                FireHashChange(oldUrl, resolved);
+                ScrollToFragment(FragmentOf(resolved));
+            }
+            return;
+        }
+
+        // Cross-document: record the entry, then ask the host to load.
+        if (replace) History.replaceState(JsValue.Null, null, resolved);
+        else History.pushState(JsValue.Null, null, resolved);
+        RequestNavigation(resolved);
+    }
+
+    /// <summary>Dispatches a popstate event with the given state to window listeners.</summary>
+    internal void FirePopState(JsValue state)
+    {
+        try
+        {
+            var evt = new Dom.JsEvent { state = state };
+            evt.initEvent("popstate");
+            _jsWindow.DispatchEvent("popstate", JsValue.FromObject(_engine, evt));
+        }
+        catch (Exception ex) { Console.WriteLine($"[popstate] {ex.Message}"); }
+    }
+
+    /// <summary>Dispatches a hashchange event to window listeners.</summary>
+    internal void FireHashChange(string oldUrl, string newUrl)
+    {
+        try
+        {
+            var evt = new Dom.JsEvent { oldURL = oldUrl, newURL = newUrl };
+            evt.initEvent("hashchange");
+            _jsWindow.DispatchEvent("hashchange", JsValue.FromObject(_engine, evt));
+        }
+        catch (Exception ex) { Console.WriteLine($"[hashchange] {ex.Message}"); }
+    }
+
+    /// <summary>Scrolls the viewport to the element whose id (or name) matches the fragment.</summary>
+    internal void ScrollToFragment(string fragment)
+    {
+        if (string.IsNullOrEmpty(fragment) || _viewport is null) return;
+        var target = FindByIdOrName(_root, fragment);
+        if (target is not null)
+            _viewport.ScrollTo(target.Box.BorderBox.Top);
+    }
+
+    private static LayoutNode? FindByIdOrName(LayoutNode node, string id)
+    {
+        if (node.Id == id || node.Attributes.GetValueOrDefault("name") == id) return node;
+        foreach (var child in node.Children)
+            if (FindByIdOrName(child, id) is { } found) return found;
+        return null;
+    }
+
+    private static bool DiffersOnlyByFragment(string a, string b)
+    {
+        static string StripFragment(string u)
+        {
+            var i = u.IndexOf('#');
+            return i < 0 ? u : u[..i];
+        }
+        return StripFragment(a) == StripFragment(b);
+    }
+
+    private static string FragmentOf(string url)
+    {
+        var i = url.IndexOf('#');
+        return i < 0 ? "" : url[(i + 1)..];
+    }
+
+    /// <summary>Updates the current URL on a host-driven (real) navigation so location/history
+    /// reflect the loaded document.</summary>
+    internal void NotifyNavigated(string url) => CurrentUrl = url;
+
     private JsEngine(LayoutNode root, int viewportWidth = 800, int viewportHeight = 600)
     {
         var baseUrl = Parser.BaseUrl ?? "about://lite/";
@@ -85,12 +200,19 @@ internal class JsEngine
             opts.EnableModules(new HttpModuleLoader(baseUrl));
         });
 
+        _root = root;
+        CurrentUrl = baseUrl;
+        History = new Dom.JsHistory(this, baseUrl);
+        Location = new Dom.JsLocation(this);
+
         _jsWindow = new JsWindow(this, viewportWidth, viewportHeight);
         var jsDocument = new JsDocument(_engine, root);
 
         _engine.SetValue("console", new JsConsole());
         _engine.SetValue("window", _jsWindow);
         _engine.SetValue("document", jsDocument);
+        _engine.SetValue("location", Location);
+        _engine.SetValue("history", History);
         _engine.SetValue("alert", new Action<object?>(msg => _jsWindow.alert(msg)));
 
         // Timers — delay/id come in as JsValue so a missing/undefined arg (e.g. setTimeout(fn))

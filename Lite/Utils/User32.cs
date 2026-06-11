@@ -24,6 +24,9 @@ internal static class User32
         IntPtr hInstance,
         IntPtr lpParam);
 
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    internal static extern bool SetWindowText(IntPtr hWnd, string lpString);
+
     [DllImport("user32.dll")]
     internal static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 

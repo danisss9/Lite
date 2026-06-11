@@ -170,6 +170,11 @@ public class BrowserWindow
             jsEngine.TaskEnqueued += () => User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
             // Form submission (and other JS-driven navigation) routes through here.
             jsEngine.OnNavigate = url => Navigate(url, hWnd);
+            // document.title updates the window caption.
+            jsEngine.OnTitleChange = t => SetWindowTitle(hWnd, t.Length == 0 ? _title : t);
+            // Reflect the parsed document's <title> in the caption.
+            if (Parser.Document?.Title is { Length: > 0 } docTitle)
+                SetWindowTitle(hWnd, docTitle);
             // Flush any tasks already queued during initial script execution.
             if (jsEngine.HasPendingTasks)
                 User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
@@ -845,18 +850,40 @@ public class BrowserWindow
     }
 
     /// <summary>
-    /// Handles a link click. Same-origin links reload the document inside this window;
-    /// links to a different host (or scheme) are opened in the OS default browser.
-    /// Pure fragment links (e.g. "#") are ignored.
+    /// Handles a link click or scripted navigation. http(s) URLs load inside this window;
+    /// non-http schemes (mailto:, etc.) open in the OS default browser. Pure fragment links
+    /// (same document, differing only by #hash) scroll to the target and fire hashchange
+    /// without a reload.
     /// </summary>
     private void Navigate(string href, IntPtr hWnd)
     {
-        if (string.IsNullOrWhiteSpace(href) || href.StartsWith('#')) return;
+        if (string.IsNullOrWhiteSpace(href)) return;
 
         if (!Uri.TryCreate(new Uri(_url), href, out var target)) return;
 
-        // External link: open in the OS default browser, leaving this window untouched.
-        if (target.Authority != new Uri(_url).Authority)
+        // Same-document fragment navigation: scroll + hashchange, no reload.
+        if (DiffersOnlyByFragment(_url, target.AbsoluteUri))
+        {
+            if (JsEngine.Instance is { } navEngine)
+            {
+                var oldUrl = _url;
+                _url = target.AbsoluteUri;
+                navEngine.NotifyNavigated(_url);
+                var frag = target.Fragment.TrimStart('#');
+                navEngine.ScrollToFragment(frag);
+                if (!string.Equals(oldUrl, _url, StringComparison.Ordinal))
+                    navEngine.FireHashChange(oldUrl, _url);
+            }
+            if (_rootNode != null)
+            {
+                (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+            }
+            return;
+        }
+
+        // Non-http(s) schemes (mailto:, tel:, file:…) open in the OS default browser.
+        if (target.Scheme is not ("http" or "https"))
         {
             Process.Start(new ProcessStartInfo(target.ToString()) { UseShellExecute = true });
             return;
@@ -940,6 +967,9 @@ public class BrowserWindow
             engine.UpdateViewportSize(_width, _height);
             engine.TaskEnqueued += () => User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
             engine.OnNavigate = u => Navigate(u, hWnd);
+            engine.OnTitleChange = t => SetWindowTitle(hWnd, t.Length == 0 ? _title : t);
+            engine.NotifyNavigated(_url);
+            SetWindowTitle(hWnd, Parser.Document?.Title is { Length: > 0 } t2 ? t2 : _title);
         }
 
         // Re-apply autofocus for the freshly loaded page.
@@ -1034,6 +1064,20 @@ public class BrowserWindow
         if (!evt.defaultPrevented)
             Navigate(Interaction.FormSubmitter.BuildActionUrl(form, Parser.BaseUrl), hWnd);
     }
+
+    /// <summary>True when two URLs are identical except for the #fragment.</summary>
+    private static bool DiffersOnlyByFragment(string a, string b)
+    {
+        static string StripFragment(string u)
+        {
+            var i = u.IndexOf('#');
+            return i < 0 ? u : u[..i];
+        }
+        return StripFragment(a) == StripFragment(b);
+    }
+
+    /// <summary>Sets the window title bar text.</summary>
+    private void SetWindowTitle(IntPtr hWnd, string title) => User32.SetWindowText(hWnd, title);
 
     /// <summary>Walks up from a node to find its containing &lt;form&gt;.</summary>
     private static LayoutNode? FindAncestorForm(LayoutNode? node)

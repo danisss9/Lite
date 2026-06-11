@@ -40,10 +40,27 @@ New-Item -ItemType Directory -Force $Vendor | Out-Null
 
 function Fetch-SparseRepo($Url, $Dest, $Sha, $Dirs) {
     if (-not (Test-Path (Join-Path $Dest '.git'))) {
+        # Clone needs an empty target. If the dir exists without a .git (e.g. a stray
+        # manually-downloaded file), clone into a temp dir and move it in, so we never
+        # leave a non-repo dir that a later `git -C` would resolve against the PARENT repo.
         Write-Host "Cloning $Url (blobless, no checkout)..."
-        git clone --filter=blob:none --no-checkout $Url $Dest
+        $tmp = "$Dest._clone_tmp"
+        if (Test-Path $tmp) { Remove-Item -Recurse -Force $tmp }
+        git clone --filter=blob:none --no-checkout $Url $tmp
         if ($LASTEXITCODE -ne 0) { throw "git clone failed for $Url" }
+        New-Item -ItemType Directory -Force $Dest | Out-Null
+        Move-Item (Join-Path $tmp '.git') (Join-Path $Dest '.git')
+        Remove-Item -Recurse -Force $tmp
     }
+
+    # SAFETY: never operate unless the repo top-level really is $Dest. Otherwise `git -C`
+    # would silently walk up to the enclosing project repo and mangle the working tree.
+    $top = (git -C $Dest rev-parse --show-toplevel 2>$null)
+    $destFull = (Resolve-Path $Dest).Path.Replace('\', '/')
+    if (-not $top -or $top.Replace('\', '/').TrimEnd('/') -ne $destFull.TrimEnd('/')) {
+        throw "Refusing to run git in '$Dest': resolved top-level is '$top', not the vendor dir. Aborting to protect the parent repo."
+    }
+
     git -C $Dest sparse-checkout set --cone @Dirs
     if ($LASTEXITCODE -ne 0) { throw "sparse-checkout failed for $Dest" }
     if ($Sha -eq 'latest') {

@@ -5,12 +5,15 @@
 # ---- harness bring-up (Phase 0 gate) ----
 lite/smoke.html
 
+# ---- Phase 2: navigation (history / location / title) ----
+lite/navigation.html
+
 # ---- Phase 1: URL / URLSearchParams (added once vendored + implemented) ----
 # url/url-constructor.any.js
 # url/urlsearchparams-append.any.js
 # url/urlsearchparams-get.any.js
 
-# ---- Phase 2: history / navigation ----
+# ---- upstream history suite (needs full document-loading infra; revisit in Phase 5) ----
 # html/browsers/history/the-history-interface/history_pushstate.html
 
 # ---- Phase 4: interactive elements / forms / observers ----

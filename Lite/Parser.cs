@@ -71,6 +71,9 @@ internal static class Parser
 
     private static string? _baseUrl;
     internal static string? BaseUrl => _baseUrl;
+    /// <summary>Base URL for resolving relative references — equals the document URL unless
+    /// a &lt;base href&gt; element overrides it.</summary>
+    private static string? _documentBaseUrl;
     private static readonly List<string> _pendingScripts = [];
     // ES modules to import after the engine is created: (specifier, code) — code is null for src modules.
     private static readonly List<(string Specifier, string? Code)> _pendingModules = [];
@@ -92,6 +95,7 @@ internal static class Parser
     internal static LayoutNode TraverseHtml(string address, int viewportWidth = 800, int viewportHeight = 600)
     {
         _baseUrl = address;
+        _documentBaseUrl = address;
         _pendingScripts.Clear();
         _pendingModules.Clear();
         _inlineModuleCounter = 0;
@@ -107,6 +111,11 @@ internal static class Parser
         var context = BrowsingContext.New(config);
         var document = context.OpenAsync(address).Result;
         Document = document;
+
+        // <base href> overrides the base used for resolving relative URLs (not the document URL).
+        if (document.QuerySelector("base[href]")?.GetAttribute("href") is { Length: > 0 } baseHref &&
+            Uri.TryCreate(new Uri(address), baseHref, out var resolvedBase))
+            _documentBaseUrl = resolvedBase.AbsoluteUri;
 
         var head = document.Head ?? document.DocumentElement;
 
@@ -220,7 +229,8 @@ internal static class Parser
     private static string? ResolveUrl(string src)
     {
         if (Uri.TryCreate(src, UriKind.Absolute, out _)) return src;
-        if (_baseUrl != null && Uri.TryCreate(new Uri(_baseUrl), src, out var resolved))
+        var baseUrl = _documentBaseUrl ?? _baseUrl;
+        if (baseUrl != null && Uri.TryCreate(new Uri(baseUrl), src, out var resolved))
             return resolved.ToString();
         return null;
     }

@@ -117,13 +117,22 @@ public class JsDocument
     }
 
     // ---- document metadata ----
+    private string _title = Parser.Document?.Title ?? string.Empty;
     public string title
     {
-        get => ""; // simplified
-        set { }    // simplified
+        get => _title;
+        set
+        {
+            _title = value ?? string.Empty;
+            if (Parser.Document is { } doc) doc.Title = _title;
+            JsEngine.Instance?.OnTitleChange?.Invoke(_title);
+        }
     }
 
-    public string URL => Parser.BaseUrl ?? "";
+    /// <summary>document.location — same object as window.location.</summary>
+    public JsLocation? location => JsEngine.Instance?.Location;
+
+    public string URL => JsEngine.Instance?.CurrentUrl ?? Parser.BaseUrl ?? "";
     public string domain
     {
         get

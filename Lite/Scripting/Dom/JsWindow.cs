@@ -14,6 +14,11 @@ internal class JsWindow
     public int innerWidth { get; set; }
     public int innerHeight { get; set; }
 
+    // Navigation objects (same instances as the globals location/history/navigator).
+    public JsLocation location => _engine.Location;
+    public JsHistory history => _engine.History;
+    public JsNavigator navigator { get; } = new();
+
     // requestAnimationFrame
     private int _nextRafId = 1;
     private readonly List<(int Id, JsValue Fn)> _rafCallbacks = [];
@@ -59,6 +64,9 @@ internal class JsWindow
         var evt = JsValue.FromObject(_engine.RawEngine, new { type, target = (object?)null });
         DispatchInternal(type, evt);
     }
+
+    /// <summary>Fires a window event by name with a pre-built event object (e.g. a JsEvent).</summary>
+    internal void DispatchEvent(string type, JsValue evt) => DispatchInternal(type, evt);
 
     private void DispatchInternal(string type, JsValue evt)
     {

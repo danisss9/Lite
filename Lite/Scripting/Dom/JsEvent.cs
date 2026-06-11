@@ -48,6 +48,11 @@ public class JsEvent
     public float pageY { get; internal set; }
     public int button { get; internal set; }
 
+    // PopStateEvent / HashChangeEvent properties
+    public JsValue? state { get; internal set; }
+    public string oldURL { get; internal set; } = string.Empty;
+    public string newURL { get; internal set; } = string.Empty;
+
     // Keyboard event properties
     public string key { get; internal set; } = string.Empty;
     public int keyCode { get; internal set; }

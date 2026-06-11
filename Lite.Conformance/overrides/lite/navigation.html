@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Lite navigation: history / location / title</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+</head>
+<body>
+<div id="log"></div>
+<script>
+test(function () {
+  var len0 = history.length;
+  history.pushState({ n: 1 }, '', '?one');
+  history.pushState({ n: 2 }, '', '?two');
+  assert_equals(history.length, len0 + 2, "length grows by 2");
+  assert_equals(history.state.n, 2, "state is latest");
+}, "history.pushState updates length and state");
+
+test(function () {
+  history.pushState({}, '', '?a');
+  var before = history.length;
+  history.replaceState({ r: 9 }, '', '?b');
+  assert_equals(history.length, before, "replaceState does not grow history");
+  assert_equals(history.state.r, 9, "replaceState updates state");
+}, "history.replaceState replaces current entry");
+
+async_test(function (t) {
+  history.pushState({ n: 10 }, '', '?ten');
+  history.pushState({ n: 20 }, '', '?twenty');
+  window.addEventListener('popstate', t.step_func_done(function (ev) {
+    assert_equals(ev.state.n, 10, "popstate carries the target entry state");
+  }));
+  history.back();
+}, "history.back fires popstate with the target state");
+
+test(function () {
+  history.pushState({}, '', '/dir/page?q=1#frag');
+  assert_equals(location.pathname, '/dir/page', "pathname");
+  assert_equals(location.search, '?q=1', "search");
+  assert_equals(location.hash, '#frag', "hash");
+}, "location reflects current URL components");
+
+async_test(function (t) {
+  var count = 0;
+  window.addEventListener('hashchange', t.step_func(function () {
+    count++;
+    assert_equals(location.hash, '#sec-x', "hash updated");
+    t.done();
+  }));
+  location.hash = 'sec-x';
+}, "setting location.hash fires hashchange without reload");
+
+test(function () {
+  document.title = 'Lite Title';
+  assert_equals(document.title, 'Lite Title');
+}, "document.title round-trips");
+
+test(function () {
+  assert_true(window.location === location, "window.location === location");
+  assert_true(window.history === history, "window.history === history");
+}, "window navigation objects are the globals");
+</script>
+</body>
+</html>
