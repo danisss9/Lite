@@ -12,6 +12,10 @@ internal static class BoxEngine
 {
     public static void Layout(LayoutNode root, float viewportWidth, float viewportHeight)
     {
+        // Establish the root (html) font-size so `rem` units resolve correctly this pass.
+        var html = root.TagName == "HTML" ? root : root.Children.FirstOrDefault(c => c.TagName == "HTML") ?? root;
+        CssUnits.RootFontSize = html.GetFontSize();
+
         LayoutBlock(root, 0, 0, viewportWidth, viewportWidth, viewportHeight, viewportHeight);
         // Second pass: lay out all absolute/fixed nodes now that normal-flow boxes are finalised
         LayoutPositioned(root, root.Box, viewportWidth, viewportHeight);
@@ -302,6 +306,17 @@ internal static class BoxEngine
     private record struct ActiveFloat(float Left, float Top, float Right, float Bottom, FloatType Side);
 
     /// <summary>
+    /// Collapses two adjoining vertical margins per CSS 2.1 §8.3.1: the result is the sum of
+    /// the largest positive and the most-negative margin (max(positives) + min(negatives)).
+    /// </summary>
+    internal static float CollapseMargins(float a, float b)
+    {
+        var posMax = Math.Max(Math.Max(a, 0f), Math.Max(b, 0f));
+        var negMin = Math.Min(Math.Min(a, 0f), Math.Min(b, 0f));
+        return posMax + negMin;
+    }
+
+    /// <summary>
     /// Returns the Y at which an element with the given <paramref name="clear"/> value
     /// should start, ensuring it is below any relevant active floats.
     /// </summary>
@@ -532,9 +547,11 @@ internal static class BoxEngine
                 }
                 else
                 {
-                    // Collapse adjacent vertical margins: use max, not sum
-                    var collapsed = Math.Max(prevMarginBottom, childMarginTop);
-                    adjust = collapsed - prevMarginBottom - childMarginTop; // ≤ 0
+                    // Collapse adjacent vertical margins (CSS 2.1 §8.3.1): the collapsed margin
+                    // is max(positives) + min(negatives), not a plain max — so negative margins
+                    // pull boxes together correctly.
+                    var collapsed = CollapseMargins(prevMarginBottom, childMarginTop);
+                    adjust = collapsed - prevMarginBottom - childMarginTop;
                     firstBlockSeen = true;
                 }
 

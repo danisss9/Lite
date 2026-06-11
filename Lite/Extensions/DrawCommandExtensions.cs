@@ -252,15 +252,7 @@ public static class StyleExtensions
             {
                 ov = ov.Trim();
                 if (TryEvalCalc(ov, total, fontSize, total, out var calcPx)) return calcPx;
-                if (ov.EndsWith("px") && float.TryParse(ov[..^2],
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
-                if (ov.EndsWith("em") && float.TryParse(ov[..^2],
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var em)) return em * fontSize;
-                if (ov.EndsWith('%') && float.TryParse(ov[..^1],
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var pct)) return pct / 100f * total;
+                if (CssUnits.TryParse(ov, fontSize, total, total, total, out var lp)) return lp;
                 // Plain number (px assumed)
                 if (float.TryParse(ov, System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var plain)) return plain;
@@ -272,15 +264,7 @@ public static class StyleExtensions
         {
             var raw = node.Style.GetProperty(name).RawValue;
             if (raw is Length l)
-            {
-                return l.Type switch
-                {
-                    Length.Unit.Px => (float)l.Value,
-                    Length.Unit.Em => (float)l.Value * fontSize,
-                    Length.Unit.Percent => (float)l.Value / 100f * total,
-                    _ => 0f,
-                };
-            }
+                return CssUnits.ToPx(l, fontSize, total, total, total);
         }
         return 0f;
     }
@@ -343,15 +327,7 @@ public static class StyleExtensions
 
         var raw = node.Style.GetProperty(PropertyNames.LineHeight).RawValue;
         if (raw is Length lh2)
-        {
-            return lh2.Type switch
-            {
-                Length.Unit.Px => (float)lh2.Value,
-                Length.Unit.Em => (float)lh2.Value * fontSize,
-                Length.Unit.Percent => (float)lh2.Value / 100f * fontSize,
-                _ => fontSize * 1.4f,
-            };
-        }
+            return CssUnits.ToPx(lh2, fontSize, fontSize, fontSize, fontSize);
 
         // Unitless number (e.g. line-height: 1.5) — try string parse
         var str = node.Style.GetPropertyValue(PropertyNames.LineHeight);
@@ -1010,22 +986,11 @@ public static class StyleExtensions
             ov = ov.Trim();
             if (ov == "auto") return float.NaN;
             if (TryEvalCalc(ov, total, size, total, out var calcPx)) return calcPx;
-            if (ov.EndsWith("px") && float.TryParse(ov[..^2],
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
-            if (ov.EndsWith('%') && float.TryParse(ov[..^1],
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var pct)) return pct / 100f * total;
+            if (CssUnits.TryParse(ov, size, total, total, total, out var lp)) return lp;
         }
         if (node.Style.GetProperty(prop).RawValue is Constant<Length>) return float.NaN; // auto
         if (node.Style.GetProperty(prop).RawValue is Length l)
-            return l.Type switch
-            {
-                Length.Unit.Px => (float)l.Value,
-                Length.Unit.Em => (float)l.Value * size,
-                Length.Unit.Percent => (float)l.Value / 100f * total,
-                _ => float.NaN,
-            };
+            return CssUnits.ToPx(l, size, total, total, total);
         return float.NaN;
     }
 
@@ -1320,30 +1285,14 @@ public static class StyleExtensions
             overrideStr = overrideStr.Trim();
             if (overrideStr is "" or "auto" or "none") return defaultValue;
             if (TryEvalCalc(overrideStr, total, size, vp, out var calcPx)) return calcPx;
-            if (overrideStr.EndsWith("px") && float.TryParse(overrideStr[..^2],
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
-            if (overrideStr.EndsWith("em") && float.TryParse(overrideStr[..^2],
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var em)) return em * size;
-            if (overrideStr.EndsWith('%') && float.TryParse(overrideStr[..^1],
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var pct)) return pct / 100f * total;
+            if (CssUnits.TryParse(overrideStr, size, total, vp, vp, out var lp)) return lp;
         }
 
         var raw = node.Style.GetProperty(propertyName).RawValue;
         if (raw is null or Constant<Length>) return defaultValue; // auto/none/unset
         if (raw is not Length length) return defaultValue;
 
-        return length.Type switch
-        {
-            Length.Unit.Px => (float)length.Value,
-            Length.Unit.Em => (float)length.Value * size,
-            Length.Unit.Percent => (float)length.Value / 100f * total,
-            Length.Unit.Vw => (float)length.Value / 100f * vp,
-            Length.Unit.Vh => (float)length.Value / 100f * vp,
-            _ => defaultValue,
-        };
+        return CssUnits.ToPx(length, size, total, vp, vp);
     }
 
     /// <summary>
@@ -1360,18 +1309,8 @@ public static class StyleExtensions
             overrideStr = overrideStr.Trim();
             if (TryEvalCalc(overrideStr, total, size, vp, out var calcPx))
                 return calcPx;
-            if (overrideStr.EndsWith("px") && float.TryParse(overrideStr[..^2],
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var px))
-                return px;
-            if (overrideStr.EndsWith("em") && float.TryParse(overrideStr[..^2],
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var em))
-                return em * size;
-            if (overrideStr.EndsWith('%') && float.TryParse(overrideStr[..^1],
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var pct))
-                return pct / 100f * total;
+            if (CssUnits.TryParse(overrideStr, size, total, vp, vp, out var lp))
+                return lp;
         }
 
         if (node.Style.GetProperty(propertyName).RawValue is Constant<Length>)
@@ -1384,15 +1323,7 @@ public static class StyleExtensions
             return size;
         }
 
-        return length.Type switch
-        {
-            Length.Unit.Em => (float)length.Value * size,
-            Length.Unit.Px => (float)length.Value,
-            Length.Unit.Vw => (float)length.Value / 100f * vp,
-            Length.Unit.Vh => (float)length.Value / 100f * vp,
-            Length.Unit.Percent => (float)length.Value / 100f * total,
-            _ => size
-        };
+        return CssUnits.ToPx(length, size, total, vp, vp);
     }
 
     // ── calc() evaluator ──────────────────────────────────────────────────────
@@ -1529,16 +1460,7 @@ public static class StyleExtensions
         if (t[p].Type == CalcTokType.Value)
         {
             var tok = t[p++];
-            return tok.Unit switch
-            {
-                "px" or "" => tok.Number,
-                "%" => tok.Number / 100f * total,
-                "em" => tok.Number * em,
-                "rem" => tok.Number * 16f,
-                "vw" => tok.Number / 100f * vp,
-                "vh" => tok.Number / 100f * vp,
-                _ => tok.Number,
-            };
+            return CssUnits.UnitStringToPx(tok.Unit, tok.Number, em, total, vp, vp);
         }
         return 0f;
     }

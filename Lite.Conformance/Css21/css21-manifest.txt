@@ -4,4 +4,10 @@
 # ---- harness sanity (Phase 0 gate) ----
 css21/sanity.html | css21/sanity-ref.html
 
-# ---- Phase 3 additions (margin collapsing, anonymous boxes, stacking, units...) ----
+# ---- Phase 3: length units (in/pt/pc/rem resolve to px equivalents) ----
+css21/units.html | css21/units-ref.html
+
+# ---- Phase 3: margin collapsing (negative margins per §8.3.1) ----
+css21/margin-collapse-neg.html | css21/margin-collapse-neg-ref.html
+
+# ---- Phase 3 additions (anonymous boxes, stacking contexts...) ----

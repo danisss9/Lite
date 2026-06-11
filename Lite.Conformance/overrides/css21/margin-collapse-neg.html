@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+<title>Adjacent margin collapsing with a negative margin</title>
+<style>
+  body { margin: 0; background: white; }
+  /* collapsed = max(30,0) + min(0,-10) = 20, so blue starts at 50 + 20 = 70 */
+  .g { height: 50px; margin-bottom: 30px; background: green; }
+  .b { height: 50px; margin-top: -10px; background: blue; }
+</style>
+</head>
+<body>
+<div class="g"></div>
+<div class="b"></div>
+</body>
+</html>
