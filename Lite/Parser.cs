@@ -1673,6 +1673,7 @@ internal static class Parser
 
             var (props, important) = ParseDeclarations(styleRule.Style.CssText);
             if (props.Count == 0) continue;
+            if (string.IsNullOrEmpty(styleRule.SelectorText)) continue;
 
             // A selector list ("a, b") gets one entry per selector so each keeps its own specificity.
             foreach (var sel in SplitSelectorList(styleRule.SelectorText))
@@ -1742,6 +1743,7 @@ internal static class Parser
 
     private static IEnumerable<string> SplitSelectorList(string selectorText)
     {
+        if (string.IsNullOrEmpty(selectorText)) yield break;
         int depth = 0, start = 0;
         for (int i = 0; i < selectorText.Length; i++)
         {

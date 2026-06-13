@@ -34,6 +34,10 @@ internal static class ConformanceServer
 
         var contentTypes = new FileExtensionContentTypeProvider();
         contentTypes.Mappings[".any.js"] = "text/javascript";
+        // WPT CSS reftests are frequently XHTML (.xht/.xhtml); serve as HTML so the parser
+        // builds a document rather than treating the markup as plain text.
+        contentTypes.Mappings[".xht"] = "text/html";
+        contentTypes.Mappings[".xhtml"] = "text/html";
 
         // WPT .any.js tests are addressed as <name>.any.html — generate the standard wrapper.
         app.Use(async (ctx, next) =>

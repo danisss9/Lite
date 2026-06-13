@@ -12,6 +12,8 @@ internal static class Program
     {
         string? suite = null;
         string? filter = null;
+        string? survey = null;
+        int surveyLimit = 0;
         bool updateBaselines = false;
 
         for (int i = 0; i < args.Length; i++)
@@ -23,6 +25,12 @@ internal static class Program
                     break;
                 case "--filter" when i + 1 < args.Length:
                     filter = args[++i];
+                    break;
+                case "--survey" when i + 1 < args.Length:
+                    survey = args[++i];
+                    break;
+                case "--survey-limit" when i + 1 < args.Length:
+                    int.TryParse(args[++i], out surveyLimit);
                     break;
                 case "--update-baselines":
                     updateBaselines = true;
@@ -48,6 +56,7 @@ internal static class Program
             return suite.ToLowerInvariant() switch
             {
                 "wpt" => WptRunner.Run(filter),
+                "css21" when survey is not null => RefTestRunner.Survey(survey, surveyLimit),
                 "css21" => RefTestRunner.Run(filter),
                 "test262" => Test262Runner.Run(filter),
                 "acid" => AcidRunner.Run(filter, updateBaselines),
