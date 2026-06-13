@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head>
+<title>currentColor resolves to the element's color</title>
+<style>
+  body { margin: 0; background: white; }
+  .box {
+    color: blue;
+    width: 100px; height: 100px;
+    border: 20px solid currentColor;   /* should paint blue */
+    background-color: white;
+  }
+</style>
+</head>
+<body>
+<div class="box"></div>
+</body>
+</html>

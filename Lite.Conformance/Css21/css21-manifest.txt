@@ -10,4 +10,7 @@ css21/units.html | css21/units-ref.html
 # ---- Phase 3: margin collapsing (negative margins per §8.3.1) ----
 css21/margin-collapse-neg.html | css21/margin-collapse-neg-ref.html
 
+# ---- Phase 3: currentColor resolves to the element's color ----
+css21/currentcolor.html | css21/currentcolor-ref.html
+
 # ---- Phase 3 additions (anonymous boxes, stacking contexts...) ----

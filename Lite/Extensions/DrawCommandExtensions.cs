@@ -1205,11 +1205,23 @@ public static class StyleExtensions
 
     private static SKColor GetColor(LayoutNode node, string propertyName, SKColor defaultColor)
     {
+        // `currentColor` resolves to the element's computed `color` (CSS Color §4.4). Check the
+        // serialized value FIRST — AngleSharp exposes currentColor as a black Color sentinel,
+        // so the RawValue-is-Color branch below would otherwise return black. Guard against
+        // self-reference on the color property itself.
+        bool IsCurrentColor(string? v) =>
+            propertyName != PropertyNames.Color &&
+            v is not null &&
+            v.Trim().Equals("currentColor", StringComparison.OrdinalIgnoreCase);
+
         if (node.TryResolveStyle(propertyName, out var overrideValue))
         {
+            if (IsCurrentColor(overrideValue)) return node.GetColor();
             var parsed = ParseCssColor(overrideValue);
             if (parsed.HasValue) return parsed.Value;
         }
+
+        if (IsCurrentColor(node.Style.GetPropertyValue(propertyName))) return node.GetColor();
 
         // Try RawValue (works when AngleSharp exposes the value as Color struct)
         if (node.Style.GetProperty(propertyName).RawValue is Color color)
