@@ -1003,7 +1003,9 @@ public static class StyleExtensions
 
     public static SKColor GetBackgroundColor(this LayoutNode node) => GetColor(node, PropertyNames.BackgroundColor, SKColors.Transparent);
     public static SKColor GetColor(this LayoutNode node) => GetColor(node, PropertyNames.Color, SKColors.Black);
-    public static float GetFontSize(this LayoutNode node) => GetSize(node, PropertyNames.FontSize, size: 16);
+    // font-size defaults to 16px (the initial medium) when no length value is present —
+    // unlike box properties, whose default is 0.
+    public static float GetFontSize(this LayoutNode node) => GetSize(node, PropertyNames.FontSize, size: 16, defaultValue: 16);
     public static float GetHeight(this LayoutNode node, float total = 0, float size = 0, float viewportHeight = -1f) => GetSize(node, PropertyNames.Height, total, size, viewportHeight);
     public static float GetWidth(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.Width, total, size);
 
@@ -1315,7 +1317,7 @@ public static class StyleExtensions
     /// <paramref name="total"/> is used for percentage units (e.g. parent content height).
     /// <paramref name="viewportSize"/> is used for vh/vw units; falls back to <paramref name="total"/> when -1.
     /// </summary>
-    private static float GetSize(LayoutNode node, string propertyName, float total = 0, float size = 0, float viewportSize = -1f)
+    private static float GetSize(LayoutNode node, string propertyName, float total = 0, float size = 0, float viewportSize = -1f, float defaultValue = 0f)
     {
         var vp = viewportSize >= 0 ? viewportSize : total;
         // Inline style override (e.g. from element.style.setProperty)
@@ -1333,9 +1335,12 @@ public static class StyleExtensions
             return size == 0 ? total - size : (total - size) / 2f;
         }
 
+        // No usable length value → the property's default. Crucially this is NOT `size`
+        // (the font-size, used as the em basis): returning it gave every element a phantom
+        // 1em of padding/margin when the value was absent.
         if (node.Style.GetProperty(propertyName).RawValue is not Length length)
         {
-            return size;
+            return defaultValue;
         }
 
         return CssUnits.ToPx(length, size, total, vp, vp);

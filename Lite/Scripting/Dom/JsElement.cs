@@ -676,18 +676,22 @@ public class JsElement
     }
 
     // ---- geometry (Phase 7) ----
-    public JsBoundingClientRect getBoundingClientRect() => new(Node);
+    // Querying geometry forces layout so the boxes reflect the current DOM/styles
+    // (matches browser forced-reflow; required for headless geometry reads).
+    private static void EnsureLayout() => JsEngine.Instance?.EnsureLayout();
 
-    public double offsetWidth => Node.Box.BorderBox.Width;
-    public double offsetHeight => Node.Box.BorderBox.Height;
-    public double offsetLeft => Node.Box.MarginBox.Left;
-    public double offsetTop => Node.Box.MarginBox.Top;
-    public double clientWidth => Node.Box.ContentBox.Width;
-    public double clientHeight => Node.Box.ContentBox.Height;
+    public JsBoundingClientRect getBoundingClientRect() { EnsureLayout(); return new(Node); }
+
+    public double offsetWidth { get { EnsureLayout(); return Node.Box.BorderBox.Width; } }
+    public double offsetHeight { get { EnsureLayout(); return Node.Box.BorderBox.Height; } }
+    public double offsetLeft { get { EnsureLayout(); return Node.Box.MarginBox.Left; } }
+    public double offsetTop { get { EnsureLayout(); return Node.Box.MarginBox.Top; } }
+    public double clientWidth { get { EnsureLayout(); return Node.Box.ContentBox.Width; } }
+    public double clientHeight { get { EnsureLayout(); return Node.Box.ContentBox.Height; } }
     public double scrollTop { get; set; }
     public double scrollLeft { get; set; }
-    public double scrollWidth => Node.Box.ContentBox.Width;
-    public double scrollHeight => Node.Box.ContentBox.Height;
+    public double scrollWidth { get { EnsureLayout(); return Node.Box.ContentBox.Width; } }
+    public double scrollHeight { get { EnsureLayout(); return Node.Box.ContentBox.Height; } }
 
     // ---- helpers ----
     private static List<LayoutNode> FindAll(LayoutNode node, Func<LayoutNode, bool> predicate)

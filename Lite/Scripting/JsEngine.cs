@@ -209,11 +209,22 @@ internal class JsEngine
         var jsDocument = new JsDocument(_engine, root);
 
         _engine.SetValue("console", new JsConsole());
-        _engine.SetValue("window", _jsWindow);
+        // The CLR window object is exposed under an internal name; the host shim makes the
+        // real `window` an alias for globalThis so `window.foo = x` works (CLR objects reject
+        // arbitrary expando assignment, which real pages and test harnesses rely on).
+        _engine.SetValue("__jsWindow", _jsWindow);
         _engine.SetValue("document", jsDocument);
         _engine.SetValue("location", Location);
         _engine.SetValue("history", History);
         _engine.SetValue("alert", new Action<object?>(msg => _jsWindow.alert(msg)));
+
+        // Window dimensions/scroll exposed as globals so they survive window===globalThis.
+        _engine.SetValue("__innerWidth", new Func<int>(() => _jsWindow.innerWidth));
+        _engine.SetValue("__innerHeight", new Func<int>(() => _jsWindow.innerHeight));
+        _engine.SetValue("__scrollX", new Func<double>(() => _jsWindow.scrollX));
+        _engine.SetValue("__scrollY", new Func<double>(() => _jsWindow.scrollY));
+        _engine.SetValue("scrollTo", new Action<int, int>((x, y) => _jsWindow.scrollTo(x, y)));
+        _engine.SetValue("scrollBy", new Action<int, int>((x, y) => _jsWindow.scrollBy(x, y)));
 
         // Timers — delay/id come in as JsValue so a missing/undefined arg (e.g. setTimeout(fn))
         // coerces to 0 instead of throwing a CLR conversion error.
@@ -299,19 +310,28 @@ internal class JsEngine
           if (typeof globalThis.queueMicrotask !== 'function') {
             globalThis.queueMicrotask = function (cb) { Promise.resolve().then(cb); };
           }
-          // Browser globals expected by test harnesses and real pages.
+          // window === self === globalThis so that `window.foo = x` defines a real global
+          // (a CLR window object can't take arbitrary expando properties).
+          globalThis.window = globalThis;
           globalThis.self = globalThis;
-          // Top-level browsing context: parent/top/self all reference this context, so
-          // frame-detection (self !== self.parent) correctly resolves to "not framed".
-          // (Real nested contexts arrive with iframe support in a later phase.)
+          // Top-level browsing context: parent/top reference this context, so frame-detection
+          // (self !== self.parent) resolves to "not framed". (Real nested contexts: iframe phase.)
           if (!('parent' in globalThis)) globalThis.parent = globalThis;
           if (!('top' in globalThis)) globalThis.top = globalThis;
           if (!('frames' in globalThis)) globalThis.frames = globalThis;
           if (!('length' in globalThis)) globalThis.length = 0;
           if (!('name' in globalThis)) globalThis.name = '';
-          globalThis.addEventListener = function (t, fn, o) { return window.addEventListener(t, fn, o); };
-          globalThis.removeEventListener = function (t, fn, o) { return window.removeEventListener(t, fn, o); };
-          globalThis.dispatchEvent = function (e) { return window.dispatchEvent(e); };
+          // Window event surface forwards to the CLR window (which owns listener state).
+          globalThis.addEventListener = function (t, fn, o) { return __jsWindow.addEventListener(t, fn, o); };
+          globalThis.removeEventListener = function (t, fn, o) { return __jsWindow.removeEventListener(t, fn, o); };
+          globalThis.dispatchEvent = function (e) { return __jsWindow.dispatchEvent(e); };
+          // Live window dimensions / scroll offsets as global accessors.
+          Object.defineProperty(globalThis, 'innerWidth', { get: __innerWidth, configurable: true });
+          Object.defineProperty(globalThis, 'innerHeight', { get: __innerHeight, configurable: true });
+          Object.defineProperty(globalThis, 'scrollX', { get: __scrollX, configurable: true });
+          Object.defineProperty(globalThis, 'scrollY', { get: __scrollY, configurable: true });
+          Object.defineProperty(globalThis, 'pageXOffset', { get: __scrollX, configurable: true });
+          Object.defineProperty(globalThis, 'pageYOffset', { get: __scrollY, configurable: true });
           globalThis.fetch = function (url, options) {
             return new Promise(function (resolve, reject) {
               __nativeFetch(String(url), options || null, function (r) {
@@ -354,6 +374,22 @@ internal class JsEngine
         try { _engine.Modules.Import(specifier); }
         catch (Exception ex) { Console.WriteLine($"[JS Module] {ex.Message}"); }
     }
+
+    /// <summary>
+    /// Runs layout so geometry queries (getBoundingClientRect / offset*/client*) reflect the
+    /// current DOM and styles. In a real window the paint loop lays out every frame; in headless
+    /// use (tests, the conformance harness) nothing else triggers layout, so script-time geometry
+    /// reads would otherwise see zero boxes. Layout is idempotent, so an extra call is safe.
+    /// </summary>
+    internal void EnsureLayout()
+    {
+        if (_layingOut) return; // guard against re-entrancy
+        _layingOut = true;
+        try { Lite.Layout.BoxEngine.Layout(_root, _jsWindow.innerWidth, _jsWindow.innerHeight); }
+        catch (Exception ex) { Console.WriteLine($"[layout-on-demand] {ex.Message}"); }
+        finally { _layingOut = false; }
+    }
+    private bool _layingOut;
 
     /// <summary>Dispatches the window <c>load</c> event to listeners registered via
     /// addEventListener. Fired once after all page scripts have executed.</summary>

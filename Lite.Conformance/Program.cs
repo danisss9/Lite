@@ -29,6 +29,8 @@ internal static class Program
                 case "--survey" when i + 1 < args.Length:
                     survey = args[++i];
                     break;
+                case "--geom" when i + 2 < args.Length:
+                    return RefTestRunner.ProbeGeometry(args[i + 1], args[i + 2]);
                 case "--survey-limit" when i + 1 < args.Length:
                     int.TryParse(args[++i], out surveyLimit);
                     break;

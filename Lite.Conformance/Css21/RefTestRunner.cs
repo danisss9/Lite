@@ -169,6 +169,34 @@ internal static class RefTestRunner
         return 0;
     }
 
+    /// <summary>Loads a page, runs its scripts, then prints the geometry of elements matching
+    /// a selector — a diagnostic for check-layout-style tests.</summary>
+    public static int ProbeGeometry(string urlPath, string selector)
+    {
+        ConformanceServer.Start();
+        var url = $"{ConformanceServer.BaseUrl}/{urlPath.TrimStart('/')}";
+        var (_, engine) = Harness.HeadlessPage.Load(url, 800, 600);
+        Harness.HeadlessPage.PumpUntilIdle(engine, 2000);
+        engine.Execute($@"
+            (function() {{
+                var els = document.querySelectorAll('{selector}');
+                for (var i=0;i<els.length;i++) {{
+                    var e = els[i];
+                    var cs = getComputedStyle(e);
+                    console.log('[GEOM] ' + (e.id||e.tagName) +
+                        ' offsetW=' + e.offsetWidth + ' offsetH=' + e.offsetHeight +
+                        ' clientW=' + e.clientWidth + ' clientH=' + e.clientHeight);
+                    for (var c=e.firstElementChild; c; c=c.nextElementSibling) {{
+                        console.log('[GEOM]   child ' + c.tagName +
+                            ' offsetW=' + c.offsetWidth + ' offsetH=' + c.offsetHeight +
+                            ' offsetTop=' + c.offsetTop);
+                    }}
+                }}
+            }})();
+        ");
+        return 0;
+    }
+
     private static bool IsReferenceFile(string path)
     {
         var name = Path.GetFileNameWithoutExtension(path);

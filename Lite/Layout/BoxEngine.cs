@@ -224,7 +224,7 @@ internal static class BoxEngine
             : nodeDisplay == DisplayType.Table
                 ? TableEngine.LayoutTable(node, contentX, contentY, contentW, viewportWidth, viewportHeight)
                 : LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight, knownContentH,
-                                 border.Top + padding.Top);
+                                 border.Top + padding.Top, EstablishesBlockFormattingContext(node));
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
@@ -304,6 +304,24 @@ internal static class BoxEngine
 
     /// <summary>Represents an active float whose occupied area affects subsequent layout.</summary>
     private record struct ActiveFloat(float Left, float Top, float Right, float Bottom, FloatType Side);
+
+    /// <summary>
+    /// True when the node establishes a new block formatting context (CSS 2.1 §9.4.1): floats,
+    /// absolutely-positioned boxes, non-block block containers (inline-block, table-cell, flex),
+    /// and elements with overflow other than visible. A BFC's contents (including child margins)
+    /// do not collapse with margins outside it.
+    /// </summary>
+    private static bool EstablishesBlockFormattingContext(LayoutNode node)
+    {
+        if (node.GetFloat() != FloatType.None) return true;
+        var pos = node.GetPosition();
+        if (pos == PositionType.Absolute || pos == PositionType.Fixed) return true;
+        if (node.GetOverflow() != OverflowType.Visible) return true;
+        var display = node.GetDisplay();
+        if (display is DisplayType.InlineBlock or DisplayType.Flex or DisplayType.InlineFlex
+            or DisplayType.TableCell or DisplayType.Table) return true;
+        return false;
+    }
 
     /// <summary>
     /// Collapses two adjoining vertical margins per CSS 2.1 §8.3.1: the result is the sum of
@@ -485,7 +503,8 @@ internal static class BoxEngine
         float contentW,
         float viewportWidth, float viewportHeight,
         float parentContentHeight = 0,
-        float parentBorderPaddingTop = -1f)
+        float parentBorderPaddingTop = -1f,
+        bool parentEstablishesBfc = false)
     {
         var cursorY = contentY;
         var prevMarginBottom = 0f;
@@ -540,10 +559,12 @@ internal static class BoxEngine
                 var childMarginTop = child.GetMarginTop(total: contentW, size: childFontSize);
 
                 float adjust;
-                if (!firstBlockSeen && parentBorderPaddingTop == 0f)
+                if (!firstBlockSeen && parentBorderPaddingTop == 0f && !parentEstablishesBfc)
                 {
-                    // Parent-child margin collapsing: first child's top margin collapses
-                    // with parent's top margin when parent has no border/padding top.
+                    // Parent-child margin collapsing: first child's top margin collapses with
+                    // the parent's top margin when the parent has no border/padding top AND does
+                    // not establish a block formatting context (CSS 2.1 §8.3.1). A BFC (e.g.
+                    // overflow != visible) contains the child's margin instead of collapsing it.
                     adjust = -childMarginTop;
                     firstBlockSeen = true;
                 }
