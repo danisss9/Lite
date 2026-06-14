@@ -535,7 +535,9 @@ internal static class BoxEngine
             if (display == DisplayType.Block || display == DisplayType.ListItem || display == DisplayType.Flex || display == DisplayType.Table)
             {
                 var childFontSize = child.GetFontSize();
-                var childMarginTop = child.GetMarginTop(total: viewportHeight, size: childFontSize);
+                // Percentage margins resolve against the containing-block WIDTH (§8.3), so the
+                // collapse math must use contentW — matching what LayoutBlock's GetMargin uses.
+                var childMarginTop = child.GetMarginTop(total: contentW, size: childFontSize);
 
                 float adjust;
                 if (!firstBlockSeen && parentBorderPaddingTop == 0f)
@@ -561,7 +563,7 @@ internal static class BoxEngine
                 var h = LayoutBlock(child, effX, cursorY + adjust, effW, viewportWidth, viewportHeight, parentContentHeight);
                 cursorY += h + adjust;
 
-                prevMarginBottom = child.GetMarginBottom(total: viewportHeight, size: childFontSize);
+                prevMarginBottom = child.GetMarginBottom(total: contentW, size: childFontSize);
                 i++;
             }
             else

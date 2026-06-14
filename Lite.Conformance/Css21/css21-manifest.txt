@@ -13,4 +13,7 @@ css21/margin-collapse-neg.html | css21/margin-collapse-neg-ref.html
 # ---- Phase 3: currentColor resolves to the element's color ----
 css21/currentcolor.html | css21/currentcolor-ref.html
 
+# (% margin/padding width-resolution is covered by LayoutTests geometry asserts, which avoid
+#  margin-collapse interactions that make an authored pixel reftest ambiguous.)
+
 # ---- Phase 3 additions (anonymous boxes, stacking contexts...) ----

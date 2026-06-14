@@ -1585,7 +1585,10 @@ internal static class Parser
         var doc = Document;
         if (doc is null)
         {
-            var cfg = Configuration.Default.WithCss();
+            // Include the render device so absolute units (in/pt/cm/…) resolve at 96 DPI,
+            // matching TraverseHtml — otherwise a fragment parsed before any page load
+            // computes 1in as 64px instead of 96px.
+            var cfg = Configuration.Default.WithCss().WithRenderDevice();
             doc = BrowsingContext.New(cfg).OpenNewAsync().Result;
             Document = doc;
         }

@@ -1013,20 +1013,23 @@ public static class StyleExtensions
     public static float GetMarginBottom(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginBottom, total, size);
     public static float GetMarginLeft(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginLeft, total, size);
 
+    // CSS 2.1 §8.3 / §8.4: percentage margins AND padding resolve against the containing
+    // block's WIDTH for all four sides — including top/bottom. (totalHeight is kept in the
+    // signature for callers but is intentionally not used as the percentage basis here.)
     public static EdgeSizes GetMargin(this LayoutNode node, float totalWidth = 0, float totalHeight = 0, float fontSize = 16) => new()
     {
-        Top = GetSize(node, PropertyNames.MarginTop, totalHeight, fontSize),
+        Top = GetSize(node, PropertyNames.MarginTop, totalWidth, fontSize),
         Right = GetSize(node, PropertyNames.MarginRight, totalWidth, fontSize),
-        Bottom = GetSize(node, PropertyNames.MarginBottom, totalHeight, fontSize),
+        Bottom = GetSize(node, PropertyNames.MarginBottom, totalWidth, fontSize),
         Left = GetSize(node, PropertyNames.MarginLeft, totalWidth, fontSize),
     };
 
     // Padding
     public static EdgeSizes GetPadding(this LayoutNode node, float totalWidth = 0, float totalHeight = 0, float fontSize = 16) => new()
     {
-        Top = GetSize(node, PropertyNames.PaddingTop, totalHeight, fontSize),
+        Top = GetSize(node, PropertyNames.PaddingTop, totalWidth, fontSize),
         Right = GetSize(node, PropertyNames.PaddingRight, totalWidth, fontSize),
-        Bottom = GetSize(node, PropertyNames.PaddingBottom, totalHeight, fontSize),
+        Bottom = GetSize(node, PropertyNames.PaddingBottom, totalWidth, fontSize),
         Left = GetSize(node, PropertyNames.PaddingLeft, totalWidth, fontSize),
     };
 
