@@ -276,10 +276,12 @@ public class JsElement
         get => Node.Attributes.GetValueOrDefault("class", string.Empty);
         set
         {
+            var old = Node.Attributes.GetValueOrDefault("class");
             Node.Attributes["class"] = value;
             // Re-run the full, idempotent cascade so rules that no longer match are retracted
             // and higher-specificity rules win (enables dynamic class-based styling).
             StyleResolver.Apply(Node);
+            MutationObserverRegistry.NotifyAttribute(_engine, Node, "class", old);
         }
     }
 
@@ -287,11 +289,19 @@ public class JsElement
     public string? getAttribute(string name) =>
         Node.Attributes.TryGetValue(name, out var v) ? v : null;
 
-    public void setAttribute(string name, string val) =>
+    public void setAttribute(string name, string val)
+    {
+        var old = Node.Attributes.TryGetValue(name, out var o) ? o : null;
         Node.Attributes[name] = val;
+        MutationObserverRegistry.NotifyAttribute(_engine, Node, name, old);
+    }
 
-    public void removeAttribute(string name) =>
+    public void removeAttribute(string name)
+    {
+        var old = Node.Attributes.TryGetValue(name, out var o) ? o : null;
         Node.Attributes.Remove(name);
+        MutationObserverRegistry.NotifyAttribute(_engine, Node, name, old);
+    }
 
     public bool hasAttribute(string name) => Node.Attributes.ContainsKey(name);
 
@@ -421,14 +431,20 @@ public class JsElement
         child.Node.Parent?.Children.Remove(child.Node);
         Node.AddChild(child.Node);
         StyleResolver.ApplyTree(child.Node);
+        var prev = Node.Children.Count >= 2 ? Node.Children[^2] : null;
+        MutationObserverRegistry.NotifyChildList(_engine, Node, [child.Node], null, prev, null);
         return child;
     }
 
     public JsElement removeChild(JsElement? child)
     {
         if (child is null) throw new InvalidOperationException("The node to be removed is not a child of this node.");
+        var idx = Node.Children.IndexOf(child.Node);
+        var prev = idx > 0 ? Node.Children[idx - 1] : null;
+        var next = idx >= 0 && idx + 1 < Node.Children.Count ? Node.Children[idx + 1] : null;
         Node.Children.Remove(child.Node);
         child.Node.Parent = null;
+        MutationObserverRegistry.NotifyChildList(_engine, Node, null, [child.Node], prev, next);
         return child;
     }
 
@@ -449,6 +465,7 @@ public class JsElement
             Node.Children.Insert(idx, newNode.Node);
         }
         StyleResolver.ApplyTree(newNode.Node);
+        MutationObserverRegistry.NotifyChildList(_engine, Node, [newNode.Node], null, null, refNode?.Node);
         return newNode;
     }
 

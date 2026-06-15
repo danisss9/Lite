@@ -61,6 +61,7 @@ internal class JsEngine
                 // Per the HTML spec, a microtask checkpoint runs after each task — this is what
                 // lets Promise .then() continuations (e.g. from fetch) actually execute.
                 _engine.Advanced.ProcessTasks();
+                Dom.MutationObserverRegistry.DeliverAll();
             }
             catch (Exception ex) { Console.WriteLine($"[JS task] {ex.Message}"); }
             ran = true;
@@ -72,7 +73,11 @@ internal class JsEngine
     /// invoking DOM event handlers so their .then() callbacks run promptly.</summary>
     internal void FlushMicrotasks()
     {
-        try { _engine.Advanced.ProcessTasks(); }
+        try
+        {
+            _engine.Advanced.ProcessTasks();
+            Dom.MutationObserverRegistry.DeliverAll();
+        }
         catch (Exception ex) { Console.WriteLine($"[JS microtask] {ex.Message}"); }
     }
 
@@ -250,6 +255,10 @@ internal class JsEngine
 
         // navigator
         _engine.SetValue("navigator", new JsNavigator());
+
+        // MutationObserver constructor; reset the registry for this fresh page.
+        Dom.MutationObserverRegistry.Reset();
+        _engine.SetValue("MutationObserver", typeof(Dom.JsMutationObserver));
 
         // Event / CustomEvent constructors (JsEvent is a superset of both)
         _engine.SetValue("Event", typeof(JsEvent));
