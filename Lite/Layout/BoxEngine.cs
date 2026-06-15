@@ -99,8 +99,10 @@ internal static class BoxEngine
         else
             contentX = cbRect.Left + margin.Left + border.Left + padding.Left;
 
-        // Determine this node's explicit content height so children can resolve % heights
-        var explicitHEarly = node.GetHeight(cbRect.Height, 0, viewportHeight);
+        // Determine this node's explicit content height so children can resolve % heights.
+        // height:auto is content-based — GetHeight returns the CB height for auto, so ignore it.
+        var autoHeight = node.IsAutoHeight();
+        var explicitHEarly = autoHeight ? 0f : node.GetHeight(cbRect.Height, 0, viewportHeight);
         float selfContentH;
         if (explicitHEarly > 0)
         {
@@ -128,7 +130,7 @@ internal static class BoxEngine
             contentH = lines.Sum(l => l.Height);
         }
 
-        var explicitH = node.GetHeight(cbRect.Height, 0, viewportHeight);
+        var explicitH = autoHeight ? 0f : node.GetHeight(cbRect.Height, 0, viewportHeight);
         if (explicitH > 0)
         {
             var isBorderBox = node.Style.GetPropertyValue("box-sizing") == "border-box";
@@ -136,7 +138,7 @@ internal static class BoxEngine
                 ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
                 : explicitH;
         }
-        else if (!float.IsNaN(top) && !float.IsNaN(bottom))
+        else if (autoHeight && !float.IsNaN(top) && !float.IsNaN(bottom))
             contentH = Math.Max(0, cbRect.Height - top - bottom - margin.Top - margin.Bottom - border.Top - border.Bottom - padding.Top - padding.Bottom);
 
         // Resolve Y — §4.1: use FlexStaticY as static position when top/bottom are both auto
@@ -207,13 +209,21 @@ internal static class BoxEngine
             }
         }
 
-        var contentW = Math.Max(0f, boxWidth - border.Left - border.Right - padding.Left - padding.Right);
+        // box-sizing: with content-box (the default), an explicit `width` IS the content width —
+        // padding/border are added outside it. Only border-box (and the auto/fill case) subtracts
+        // padding+border from the box width. (Height already honors this below.)
+        var isBorderBoxW = node.Style.GetPropertyValue("box-sizing") == "border-box";
+        var contentW = (explicitW > 0 && !isBorderBoxW)
+            ? Math.Max(0f, explicitW)
+            : Math.Max(0f, boxWidth - border.Left - border.Right - padding.Left - padding.Right);
         var contentX = x + margin.Left + border.Left + padding.Left;
         var contentY = y + margin.Top + border.Top + padding.Top;
 
-        // Resolve this node's explicit height using parentContentHeight for % and viewportHeight for vh/vw
+        // Resolve this node's explicit height using parentContentHeight for % and viewportHeight for vh/vw.
+        // height:auto is content-based — GetHeight returns the containing-block height for auto (the
+        // width-style "fill" behaviour of GetSize), which must NOT be treated as an explicit height.
         var isBorderBox = node.Style.GetPropertyValue("box-sizing") == "border-box";
-        var explicitH = node.GetHeight(parentContentHeight, 0, viewportHeight);
+        var explicitH = node.IsAutoHeight() ? 0f : node.GetHeight(parentContentHeight, 0, viewportHeight);
         var knownContentH = explicitH > 0
             ? (isBorderBox ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitH)
             : 0f;

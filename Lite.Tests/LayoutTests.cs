@@ -90,6 +90,22 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void AbsPosBfc_ContainsFloatWithBottomMargin()
+    {
+        // §10.6.7 / BFC: an abs-pos container's auto-height includes a float's margin-box.
+        // float h=48 + margin-bottom=48 → container height 96.
+        var ws1 = new LayoutNode(null, "#text", "\n  ", _styleCache.Style);
+        ws1.StyleOverrides["display"] = "inline";
+        var flt = Block(new() { ["float"] = "left", ["width"] = "100%", ["height"] = "48px", ["margin-bottom"] = "48px" });
+        var ws2 = new LayoutNode(null, "#text", "\n", _styleCache.Style);
+        ws2.StyleOverrides["display"] = "inline";
+        var container = Block(new() { ["position"] = "absolute", ["width"] = "96px", ["height"] = "auto" }, ws1, flt, ws2);
+        LayoutTree(container);
+        var h = container.Box.ContentBox.Height;
+        True(Math.Abs(h - 96f) < 1f, $"expected abs-pos BFC height 96 (float 48 + mb 48), got {h}");
+    }
+
+    [Test]
     public static void NegativeMarginCollapse_PullsBoxesTogether()
     {
         // green h=50 mb=30; blue h=50 mt=-10 → collapsed = 30 + (-10) = 20 → blue top at 70.

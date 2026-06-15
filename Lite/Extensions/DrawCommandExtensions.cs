@@ -1007,6 +1007,17 @@ public static class StyleExtensions
     // unlike box properties, whose default is 0.
     public static float GetFontSize(this LayoutNode node) => GetSize(node, PropertyNames.FontSize, size: 16, defaultValue: 16);
     public static float GetHeight(this LayoutNode node, float total = 0, float size = 0, float viewportHeight = -1f) => GetSize(node, PropertyNames.Height, total, size, viewportHeight);
+
+    /// <summary>True when height is auto/unset. Needed because GetHeight returns the
+    /// containing-block height for auto (the width-style "fill" behaviour of GetSize), which
+    /// callers must NOT treat as an explicit height — auto height is content-based.</summary>
+    public static bool IsAutoHeight(this LayoutNode node)
+    {
+        if (node.TryResolveStyle(PropertyNames.Height, out var h))
+            return string.IsNullOrEmpty(h) || h.Trim() is "auto";
+        var raw = node.Style.GetProperty(PropertyNames.Height).RawValue;
+        return raw is null or Constant<Length>;
+    }
     public static float GetWidth(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.Width, total, size);
 
     // Margins
