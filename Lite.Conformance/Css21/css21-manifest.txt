@@ -16,4 +16,9 @@ css21/currentcolor.html | css21/currentcolor-ref.html
 # (% margin/padding width-resolution is covered by LayoutTests geometry asserts, which avoid
 #  margin-collapse interactions that make an authored pixel reftest ambiguous.)
 
-# ---- Phase 3 additions (anonymous boxes, stacking contexts...) ----
+# block-in-inline (inline broken around a block → block flow) is covered by a deterministic
+# geometry test in LayoutTests (BlockInInline_*). The upstream box-display/block-in-inline-*
+# reftests are table-based and differ by ~2% on <td> border anti-aliasing, not the structure;
+# survey count rose 3→24 on box-display from the inline→block promotion.
+
+# ---- Phase 3 additions (full anonymous-box splitting, stacking contexts...) ----

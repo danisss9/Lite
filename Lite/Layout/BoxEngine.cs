@@ -16,6 +16,8 @@ internal static class BoxEngine
         var html = root.TagName == "HTML" ? root : root.Children.FirstOrDefault(c => c.TagName == "HTML") ?? root;
         CssUnits.RootFontSize = html.GetFontSize();
 
+        NormalizeBlockInInline(root);
+
         LayoutBlock(root, 0, 0, viewportWidth, viewportWidth, viewportHeight, viewportHeight);
         // Second pass: lay out all absolute/fixed nodes now that normal-flow boxes are finalised
         LayoutPositioned(root, root.Box, viewportWidth, viewportHeight);
@@ -53,6 +55,31 @@ internal static class BoxEngine
                 LayoutPositioned(child, nextCb, viewportWidth, viewportHeight);
             }
         }
+    }
+
+    /// <summary>
+    /// CSS 2.1 §9.2.1.1 (block-in-inline): when an inline-level box contains an in-flow
+    /// block-level box, the inline is broken around the block and anonymous block boxes wrap
+    /// the inline pieces. We approximate this by promoting such an inline element to a block
+    /// container — its text/inline runs then become anonymous block line-boxes via
+    /// <see cref="LayoutChildren"/>, which is the visible result the spec requires.
+    /// </summary>
+    private static void NormalizeBlockInInline(LayoutNode node)
+    {
+        foreach (var child in node.Children)
+            NormalizeBlockInInline(child);
+
+        if (node.TagName.StartsWith('#')) return;
+        // Only pure inline boxes break around a block. inline-block is already a block
+        // container *and* inline-level — promoting it to block would wrongly pull it out of
+        // its line, so leave it alone.
+        if (node.GetDisplay() is not DisplayType.Inline) return;
+
+        bool hasBlockChild = node.Children.Any(c =>
+            !c.TagName.StartsWith('#') &&
+            c.GetDisplay() is DisplayType.Block or DisplayType.ListItem or DisplayType.Table);
+        if (hasBlockChild)
+            node.StyleOverrides["display"] = "block";
     }
 
     private static void ResolveAbsoluteBox(LayoutNode node, BoxDimensions cb,

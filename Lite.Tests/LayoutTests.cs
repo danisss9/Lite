@@ -106,6 +106,30 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void BlockInInline_PromotesInlineToBlock()
+    {
+        // CSS 2.1 §9.2.1.1: an inline box containing a block is broken around it. We model
+        // that by promoting the inline to a block container, so the block child stacks.
+        var blockChild = Block(new() { ["height"] = "50px" });
+        var span = new LayoutNode(null, "SPAN", "", _styleCache.Style);
+        span.StyleOverrides["display"] = "inline";
+        foreach (var side in new[] { "top", "right", "bottom", "left" })
+        {
+            span.StyleOverrides[$"margin-{side}"] = "0";
+            span.StyleOverrides[$"padding-{side}"] = "0";
+            span.StyleOverrides[$"border-{side}-width"] = "0";
+        }
+        span.AddChild(blockChild);
+        var container = Block(new() { ["width"] = "200px" }, span);
+        LayoutTree(container);
+
+        True(span.GetDisplay() == Lite.Extensions.DisplayType.Block,
+            "inline span containing a block child should be promoted to a block container");
+        True(Math.Abs(span.Box.ContentBox.Height - 50f) < 1f,
+            $"promoted span height should be the block child's 50px, got {span.Box.ContentBox.Height}");
+    }
+
+    [Test]
     public static void NegativeMarginCollapse_PullsBoxesTogether()
     {
         // green h=50 mb=30; blue h=50 mt=-10 → collapsed = 30 + (-10) = 20 → blue top at 70.
