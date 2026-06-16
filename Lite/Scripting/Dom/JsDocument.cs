@@ -59,6 +59,11 @@ public class JsDocument
         }).Select(n => new JsElement(_engine, n)).ToArray();
     }
 
+    /// <summary>Returns all elements with the given name attribute (Document.getElementsByName()).</summary>
+    public JsElement[] getElementsByName(string name) =>
+        FindAll(_root, n => n.Attributes.GetValueOrDefault("name") == name)
+            .Select(n => new JsElement(_engine, n)).ToArray();
+
     // ---- creation ----
     public JsElement createElement(string tagName)
     {

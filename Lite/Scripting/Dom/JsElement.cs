@@ -305,6 +305,40 @@ public class JsElement
 
     public bool hasAttribute(string name) => Node.Attributes.ContainsKey(name);
 
+    /// <summary>NamedNodeMap of this element's attributes (Element.attributes).</summary>
+    public JsNamedNodeMap attributes => new(Node);
+
+    /// <summary>True if the element has any attributes (excludes engine-internal keys).</summary>
+    public bool hasAttributes() => Node.Attributes.Keys.Any(k => !k.StartsWith('_'));
+
+    /// <summary>The element's attribute names (Element.getAttributeNames()).</summary>
+    public string[] getAttributeNames() =>
+        Node.Attributes.Keys.Where(k => !k.StartsWith('_')).ToArray();
+
+    /// <summary>Returns the Attr node for the given name, or null.</summary>
+    public JsAttr? getAttributeNode(string name) =>
+        Node.Attributes.ContainsKey(name) ? new JsAttr(Node, name) : null;
+
+    /// <summary>Toggles an attribute. With <paramref name="force"/>, sets/removes per the flag;
+    /// otherwise flips presence. Returns whether the attribute is present afterwards.</summary>
+    public bool toggleAttribute(string name, bool? force = null)
+    {
+        var present = Node.Attributes.ContainsKey(name);
+        var shouldHave = force ?? !present;
+        if (shouldHave && !present)
+        {
+            Node.Attributes[name] = "";
+            MutationObserverRegistry.NotifyAttribute(_engine, Node, name, null);
+        }
+        else if (!shouldHave && present)
+        {
+            var old = Node.Attributes[name];
+            Node.Attributes.Remove(name);
+            MutationObserverRegistry.NotifyAttribute(_engine, Node, name, old);
+        }
+        return shouldHave;
+    }
+
     // ---- tree navigation ----
 
     /// <summary>
