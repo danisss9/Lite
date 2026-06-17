@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head>
+<title>Stacking: z-index flattens across a non-positioned ancestor</title>
+<style>
+  body { margin: 0; background: white; }
+  /* GREEN (z-index 5) is nested in a non-positioned div; RED (z-index 3) is a sibling of that
+     div. Both abs-positioned at the same spot. Per CSS 2.1 Appendix E, GREEN's z-index is
+     compared in the ROOT stacking context (its ancestor div doesn't establish one), so
+     GREEN (5) > RED (3) and GREEN paints on top. The old per-parent sort painted RED on top. */
+  .a { position: absolute; top: 0; left: 0; width: 100px; height: 100px; background: green; z-index: 5; }
+  .b { position: absolute; top: 0; left: 0; width: 100px; height: 100px; background: red; z-index: 3; }
+</style>
+</head>
+<body>
+  <div><div class="a"></div></div>
+  <div class="b"></div>
+</body>
+</html>

@@ -489,52 +489,81 @@ internal static class Drawer
     }
 
     /// <summary>
-    /// Only absolute/fixed nodes (or relative with an explicit z-index) participate in
-    /// z-index stacking. position:relative without z-index paints in normal document order.
+    /// An element establishes a stacking context (painted atomically, ordered by z-index within
+    /// its parent context) when it is positioned (relative/absolute/sticky), has opacity &lt; 1,
+    /// or has a transform. position:fixed is excluded — those are painted by PaintFixedNodes.
+    ///
+    /// Pragmatic model of CSS 2.1 Appendix E: ALL positioned elements are treated as stacking
+    /// contexts. This correctly flattens and z-orders positioned descendants across nesting
+    /// levels (the main gap of the old per-parent sort). The one unmodeled subtlety is the
+    /// z-index:auto case where a positioned-auto element's own positioned descendants are meant
+    /// to join the PARENT context rather than be isolated within it.
     /// </summary>
-    private static bool NeedsZSort(LayoutNode c)
+    private static bool EstablishesStackingContext(LayoutNode n)
     {
-        var p = c.GetPosition();
-        if (p == PositionType.Absolute || p == PositionType.Fixed) return true;
-        if (p == PositionType.Relative)
-        {
-            // Only create stacking context when z-index is explicitly set (not "auto"/unset)
-            var raw = c.Style.GetPropertyValue(AngleSharp.Css.PropertyNames.ZIndex);
-            return !string.IsNullOrEmpty(raw) && raw != "auto" && int.TryParse(raw, out _);
-        }
+        var pos = n.GetPosition();
+        if (pos is PositionType.Absolute or PositionType.Relative or PositionType.Sticky) return true;
+        if (n.GetOpacity() < 1f) return true;
+        if (n.GetTransform() != null) return true;
         return false;
     }
 
-    /// <summary>Paints children sorted by z-index (negative first, then 0+).</summary>
+    /// <summary>Collects stacking-context descendants of <paramref name="node"/> in document
+    /// order, descending through non-stacking, non-fixed boxes but stopping at (and including)
+    /// each stacking context — so deep positioned elements flatten into their nearest ancestor
+    /// stacking context. position:fixed is skipped (PaintFixedNodes owns it).</summary>
+    private static void CollectStackingItems(LayoutNode node, List<LayoutNode> items)
+    {
+        foreach (var child in node.Children)
+        {
+            if (child.GetDisplay() == DisplayType.None) continue;
+            if (child.GetPosition() == PositionType.Fixed) continue;
+            if (EstablishesStackingContext(child)) items.Add(child); // atomic — don't descend
+            else CollectStackingItems(child, items);
+        }
+    }
+
+    /// <summary>
+    /// Paints a node's descendants per CSS 2.1 Appendix E. The node's own background/borders are
+    /// already painted by the caller, so the order here is: negative-z stacking contexts → in-flow
+    /// non-positioned content → zero/positive-z stacking contexts (and positioned descendants).
+    /// A stacking-context root flattens & z-orders ALL positioned descendants in its subtree;
+    /// non-root nodes only paint their in-flow (non-stacking) children, since their positioned
+    /// descendants were already collected by the nearest ancestor stacking-context root.
+    /// </summary>
     private static void PaintChildrenSorted(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
-        var display = node.GetDisplay();
-        var isFlex = display == DisplayType.Flex || display == DisplayType.InlineFlex;
-        var children = node.Children;
+        var isFlex = node.GetDisplay() is DisplayType.Flex or DisplayType.InlineFlex;
+        IEnumerable<LayoutNode> ordered = isFlex ? node.Children.OrderBy(c => c.GetOrder()) : node.Children;
 
-        // §5.4: Flex containers paint children in order-modified document order.
-        // Within each order bucket: negative z-index first, then normal, then non-negative stacked.
-        IEnumerable<LayoutNode> orderedChildren = isFlex
-            ? children.OrderBy(c => c.GetOrder())
-            : (IEnumerable<LayoutNode>)children;
+        // The root element (no parent) and any stacking-context-establishing box are roots.
+        bool isScRoot = node.Parent is null || EstablishesStackingContext(node);
 
-        // Fast path — no z-sorted children
-        if (!orderedChildren.Any(NeedsZSort))
+        void PaintInFlow()
         {
-            foreach (var child in orderedChildren)
+            foreach (var child in ordered)
+            {
+                if (child.GetPosition() == PositionType.Fixed) continue;       // PaintFixedNodes
+                if (EstablishesStackingContext(child)) continue;               // handled by SC root
                 PaintNode(canvas, child, viewportWidth);
+            }
+        }
+
+        if (!isScRoot)
+        {
+            PaintInFlow();
             return;
         }
 
-        var childList = orderedChildren.ToList();
-        // Negative z-index first, then normal flow (incl. position:relative without z-index), then non-negative stacked
-        var negZ = childList.Where(c => NeedsZSort(c) && c.GetZIndex() < 0).OrderBy(c => c.GetZIndex()).ToList();
-        var normal = childList.Where(c => !NeedsZSort(c)).ToList();
-        var posZ = childList.Where(c => NeedsZSort(c) && c.GetZIndex() >= 0).OrderBy(c => c.GetZIndex()).ToList();
+        var items = new List<LayoutNode>();
+        CollectStackingItems(node, items);
+        // OrderBy is stable, so equal z-indices keep document order.
+        var negativeZ = items.Where(c => c.GetZIndex() < 0).OrderBy(c => c.GetZIndex()).ToList();
+        var nonNegativeZ = items.Where(c => c.GetZIndex() >= 0).OrderBy(c => c.GetZIndex()).ToList();
 
-        foreach (var c in negZ) PaintNode(canvas, c, viewportWidth);
-        foreach (var c in normal) PaintNode(canvas, c, viewportWidth);
-        foreach (var c in posZ) PaintNode(canvas, c, viewportWidth);
+        foreach (var c in negativeZ) PaintNode(canvas, c, viewportWidth);
+        PaintInFlow();
+        foreach (var c in nonNegativeZ) PaintNode(canvas, c, viewportWidth);
     }
 
     // -------------------------------------------------------------------------

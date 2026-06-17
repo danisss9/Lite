@@ -21,4 +21,7 @@ css21/currentcolor.html | css21/currentcolor-ref.html
 # reftests are table-based and differ by ~2% on <td> border anti-aliasing, not the structure;
 # survey count rose 3→24 on box-display from the inline→block promotion.
 
-# ---- Phase 3 additions (full anonymous-box splitting, stacking contexts...) ----
+# ---- Phase 3: stacking contexts (Appendix E flattening — z-index across nesting levels) ----
+css21/stacking-flatten.html | css21/stacking-flatten-ref.html
+
+# ---- Phase 3 additions (full anonymous-box splitting, z-index:auto subtlety...) ----
