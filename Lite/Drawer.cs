@@ -247,6 +247,16 @@ internal static class Drawer
             }
         }
 
+        // CSS `clip: rect(...)` — clips an absolutely-positioned element to a rectangle
+        // relative to its border box (CSS 2.1 §11.1.2).
+        var cssClipRect = node.GetClipRect();
+        bool cssClipped = cssClipRect is not null;
+        if (cssClipped)
+        {
+            canvas.Save();
+            canvas.ClipRect(cssClipRect!.Value);
+        }
+
         // Apply per-element scroll offset
         var scrollState = node.ScrollState;
         if (scrollState != null && scrollState.NeedsScrollbar)
@@ -266,6 +276,7 @@ internal static class Drawer
             DrawElementScrollbar(canvas, node, scrollState);
         }
 
+        if (cssClipped) canvas.Restore();
         if (opacity < 1f || clip) canvas.Restore();
         if (filterPaint != null) { canvas.Restore(); filterPaint.Dispose(); }
         if (transform != null) canvas.Restore();
@@ -1050,7 +1061,30 @@ internal static class Drawer
         var listStylePos = node.GetListStylePosition();
         float insideMarkerWidth = 0f; // track width consumed by inside marker
 
-        if (listStyleType != ListStyleType.None)
+        // list-style-image: when set and loadable, the image replaces the bullet/number marker.
+        var listImageUrl = node.GetListStyleImage();
+        SKBitmap? listImage = null;
+        if (listImageUrl is not null)
+        {
+            if (!_bgImageCache.TryGetValue(listImageUrl, out listImage))
+            {
+                listImage = ResourceLoader.FetchImage(listImageUrl, Parser.BaseUrl);
+                _bgImageCache[listImageUrl] = listImage;
+            }
+        }
+
+        if (listImage is not null)
+        {
+            var lineH = node.GetLineHeight(node.GetFontSize());
+            float imgW = listImage.Width, imgH = listImage.Height;
+            var dest = listStylePos == ListStylePosition.Inside
+                ? new SKRect(box.ContentBox.Left, box.ContentBox.Top, box.ContentBox.Left + imgW, box.ContentBox.Top + imgH)
+                : new SKRect(box.ContentBox.Left - imgW - 4f, box.ContentBox.Top, box.ContentBox.Left - 4f, box.ContentBox.Top + imgH);
+            using var imgPaint = new SKPaint { IsAntialias = true };
+            canvas.DrawBitmap(listImage, dest, imgPaint);
+            if (listStylePos == ListStylePosition.Inside) insideMarkerWidth = imgW + 4f;
+        }
+        else if (listStyleType != ListStyleType.None)
         {
             using var markerFont = TextMeasure.CreateFont(node);
             using var markerPaint = new SKPaint { Color = node.GetColor(), IsAntialias = true };

@@ -384,6 +384,35 @@ public static class StyleExtensions
         };
     }
 
+    /// <summary>Parses the CSS <c>clip: rect(top,right,bottom,left)</c> property into an
+    /// absolute clip rectangle (offsets relative to the element's border box). Returns null
+    /// for <c>auto</c>/unset. <c>auto</c> on an edge means that edge of the border box.</summary>
+    public static SkiaSharp.SKRect? GetClipRect(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("clip", out var ov)
+            ? ov : node.Style.GetPropertyValue("clip");
+        if (string.IsNullOrEmpty(raw)) return null;
+        raw = raw.Trim();
+        var open = raw.IndexOf('(');
+        var close = raw.IndexOf(')');
+        if (!raw.StartsWith("rect", StringComparison.OrdinalIgnoreCase) || open < 0 || close < 0) return null;
+
+        var parts = raw[(open + 1)..close].Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 4) return null;
+
+        var box = node.Box.BorderBox;
+        var fontSize = node.GetFontSize();
+        float Edge(string s, float autoVal) =>
+            s.Trim().Equals("auto", StringComparison.OrdinalIgnoreCase) ? autoVal :
+            CssUnits.TryParse(s.Trim(), fontSize, 0, 0, 0, out var px) ? px : autoVal;
+
+        var top = Edge(parts[0], 0f);
+        var right = Edge(parts[1], box.Width);
+        var bottom = Edge(parts[2], box.Height);
+        var left = Edge(parts[3], 0f);
+        return new SkiaSharp.SKRect(box.Left + left, box.Top + top, box.Left + right, box.Top + bottom);
+    }
+
     public static int GetZIndex(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.ZIndex, out var ov)
@@ -675,6 +704,27 @@ public static class StyleExtensions
             return inner.Trim().Trim('"', '\'');
         }
         return null;
+    }
+
+    /// <summary>Returns the url() of <c>list-style-image</c> (or the <c>list-style</c> shorthand),
+    /// or null for none/unset.</summary>
+    public static string? GetListStyleImage(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("list-style-image", out var ov)
+            ? ov : node.Style.GetPropertyValue("list-style-image");
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            // Fall back to a url() inside the list-style shorthand.
+            var shorthand = node.TryResolveStyle("list-style", out var ls)
+                ? ls : node.Style.GetPropertyValue("list-style");
+            raw = shorthand ?? "";
+        }
+        var idx = raw.IndexOf("url(", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return null;
+        var inner = raw[(idx + 4)..];
+        var close = inner.IndexOf(')');
+        if (close < 0) return null;
+        return inner[..close].Trim().Trim('"', '\'');
     }
 
     /// <summary>Parses a linear-gradient() from background-image or background.</summary>

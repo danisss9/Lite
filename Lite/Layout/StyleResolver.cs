@@ -95,6 +95,10 @@ internal static class StyleResolver
             node.CascadeAppliedProps.Add(prop);
         }
 
+        // Resolve the cascade-wide keywords initial / inherit / unset against PropertyTable.
+        foreach (var prop in node.StyleOverrides.Keys.ToList())
+            ResolveCssWideKeyword(node, prop);
+
         // Inheritance: for inherited properties still unset, take the parent's resolved value.
         if (node.Parent is { } parent)
         {
@@ -109,4 +113,29 @@ internal static class StyleResolver
             }
         }
     }
+
+    /// <summary>Resolves an <c>initial</c> / <c>inherit</c> / <c>unset</c> value in
+    /// <see cref="LayoutNode.StyleOverrides"/> to a concrete value (CSS 2.1 / Cascade §7.3).</summary>
+    internal static void ResolveCssWideKeyword(LayoutNode node, string prop)
+    {
+        if (!node.StyleOverrides.TryGetValue(prop, out var raw)) return;
+        var keyword = raw.Trim().ToLowerInvariant();
+        if (keyword is not ("initial" or "inherit" or "unset")) return;
+
+        string? resolved = keyword switch
+        {
+            "inherit" => InheritedOrNull(node, prop) ?? PropertyTable.InitialValue(prop),
+            "initial" => PropertyTable.InitialValue(prop),
+            "unset" => PropertyTable.IsInherited(prop)
+                ? (InheritedOrNull(node, prop) ?? PropertyTable.InitialValue(prop))
+                : PropertyTable.InitialValue(prop),
+            _ => null,
+        };
+
+        if (resolved is not null) node.StyleOverrides[prop] = resolved;
+        else node.StyleOverrides.Remove(prop); // unknown property → drop the unusable keyword
+    }
+
+    private static string? InheritedOrNull(LayoutNode node, string prop) =>
+        node.Parent is { } p && p.TryResolveStyle(prop, out var v) && !string.IsNullOrEmpty(v) ? v : null;
 }

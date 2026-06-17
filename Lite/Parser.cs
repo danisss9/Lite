@@ -135,11 +135,20 @@ internal static class Parser
             try
             {
                 var css = _httpClient.GetStringAsync(cssUrl).Result;
+                css = InlineImports(css, cssUrl);
                 var styleEl = document.CreateElement("style");
                 styleEl.TextContent = css;
                 head.AppendChild(styleEl);
             }
             catch (Exception ex) { Console.WriteLine($"[CSS load error] {cssUrl}: {ex.Message}"); }
+        }
+
+        // Process @import in author <style> elements (skip the UA sheet, which has none).
+        foreach (var styleEl in document.QuerySelectorAll("style"))
+        {
+            var text = styleEl.TextContent;
+            if (text.Contains("@import", StringComparison.OrdinalIgnoreCase))
+                styleEl.TextContent = InlineImports(text, _documentBaseUrl ?? _baseUrl ?? "");
         }
 
         // Collect @keyframes from all stylesheets before traversing the DOM
@@ -233,6 +242,44 @@ internal static class Parser
         if (baseUrl != null && Uri.TryCreate(new Uri(baseUrl), src, out var resolved))
             return resolved.ToString();
         return null;
+    }
+
+    /// <summary>
+    /// Recursively inlines <c>@import</c> rules (CSS 2.1 §6.3): fetches each imported sheet
+    /// (resolved against <paramref name="baseUrl"/>), inlines ITS imports, and substitutes the
+    /// text. A media-qualified import (<c>@import url(x) print;</c>) is wrapped in an @media block.
+    /// </summary>
+    private static string InlineImports(string css, string baseUrl, int depth = 0)
+    {
+        if (depth > 8 || string.IsNullOrEmpty(css) ||
+            !css.Contains("@import", StringComparison.OrdinalIgnoreCase))
+            return css;
+
+        // @import url("x") media;  |  @import "x" media;  |  @import 'x';
+        var rx = new System.Text.RegularExpressions.Regex(
+            @"@import\s+(?:url\(\s*)?['""]?([^'""\)\s]+)['""]?\s*\)?\s*([^;]*);",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return rx.Replace(css, m =>
+        {
+            var importUrl = m.Groups[1].Value.Trim();
+            var media = m.Groups[2].Value.Trim();
+            string resolved;
+            if (Uri.TryCreate(importUrl, UriKind.Absolute, out var abs)) resolved = abs.ToString();
+            else if (Uri.TryCreate(new Uri(baseUrl), importUrl, out var rel)) resolved = rel.ToString();
+            else return "";
+            try
+            {
+                var imported = _httpClient.GetStringAsync(resolved).Result;
+                imported = InlineImports(imported, resolved, depth + 1);
+                return string.IsNullOrEmpty(media) ? imported : $"@media {media} {{\n{imported}\n}}";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[@import load error] {resolved}: {ex.Message}");
+                return "";
+            }
+        });
     }
 
     /// <summary>Walks all stylesheets and loads @font-face rules into <see cref="FontRegistry"/>.</summary>
@@ -593,7 +640,7 @@ internal static class Parser
         if (value is "none" or "normal" or "") return null;
 
         // Check if this is a simple single-token value
-        if (!value.Contains("counter(") && !value.Contains("counters("))
+        if (!value.Contains("counter(") && !value.Contains("counters(") && !value.Contains("attr("))
         {
             // Simple single value
             if ((value.StartsWith('"') && value.EndsWith('"')) ||
@@ -602,10 +649,17 @@ internal static class Parser
                 var inner = value[1..^1];
                 return DecodeCssEscapes(inner);
             }
-            if (value.StartsWith("attr(")) return null;
             if (value == "open-quote") return "\u201C";
             if (value == "close-quote") return "\u201D";
             return value;
+        }
+
+        // Simple attr(name) \u2014 the named attribute's value (CSS 2.1 \u00A712.2).
+        if (value.StartsWith("attr(", StringComparison.OrdinalIgnoreCase) && value.EndsWith(")") &&
+            !value[5..].Contains("attr(") && !value.Contains(' '))
+        {
+            var attrName = value[5..^1].Trim();
+            return node?.Attributes.GetValueOrDefault(attrName) ?? "";
         }
 
         // Tokenize concatenated content value: "text" counter(name) "more"
@@ -653,6 +707,17 @@ internal static class Parser
                 var counterVal = 0;
                 node?.CounterValues?.TryGetValue(counterName, out counterVal);
                 sb.Append(counterVal);
+                i = paren + 1;
+                continue;
+            }
+
+            // attr(name) \u2014 the named attribute's value
+            if (value[i..].StartsWith("attr(", StringComparison.OrdinalIgnoreCase))
+            {
+                var paren = value.IndexOf(')', i);
+                if (paren < 0) break;
+                var attrName = value[(i + 5)..paren].Trim();
+                if (node?.Attributes.TryGetValue(attrName, out var av) == true) sb.Append(av);
                 i = paren + 1;
                 continue;
             }

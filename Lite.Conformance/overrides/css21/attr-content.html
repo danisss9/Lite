@@ -1,0 +1,11 @@
+<!doctype html>
+<html>
+<head>
+<title>attr() in content</title>
+<style>
+  body { margin: 0; background: white; font: 16px monospace; }
+  .x::before { content: attr(data-label); color: green; }
+</style>
+</head>
+<body><span class="x" data-label="OK"></span></body>
+</html>

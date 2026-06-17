@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+<title>clip: rect() on an absolutely positioned element</title>
+<style>
+  body { margin: 0; background: white; }
+  /* A 100x100 green box clipped to its top-left 50x50 quadrant. */
+  .c {
+    position: absolute; top: 0; left: 0;
+    width: 100px; height: 100px; background: green;
+    clip: rect(0px, 50px, 50px, 0px);
+  }
+</style>
+</head>
+<body><div class="c"></div></body>
+</html>
