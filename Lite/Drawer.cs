@@ -390,13 +390,25 @@ internal static class Drawer
         DrawOutline(canvas, box, node);
     }
 
+    /// <summary>CSS 2.1 §17.6.1.1: with <c>empty-cells: hide</c>, a table cell with no in-flow
+    /// content paints neither background nor borders.</summary>
+    private static bool IsEmptyCellHidden(LayoutNode node)
+    {
+        if (node.GetDisplay() != DisplayType.TableCell) return false;
+        var ec = node.TryResolveStyle("empty-cells", out var v) ? v : node.Style.GetPropertyValue("empty-cells");
+        if (ec?.Trim() != "hide") return false;
+        bool hasContent = !string.IsNullOrWhiteSpace(node.DisplayText)
+            || node.Children.Any(c => c.TagName != "#text" || !string.IsNullOrWhiteSpace(c.DisplayText));
+        return !hasContent;
+    }
+
     private static void PaintBlock(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
         var box = node.Box;
 
         // Decorations are drawn before the scroll translate for scrollable elements;
-        // skip them here to avoid painting them twice.
-        if (node.ScrollState?.NeedsScrollbar != true)
+        // skip them here to avoid painting them twice. empty-cells:hide also suppresses them.
+        if (node.ScrollState?.NeedsScrollbar != true && !IsEmptyCellHidden(node))
         {
             DrawBoxShadows(canvas, box, node);
 

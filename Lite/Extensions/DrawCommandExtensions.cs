@@ -296,16 +296,30 @@ public static class StyleExtensions
 
     public static TextAlign GetTextAlign(this LayoutNode node)
     {
-        var raw = node.TryResolveStyle(PropertyNames.TextAlign, out var ov)
+        var raw = (node.TryResolveStyle(PropertyNames.TextAlign, out var ov)
             ? ov
-            : node.Style.GetPropertyValue(PropertyNames.TextAlign);
+            : node.Style.GetPropertyValue(PropertyNames.TextAlign))?.Trim().ToLowerInvariant();
+        var rtl = node.GetDirection() == "rtl";
         return raw switch
         {
             "center" => TextAlign.Center,
             "right" => TextAlign.Right,
+            "left" => TextAlign.Left,
             "justify" => TextAlign.Justify,
-            _ => TextAlign.Left,
+            "start" => rtl ? TextAlign.Right : TextAlign.Left,
+            "end" => rtl ? TextAlign.Left : TextAlign.Right,
+            // Initial value is "start": right in RTL, left in LTR.
+            _ => rtl ? TextAlign.Right : TextAlign.Left,
         };
+    }
+
+    /// <summary>Returns the computed inline base direction, "ltr" (default) or "rtl".
+    /// direction is inherited, so a child of an RTL block reports "rtl".</summary>
+    public static string GetDirection(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("direction", out var ov)
+            ? ov : node.Style.GetPropertyValue("direction");
+        return raw?.Trim().Equals("rtl", StringComparison.OrdinalIgnoreCase) == true ? "rtl" : "ltr";
     }
 
     /// <summary>Returns the computed line-height in pixels. Falls back to fontSize * 1.4.</summary>

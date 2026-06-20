@@ -56,7 +56,21 @@ internal static class TableEngine
         var colWidths = ComputeColumnWidths(placements, colCount, contentW - spacing * (colCount + 1), viewportW, viewportH);
         var rowHeights = new float[rowCount];
 
-        var cursorY = contentY + spacing;
+        // Caption (CSS 2.1 §17.4): a block spanning the table width, placed above (default) or
+        // below the table box per caption-side.
+        var caption = table.Children.FirstOrDefault(c => c.TagName == "CAPTION" && c.GetDisplay() != DisplayType.None);
+        bool captionBottom = false;
+        float captionTopH = 0f;
+        if (caption is not null)
+        {
+            var side = caption.TryResolveStyle("caption-side", out var cs)
+                ? cs : caption.Style.GetPropertyValue("caption-side");
+            captionBottom = side?.Trim() == "bottom";
+            if (!captionBottom)
+                captionTopH = LayoutCaptionBlock(caption, contentX, contentY, contentW, viewportW, viewportH);
+        }
+
+        var cursorY = contentY + captionTopH + spacing;
 
         // ── Pass 1: measure each cell's natural content height ──────────────
         foreach (var p in placements)
@@ -83,6 +97,12 @@ internal static class TableEngine
                 var lh = cell.GetLineHeight(cell.GetFontSize());
                 var lines = TextMeasure.WrapText(cell.DisplayText, Math.Max(cw, 1f), font, cell.GetWhiteSpace(), lh);
                 contentH = lines.Sum(l => l.Height);
+            }
+            // A cell's explicit height acts as a minimum for its content height.
+            if (!cell.IsAutoHeight())
+            {
+                var explicitCellH = cell.GetHeight(0f, 0f, viewportH);
+                if (explicitCellH > contentH) contentH = explicitCellH;
             }
 
             var cellOuterH = cellMarg.Top + cellBord.Top + cellPad.Top
@@ -185,7 +205,51 @@ internal static class TableEngine
             };
         }
 
+        if (caption is not null && captionBottom)
+            ry += LayoutCaptionBlock(caption, contentX, ry, contentW, viewportW, viewportH);
+
         return ry - contentY;
+    }
+
+    /// <summary>Lays out a table CAPTION as a block spanning the table width and returns its
+    /// margin-box height. Sets caption.Box so it paints in the normal child pass.</summary>
+    private static float LayoutCaptionBlock(LayoutNode caption, float x, float y, float width,
+        float viewportW, float viewportH)
+    {
+        // A caption is a block-level box; mark it so the painter draws its background/borders
+        // (an empty inline caption would otherwise paint nothing).
+        caption.StyleOverrides["display"] = "block";
+        var fs = caption.GetFontSize();
+        var pad = caption.GetPadding(width, viewportH, fs);
+        var bord = caption.GetBorderWidth();
+        var marg = caption.GetMargin(width, viewportH, fs);
+        var cw = Math.Max(0f, width - marg.Left - marg.Right - bord.Left - bord.Right - pad.Left - pad.Right);
+        var cx = x + marg.Left + bord.Left + pad.Left;
+        var cy = y + marg.Top + bord.Top + pad.Top;
+
+        var contentH = BoxEngine.LayoutChildrenPublic(caption.Children, cx, cy, cw, viewportW, viewportH);
+        if (contentH == 0f && !string.IsNullOrEmpty(caption.DisplayText))
+        {
+            using var font = TextMeasure.CreateFont(caption);
+            var lh = caption.GetLineHeight(fs);
+            var lines = TextMeasure.WrapText(caption.DisplayText, Math.Max(cw, 1f), font, caption.GetWhiteSpace(), lh);
+            contentH = lines.Sum(l => l.Height);
+        }
+        // Honour an explicit height on the caption.
+        if (!caption.IsAutoHeight())
+        {
+            var h = caption.GetHeight(0f, 0f, viewportH);
+            if (h > 0f) contentH = h;
+        }
+
+        caption.Box = new BoxDimensions
+        {
+            ContentBox = new SKRect(cx, cy, cx + cw, cy + contentH),
+            Padding = pad,
+            Border = bord,
+            Margin = marg,
+        };
+        return marg.Top + bord.Top + pad.Top + contentH + pad.Bottom + bord.Bottom + marg.Bottom;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -30,4 +30,11 @@ css21/attr-content.html | css21/attr-content-ref.html
 css21/clip-rect.html | css21/clip-rect-ref.html
 # (list-style-image url parsing covered by CssWideKeywordTests; initial/unset by CssWideKeywordTests)
 
+# ---- Phase 3: medium items — direction:rtl, ::first-letter, table caption, empty-cells ----
+css21/rtl-align.html | css21/rtl-align-ref.html
+css21/first-letter-color.html | css21/first-letter-color-ref.html
+css21/caption-top.html | css21/caption-top-ref.html
+css21/caption-bottom.html | css21/caption-bottom-ref.html
+css21/empty-cells-hide.html | css21/empty-cells-hide-ref.html
+
 # ---- Phase 3 additions (full anonymous-box splitting, z-index:auto subtlety...) ----
