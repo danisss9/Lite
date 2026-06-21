@@ -130,6 +130,31 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void ParentLastChild_MarginCollapsesThrough()
+    {
+        // A parent with no bottom border/padding and auto height: the last child's bottom margin
+        // collapses through, so the parent's content box is just the child (50), not 50+30.
+        var child = Block(new() { ["height"] = "50px", ["margin-bottom"] = "30px" });
+        var parent = Block(new() { ["width"] = "100px" }, child);
+        var container = Block(new() { ["width"] = "200px" }, parent);
+        LayoutTree(container);
+        var h = parent.Box.ContentBox.Height;
+        True(Math.Abs(h - 50f) < 1f, $"expected parent content height 50 (child margin collapses through), got {h}");
+    }
+
+    [Test]
+    public static void BottomPadding_PreventsCollapseThrough()
+    {
+        // With bottom padding, the child's bottom margin is contained: content height = 50 + 30.
+        var child = Block(new() { ["height"] = "50px", ["margin-bottom"] = "30px" });
+        var parent = Block(new() { ["width"] = "100px", ["padding-bottom"] = "5px" }, child);
+        var container = Block(new() { ["width"] = "200px" }, parent);
+        LayoutTree(container);
+        var h = parent.Box.ContentBox.Height;
+        True(Math.Abs(h - 80f) < 1f, $"expected parent content height 80 (margin contained by bottom padding), got {h}");
+    }
+
+    [Test]
     public static void NegativeMarginCollapse_PullsBoxesTogether()
     {
         // green h=50 mb=30; blue h=50 mt=-10 → collapsed = 30 + (-10) = 20 → blue top at 70.

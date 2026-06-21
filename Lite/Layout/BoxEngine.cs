@@ -18,7 +18,7 @@ internal static class BoxEngine
 
         NormalizeBlockInInline(root);
 
-        LayoutBlock(root, 0, 0, viewportWidth, viewportWidth, viewportHeight, viewportHeight);
+        LayoutBlock(root, 0, 0, viewportWidth, viewportWidth, viewportHeight, viewportHeight); // root: margin-box discarded
         // Second pass: lay out all absolute/fixed nodes now that normal-flow boxes are finalised
         LayoutPositioned(root, root.Box, viewportWidth, viewportHeight);
     }
@@ -200,7 +200,9 @@ internal static class BoxEngine
     /// Lays out a block-level node at the given position.
     /// Returns the total margin-box height consumed (for the parent's y-cursor).
     /// </summary>
-    private static float LayoutBlock(
+    /// <summary>Lays out a block-level node. Returns its total margin-box height and its
+    /// effective bottom margin (after any last-child collapse-through).</summary>
+    private static (float Height, float BottomMargin) LayoutBlock(
         LayoutNode node,
         float x, float y,
         float availableWidth,
@@ -210,7 +212,7 @@ internal static class BoxEngine
         if (node.GetDisplay() == DisplayType.None)
         {
             node.Box = default;
-            return 0f;
+            return (0f, 0f);
         }
 
         var fontSize = node.GetFontSize();
@@ -256,12 +258,16 @@ internal static class BoxEngine
             : 0f;
 
         var nodeDisplay = node.GetDisplay();
-        var contentH = (nodeDisplay == DisplayType.Flex || nodeDisplay == DisplayType.InlineFlex)
-            ? FlexEngine.LayoutFlex(node, contentX, contentY, contentW, knownContentH, viewportWidth, viewportHeight)
-            : nodeDisplay == DisplayType.Table
-                ? TableEngine.LayoutTable(node, contentX, contentY, contentW, viewportWidth, viewportHeight)
-                : LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight, knownContentH,
-                                 border.Top + padding.Top, EstablishesBlockFormattingContext(node));
+        var establishesBfc = EstablishesBlockFormattingContext(node);
+        float contentH;
+        float trailingMargin = 0f; // last in-flow block child's bottom margin (collapse-through candidate)
+        if (nodeDisplay is DisplayType.Flex or DisplayType.InlineFlex)
+            contentH = FlexEngine.LayoutFlex(node, contentX, contentY, contentW, knownContentH, viewportWidth, viewportHeight);
+        else if (nodeDisplay == DisplayType.Table)
+            contentH = TableEngine.LayoutTable(node, contentX, contentY, contentW, viewportWidth, viewportHeight);
+        else
+            contentH = LayoutChildrenImpl(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight,
+                knownContentH, border.Top + padding.Top, establishesBfc, out trailingMargin);
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
@@ -272,6 +278,17 @@ internal static class BoxEngine
             var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentW, 1f), font, ws, lh);
             contentH = lines.Sum(l => l.Height);
         }
+
+        // Parent–last-child margin collapse-through (CSS 2.1 §8.3.1): when this block has no
+        // bottom border/padding, an auto height, and is not a block formatting context, the last
+        // in-flow child's bottom margin collapses with this block's own bottom margin (propagating
+        // out) rather than adding to the content height. Otherwise it stays inside the content.
+        var effectiveBottomMargin = margin.Bottom;
+        if (trailingMargin != 0f && padding.Bottom == 0f && border.Bottom == 0f
+            && node.IsAutoHeight() && !establishesBfc)
+            effectiveBottomMargin = CollapseMargins(margin.Bottom, trailingMargin);
+        else
+            contentH += trailingMargin;
 
         // Explicit height overrides — respect box-sizing: border-box
         if (explicitH > 0)
@@ -306,6 +323,7 @@ internal static class BoxEngine
             node.ScrollState = null;
         }
 
+        margin.Bottom = effectiveBottomMargin;
         node.Box = new BoxDimensions
         {
             ContentBox = new SKRect(contentX, contentY, contentX + contentW, contentY + contentH),
@@ -316,8 +334,8 @@ internal static class BoxEngine
 
         var totalH = margin.Top + border.Top + padding.Top
                    + contentH
-                   + padding.Bottom + border.Bottom + margin.Bottom;
-        return totalH;
+                   + padding.Bottom + border.Bottom + effectiveBottomMargin;
+        return (totalH, effectiveBottomMargin);
     }
 
     /// <summary>
@@ -534,6 +552,8 @@ internal static class BoxEngine
         return new ActiveFloat(outerLeft, outerTop, outerRight, outerBottom, side);
     }
 
+    /// <summary>Back-compat wrapper: returns content height INCLUDING any trailing child margin
+    /// (used by callers that don't participate in parent–last-child margin collapsing).</summary>
     private static float LayoutChildren(
         List<LayoutNode> children,
         float contentX, float contentY,
@@ -543,9 +563,30 @@ internal static class BoxEngine
         float parentBorderPaddingTop = -1f,
         bool parentEstablishesBfc = false)
     {
+        var h = LayoutChildrenImpl(children, contentX, contentY, contentW, viewportWidth, viewportHeight,
+            parentContentHeight, parentBorderPaddingTop, parentEstablishesBfc, out var trailing);
+        return h + trailing;
+    }
+
+    /// <summary>
+    /// Lays out block-container children. Returns content height EXCLUDING the trailing margin
+    /// of the last in-flow block child (reported via <paramref name="trailingMargin"/>), so the
+    /// parent can collapse that margin through itself per CSS 2.1 §8.3.1.
+    /// </summary>
+    private static float LayoutChildrenImpl(
+        List<LayoutNode> children,
+        float contentX, float contentY,
+        float contentW,
+        float viewportWidth, float viewportHeight,
+        float parentContentHeight,
+        float parentBorderPaddingTop,
+        bool parentEstablishesBfc,
+        out float trailingMargin)
+    {
         var cursorY = contentY;
         var prevMarginBottom = 0f;
         var firstBlockSeen = false;
+        var lastPlacedWasBlock = false;
         var i = 0;
         var floats = new List<ActiveFloat>();
 
@@ -618,10 +659,13 @@ internal static class BoxEngine
                 // Narrow available width for non-floated blocks when floats are active
                 var (effX, effW) = AvailableBand(floats, cursorY + adjust, 1, contentX, contentW);
 
-                var h = LayoutBlock(child, effX, cursorY + adjust, effW, viewportWidth, viewportHeight, parentContentHeight);
+                var (h, childBottomMargin) = LayoutBlock(child, effX, cursorY + adjust, effW, viewportWidth, viewportHeight, parentContentHeight);
                 cursorY += h + adjust;
 
-                prevMarginBottom = child.GetMarginBottom(total: contentW, size: childFontSize);
+                // Use the child's EFFECTIVE bottom margin (after its own last-child collapse-through)
+                // for the next sibling's collapse and as a candidate trailing margin.
+                prevMarginBottom = childBottomMargin;
+                lastPlacedWasBlock = true;
                 i++;
             }
             else
@@ -649,15 +693,18 @@ internal static class BoxEngine
                 var runH = LayoutInlineRun(run, effX, cursorY, effW, viewportWidth, viewportHeight);
                 cursorY += runH;
                 prevMarginBottom = 0f;
+                lastPlacedWasBlock = false;
             }
         }
 
-        // Ensure container encompasses all floats (CSS 2.1: floats don't expand parent by default,
-        // but many modern sites expect BFC behavior — expand to contain floats)
+        // The last in-flow block child's bottom margin is a candidate to collapse through the
+        // parent — but only if no float extends past it (then it sits inside the content).
+        var flowBottom = cursorY;
         foreach (var f in floats)
             cursorY = Math.Max(cursorY, f.Bottom);
 
-        return cursorY - contentY;
+        trailingMargin = (lastPlacedWasBlock && cursorY <= flowBottom) ? prevMarginBottom : 0f;
+        return (cursorY - contentY) - trailingMargin;
     }
 
     // -------------------------------------------------------------------------
