@@ -185,7 +185,9 @@ internal static class RefTestRunner
                     var cs = getComputedStyle(e);
                     console.log('[GEOM] ' + (e.id||e.tagName) +
                         ' offsetW=' + e.offsetWidth + ' offsetH=' + e.offsetHeight +
-                        ' clientW=' + e.clientWidth + ' clientH=' + e.clientHeight);
+                        ' clientW=' + e.clientWidth + ' clientH=' + e.clientHeight +
+                        ' fontSize=' + cs.fontSize + ' borderTop=' + cs.borderTopWidth +
+                        ' width=' + cs.width + ' marginTop=' + cs.marginTop);
                     for (var c=e.firstElementChild; c; c=c.nextElementSibling) {{
                         console.log('[GEOM]   child ' + c.tagName +
                             ' offsetW=' + c.offsetWidth + ' offsetH=' + c.offsetHeight +

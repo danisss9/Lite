@@ -610,16 +610,24 @@ internal static class BoxEngine
                 continue;
             }
 
-            // Handle clear property — push cursorY below relevant floats
+            // 'float' applies to elements, never to text runs. A #text node shares its parent's
+            // computed style, so it would otherwise inherit a (non-inherited) float/clear from a
+            // floated parent and spawn a phantom full-width float that collapses the flow band.
+            var floatSide = child.TagName == "#text" ? FloatType.None : child.GetFloat();
+
+            // 'clear' applies only to block-level boxes and floats (CSS 2.1 §9.5.2); inline-level
+            // boxes ignore it. (Text nodes can carry a non-inherited 'clear' from the parent's
+            // computed style — honoring it on an inline run would also stall the run collector.)
             var clear = child.GetClear();
-            if (clear != ClearType.None)
+            var isBlockLevel = display == DisplayType.Block || display == DisplayType.ListItem
+                            || display == DisplayType.Flex || display == DisplayType.Table;
+            if (clear != ClearType.None && (floatSide != FloatType.None || isBlockLevel))
             {
                 cursorY = ApplyClear(clear, floats, cursorY);
                 RetireFloats(floats, cursorY);
             }
 
             // Handle floated elements — taken out of normal flow but affect available width
-            var floatSide = child.GetFloat();
             if (floatSide != FloatType.None)
             {
                 var af = LayoutFloat(child, floatSide, floats, contentX, cursorY, contentW,
@@ -629,7 +637,7 @@ internal static class BoxEngine
                 continue;
             }
 
-            if (display == DisplayType.Block || display == DisplayType.ListItem || display == DisplayType.Flex || display == DisplayType.Table)
+            if (isBlockLevel)
             {
                 var childFontSize = child.GetFontSize();
                 // Percentage margins resolve against the containing-block WIDTH (§8.3), so the
@@ -670,16 +678,17 @@ internal static class BoxEngine
             }
             else
             {
-                // Collect consecutive inline / inline-block / BR children into a run
-                var run = new List<LayoutNode>();
+                // Collect consecutive inline / inline-block / BR children into a run. The current
+                // child is always taken first (it is inline — blocks/floats are handled above), so
+                // the run is never empty and i always advances. Subsequent block/float children end
+                // the run for their own handling; 'clear' is ignored here (inline boxes don't clear).
+                var run = new List<LayoutNode> { child };
+                i++;
                 while (i < children.Count)
                 {
                     var d = children[i].GetDisplay();
                     if (d == DisplayType.Block || d == DisplayType.ListItem || d == DisplayType.Flex || d == DisplayType.Table) break;
-                    // Stop if the next child is floated (it needs separate handling)
-                    if (children[i].GetFloat() != FloatType.None) break;
-                    // Stop if the next child has clear set
-                    if (children[i].GetClear() != ClearType.None) break;
+                    if (children[i].TagName != "#text" && children[i].GetFloat() != FloatType.None) break;
                     run.Add(children[i]);
                     i++;
                 }

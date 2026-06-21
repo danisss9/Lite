@@ -1070,7 +1070,10 @@ public static class StyleExtensions
     // font-size defaults to 16px (the initial medium) when no length value is present —
     // unlike box properties, whose default is 0.
     public static float GetFontSize(this LayoutNode node) => GetSize(node, PropertyNames.FontSize, size: 16, defaultValue: 16);
-    public static float GetHeight(this LayoutNode node, float total = 0, float size = 0, float viewportHeight = -1f) => GetSize(node, PropertyNames.Height, total, size, viewportHeight);
+    // em/rem in width/height resolve against the element's own font-size; auto/unset → 0 so the
+    // layout caller applies fill / shrink-to-fit. (Callers pass size=0, so default the em basis here.)
+    public static float GetHeight(this LayoutNode node, float total = 0, float size = 0, float viewportHeight = -1f)
+        => GetSizeOrDefault(node, PropertyNames.Height, total, size > 0 ? size : node.GetFontSize(), 0f, viewportHeight);
 
     /// <summary>True when height is auto/unset. Needed because GetHeight returns the
     /// containing-block height for auto (the width-style "fill" behaviour of GetSize), which
@@ -1082,7 +1085,8 @@ public static class StyleExtensions
         var raw = node.Style.GetProperty(PropertyNames.Height).RawValue;
         return raw is null or Constant<Length>;
     }
-    public static float GetWidth(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.Width, total, size);
+    public static float GetWidth(this LayoutNode node, float total = 0, float size = 0)
+        => GetSizeOrDefault(node, PropertyNames.Width, total, size > 0 ? size : node.GetFontSize(), 0f);
 
     // Margins
     public static float GetMarginTop(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginTop, total, size);
@@ -1361,9 +1365,12 @@ public static class StyleExtensions
 
     private static float GetBorderSideWidth(LayoutNode node, string propertyName)
     {
+        // Border widths may use any length unit (px/em/rem/…). AngleSharp already resolves the
+        // used width to 0 when border-style is none, so we just convert whatever length it gives,
+        // resolving em/rem against the element's own font-size.
         var raw = node.Style.GetProperty(propertyName).RawValue;
-        if (raw is Length borderLength && borderLength.Type == Length.Unit.Px)
-            return (float)borderLength.Value;
+        if (raw is Length borderLength)
+            return CssUnits.ToPx(borderLength, node.GetFontSize(), 0, 0, 0);
         return 0f;
     }
 
