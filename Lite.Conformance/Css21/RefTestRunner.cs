@@ -187,7 +187,8 @@ internal static class RefTestRunner
                         ' offsetW=' + e.offsetWidth + ' offsetH=' + e.offsetHeight +
                         ' clientW=' + e.clientWidth + ' clientH=' + e.clientHeight +
                         ' fontSize=' + cs.fontSize + ' borderTop=' + cs.borderTopWidth +
-                        ' width=' + cs.width + ' marginTop=' + cs.marginTop);
+                        ' width=' + cs.width + ' marginTop=' + cs.marginTop +
+                        ' lineHeight=' + cs.lineHeight);
                     for (var c=e.firstElementChild; c; c=c.nextElementSibling) {{
                         console.log('[GEOM]   child ' + c.tagName +
                             ' offsetW=' + c.offsetWidth + ' offsetH=' + c.offsetHeight +

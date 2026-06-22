@@ -339,16 +339,20 @@ public static class StyleExtensions
                 return mult * fontSize;
         }
 
-        var raw = node.Style.GetProperty(PropertyNames.LineHeight).RawValue;
-        if (raw is Length lh2)
-            return CssUnits.ToPx(lh2, fontSize, fontSize, fontSize, fontSize);
-
-        // Unitless number (e.g. line-height: 1.5) — try string parse
+        // A unitless line-height (e.g. `1`, `1.5`) is a font-size MULTIPLIER, not a pixel length —
+        // and it inherits as the number (so it multiplies each element's own font-size). Check the
+        // computed string for a bare number BEFORE the Length branch, because AngleSharp surfaces
+        // it as a unitless Length that CssUnits.ToPx would otherwise treat as pixels (e.g. `1`→1px,
+        // collapsing every line box to 1px tall). A value with any unit fails the bare-number parse.
         var str = node.Style.GetPropertyValue(PropertyNames.LineHeight);
         if (!string.IsNullOrEmpty(str) && str != "normal" &&
             float.TryParse(str, System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var num))
             return num * fontSize;
+
+        var raw = node.Style.GetProperty(PropertyNames.LineHeight).RawValue;
+        if (raw is Length lh2)
+            return CssUnits.ToPx(lh2, fontSize, fontSize, fontSize, fontSize);
 
         return fontSize * 1.4f;
     }
