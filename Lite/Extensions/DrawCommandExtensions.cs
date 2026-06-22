@@ -1067,9 +1067,17 @@ public static class StyleExtensions
 
     public static SKColor GetBackgroundColor(this LayoutNode node) => GetColor(node, PropertyNames.BackgroundColor, SKColors.Transparent);
     public static SKColor GetColor(this LayoutNode node) => GetColor(node, PropertyNames.Color, SKColors.Black);
-    // font-size defaults to 16px (the initial medium) when no length value is present —
-    // unlike box properties, whose default is 0.
-    public static float GetFontSize(this LayoutNode node) => GetSize(node, PropertyNames.FontSize, size: 16, defaultValue: 16);
+    // font-size: em/% are relative to the PARENT's font-size (not 16, and not the element's own —
+    // that would be circular); unset inherits the parent. AngleSharp resolves inherited/absolute
+    // font-size to a px length already, so that common case returns immediately without recursing.
+    public static float GetFontSize(this LayoutNode node)
+    {
+        if (!node.TryResolveStyle(PropertyNames.FontSize, out _) &&
+            node.Style.GetProperty(PropertyNames.FontSize).RawValue is Length l && l.Type == Length.Unit.Px)
+            return (float)l.Value;
+        var parentFs = node.Parent?.GetFontSize() ?? 16f;
+        return GetSize(node, PropertyNames.FontSize, total: parentFs, size: parentFs, defaultValue: parentFs);
+    }
     // em/rem in width/height resolve against the element's own font-size; auto/unset → 0 so the
     // layout caller applies fill / shrink-to-fit. (Callers pass size=0, so default the em basis here.)
     public static float GetHeight(this LayoutNode node, float total = 0, float size = 0, float viewportHeight = -1f)

@@ -207,7 +207,8 @@ internal static class BoxEngine
         float x, float y,
         float availableWidth,
         float viewportWidth, float viewportHeight,
-        float parentContentHeight = 0)
+        float parentContentHeight = 0,
+        List<ActiveFloat>? bfcFloats = null)
     {
         if (node.GetDisplay() == DisplayType.None)
         {
@@ -266,8 +267,15 @@ internal static class BoxEngine
         else if (nodeDisplay == DisplayType.Table)
             contentH = TableEngine.LayoutTable(node, contentX, contentY, contentW, viewportWidth, viewportHeight);
         else
+        {
+            // Float context: a BFC-establishing block (or the root, when no ambient context was
+            // passed) owns a fresh list; a normal block threads its ancestor BFC's list so floats
+            // declared inside it escape into that context rather than being contained here.
+            var ownsFloatContext = establishesBfc || bfcFloats is null;
+            var floatCtx = ownsFloatContext ? new List<ActiveFloat>() : bfcFloats!;
             contentH = LayoutChildrenImpl(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight,
-                knownContentH, border.Top + padding.Top, establishesBfc, out trailingMargin);
+                knownContentH, border.Top + padding.Top, establishesBfc, floatCtx, ownsFloatContext, out trailingMargin);
+        }
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
@@ -553,7 +561,9 @@ internal static class BoxEngine
     }
 
     /// <summary>Back-compat wrapper: returns content height INCLUDING any trailing child margin
-    /// (used by callers that don't participate in parent–last-child margin collapsing).</summary>
+    /// (used by callers that don't participate in parent–last-child margin collapsing). These
+    /// callers (a float's content, an abs-pos box, a flex item) all establish a new block
+    /// formatting context, so they own a fresh float context.</summary>
     private static float LayoutChildren(
         List<LayoutNode> children,
         float contentX, float contentY,
@@ -564,7 +574,8 @@ internal static class BoxEngine
         bool parentEstablishesBfc = false)
     {
         var h = LayoutChildrenImpl(children, contentX, contentY, contentW, viewportWidth, viewportHeight,
-            parentContentHeight, parentBorderPaddingTop, parentEstablishesBfc, out var trailing);
+            parentContentHeight, parentBorderPaddingTop, parentEstablishesBfc,
+            new List<ActiveFloat>(), ownsFloatContext: true, out var trailing);
         return h + trailing;
     }
 
@@ -572,6 +583,11 @@ internal static class BoxEngine
     /// Lays out block-container children. Returns content height EXCLUDING the trailing margin
     /// of the last in-flow block child (reported via <paramref name="trailingMargin"/>), so the
     /// parent can collapse that margin through itself per CSS 2.1 §8.3.1.
+    /// <para><paramref name="floats"/> is the active-float list of the containing block formatting
+    /// context. A block that establishes a BFC owns its list; a normal (non-BFC) block reuses its
+    /// ancestor BFC's list so its floats escape into that context (CSS 2.1 §9.5) — floats are not
+    /// contained by a non-BFC parent and interact with the BFC's other floats. Only the BFC root
+    /// (<paramref name="ownsFloatContext"/>) grows its height to contain the floats.</para>
     /// </summary>
     private static float LayoutChildrenImpl(
         List<LayoutNode> children,
@@ -581,6 +597,8 @@ internal static class BoxEngine
         float parentContentHeight,
         float parentBorderPaddingTop,
         bool parentEstablishesBfc,
+        List<ActiveFloat> floats,
+        bool ownsFloatContext,
         out float trailingMargin)
     {
         var cursorY = contentY;
@@ -588,7 +606,6 @@ internal static class BoxEngine
         var firstBlockSeen = false;
         var lastPlacedWasBlock = false;
         var i = 0;
-        var floats = new List<ActiveFloat>();
 
         while (i < children.Count)
         {
@@ -667,7 +684,7 @@ internal static class BoxEngine
                 // Narrow available width for non-floated blocks when floats are active
                 var (effX, effW) = AvailableBand(floats, cursorY + adjust, 1, contentX, contentW);
 
-                var (h, childBottomMargin) = LayoutBlock(child, effX, cursorY + adjust, effW, viewportWidth, viewportHeight, parentContentHeight);
+                var (h, childBottomMargin) = LayoutBlock(child, effX, cursorY + adjust, effW, viewportWidth, viewportHeight, parentContentHeight, floats);
                 cursorY += h + adjust;
 
                 // Use the child's EFFECTIVE bottom margin (after its own last-child collapse-through)
@@ -706,11 +723,13 @@ internal static class BoxEngine
             }
         }
 
-        // The last in-flow block child's bottom margin is a candidate to collapse through the
-        // parent — but only if no float extends past it (then it sits inside the content).
+        // A block formatting context grows to contain its floats (CSS 2.1 §10.6.7); a non-BFC
+        // block does not — its floats belong to an ancestor BFC and overflow this box. The last
+        // in-flow block child's bottom margin can collapse through only if no float extends past it.
         var flowBottom = cursorY;
-        foreach (var f in floats)
-            cursorY = Math.Max(cursorY, f.Bottom);
+        if (ownsFloatContext)
+            foreach (var f in floats)
+                cursorY = Math.Max(cursorY, f.Bottom);
 
         trailingMargin = (lastPlacedWasBlock && cursorY <= flowBottom) ? prevMarginBottom : 0f;
         return (cursorY - contentY) - trailingMargin;
