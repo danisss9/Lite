@@ -65,8 +65,12 @@ public class LayoutNode
     public Dictionary<string, string>? FirstLetterStyles { get; set; }
     /// <summary>Styles for ::first-line pseudo-element.</summary>
     public Dictionary<string, string>? FirstLineStyles { get; set; }
-    /// <summary>Snapshot of CSS counter values at this node's position in the tree (for counter() resolution).</summary>
+    /// <summary>Snapshot of CSS counter values (top of each scope stack) at this node's position
+    /// in the tree (for counter() resolution).</summary>
     public Dictionary<string, int>? CounterValues { get; set; }
+    /// <summary>Snapshot of the full nested counter scope stacks at this node (for counters(name, sep)).
+    /// Each list is outermost-first; the last element is the innermost/current value.</summary>
+    public Dictionary<string, List<int>>? CounterStacks { get; set; }
     /// <summary>Per-element scroll state for overflow:scroll/auto elements.</summary>
     public ElementScrollState? ScrollState { get; set; }
 

@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<title>counters() joins the nested counter scope stack (CSS 2.1 §12.4.1)</title>
+<style>
+  body { margin: 0; background: white; font: 16px monospace; }
+  .l1 { counter-reset: item; }
+  .l2 { counter-reset: item; }
+  .row { counter-increment: item; color: black; }
+  .row::before { content: counters(item, ".") ". "; }
+</style>
+</head>
+<body>
+<div class="l1">
+  <div class="row">A</div>
+  <div class="row">B
+    <div class="l2">
+      <div class="row">C</div>
+      <div class="row">D</div>
+    </div>
+  </div>
+  <div class="row">E</div>
+</div>
+</body>
+</html>

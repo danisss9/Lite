@@ -89,8 +89,10 @@ internal static class Parser
     internal static int ViewportWidth { get; private set; } = 800;
     internal static int ViewportHeight { get; private set; } = 600;
 
-    // CSS counter state maintained during document-order traversal
-    private static readonly Dictionary<string, int> _counters = new();
+    // CSS counter state maintained during document-order traversal.
+    // A stack per counter name (CSS 2.1 §12.4): counter-reset pushes a new nested instance,
+    // popped when its element's subtree is left; counters(name, sep) joins the whole stack.
+    private static readonly Dictionary<string, List<int>> _counters = new();
 
     internal static LayoutNode TraverseHtml(string address, int viewportWidth = 800, int viewportHeight = 600)
     {
@@ -512,6 +514,11 @@ internal static class Parser
             node.StyleOverrides["height"] = canvasH;
         }
 
+        // Apply CSS counters (counter-reset/counter-increment) in document order BEFORE traversing
+        // children, and snapshot the resulting state onto the node (for counter()/counters() and the
+        // ::before/::after generated content). The pushed instances are popped after the subtree.
+        ApplyCounters(node, out var pushedCounters);
+
         if (hasMixedChildren)
         {
             // Walk ChildNodes in DOM order so text nodes keep their position among element siblings.
@@ -557,28 +564,61 @@ internal static class Parser
             }
         }
 
-        // Process CSS counters (counter-reset, counter-increment) before pseudo-elements
-        if (node.StyleOverrides.TryGetValue("counter-reset", out var crReset))
-        {
-            foreach (var part in ParseCounterSpec(crReset))
-                _counters[part.Name] = part.Value;
-        }
-        if (node.StyleOverrides.TryGetValue("counter-increment", out var crInc))
-        {
-            foreach (var part in ParseCounterSpec(crInc))
-            {
-                _counters.TryGetValue(part.Name, out var cur);
-                _counters[part.Name] = cur + (part.Value == 0 ? 1 : part.Value);
-            }
-        }
-        // Snapshot current counter state on the node for counter() resolution
-        if (_counters.Count > 0)
-            node.CounterValues = new Dictionary<string, int>(_counters);
+        // Leaving this node's subtree: pop the counter instances it introduced (scope ends).
+        PopCounters(pushedCounters);
 
-        // Create ::before and ::after pseudo-element children
+        // Create ::before and ::after pseudo-element children (using the snapshot taken above)
         CreatePseudoElementChildren(node);
 
         return node;
+    }
+
+    /// <summary>Applies counter-reset/counter-increment for <paramref name="node"/> in document order
+    /// and snapshots the current counter state onto it. Returns the counter names this node pushed
+    /// via counter-reset (to be popped after its subtree). Call BEFORE traversing children.</summary>
+    private static void ApplyCounters(LayoutNode node, out List<string> pushed)
+    {
+        pushed = new List<string>();
+
+        if (node.StyleOverrides.TryGetValue("counter-reset", out var crReset) &&
+            !crReset.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var part in ParseCounterSpec(crReset))
+            {
+                if (!_counters.TryGetValue(part.Name, out var stack))
+                    _counters[part.Name] = stack = new List<int>();
+                stack.Add(part.Value);              // push a new nested instance
+                pushed.Add(part.Name);
+            }
+        }
+
+        if (node.StyleOverrides.TryGetValue("counter-increment", out var crInc) &&
+            !crInc.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var part in ParseCounterSpec(crInc))
+            {
+                if (!_counters.TryGetValue(part.Name, out var stack) || stack.Count == 0)
+                    // Not in scope: auto-create a document-root instance (not popped by this node).
+                    _counters[part.Name] = stack = new List<int> { 0 };
+                stack[^1] += part.Value == 0 ? 1 : part.Value;
+            }
+        }
+
+        if (_counters.Count == 0) return;
+        foreach (var (name, stack) in _counters)
+        {
+            if (stack.Count == 0) continue;
+            (node.CounterValues ??= new())[name] = stack[^1];
+            (node.CounterStacks ??= new())[name] = new List<int>(stack);
+        }
+    }
+
+    /// <summary>Pops the counter instances pushed by a node's counter-reset when its subtree ends.</summary>
+    private static void PopCounters(List<string> pushed)
+    {
+        foreach (var name in pushed)
+            if (_counters.TryGetValue(name, out var stack) && stack.Count > 0)
+                stack.RemoveAt(stack.Count - 1);
     }
 
     /// <summary>
@@ -686,27 +726,31 @@ internal static class Parser
                 var paren = value.IndexOf(')', i);
                 if (paren < 0) break;
                 var args = value[(i + 8)..paren].Split(',', StringSplitOptions.TrimEntries);
-                var counterName = args[0];
                 var counterVal = 0;
-                node?.CounterValues?.TryGetValue(counterName, out counterVal);
-                if (args.Length > 1)
-                    sb.Append(FormatCounter(counterVal, args[1]));
-                else
-                    sb.Append(counterVal);
+                node?.CounterValues?.TryGetValue(args[0], out counterVal);
+                sb.Append(FormatCounter(counterVal, args.Length > 1 ? args[1] : "decimal"));
                 i = paren + 1;
                 continue;
             }
 
-            // counters(name, separator) or counters(name, separator, style)
+            // counters(name, separator) or counters(name, separator, style) — joins the whole
+            // nested scope stack with the separator (CSS 2.1 §12.4.1, e.g. nested-list "1.2.1").
             if (value[i..].StartsWith("counters("))
             {
                 var paren = value.IndexOf(')', i);
                 if (paren < 0) break;
                 var args = value[(i + 9)..paren].Split(',', StringSplitOptions.TrimEntries);
                 var counterName = args[0];
-                var counterVal = 0;
-                node?.CounterValues?.TryGetValue(counterName, out counterVal);
-                sb.Append(counterVal);
+                var sep = args.Length > 1 ? UnquoteContentToken(args[1]) : "";
+                var style = args.Length > 2 ? args[2] : "decimal";
+                if (node?.CounterStacks != null && node.CounterStacks.TryGetValue(counterName, out var stack))
+                    sb.Append(string.Join(sep, stack.Select(v => FormatCounter(v, style))));
+                else
+                {
+                    var counterVal = 0;
+                    node?.CounterValues?.TryGetValue(counterName, out counterVal);
+                    sb.Append(FormatCounter(counterVal, style));
+                }
                 i = paren + 1;
                 continue;
             }
@@ -731,6 +775,15 @@ internal static class Parser
         }
 
         return sb.Length > 0 ? sb.ToString() : null;
+    }
+
+    /// <summary>Strips surrounding quotes from a content() separator token and decodes CSS escapes.</summary>
+    private static string UnquoteContentToken(string s)
+    {
+        s = s.Trim();
+        if (s.Length >= 2 && ((s[0] == '"' && s[^1] == '"') || (s[0] == '\'' && s[^1] == '\'')))
+            return DecodeCssEscapes(s[1..^1]);
+        return s;
     }
 
     private static string FormatCounter(int value, string style) => style switch
@@ -1665,7 +1718,7 @@ internal static class Parser
         attached?.AppendChild(container);
 
         // Preserve the document-global counter state — fragment parsing must not corrupt it.
-        var savedCounters = new Dictionary<string, int>(_counters);
+        var savedCounters = _counters.ToDictionary(kv => kv.Key, kv => new List<int>(kv.Value));
         var savedVerbose = _verbose;
         _verbose = false;
         try

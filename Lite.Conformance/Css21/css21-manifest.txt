@@ -37,4 +37,7 @@ css21/caption-top.html | css21/caption-top-ref.html
 css21/caption-bottom.html | css21/caption-bottom-ref.html
 css21/empty-cells-hide.html | css21/empty-cells-hide-ref.html
 
+# ---- Phase A: nested CSS counters — counters(name, sep) joins the scope stack (§12.4.1) ----
+css21/counters-nested.html | css21/counters-nested-ref.html
+
 # ---- Phase 3 additions (full anonymous-box splitting, z-index:auto subtlety...) ----
