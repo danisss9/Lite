@@ -331,6 +331,24 @@ internal static class BoxEngine
             node.ScrollState = null;
         }
 
+        // CSS 2.1 §10.7: clamp the resolved height to min-height/max-height. Percentages resolve
+        // against the containing block height; when that is auto (parentContentHeight == 0) an
+        // unresolvable percentage max-height computes to 'none' and min-height to 0.
+        var maxH = node.GetMaxHeight(parentContentHeight, fontSize);
+        if (maxH < float.PositiveInfinity && !(IsPercentValue(node, "max-height") && parentContentHeight <= 0f))
+        {
+            var maxContent = isBorderBox
+                ? Math.Max(0f, maxH - border.Top - border.Bottom - padding.Top - padding.Bottom) : maxH;
+            if (contentH > maxContent) contentH = maxContent;
+        }
+        var minH = node.GetMinHeight(parentContentHeight, fontSize);
+        if (minH > 0f && !(IsPercentValue(node, "min-height") && parentContentHeight <= 0f))
+        {
+            var minContent = isBorderBox
+                ? Math.Max(0f, minH - border.Top - border.Bottom - padding.Top - padding.Bottom) : minH;
+            if (contentH < minContent) contentH = minContent;
+        }
+
         margin.Bottom = effectiveBottomMargin;
         node.Box = new BoxDimensions
         {
@@ -383,8 +401,18 @@ internal static class BoxEngine
         var display = node.GetDisplay();
         if (display is DisplayType.InlineBlock or DisplayType.Flex or DisplayType.InlineFlex
             or DisplayType.TableCell or DisplayType.Table) return true;
+        // display: flow-root explicitly establishes a BFC (it maps to Block in GetDisplay).
+        if (RawStyle(node, "display") == "flow-root") return true;
         return false;
     }
+
+    /// <summary>Reads a raw style value (override first, then declared) for a property.</summary>
+    private static string? RawStyle(LayoutNode node, string prop)
+        => node.TryResolveStyle(prop, out var ov) ? ov : node.Style.GetPropertyValue(prop);
+
+    /// <summary>True when the property's value is a percentage (e.g. "100%").</summary>
+    private static bool IsPercentValue(LayoutNode node, string prop)
+        => RawStyle(node, prop)?.TrimEnd().EndsWith("%") == true;
 
     /// <summary>
     /// Collapses two adjoining vertical margins per CSS 2.1 §8.3.1: the result is the sum of

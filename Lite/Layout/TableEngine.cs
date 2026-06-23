@@ -384,9 +384,11 @@ internal static class TableEngine
     }
 
     /// <summary>
-    /// Determines pixel width for each column.
-    /// Only cells with colspan=1 contribute explicit widths;
-    /// remaining space is divided evenly among auto columns.
+    /// Determines pixel width for each column (CSS 2.1 §17.5.2.2 automatic layout).
+    /// Cells with an explicit width (colspan=1) fix their column; the remaining width is
+    /// distributed to the auto columns according to their measured content min/max widths
+    /// (a column with short content stays narrow; one with long content takes more), falling
+    /// back to an even split for columns whose content width can't be measured (e.g. empty cells).
     /// </summary>
     private static float[] ComputeColumnWidths(
         List<CellPlacement> placements,
@@ -396,7 +398,7 @@ internal static class TableEngine
     {
         var widths = new float[colCount];
 
-        // Gather explicit widths from cells with colspan=1
+        // Gather explicit widths from cells with colspan=1 (these columns are fixed).
         foreach (var p in placements)
         {
             if (p.ColSpan != 1) continue;
@@ -407,14 +409,95 @@ internal static class TableEngine
             }
         }
 
-        // Evenly distribute remaining width among auto columns
-        var fixedSum = widths.Sum();
-        var autoCnt = widths.Count(w => w == 0f);
-        var autoW = autoCnt > 0 ? Math.Max(0f, availableW - fixedSum) / autoCnt : 0f;
+        var autoCols = Enumerable.Range(0, colCount).Where(c => widths[c] == 0f).ToList();
+        if (autoCols.Count == 0) return widths;
 
-        for (var c = 0; c < colCount; c++)
-            if (widths[c] == 0f) widths[c] = autoW;
+        // Measure intrinsic content min/max for each auto column from its colspan=1 cells.
+        var colMin = new float[colCount];
+        var colMax = new float[colCount];
+        var hasContent = new bool[colCount];
+        foreach (var p in placements)
+        {
+            if (p.ColSpan != 1 || widths[p.Col] != 0f) continue;
+            var (cMin, cMax) = MeasureCellIntrinsic(p.Cell, availableW, viewportH);
+            colMin[p.Col] = Math.Max(colMin[p.Col], cMin);
+            colMax[p.Col] = Math.Max(colMax[p.Col], cMax);
+            hasContent[p.Col] = true;
+        }
+
+        var remaining = Math.Max(0f, availableW - widths.Sum());
+
+        // No measurable content (e.g. all-empty cells) → preserve the legacy even split.
+        if (!autoCols.Any(c => hasContent[c] && colMax[c] > 0f))
+        {
+            var even = remaining / autoCols.Count;
+            foreach (var c in autoCols) widths[c] = even;
+            return widths;
+        }
+
+        var sumMin = autoCols.Sum(c => colMin[c]);
+        var sumMax = autoCols.Sum(c => colMax[c]);
+
+        if (sumMax <= remaining)
+        {
+            // Room for every preferred width; give each its max and share the leftover equally.
+            var extra = (remaining - sumMax) / autoCols.Count;
+            foreach (var c in autoCols) widths[c] = colMax[c] + extra;
+        }
+        else if (sumMin >= remaining || sumMax <= sumMin)
+        {
+            // Not even room for the minimums (table overflows) — use minimums.
+            foreach (var c in autoCols) widths[c] = colMin[c];
+        }
+        else
+        {
+            // Distribute the slack between min and max proportionally to each column's flexibility.
+            var slack = (remaining - sumMin) / (sumMax - sumMin);
+            foreach (var c in autoCols) widths[c] = colMin[c] + (colMax[c] - colMin[c]) * slack;
+        }
 
         return widths;
+    }
+
+    /// <summary>Measures a table cell's intrinsic min (longest unbreakable unit) and max
+    /// (preferred, no-wrap) content widths, including the cell's own padding+border.</summary>
+    private static (float Min, float Max) MeasureCellIntrinsic(LayoutNode cell, float availableW, float viewportH)
+    {
+        var fs = cell.GetFontSize();
+        var pad = cell.GetPadding(availableW, viewportH, fs);
+        var bord = cell.GetBorderWidth();
+        var extra = pad.Left + pad.Right + bord.Left + bord.Right;
+        var (min, max) = MeasureIntrinsic(cell, viewportH);
+        return (min + extra, max + extra);
+    }
+
+    /// <summary>Recursively measures intrinsic content widths (excluding the node's own box model).
+    /// Block children stack, so the column needs the widest child; text gives max = one-line width
+    /// and min = the widest single word.</summary>
+    private static (float Min, float Max) MeasureIntrinsic(LayoutNode node, float viewportH)
+    {
+        float min = 0f, max = 0f;
+        if (!string.IsNullOrEmpty(node.DisplayText))
+        {
+            using var font = TextMeasure.CreateFont(node);
+            max = font.MeasureText(node.DisplayText);
+            foreach (var word in node.DisplayText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                min = Math.Max(min, font.MeasureText(word));
+        }
+        foreach (var ch in node.Children)
+        {
+            if (ch.GetDisplay() == DisplayType.None) continue;
+            var (cMin, cMax) = MeasureIntrinsic(ch, viewportH);
+            var fs = ch.GetFontSize();
+            var pad = ch.GetPadding(0f, viewportH, fs);
+            var bord = ch.GetBorderWidth();
+            var marg = ch.GetMargin(0f, viewportH, fs);
+            var boxExtra = pad.Left + pad.Right + bord.Left + bord.Right + marg.Left + marg.Right;
+            var w = ch.GetWidth(0f);  // explicit px/em width (0 for auto/percent)
+            if (w > 0f) { cMin = Math.Max(cMin, w); cMax = Math.Max(cMax, w); }
+            min = Math.Max(min, cMin + boxExtra);
+            max = Math.Max(max, cMax + boxExtra);
+        }
+        return (min, max);
     }
 }

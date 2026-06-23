@@ -50,7 +50,7 @@ public static class StyleExtensions
             : node.Style.GetPropertyValue(PropertyNames.Display);
         return raw switch
         {
-            "block" => DisplayType.Block,
+            "block" or "flow-root" => DisplayType.Block,
             "inline-block" => DisplayType.InlineBlock,
             "list-item" => DisplayType.ListItem,
             "flex" => DisplayType.Flex,

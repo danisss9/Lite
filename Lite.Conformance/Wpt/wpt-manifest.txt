@@ -18,8 +18,10 @@ css/CSS2/normal-flow/containing-block-percent-padding-bottom.html
 css/CSS2/normal-flow/containing-block-percent-padding-left.html
 css/CSS2/normal-flow/containing-block-percent-padding-right.html
 css/CSS2/normal-flow/unresolvable-max-height.html
-css/CSS2/normal-flow/auto-margins-used-values.html [expected-fail: horizontal auto-margin used-value reporting not exact]
-css/CSS2/normal-flow/unresolvable-min-height.html [expected-fail: min-height with unresolvable percentage basis]
+# Phase A.6: auto margins now resolve to used px (reported via getComputedStyle), and
+# min-height/max-height clamp the resolved height with unresolvable-% handling (§10.7).
+css/CSS2/normal-flow/auto-margins-used-values.html
+css/CSS2/normal-flow/unresolvable-min-height.html
 
 # ---- Phase 1: URL / URLSearchParams (added once vendored + implemented) ----
 # url/url-constructor.any.js

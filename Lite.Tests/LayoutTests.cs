@@ -154,6 +154,44 @@ public static class LayoutTests
         True(Math.Abs(h - 80f) < 1f, $"expected parent content height 80 (margin contained by bottom padding), got {h}");
     }
 
+    private static LayoutNode TableCell(string text)
+    {
+        var node = new LayoutNode(null, "TD", text, _styleCache.Style);
+        node.StyleOverrides["display"] = "table-cell";
+        foreach (var side in new[] { "top", "right", "bottom", "left" })
+        {
+            node.StyleOverrides[$"margin-{side}"] = "0";
+            node.StyleOverrides[$"padding-{side}"] = "0";
+            node.StyleOverrides[$"border-{side}-width"] = "0";
+        }
+        return node;
+    }
+
+    [Test]
+    public static void AutoTable_ColumnWidthsTrackContent()
+    {
+        // CSS 2.1 §17.5.2.2: with automatic layout, a column with short content stays narrow and
+        // a column with long content takes the rest — not an even 50/50 split.
+        var c1 = TableCell("Hi");
+        var c2 = TableCell("this is a much longer piece of cell text");
+        var row = new LayoutNode(null, "TR", "", _styleCache.Style);
+        row.StyleOverrides["display"] = "table-row";
+        row.AddChild(c1);
+        row.AddChild(c2);
+        var table = new LayoutNode(null, "TABLE", "", _styleCache.Style);
+        table.StyleOverrides["display"] = "table";
+        table.StyleOverrides["width"] = "300px";
+        table.StyleOverrides["border-spacing"] = "0";
+        table.AddChild(row);
+        LayoutTree(table);
+
+        var w1 = c1.Box.ContentBox.Width;
+        var w2 = c2.Box.ContentBox.Width;
+        True(w1 > 0f && w2 > 0f, $"both columns should have width (got {w1}, {w2})");
+        True(w1 < w2, $"short-content column should be narrower than long-content column (got {w1} vs {w2})");
+        True(Math.Abs((w1 + w2) - 300f) < 1.5f, $"columns should fill the 300px table (got {w1 + w2})");
+    }
+
     [Test]
     public static void NegativeMarginCollapse_PullsBoxesTogether()
     {

@@ -11,17 +11,39 @@ public class JsComputedStyle
 
     public string getPropertyValue(string property)
     {
-        // Check overrides first, then declared style
+        // Resolved/used values for layout properties come from the computed box (CSSOM returns
+        // used values for these — e.g. an auto margin resolves to its used pixel length).
+        switch (property)
+        {
+            case "margin-top": return Px(_node.Box.Margin.Top);
+            case "margin-right": return Px(_node.Box.Margin.Right);
+            case "margin-bottom": return Px(_node.Box.Margin.Bottom);
+            case "margin-left": return Px(_node.Box.Margin.Left);
+            case "padding-top": return Px(_node.Box.Padding.Top);
+            case "padding-right": return Px(_node.Box.Padding.Right);
+            case "padding-bottom": return Px(_node.Box.Padding.Bottom);
+            case "padding-left": return Px(_node.Box.Padding.Left);
+            case "border-top-width": return Px(_node.Box.Border.Top);
+            case "border-right-width": return Px(_node.Box.Border.Right);
+            case "border-bottom-width": return Px(_node.Box.Border.Bottom);
+            case "border-left-width": return Px(_node.Box.Border.Left);
+            case "width": return Px(_node.Box.ContentBox.Width);
+            case "height": return Px(_node.Box.ContentBox.Height);
+        }
+        // Otherwise: overrides first, then declared style.
         if (_node.TryResolveStyle(property, out var val)) return val;
         return _node.Style.GetPropertyValue(property) ?? "";
     }
+
+    private static string Px(float v) =>
+        v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "px";
 
     // Common properties
     public string display => getPropertyValue("display");
     public string color => getPropertyValue("color");
     public string backgroundColor => getPropertyValue("background-color");
-    public string width => _node.Box.ContentBox.Width + "px";
-    public string height => _node.Box.ContentBox.Height + "px";
+    public string width => getPropertyValue("width");
+    public string height => getPropertyValue("height");
     public string fontSize => getPropertyValue("font-size");
     public string fontWeight => getPropertyValue("font-weight");
     public string fontFamily => getPropertyValue("font-family");

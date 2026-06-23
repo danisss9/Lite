@@ -725,10 +725,10 @@ internal static class Parser
             {
                 var paren = value.IndexOf(')', i);
                 if (paren < 0) break;
-                var args = value[(i + 8)..paren].Split(',', StringSplitOptions.TrimEntries);
+                var args = SplitCounterArgs(value[(i + 8)..paren]);
                 var counterVal = 0;
-                node?.CounterValues?.TryGetValue(args[0], out counterVal);
-                sb.Append(FormatCounter(counterVal, args.Length > 1 ? args[1] : "decimal"));
+                if (args.Count > 0) node?.CounterValues?.TryGetValue(args[0], out counterVal);
+                sb.Append(FormatCounter(counterVal, args.Count > 1 ? args[1] : "decimal"));
                 i = paren + 1;
                 continue;
             }
@@ -739,10 +739,10 @@ internal static class Parser
             {
                 var paren = value.IndexOf(')', i);
                 if (paren < 0) break;
-                var args = value[(i + 9)..paren].Split(',', StringSplitOptions.TrimEntries);
-                var counterName = args[0];
-                var sep = args.Length > 1 ? UnquoteContentToken(args[1]) : "";
-                var style = args.Length > 2 ? args[2] : "decimal";
+                var args = SplitCounterArgs(value[(i + 9)..paren]);
+                var counterName = args.Count > 0 ? args[0] : "";
+                var sep = args.Count > 1 ? args[1] : "";
+                var style = args.Count > 2 ? args[2] : "decimal";
                 if (node?.CounterStacks != null && node.CounterStacks.TryGetValue(counterName, out var stack))
                     sb.Append(string.Join(sep, stack.Select(v => FormatCounter(v, style))));
                 else
@@ -777,13 +777,30 @@ internal static class Parser
         return sb.Length > 0 ? sb.ToString() : null;
     }
 
-    /// <summary>Strips surrounding quotes from a content() separator token and decodes CSS escapes.</summary>
-    private static string UnquoteContentToken(string s)
+    /// <summary>Splits counter()/counters() arguments. AngleSharp normalizes
+    /// <c>counters(item, ".")</c> to <c>counters(item .)</c> (comma dropped, separator unquoted),
+    /// so we split on commas OR whitespace while keeping quoted tokens intact and dropping quotes.</summary>
+    private static List<string> SplitCounterArgs(string inner)
     {
-        s = s.Trim();
-        if (s.Length >= 2 && ((s[0] == '"' && s[^1] == '"') || (s[0] == '\'' && s[^1] == '\'')))
-            return DecodeCssEscapes(s[1..^1]);
-        return s;
+        var args = new List<string>();
+        var sb = new System.Text.StringBuilder();
+        char quote = '\0';
+        foreach (var c in inner)
+        {
+            if (quote != '\0')
+            {
+                if (c == quote) quote = '\0';
+                else sb.Append(c);
+            }
+            else if (c is '"' or '\'') quote = c;
+            else if (c == ',' || char.IsWhiteSpace(c))
+            {
+                if (sb.Length > 0) { args.Add(sb.ToString()); sb.Clear(); }
+            }
+            else sb.Append(c);
+        }
+        if (sb.Length > 0) args.Add(sb.ToString());
+        return args;
     }
 
     private static string FormatCounter(int value, string style) => style switch

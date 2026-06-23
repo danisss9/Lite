@@ -120,6 +120,9 @@ internal class JsWindow
     // ---- getComputedStyle (Phase 7) ----
     public JsComputedStyle getComputedStyle(JsElement element, string? pseudoElement = null)
     {
+        // getComputedStyle reports used values for layout properties (margins/padding/width/...),
+        // so the box must be laid out first.
+        JsEngine.Instance?.EnsureLayout();
         return new JsComputedStyle(element.Node);
     }
 

@@ -1773,12 +1773,29 @@ internal static class Drawer
         var isFirstLine = true;
         var firstLetterDrawn = false;
 
+        var lastLineIndex = lines.Count - 1;
+        var lineIndex = -1;
         foreach (var line in lines)
         {
+            lineIndex++;
             // Measure actual draw width accounting for letter-spacing
             var lineWidth = line.Width;
             if (letterSpacing != 0f || wordSpacing != 0f)
                 lineWidth = MeasureWithSpacing(line.Text, font, letterSpacing, wordSpacing);
+
+            // text-align: justify — widen the inter-word gaps so every line except the last fills
+            // the available width (CSS 2.1 §16.2). Last lines and single-word lines stay unmodified.
+            var lineWordSpacing = wordSpacing;
+            var justified = false;
+            if (textAlign == TextAlign.Justify && lineIndex != lastLineIndex && lineWidth < maxWidth)
+            {
+                var gaps = line.Text.Count(c => c == ' ');
+                if (gaps > 0)
+                {
+                    lineWordSpacing = wordSpacing + (maxWidth - lineWidth) / gaps;
+                    justified = true;
+                }
+            }
 
             // Compute x offset for text-align
             var drawX = textAlign switch
@@ -1787,6 +1804,9 @@ internal static class Drawer
                 TextAlign.Right => x + maxWidth - lineWidth,
                 _ => x,
             };
+
+            // A justified line visually spans the full width (used for underline/strike extents).
+            var drawnWidth = justified ? maxWidth : lineWidth;
 
             // Apply text-indent on first line
             if (isFirstLine && textIndent != 0f)
@@ -1841,7 +1861,7 @@ internal static class Drawer
                     IsAntialias = true,
                     MaskFilter = sigma > 0 ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma) : null,
                 };
-                DrawTextWithSpacing(canvas, line.Text, drawX + ts.OffsetX, baseline + ts.OffsetY, lineFont, sp, letterSpacing, wordSpacing);
+                DrawTextWithSpacing(canvas, line.Text, drawX + ts.OffsetX, baseline + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing);
             }
 
             // Handle ::first-letter on the first character of the first line
@@ -1880,11 +1900,11 @@ internal static class Drawer
 
                 DrawTextWithSpacing(canvas, firstChar, drawX, baseline, flFont, flPaint, 0, 0);
                 if (restText.Length > 0)
-                    DrawTextWithSpacing(canvas, restText, drawX + flWidth, baseline, lineFont, linePaint, letterSpacing, wordSpacing);
+                    DrawTextWithSpacing(canvas, restText, drawX + flWidth, baseline, lineFont, linePaint, letterSpacing, lineWordSpacing);
             }
             else
             {
-                DrawTextWithSpacing(canvas, line.Text, drawX, baseline, lineFont, linePaint, letterSpacing, wordSpacing);
+                DrawTextWithSpacing(canvas, line.Text, drawX, baseline, lineFont, linePaint, letterSpacing, lineWordSpacing);
             }
 
             if (underline)
@@ -1893,7 +1913,7 @@ internal static class Drawer
                 var uY = baseline + (metrics.UnderlinePosition ?? lineFont.Size * 0.1f);
                 var uThick = Math.Max(metrics.UnderlineThickness ?? 1f, 1f);
                 using var lp = new SKPaint { Color = linePaint.Color, StrokeWidth = uThick, IsAntialias = true };
-                canvas.DrawLine(drawX, uY, drawX + lineWidth, uY, lp);
+                canvas.DrawLine(drawX, uY, drawX + drawnWidth, uY, lp);
             }
 
             if (lineThrough)
@@ -1901,7 +1921,7 @@ internal static class Drawer
                 var strikY = baseline - lineFont.Size * 0.3f;
                 var uThick = Math.Max(lineFont.Metrics.UnderlineThickness ?? 1f, 1f);
                 using var lp = new SKPaint { Color = linePaint.Color, StrokeWidth = uThick, IsAntialias = true };
-                canvas.DrawLine(drawX, strikY, drawX + lineWidth, strikY, lp);
+                canvas.DrawLine(drawX, strikY, drawX + drawnWidth, strikY, lp);
             }
 
             isFirstLine = false;
