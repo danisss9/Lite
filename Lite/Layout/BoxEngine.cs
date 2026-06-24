@@ -629,8 +629,11 @@ internal static class BoxEngine
         bool ownsFloatContext,
         out float trailingMargin)
     {
-        var cursorY = contentY;
-        var prevMarginBottom = 0f;
+        // Running-margin model (CSS 2.1 §8.3.1): runY is the committed content bottom (the border
+        // bottom of the last non-collapsing box) and pendingMargin is the collapsing margin still
+        // accumulating below it. The previous single cursor is equivalent to runY + pendingMargin.
+        var runY = contentY;
+        var pendingMargin = 0f;
         var firstBlockSeen = false;
         var lastPlacedWasBlock = false;
         var i = 0;
@@ -668,14 +671,17 @@ internal static class BoxEngine
                             || display == DisplayType.Flex || display == DisplayType.Table;
             if (clear != ClearType.None && (floatSide != FloatType.None || isBlockLevel))
             {
-                cursorY = ApplyClear(clear, floats, cursorY);
-                RetireFloats(floats, cursorY);
+                var cleared = ApplyClear(clear, floats, runY + pendingMargin);
+                RetireFloats(floats, cleared);
+                // Keep runY + pendingMargin == cleared so the running margin still collapses with the
+                // next box exactly as before (clearance behaviour unchanged).
+                runY = cleared - pendingMargin;
             }
 
             // Handle floated elements — taken out of normal flow but affect available width
             if (floatSide != FloatType.None)
             {
-                var af = LayoutFloat(child, floatSide, floats, contentX, cursorY, contentW,
+                var af = LayoutFloat(child, floatSide, floats, contentX, runY + pendingMargin, contentW,
                                      viewportWidth, viewportHeight, parentContentHeight);
                 floats.Add(af);
                 i++;
@@ -689,35 +695,35 @@ internal static class BoxEngine
                 // collapse math must use contentW — matching what LayoutBlock's GetMargin uses.
                 var childMarginTop = child.GetMarginTop(total: contentW, size: childFontSize);
 
-                float adjust;
-                if (!firstBlockSeen && parentBorderPaddingTop == 0f && !parentEstablishesBfc)
+                // First in-flow child: its top margin collapses with the parent's (the child is
+                // placed at the parent's content-box top) when the parent has no border/padding top
+                // and does not establish a BFC (§8.3.1). Otherwise it collapses with the running
+                // margin — max(positives)+min(negatives) so negative margins pull boxes together.
+                var firstChildCollapse = !firstBlockSeen && parentBorderPaddingTop == 0f && !parentEstablishesBfc;
+                var gap = firstChildCollapse ? 0f : CollapseMargins(pendingMargin, childMarginTop);
+                firstBlockSeen = true;
+
+                var borderTop = runY + gap;
+                var (effX, effW) = AvailableBand(floats, borderTop, 1, contentX, contentW);
+                var (h, childBottomMargin) = LayoutBlock(child, effX, borderTop - childMarginTop, effW,
+                                                         viewportWidth, viewportHeight, parentContentHeight, floats);
+                var borderBoxH = h - childMarginTop - childBottomMargin;
+
+                // Self-collapsing block (§8.3.1): no in-flow content / border / padding / height, and
+                // not a BFC → its top and bottom margins are adjoining, fold together into the running
+                // margin, and the box contributes no height (so neighbouring margins collapse through).
+                if (borderBoxH <= 0.01f && child.IsAutoHeight() && !EstablishesBlockFormattingContext(child))
                 {
-                    // Parent-child margin collapsing: first child's top margin collapses with
-                    // the parent's top margin when the parent has no border/padding top AND does
-                    // not establish a block formatting context (CSS 2.1 §8.3.1). A BFC (e.g.
-                    // overflow != visible) contains the child's margin instead of collapsing it.
-                    adjust = -childMarginTop;
-                    firstBlockSeen = true;
+                    var own = CollapseMargins(childMarginTop, childBottomMargin);
+                    pendingMargin = firstChildCollapse ? own : CollapseMargins(pendingMargin, own);
                 }
                 else
                 {
-                    // Collapse adjacent vertical margins (CSS 2.1 §8.3.1): the collapsed margin
-                    // is max(positives) + min(negatives), not a plain max — so negative margins
-                    // pull boxes together correctly.
-                    var collapsed = CollapseMargins(prevMarginBottom, childMarginTop);
-                    adjust = collapsed - prevMarginBottom - childMarginTop;
-                    firstBlockSeen = true;
+                    // Commit: runY advances to the child's border-box bottom; its (effective, after
+                    // its own last-child collapse-through) bottom margin becomes the running margin.
+                    runY = borderTop + borderBoxH;
+                    pendingMargin = childBottomMargin;
                 }
-
-                // Narrow available width for non-floated blocks when floats are active
-                var (effX, effW) = AvailableBand(floats, cursorY + adjust, 1, contentX, contentW);
-
-                var (h, childBottomMargin) = LayoutBlock(child, effX, cursorY + adjust, effW, viewportWidth, viewportHeight, parentContentHeight, floats);
-                cursorY += h + adjust;
-
-                // Use the child's EFFECTIVE bottom margin (after its own last-child collapse-through)
-                // for the next sibling's collapse and as a candidate trailing margin.
-                prevMarginBottom = childBottomMargin;
                 lastPlacedWasBlock = true;
                 i++;
             }
@@ -742,11 +748,13 @@ internal static class BoxEngine
                 if (run.All(n => n.TagName == "#text" && n.DisplayText.Trim().Length == 0))
                     continue;
 
-                // Narrow for floats in inline context too
-                var (effX, effW) = AvailableBand(floats, cursorY, 1, contentX, contentW);
-                var runH = LayoutInlineRun(run, effX, cursorY, effW, viewportWidth, viewportHeight);
-                cursorY += runH;
-                prevMarginBottom = 0f;
+                // Inline content commits the pending block margin (margins don't collapse across a
+                // line box) and lays out at the committed position.
+                runY += pendingMargin;
+                pendingMargin = 0f;
+                var (effX, effW) = AvailableBand(floats, runY, 1, contentX, contentW);
+                var runH = LayoutInlineRun(run, effX, runY, effW, viewportWidth, viewportHeight);
+                runY += runH;
                 lastPlacedWasBlock = false;
             }
         }
@@ -754,13 +762,14 @@ internal static class BoxEngine
         // A block formatting context grows to contain its floats (CSS 2.1 §10.6.7); a non-BFC
         // block does not — its floats belong to an ancestor BFC and overflow this box. The last
         // in-flow block child's bottom margin can collapse through only if no float extends past it.
-        var flowBottom = cursorY;
+        var contentBottom = runY + pendingMargin;
+        var flowBottom = contentBottom;
         if (ownsFloatContext)
             foreach (var f in floats)
-                cursorY = Math.Max(cursorY, f.Bottom);
+                contentBottom = Math.Max(contentBottom, f.Bottom);
 
-        trailingMargin = (lastPlacedWasBlock && cursorY <= flowBottom) ? prevMarginBottom : 0f;
-        return (cursorY - contentY) - trailingMargin;
+        trailingMargin = (lastPlacedWasBlock && contentBottom <= flowBottom) ? pendingMargin : 0f;
+        return (contentBottom - contentY) - trailingMargin;
     }
 
     // -------------------------------------------------------------------------

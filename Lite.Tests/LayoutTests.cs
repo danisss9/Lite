@@ -193,6 +193,21 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void SelfCollapsingBlock_CollapsesAllAdjoiningMargins()
+    {
+        // CSS 2.1 §8.3.1: an empty block (no content/border/padding/height) is self-collapsing — its
+        // own top and bottom margins are adjoining and collapse with the surrounding margins into a
+        // single margin. collapse(10, 20, 40, 5) = 40, so blue sits 50 + 40 below green's top.
+        var green = Block(new() { ["height"] = "50px", ["margin-bottom"] = "10px" });
+        var empty = Block(new() { ["margin-top"] = "20px", ["margin-bottom"] = "40px" });
+        var blue = Block(new() { ["height"] = "50px", ["margin-top"] = "5px" });
+        var container = Block(new() { ["width"] = "200px" }, green, empty, blue);
+        LayoutTree(container);
+        var delta = blue.Box.ContentBox.Top - green.Box.ContentBox.Top;
+        True(Math.Abs(delta - 90f) < 1f, $"expected blue 90px below green (50 + collapsed 40), got {delta}");
+    }
+
+    [Test]
     public static void NegativeMarginCollapse_PullsBoxesTogether()
     {
         // green h=50 mb=30; blue h=50 mt=-10 → collapsed = 30 + (-10) = 20 → blue top at 70.
