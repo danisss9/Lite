@@ -252,6 +252,7 @@ internal class JsEngine
         // URL / URLSearchParams constructors
         _engine.SetValue("URL", typeof(JsUrl));
         _engine.SetValue("URLSearchParams", typeof(JsUrlSearchParams));
+        _engine.SetValue("FormData", typeof(JsFormData));
 
         // navigator
         _engine.SetValue("navigator", new JsNavigator());

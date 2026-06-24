@@ -17,7 +17,7 @@ internal static class BoxEngine
         CssUnits.RootFontSize = html.GetFontSize();
 
         NormalizeBlockInInline(root);
-        NormalizeDetails(root);
+        NormalizeInteractive(root);
 
         LayoutBlock(root, 0, 0, viewportWidth, viewportWidth, viewportHeight, viewportHeight); // root: margin-box discarded
         // Second pass: lay out all absolute/fixed nodes now that normal-flow boxes are finalised
@@ -95,39 +95,50 @@ internal static class BoxEngine
     }
 
     /// <summary>
-    /// HTML &lt;details&gt;: when not <c>open</c>, only the first &lt;summary&gt; is shown; all other
-    /// children are collapsed (display:none). Runs each layout so toggling <c>open</c> (via click or
-    /// JS) re-flows. The pre-details display value is saved so it can be restored when re-opened
-    /// without clobbering an author-specified display.
+    /// Interactive-element layout collapse, re-run each layout so toggling <c>open</c> (via click or
+    /// JS) re-flows:
+    ///   • &lt;details&gt; — when not <c>open</c>, only the first &lt;summary&gt; is shown; the rest collapse.
+    ///   • &lt;dialog&gt; — collapsed entirely unless <c>open</c> (the UA <c>dialog:not([open])</c> rule).
+    /// The pre-hide display is saved (<see cref="LayoutNode.DetailsSavedDisplay"/>) so it can be
+    /// restored on re-open without clobbering an author-specified display.
     /// </summary>
-    private static void NormalizeDetails(LayoutNode node)
+    private static void NormalizeInteractive(LayoutNode node)
     {
         foreach (var child in node.Children)
-            NormalizeDetails(child);
+            NormalizeInteractive(child);
 
-        if (node.TagName != "DETAILS") return;
-        var open = node.Attributes.ContainsKey("open");
-        var summarySeen = false;
+        if (node.TagName == "DIALOG")
+            SetHiddenByUa(node, hide: !node.Attributes.ContainsKey("open"));
 
-        foreach (var child in node.Children)
+        if (node.TagName == "DETAILS")
         {
-            if (child.TagName is "#text") continue;
-            if (!summarySeen && child.TagName == "SUMMARY") { summarySeen = true; continue; }
+            var open = node.Attributes.ContainsKey("open");
+            var summarySeen = false;
+            foreach (var child in node.Children)
+            {
+                if (child.TagName is "#text") continue;
+                if (!summarySeen && child.TagName == "SUMMARY") { summarySeen = true; continue; }
+                SetHiddenByUa(child, hide: !open);
+            }
+        }
+    }
 
-            if (!open)
+    /// <summary>Hides/unhides a node via display:none, saving and restoring its prior display value.</summary>
+    private static void SetHiddenByUa(LayoutNode n, bool hide)
+    {
+        if (hide)
+        {
+            if (n.DetailsSavedDisplay is null)
             {
-                if (child.DetailsSavedDisplay is null)
-                {
-                    child.DetailsSavedDisplay = child.StyleOverrides.GetValueOrDefault("display") ?? "";
-                    child.StyleOverrides["display"] = "none";
-                }
+                n.DetailsSavedDisplay = n.StyleOverrides.GetValueOrDefault("display") ?? "";
+                n.StyleOverrides["display"] = "none";
             }
-            else if (child.DetailsSavedDisplay is not null)
-            {
-                if (child.DetailsSavedDisplay.Length == 0) child.StyleOverrides.Remove("display");
-                else child.StyleOverrides["display"] = child.DetailsSavedDisplay;
-                child.DetailsSavedDisplay = null;
-            }
+        }
+        else if (n.DetailsSavedDisplay is not null)
+        {
+            if (n.DetailsSavedDisplay.Length == 0) n.StyleOverrides.Remove("display");
+            else n.StyleOverrides["display"] = n.DetailsSavedDisplay;
+            n.DetailsSavedDisplay = null;
         }
     }
 

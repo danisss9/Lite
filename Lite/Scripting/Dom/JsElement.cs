@@ -238,7 +238,8 @@ public class JsElement
     }
 
     /// <summary>HTMLDetailsElement/HTMLDialogElement.open — reflects the <c>open</c> attribute.
-    /// Layout collapses a closed &lt;details&gt;'s non-summary content on the next reflow.</summary>
+    /// Layout collapses a closed &lt;details&gt;'s non-summary content / a closed &lt;dialog&gt;
+    /// entirely on the next reflow.</summary>
     public bool open
     {
         get => Node.Attributes.ContainsKey("open");
@@ -247,15 +248,42 @@ public class JsElement
             var was = Node.Attributes.ContainsKey("open");
             if (value) Node.Attributes["open"] = ""; else Node.Attributes.Remove("open");
             // HTMLDetailsElement fires a non-bubbling 'toggle' event asynchronously on change.
-            if (was != value && Node.TagName == "DETAILS" && JsEngine.Instance is { } eng)
-                eng.EnqueueMacrotask(() =>
-                {
-                    var evt = new JsEvent();
-                    evt.initEvent("toggle", false, false);
-                    evt.target = For(eng.RawEngine, Node);
-                    EventDispatcher.DispatchEvent(Node, evt, eng);
-                });
+            if (was != value && Node.TagName == "DETAILS") FireSimpleEvent("toggle");
         }
+    }
+
+    /// <summary>HTMLDialogElement.returnValue (backed by an internal attribute on the node).</summary>
+    public string returnValue
+    {
+        get => Node.Attributes.GetValueOrDefault("_returnValue", string.Empty);
+        set => Node.Attributes["_returnValue"] = value;
+    }
+
+    /// <summary>HTMLDialogElement.show() — opens the dialog (non-modal).</summary>
+    public void show() => Node.Attributes["open"] = "";
+
+    /// <summary>HTMLDialogElement.showModal() — opens the dialog as modal (top-layer/backdrop are
+    /// approximated; the open state + layout reveal are the conformance-visible behaviour).</summary>
+    public void showModal() => Node.Attributes["open"] = "";
+
+    /// <summary>HTMLDialogElement.close([returnValue]) — closes the dialog and fires a 'close' event.</summary>
+    public void close(string? returnValue = null)
+    {
+        if (returnValue != null) Node.Attributes["_returnValue"] = returnValue;
+        if (Node.Attributes.Remove("open")) FireSimpleEvent("close");
+    }
+
+    /// <summary>Queues a non-bubbling event of <paramref name="type"/> on this node (macrotask).</summary>
+    private void FireSimpleEvent(string type)
+    {
+        if (JsEngine.Instance is not { } eng) return;
+        eng.EnqueueMacrotask(() =>
+        {
+            var evt = new JsEvent();
+            evt.initEvent(type, false, false);
+            evt.target = For(eng.RawEngine, Node);
+            EventDispatcher.DispatchEvent(Node, evt, eng);
+        });
     }
 
     public string type
@@ -287,6 +315,16 @@ public class JsElement
     public ValidityState validity => FormValidation.GetValidity(Node);
     public bool checkValidity() => !willValidate || validity.valid;
     public bool reportValidity() => checkValidity();
+
+    /// <summary>The control's validation message (custom message or a built-in one; empty if valid).</summary>
+    public string validationMessage => FormValidation.GetValidationMessage(Node);
+
+    /// <summary>Sets a custom validity message; a non-empty message makes the control invalid.</summary>
+    public void setCustomValidity(string message)
+    {
+        if (string.IsNullOrEmpty(message)) Node.Attributes.Remove("_customValidity");
+        else Node.Attributes["_customValidity"] = message;
+    }
 
     /// <summary>Submits the form (HTMLFormElement.submit). No-op on non-form elements.</summary>
     public void submit()

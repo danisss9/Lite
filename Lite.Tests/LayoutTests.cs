@@ -253,4 +253,22 @@ public static class LayoutTests
         True(Math.Abs(details.Box.ContentBox.Height - 120f) < 1f,
             $"open details should show summary + 100px content (120), got {details.Box.ContentBox.Height}");
     }
+
+    [Test]
+    public static void Dialog_HiddenUnlessOpen()
+    {
+        // A <dialog> is display:none (collapsed) unless it has the open attribute.
+        var content = Tagged("DIV", new() { ["height"] = "60px" });
+        var dialog = Tagged("DIALOG", new());
+        dialog.AddChild(content);
+        var root = LayoutTree(Block(new() { ["width"] = "200px" }, dialog));
+
+        True(dialog.Box.ContentBox.Height < 1f,
+            $"a closed dialog should be hidden (0 height), got {dialog.Box.ContentBox.Height}");
+
+        dialog.Attributes["open"] = "";
+        BoxEngine.Layout(root, 800, 600);
+        True(Math.Abs(dialog.Box.ContentBox.Height - 60f) < 1f,
+            $"an open dialog should show its 60px content, got {dialog.Box.ContentBox.Height}");
+    }
 }

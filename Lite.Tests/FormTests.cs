@@ -124,4 +124,55 @@ public static class FormTests
         True(SelectorEngine.Matches(node, ":required"), ":required should match an input with the attribute");
         True(SelectorEngine.Matches(node, "input:invalid"), "empty required input should match :invalid");
     }
+
+    [Test]
+    public static void SetCustomValidity_MakesControlInvalid()
+    {
+        var e = NewEngine(out _);
+        e.Execute(@"
+            var inp = document.createElement('input');
+            document.body.appendChild(inp);
+            var validBefore = inp.checkValidity();
+            inp.setCustomValidity('bad value');
+            var validAfter = inp.checkValidity();
+            var msg = inp.validationMessage;
+            var customErr = inp.validity.customError;
+            inp.setCustomValidity('');
+            var validCleared = inp.checkValidity();");
+        True(Global(e, "validBefore") is true, "a fresh input is valid");
+        True(Global(e, "validAfter") is false, "setCustomValidity makes the control invalid");
+        Equal("bad value", (string?)Global(e, "msg"));
+        True(Global(e, "customErr") is true, "validity.customError should be true");
+        True(Global(e, "validCleared") is true, "clearing custom validity restores validity");
+    }
+
+    [Test]
+    public static void FormData_AppendGetAndFromForm()
+    {
+        var e = NewEngine(out _);
+        e.Execute(@"
+            var fd = new FormData();
+            fd.append('a', '1');
+            fd.append('a', '2');
+            fd.append('b', 'x');
+            var aFirst = fd.get('a');
+            var aAll = fd.getAll('a').join(',');
+            var hasB = fd.has('b');
+            fd.set('a', '9');
+            var aAfterSet = fd.getAll('a').join(',');
+            fd.delete('b');
+            var hasBAfter = fd.has('b');
+
+            document.body.innerHTML = '<form><input name=\""q\"" value=\""hi\""><input name=\""n\"" value=\""5\""></form>';
+            var fromForm = new FormData(document.querySelector('form'));
+            var q = fromForm.get('q');
+            var n = fromForm.get('n');");
+        Equal("1", (string?)Global(e, "aFirst"));
+        Equal("1,2", (string?)Global(e, "aAll"));
+        True(Global(e, "hasB") is true, "has('b') should be true");
+        Equal("9", (string?)Global(e, "aAfterSet"));   // set collapses duplicates to one
+        True(Global(e, "hasBAfter") is false, "delete('b') should remove it");
+        Equal("hi", (string?)Global(e, "q"));
+        Equal("5", (string?)Global(e, "n"));
+    }
 }

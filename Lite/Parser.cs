@@ -13,7 +13,7 @@ namespace Lite;
 internal static class Parser
 {
     private const string UserAgentStylesheet = """
-        div, section, article, header, footer, main, nav, aside, form, ul, ol, li, fieldset, figure, figcaption, address, details, summary { display: block; }
+        div, section, article, header, footer, main, nav, aside, form, ul, ol, li, fieldset, figure, figcaption, address, details, summary, dialog { display: block; }
         label { display: inline; }
         body { display: block; margin: 8px; }
         h1 { display: block; font-size: 2em; margin-top: 0.67em; margin-bottom: 0.67em; margin-left: 0px; margin-right: 0px; font-weight: bold; }

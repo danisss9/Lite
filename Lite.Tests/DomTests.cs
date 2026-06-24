@@ -168,4 +168,27 @@ public static class DomTests
         True(engine.RawEngine.GetValue("hasAttr").ToObject() is true, "setting open should add the open attribute");
         True(System.Convert.ToInt32(engine.RawEngine.GetValue("fired").ToObject()) == 1, "toggle event should fire once on change");
     }
+
+    [Test]
+    public static void Dialog_ShowCloseAndReturnValue()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute("document.body.innerHTML = '<dialog><p>hi</p></dialog>';");
+        engine.Execute(@"
+            var dlg = document.querySelector('dialog');
+            var open0 = dlg.open;
+            dlg.show();
+            var open1 = dlg.open;
+            var closed = 0;
+            dlg.addEventListener('close', function () { closed++; });
+            dlg.close('accepted');
+            var open2 = dlg.open;
+            var rv = dlg.returnValue;");
+        engine.DrainTasks(); // close event delivered on a macrotask
+        True(engine.RawEngine.GetValue("open0").ToObject() is false, "dialog starts closed");
+        True(engine.RawEngine.GetValue("open1").ToObject() is true, "show() opens the dialog");
+        True(engine.RawEngine.GetValue("open2").ToObject() is false, "close() closes the dialog");
+        True((string?)engine.RawEngine.GetValue("rv").ToObject() == "accepted", "close(v) sets returnValue");
+        True(System.Convert.ToInt32(engine.RawEngine.GetValue("closed").ToObject()) == 1, "close() fires a close event");
+    }
 }
