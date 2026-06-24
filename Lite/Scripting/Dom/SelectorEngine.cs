@@ -10,13 +10,13 @@ internal static class SelectorEngine
     internal static JsElement? QuerySelector(LayoutNode root, string selector, Engine engine)
     {
         var node = FindFirst(root, n => Matches(n, selector));
-        return node is null ? null : new JsElement(engine, node);
+        return node is null ? null : JsElement.For(engine, node);
     }
 
     internal static JsElement[] QuerySelectorAll(LayoutNode root, string selector, Engine engine)
     {
         return FindAll(root, n => Matches(n, selector))
-            .Select(n => new JsElement(engine, n)).ToArray();
+            .Select(n => JsElement.For(engine, n)).ToArray();
     }
 
     /// <summary>Tests whether a node matches a full selector string (with commas, combinators).</summary>

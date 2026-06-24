@@ -32,10 +32,10 @@ public class JsMutationRecord
 
     public string type { get; }
     public JsElement target => new(_engine, _target);
-    public JsElement[] addedNodes => _added.Select(n => new JsElement(_engine, n)).ToArray();
-    public JsElement[] removedNodes => _removed.Select(n => new JsElement(_engine, n)).ToArray();
-    public JsElement? previousSibling => _prev is null ? null : new JsElement(_engine, _prev);
-    public JsElement? nextSibling => _next is null ? null : new JsElement(_engine, _next);
+    public JsElement[] addedNodes => _added.Select(n => JsElement.For(_engine, n)).ToArray();
+    public JsElement[] removedNodes => _removed.Select(n => JsElement.For(_engine, n)).ToArray();
+    public JsElement? previousSibling => _prev is null ? null : JsElement.For(_engine, _prev);
+    public JsElement? nextSibling => _next is null ? null : JsElement.For(_engine, _next);
     public string? attributeName { get; }
     public string? attributeNamespace => null;
     public string? oldValue { get; }

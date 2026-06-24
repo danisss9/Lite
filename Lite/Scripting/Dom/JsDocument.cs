@@ -18,22 +18,22 @@ public class JsDocument
     // ---- identity ----
     public string nodeName => "#document";
     public int nodeType => 9;
-    public JsElement? documentElement => _root.Children.Count > 0 ? new JsElement(_engine, _root) : null;
+    public JsElement? documentElement => _root.Children.Count > 0 ? JsElement.For(_engine, _root) : null;
 
     /// <summary>Returns the window object (document.defaultView).</summary>
     public object? defaultView => JsEngine.Instance?.RawEngine.GetValue("window").ToObject();
 
     public JsElement? body =>
-        FindFirst(_root, n => n.TagName == "BODY") is { } b ? new JsElement(_engine, b) : null;
+        FindFirst(_root, n => n.TagName == "BODY") is { } b ? JsElement.For(_engine, b) : null;
 
     public JsElement? head =>
-        FindFirst(_root, n => n.TagName == "HEAD") is { } h ? new JsElement(_engine, h) : null;
+        FindFirst(_root, n => n.TagName == "HEAD") is { } h ? JsElement.For(_engine, h) : null;
 
     // ---- selectors ----
     public JsElement? getElementById(string id)
     {
         var node = FindById(_root, id);
-        return node is null ? null : new JsElement(_engine, node);
+        return node is null ? null : JsElement.For(_engine, node);
     }
 
     public JsElement? querySelector(string selector) =>
@@ -46,7 +46,7 @@ public class JsDocument
     {
         var tag = tagName.ToUpperInvariant();
         return FindAll(_root, n => tag == "*" || n.TagName == tag)
-            .Select(n => new JsElement(_engine, n)).ToArray();
+            .Select(n => JsElement.For(_engine, n)).ToArray();
     }
 
     public JsElement[] getElementsByClassName(string classNames)
@@ -56,13 +56,13 @@ public class JsDocument
         {
             var nodeClasses = n.Attributes.GetValueOrDefault("class", "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
             return classes.All(c => nodeClasses.Contains(c));
-        }).Select(n => new JsElement(_engine, n)).ToArray();
+        }).Select(n => JsElement.For(_engine, n)).ToArray();
     }
 
     /// <summary>Returns all elements with the given name attribute (Document.getElementsByName()).</summary>
     public JsElement[] getElementsByName(string name) =>
         FindAll(_root, n => n.Attributes.GetValueOrDefault("name") == name)
-            .Select(n => new JsElement(_engine, n)).ToArray();
+            .Select(n => JsElement.For(_engine, n)).ToArray();
 
     // ---- creation ----
     public JsElement createElement(string tagName)
@@ -72,7 +72,7 @@ public class JsDocument
         {
             NeedsStyleResolution = true, // cascade applied when inserted into the live tree
         };
-        return new JsElement(_engine, node);
+        return JsElement.For(_engine, node);
     }
 
     public JsElement createElementNS(string ns, string tagName)
@@ -83,21 +83,21 @@ public class JsDocument
             NeedsStyleResolution = true,
         };
         node.Attributes["xmlns"] = ns;
-        return new JsElement(_engine, node);
+        return JsElement.For(_engine, node);
     }
 
     public JsElement createTextNode(string text)
     {
         var style = _root.Style;
         var node = new LayoutNode(null, "#text", text, style);
-        return new JsElement(_engine, node);
+        return JsElement.For(_engine, node);
     }
 
     public JsElement createDocumentFragment()
     {
         var style = _root.Style;
         var node = new LayoutNode(null, "#document-fragment", string.Empty, style);
-        return new JsElement(_engine, node);
+        return JsElement.For(_engine, node);
     }
 
     public JsEvent createEvent(string type)

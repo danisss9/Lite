@@ -74,6 +74,10 @@ public class LayoutNode
     /// <summary>Per-element scroll state for overflow:scroll/auto elements.</summary>
     public ElementScrollState? ScrollState { get; set; }
 
+    /// <summary>For a child collapsed by a closed &lt;details&gt;: the display value before it was
+    /// hidden (null = not hidden by details; "" = no explicit display to restore).</summary>
+    public string? DetailsSavedDisplay { get; set; }
+
     /// <summary>
     /// True for nodes created via document.createElement that have not yet had the
     /// stylesheet cascade applied. <see cref="Lite.Layout.StyleResolver"/> resolves and

@@ -36,7 +36,7 @@ public class JsTreeWalker
     {
         if (_current == _root || _current.Parent == null) return null;
         _current = _current.Parent;
-        return AcceptsNode(_current) ? new JsElement(_engine, _current) : parentNode();
+        return AcceptsNode(_current) ? JsElement.For(_engine, _current) : parentNode();
     }
 
     public JsElement? firstChild()
@@ -44,7 +44,7 @@ public class JsTreeWalker
         if (_current.Children.Count == 0) return null;
         foreach (var child in _current.Children)
         {
-            if (AcceptsNode(child)) { _current = child; return new JsElement(_engine, _current); }
+            if (AcceptsNode(child)) { _current = child; return JsElement.For(_engine, _current); }
         }
         return null;
     }
@@ -54,7 +54,7 @@ public class JsTreeWalker
         if (_current.Children.Count == 0) return null;
         for (int i = _current.Children.Count - 1; i >= 0; i--)
         {
-            if (AcceptsNode(_current.Children[i])) { _current = _current.Children[i]; return new JsElement(_engine, _current); }
+            if (AcceptsNode(_current.Children[i])) { _current = _current.Children[i]; return JsElement.For(_engine, _current); }
         }
         return null;
     }
@@ -67,7 +67,7 @@ public class JsTreeWalker
         {
             foreach (var child in node.Children)
             {
-                if (AcceptsNode(child)) { _current = child; return new JsElement(_engine, _current); }
+                if (AcceptsNode(child)) { _current = child; return JsElement.For(_engine, _current); }
                 // Check child's subtree
                 _current = child;
                 var result = nextNode();
@@ -82,7 +82,7 @@ public class JsTreeWalker
             var idx = siblings.IndexOf(node);
             for (int i = idx + 1; i < siblings.Count; i++)
             {
-                if (AcceptsNode(siblings[i])) { _current = siblings[i]; return new JsElement(_engine, _current); }
+                if (AcceptsNode(siblings[i])) { _current = siblings[i]; return JsElement.For(_engine, _current); }
                 _current = siblings[i];
                 var result = nextNode();
                 if (result != null) return result;
@@ -102,13 +102,13 @@ public class JsTreeWalker
         for (int i = idx - 1; i >= 0; i--)
         {
             var last = GetLastDescendant(siblings[i]);
-            if (last != null && AcceptsNode(last)) { _current = last; return new JsElement(_engine, _current); }
-            if (AcceptsNode(siblings[i])) { _current = siblings[i]; return new JsElement(_engine, _current); }
+            if (last != null && AcceptsNode(last)) { _current = last; return JsElement.For(_engine, _current); }
+            if (AcceptsNode(siblings[i])) { _current = siblings[i]; return JsElement.For(_engine, _current); }
         }
         if (_current.Parent != _root && AcceptsNode(_current.Parent))
         {
             _current = _current.Parent;
-            return new JsElement(_engine, _current);
+            return JsElement.For(_engine, _current);
         }
         return null;
     }
@@ -153,13 +153,13 @@ public class JsNodeIterator
     public JsElement? nextNode()
     {
         _index++;
-        return _index < _flatList.Count ? new JsElement(_engine, _flatList[_index]) : null;
+        return _index < _flatList.Count ? JsElement.For(_engine, _flatList[_index]) : null;
     }
 
     public JsElement? previousNode()
     {
         _index--;
-        return _index >= 0 ? new JsElement(_engine, _flatList[_index]) : null;
+        return _index >= 0 ? JsElement.For(_engine, _flatList[_index]) : null;
     }
 
     private static List<LayoutNode> Flatten(LayoutNode root, int whatToShow)

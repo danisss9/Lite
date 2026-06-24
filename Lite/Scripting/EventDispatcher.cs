@@ -25,7 +25,7 @@ internal static class EventDispatcher
 
         var evt = new JsEvent();
         evt.initEvent(eventType.ToLowerInvariant(), true, true);
-        evt.target = new JsElement(engine.RawEngine, node);
+        evt.target = JsElement.For(engine.RawEngine, node);
 
         return DispatchEvent(node, evt, engine);
     }
@@ -49,7 +49,7 @@ internal static class EventDispatcher
         foreach (var ancestor in ancestors)
         {
             if (evt.PropagationStopped) break;
-            evt.currentTarget = new JsElement(engine.RawEngine, ancestor);
+            evt.currentTarget = JsElement.For(engine.RawEngine, ancestor);
             if (InvokeListeners(ancestor, eventType, evt, engine, capturePhase: true))
                 handled = true;
         }
@@ -84,7 +84,7 @@ internal static class EventDispatcher
             {
                 if (evt.PropagationStopped) break;
                 var ancestor = ancestors[i];
-                evt.currentTarget = new JsElement(engine.RawEngine, ancestor);
+                evt.currentTarget = JsElement.For(engine.RawEngine, ancestor);
                 if (InvokeListeners(ancestor, eventType, evt, engine, capturePhase: false))
                     handled = true;
                 // Inline handler on ancestors during bubbling

@@ -218,4 +218,39 @@ public static class LayoutTests
         True(Math.Abs(blue.Box.ContentBox.Top - green.Box.ContentBox.Top - 70f) < 0.5f,
             $"expected blue 70px below green (50 + collapsed 20), got {blue.Box.ContentBox.Top - green.Box.ContentBox.Top}");
     }
+
+    private static LayoutNode Tagged(string tag, Dictionary<string, string> styles)
+    {
+        var node = new LayoutNode(null, tag, "", _styleCache.Style);
+        foreach (var side in new[] { "top", "right", "bottom", "left" })
+        {
+            node.StyleOverrides[$"margin-{side}"] = "0";
+            node.StyleOverrides[$"padding-{side}"] = "0";
+            node.StyleOverrides[$"border-{side}-width"] = "0";
+        }
+        node.StyleOverrides["display"] = "block";
+        foreach (var (k, v) in styles) node.StyleOverrides[k] = v;
+        return node;
+    }
+
+    [Test]
+    public static void Details_ClosedHidesNonSummaryContent()
+    {
+        // A closed <details> shows only its first <summary>; the rest is collapsed. Toggling `open`
+        // reflows to reveal it.
+        var summary = Tagged("SUMMARY", new() { ["height"] = "20px" });
+        var content = Tagged("DIV", new() { ["height"] = "100px" });
+        var details = Tagged("DETAILS", new());
+        details.AddChild(summary);
+        details.AddChild(content);
+        var root = LayoutTree(Block(new() { ["width"] = "200px" }, details));
+
+        True(Math.Abs(details.Box.ContentBox.Height - 20f) < 1f,
+            $"closed details should show only the 20px summary, got {details.Box.ContentBox.Height}");
+
+        details.Attributes["open"] = "";
+        BoxEngine.Layout(root, 800, 600);
+        True(Math.Abs(details.Box.ContentBox.Height - 120f) < 1f,
+            $"open details should show summary + 100px content (120), got {details.Box.ContentBox.Height}");
+    }
 }

@@ -130,4 +130,42 @@ public static class DomTests
         engine.Execute("document.getElementById('gone').remove();");
         True(!body.Children.Any(c => c.TagName == "P"), "removed element should be gone");
     }
+
+    [Test]
+    public static void WrapperIdentity_SameNodeYieldsSameWrapper()
+    {
+        // A DOM node must always surface as the SAME JS object so === and assert_equals(node, node)
+        // work (a real WPT/JS expectation that the per-call wrapper construction used to break).
+        var (_, _, engine) = NewPage();
+        engine.Execute("document.body.innerHTML = '<p id=\"x\">hi</p>';");
+        engine.Execute(@"
+            var a = document.getElementById('x');
+            var b = document.getElementById('x');
+            var idSame = (a === b);
+            var parentSame = (a.parentElement === document.body);
+            var childSame = (document.body.children[0] === a);");
+        True(engine.RawEngine.GetValue("idSame").ToObject() is true, "getElementById must return the same wrapper for the same node");
+        True(engine.RawEngine.GetValue("parentSame").ToObject() is true, "parentElement must be identity-equal to document.body");
+        True(engine.RawEngine.GetValue("childSame").ToObject() is true, "children[] must be identity-equal to getElementById");
+    }
+
+    [Test]
+    public static void DetailsOpen_ReflectsAndFiresToggle()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute("document.body.innerHTML = '<details><summary>S</summary><p>body</p></details>';");
+        engine.Execute(@"
+            var d = document.querySelector('details');
+            var initial = d.open;
+            var fired = 0;
+            d.addEventListener('toggle', function () { fired++; });
+            d.open = true;
+            var afterOpen = d.open;
+            var hasAttr = d.hasAttribute('open');");
+        engine.DrainTasks(); // toggle is delivered on a macrotask
+        True(engine.RawEngine.GetValue("initial").ToObject() is false, "details.open should start false");
+        True(engine.RawEngine.GetValue("afterOpen").ToObject() is true, "details.open should be true after setting");
+        True(engine.RawEngine.GetValue("hasAttr").ToObject() is true, "setting open should add the open attribute");
+        True(System.Convert.ToInt32(engine.RawEngine.GetValue("fired").ToObject()) == 1, "toggle event should fire once on change");
+    }
 }

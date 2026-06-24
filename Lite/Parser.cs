@@ -458,6 +458,10 @@ internal static class Parser
             else if (optionValues.Count > 0) node.Attributes["value"] = optionValues[0];
         }
 
+        // <details>/<dialog> open state (drives layout collapse + the .open DOM property)
+        if (tag is "DETAILS" or "DIALOG" && element.HasAttribute("open"))
+            node.Attributes["open"] = "";
+
         // Capture inline event handlers for any element
         foreach (var attr in new[] { "onclick", "onchange", "oninput", "onsubmit", "onkeyup", "onkeydown", "onload" })
         {

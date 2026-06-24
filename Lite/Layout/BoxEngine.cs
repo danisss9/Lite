@@ -17,6 +17,7 @@ internal static class BoxEngine
         CssUnits.RootFontSize = html.GetFontSize();
 
         NormalizeBlockInInline(root);
+        NormalizeDetails(root);
 
         LayoutBlock(root, 0, 0, viewportWidth, viewportWidth, viewportHeight, viewportHeight); // root: margin-box discarded
         // Second pass: lay out all absolute/fixed nodes now that normal-flow boxes are finalised
@@ -90,6 +91,43 @@ internal static class BoxEngine
             node.StyleOverrides["padding-bottom"] = "0";
             node.StyleOverrides["border-top-width"] = "0";
             node.StyleOverrides["border-bottom-width"] = "0";
+        }
+    }
+
+    /// <summary>
+    /// HTML &lt;details&gt;: when not <c>open</c>, only the first &lt;summary&gt; is shown; all other
+    /// children are collapsed (display:none). Runs each layout so toggling <c>open</c> (via click or
+    /// JS) re-flows. The pre-details display value is saved so it can be restored when re-opened
+    /// without clobbering an author-specified display.
+    /// </summary>
+    private static void NormalizeDetails(LayoutNode node)
+    {
+        foreach (var child in node.Children)
+            NormalizeDetails(child);
+
+        if (node.TagName != "DETAILS") return;
+        var open = node.Attributes.ContainsKey("open");
+        var summarySeen = false;
+
+        foreach (var child in node.Children)
+        {
+            if (child.TagName is "#text") continue;
+            if (!summarySeen && child.TagName == "SUMMARY") { summarySeen = true; continue; }
+
+            if (!open)
+            {
+                if (child.DetailsSavedDisplay is null)
+                {
+                    child.DetailsSavedDisplay = child.StyleOverrides.GetValueOrDefault("display") ?? "";
+                    child.StyleOverrides["display"] = "none";
+                }
+            }
+            else if (child.DetailsSavedDisplay is not null)
+            {
+                if (child.DetailsSavedDisplay.Length == 0) child.StyleOverrides.Remove("display");
+                else child.StyleOverrides["display"] = child.DetailsSavedDisplay;
+                child.DetailsSavedDisplay = null;
+            }
         }
     }
 

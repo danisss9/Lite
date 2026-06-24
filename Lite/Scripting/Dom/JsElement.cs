@@ -20,6 +20,17 @@ public class JsElement
         Node = node;
     }
 
+    // Wrapper identity: a LayoutNode belongs to exactly one engine, so a node-keyed weak cache
+    // guarantees the same node always yields the SAME JsElement. This makes JS === and WPT
+    // assert_equals(node, node) work (e.g. getElementById('x') === getElementById('x')) and keeps
+    // per-element state (style, listeners) stable across accessor calls. Keys are weak, so wrappers
+    // for GC'd nodes are collected automatically.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<LayoutNode, JsElement> _wrappers = new();
+
+    /// <summary>Returns the canonical JsElement wrapper for a node (cached per node).</summary>
+    public static JsElement For(Engine engine, LayoutNode node)
+        => _wrappers.GetValue(node, n => new JsElement(engine, n));
+
     // ---- identity ----
     public string id
     {
@@ -226,6 +237,27 @@ public class JsElement
         set { if (value) Node.Attributes["disabled"] = ""; else Node.Attributes.Remove("disabled"); }
     }
 
+    /// <summary>HTMLDetailsElement/HTMLDialogElement.open — reflects the <c>open</c> attribute.
+    /// Layout collapses a closed &lt;details&gt;'s non-summary content on the next reflow.</summary>
+    public bool open
+    {
+        get => Node.Attributes.ContainsKey("open");
+        set
+        {
+            var was = Node.Attributes.ContainsKey("open");
+            if (value) Node.Attributes["open"] = ""; else Node.Attributes.Remove("open");
+            // HTMLDetailsElement fires a non-bubbling 'toggle' event asynchronously on change.
+            if (was != value && Node.TagName == "DETAILS" && JsEngine.Instance is { } eng)
+                eng.EnqueueMacrotask(() =>
+                {
+                    var evt = new JsEvent();
+                    evt.initEvent("toggle", false, false);
+                    evt.target = For(eng.RawEngine, Node);
+                    EventDispatcher.DispatchEvent(Node, evt, eng);
+                });
+        }
+    }
+
     public string type
     {
         get => Node.Attributes.GetValueOrDefault("type", Node.TagName == "INPUT" ? "text" : string.Empty);
@@ -246,7 +278,7 @@ public class JsElement
         get
         {
             for (var p = Node.Parent; p != null; p = p.Parent)
-                if (p.TagName == "FORM") return new JsElement(_engine, p);
+                if (p.TagName == "FORM") return JsElement.For(_engine, p);
             return null;
         }
     }
@@ -357,19 +389,19 @@ public class JsElement
     }
 
     public JsElement[] children =>
-        Node.Children.Where(c => c.TagName != "#text").Select(c => new JsElement(_engine, c)).ToArray();
+        Node.Children.Where(c => c.TagName != "#text").Select(c => JsElement.For(_engine, c)).ToArray();
 
     public JsElement[] childNodes
     {
         get
         {
             EnsureTextChildMaterialized();
-            return Node.Children.Select(c => new JsElement(_engine, c)).ToArray();
+            return Node.Children.Select(c => JsElement.For(_engine, c)).ToArray();
         }
     }
 
     public JsElement? parentElement =>
-        Node.Parent is { } p ? new JsElement(_engine, p) : null;
+        Node.Parent is { } p ? JsElement.For(_engine, p) : null;
 
     public JsElement? parentNode => parentElement;
 
@@ -378,7 +410,7 @@ public class JsElement
         get
         {
             EnsureTextChildMaterialized();
-            return Node.Children.Count > 0 ? new JsElement(_engine, Node.Children[0]) : null;
+            return Node.Children.Count > 0 ? JsElement.For(_engine, Node.Children[0]) : null;
         }
     }
 
@@ -387,15 +419,15 @@ public class JsElement
         get
         {
             EnsureTextChildMaterialized();
-            return Node.Children.Count > 0 ? new JsElement(_engine, Node.Children[^1]) : null;
+            return Node.Children.Count > 0 ? JsElement.For(_engine, Node.Children[^1]) : null;
         }
     }
 
     public JsElement? firstElementChild =>
-        Node.Children.FirstOrDefault(c => c.TagName != "#text") is { } n ? new JsElement(_engine, n) : null;
+        Node.Children.FirstOrDefault(c => c.TagName != "#text") is { } n ? JsElement.For(_engine, n) : null;
 
     public JsElement? lastElementChild =>
-        Node.Children.LastOrDefault(c => c.TagName != "#text") is { } n ? new JsElement(_engine, n) : null;
+        Node.Children.LastOrDefault(c => c.TagName != "#text") is { } n ? JsElement.For(_engine, n) : null;
 
     public JsElement? nextSibling
     {
@@ -404,7 +436,7 @@ public class JsElement
             if (Node.Parent is null) return null;
             var siblings = Node.Parent.Children;
             var idx = siblings.IndexOf(Node);
-            return idx >= 0 && idx + 1 < siblings.Count ? new JsElement(_engine, siblings[idx + 1]) : null;
+            return idx >= 0 && idx + 1 < siblings.Count ? JsElement.For(_engine, siblings[idx + 1]) : null;
         }
     }
 
@@ -415,7 +447,7 @@ public class JsElement
             if (Node.Parent is null) return null;
             var siblings = Node.Parent.Children;
             var idx = siblings.IndexOf(Node);
-            return idx > 0 ? new JsElement(_engine, siblings[idx - 1]) : null;
+            return idx > 0 ? JsElement.For(_engine, siblings[idx - 1]) : null;
         }
     }
 
@@ -427,7 +459,7 @@ public class JsElement
             var siblings = Node.Parent.Children;
             var idx = siblings.IndexOf(Node);
             for (int i = idx + 1; i < siblings.Count; i++)
-                if (siblings[i].TagName != "#text") return new JsElement(_engine, siblings[i]);
+                if (siblings[i].TagName != "#text") return JsElement.For(_engine, siblings[i]);
             return null;
         }
     }
@@ -440,7 +472,7 @@ public class JsElement
             var siblings = Node.Parent.Children;
             var idx = siblings.IndexOf(Node);
             for (int i = idx - 1; i >= 0; i--)
-                if (siblings[i].TagName != "#text") return new JsElement(_engine, siblings[i]);
+                if (siblings[i].TagName != "#text") return JsElement.For(_engine, siblings[i]);
             return null;
         }
     }
@@ -612,18 +644,18 @@ public class JsElement
         {
             foreach (var child in Node.Children)
             {
-                var childEl = new JsElement(_engine, child);
+                var childEl = JsElement.For(_engine, child);
                 var childClone = childEl.cloneNode(true);
                 clone.AddChild(childClone.Node);
             }
         }
-        return new JsElement(_engine, clone);
+        return JsElement.For(_engine, clone);
     }
 
     public bool contains(JsElement other)
     {
         if (other.Node == Node) return true;
-        return Node.Children.Any(c => new JsElement(_engine, c).contains(other));
+        return Node.Children.Any(c => JsElement.For(_engine, c).contains(other));
     }
 
     public bool hasChildNodes() => Node.Children.Count > 0;
@@ -695,7 +727,7 @@ public class JsElement
     {
         var tag = tagName.ToUpperInvariant();
         return FindAll(Node, n => tag == "*" || n.TagName == tag)
-            .Select(n => new JsElement(_engine, n)).ToArray();
+            .Select(n => JsElement.For(_engine, n)).ToArray();
     }
 
     public JsElement[] getElementsByClassName(string classNames)
@@ -705,7 +737,7 @@ public class JsElement
         {
             var nodeClasses = n.Attributes.GetValueOrDefault("class", "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
             return classes.All(c => nodeClasses.Contains(c));
-        }).Select(n => new JsElement(_engine, n)).ToArray();
+        }).Select(n => JsElement.For(_engine, n)).ToArray();
     }
 
     // ---- canvas ----
