@@ -2,6 +2,7 @@ using Lite;
 using Lite.Extensions;
 using Lite.Layout;
 using Lite.Models;
+using SkiaSharp;
 using static Lite.Tests.TestRunner;
 
 namespace Lite.Tests;
@@ -270,5 +271,52 @@ public static class LayoutTests
         BoxEngine.Layout(root, 800, 600);
         True(Math.Abs(dialog.Box.ContentBox.Height - 60f) < 1f,
             $"an open dialog should show its 60px content, got {dialog.Box.ContentBox.Height}");
+    }
+
+    [Test]
+    public static void Progress_DefaultInlineBlockSize()
+    {
+        // <progress> with no explicit size gets the UA replaced-element default (160x16).
+        var progress = Tagged("PROGRESS", new() { ["display"] = "inline-block" });
+        LayoutTree(Block(new() { ["width"] = "400px" }, progress));
+        True(Math.Abs(progress.Box.ContentBox.Width - 160f) < 1f,
+            $"default progress width should be 160, got {progress.Box.ContentBox.Width}");
+        True(Math.Abs(progress.Box.ContentBox.Height - 16f) < 1f,
+            $"default progress height should be 16, got {progress.Box.ContentBox.Height}");
+    }
+
+    [Test]
+    public static void Meter_DefaultInlineBlockSize()
+    {
+        var meter = Tagged("METER", new() { ["display"] = "inline-block" });
+        LayoutTree(Block(new() { ["width"] = "400px" }, meter));
+        True(Math.Abs(meter.Box.ContentBox.Width - 80f) < 1f,
+            $"default meter width should be 80, got {meter.Box.ContentBox.Width}");
+        True(Math.Abs(meter.Box.ContentBox.Height - 16f) < 1f,
+            $"default meter height should be 16, got {meter.Box.ContentBox.Height}");
+    }
+
+    [Test]
+    public static void Progress_PaintsDeterminateFill()
+    {
+        // A determinate <progress value=0.5 max=1> paints a blue fill over the left half of its
+        // grey track. Sample 25% across (filled → blue) and 75% (empty → grey), relative to the
+        // computed box so the assertion is position-independent.
+        var progress = Tagged("PROGRESS",
+            new() { ["display"] = "inline-block", ["width"] = "200px", ["height"] = "20px" });
+        progress.Attributes["value"] = "0.5";
+        progress.Attributes["max"] = "1";
+        var root = LayoutTree(Block(new() { ["width"] = "400px" }, progress));
+
+        using var bmp = Drawer.DrawToBitmap(800, 600, root, new Viewport { ViewportHeight = 600 });
+        var box = progress.Box.ContentBox;
+        var y = (int)box.MidY;
+        var fill = bmp.GetPixel((int)(box.Left + box.Width * 0.25f), y);
+        var empty = bmp.GetPixel((int)(box.Left + box.Width * 0.75f), y);
+
+        True(fill.Blue > 150 && fill.Red < 120,
+            $"filled region should be blue (#0078D7), got {fill}");
+        True(empty.Red > 150 && Math.Abs(empty.Red - empty.Blue) < 20 && Math.Abs(empty.Red - empty.Green) < 20,
+            $"empty region should be the grey track, got {empty}");
     }
 }

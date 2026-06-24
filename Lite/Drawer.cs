@@ -321,6 +321,14 @@ internal static class Drawer
                 PaintSelect(canvas, node);
                 return;
 
+            case "PROGRESS":
+                PaintProgress(canvas, node);
+                return;
+
+            case "METER":
+                PaintMeter(canvas, node);
+                return;
+
             case "HR":
                 PaintHorizontalRule(canvas, node);
                 return;
@@ -856,6 +864,76 @@ internal static class Drawer
         canvas.DrawCircle(thumbX, trackY, 7, thumbBorder);
 
         _hitRegions.Add(new HitRegion(rect, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.Range));
+    }
+
+    private static float ParseAttrFloat(LayoutNode node, string name, float fallback)
+    {
+        if (node.Attributes.TryGetValue(name, out var s) &&
+            float.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v))
+            return v;
+        return fallback;
+    }
+
+    /// <summary>HTMLProgressElement: a track with a determinate filled portion (value/max).
+    /// A progress with no <c>value</c> attribute is indeterminate and paints only the track.</summary>
+    private static void PaintProgress(SKCanvas canvas, LayoutNode node)
+    {
+        var rect = node.Box.ContentBox;
+        var track = new SKColor(0xC8, 0xC8, 0xC8);
+        var fill = new SKColor(0x00, 0x78, 0xD7);
+
+        using var trackPaint = new SKPaint { Color = track, IsAntialias = false };
+        canvas.DrawRect(rect, trackPaint);
+
+        // Indeterminate when there is no value attribute (the bar position is unknown).
+        if (!node.Attributes.ContainsKey("value")) return;
+
+        var max = ParseAttrFloat(node, "max", 1f);
+        if (max <= 0) max = 1f;
+        var value = Math.Clamp(ParseAttrFloat(node, "value", 0f), 0f, max);
+        var ratio = value / max;
+
+        using var fillPaint = new SKPaint { Color = fill, IsAntialias = false };
+        canvas.DrawRect(new SKRect(rect.Left, rect.Top, rect.Left + rect.Width * ratio, rect.Bottom), fillPaint);
+    }
+
+    /// <summary>HTMLMeterElement: a gauge whose filled portion is value within [min,max], coloured
+    /// green/yellow/red by how far the value sits from the optimum region (HTML §4.10.14).</summary>
+    private static void PaintMeter(SKCanvas canvas, LayoutNode node)
+    {
+        var rect = node.Box.ContentBox;
+        using var trackPaint = new SKPaint { Color = new SKColor(0xE6, 0xE6, 0xE6), IsAntialias = false };
+        canvas.DrawRect(rect, trackPaint);
+
+        var min = ParseAttrFloat(node, "min", 0f);
+        var max = ParseAttrFloat(node, "max", 1f);
+        if (max < min) max = min;
+        var value = Math.Clamp(ParseAttrFloat(node, "value", 0f), min, max);
+        var low = Math.Clamp(ParseAttrFloat(node, "low", min), min, max);
+        var high = Math.Clamp(ParseAttrFloat(node, "high", max), low, max);
+        var optimum = Math.Clamp(ParseAttrFloat(node, "optimum", (min + max) / 2f), min, max);
+
+        var fill = MeterColor(value, low, high, optimum);
+        var span = max - min;
+        var ratio = span > 0 ? (value - min) / span : 0f;
+
+        using var fillPaint = new SKPaint { Color = fill, IsAntialias = false };
+        canvas.DrawRect(new SKRect(rect.Left, rect.Top, rect.Left + rect.Width * ratio, rect.Bottom), fillPaint);
+    }
+
+    /// <summary>Picks the meter bar colour: green when the value is in the same band as the optimum,
+    /// yellow one band away, red two bands away (the bands are [min,low], (low,high], (high,max]).</summary>
+    private static SKColor MeterColor(float value, float low, float high, float optimum)
+    {
+        var green = new SKColor(0x4C, 0xAF, 0x50);
+        var yellow = new SKColor(0xE6, 0xC2, 0x29);
+        var red = new SKColor(0xD9, 0x3A, 0x2B);
+
+        int Band(float v) => v <= low ? 0 : v <= high ? 1 : 2;
+        var optBand = Band(optimum);
+        var valBand = Band(value);
+        var dist = Math.Abs(valBand - optBand);
+        return dist == 0 ? green : dist == 1 ? yellow : red;
     }
 
     private static void PaintTextarea(SKCanvas canvas, LayoutNode node)

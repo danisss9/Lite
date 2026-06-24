@@ -915,6 +915,8 @@ internal static class FlexEngine
             }
             if (node.TagName == "TEXTAREA") return (FormLayout.TextareaWidth, FormLayout.TextareaHeight);
             if (node.TagName == "SELECT") return (FormLayout.SelectWidth, FormLayout.SelectHeight);
+            if (node.TagName == "PROGRESS") return (FormLayout.ProgressWidth, FormLayout.ProgressHeight);
+            if (node.TagName == "METER") return (FormLayout.MeterWidth, FormLayout.MeterHeight);
             return (0f, 0f);
         }
     }

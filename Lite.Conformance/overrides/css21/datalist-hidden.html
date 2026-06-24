@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head>
+<title>datalist (and its options) are not rendered (UA display:none)</title>
+<style>
+  body { margin: 0; background: white; }
+  .box { width: 100px; height: 20px; }
+  .green { background: green; }
+  .blue { background: blue; }
+</style>
+</head>
+<body>
+<div class="box green"></div>
+<datalist><option value="a">a</option><option value="b">b</option></datalist>
+<div class="box blue"></div>
+</body>
+</html>

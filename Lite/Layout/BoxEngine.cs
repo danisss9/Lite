@@ -1012,6 +1012,8 @@ internal static class BoxEngine
                 else if (node.TagName == "BUTTON") { defaultW = 0f; defaultH = FormLayout.TextInputHeight; }
                 else if (node.TagName == "TEXTAREA") { defaultW = FormLayout.TextareaWidth; defaultH = FormLayout.TextareaHeight; }
                 else if (node.TagName == "SELECT") { defaultW = FormLayout.SelectWidth; defaultH = FormLayout.SelectHeight; }
+                else if (node.TagName == "PROGRESS") { defaultW = FormLayout.ProgressWidth; defaultH = FormLayout.ProgressHeight; }
+                else if (node.TagName == "METER") { defaultW = FormLayout.MeterWidth; defaultH = FormLayout.MeterHeight; }
                 else { defaultW = FormLayout.TextInputWidth; defaultH = FormLayout.TextInputHeight; }
 
                 var w = explicitW > 0 ? explicitW : defaultW;

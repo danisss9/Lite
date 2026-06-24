@@ -55,6 +55,10 @@ internal static class Parser
         th { display: table-cell; font-weight: bold; padding-top: 1px; padding-right: 1px; padding-bottom: 1px; padding-left: 1px; }
         textarea { display: inline-block; cursor: text; font-family: monospace; font-size: 13px; }
         select { display: inline-block; cursor: pointer; }
+        progress { display: inline-block; }
+        meter { display: inline-block; }
+        datalist { display: none; }
+        output { display: inline; }
         input[type="radio"] { cursor: pointer; }
         input[type="password"] { cursor: text; }
         input[type="number"] { cursor: text; }
@@ -456,6 +460,44 @@ internal static class Parser
             node.Attributes["_optionValues"] = string.Join("|", optionValues);
             if (selectedValue != null) node.Attributes["value"] = selectedValue;
             else if (optionValues.Count > 0) node.Attributes["value"] = optionValues[0];
+        }
+
+        if (tag == "PROGRESS")
+        {
+            foreach (var attr in new[] { "value", "max" })
+            {
+                var val = element.GetAttribute(attr);
+                if (val != null) node.Attributes[attr] = val;
+            }
+        }
+
+        if (tag == "METER")
+        {
+            foreach (var attr in new[] { "value", "min", "max", "low", "high", "optimum" })
+            {
+                var val = element.GetAttribute(attr);
+                if (val != null) node.Attributes[attr] = val;
+            }
+        }
+
+        if (tag == "OUTPUT")
+        {
+            foreach (var attr in new[] { "for", "name" })
+            {
+                var val = element.GetAttribute(attr);
+                if (val != null) node.Attributes[attr] = val;
+            }
+        }
+
+        if (tag == "OPTION")
+        {
+            // The option's value is its `value` attribute, falling back to its text content.
+            node.Attributes["value"] = element.GetAttribute("value") ?? element.TextContent.Trim();
+            foreach (var attr in new[] { "label", "selected", "disabled" })
+            {
+                var val = element.GetAttribute(attr);
+                if (val != null) node.Attributes[attr] = val;
+            }
         }
 
         // <details>/<dialog> open state (drives layout collapse + the .open DOM property)

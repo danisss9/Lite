@@ -21,6 +21,13 @@ public static class FormTests
 
     private static object? Global(JsEngine e, string name) => e.RawEngine.GetValue(name).ToObject();
 
+    /// <summary>Asserts a JS-sourced numeric value equals <paramref name="expected"/> within 1e-6.</summary>
+    private static void Near(double expected, object? actual, string what)
+    {
+        var got = Convert.ToDouble(actual, System.Globalization.CultureInfo.InvariantCulture);
+        True(Math.Abs(got - expected) < 1e-6, $"{what}: expected {expected}, got {got}");
+    }
+
     [Test]
     public static void CustomEvent_CarriesDetail()
     {
@@ -174,5 +181,74 @@ public static class FormTests
         True(Global(e, "hasBAfter") is false, "delete('b') should remove it");
         Equal("hi", (string?)Global(e, "q"));
         Equal("5", (string?)Global(e, "n"));
+    }
+
+    [Test]
+    public static void Progress_ValueMaxPositionReflect()
+    {
+        var e = NewEngine(out _);
+        e.Execute(@"
+            document.body.innerHTML = '<progress value=""0.25"" max=""1""></progress>';
+            var p = document.querySelector('progress');
+            var v = p.value, m = p.max, pos = p.position, vType = typeof p.value;
+            p.value = 0.75;
+            var v2 = p.value, attr = p.getAttribute('value');
+            document.body.innerHTML = '<progress></progress>';
+            var indet = document.querySelector('progress').position;");
+        Near(0.25, Global(e, "v"), "progress.value");
+        Near(1.0, Global(e, "m"), "progress.max");
+        Near(0.25, Global(e, "pos"), "progress.position");
+        Equal("number", (string?)Global(e, "vType"));
+        Near(0.75, Global(e, "v2"), "progress.value after set");
+        Equal("0.75", (string?)Global(e, "attr"));
+        Near(-1.0, Global(e, "indet"), "indeterminate progress.position");   // no value attr
+    }
+
+    [Test]
+    public static void Meter_ValueAndBoundsReflectAndClamp()
+    {
+        var e = NewEngine(out _);
+        e.Execute(@"
+            document.body.innerHTML = '<meter min=""0"" max=""10"" low=""2"" high=""8"" optimum=""9"" value=""5""></meter>';
+            var m = document.querySelector('meter');
+            var v=m.value, mn=m.min, mx=m.max, lo=m.low, hi=m.high, op=m.optimum;
+            m.value = 20; var clamped = m.value;");
+        Near(5.0, Global(e, "v"), "meter.value");
+        Near(0.0, Global(e, "mn"), "meter.min");
+        Near(10.0, Global(e, "mx"), "meter.max");
+        Near(2.0, Global(e, "lo"), "meter.low");
+        Near(8.0, Global(e, "hi"), "meter.high");
+        Near(9.0, Global(e, "op"), "meter.optimum");
+        Near(10.0, Global(e, "clamped"), "meter.value clamped to max");   // value clamps into [min,max]
+    }
+
+    [Test]
+    public static void Output_ValueTypeAndFor()
+    {
+        var e = NewEngine(out _);
+        e.Execute(@"
+            document.body.innerHTML = '<form><output for=""a b"">42</output></form>';
+            var o = document.querySelector('output');
+            var v = o.value, t = o.type, f = o.htmlFor;
+            o.value = 'hi';
+            var v2 = o.value, txt = o.textContent;");
+        Equal("42", (string?)Global(e, "v"));         // value mirrors text content
+        Equal("output", (string?)Global(e, "t"));
+        Equal("a b", (string?)Global(e, "f"));
+        Equal("hi", (string?)Global(e, "v2"));
+        Equal("hi", (string?)Global(e, "txt"));        // setting value rewrites text content
+    }
+
+    [Test]
+    public static void Datalist_ExposesOptions()
+    {
+        var e = NewEngine(out _);
+        e.Execute(@"
+            document.body.innerHTML = '<datalist id=""d""><option value=""x""></option><option value=""y""></option></datalist>';
+            var dl = document.getElementById('d');
+            var n = dl.options.length;
+            var first = dl.options[0].value;");
+        Equal(2, Convert.ToInt32(Global(e, "n")));
+        Equal("x", (string?)Global(e, "first"));
     }
 }

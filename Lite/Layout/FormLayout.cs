@@ -15,4 +15,8 @@ internal static class FormLayout
     public const float SelectHeight    = 22f;
     public const float RangeWidth      = 150f;
     public const float RangeHeight     = 20f;
+    public const float ProgressWidth   = 160f;
+    public const float ProgressHeight  = 16f;
+    public const float MeterWidth      = 80f;
+    public const float MeterHeight     = 16f;
 }

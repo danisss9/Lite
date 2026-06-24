@@ -211,14 +211,94 @@ public class JsElement
     }
 
     // ---- form value / checked ----
-    public string value
+    /// <summary>Form-control value. Most controls expose a string; HTMLProgressElement and
+    /// HTMLMeterElement expose a numeric value (clamped reflection of the <c>value</c> attribute);
+    /// HTMLOutputElement's value is its text content.</summary>
+    public object value
     {
-        get
+        get => Node.TagName switch
         {
-            Node.Attributes.TryGetValue("value", out var defaultVal);
-            return FormState.GetTextValue(Node.NodeKey, defaultVal);
+            "PROGRESS" => ProgressValue(),
+            "METER" => MeterValue(),
+            "OUTPUT" => textContent,
+            _ => FormValue(),
+        };
+        set
+        {
+            switch (Node.TagName)
+            {
+                case "PROGRESS":
+                case "METER":
+                    Node.Attributes["value"] = ToNumStr(value);
+                    break;
+                case "OUTPUT":
+                    textContent = ToStr(value);
+                    break;
+                default:
+                    FormState.TextInputValues[Node.NodeKey] = ToStr(value);
+                    break;
+            }
         }
-        set => FormState.TextInputValues[Node.NodeKey] = value;
+    }
+
+    private string FormValue()
+    {
+        Node.Attributes.TryGetValue("value", out var defaultVal);
+        return FormState.GetTextValue(Node.NodeKey, defaultVal);
+    }
+
+    // ---- progress / meter (HTMLProgressElement, HTMLMeterElement) ----
+
+    private double NumAttr(string name, double fallback) =>
+        Node.Attributes.TryGetValue(name, out var s) &&
+        double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)
+            ? v : fallback;
+
+    private double ProgressMax() { var m = NumAttr("max", 1); return m <= 0 ? 1 : m; }
+    private double ProgressValue() => Math.Clamp(NumAttr("value", 0), 0, ProgressMax());
+    private double MeterMin() => NumAttr("min", 0);
+    private double MeterMax() { var min = MeterMin(); var m = NumAttr("max", 1); return m < min ? min : m; }
+    private double MeterValue() => Math.Clamp(NumAttr("value", 0), MeterMin(), MeterMax());
+
+    /// <summary>HTMLProgressElement.max / HTMLMeterElement.max (reflected, defaulting to 1).</summary>
+    public double max => Node.TagName == "PROGRESS" ? ProgressMax() : MeterMax();
+
+    /// <summary>HTMLMeterElement.min (reflected, defaulting to 0).</summary>
+    public double min => MeterMin();
+
+    /// <summary>HTMLProgressElement.position — value/max for a determinate bar, or -1 when
+    /// the element is indeterminate (no <c>value</c> attribute).</summary>
+    public double position => Node.Attributes.ContainsKey("value") ? ProgressValue() / ProgressMax() : -1;
+
+    /// <summary>HTMLMeterElement.low (reflected; clamped to [min,max], defaulting to min).</summary>
+    public double low { get { var lo = NumAttr("low", MeterMin()); return Math.Clamp(lo, MeterMin(), MeterMax()); } }
+
+    /// <summary>HTMLMeterElement.high (reflected; clamped to [low,max], defaulting to max).</summary>
+    public double high { get { var hi = NumAttr("high", MeterMax()); return Math.Clamp(hi, low, MeterMax()); } }
+
+    /// <summary>HTMLMeterElement.optimum (reflected; clamped to [min,max], default midpoint).</summary>
+    public double optimum { get { var min = MeterMin(); var max = MeterMax(); return Math.Clamp(NumAttr("optimum", (min + max) / 2), min, max); } }
+
+    private static string ToStr(object? v)
+    {
+        if (v is JsValue jv) v = jv.ToObject();
+        return v switch
+        {
+            null => string.Empty,
+            string s => s,
+            double d => d.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            bool b => b ? "true" : "false",
+            _ => Convert.ToString(v, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+        };
+    }
+
+    private static string ToNumStr(object? v)
+    {
+        if (v is JsValue jv) v = jv.ToObject();
+        if (v is double d) return d.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (v is string s && double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var p))
+            return p.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return ToStr(v);
     }
 
     public bool @checked
@@ -288,9 +368,30 @@ public class JsElement
 
     public string type
     {
-        get => Node.Attributes.GetValueOrDefault("type", Node.TagName == "INPUT" ? "text" : string.Empty);
+        get => Node.TagName == "OUTPUT"
+            ? "output"
+            : Node.Attributes.GetValueOrDefault("type", Node.TagName == "INPUT" ? "text" : string.Empty);
         set => Node.Attributes["type"] = value;
     }
+
+    /// <summary>Reflects the <c>for</c> content attribute (HTMLLabelElement / HTMLOutputElement.htmlFor).
+    /// For &lt;output&gt; this is a space-separated list of IDs; we expose it as a single string.</summary>
+    public string htmlFor
+    {
+        get => Node.Attributes.GetValueOrDefault("for", string.Empty);
+        set => Node.Attributes["for"] = value;
+    }
+
+    /// <summary>HTMLOutputElement.defaultValue — the value used on form reset (backed by an internal
+    /// attribute; defaults to the current text content until explicitly set).</summary>
+    public string defaultValue
+    {
+        get => Node.Attributes.TryGetValue("_defaultValue", out var d) ? d : textContent;
+        set => Node.Attributes["_defaultValue"] = value;
+    }
+
+    /// <summary>HTMLSelectElement.options / HTMLDataListElement.options — the contained &lt;option&gt;s.</summary>
+    public JsElement[] options => getElementsByTagName("option");
 
     public string name
     {

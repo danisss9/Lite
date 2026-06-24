@@ -48,4 +48,7 @@ css21/justify.html | css21/justify-ref.html
 css/CSS2/box-display/block-in-inline-vertical-margins-on-span-ignored.html | css/CSS2/box-display/block-in-inline-vertical-margins-on-span-ignored-ref.html
 css/CSS2/box-display/block-in-inline-self-collapsing-only-child.html | css/CSS2/box-display/block-in-inline-self-collapsing-only-child-ref.html
 
+# ---- Phase B: interactive elements — <datalist> is display:none per the UA stylesheet ----
+css21/datalist-hidden.html | css21/datalist-hidden-ref.html
+
 # ---- Phase 3 additions (full anonymous-box splitting, z-index:auto subtlety...) ----
