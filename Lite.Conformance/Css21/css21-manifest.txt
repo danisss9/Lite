@@ -43,4 +43,9 @@ css21/counters-nested.html | css21/counters-nested-ref.html
 # ---- Phase A: text-align justify (equal inter-word gaps == flex space-between) ----
 css21/justify.html | css21/justify-ref.html
 
+# ---- Phase A.4: block-in-inline §9.2.1.1 — inline's vertical margins ignored; self-collapsing
+#      block-in-inline collapses through itself + ancestors (upstream WPT, white-canvas default) ----
+css/CSS2/box-display/block-in-inline-vertical-margins-on-span-ignored.html | css/CSS2/box-display/block-in-inline-vertical-margins-on-span-ignored-ref.html
+css/CSS2/box-display/block-in-inline-self-collapsing-only-child.html | css/CSS2/box-display/block-in-inline-self-collapsing-only-child-ref.html
+
 # ---- Phase 3 additions (full anonymous-box splitting, z-index:auto subtlety...) ----

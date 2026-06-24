@@ -42,10 +42,12 @@ internal static class Drawer
         var bitmap = new SKBitmap(imageInfo);
         var canvas = new SKCanvas(bitmap);
 
-        // Propagate body background to the viewport canvas (matches browser behaviour)
+        // Propagate the root/body background to the viewport canvas (CSS 2.1 §14.2). When neither
+        // sets a background the canvas is the UA default — white, as in browsers (not a grey wash).
         var body = root.Children.FirstOrDefault(c => c.TagName == "BODY") ?? root;
-        var clearColor = body.GetBackgroundColor();
-        if (clearColor == SKColors.Transparent) clearColor = new SKColor(240, 240, 242);
+        var clearColor = root.GetBackgroundColor();
+        if (clearColor == SKColors.Transparent) clearColor = body.GetBackgroundColor();
+        if (clearColor == SKColors.Transparent) clearColor = SKColors.White;
         canvas.Clear(clearColor);
         _hitRegions = [];
         SelectOptionMap.Clear();

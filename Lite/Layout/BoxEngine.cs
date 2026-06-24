@@ -79,7 +79,18 @@ internal static class BoxEngine
             !c.TagName.StartsWith('#') &&
             c.GetDisplay() is DisplayType.Block or DisplayType.ListItem or DisplayType.Table);
         if (hasBlockChild)
+        {
             node.StyleOverrides["display"] = "block";
+            // §9.2.1.1: when an inline box is broken around a block, the inline's vertical margins,
+            // padding and borders have no effect (they must not shift the block) — drop them on the
+            // promoted anonymous block container. The horizontal box-model still applies.
+            node.StyleOverrides["margin-top"] = "0";
+            node.StyleOverrides["margin-bottom"] = "0";
+            node.StyleOverrides["padding-top"] = "0";
+            node.StyleOverrides["padding-bottom"] = "0";
+            node.StyleOverrides["border-top-width"] = "0";
+            node.StyleOverrides["border-bottom-width"] = "0";
+        }
     }
 
     private static void ResolveAbsoluteBox(LayoutNode node, BoxDimensions cb,
@@ -709,10 +720,11 @@ internal static class BoxEngine
                                                          viewportWidth, viewportHeight, parentContentHeight, floats);
                 var borderBoxH = h - childMarginTop - childBottomMargin;
 
-                // Self-collapsing block (§8.3.1): no in-flow content / border / padding / height, and
+                // Self-collapsing block (§8.3.1): no in-flow content / border / padding / height (a
+                // zero border-box height already implies height is auto-or-0 with no min-height), and
                 // not a BFC → its top and bottom margins are adjoining, fold together into the running
                 // margin, and the box contributes no height (so neighbouring margins collapse through).
-                if (borderBoxH <= 0.01f && child.IsAutoHeight() && !EstablishesBlockFormattingContext(child))
+                if (borderBoxH <= 0.01f && !EstablishesBlockFormattingContext(child))
                 {
                     var own = CollapseMargins(childMarginTop, childBottomMargin);
                     pendingMargin = firstChildCollapse ? own : CollapseMargins(pendingMargin, own);
