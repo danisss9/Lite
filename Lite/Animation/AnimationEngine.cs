@@ -1,4 +1,5 @@
 using System.Globalization;
+using Lite.Extensions;
 using Lite.Models;
 using SkiaSharp;
 
@@ -370,7 +371,7 @@ public static class AnimationEngine
     {
         if (node.AnimationOverrides.TryGetValue(prop, out var ao)) return ao;
         if (node.TryResolveStyle(prop, out var ov)) return ov;
-        var sv = node.Style.GetPropertyValue(prop);
+        var sv = node.Style.GetPropertyValueSafe(prop);
         return string.IsNullOrEmpty(sv) ? null : sv;
     }
 
@@ -388,7 +389,7 @@ public static class AnimationEngine
         if (node.IsHovered && node.HoverStyles.TryGetValue(prop, out var v3)) return v3;
         if (node.MediaOverrides.TryGetValue(prop, out var v4m)) return v4m;
         if (node.StyleOverrides.TryGetValue(prop, out var v4)) return v4;
-        var sv = node.Style.GetPropertyValue(prop);
+        var sv = node.Style.GetPropertyValueSafe(prop);
         return string.IsNullOrEmpty(sv) ? null : sv;
     }
 

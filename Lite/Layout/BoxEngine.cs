@@ -165,15 +165,27 @@ internal static class BoxEngine
             contentW = Math.Max(0, cbRect.Width - left - right - margin.Left - margin.Right - border.Left - border.Right - padding.Left - padding.Right);
         else
         {
-            // Shrink-wrap to text content; fall back to half container width for block containers
+            // Shrink-to-fit (§10.3.7). For text, measure the text. For a block container we lack a
+            // true max-content pass, so approximate the shrink-to-fit width by the widest explicit
+            // (non-auto) width among the children's subtree; fall back to half the container.
             if (!string.IsNullOrEmpty(node.DisplayText))
             {
                 using var shrinkFont = TextMeasure.CreateFont(node);
                 contentW = shrinkFont.MeasureText(node.DisplayText);
             }
             else
-                contentW = Math.Max(0, cbRect.Width * 0.5f);
+            {
+                var intrinsic = MeasureExplicitMaxWidth(node, cbRect.Width, viewportHeight);
+                contentW = intrinsic > 0
+                    ? Math.Min(intrinsic, cbRect.Width)
+                    : Math.Max(0, cbRect.Width * 0.5f);
+            }
         }
+
+        // Clamp to min/max-width (§10.4) — min wins over max. (Acid2's fixed scalp uses
+        // width:140%; max-width:4em to pin the head's top line to a fixed size.)
+        contentW = Math.Min(contentW, node.GetMaxWidth(cbRect.Width, fontSize));
+        contentW = Math.Max(contentW, node.GetMinWidth(cbRect.Width, fontSize));
 
         // Resolve X — §4.1: use FlexStaticX as static position when left/right are both auto
         float contentX;
@@ -193,7 +205,7 @@ internal static class BoxEngine
         float selfContentH;
         if (explicitHEarly > 0)
         {
-            var isBBEarly = node.Style.GetPropertyValue("box-sizing") == "border-box";
+            var isBBEarly = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
             selfContentH = isBBEarly
                 ? Math.Max(0f, explicitHEarly - border.Top - border.Bottom - padding.Top - padding.Bottom)
                 : explicitHEarly;
@@ -220,13 +232,18 @@ internal static class BoxEngine
         var explicitH = autoHeight ? 0f : node.GetHeight(cbRect.Height, 0, viewportHeight);
         if (explicitH > 0)
         {
-            var isBorderBox = node.Style.GetPropertyValue("box-sizing") == "border-box";
+            var isBorderBox = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
             contentH = isBorderBox
                 ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
                 : explicitH;
         }
         else if (autoHeight && !float.IsNaN(top) && !float.IsNaN(bottom))
             contentH = Math.Max(0, cbRect.Height - top - bottom - margin.Top - margin.Bottom - border.Top - border.Bottom - padding.Top - padding.Bottom);
+
+        // Clamp to min/max-height (§10.7) — min wins over max (Acid2's scalp: min-height:1em
+        // overrides max-height:2mm).
+        contentH = Math.Min(contentH, node.GetMaxHeight(cbRect.Height, fontSize));
+        contentH = Math.Max(contentH, node.GetMinHeight(cbRect.Height, fontSize));
 
         // Resolve Y — §4.1: use FlexStaticY as static position when top/bottom are both auto
         float contentY;
@@ -250,6 +267,34 @@ internal static class BoxEngine
             Border = border,
             Margin = margin,
         };
+    }
+
+    /// <summary>
+    /// Approximates the shrink-to-fit width of an auto-width container without a full max-content
+    /// pass: the widest explicit (non-auto) outer width (content+padding+border+margin) found in
+    /// the subtree, or 0 if none. Lets an absolutely-positioned block with explicit-width children
+    /// (Acid2's eyes: two 10em boxes) shrink to fit rather than defaulting to half its container.
+    /// </summary>
+    private static float MeasureExplicitMaxWidth(LayoutNode node, float cbWidth, float viewportHeight)
+    {
+        float best = 0f;
+        foreach (var child in node.Children)
+        {
+            if (child.GetDisplay() == DisplayType.None) continue;
+            var fontSize = child.GetFontSize();
+            var w = child.GetWidth(cbWidth, fontSize);
+            if (w > 0)
+            {
+                var pad = child.GetPadding(cbWidth, 0, fontSize);
+                var bord = child.GetBorderWidth();
+                var marg = child.GetMargin(cbWidth, 0, fontSize);
+                best = Math.Max(best, w + pad.Left + pad.Right + bord.Left + bord.Right
+                                     + Math.Max(0, marg.Left) + Math.Max(0, marg.Right));
+            }
+            else
+                best = Math.Max(best, MeasureExplicitMaxWidth(child, cbWidth, viewportHeight));
+        }
+        return best;
     }
 
     // -------------------------------------------------------------------------
@@ -302,7 +347,7 @@ internal static class BoxEngine
         // box-sizing: with content-box (the default), an explicit `width` IS the content width —
         // padding/border are added outside it. Only border-box (and the auto/fill case) subtracts
         // padding+border from the box width. (Height already honors this below.)
-        var isBorderBoxW = node.Style.GetPropertyValue("box-sizing") == "border-box";
+        var isBorderBoxW = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
         var contentW = (explicitW > 0 && !isBorderBoxW)
             ? Math.Max(0f, explicitW)
             : Math.Max(0f, boxWidth - border.Left - border.Right - padding.Left - padding.Right);
@@ -312,7 +357,7 @@ internal static class BoxEngine
         // Resolve this node's explicit height using parentContentHeight for % and viewportHeight for vh/vw.
         // height:auto is content-based — GetHeight returns the containing-block height for auto (the
         // width-style "fill" behaviour of GetSize), which must NOT be treated as an explicit height.
-        var isBorderBox = node.Style.GetPropertyValue("box-sizing") == "border-box";
+        var isBorderBox = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
         var explicitH = node.IsAutoHeight() ? 0f : node.GetHeight(parentContentHeight, 0, viewportHeight);
         var knownContentH = explicitH > 0
             ? (isBorderBox ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitH)
@@ -468,7 +513,7 @@ internal static class BoxEngine
 
     /// <summary>Reads a raw style value (override first, then declared) for a property.</summary>
     private static string? RawStyle(LayoutNode node, string prop)
-        => node.TryResolveStyle(prop, out var ov) ? ov : node.Style.GetPropertyValue(prop);
+        => node.TryResolveStyle(prop, out var ov) ? ov : node.Style.GetPropertyValueSafe(prop);
 
     /// <summary>True when the property's value is a percentage (e.g. "100%").</summary>
     private static bool IsPercentValue(LayoutNode node, string prop)
@@ -554,7 +599,7 @@ internal static class BoxEngine
         float childContentW;
         if (explicitW > 0)
         {
-            var isBB = child.Style.GetPropertyValue("box-sizing") == "border-box";
+            var isBB = child.Style.GetPropertyValueSafe("box-sizing") == "border-box";
             childContentW = isBB
                 ? Math.Max(0, explicitW - border.Left - border.Right - padding.Left - padding.Right)
                 : explicitW;
@@ -606,7 +651,7 @@ internal static class BoxEngine
         var placeContentY = placeY + margin.Top + border.Top + padding.Top;
 
         // Lay out children inside the float
-        var isBorderBox = child.Style.GetPropertyValue("box-sizing") == "border-box";
+        var isBorderBox = child.Style.GetPropertyValueSafe("box-sizing") == "border-box";
         var explicitH = child.GetHeight(parentContentHeight, 0, viewportHeight);
         var knownH = explicitH > 0
             ? (isBorderBox ? Math.Max(0, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitH)
@@ -1035,7 +1080,7 @@ internal static class BoxEngine
                 items.Add(new InlineItem(InlineItemKind.InlineBlock, node, null, totalW, totalH,
                            margin, padding, border, w, h));
             }
-            else if (node.TagName == "IMG")
+            else if (node.TagName == "IMG" || (node.TagName == "OBJECT" && node.Image != null))
             {
                 var w = node.IntrinsicWidth > 0 ? (float)node.IntrinsicWidth : node.Image?.Width ?? 100f;
                 var h = node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight : node.Image?.Height ?? 100f;

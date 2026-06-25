@@ -16,7 +16,7 @@ internal static class TableEngine
     private static bool IsBorderCollapse(LayoutNode table)
     {
         var raw = table.TryResolveStyle("border-collapse", out var ov)
-            ? ov : table.Style.GetPropertyValue("border-collapse");
+            ? ov : table.Style.GetPropertyValueSafe("border-collapse");
         return raw?.Trim() == "collapse";
     }
 
@@ -24,7 +24,7 @@ internal static class TableEngine
     private static float GetBorderSpacing(LayoutNode table)
     {
         var raw = table.TryResolveStyle("border-spacing", out var ov)
-            ? ov : table.Style.GetPropertyValue("border-spacing");
+            ? ov : table.Style.GetPropertyValueSafe("border-spacing");
         if (string.IsNullOrWhiteSpace(raw)) return 2f;
         raw = raw.Trim().Split(' ')[0]; // Use first value (horizontal)
         if (raw.EndsWith("px") && float.TryParse(raw[..^2],
@@ -64,7 +64,7 @@ internal static class TableEngine
         if (caption is not null)
         {
             var side = caption.TryResolveStyle("caption-side", out var cs)
-                ? cs : caption.Style.GetPropertyValue("caption-side");
+                ? cs : caption.Style.GetPropertyValueSafe("caption-side");
             captionBottom = side?.Trim() == "bottom";
             if (!captionBottom)
                 captionTopH = LayoutCaptionBlock(caption, contentX, contentY, contentW, viewportW, viewportH);

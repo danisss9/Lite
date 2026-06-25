@@ -1,5 +1,6 @@
 using Lite.Conformance.Harness;
 using Lite.Layout;
+using Lite.Models;
 using SkiaSharp;
 
 namespace Lite.Conformance.Css21;
@@ -209,20 +210,42 @@ internal static class RefTestRunner
                name.StartsWith("ref-", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Renders a served page to a bitmap at the reftest viewport size.</summary>
-    internal static SKBitmap Render(string path, int width = Width, int height = Height, float scrollY = 0)
+    /// <summary>Renders a served page to a bitmap at the reftest viewport size.
+    /// When <paramref name="anchor"/> is given, the page is first laid out and then scrolled so
+    /// that the element with that id sits at the top of the viewport (as following its in-page
+    /// link would) — this is how Acid2 is meant to be viewed: the smiley face is assembled
+    /// ~2600px down the page and only comes into view after jumping to <c>#top</c>.</summary>
+    internal static SKBitmap Render(string path, int width = Width, int height = Height, float scrollY = 0, string? anchor = null)
     {
         var url = $"{ConformanceServer.BaseUrl}/{path.TrimStart('/')}";
         var (root, engine) = HeadlessPage.Load(url, width, height);
         HeadlessPage.PumpUntilIdle(engine, 2_000);
         var viewport = new Viewport { ViewportHeight = height };
+        if (anchor is not null)
+        {
+            // First layout establishes box positions (and ContentHeight for the scroll clamp).
+            Drawer.DrawToBitmap(width, height, root, viewport).Dispose();
+            var target = FindById(root, anchor);
+            if (target is not null) scrollY += target.Box.BorderBox.Top;
+        }
         if (scrollY > 0)
         {
-            // First layout establishes ContentHeight so the scroll clamp works.
-            Drawer.DrawToBitmap(width, height, root, viewport).Dispose();
+            if (anchor is null)
+                Drawer.DrawToBitmap(width, height, root, viewport).Dispose();   // establish ContentHeight
             viewport.ScrollTo(scrollY);
         }
         return Drawer.DrawToBitmap(width, height, root, viewport);
+    }
+
+    private static LayoutNode? FindById(LayoutNode node, string id)
+    {
+        if (node.Id == id) return node;
+        foreach (var child in node.Children)
+        {
+            var found = FindById(child, id);
+            if (found is not null) return found;
+        }
+        return null;
     }
 
     private static string SafeName(string path) =>

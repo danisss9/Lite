@@ -49,9 +49,15 @@ internal static class DataUri
             mediaType = semi < 0 ? meta : meta[..semi];
         }
 
-        bytes = meta.Contains("base64", StringComparison.OrdinalIgnoreCase)
-            ? Convert.FromBase64String(data)
-            : System.Text.Encoding.UTF8.GetBytes(Uri.UnescapeDataString(data));
+        try
+        {
+            // The data portion may itself be percent-encoded even inside a base64 payload
+            // (Acid2 encodes '/' as %2F and '=' as %3D). Percent-decode first, then base64-decode.
+            bytes = meta.Contains("base64", StringComparison.OrdinalIgnoreCase)
+                ? Convert.FromBase64String(Uri.UnescapeDataString(data))
+                : System.Text.Encoding.UTF8.GetBytes(Uri.UnescapeDataString(data));
+        }
+        catch (FormatException) { return false; }
         return true;
     }
 }

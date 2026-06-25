@@ -26,7 +26,7 @@ internal static class ResourceLoader
         try
         {
             var bytes = _client.GetByteArrayAsync(resolved).Result;
-            var bitmap = SKBitmap.Decode(bytes);
+            var bitmap = DecodeImageBytes(bytes);
             _cache[resolved] = bitmap;
             return bitmap;
         }
@@ -57,21 +57,27 @@ internal static class ResourceLoader
 
     private static SKBitmap? DecodeDataUri(string dataUri)
     {
-        // data:[<mediatype>][;base64],<data>
-        try
-        {
-            var commaIdx = dataUri.IndexOf(',');
-            if (commaIdx < 0) return null;
-            var meta = dataUri[5..commaIdx]; // after "data:"
-            var data = dataUri[(commaIdx + 1)..];
-            byte[] bytes;
-            if (meta.Contains("base64", StringComparison.OrdinalIgnoreCase))
-                bytes = Convert.FromBase64String(data);
-            else
-                bytes = System.Text.Encoding.UTF8.GetBytes(Uri.UnescapeDataString(data));
-            return SKBitmap.Decode(bytes);
-        }
+        // data:[<mediatype>][;base64],<data> — DataUri handles percent-encoded base64 payloads.
+        if (!DataUri.TryDecodeBytes(dataUri, out var bytes, out _)) return null;
+        try { return DecodeImageBytes(bytes); }
         catch { return null; }
+    }
+
+    /// <summary>
+    /// Decodes encoded image bytes into a bitmap whose pixels are straight (un-premultiplied)
+    /// alpha, so that semi-/fully-transparent PNGs composite correctly with SKCanvas source-over
+    /// (Acid2's eyes are two offset partly-transparent PNGs that must overlap into solid yellow).
+    /// </summary>
+    internal static SKBitmap? DecodeImageBytes(byte[] bytes)
+    {
+        using var codec = SKCodec.Create(new MemoryStream(bytes));
+        if (codec is null) return SKBitmap.Decode(bytes);
+        var info = codec.Info.WithColorType(SKColorType.Rgba8888).WithAlphaType(SKAlphaType.Unpremul);
+        var bitmap = new SKBitmap(info);
+        if (codec.GetPixels(info, bitmap.GetPixels()) is SKCodecResult.Success or SKCodecResult.IncompleteInput)
+            return bitmap;
+        bitmap.Dispose();
+        return SKBitmap.Decode(bytes);
     }
 
     private static string? ResolveUrl(string src, string? baseUrl)

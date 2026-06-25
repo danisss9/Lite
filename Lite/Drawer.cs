@@ -19,6 +19,8 @@ internal static class Drawer
     private static float _viewportScrollY;
     /// <summary>Current viewport height — used for position:sticky calculations.</summary>
     private static float _viewportHeight;
+    /// <summary>Current viewport width — used for fixed background-attachment positioning.</summary>
+    private static float _viewportWidth;
 
     /// <summary>Bitmap backing the pixel pointer returned by <see cref="Draw"/>; kept alive
     /// until the next Draw call so the Win32 blit never reads freed memory.</summary>
@@ -54,6 +56,7 @@ internal static class Drawer
         _pendingDropdown = null;
         _viewportScrollY = viewport.ScrollY;
         _viewportHeight = height;
+        _viewportWidth = width;
 
         canvas.Save();
         canvas.Translate(0, -viewport.ScrollY);
@@ -305,6 +308,17 @@ internal static class Drawer
                 PaintImage(canvas, node);
                 return;
 
+            case "OBJECT":
+                // A loaded <object> is a replaced element (paint its background/border, then the
+                // image); an unloaded one renders its fallback child content.
+                if (node.Image != null)
+                {
+                    PaintBlockDecorations(canvas, node);
+                    PaintImage(canvas, node);
+                }
+                else PaintChildrenSorted(canvas, node, viewportWidth);
+                return;
+
             case "INPUT":
                 PaintInput(canvas, node);
                 return;
@@ -405,7 +419,7 @@ internal static class Drawer
     private static bool IsEmptyCellHidden(LayoutNode node)
     {
         if (node.GetDisplay() != DisplayType.TableCell) return false;
-        var ec = node.TryResolveStyle("empty-cells", out var v) ? v : node.Style.GetPropertyValue("empty-cells");
+        var ec = node.TryResolveStyle("empty-cells", out var v) ? v : node.Style.GetPropertyValueSafe("empty-cells");
         if (ec?.Trim() != "hide") return false;
         bool hasContent = !string.IsNullOrWhiteSpace(node.DisplayText)
             || node.Children.Any(c => c.TagName != "#text" || !string.IsNullOrWhiteSpace(c.DisplayText));
@@ -1741,7 +1755,16 @@ internal static class Drawer
         var repeat = node.GetBackgroundRepeat();
         var (posX, posY) = node.GetBackgroundPosition();
         var (sizeW, sizeH) = node.GetBackgroundSize();
-        var area = box.PaddingBox;
+
+        // background-attachment: fixed — the positioning area is the viewport (in document
+        // coordinates the canvas is translated by -scrollY, so the viewport's top-left sits at
+        // y = scrollY). The painted background is still clipped to the element's padding box, but
+        // its placement is independent of where the element scrolled to (CSS 2.1 §14.2.1).
+        bool fixedBg = node.IsBackgroundFixed();
+        var clipArea = box.PaddingBox;
+        var area = fixedBg
+            ? new SKRect(0, _viewportScrollY, _viewportWidth, _viewportScrollY + _viewportHeight)
+            : box.PaddingBox;
 
         // Resolve image draw size
         float drawW = bitmap.Width, drawH = bitmap.Height;
@@ -1764,11 +1787,11 @@ internal static class Drawer
         float offY = ResolveBgPosition(posY, area.Height, drawH);
 
         canvas.Save();
-        var (rx, ry) = node.GetBorderRadius(area.Width, area.Height);
+        var (rx, ry) = node.GetBorderRadius(clipArea.Width, clipArea.Height);
         if (rx > 0 || ry > 0)
-            canvas.ClipRoundRect(new SKRoundRect(area, rx, ry), antialias: true);
+            canvas.ClipRoundRect(new SKRoundRect(clipArea, rx, ry), antialias: true);
         else
-            canvas.ClipRect(area);
+            canvas.ClipRect(clipArea);
 
         bool repeatX = repeat is "repeat" or "repeat-x";
         bool repeatY = repeat is "repeat" or "repeat-y";

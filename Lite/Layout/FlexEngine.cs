@@ -347,7 +347,7 @@ internal static class FlexEngine
                 var explicitH = d.Node.GetHeight(crossContainerSize, 0, viewportHeight);
                 if (explicitH > 0)
                 {
-                    var isBorderBox = d.Node.Style.GetPropertyValue("box-sizing") == "border-box";
+                    var isBorderBox = d.Node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
                     h = isBorderBox
                         ? Math.Max(0, explicitH - d.Border.CrossStart - d.Border.CrossEnd
                                                 - d.Padding.CrossStart - d.Padding.CrossEnd)
@@ -688,7 +688,7 @@ internal static class FlexEngine
             float rawMinCross = isRow ? node.GetMinHeight(containerH, fontSize) : node.GetMinWidth(containerW, fontSize);
             float rawMaxCross = isRow ? node.GetMaxHeight(containerH, fontSize) : node.GetMaxWidth(containerW, fontSize);
 
-            var isBorderBoxNode = node.Style.GetPropertyValue("box-sizing") == "border-box";
+            var isBorderBoxNode = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
             var mainPB = Border.MainStart + Border.MainEnd + Padding.MainStart + Padding.MainEnd;
             var crossPB = Border.CrossStart + Border.CrossEnd + Padding.CrossStart + Padding.CrossEnd;
 

@@ -14,14 +14,17 @@ internal static class AcidRunner
     private const int Width = 800;
     private const int Height = 600;
 
-    private sealed record AcidCase(string Name, string Path, float ScrollY = 0);
+    private sealed record AcidCase(string Name, string Path, float ScrollY = 0, string? Anchor = null);
 
     private static readonly AcidCase[] Cases =
     [
         new("acid1", "acid/acid1/test5526c.htm"),
-        new("acid2", "acid/acid2/test.html"),
-        // position:fixed check — the smile must not move when the page scrolls.
-        new("acid2-scrolled", "acid/acid2/test.html", ScrollY: 50),
+        // Acid2's face is assembled ~2600px down the page; it only appears once you follow the
+        // "Take The Acid2 Test" link to #top, which scrolls #top to the top of the viewport.
+        new("acid2", "acid/acid2/test.html", Anchor: "top"),
+        // position:fixed check — the fixed scalp/backgrounds must not move when the page scrolls
+        // 50px past #top while the rest of the face shifts up.
+        new("acid2-scrolled", "acid/acid2/test.html", ScrollY: 50, Anchor: "top"),
     ];
 
     public static int Run(string? filter, bool updateBaselines)
@@ -45,13 +48,13 @@ internal static class AcidRunner
             SKBitmap render;
             try
             {
-                render = RefTestRunner.Render(acidCase.Path, Width, Height, acidCase.ScrollY);
+                render = RefTestRunner.Render(acidCase.Path, Width, Height, acidCase.ScrollY, acidCase.Anchor);
             }
             catch (Exception ex)
             {
                 result.Failed++;
                 result.Problems.Add($"{acidCase.Name}: render crashed: {ex.Message}");
-                Console.WriteLine($"  FAIL  {acidCase.Name}: render crashed: {ex.Message}");
+                Console.WriteLine($"  FAIL  {acidCase.Name}: render crashed: {ex}");
                 continue;
             }
 

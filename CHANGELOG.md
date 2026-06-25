@@ -2,7 +2,55 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.7] - 2026-06-10 (current)
+## [0.0.9] - 2026-06-25 (current)
+
+### Added
+
+- **Script execution timing** — classic scripts now run in the correct order: in-position (inline + external without `defer`/`async`) scripts execute in document order during parse, `defer` scripts run after parsing in document order, and `async` scripts are queued on the event loop in any order; ES modules remain deferred per spec (`Parser`)
+- **`document.write()`** — `document.write` / `writeln` / `open` / `close` parse markup and append the resulting nodes to `<body>` (`JsDocument`)
+- **`<template>` element** — parsed as an inert fragment; `template.content` exposes a `DocumentFragment` holding the parsed children, which are not rendered or laid out (`Parser`, `JsElement`)
+- **`<dialog>` element** — `show()`, `showModal()`, `close(returnValue)`, `returnValue`, `validationMessage`, and `setCustomValidity()`; the `open` attribute drives visibility (`JsElement`, `BoxEngine`)
+- **`FormData` API** — `new FormData(form)` enumerates a form's successful controls; entries, `get`, `getAll`, `append`, `set`, `delete`, `has` (`JsFormData`)
+- **`<progress>` / `<meter>` / `<output>`** — rendered form elements with `value`, `min`, `max`, `low`, `high`, `optimum`, and `for` attributes; `<output>` reflects its referenced controls (`Drawer`, `FormLayout`, `JsElement`)
+- **`<details>` open/close collapse** — toggling the `open` attribute re-flows the disclosure content in/out of the layout tree (`BoxEngine`, `JsElement`)
+- **`ResizeObserver`** — `new ResizeObserver(cb)`, `observe`/`unobserve`/`disconnect`, `contentRect` entries delivered on the event loop (`JsResizeObserver`)
+- **`IntersectionObserver`** — `new IntersectionObserver(cb, options)`, `observe`/`unobserve`/`disconnect`, `isIntersecting` / `intersectionRatio` entries (`JsIntersectionObserver`)
+- **`WheelEvent` / `PointerEvent`** — `wheel` dispatched with `deltaX/Y/Z`; pointer events (`pointerdown`/`up`/`move`) dispatched alongside mouse events with `pointerId`, `pointerType`, `pressure` (`JsEvent`, `BrowserWindow`)
+- **`<input type="file">`** — native Win32 file open dialog (`Comdlg32`); `input.files` (`FileList` with `name`, `size`, `type`) and `input.value` reflect the selection (`JsFileList`)
+- **`multipart/form-data` submission** — `enctype="multipart/form-data"` builds an RFC 7578 body with file parts (filename + content-type); `application/x-www-form-urlencoded` and GET query encoding retained (`FormSubmitter`)
+- **`Attr.value` mutation** — setting `attr.value` updates the owning element's attribute and triggers mutation observers (`JsNamedNodeMap`)
+- **Tests** — expanded `DomTests`, `FormTests`, and `LayoutTests` suites covering template, dialog, FormData, progress/meter/output, details, observers, and file inputs
+
+### Fixed
+
+- **Self-collapsing margins** — the margin-collapse model now follows CSS 2.1 §8.3.1, including the self-collapsing case (margins of a block whose top/bottom margins adjoin collapse through) (`BoxEngine`)
+- **Block-in-inline margin suppression** — margins on block boxes split by inline content are suppressed per §9.2.1.1, preventing spurious vertical spacing in split-inline formatting (`BoxEngine`)
+
+## [0.0.8] - 2026-06-23
+
+### Added
+
+- **Conformance test harness** — new `Lite.Conformance` project with runners for CSS 2.1 reftests, Web Platform Tests, test262, and the Acid tests; headless page rendering, pixel-diff comparison against approved baselines, mismatch-reference support, and a survey mode (`AcidRunner`, `RefTestRunner`, `WptRunner`, `Test262Runner`, `HeadlessPage`, `PixelDiff`, `ConformanceServer`)
+- **`window.location`** — `href`, `protocol`, `host`, `hostname`, `port`, `pathname`, `search`, `hash`, `origin`, and `assign` / `replace` / `reload` setters; same-document (fragment-only) changes scroll to the fragment and fire `hashchange` without reloading (`JsLocation`)
+- **`window.history`** — `length`, `state`, `back` / `forward` / `go`, `pushState` / `replaceState`; `popstate` events dispatched to window listeners (`JsHistory`)
+- **URL APIs** — `URL` (parsing, `href`/`origin`/`pathname`/`search`/`hash` components, `searchParams`) and `URLSearchParams` (`get`, `getAll`, `append`, `set`, `delete`, `has`, `entries`, `toString`) (`JsUrl`, `JsUrlSearchParams`)
+- **`navigator`** — `userAgent`, `platform`, `language` (`JsNavigator`)
+- **All CSS length units** — centralized `CssUnits` resolver supporting `px`, `em`, `rem`, `%`, `vw`, `vh`, `vmin`, `vmax`, `ex`, `ch`, `pt`, `pc`, `in`, `cm`, `mm`, and `q` across all length-resolving properties (`CssUnits`)
+- **`currentcolor` keyword** — `color: currentcolor` resolves against the inherited `color` value (`DrawCommandExtensions`)
+- **`MutationObserver`** — `observe(target, options)`, `disconnect`, `takeRecords`; records for `childList`, `attributes`, and `characterData` mutations with the spec's microtask delivery (`JsMutationObserver`)
+- **Attribute API** — `element.attributes` as a live `NamedNodeMap`, `getAttributeNode` / `setAttributeNode` / `removeAttributeNode`, and `Attr` nodes with mutable `value` / `name` (`JsNamedNodeMap`, `JsElement`)
+- **Geometry probing & DOM layout hooks** — layout nodes carry geometry used by `getBoundingClientRect` and the conformance reftest harness; `JsElement` exposes resolved geometry to JavaScript (`JsEngine`, `JsElement`, `BoxEngine`)
+- **`data:` URL parsing** — `DataUri` decodes `data:` URLs (base64 and percent-encoded) for use by `fetch` and image loading (`DataUri`)
+- **`XMLHttpRequest` improvements** — async send on a background thread with `readyState`, `status`, `statusText`, `responseText`, `responseURL`, and `onload` / `onerror` / `onreadystatechange` callbacks (`JsXmlHttpRequest`)
+- **Acid1 compliance** — the Acid1 reference renders correctly and an 800×600 baseline is approved (`baselines/acid1.png`)
+- **Tests** — new `AttributeApiTests`, `CssWideKeywordTests`, `HostObjectTests`, `LayoutTests`, `MutationObserverTests`, and `NavigationTests` suites; `Lite.Example` renamed from `Example`
+
+### Fixed
+
+- **Unitless `line-height`** — a bare-number computed `line-height` (e.g. `font: 10px/1`) is now treated as a font-size multiplier instead of a pixel length, which had collapsed every line box to ~1px and overlapped the Acid1 headings (`BoxEngine`)
+- **Box / table / CSS parser / drawer** — a series of correctness improvements to the box model, table column sizing, CSS parser, and renderer landed alongside the conformance work
+
+## [0.0.7] - 2026-06-10
 
 ### Added
 

@@ -3,6 +3,7 @@ using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Css.Dom;
 using Lite.Animation;
+using Lite.Extensions;
 using Lite.Layout;
 using Lite.Models;
 using Lite.Network;
@@ -98,7 +99,7 @@ internal static class Parser
     internal static IDocument? Document { get; private set; }
 
     /// <summary>Suppresses per-element debug logging during fragment (innerHTML) parsing.</summary>
-    private static bool _verbose = true;
+    private static bool _verbose = false;
     internal static int ViewportWidth { get; private set; } = 800;
     internal static int ViewportHeight { get; private set; } = 600;
 
@@ -142,22 +143,39 @@ internal static class Parser
         head.InsertBefore(uaStyle, head.FirstChild);
 
         // Eagerly fetch and inline all <link rel="stylesheet"> files so that
-        // ComputeCurrentStyle() sees the fully-cascaded styles synchronously.
-        foreach (var link in document.QuerySelectorAll("link[rel='stylesheet']"))
+        // ComputeCurrentStyle() sees the fully-cascaded styles synchronously. The rel is a
+        // space-separated token set (HTML4 §6.12), so match any rel containing the "stylesheet"
+        // token (e.g. Acid2's rel="appendix stylesheet") — but skip alternate stylesheets.
+        foreach (var link in document.QuerySelectorAll("link[rel~='stylesheet']"))
         {
+            var rel = link.GetAttribute("rel") ?? "";
+            if (rel.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                   .Any(t => t.Equals("alternate", StringComparison.OrdinalIgnoreCase)))
+                continue;
             var href = link.GetAttribute("href");
             if (string.IsNullOrEmpty(href)) continue;
-            var cssUrl = ResolveUrl(href);
-            if (cssUrl is null) continue;
             try
             {
-                var css = _httpClient.GetStringAsync(cssUrl).Result;
-                css = InlineImports(css, cssUrl);
+                string css;
+                string cssBase;
+                if (DataUri.IsDataUri(href))
+                {
+                    if (!DataUri.TryDecodeText(href, out css, out _)) continue;
+                    cssBase = _documentBaseUrl ?? _baseUrl ?? "";
+                }
+                else
+                {
+                    var cssUrl = ResolveUrl(href);
+                    if (cssUrl is null) continue;
+                    css = _httpClient.GetStringAsync(cssUrl).Result;
+                    cssBase = cssUrl;
+                }
+                css = InlineImports(css, cssBase);
                 var styleEl = document.CreateElement("style");
                 styleEl.TextContent = css;
                 head.AppendChild(styleEl);
             }
-            catch (Exception ex) { Console.WriteLine($"[CSS load error] {cssUrl}: {ex.Message}"); }
+            catch (Exception ex) { Console.WriteLine($"[CSS load error] {href}: {ex.Message}"); }
         }
 
         // Process @import in author <style> elements (skip the UA sheet, which has none).
@@ -418,6 +436,30 @@ internal static class Parser
                 node.Image = ResourceLoader.FetchImage(src, _baseUrl);
         }
 
+        // <object>: a replaced element that renders its `data` resource, falling back to its
+        // child content (which may be a nested <object>) when the resource cannot be displayed
+        // (CSS2.1/HTML4 §13.3). Acid2's eyes are a 3-deep object chain: unknown type → 404 →
+        // the eyes PNG. We only render images here; any non-image `type` (e.g. text/html) or a
+        // resource that fails to decode falls through to the fallback content.
+        bool objectShowsImage = false;
+        if (tag == "OBJECT")
+        {
+            var data = element.GetAttribute("data");
+            var type = element.GetAttribute("type");
+            var couldBeImage = string.IsNullOrEmpty(type) ||
+                               type.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+            if (!string.IsNullOrEmpty(data) && couldBeImage)
+            {
+                var img = ResourceLoader.FetchImage(data, _baseUrl);
+                if (img is not null)
+                {
+                    node.Image = img;
+                    node.Attributes["src"] = data;   // so the replaced-element paint path fires
+                    objectShowsImage = true;          // suppress fallback content
+                }
+            }
+        }
+
         if (tag is "TD" or "TH")
         {
             foreach (var attr in new[] { "colspan", "rowspan" })
@@ -598,7 +640,11 @@ internal static class Parser
         // ::before/::after generated content). The pushed instances are popped after the subtree.
         ApplyCounters(node, out var pushedCounters);
 
-        if (hasMixedChildren)
+        if (objectShowsImage)
+        {
+            // Replaced <object> showing an image: its fallback children are not rendered.
+        }
+        else if (hasMixedChildren)
         {
             // Walk ChildNodes in DOM order so text nodes keep their position among element siblings.
             // e.g. <p>Hello <strong>world</strong>!</p> → [#TEXT("Hello"), strong, #TEXT("!")]
@@ -1112,27 +1158,11 @@ internal static class Parser
     /// flex-related property values into the node's StyleOverrides dictionary.
     /// This works around AngleSharp.Css not cascading these properties through ComputeCurrentStyle().
     /// </summary>
-    private static bool _debugCssOnce = false;
     private static void ExtractMatchedCssProperties(IElement element, LayoutNode node)
     {
         if (element.Owner?.StyleSheets is null) return;
 
-        var sheets = element.Owner.StyleSheets.ToList();
-        if (!_debugCssOnce)
-        {
-            _debugCssOnce = true;
-            Console.WriteLine($"[CSS-DEBUG] Total stylesheets: {sheets.Count}");
-            foreach (var s in sheets)
-                Console.WriteLine($"  Sheet type: {s.GetType().FullName}, isCss: {s is ICssStyleSheet}");
-            if (sheets.OfType<ICssStyleSheet>().FirstOrDefault() is { } firstCss)
-            {
-                Console.WriteLine($"  First CSS sheet rules: {firstCss.Rules.Length}");
-                foreach (var r in firstCss.Rules.Take(5))
-                    Console.WriteLine($"    Rule type: {r.GetType().FullName}, isCssStyle: {r is ICssStyleRule}, text: {r.CssText?[..Math.Min(r.CssText?.Length ?? 0, 80)]}");
-            }
-        }
-
-        foreach (var sheet in sheets.OfType<ICssStyleSheet>())
+        foreach (var sheet in element.Owner.StyleSheets.OfType<ICssStyleSheet>())
         {
             ProcessRules(sheet.Rules, element, node, mediaText: null);
         }
@@ -1174,7 +1204,7 @@ internal static class Parser
                 var style = styleRule.Style;
                 foreach (var prop in s_extraProps)
                 {
-                    var val = style.GetPropertyValue(prop);
+                    var val = style.GetPropertyValueSafe(prop);
                     if (!string.IsNullOrEmpty(val))
                         StoreProp(node, prop, val);
                 }
@@ -1202,7 +1232,7 @@ internal static class Parser
         // Collect via GetPropertyValue for known extra props
         foreach (var prop in s_extraProps)
         {
-            var val = style.GetPropertyValue(prop);
+            var val = style.GetPropertyValueSafe(prop);
             if (!string.IsNullOrEmpty(val))
                 props[prop] = val;
         }
@@ -1279,7 +1309,6 @@ internal static class Parser
             var parts = val.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             node.StyleOverrides["row-gap"] = parts[0];
             node.StyleOverrides["column-gap"] = parts.Length > 1 ? parts[1] : parts[0];
-            Console.WriteLine($"  [CSS] {node.TagName}#{node.Id}.{node.Text[..Math.Min(node.Text.Length, 20)]}: gap → row-gap={parts[0]}, column-gap={(parts.Length > 1 ? parts[1] : parts[0])}");
         }
         else if (prop == "flex")
         {
@@ -1365,7 +1394,6 @@ internal static class Parser
         else
         {
             node.StyleOverrides[prop] = val;
-            Console.WriteLine($"  [CSS] {node.TagName}#{node.Id}: {prop} = {val}");
         }
     }
 
@@ -1585,7 +1613,7 @@ internal static class Parser
         // Also try GetPropertyValue for known extra properties
         foreach (var prop in s_extraProps)
         {
-            var val = rule.Style.GetPropertyValue(prop);
+            var val = rule.Style.GetPropertyValueSafe(prop);
             if (!string.IsNullOrEmpty(val) && !props.ContainsKey(prop))
                 props[prop] = val;
         }

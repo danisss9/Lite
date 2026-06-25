@@ -43,11 +43,23 @@ public enum VerticalAlignType { Baseline, Top, Middle, Bottom, TextTop, TextBott
 
 public static class StyleExtensions
 {
+    /// <summary>
+    /// Reads a CSS property value, swallowing the NullReferenceException that AngleSharp.Css
+    /// 0.17 can throw while serializing certain periodic/invalid declarations — e.g. Acid2's
+    /// <c>border-color: red yellow black yellow</c> or <c>border-spacing</c>. A failed read
+    /// returns "" so the offending declaration is simply ignored (CSS error recovery).
+    /// </summary>
+    public static string GetPropertyValueSafe(this AngleSharp.Css.Dom.ICssStyleDeclaration style, string prop)
+    {
+        try { return style.GetPropertyValue(prop) ?? ""; }
+        catch { return ""; }
+    }
+
     public static DisplayType GetDisplay(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.Display, out var ov)
             ? ov
-            : node.Style.GetPropertyValue(PropertyNames.Display);
+            : node.Style.GetPropertyValueSafe(PropertyNames.Display);
         return raw switch
         {
             "block" or "flow-root" => DisplayType.Block,
@@ -66,7 +78,7 @@ public static class StyleExtensions
     public static FlexDirection GetFlexDirection(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.FlexDirection, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.FlexDirection);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.FlexDirection);
         return raw switch
         {
             "row-reverse" => FlexDirection.RowReverse,
@@ -79,7 +91,7 @@ public static class StyleExtensions
     public static FlexWrap GetFlexWrap(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.FlexWrap, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.FlexWrap);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.FlexWrap);
         return raw switch
         {
             "wrap" => FlexWrap.Wrap,
@@ -91,7 +103,7 @@ public static class StyleExtensions
     public static JustifyContent GetJustifyContent(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.JustifyContent, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.JustifyContent);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.JustifyContent);
         return raw switch
         {
             "flex-end" => JustifyContent.FlexEnd,
@@ -106,7 +118,7 @@ public static class StyleExtensions
     public static AlignItems GetAlignItems(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.AlignItems, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.AlignItems);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.AlignItems);
         return raw switch
         {
             "flex-start" => AlignItems.FlexStart,
@@ -120,7 +132,7 @@ public static class StyleExtensions
     public static AlignSelf GetAlignSelf(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.AlignSelf, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.AlignSelf);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.AlignSelf);
         return raw switch
         {
             "flex-start" => AlignSelf.FlexStart,
@@ -135,7 +147,7 @@ public static class StyleExtensions
     public static AlignContent GetAlignContent(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("align-content", out var ov)
-            ? ov : node.Style.GetPropertyValue("align-content");
+            ? ov : node.Style.GetPropertyValueSafe("align-content");
         return raw switch
         {
             "flex-start" => AlignContent.FlexStart,
@@ -150,14 +162,14 @@ public static class StyleExtensions
     public static int GetOrder(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("order", out var ov)
-            ? ov : node.Style.GetPropertyValue("order");
+            ? ov : node.Style.GetPropertyValueSafe("order");
         return int.TryParse(raw, out var v) ? v : 0;
     }
 
     public static Visibility GetVisibility(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.Visibility, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.Visibility);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.Visibility);
         return raw switch
         {
             "hidden" => Visibility.Hidden,
@@ -201,7 +213,7 @@ public static class StyleExtensions
     public static float GetFlexGrow(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.FlexGrow, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.FlexGrow);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.FlexGrow);
         return float.TryParse(raw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0f;
     }
@@ -209,7 +221,7 @@ public static class StyleExtensions
     public static float GetFlexShrink(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.FlexShrink, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.FlexShrink);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.FlexShrink);
         return float.TryParse(raw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 1f;
     }
@@ -218,7 +230,7 @@ public static class StyleExtensions
     public static float GetFlexBasis(this LayoutNode node, float containerMain)
     {
         var raw = node.TryResolveStyle(PropertyNames.FlexBasis, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.FlexBasis);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.FlexBasis);
         if (string.IsNullOrEmpty(raw) || raw == "auto" || raw == "content") return float.NaN;
         if (TryEvalCalc(raw, containerMain, 16f, containerMain, out var calcPx)) return calcPx;
         if (raw.EndsWith("px") && float.TryParse(raw[..^2],
@@ -272,7 +284,7 @@ public static class StyleExtensions
     public static bool GetFontBold(this LayoutNode node)
     {
         var weight = node.TryResolveStyle(PropertyNames.FontWeight, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.FontWeight);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.FontWeight);
         return weight is "bold" or "bolder" or "700" or "800" or "900";
     }
 
@@ -280,17 +292,17 @@ public static class StyleExtensions
     {
         var style = node.TryResolveStyle(PropertyNames.FontStyle, out var ov)
             ? ov
-            : node.Style.GetPropertyValue(PropertyNames.FontStyle);
+            : node.Style.GetPropertyValueSafe(PropertyNames.FontStyle);
         return style is "italic" or "oblique";
     }
 
     public static bool IsLineThrough(this LayoutNode node)
     {
         var line = node.TryResolveStyle(PropertyNames.TextDecorationLine, out var ov1)
-            ? ov1 : node.Style.GetPropertyValue(PropertyNames.TextDecorationLine);
+            ? ov1 : node.Style.GetPropertyValueSafe(PropertyNames.TextDecorationLine);
         if (line.Contains("line-through", StringComparison.OrdinalIgnoreCase)) return true;
         var dec = node.TryResolveStyle(PropertyNames.TextDecoration, out var ov2)
-            ? ov2 : node.Style.GetPropertyValue(PropertyNames.TextDecoration);
+            ? ov2 : node.Style.GetPropertyValueSafe(PropertyNames.TextDecoration);
         return dec.Contains("line-through", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -298,7 +310,7 @@ public static class StyleExtensions
     {
         var raw = (node.TryResolveStyle(PropertyNames.TextAlign, out var ov)
             ? ov
-            : node.Style.GetPropertyValue(PropertyNames.TextAlign))?.Trim().ToLowerInvariant();
+            : node.Style.GetPropertyValueSafe(PropertyNames.TextAlign))?.Trim().ToLowerInvariant();
         var rtl = node.GetDirection() == "rtl";
         return raw switch
         {
@@ -318,7 +330,7 @@ public static class StyleExtensions
     public static string GetDirection(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("direction", out var ov)
-            ? ov : node.Style.GetPropertyValue("direction");
+            ? ov : node.Style.GetPropertyValueSafe("direction");
         return raw?.Trim().Equals("rtl", StringComparison.OrdinalIgnoreCase) == true ? "rtl" : "ltr";
     }
 
@@ -344,7 +356,7 @@ public static class StyleExtensions
         // computed string for a bare number BEFORE the Length branch, because AngleSharp surfaces
         // it as a unitless Length that CssUnits.ToPx would otherwise treat as pixels (e.g. `1`→1px,
         // collapsing every line box to 1px tall). A value with any unit fails the bare-number parse.
-        var str = node.Style.GetPropertyValue(PropertyNames.LineHeight);
+        var str = node.Style.GetPropertyValueSafe(PropertyNames.LineHeight);
         if (!string.IsNullOrEmpty(str) && str != "normal" &&
             float.TryParse(str, System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var num))
@@ -361,7 +373,7 @@ public static class StyleExtensions
     {
         var raw = node.TryResolveStyle(PropertyNames.WhiteSpace, out var ov)
             ? ov
-            : node.Style.GetPropertyValue(PropertyNames.WhiteSpace);
+            : node.Style.GetPropertyValueSafe(PropertyNames.WhiteSpace);
         return raw switch
         {
             "nowrap" => WhiteSpace.NoWrap,
@@ -375,7 +387,7 @@ public static class StyleExtensions
     public static PositionType GetPosition(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.Position, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.Position);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.Position);
         return raw switch
         {
             "relative" => PositionType.Relative,
@@ -392,7 +404,7 @@ public static class StyleExtensions
     public static OverflowType GetOverflow(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.Overflow, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.Overflow);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.Overflow);
         return raw switch
         {
             "hidden" => OverflowType.Hidden,
@@ -408,7 +420,7 @@ public static class StyleExtensions
     public static SkiaSharp.SKRect? GetClipRect(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("clip", out var ov)
-            ? ov : node.Style.GetPropertyValue("clip");
+            ? ov : node.Style.GetPropertyValueSafe("clip");
         if (string.IsNullOrEmpty(raw)) return null;
         raw = raw.Trim();
         var open = raw.IndexOf('(');
@@ -434,7 +446,7 @@ public static class StyleExtensions
     public static int GetZIndex(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.ZIndex, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.ZIndex);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.ZIndex);
         return int.TryParse(raw, out var z) ? z : 0;
     }
 
@@ -442,7 +454,7 @@ public static class StyleExtensions
     public static float GetAspectRatio(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("aspect-ratio", out var ov)
-            ? ov : node.Style.GetPropertyValue("aspect-ratio");
+            ? ov : node.Style.GetPropertyValueSafe("aspect-ratio");
         if (string.IsNullOrWhiteSpace(raw) || raw == "auto") return 0f;
         // "16 / 9" or "16/9" or "1.5"
         raw = raw.Replace(" ", "");
@@ -466,7 +478,7 @@ public static class StyleExtensions
     public static (float Rx, float Ry) GetBorderRadius(this LayoutNode node, float width, float height)
     {
         var raw = node.TryResolveStyle("border-radius", out var ov)
-            ? ov : node.Style.GetPropertyValue("border-radius");
+            ? ov : node.Style.GetPropertyValueSafe("border-radius");
         if (string.IsNullOrWhiteSpace(raw)) return (0f, 0f);
         raw = raw.Trim();
         if (TryEvalCalc(raw, width, 16f, width, out var calcPx)) { var rc = Math.Max(0f, calcPx); return (rc, rc); }
@@ -490,7 +502,7 @@ public static class StyleExtensions
     public static float GetOpacity(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("opacity", out var ov)
-            ? ov : node.Style.GetPropertyValue("opacity");
+            ? ov : node.Style.GetPropertyValueSafe("opacity");
         return float.TryParse(raw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var f)
             ? Math.Clamp(f, 0f, 1f) : 1f;
@@ -499,7 +511,7 @@ public static class StyleExtensions
     public static FloatType GetFloat(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("float", out var ov)
-            ? ov : node.Style.GetPropertyValue("float");
+            ? ov : node.Style.GetPropertyValueSafe("float");
         return raw switch
         {
             "left" => FloatType.Left,
@@ -512,14 +524,14 @@ public static class StyleExtensions
     public static bool IsTextOverflowEllipsis(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("text-overflow", out var ov)
-            ? ov : node.Style.GetPropertyValue("text-overflow");
+            ? ov : node.Style.GetPropertyValueSafe("text-overflow");
         return raw == "ellipsis";
     }
 
     public static ClearType GetClear(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("clear", out var ov)
-            ? ov : node.Style.GetPropertyValue("clear");
+            ? ov : node.Style.GetPropertyValueSafe("clear");
         return raw switch
         {
             "left" => ClearType.Left,
@@ -532,7 +544,7 @@ public static class StyleExtensions
     public static TextTransform GetTextTransform(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("text-transform", out var ov)
-            ? ov : node.Style.GetPropertyValue("text-transform");
+            ? ov : node.Style.GetPropertyValueSafe("text-transform");
         return raw switch
         {
             "uppercase" => TextTransform.Uppercase,
@@ -545,7 +557,7 @@ public static class StyleExtensions
     public static float GetLetterSpacing(this LayoutNode node, float fontSize = 16)
     {
         var raw = node.TryResolveStyle("letter-spacing", out var ov)
-            ? ov : node.Style.GetPropertyValue("letter-spacing");
+            ? ov : node.Style.GetPropertyValueSafe("letter-spacing");
         if (string.IsNullOrWhiteSpace(raw) || raw == "normal") return 0f;
         raw = raw.Trim();
         if (raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px)) return px;
@@ -556,7 +568,7 @@ public static class StyleExtensions
     public static float GetWordSpacing(this LayoutNode node, float fontSize = 16)
     {
         var raw = node.TryResolveStyle("word-spacing", out var ov)
-            ? ov : node.Style.GetPropertyValue("word-spacing");
+            ? ov : node.Style.GetPropertyValueSafe("word-spacing");
         if (string.IsNullOrWhiteSpace(raw) || raw == "normal") return 0f;
         raw = raw.Trim();
         if (raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px)) return px;
@@ -575,12 +587,12 @@ public static class StyleExtensions
     private static BorderStyle GetBorderStyleSide(LayoutNode node, string prop)
     {
         var raw = node.TryResolveStyle(prop, out var ov)
-            ? ov : node.Style.GetPropertyValue(prop);
+            ? ov : node.Style.GetPropertyValueSafe(prop);
         if (string.IsNullOrWhiteSpace(raw))
         {
             // Try shorthand 'border-style'
             raw = node.TryResolveStyle("border-style", out var ov2)
-                ? ov2 : node.Style.GetPropertyValue("border-style");
+                ? ov2 : node.Style.GetPropertyValueSafe("border-style");
         }
         return raw?.Trim() switch
         {
@@ -601,12 +613,12 @@ public static class StyleExtensions
     public static ListStyleType GetListStyleType(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("list-style-type", out var ov)
-            ? ov : node.Style.GetPropertyValue("list-style-type");
+            ? ov : node.Style.GetPropertyValueSafe("list-style-type");
         // Also check parent (UL/OL) if not set on LI
         if (string.IsNullOrWhiteSpace(raw) && node.Parent != null)
         {
             raw = node.Parent.TryResolveStyle("list-style-type", out var ov2)
-                ? ov2 : node.Parent.Style.GetPropertyValue("list-style-type");
+                ? ov2 : node.Parent.Style.GetPropertyValueSafe("list-style-type");
         }
         return raw?.Trim() switch
         {
@@ -626,11 +638,11 @@ public static class StyleExtensions
     public static ListStylePosition GetListStylePosition(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("list-style-position", out var ov)
-            ? ov : node.Style.GetPropertyValue("list-style-position");
+            ? ov : node.Style.GetPropertyValueSafe("list-style-position");
         if (string.IsNullOrWhiteSpace(raw) && node.Parent != null)
         {
             raw = node.Parent.TryResolveStyle("list-style-position", out var ov2)
-                ? ov2 : node.Parent.Style.GetPropertyValue("list-style-position");
+                ? ov2 : node.Parent.Style.GetPropertyValueSafe("list-style-position");
         }
         return raw?.Trim() switch
         {
@@ -642,7 +654,7 @@ public static class StyleExtensions
     public static VerticalAlignType GetVerticalAlign(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("vertical-align", out var ov)
-            ? ov : node.Style.GetPropertyValue("vertical-align");
+            ? ov : node.Style.GetPropertyValueSafe("vertical-align");
         return raw?.Trim() switch
         {
             "top" => VerticalAlignType.Top,
@@ -661,7 +673,7 @@ public static class StyleExtensions
     public static float GetOutlineWidth(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("outline-width", out var ov)
-            ? ov : node.Style.GetPropertyValue("outline-width");
+            ? ov : node.Style.GetPropertyValueSafe("outline-width");
         if (string.IsNullOrWhiteSpace(raw)) return 0f;
         raw = raw.Trim();
         return raw switch
@@ -679,7 +691,7 @@ public static class StyleExtensions
     public static BorderStyle GetOutlineStyle(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("outline-style", out var ov)
-            ? ov : node.Style.GetPropertyValue("outline-style");
+            ? ov : node.Style.GetPropertyValueSafe("outline-style");
         return raw?.Trim() switch
         {
             "dotted" => BorderStyle.Dotted,
@@ -697,7 +709,7 @@ public static class StyleExtensions
     public static float GetOutlineOffset(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("outline-offset", out var ov)
-            ? ov : node.Style.GetPropertyValue("outline-offset");
+            ? ov : node.Style.GetPropertyValueSafe("outline-offset");
         if (string.IsNullOrWhiteSpace(raw)) return 0f;
         raw = raw.Trim();
         if (raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px)) return px;
@@ -709,7 +721,7 @@ public static class StyleExtensions
     public static string? GetBackgroundImage(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("background-image", out var ov)
-            ? ov : node.Style.GetPropertyValue("background-image");
+            ? ov : node.Style.GetPropertyValueSafe("background-image");
         if (string.IsNullOrWhiteSpace(raw) || raw == "none") return null;
         // If it's a gradient, return null — handled by GetLinearGradient
         if (raw.Contains("gradient", StringComparison.OrdinalIgnoreCase)) return null;
@@ -729,12 +741,12 @@ public static class StyleExtensions
     public static string? GetListStyleImage(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("list-style-image", out var ov)
-            ? ov : node.Style.GetPropertyValue("list-style-image");
+            ? ov : node.Style.GetPropertyValueSafe("list-style-image");
         if (string.IsNullOrWhiteSpace(raw))
         {
             // Fall back to a url() inside the list-style shorthand.
             var shorthand = node.TryResolveStyle("list-style", out var ls)
-                ? ls : node.Style.GetPropertyValue("list-style");
+                ? ls : node.Style.GetPropertyValueSafe("list-style");
             raw = shorthand ?? "";
         }
         var idx = raw.IndexOf("url(", StringComparison.OrdinalIgnoreCase);
@@ -749,12 +761,12 @@ public static class StyleExtensions
     public static LinearGradient? GetLinearGradient(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("background-image", out var ov)
-            ? ov : node.Style.GetPropertyValue("background-image");
+            ? ov : node.Style.GetPropertyValueSafe("background-image");
         if (string.IsNullOrWhiteSpace(raw) || raw == "none")
         {
             // Also check shorthand "background" property
             raw = node.TryResolveStyle("background", out var bg)
-                ? bg : node.Style.GetPropertyValue("background");
+                ? bg : node.Style.GetPropertyValueSafe("background");
         }
         if (string.IsNullOrWhiteSpace(raw)) return null;
         return ParseLinearGradient(raw);
@@ -879,7 +891,7 @@ public static class StyleExtensions
     public static string GetBackgroundRepeat(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("background-repeat", out var ov)
-            ? ov : node.Style.GetPropertyValue("background-repeat");
+            ? ov : node.Style.GetPropertyValueSafe("background-repeat");
         if (string.IsNullOrWhiteSpace(raw)) return "repeat";
         return raw.Trim();
     }
@@ -887,7 +899,7 @@ public static class StyleExtensions
     public static (string X, string Y) GetBackgroundPosition(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("background-position", out var ov)
-            ? ov : node.Style.GetPropertyValue("background-position");
+            ? ov : node.Style.GetPropertyValueSafe("background-position");
         if (string.IsNullOrWhiteSpace(raw)) return ("0%", "0%");
         var parts = raw.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var x = parts.Length > 0 ? parts[0] : "0%";
@@ -895,10 +907,26 @@ public static class StyleExtensions
         return (x, y);
     }
 
+    /// <summary>True when <c>background-attachment: fixed</c> — the background is positioned
+    /// relative to the viewport and does not scroll with the element (CSS 2.1 §14.2.1).</summary>
+    public static bool IsBackgroundFixed(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("background-attachment", out var ov)
+            ? ov : node.Style.GetPropertyValueSafe("background-attachment");
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            // AngleSharp doesn't always split the attachment out of the shorthand — scan it.
+            raw = node.TryResolveStyle("background", out var bg)
+                ? bg : node.Style.GetPropertyValueSafe("background");
+        }
+        return (raw ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Any(t => t.Equals("fixed", StringComparison.OrdinalIgnoreCase));
+    }
+
     public static (string W, string H) GetBackgroundSize(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("background-size", out var ov)
-            ? ov : node.Style.GetPropertyValue("background-size");
+            ? ov : node.Style.GetPropertyValueSafe("background-size");
         if (string.IsNullOrWhiteSpace(raw) || raw == "auto") return ("auto", "auto");
         if (raw.Trim() == "cover") return ("cover", "cover");
         if (raw.Trim() == "contain") return ("contain", "contain");
@@ -937,7 +965,7 @@ public static class StyleExtensions
     public static List<BoxShadow> GetBoxShadows(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("box-shadow", out var ov)
-            ? ov : node.Style.GetPropertyValue("box-shadow");
+            ? ov : node.Style.GetPropertyValueSafe("box-shadow");
         if (string.IsNullOrWhiteSpace(raw) || raw == "none") return [];
         var result = new List<BoxShadow>();
         foreach (var layer in SplitShadowLayers(raw))
@@ -951,7 +979,7 @@ public static class StyleExtensions
     public static TextShadow? GetTextShadow(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("text-shadow", out var ov)
-            ? ov : node.Style.GetPropertyValue("text-shadow");
+            ? ov : node.Style.GetPropertyValueSafe("text-shadow");
         if (string.IsNullOrWhiteSpace(raw) || raw == "none") return null;
         // text-shadow uses same token format as box-shadow but without spread/inset
         if (TryParseShadowLayer(SplitShadowLayers(raw).FirstOrDefault() ?? "", out var s))
@@ -1143,17 +1171,17 @@ public static class StyleExtensions
     public static bool IsUnderline(this LayoutNode node)
     {
         var line = node.TryResolveStyle(PropertyNames.TextDecorationLine, out var ov1)
-            ? ov1 : node.Style.GetPropertyValue(PropertyNames.TextDecorationLine);
+            ? ov1 : node.Style.GetPropertyValueSafe(PropertyNames.TextDecorationLine);
         if (line.Contains("underline", StringComparison.OrdinalIgnoreCase)) return true;
         var dec = node.TryResolveStyle(PropertyNames.TextDecoration, out var ov2)
-            ? ov2 : node.Style.GetPropertyValue(PropertyNames.TextDecoration);
+            ? ov2 : node.Style.GetPropertyValueSafe(PropertyNames.TextDecoration);
         return dec.Contains("underline", StringComparison.OrdinalIgnoreCase);
     }
 
     public static CursorType GetCursor(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.Cursor, out var ov)
-            ? ov : node.Style.GetPropertyValue(PropertyNames.Cursor);
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.Cursor);
         return raw switch
         {
             "pointer" => CursorType.Pointer,
@@ -1165,7 +1193,7 @@ public static class StyleExtensions
     public static bool GetPointerEventsNone(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("pointer-events", out var ov)
-            ? ov : node.Style.GetPropertyValue("pointer-events");
+            ? ov : node.Style.GetPropertyValueSafe("pointer-events");
         return raw == "none";
     }
 
@@ -1173,7 +1201,7 @@ public static class StyleExtensions
     public static SKMatrix? GetTransform(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("transform", out var ov)
-            ? ov : node.Style.GetPropertyValue("transform");
+            ? ov : node.Style.GetPropertyValueSafe("transform");
         if (string.IsNullOrWhiteSpace(raw) || raw == "none") return null;
 
         var result = SKMatrix.Identity;
@@ -1279,7 +1307,7 @@ public static class StyleExtensions
     public static string? GetFilter(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("filter", out var ov)
-            ? ov : node.Style.GetPropertyValue("filter");
+            ? ov : node.Style.GetPropertyValueSafe("filter");
         if (string.IsNullOrWhiteSpace(raw) || raw == "none") return null;
         return raw.Trim();
     }
@@ -1288,7 +1316,7 @@ public static class StyleExtensions
     {
         var value = node.TryResolveStyle(PropertyNames.FontFamily, out var ov)
             ? ov
-            : node.Style.GetPropertyValue(PropertyNames.FontFamily);
+            : node.Style.GetPropertyValueSafe(PropertyNames.FontFamily);
         if (string.IsNullOrEmpty(value)) return "Arial";
         var first = value.Split(',')[0].Trim().Trim('"', '\'');
         return first switch
@@ -1317,14 +1345,14 @@ public static class StyleExtensions
             if (parsed.HasValue) return parsed.Value;
         }
 
-        if (IsCurrentColor(node.Style.GetPropertyValue(propertyName))) return node.GetColor();
+        if (IsCurrentColor(node.Style.GetPropertyValueSafe(propertyName))) return node.GetColor();
 
         // Try RawValue (works when AngleSharp exposes the value as Color struct)
         if (node.Style.GetProperty(propertyName).RawValue is Color color)
             return new SKColor(color.R, color.G, color.B, color.A);
 
         // Fallback: parse the serialized CSS string value (e.g. "#3b82f6", "rgb(59,130,246)")
-        var str = node.Style.GetPropertyValue(propertyName);
+        var str = node.Style.GetPropertyValueSafe(propertyName);
         if (!string.IsNullOrEmpty(str))
         {
             var parsed = ParseCssColor(str);

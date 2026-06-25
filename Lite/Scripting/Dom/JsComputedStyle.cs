@@ -32,7 +32,7 @@ public class JsComputedStyle
         }
         // Otherwise: overrides first, then declared style.
         if (_node.TryResolveStyle(property, out var val)) return val;
-        return _node.Style.GetPropertyValue(property) ?? "";
+        return _node.Style.GetPropertyValueSafe(property) ?? "";
     }
 
     private static string Px(float v) =>
