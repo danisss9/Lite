@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Script execution timing: in-position, defer, async + document.write</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script>window.__order = [];</script>
+<script>window.__order.push('inline-head');</script>
+<script defer src="data:text/javascript,window.__order.push('defer1')"></script>
+</head>
+<body>
+<script>window.__order.push('inline-body');</script>
+<script async src="data:text/javascript,window.__order.push('async1');window.__asyncDone&&window.__asyncDone()"></script>
+
+<script>
+// Runs in document position during the synchronous parse phase. Only the inline (in-position)
+// scripts before it have executed; the defer and async scripts have not.
+test(function () {
+  assert_array_equals(window.__order, ['inline-head', 'inline-body'],
+    'in-position scripts run during parse, before defer and async');
+}, 'in-position classic scripts run first, in document order');
+
+// document.write appends parsed content; a later in-position script can observe it.
+document.write('<p id="written">w</p>');
+</script>
+
+<script>
+test(function () {
+  assert_true(document.getElementById('written') !== null,
+    'document.write content is reachable via getElementById');
+}, 'document.write appends parsed content to the document');
+
+// The async script invokes this when it runs (a task after the synchronous load phase), by which
+// time the defer script has already executed.
+async_test(function (t) {
+  window.__asyncDone = t.step_func_done(function () {
+    assert_array_equals(window.__order, ['inline-head', 'inline-body', 'defer1', 'async1'],
+      'order is in-position (document order), then defer, then async');
+  });
+}, 'defer runs after parse; async runs on a later task, after defer');
+</script>
+</body>
+</html>

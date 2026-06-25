@@ -108,21 +108,24 @@ public class JsDocument
         return new JsEvent();
     }
 
-    // ---- document.write / open / close (minimal stubs) ----
-    private string _writeBuffer = "";
+    // ---- document.write / open / close ----
+    // Minimal model: each write() parses its markup and appends the result to <body>. Because the
+    // document is parsed up front (not incrementally), writes land at the end of the body rather
+    // than at the script's position, and markup split across calls is not stitched together.
 
-    public void open() => _writeBuffer = "";
+    public void open() { /* no-op: we never buffer/blank the document */ }
 
-    public void write(string markup) => _writeBuffer += markup;
-
-    public void writeln(string markup) => _writeBuffer += markup + "\n";
-
-    public void close()
+    public void write(string markup)
     {
-        // Stub — in a full implementation this would reparse the document.
-        // For now, just clear the buffer.
-        _writeBuffer = "";
+        if (string.IsNullOrEmpty(markup)) return;
+        var target = FindFirst(_root, n => n.TagName == "BODY") ?? _root;
+        foreach (var node in Parser.ParseFragment(markup, target.TagName))
+            target.AddChild(node);
     }
+
+    public void writeln(string markup) => write((markup ?? "") + "\n");
+
+    public void close() { /* no-op */ }
 
     // ---- document metadata ----
     private string _title = Parser.Document?.Title ?? string.Empty;

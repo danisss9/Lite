@@ -81,7 +81,13 @@ internal static class Parser
     /// <summary>Base URL for resolving relative references — equals the document URL unless
     /// a &lt;base href&gt; element overrides it.</summary>
     private static string? _documentBaseUrl;
+    // Classic scripts that run "in document position" during parse: inline scripts and external
+    // (src) scripts without defer/async. Executed in document order, before deferred/async.
     private static readonly List<string> _pendingScripts = [];
+    // External classic scripts marked `defer` — executed after parsing, in document order.
+    private static readonly List<string> _deferredScripts = [];
+    // External classic scripts marked `async` — executed on the task queue, not in any order.
+    private static readonly List<string> _asyncScripts = [];
     // ES modules to import after the engine is created: (specifier, code) — code is null for src modules.
     private static readonly List<(string Specifier, string? Code)> _pendingModules = [];
     private static int _inlineModuleCounter;
@@ -106,6 +112,8 @@ internal static class Parser
         _baseUrl = address;
         _documentBaseUrl = address;
         _pendingScripts.Clear();
+        _deferredScripts.Clear();
+        _asyncScripts.Clear();
         _pendingModules.Clear();
         _inlineModuleCounter = 0;
         _counters.Clear();
@@ -176,14 +184,28 @@ internal static class Parser
         // Always create the JS engine so inline onclick/on* handlers work,
         // even when there are no external or inline script blocks.
         var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight);
+
+        // 1) In-position classic scripts (inline + external without defer/async), in document order.
+        //    document.write() during these appends to the body (see JsDocument.write).
         foreach (var script in _pendingScripts)
             jsEngine.Execute(script);
 
-        // Evaluate ES modules after classic scripts (modules are deferred by spec).
+        // 2) Deferred classic scripts run after parsing, in document order.
+        foreach (var script in _deferredScripts)
+            jsEngine.Execute(script);
+
+        // 3) ES modules (deferred by spec) in document order.
         foreach (var (specifier, code) in _pendingModules)
         {
             if (code is not null) jsEngine.AddModule(specifier, code);
             jsEngine.ImportModule(specifier);
+        }
+
+        // 4) Async classic scripts run on the task queue, not in document order (after the sync phase).
+        foreach (var script in _asyncScripts)
+        {
+            var code = script;
+            jsEngine.EnqueueMacrotask(() => jsEngine.Execute(code));
         }
 
         // Fire body onload handler if present
@@ -962,6 +984,11 @@ internal static class Parser
         var type = scriptEl.GetAttribute("type");
         bool isModule = string.Equals(type, "module", StringComparison.OrdinalIgnoreCase);
         var src = scriptEl.GetAttribute("src");
+        // defer/async only apply to external (src) scripts; they are ignored on inline scripts.
+        bool hasSrc = !string.IsNullOrEmpty(src);
+        bool isAsync = hasSrc && scriptEl.HasAttribute("async");
+        bool isDefer = hasSrc && scriptEl.HasAttribute("defer");
+
         if (src != null)
         {
             // Handle data: URIs inline (HttpClient doesn't support them)
@@ -970,7 +997,7 @@ internal static class Parser
                 var code = DecodeDataUri(src);
                 if (string.IsNullOrWhiteSpace(code)) return;
                 if (isModule) _pendingModules.Add((NextInlineModuleSpecifier(), code));
-                else _pendingScripts.Add(code);
+                else BucketClassic(code, isAsync, isDefer);
                 return;
             }
 
@@ -987,16 +1014,26 @@ internal static class Parser
                 {
                     var code = _httpClient.GetStringAsync(scriptUrl).Result;
                     if (!string.IsNullOrWhiteSpace(code))
-                        _pendingScripts.Add(code);
+                        BucketClassic(code, isAsync, isDefer);
                 }
                 catch (Exception ex) { Console.WriteLine($"[Script load error] {scriptUrl}: {ex.Message}"); }
             }
         }
         else if (!string.IsNullOrWhiteSpace(scriptEl.TextContent))
         {
+            // Inline scripts always run in document position (defer/async do not apply).
             if (isModule) _pendingModules.Add((NextInlineModuleSpecifier(), scriptEl.TextContent));
             else _pendingScripts.Add(scriptEl.TextContent);
         }
+    }
+
+    /// <summary>Routes an external classic script's code into the in-position, deferred, or async
+    /// execution bucket (HTML §"prepare the script element").</summary>
+    private static void BucketClassic(string code, bool isAsync, bool isDefer)
+    {
+        if (isAsync) _asyncScripts.Add(code);
+        else if (isDefer) _deferredScripts.Add(code);
+        else _pendingScripts.Add(code);
     }
 
     /// <summary>Builds a unique absolute specifier for an inline module so its relative

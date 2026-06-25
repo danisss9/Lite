@@ -5,6 +5,9 @@
 # ---- harness bring-up (Phase 0 gate) ----
 lite/smoke.html
 
+# ---- Phase B item 2: script execution timing (in-position / defer / async) + document.write ----
+lite/script-timing.html
+
 # ---- Phase 2: navigation (history / location / title) ----
 lite/navigation.html
 
