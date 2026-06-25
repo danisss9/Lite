@@ -191,4 +191,55 @@ public static class DomTests
         True((string?)engine.RawEngine.GetValue("rv").ToObject() == "accepted", "close(v) sets returnValue");
         True(System.Convert.ToInt32(engine.RawEngine.GetValue("closed").ToObject()) == 1, "close() fires a close event");
     }
+
+    [Test]
+    public static void Template_ContentIsInertFragment()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute("document.body.innerHTML = '<template id=\"t\"><p class=\"x\">hi</p><span>yo</span></template>';");
+        engine.Execute(@"
+            var t = document.getElementById('t');
+            var ownChildren = t.children.length;        // template's own children are empty
+            var frag = t.content;
+            var fragType = frag.nodeType;               // 11 = DOCUMENT_FRAGMENT_NODE
+            var fragChildren = frag.children.length;
+            var pText = frag.querySelector('.x').textContent;
+            var bodyText = document.body.textContent;   // template content must not render");
+        True(System.Convert.ToInt32(engine.RawEngine.GetValue("ownChildren").ToObject()) == 0,
+            "a <template>'s own children are empty (content lives in the fragment)");
+        True(System.Convert.ToInt32(engine.RawEngine.GetValue("fragType").ToObject()) == 11,
+            "template.content is a DocumentFragment (nodeType 11)");
+        True(System.Convert.ToInt32(engine.RawEngine.GetValue("fragChildren").ToObject()) == 2,
+            "template.content holds the two parsed children");
+        True((string?)engine.RawEngine.GetValue("pText").ToObject() == "hi",
+            "querySelector inside template.content works");
+        True(!((string?)engine.RawEngine.GetValue("bodyText").ToObject() ?? "").Contains("hi"),
+            "template content must not appear in the rendered document");
+    }
+
+    [Test]
+    public static void Picture_SelectsMatchingSourceForImg()
+    {
+        var (_, _, engine) = NewPage();
+        // Picture 1: first source is skipped (non-image type), second matches → wins.
+        // Picture 2: only source never matches → falls back to the <img>'s own src.
+        engine.Execute(@"
+            document.body.innerHTML =
+                '<picture>' +
+                  '<source srcset=""bad.png"" type=""application/json"">' +
+                  '<source srcset=""large.png"" media=""(min-width: 1px)"">' +
+                  '<img src=""fallback.png"">' +
+                '</picture>' +
+                '<picture>' +
+                  '<source srcset=""none.png"" media=""(max-width: 1px)"">' +
+                  '<img src=""fb2.png"">' +
+                '</picture>';
+            var imgs = document.querySelectorAll('img');
+            var chosen = imgs[0].currentSrc;
+            var chosenSrc = imgs[0].src;
+            var fallback = imgs[1].currentSrc;");
+        Equal("large.png", (string?)engine.RawEngine.GetValue("chosen").ToObject());
+        Equal("large.png", (string?)engine.RawEngine.GetValue("chosenSrc").ToObject());
+        Equal("fb2.png", (string?)engine.RawEngine.GetValue("fallback").ToObject());
+    }
 }

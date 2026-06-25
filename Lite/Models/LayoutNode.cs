@@ -78,6 +78,11 @@ public class LayoutNode
     /// hidden (null = not hidden by details; "" = no explicit display to restore).</summary>
     public string? DetailsSavedDisplay { get; set; }
 
+    /// <summary>For a &lt;template&gt; element: the inert <c>#document-fragment</c> holding its parsed
+    /// content (exposed to JS as <c>template.content</c>). The content is NOT part of the rendered tree
+    /// — the template element itself has no rendered children.</summary>
+    public LayoutNode? TemplateContent { get; set; }
+
     /// <summary>
     /// True for nodes created via document.createElement that have not yet had the
     /// stylesheet cascade applied. <see cref="Lite.Layout.StyleResolver"/> resolves and

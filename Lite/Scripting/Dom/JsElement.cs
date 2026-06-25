@@ -393,6 +393,22 @@ public class JsElement
     /// <summary>HTMLSelectElement.options / HTMLDataListElement.options — the contained &lt;option&gt;s.</summary>
     public JsElement[] options => getElementsByTagName("option");
 
+    /// <summary>HTMLTemplateElement.content — the inert DocumentFragment holding the template's
+    /// parsed content (null on non-template elements).</summary>
+    public JsElement? content => Node.TemplateContent is { } frag ? For(_engine, frag) : null;
+
+    /// <summary>HTMLImageElement.src / HTMLSourceElement.src — reflects the <c>src</c> attribute.</summary>
+    public string src
+    {
+        get => Node.Attributes.GetValueOrDefault("src", string.Empty);
+        set => Node.Attributes["src"] = value;
+    }
+
+    /// <summary>HTMLImageElement.currentSrc — the URL actually chosen for display (after
+    /// &lt;picture&gt;/&lt;source&gt; selection), falling back to the <c>src</c> attribute.</summary>
+    public string currentSrc =>
+        Node.Attributes.TryGetValue("_currentSrc", out var c) ? c : Node.Attributes.GetValueOrDefault("src", string.Empty);
+
     public string name
     {
         get => Node.Attributes.GetValueOrDefault("name", string.Empty);

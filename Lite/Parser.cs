@@ -69,9 +69,12 @@ internal static class Parser
         q::after { content: close-quote; }
         """;
 
-    // Tags that should not appear in the layout tree
+    // Tags that should not appear in the layout tree.
+    // NOTE: TEMPLATE is intentionally NOT here — a <template> element IS in the DOM (so JS can reach
+    // it), but it renders nothing (display:none) and its parsed content lives in an inert fragment
+    // exposed as template.content (see the TEMPLATE clause in Traverse).
     private static readonly HashSet<string> SkipTags =
-        ["HEAD", "STYLE", "NOSCRIPT", "META", "LINK", "TITLE", "TEMPLATE"];
+        ["HEAD", "STYLE", "NOSCRIPT", "META", "LINK", "TITLE"];
 
     private static string? _baseUrl;
     internal static string? BaseUrl => _baseUrl;
@@ -384,6 +387,7 @@ internal static class Parser
         {
             var src = element.GetAttribute("src");
             node.Alt = element.GetAttribute("alt") ?? string.Empty;
+            if (src != null) node.Attributes["src"] = src;   // source of truth for .src / .currentSrc
 
             if (int.TryParse(element.GetAttribute("width"), out var w)) node.IntrinsicWidth = w;
             if (int.TryParse(element.GetAttribute("height"), out var h)) node.IntrinsicHeight = h;
@@ -500,6 +504,13 @@ internal static class Parser
             }
         }
 
+        if (tag == "TEMPLATE")
+        {
+            // The template's parsed content is held inert (template.content) and never rendered.
+            node.TemplateContent = BuildTemplateContent(element);
+            node.StyleOverrides["display"] = "none";
+        }
+
         // <details>/<dialog> open state (drives layout collapse + the .open DOM property)
         if (tag is "DETAILS" or "DIALOG" && element.HasAttribute("open"))
             node.Attributes["open"] = "";
@@ -609,6 +620,11 @@ internal static class Parser
                 node.AddChild(Traverse(child, indent + 1));
             }
         }
+
+        // <picture>: now that the <img> and <source> children exist, pick the source the <img>
+        // should display (media/type-based selection; falls back to the <img>'s own src).
+        if (tag == "PICTURE")
+            SelectPictureSource(element, node);
 
         // Leaving this node's subtree: pop the counter instances it introduced (scope ends).
         PopCounters(pushedCounters);
@@ -1818,6 +1834,97 @@ internal static class Parser
             foreach (var kv in savedCounters) _counters[kv.Key] = kv.Value;
         }
         return result;
+    }
+
+    /// <summary>Builds the inert <c>#document-fragment</c> for a &lt;template&gt; from its
+    /// <c>HTMLTemplateElement.content</c> (a separate AngleSharp fragment, not the element's own
+    /// child nodes). Global counter state is preserved — template content must not perturb it.</summary>
+    private static LayoutNode BuildTemplateContent(IElement templateEl)
+    {
+        var fragStyle = templateEl.ComputeCurrentStyle();
+        var frag = new LayoutNode(null, "#document-fragment", string.Empty, fragStyle);
+        if (templateEl is not AngleSharp.Html.Dom.IHtmlTemplateElement tmpl) return frag;
+
+        var savedCounters = _counters.ToDictionary(kv => kv.Key, kv => new List<int>(kv.Value));
+        try
+        {
+            foreach (var childNode in tmpl.Content.ChildNodes)
+            {
+                if (childNode is IText textNode)
+                {
+                    var text = CollapseWhitespace(textNode.Data);
+                    if (text.Length == 0) continue;
+                    var tn = new LayoutNode(null, "#text", text, fragStyle);
+                    tn.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "inline";
+                    frag.AddChild(tn);
+                }
+                else if (childNode is IElement childEl)
+                {
+                    if (childEl.TagName.Equals("script", StringComparison.OrdinalIgnoreCase)) continue;
+                    frag.AddChild(Traverse(childEl, 0));
+                }
+            }
+        }
+        finally
+        {
+            _counters.Clear();
+            foreach (var kv in savedCounters) _counters[kv.Key] = kv.Value;
+        }
+        return frag;
+    }
+
+    /// <summary>Implements the &lt;picture&gt; source-selection algorithm (simplified): the first
+    /// &lt;source&gt; whose <c>media</c> matches the viewport and whose <c>type</c> is a supported
+    /// image type (or absent) wins; its first <c>srcset</c> URL becomes the &lt;img&gt;'s resource.
+    /// If no source matches, the &lt;img&gt;'s own <c>src</c> is kept. The chosen URL is recorded as
+    /// <c>_currentSrc</c> (exposed via <c>img.currentSrc</c>). Density/width descriptors are ignored.</summary>
+    private static void SelectPictureSource(IElement pictureEl, LayoutNode pictureNode)
+    {
+        var imgNode = pictureNode.Children.FirstOrDefault(c => c.TagName == "IMG");
+        if (imgNode is null) return;
+
+        foreach (var source in pictureEl.QuerySelectorAll("source"))
+        {
+            var srcset = source.GetAttribute("srcset");
+            if (string.IsNullOrWhiteSpace(srcset)) continue;
+
+            var type = source.GetAttribute("type");
+            if (!string.IsNullOrEmpty(type) && !type.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var media = source.GetAttribute("media");
+            if (!string.IsNullOrEmpty(media) && !MediaQueryEvaluator.Matches(media, ViewportWidth, ViewportHeight))
+                continue;
+
+            var url = FirstSrcsetUrl(srcset);
+            if (string.IsNullOrEmpty(url)) continue;
+
+            // This source wins — point the <img> at it.
+            imgNode.Attributes["src"] = url;
+            imgNode.Attributes["_currentSrc"] = ResolveAgainstBase(url);
+            imgNode.Image = ResourceLoader.FetchImage(url, _baseUrl);
+            return;
+        }
+
+        // No source matched: the chosen resource is the <img>'s own src.
+        if (imgNode.Attributes.TryGetValue("src", out var imgSrc) && !string.IsNullOrEmpty(imgSrc))
+            imgNode.Attributes["_currentSrc"] = ResolveAgainstBase(imgSrc);
+    }
+
+    /// <summary>Returns the first URL in a <c>srcset</c> value (the token before any whitespace/descriptor
+    /// in the first comma-separated candidate).</summary>
+    private static string? FirstSrcsetUrl(string srcset)
+    {
+        var first = srcset.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+        return first?.Split(' ', '\t', '\n')[0];
+    }
+
+    /// <summary>Resolves a possibly-relative URL against the document base; returns it unchanged when
+    /// there is no usable base (e.g. fragments parsed before any page load).</summary>
+    private static string ResolveAgainstBase(string url)
+    {
+        if (string.IsNullOrEmpty(_baseUrl)) return url;
+        return Uri.TryCreate(new Uri(_baseUrl), url, out var abs) ? abs.AbsoluteUri : url;
     }
 
     // ---- CSS rule storage for the LayoutNode-based cascade (StyleResolver) ----
