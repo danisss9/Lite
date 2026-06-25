@@ -183,6 +183,97 @@ public static class FormTests
         Equal("5", (string?)Global(e, "n"));
     }
 
+    private static LayoutNode? FindDescendant(LayoutNode root, Func<LayoutNode, bool> pred)
+    {
+        foreach (var c in root.Children)
+        {
+            if (pred(c)) return c;
+            if (FindDescendant(c, pred) is { } found) return found;
+        }
+        return null;
+    }
+
+    [Test]
+    public static void Multipart_EncodesTextAndFileParts()
+    {
+        var form = Parser.ParseFragment(
+            "<form method=\"post\" enctype=\"multipart/form-data\">" +
+            "<input name=\"title\" value=\"Hi\">" +
+            "<input type=\"file\" name=\"doc\">" +
+            "</form>")[0];
+        var fileInput = FindDescendant(form, c => c.Attributes.GetValueOrDefault("type") == "file")!;
+        FormState.Files[fileInput.NodeKey] = [new SelectedFile("a.txt", 5, "text/plain", "hello", 0)];
+
+        var body = FormSubmitter.BuildMultipartBody(form, "BOUND");
+        Contains("Content-Disposition: form-data; name=\"title\"", body);
+        Contains("Hi", body);
+        Contains("name=\"doc\"; filename=\"a.txt\"", body);
+        Contains("Content-Type: text/plain", body);
+        Contains("hello", body);
+        Contains("--BOUND--", body);
+
+        FormState.Files.Remove(fileInput.NodeKey); // don't leak into other tests
+    }
+
+    [Test]
+    public static void BuildSubmission_GetPostUrlencodedMultipart()
+    {
+        var get = Parser.ParseFragment("<form action=\"/s\" method=\"get\"><input name=\"q\" value=\"x\"></form>")[0];
+        var s1 = FormSubmitter.BuildSubmission(get, "http://h/p");
+        Equal("GET", s1.Method);
+        Contains("q=x", s1.Url);
+        True(s1.Body is null, "GET submission carries no body");
+
+        var post = Parser.ParseFragment("<form action=\"/s\" method=\"post\"><input name=\"q\" value=\"x\"></form>")[0];
+        var s2 = FormSubmitter.BuildSubmission(post, "http://h/p");
+        Equal("POST", s2.Method);
+        Equal("q=x", s2.Body);
+        Contains("application/x-www-form-urlencoded", s2.ContentType!);
+
+        var mp = Parser.ParseFragment("<form action=\"/s\" method=\"post\" enctype=\"multipart/form-data\"><input name=\"q\" value=\"x\"></form>")[0];
+        var s3 = FormSubmitter.BuildSubmission(mp, "http://h/p");
+        Contains("multipart/form-data; boundary=", s3.ContentType!);
+        Contains("name=\"q\"", s3.Body!);
+    }
+
+    [Test]
+    public static void FileList_ReflectsSelectedFiles()
+    {
+        var e = NewEngine(out var body);
+        e.Execute("document.body.innerHTML = '<input type=\"file\" id=\"f\">';");
+        var input = FindDescendant(body, c => c.TagName == "INPUT")!;
+        FormState.Files[input.NodeKey] = [new SelectedFile("p.png", 12, "image/png", "", 0)];
+        e.Execute(@"
+            var inp = document.getElementById('f');
+            var n = inp.files.length;
+            var name = inp.files[0].name;
+            var type = inp.files[0].type;
+            var notFile = document.createElement('div').files;");
+        Equal(1, Convert.ToInt32(Global(e, "n")));
+        Equal("p.png", (string?)Global(e, "name"));
+        Equal("image/png", (string?)Global(e, "type"));
+        True(Global(e, "notFile") is null, "files is null on non-file elements");
+
+        FormState.Files.Remove(input.NodeKey);
+    }
+
+    [Test]
+    public static void RequestSubmit_FiresSubmit_PlainSubmitDoesNot()
+    {
+        var e = NewEngine(out _);
+        e.Execute(@"
+            document.body.innerHTML = '<form action=""/x""><input name=""q"" value=""1""></form>';
+            var form = document.querySelector('form');
+            globalThis.fired = 0;
+            form.addEventListener('submit', function (ev) { globalThis.fired++; ev.preventDefault(); });
+            form.requestSubmit();
+            var afterRequest = globalThis.fired;
+            form.submit();
+            var afterSubmit = globalThis.fired;");
+        Equal(1, Convert.ToInt32(Global(e, "afterRequest")));   // requestSubmit fires the event
+        Equal(1, Convert.ToInt32(Global(e, "afterSubmit")));    // submit() does NOT fire it
+    }
+
     [Test]
     public static void Progress_ValueMaxPositionReflect()
     {

@@ -22,6 +22,22 @@ public class JsEvent
             var b = o.Get("bubbles"); if (b.IsBoolean()) bubbles = b.AsBoolean();
             var c = o.Get("cancelable"); if (c.IsBoolean()) cancelable = c.AsBoolean();
             var d = o.Get("detail"); if (!d.IsUndefined() && !d.IsNull()) detail = d;
+
+            // MouseEvent / WheelEvent / PointerEvent init dictionaries (a superset is read here).
+            void Num(string k, Action<float> set) { var v = o.Get(k); if (v.IsNumber()) set((float)v.AsNumber()); }
+            void Flag(string k, Action<bool> set) { var v = o.Get(k); if (v.IsBoolean()) set(v.AsBoolean()); }
+            void Str(string k, Action<string> set) { var v = o.Get(k); if (v.IsString()) set(v.AsString()); }
+
+            Num("clientX", v => clientX = v); Num("clientY", v => clientY = v);
+            Num("button", v => button = (int)v);
+            Flag("ctrlKey", v => ctrlKey = v); Flag("shiftKey", v => shiftKey = v);
+            Flag("altKey", v => altKey = v); Flag("metaKey", v => metaKey = v);
+            Num("deltaX", v => deltaX = v); Num("deltaY", v => deltaY = v);
+            Num("deltaZ", v => deltaZ = v); Num("deltaMode", v => deltaMode = (int)v);
+            Num("pointerId", v => pointerId = (int)v);
+            Str("pointerType", v => pointerType = v);
+            Flag("isPrimary", v => isPrimary = v);
+            Num("pressure", v => pressure = v);
         }
     }
 
@@ -52,6 +68,23 @@ public class JsEvent
     public JsValue? state { get; internal set; }
     public string oldURL { get; internal set; } = string.Empty;
     public string newURL { get; internal set; } = string.Empty;
+
+    // WheelEvent properties (deltaMode: 0=pixel, 1=line, 2=page)
+    public float deltaX { get; internal set; }
+    public float deltaY { get; internal set; }
+    public float deltaZ { get; internal set; }
+    public int deltaMode { get; internal set; }
+    public int DOM_DELTA_PIXEL { get; } = 0;
+    public int DOM_DELTA_LINE { get; } = 1;
+    public int DOM_DELTA_PAGE { get; } = 2;
+
+    // PointerEvent properties
+    public int pointerId { get; internal set; }
+    public string pointerType { get; internal set; } = "mouse";
+    public bool isPrimary { get; internal set; } = true;
+    public float pressure { get; internal set; }
+    public float width { get; internal set; } = 1;
+    public float height { get; internal set; } = 1;
 
     // Keyboard event properties
     public string key { get; internal set; } = string.Empty;

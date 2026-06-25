@@ -66,8 +66,16 @@ internal class JsEngine
             catch (Exception ex) { Console.WriteLine($"[JS task] {ex.Message}"); }
             ran = true;
         }
+        // Deliver any queued observer notifications even when no macrotask ran this turn (e.g. a
+        // synchronous DOM mutation followed by an explicit drain).
+        Dom.MutationObserverRegistry.DeliverAll();
+        Dom.ResizeObserverRegistry.DeliverAll();
+        Dom.IntersectionObserverRegistry.DeliverAll();
         return ran;
     }
+
+    /// <summary>The current viewport (layout) size in CSS pixels.</summary>
+    internal (int W, int H) ViewportSize => (_jsWindow.innerWidth, _jsWindow.innerHeight);
 
     /// <summary>Runs any pending Promise continuations (microtask checkpoint). Call after
     /// invoking DOM event handlers so their .then() callbacks run promptly.</summary>
@@ -261,11 +269,19 @@ internal class JsEngine
         Dom.MutationObserverRegistry.Reset();
         _engine.SetValue("MutationObserver", typeof(Dom.JsMutationObserver));
 
+        // ResizeObserver / IntersectionObserver constructors; reset their registries too.
+        Dom.ResizeObserverRegistry.Reset();
+        Dom.IntersectionObserverRegistry.Reset();
+        _engine.SetValue("ResizeObserver", typeof(Dom.JsResizeObserver));
+        _engine.SetValue("IntersectionObserver", typeof(Dom.JsIntersectionObserver));
+
         // Event / CustomEvent constructors (JsEvent is a superset of both)
         _engine.SetValue("Event", typeof(JsEvent));
         _engine.SetValue("CustomEvent", typeof(JsEvent));
         _engine.SetValue("MouseEvent", typeof(JsEvent));
         _engine.SetValue("KeyboardEvent", typeof(JsEvent));
+        _engine.SetValue("WheelEvent", typeof(JsEvent));
+        _engine.SetValue("PointerEvent", typeof(JsEvent));
 
         // NodeFilter constants
         _engine.SetValue("NodeFilter", new

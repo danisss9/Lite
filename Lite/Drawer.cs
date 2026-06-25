@@ -702,6 +702,9 @@ internal static class Drawer
             case "range":
                 PaintRange(canvas, node, rect);
                 return;
+            case "file":
+                PaintFileInput(canvas, node, rect);
+                return;
         }
 
         // Text-like inputs: text, password, number, email, etc.
@@ -864,6 +867,31 @@ internal static class Drawer
         canvas.DrawCircle(thumbX, trackY, 7, thumbBorder);
 
         _hitRegions.Add(new HitRegion(rect, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.Range));
+    }
+
+    /// <summary>&lt;input type=file&gt;: a "Choose File" button plus the chosen filename(s) summary.</summary>
+    private static void PaintFileInput(SKCanvas canvas, LayoutNode node, SKRect rect)
+    {
+        var btnW = 90f;
+        var btnRect = new SKRect(rect.Left, rect.Top, rect.Left + Math.Min(btnW, rect.Width), rect.Bottom);
+
+        using var btnBg = new SKPaint { Color = new SKColor(0xE1, 0xE1, 0xE1), IsAntialias = true };
+        canvas.DrawRect(btnRect, btnBg);
+        using var btnBorder = new SKPaint { Color = new SKColor(0x9A, 0x9A, 0x9A), Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
+        canvas.DrawRect(btnRect, btnBorder);
+
+        using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
+        using var font = new SKFont { Size = 12 };
+        canvas.DrawText("Choose File", btnRect.Left + 6, btnRect.MidY + 4, SKTextAlign.Left, font, textPaint);
+
+        var files = FormState.GetFiles(node.NodeKey);
+        var label = files.Count == 0 ? "No file chosen"
+            : files.Count == 1 ? files[0].Name
+            : $"{files.Count} files";
+        using var labelPaint = new SKPaint { Color = new SKColor(0x40, 0x40, 0x40), IsAntialias = true };
+        canvas.DrawText(label, btnRect.Right + 8, rect.MidY + 4, SKTextAlign.Left, font, labelPaint);
+
+        _hitRegions.Add(new HitRegion(btnRect, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.FileOpen));
     }
 
     private static float ParseAttrFloat(LayoutNode node, string name, float fallback)

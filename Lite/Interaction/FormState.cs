@@ -1,10 +1,21 @@
 namespace Lite.Interaction;
 
+/// <summary>A file chosen for an &lt;input type=file&gt;. <see cref="TextContent"/> is the file's
+/// content decoded as text (best-effort; binary content is not modeled).</summary>
+internal sealed record SelectedFile(string Name, long Size, string Type, string TextContent, double LastModified);
+
 internal static class FormState
 {
     public static Dictionary<Guid, string> TextInputValues { get; } = [];
     public static HashSet<Guid> CheckedBoxes { get; } = [];
     public static Guid? FocusedInput { get; set; }
+
+    /// <summary>Files selected for each &lt;input type=file&gt; (by NodeKey).</summary>
+    public static Dictionary<Guid, List<SelectedFile>> Files { get; } = [];
+
+    /// <summary>The files chosen for a file input (empty list if none).</summary>
+    public static IReadOnlyList<SelectedFile> GetFiles(Guid key) =>
+        Files.TryGetValue(key, out var f) ? f : (IReadOnlyList<SelectedFile>)Array.Empty<SelectedFile>();
 
     /// <summary>Maps radio NodeKey → group name for radio button group logic.</summary>
     public static Dictionary<Guid, string> RadioGroups { get; } = [];

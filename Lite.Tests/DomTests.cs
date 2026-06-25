@@ -242,4 +242,108 @@ public static class DomTests
         Equal("large.png", (string?)engine.RawEngine.GetValue("chosenSrc").ToObject());
         Equal("fb2.png", (string?)engine.RawEngine.GetValue("fallback").ToObject());
     }
+
+    private static object? Val(JsEngine e, string name) => e.RawEngine.GetValue(name).ToObject();
+
+    [Test]
+    public static void ResizeObserver_FiresInitialAndOnResize()
+    {
+        var (root, body, engine) = NewPage();
+        body.StyleOverrides["display"] = "block";
+        engine.Execute(@"
+            var d = document.createElement('div');
+            d.style.display = 'block'; d.style.width = '120px'; d.style.height = '30px';
+            document.body.appendChild(d);
+            globalThis.count = 0; globalThis.first = 0; globalThis.last = 0;
+            var ro = new ResizeObserver(function (entries) {
+                globalThis.count++;
+                globalThis.last = entries[0].contentRect.width;
+                if (globalThis.count === 1) globalThis.first = entries[0].contentRect.width;
+            });
+            ro.observe(d);
+            globalThis.__d = d;");
+        engine.DrainTasks();                               // initial observation
+        engine.Execute("__d.style.width = '200px';");
+        engine.DrainTasks();                               // size changed → re-deliver
+        Equal(2, System.Convert.ToInt32(Val(engine, "count")));
+        True(System.Math.Abs(System.Convert.ToDouble(Val(engine, "first")) - 120) < 1, "initial contentRect.width 120");
+        True(System.Math.Abs(System.Convert.ToDouble(Val(engine, "last")) - 200) < 1, "resized contentRect.width 200");
+    }
+
+    [Test]
+    public static void IntersectionObserver_ReportsViewportIntersection()
+    {
+        var (root, body, engine) = NewPage();
+        body.StyleOverrides["display"] = "block";
+        engine.Execute(@"
+            var d = document.createElement('div');
+            d.style.display = 'block'; d.style.width = '50px'; d.style.height = '50px';
+            document.body.appendChild(d);
+            globalThis.hits = 0; globalThis.intersecting = null; globalThis.ratio = -1;
+            var io = new IntersectionObserver(function (entries) {
+                globalThis.hits++;
+                globalThis.intersecting = entries[0].isIntersecting;
+                globalThis.ratio = entries[0].intersectionRatio;
+            });
+            io.observe(d);");
+        engine.DrainTasks();
+        True(System.Convert.ToInt32(Val(engine, "hits")) >= 1, "intersection callback should fire once");
+        True(Val(engine, "intersecting") is true, "a 50x50 box at the top-left is intersecting the viewport");
+        True(System.Math.Abs(System.Convert.ToDouble(Val(engine, "ratio")) - 1.0) < 0.01, "fully visible → ratio 1");
+    }
+
+    [Test]
+    public static void WheelAndPointerEvents_ConstructWithProperties()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute(@"
+            var w = new WheelEvent('wheel', { deltaY: 120, deltaX: 5 });
+            var wType = w.type, wY = w.deltaY, wX = w.deltaX;
+            var p = new PointerEvent('pointerdown', { pointerId: 7, pointerType: 'pen', isPrimary: true, clientX: 3 });
+            var pType = p.type, pid = p.pointerId, pkind = p.pointerType, px = p.clientX;");
+        Equal("wheel", (string?)Val(engine, "wType"));
+        True(System.Math.Abs(System.Convert.ToDouble(Val(engine, "wY")) - 120) < 0.01, "deltaY round-trips");
+        True(System.Math.Abs(System.Convert.ToDouble(Val(engine, "wX")) - 5) < 0.01, "deltaX round-trips");
+        Equal("pointerdown", (string?)Val(engine, "pType"));
+        Equal(7, System.Convert.ToInt32(Val(engine, "pid")));
+        Equal("pen", (string?)Val(engine, "pkind"));
+    }
+
+    [Test]
+    public static void Attr_ValueMutationIsObservableAndRecascades()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute(@"
+            document.body.innerHTML = '<p id=""t"" class=""old"">hi</p>';
+            var p = document.getElementById('t');
+            var records = 0;
+            var mo = new MutationObserver(function (recs) { records += recs.length; });
+            mo.observe(p, { attributes: true });
+            var attr = p.getAttributeNode('class');
+            attr.value = 'fresh';
+            var classNow = p.className;
+            var attrNow = p.getAttribute('class');");
+        engine.DrainTasks(); // mutation records delivered at the checkpoint
+        Equal("fresh", (string?)Val(engine, "classNow"));
+        Equal("fresh", (string?)Val(engine, "attrNow"));
+        True(System.Convert.ToInt32(Val(engine, "records")) >= 1, "mutating Attr.value queues a MutationRecord");
+    }
+
+    [Test]
+    public static void CreateAttribute_SetAttributeNode_RoundTrips()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute(@"
+            var el = document.createElement('div');
+            var a = document.createAttribute('data-x');
+            a.value = '42';
+            var detachedOwner = a.ownerElement;     // null while detached
+            el.setAttributeNode(a);
+            var got = el.getAttribute('data-x');
+            el.attributes.removeNamedItem('data-x');
+            var afterRemove = el.getAttribute('data-x');");
+        Equal("42", (string?)Val(engine, "got"));
+        True(Val(engine, "detachedOwner") is null, "a detached Attr has no ownerElement");
+        True(Val(engine, "afterRemove") is null, "removeNamedItem deletes the attribute");
+    }
 }

@@ -443,11 +443,33 @@ public class JsElement
         else Node.Attributes["_customValidity"] = message;
     }
 
-    /// <summary>Submits the form (HTMLFormElement.submit). No-op on non-form elements.</summary>
+    /// <summary>HTMLInputElement.files — the chosen files for an &lt;input type=file&gt;
+    /// (null on any other element, per the spec).</summary>
+    public JsFileList? files =>
+        Node.TagName == "INPUT" && Node.Attributes.GetValueOrDefault("type", "text").ToLowerInvariant() == "file"
+            ? new JsFileList(FormState.GetFiles(Node.NodeKey))
+            : null;
+
+    /// <summary>HTMLFormElement.submit() — submits WITHOUT firing a submit event (per spec).
+    /// No-op on non-form elements.</summary>
     public void submit()
     {
         if (Node.TagName != "FORM") return;
-        JsEngine.Instance?.RequestNavigation(FormSubmitter.BuildActionUrl(Node, Parser.BaseUrl));
+        var sub = FormSubmitter.BuildSubmission(Node, Parser.BaseUrl);
+        JsEngine.Instance?.RequestNavigation(sub.Url);
+    }
+
+    /// <summary>HTMLFormElement.requestSubmit() — fires a cancelable submit event first, then
+    /// submits only if it wasn't prevented.</summary>
+    public void requestSubmit(JsElement? submitter = null)
+    {
+        if (Node.TagName != "FORM" || JsEngine.Instance is not { } engine) return;
+        var evt = new JsEvent();
+        evt.initEvent("submit", true, true);
+        evt.target = For(_engine, Node);
+        EventDispatcher.DispatchEvent(Node, evt, engine);
+        if (evt.DefaultPrevented) return;
+        engine.RequestNavigation(FormSubmitter.BuildSubmission(Node, Parser.BaseUrl).Url);
     }
 
     /// <summary>Resets the form's controls to their defaults (HTMLFormElement.reset).</summary>
@@ -480,14 +502,41 @@ public class JsElement
     {
         var old = Node.Attributes.TryGetValue(name, out var o) ? o : null;
         Node.Attributes[name] = val;
-        MutationObserverRegistry.NotifyAttribute(_engine, Node, name, old);
+        OnAttributeChanged(Node, name, old);
     }
 
     public void removeAttribute(string name)
     {
         var old = Node.Attributes.TryGetValue(name, out var o) ? o : null;
         Node.Attributes.Remove(name);
-        MutationObserverRegistry.NotifyAttribute(_engine, Node, name, old);
+        OnAttributeChanged(Node, name, old);
+    }
+
+    /// <summary>Shared attribute-change side effects: re-cascade for selector-affecting attributes
+    /// (class/id) and queue a MutationRecord. Used by setAttribute/removeAttribute and Attr.value.</summary>
+    internal static void OnAttributeChanged(LayoutNode node, string name, string? oldValue)
+    {
+        if (name is "class" or "id") StyleResolver.Apply(node);
+        if (JsEngine.Instance is { } eng)
+            MutationObserverRegistry.NotifyAttribute(eng.RawEngine, node, name, oldValue);
+    }
+
+    /// <summary>Element.setAttributeNode(attr) — sets the named attribute from the Attr's value.</summary>
+    public JsAttr? setAttributeNode(JsAttr attr)
+    {
+        var old = Node.Attributes.TryGetValue(attr.name, out var o) ? o : null;
+        Node.Attributes[attr.name] = attr.value;
+        OnAttributeChanged(Node, attr.name, old);
+        return old is null ? null : new JsAttr(Node, attr.name);
+    }
+
+    /// <summary>Element.removeAttributeNode(attr) — removes the attribute the Attr refers to.</summary>
+    public JsAttr? removeAttributeNode(JsAttr attr)
+    {
+        var old = Node.Attributes.TryGetValue(attr.name, out var o) ? o : null;
+        Node.Attributes.Remove(attr.name);
+        OnAttributeChanged(Node, attr.name, old);
+        return attr;
     }
 
     public bool hasAttribute(string name) => Node.Attributes.ContainsKey(name);

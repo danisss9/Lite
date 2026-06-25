@@ -100,6 +100,9 @@ public class JsDocument
         return JsElement.For(_engine, node);
     }
 
+    /// <summary>document.createAttribute(name) — a detached Attr to attach via setAttributeNode.</summary>
+    public JsAttr createAttribute(string name) => new(name);
+
     public JsEvent createEvent(string type)
     {
         return new JsEvent();

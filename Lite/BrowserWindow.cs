@@ -359,13 +359,15 @@ public class BrowserWindow
                         ? FindScrollableAncestor(_rootNode, wheelPt.X, contentPtY)
                         : null;
 
-                    if (scrollTarget?.ScrollState != null)
+                    // Dispatch a cancelable wheel event; preventDefault() suppresses the scroll.
+                    var wheelPrevented = DispatchWheelEvent(scrollTarget ?? _rootNode, wheelPt.X, wheelPt.Y, contentPtY, -delta / 120f * 60f);
+
+                    if (!wheelPrevented)
                     {
-                        scrollTarget.ScrollState.ScrollBy(scrollAmount);
-                    }
-                    else
-                    {
-                        _viewport.ScrollBy(scrollAmount);
+                        if (scrollTarget?.ScrollState != null)
+                            scrollTarget.ScrollState.ScrollBy(scrollAmount);
+                        else
+                            _viewport.ScrollBy(scrollAmount);
                     }
 
                     if (_rootNode != null)
@@ -684,6 +686,13 @@ public class BrowserWindow
                             var btn = FindNodeByKey(_rootNode, region.NodeKey);
                             if (btn != null && IsSubmitControl(btn) && FindAncestorForm(btn) is { } submitForm)
                                 SubmitForm(submitForm, hWnd);
+                            handled = true;
+                            break;
+                        }
+
+                        if (region.InputAction == InputAction.FileOpen)
+                        {
+                            OpenFilePicker(region.NodeKey, hWnd);
                             handled = true;
                             break;
                         }
@@ -1058,12 +1067,60 @@ public class BrowserWindow
 
         var evt = new Scripting.Dom.JsEvent();
         evt.initEvent("submit", true, true);
-        evt.target = new Scripting.Dom.JsElement(engine.RawEngine, form);
+        evt.target = Scripting.Dom.JsElement.For(engine.RawEngine, form);
         EventDispatcher.DispatchEvent(form, evt, engine);
 
         if (!evt.defaultPrevented)
-            Navigate(Interaction.FormSubmitter.BuildActionUrl(form, Parser.BaseUrl), hWnd);
+            Navigate(Interaction.FormSubmitter.BuildSubmission(form, Parser.BaseUrl).Url, hWnd);
     }
+
+    /// <summary>Shows the native Open dialog for an &lt;input type=file&gt;, records the chosen files
+    /// in <see cref="FormState"/>, and fires an "input"/"change" event.</summary>
+    private void OpenFilePicker(Guid nodeKey, IntPtr hWnd)
+    {
+        if (_rootNode == null) return;
+        var node = FindNodeByKey(_rootNode, nodeKey);
+        if (node == null) return;
+
+        var multiple = node.Attributes.ContainsKey("multiple");
+        var accept = node.Attributes.GetValueOrDefault("accept", "");
+        var paths = Utils.Comdlg32.ShowOpenDialog(hWnd, accept, multiple);
+        if (paths.Length == 0) return;
+
+        var selected = new List<Interaction.SelectedFile>();
+        foreach (var path in paths)
+        {
+            try
+            {
+                var info = new FileInfo(path);
+                var text = info.Length <= 5_000_000 ? File.ReadAllText(path) : "";  // text-only model
+                var modified = new DateTimeOffset(info.LastWriteTimeUtc).ToUnixTimeMilliseconds();
+                selected.Add(new Interaction.SelectedFile(info.Name, info.Length, GuessMimeType(path), text, modified));
+            }
+            catch { /* skip unreadable files */ }
+        }
+        FormState.Files[nodeKey] = selected;
+
+        // Notify listeners that the control's value changed.
+        EventDispatcher.Dispatch(nodeKey, "input", _rootNode);
+        EventDispatcher.Dispatch(nodeKey, "change", _rootNode);
+    }
+
+    private static string GuessMimeType(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+    {
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".gif" => "image/gif",
+        ".webp" => "image/webp",
+        ".svg" => "image/svg+xml",
+        ".txt" => "text/plain",
+        ".html" or ".htm" => "text/html",
+        ".css" => "text/css",
+        ".js" => "text/javascript",
+        ".json" => "application/json",
+        ".pdf" => "application/pdf",
+        _ => "application/octet-stream",
+    };
 
     /// <summary>True when two URLs are identical except for the #fragment.</summary>
     private static bool DiffersOnlyByFragment(string a, string b)
@@ -1101,6 +1158,39 @@ public class BrowserWindow
 
     private void DispatchMouseEvent(string eventType, LayoutNode node, int x, int y, float contentY, JsEngine engine)
     {
+        // Pointer event fires before its compatibility mouse event (mousedown→pointerdown, etc.).
+        if (PointerTypeFor(eventType) is { } pointerType)
+            DispatchPointerOrMouse(pointerType, node, x, y, contentY, engine, isPointer: true);
+        DispatchPointerOrMouse(eventType, node, x, y, contentY, engine, isPointer: false);
+    }
+
+    /// <summary>Dispatches a cancelable "wheel" event to the node under the cursor. Returns true if
+    /// a listener called preventDefault() (so the host should not scroll).</summary>
+    private bool DispatchWheelEvent(LayoutNode? node, int x, int y, float contentY, float deltaY)
+    {
+        if (node is null || JsEngine.Instance is not { } engine) return false;
+        var evt = new Scripting.Dom.JsEvent();
+        evt.initEvent("wheel", true, true);
+        evt.clientX = x;
+        evt.clientY = y;
+        evt.pageX = x;
+        evt.pageY = (int)contentY;
+        evt.deltaY = deltaY;
+        evt.target = Scripting.Dom.JsElement.For(engine.RawEngine, node);
+        EventDispatcher.DispatchEvent(node, evt, engine);
+        return evt.defaultPrevented;
+    }
+
+    private static string? PointerTypeFor(string mouseType) => mouseType switch
+    {
+        "mousedown" => "pointerdown",
+        "mouseup" => "pointerup",
+        "mousemove" => "pointermove",
+        _ => null,
+    };
+
+    private void DispatchPointerOrMouse(string eventType, LayoutNode node, int x, int y, float contentY, JsEngine engine, bool isPointer)
+    {
         var evt = new Scripting.Dom.JsEvent();
         evt.initEvent(eventType, true, true);
         evt.clientX = x;
@@ -1108,7 +1198,8 @@ public class BrowserWindow
         evt.pageX = x;
         evt.pageY = (int)contentY;
         evt.button = 0;
-        evt.target = new Scripting.Dom.JsElement(engine.RawEngine, node);
+        if (isPointer) { evt.pointerId = 1; evt.pointerType = "mouse"; evt.isPrimary = true; }
+        evt.target = Scripting.Dom.JsElement.For(engine.RawEngine, node);
         EventDispatcher.DispatchEvent(node, evt, engine);
     }
 
