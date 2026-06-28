@@ -150,7 +150,8 @@ BrowserWindow          Native window + message loop; in-page navigation (backgro
 | `h1`–`h6`                                                                               | Headings with computed font size and weight                                                                          |
 | `p`                                                                                     | Paragraph with block layout                                                                                          |
 | `a`                                                                                     | Link — same-origin links navigate in-page (with a loading animation); cross-origin links open in the system browser  |
-| `img`                                                                                   | Image loaded via HTTP; falls back to a placeholder with alt text                                                     |
+| `img`                                                                                   | Image loaded via HTTP or `data:` URI (incl. percent-encoded base64); straight-alpha compositing; placeholder + alt   |
+| `object`                                                                                | Renders its `data` resource as a replaced image; falls back to child content (incl. nested `<object>`) on failure    |
 | `input` (text)                                                                          | Focusable text field with keyboard input and backspace                                                               |
 | `input` (password)                                                                      | Masked text field with bullet characters                                                                             |
 | `input` (number)                                                                        | Numeric input with up/down stepper arrows; `min`, `max`, `step`                                                      |
@@ -202,6 +203,7 @@ BrowserWindow          Native window + message loop; in-page navigation (backgro
 | `background-repeat`                                  | `repeat`, `repeat-x`, `repeat-y`, `no-repeat`                                                                           |
 | `background-position`                                | Keywords, `px`, `%`                                                                                                     |
 | `background-size`                                    | `cover`, `contain`, `auto`, `px`, `%`                                                                                   |
+| `background-attachment`                              | `scroll`, `fixed` (fixed backgrounds pin to the viewport)                                                              |
 | `color`                                              | Any CSS color                                                                                                           |
 | `opacity`                                            | `0`–`1`                                                                                                                 |
 | `font-size`                                          | `px`, `em`, keyword sizes                                                                                               |

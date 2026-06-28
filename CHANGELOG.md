@@ -2,7 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.9] - 2026-06-25 (current)
+## [0.0.10] - 2026-06-28 (current)
+
+### Added
+
+- **Acid2 (partial) + gate** — the Acid2 test and its `position:fixed` scroll variant render deterministically and are gated against approved baselines (`baselines/acid2.png`, `baselines/acid2-scrolled.png`). The render is a recognizable smiley (head, eyes, scalp, chin); the mouth/nose detail awaits the deferred CSS 2.1 anonymous-box / margin-collapse work. The harness scrolls to `#top` (as following the in-page link would) so the face comes into view (`AcidRunner`, `RefTestRunner`)
+- **`<object>` nested fallback** — an `<object>` renders its `data` resource as a replaced image; when the resource can't be displayed it falls through to its child content, which may be a nested `<object>` (Acid2's eyes are a 3-deep chain) (`Parser`, `Drawer`, `BoxEngine`)
+- **`background-attachment: fixed`** — fixed backgrounds are positioned relative to the viewport and clipped to the element box, so they stay put as the element scrolls (`Drawer`, `DrawCommandExtensions`)
+- **Appendix/alternate stylesheets** — `<link>` elements whose `rel` token set contains `stylesheet` (e.g. `rel="appendix stylesheet"`) are loaded, including `data:` CSS hrefs; `alternate` stylesheets are skipped (`Parser`)
+- **min/max-width & min/max-height clamping for absolute/fixed boxes** — `ResolveAbsoluteBox` clamps the resolved width/height to the min/max box (min wins over max, CSS 2.1 §10.4/§10.7), and approximates shrink-to-fit width from the widest explicit child width instead of defaulting to half the containing block (`BoxEngine`)
+- **Tests** — new `AcidPrereqTests` covering percent-encoded `data:` images, straight-alpha PNG decode, `<object>` nested fallback, `background-attachment: fixed`, and max-width clamping
+
+### Fixed
+
+- **AngleSharp periodic-value crash** — reading certain periodic/invalid declarations (e.g. `border-color: red yellow black yellow`) threw a `NullReferenceException` deep in AngleSharp.Css; all property reads now go through `GetPropertyValueSafe`, which swallows the failure and ignores the declaration (CSS error recovery) (`DrawCommandExtensions` and all callers)
+- **Percent-encoded base64 `data:` images** — `data:image/...;base64,` payloads whose `/` and `=` are percent-encoded (`%2F`, `%3D`, as Acid2 encodes them) now decode correctly (`DataUri`, `ResourceLoader`)
+- **Alpha PNG compositing** — images decode with straight (un-premultiplied) alpha so partly-transparent PNGs composite correctly with source-over (Acid2's eyes are two offset transparent PNGs that must overlap into solid yellow) (`ResourceLoader`)
+- **Debug logging removed** — the parser's per-element and per-property `[CSS]` console spam (previously always on) is gone (`Parser`)
+
+## [0.0.9] - 2026-06-25
 
 ### Added
 
