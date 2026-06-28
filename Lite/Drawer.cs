@@ -351,6 +351,11 @@ internal static class Drawer
                 PaintIframe(canvas, node);
                 return;
 
+            case "VIDEO":
+            case "AUDIO":
+                PaintMedia(canvas, node);
+                return;
+
             case "SVG":
                 SvgRenderer.Render(canvas, node);
                 return;
@@ -698,6 +703,95 @@ internal static class Drawer
                 canvas.DrawText(node.Alt, destRect.Left + 4, destRect.Top + 14, SKTextAlign.Left, altFont, altPaint);
             }
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Media (audio / video)
+    // -------------------------------------------------------------------------
+
+    /// <summary>Paints an &lt;audio&gt;/&lt;video&gt; element: a video frame/poster (or a black box),
+    /// then a controls overlay (play/pause glyph + progress bar + time) when <c>controls</c> is set.
+    /// The progress reflects the backend's live currentTime/duration.</summary>
+    private static void PaintMedia(SKCanvas canvas, LayoutNode node)
+    {
+        var box = node.Box.ContentBox;
+        bool isVideo = node.TagName == "VIDEO";
+
+        if (isVideo)
+        {
+            // Decoded frame (real backend) → poster image → black letterbox.
+            var frame = node.Media?.CurrentFrame ?? node.Image;
+            if (frame is not null)
+                canvas.DrawBitmap(frame, box);
+            else
+            {
+                using var bg = new SKPaint { Color = new SKColor(20, 20, 20) };
+                canvas.DrawRect(box, bg);
+            }
+        }
+
+        if (!node.Attributes.ContainsKey("controls")) return;
+
+        // ---- controls bar ----
+        float barH = Math.Min(40f, box.Height);
+        var bar = new SKRect(box.Left, box.Bottom - barH, box.Right, box.Bottom);
+        using (var barPaint = new SKPaint { Color = new SKColor(0, 0, 0, isVideo ? (byte)150 : (byte)235) })
+            canvas.DrawRect(bar, barPaint);
+
+        var cur = node.Media?.CurrentTime ?? 0;
+        var dur = node.Media?.Duration ?? 0;
+        bool paused = node.Media?.Paused ?? true;
+
+        // Play/pause glyph at the left.
+        float pad = 10f, glyph = 14f;
+        float gx = bar.Left + pad, gy = bar.MidY;
+        using (var fg = new SKPaint { Color = SKColors.White, IsAntialias = true })
+        {
+            if (paused)
+            {
+                using var path = new SKPath();
+                path.MoveTo(gx, gy - glyph / 2);
+                path.LineTo(gx, gy + glyph / 2);
+                path.LineTo(gx + glyph * 0.85f, gy);
+                path.Close();
+                canvas.DrawPath(path, fg);
+            }
+            else
+            {
+                canvas.DrawRect(gx, gy - glyph / 2, glyph * 0.32f, glyph, fg);
+                canvas.DrawRect(gx + glyph * 0.55f, gy - glyph / 2, glyph * 0.32f, glyph, fg);
+            }
+        }
+
+        // Time label at the right.
+        using var timeFont = new SKFont { Size = 11 };
+        using var timePaint = new SKPaint { Color = SKColors.White, IsAntialias = true };
+        var label = $"{FormatTime(cur)} / {FormatTime(dur)}";
+        float labelW = timeFont.MeasureText(label);
+        canvas.DrawText(label, bar.Right - pad - labelW, bar.MidY + 4, SKTextAlign.Left, timeFont, timePaint);
+
+        // Progress track + fill between the glyph and the time label.
+        float trackLeft = gx + glyph + pad;
+        float trackRight = bar.Right - pad - labelW - pad;
+        if (trackRight > trackLeft)
+        {
+            float ty = bar.MidY, th = 4f;
+            using var track = new SKPaint { Color = new SKColor(255, 255, 255, 70), IsAntialias = true };
+            canvas.DrawRoundRect(trackLeft, ty - th / 2, trackRight - trackLeft, th, 2, 2, track);
+            float ratio = dur > 0 ? (float)Math.Clamp(cur / dur, 0, 1) : 0f;
+            using var fill = new SKPaint { Color = new SKColor(0, 150, 255), IsAntialias = true };
+            canvas.DrawRoundRect(trackLeft, ty - th / 2, (trackRight - trackLeft) * ratio, th, 2, 2, fill);
+        }
+
+        // Hit region toggles play/pause (the whole bar) so the controls work in the live window.
+        _hitRegions.Add(new HitRegion(bar, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.MediaToggle));
+    }
+
+    private static string FormatTime(double seconds)
+    {
+        if (double.IsNaN(seconds) || seconds < 0) seconds = 0;
+        int total = (int)Math.Floor(seconds);
+        return $"{total / 60}:{total % 60:00}";
     }
 
     // -------------------------------------------------------------------------

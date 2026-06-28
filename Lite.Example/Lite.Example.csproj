@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Lite\Lite.csproj" />
+    <ProjectReference Include="..\Lite.Media\Lite.Media.csproj" />
   </ItemGroup>
 
 </Project>

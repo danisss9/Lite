@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio &amp; Video — Lite Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="back-btn">&larr; Back to index</a>
+    <h1>Audio &amp; Video</h1>
+    <p class="subtitle">The HTMLMediaElement API, controls, and media events</p>
+  </header>
+
+  <main>
+
+    <section class="card">
+      <h2>&lt;video&gt; with controls</h2>
+      <p>The video element shows its poster and a controls bar (play/pause + progress). Drive it from
+        JavaScript below, or click the bar to toggle play/pause.</p>
+      <video id="vid" width="420" height="236" data-duration="20"
+             poster="https://via.placeholder.com/420x236/10243e/9fd3ff?text=Lite+Video" controls>
+        <source src="movie.webm" type="video/webm">
+        <source src="movie.mp4" type="video/mp4">
+      </video>
+
+      <div class="mt-sm">
+        <button id="play">Play</button>
+        <button id="pause">Pause</button>
+        <button id="restart">Restart</button>
+      </div>
+      <div id="status" class="demo-log">Ready.</div>
+    </section>
+
+    <section class="card">
+      <h2>&lt;audio&gt; controls strip</h2>
+      <p>An audio element renders a compact controls strip when <code>controls</code> is present.</p>
+      <audio id="snd" controls data-duration="12" src="song.mp3"></audio>
+    </section>
+
+    <section class="card">
+      <h2>canPlayType</h2>
+      <div id="cpt" class="demo-log"></div>
+    </section>
+
+    <script>
+      var vid = document.getElementById('vid');
+      var status = document.getElementById('status');
+
+      function show() {
+        status.textContent =
+          'currentTime ' + vid.currentTime.toFixed(1) + ' / ' + vid.duration.toFixed(1) +
+          '  ·  paused=' + vid.paused + '  ·  ended=' + vid.ended +
+          '  ·  readyState=' + vid.readyState + '  ·  currentSrc=' + vid.currentSrc;
+      }
+      ['loadedmetadata', 'play', 'playing', 'timeupdate', 'pause', 'ended'].forEach(function (t) {
+        vid.addEventListener(t, show);
+      });
+
+      document.getElementById('play').addEventListener('click', function () { vid.play(); });
+      document.getElementById('pause').addEventListener('click', function () { vid.pause(); });
+      document.getElementById('restart').addEventListener('click', function () {
+        vid.currentTime = 0; vid.play();
+      });
+
+      var cpt = document.getElementById('cpt');
+      cpt.textContent =
+        "canPlayType('video/mp4') → '" + vid.canPlayType('video/mp4') + "'   " +
+        "canPlayType('video/mp4; codecs=\"avc1\"') → '" + vid.canPlayType('video/mp4; codecs="avc1"') + "'   " +
+        "canPlayType('application/x-bogus') → '" + vid.canPlayType('application/x-bogus') + "'";
+
+      show();
+    </script>
+
+  </main>
+
+  <footer>
+    <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
+  </footer>
+
+</body>
+</html>

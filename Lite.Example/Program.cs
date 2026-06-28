@@ -1,6 +1,10 @@
 using Lite.Example;
 using Lite;
 
+// Use the real LibVLC media backend for <audio>/<video> (falls back to the simulated timeline
+// if the native libraries aren't available).
+Lite.Media.Vlc.VlcMedia.Register();
+
 var resourcesPath = Path.GetFullPath("resources");
 StaticFileServer.Start(resourcesPath);
 

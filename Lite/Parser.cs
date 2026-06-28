@@ -217,6 +217,9 @@ internal static class Parser
         // so they can immediately use iframe.contentWindow.
         WireChildFrames(root, jsEngine);
 
+        // Start playback for any autoplaying <audio>/<video> (creates the backend + fires events).
+        StartAutoplayMedia(root, jsEngine);
+
         // 1) In-position classic scripts (inline + external without defer/async), in document order.
         //    document.write() during these appends to the body (see JsDocument.write).
         foreach (var script in _pendingScripts)
@@ -257,6 +260,32 @@ internal static class Parser
             ViewportWidth = viewportWidth,
             ViewportHeight = viewportHeight,
         };
+    }
+
+    /// <summary>Optimistically reports whether a media MIME type can be played. The simulated
+    /// backend has no real decoder, so we accept the common container types (browsers return
+    /// "maybe"/"probably" similarly). Used for &lt;source&gt; selection and canPlayType.</summary>
+    internal static bool IsPlayableMediaType(string? type)
+    {
+        if (string.IsNullOrWhiteSpace(type)) return true;   // no hint → try it
+        var t = type.ToLowerInvariant();
+        return t.Contains("mp4") || t.Contains("mpeg") || t.Contains("mp3") || t.Contains("ogg")
+            || t.Contains("webm") || t.Contains("wav") || t.Contains("aac") || t.Contains("m4a")
+            || t.Contains("avc1") || t.Contains("mp4a") || t.StartsWith("audio/") || t.StartsWith("video/");
+    }
+
+    /// <summary>Starts playback for autoplaying media elements once the engine exists.</summary>
+    private static void StartAutoplayMedia(LayoutNode root, JsEngine engine)
+    {
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            if (node.TagName is "AUDIO" or "VIDEO" && node.Attributes.ContainsKey("autoplay"))
+                Scripting.Dom.JsElement.For(engine.RawEngine, node).play();
+            foreach (var c in node.Children) stack.Push(c);
+        }
     }
 
     /// <summary>Wires every nested &lt;iframe&gt; with a child Page into the parent browsing context:
@@ -784,15 +813,62 @@ internal static class Parser
             catch (Exception ex) { Console.WriteLine($"[iframe load] {ex.Message}"); }
         }
 
+        // <audio> / <video> — replaced media elements. Capture reflected attributes, pick the
+        // playable source (explicit src, else the first <source> with a supported type), and give
+        // VIDEO a box (poster or 300×150). The backend/timeline is created lazily by JsElement.
+        if (tag is "AUDIO" or "VIDEO")
+        {
+            foreach (var attr in new[] { "src", "controls", "autoplay", "loop", "muted",
+                         "preload", "poster", "width", "height", "crossorigin", "data-duration" })
+            {
+                var v = element.GetAttribute(attr);
+                if (v != null) node.Attributes[attr] = v;
+            }
+
+            var currentSrc = element.GetAttribute("src");
+            if (string.IsNullOrEmpty(currentSrc))
+            {
+                foreach (var s in element.QuerySelectorAll("source"))
+                {
+                    var ss = s.GetAttribute("src");
+                    if (string.IsNullOrEmpty(ss)) continue;
+                    if (IsPlayableMediaType(s.GetAttribute("type"))) { currentSrc = ss; break; }
+                }
+            }
+            if (!string.IsNullOrEmpty(currentSrc)) node.Attributes["_currentSrc"] = currentSrc;
+
+            if (tag == "VIDEO")
+            {
+                var w = element.GetAttribute("width");
+                var h = element.GetAttribute("height");
+                node.StyleOverrides["display"] = "inline-block";
+                node.StyleOverrides["width"] = string.IsNullOrEmpty(w) ? "300px" : (w.EndsWith("px") ? w : w + "px");
+                node.StyleOverrides["height"] = string.IsNullOrEmpty(h) ? "150px" : (h.EndsWith("px") ? h : h + "px");
+                var poster = element.GetAttribute("poster");
+                if (!string.IsNullOrEmpty(poster)) node.Image = ResourceLoader.FetchImage(poster, _baseUrl);
+            }
+            else // AUDIO renders a controls strip only when `controls` is present; otherwise no box.
+            {
+                if (element.HasAttribute("controls"))
+                {
+                    node.StyleOverrides["display"] = "inline-block";
+                    node.StyleOverrides["width"] = "300px";
+                    node.StyleOverrides["height"] = "54px";
+                }
+                else node.StyleOverrides["display"] = "none";
+            }
+        }
+
         // Apply CSS counters (counter-reset/counter-increment) in document order BEFORE traversing
         // children, and snapshot the resulting state onto the node (for counter()/counters() and the
         // ::before/::after generated content). The pushed instances are popped after the subtree.
         ApplyCounters(node, out var pushedCounters);
 
-        if (objectShowsImage || tag == "IFRAME")
+        if (objectShowsImage || tag is "IFRAME" or "AUDIO" or "VIDEO")
         {
-            // Replaced elements: a loaded <object> shows its image (fallback children dropped);
-            // an <iframe> hosts its child Page (its element children are inert fallback content).
+            // Replaced elements with no rendered children: a loaded <object> shows its image; an
+            // <iframe> hosts a child Page; <audio>/<video> render their own controls/frame (their
+            // <source>/<track> children and fallback text are inert).
         }
         else if (hasMixedChildren)
         {

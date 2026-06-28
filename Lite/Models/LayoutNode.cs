@@ -30,6 +30,9 @@ public class LayoutNode
     /// <summary>For an &lt;iframe&gt;: the nested browsing context (child Page) it hosts. The
     /// iframe is laid out as a replaced box and the child Page is painted clipped into it.</summary>
     internal Page? ChildPage { get; set; }
+    /// <summary>For an &lt;audio&gt;/&lt;video&gt;: the media backend driving its timeline. Created
+    /// lazily when the element's media API is first used (or on autoplay).</summary>
+    internal Media.IMediaBackend? Media { get; set; }
     public int IntrinsicWidth { get; set; }
     public int IntrinsicHeight { get; set; }
     public string? Alt { get; set; }

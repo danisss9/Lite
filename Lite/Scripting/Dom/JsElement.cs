@@ -424,6 +424,88 @@ public class JsElement
         set => Node.Attributes["name"] = value;
     }
 
+    // ---- HTMLMediaElement (audio/video) — Phase D ----
+
+    private bool IsMedia => Node.TagName is "AUDIO" or "VIDEO";
+
+    /// <summary>Gets the element's media backend, creating + loading it on first use (when
+    /// <paramref name="create"/>) — the timeline is decoder-free (<see cref="Media.SimulatedMediaBackend"/>).</summary>
+    private Media.IMediaBackend? MediaBackend(bool create)
+    {
+        if (!IsMedia) return null;
+        if (Node.Media is null && create && JsEngine.For(_engine) is { } eng)
+        {
+            var node = Node;
+            var backend = Media.MediaBackends.Create(
+                schedule: a => eng.EnqueueMacrotask(a),
+                dispatch: evtName => EventDispatcher.DispatchToNode(node, evtName, eng));
+            Node.Media = backend;
+            backend.Load(currentSrc, MediaDurationHint(), Node.Attributes.ContainsKey("loop"));
+        }
+        return Node.Media;
+    }
+
+    // The simulated backend has no real media, so the duration comes from an optional test hook
+    // (data-duration, in seconds) or a small default.
+    private double MediaDurationHint() =>
+        Node.Attributes.TryGetValue("data-duration", out var d) &&
+        double.TryParse(d, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0
+            ? v : 4.0;
+
+    private bool GetBoolAttr(string n) => Node.Attributes.ContainsKey(n);
+    private void SetBoolAttr(string n, bool value) { if (value) Node.Attributes[n] = ""; else Node.Attributes.Remove(n); }
+
+    /// <summary>HTMLMediaElement.play() — begins playback; returns a resolved Promise.</summary>
+    public JsValue play()
+    {
+        MediaBackend(true)?.Play();
+        return _engine.Evaluate("Promise.resolve()");
+    }
+    public void pause() => MediaBackend(false)?.Pause();
+    public void load() { Node.Media?.Dispose(); Node.Media = null; MediaBackend(true); }
+
+    public bool paused => MediaBackend(false)?.Paused ?? true;
+    public bool ended => MediaBackend(false)?.Ended ?? false;
+    public double duration => MediaBackend(false) is { } b ? b.Duration : double.NaN;
+    public int readyState => MediaBackend(false)?.ReadyState ?? 0;
+    public int networkState => currentSrc.Length > 0 ? 1 : 0;   // IDLE=1 when a source is selected
+
+    public double currentTime
+    {
+        get => MediaBackend(false)?.CurrentTime ?? 0.0;
+        set { var b = MediaBackend(true); if (b != null) b.CurrentTime = value; }
+    }
+    public double volume
+    {
+        get => MediaBackend(false)?.Volume ?? 1.0;
+        set { var b = MediaBackend(true); if (b != null) b.Volume = value; }
+    }
+    public bool muted
+    {
+        get => MediaBackend(false)?.Muted ?? GetBoolAttr("muted");
+        set { var b = MediaBackend(true); if (b != null) b.Muted = value; }
+    }
+
+    public bool autoplay { get => GetBoolAttr("autoplay"); set => SetBoolAttr("autoplay", value); }
+    public bool loop { get => GetBoolAttr("loop"); set => SetBoolAttr("loop", value); }
+    public bool controls { get => GetBoolAttr("controls"); set => SetBoolAttr("controls", value); }
+    public string preload { get => Node.Attributes.GetValueOrDefault("preload", ""); set => Node.Attributes["preload"] = value; }
+    public string poster { get => Node.Attributes.GetValueOrDefault("poster", ""); set => Node.Attributes["poster"] = value; }
+
+    // readyState constants (HTMLMediaElement)
+    public int HAVE_NOTHING => 0;
+    public int HAVE_METADATA => 1;
+    public int HAVE_CURRENT_DATA => 2;
+    public int HAVE_FUTURE_DATA => 3;
+    public int HAVE_ENOUGH_DATA => 4;
+
+    /// <summary>HTMLMediaElement.canPlayType — "probably" (type + codecs), "maybe", or "".</summary>
+    public string canPlayType(string? type)
+    {
+        if (string.IsNullOrWhiteSpace(type) || !Parser.IsPlayableMediaType(type)) return "";
+        return type.Contains("codecs", StringComparison.OrdinalIgnoreCase) ? "probably" : "maybe";
+    }
+
     // ---- form association & constraint validation ----
 
     /// <summary>The containing &lt;form&gt;, or null.</summary>

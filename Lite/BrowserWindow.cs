@@ -471,6 +471,18 @@ public class BrowserWindow
                                         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                                     }
                                 }
+                                else if (region.InputAction == InputAction.MediaToggle)
+                                {
+                                    var node = FindNodeByKey(_rootNode, region.NodeKey);
+                                    if (node != null && JsEngine.Instance is { } mediaEngine)
+                                    {
+                                        var el = Scripting.Dom.JsElement.For(mediaEngine.RawEngine, node);
+                                        if (el.paused) el.play(); else el.pause();
+                                        User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
+                                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                                    }
+                                }
                                 break;
                             }
                         }

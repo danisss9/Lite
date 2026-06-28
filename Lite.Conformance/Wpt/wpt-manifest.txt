@@ -12,6 +12,10 @@ lite/script-timing.html
 #      postMessage round-trip, frameElement, window.parent, iframe load) ----
 lite/iframe.html
 
+# ---- Phase D: HTMLMediaElement (canPlayType, attribute reflection, <source> selection,
+#      play→playing→timeupdate→ended event order via the simulated backend) ----
+lite/media.html
+
 # ---- Phase 2: navigation (history / location / title) ----
 lite/navigation.html
 

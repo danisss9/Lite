@@ -2,7 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.10] - 2026-06-28 (current)
+## [0.0.11] - 2026-06-28 (current)
+
+### Added
+
+- **`<audio>` / `<video>` (HTMLMediaElement)** — `play()` (returns a Promise) / `pause()` / `load()`, `currentTime`, `duration`, `paused`, `ended`, `readyState`, `volume`, `muted`, `autoplay`, `loop`, `controls`, `preload`, `poster`, `src` / `currentSrc`, `networkState`, and `canPlayType()`; media events fire in spec order (loadedmetadata → canplay → play → playing → timeupdate → ended), with `<source>` selection, `poster`, and `autoplay` (`JsElement`, `Parser`)
+- **Pluggable media backend** — new `IMediaBackend` with a default decoder-free `SimulatedMediaBackend` that drives a deterministic timeline on the page's task queue (so the API, event order, and controls work and are testable without native codecs), selected via a `MediaBackends` factory (`Lite/Media`)
+- **Real LibVLC backend (`Lite.Media`)** — a new optional project with `VlcMediaBackend` (LibVLCSharp + bundled native codecs) that decodes real audio/video: audio plays through the system device and video frames are decoded to RGBA → `SKBitmap` composited into the element's box. Call `Lite.Media.Vlc.VlcMedia.Register()` at startup to enable it (the Example app does); it falls back to the simulated backend if the native libraries are unavailable
+- **Media controls UI** — `<video>` paints its poster/frame and, when `controls` is set, a controls bar (play/pause glyph + progress + time); `<audio controls>` renders a compact strip. Clicking the bar toggles play/pause in the live window (`Drawer`, `BrowserWindow`)
+- **Tests + demo** — new `MediaTests` (canPlayType, attribute reflection, `<source>` selection, play→ended event order, pause, autoplay, render), a WPT-style `lite/media.html` gate, and an **Audio & Video** Example demo page
+- **Known limitation** — the conformance suite/tests run against the simulated backend (deterministic, no native codecs); the LibVLC backend builds and deploys its native libs but its playback was not verified in the headless CI environment. `<track>`/WebVTT cues are not yet parsed
+
+## [0.0.10] - 2026-06-28
 
 ### Added
 

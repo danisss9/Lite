@@ -8,10 +8,11 @@ Lite is a lightweight HTML/CSS/JS rendering engine for Windows, written in C#. I
 
 ## Projects
 
-| Project    | Type          | Description                                              |
-| ---------- | ------------- | -------------------------------------------------------- |
-| `Lite/`    | Class library | The rendering engine and `BrowserWindow` API             |
-| `Example/` | Executable    | Demo app using the library with a local HTML/CSS/JS site |
+| Project       | Type          | Description                                                          |
+| ------------- | ------------- | ------------------------------------------------------------------- |
+| `Lite/`       | Class library | The rendering engine and `BrowserWindow` API                        |
+| `Lite.Media/` | Class library | Optional LibVLC-backed audio/video playback (`VlcMedia.Register()`) |
+| `Example/`    | Executable    | Demo app using the library with a local HTML/CSS/JS site            |
 
 ---
 
@@ -153,6 +154,7 @@ BrowserWindow          Native window + message loop; in-page navigation (backgro
 | `img`                                                                                   | Image loaded via HTTP or `data:` URI (incl. percent-encoded base64); straight-alpha compositing; placeholder + alt   |
 | `object`                                                                                | Renders its `data` resource as a replaced image; falls back to child content (incl. nested `<object>`) on failure    |
 | `iframe`                                                                                | Hosts a nested document (`srcdoc` or same-origin `src`) with its own DOM/JS; `contentWindow`/`contentDocument`, `postMessage`, `window.parent`/`frameElement`, `load` |
+| `audio`, `video`                                                                        | HTMLMediaElement API (`play`/`pause`/`currentTime`/`duration`/`canPlayType`…), `<source>` selection, poster, controls bar, and media events; simulated timeline by default, or real playback via the optional `Lite.Media` (LibVLC) backend |
 | `input` (text)                                                                          | Focusable text field with keyboard input and backspace                                                               |
 | `input` (password)                                                                      | Masked text field with bullet characters                                                                             |
 | `input` (number)                                                                        | Numeric input with up/down stepper arrows; `min`, `max`, `step`                                                      |

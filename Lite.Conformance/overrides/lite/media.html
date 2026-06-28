@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HTMLMediaElement: canPlayType, reflection, source selection, event order</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+</head>
+<body>
+<video id="v" data-duration="2">
+  <source src="bad.xyz" type="application/x-unknown">
+  <source src="clip.webm" type="video/webm">
+  <source src="clip.mp4" type="video/mp4">
+</video>
+<audio id="a" controls loop src="song.mp3"></audio>
+
+<script>
+test(function () {
+  var v = document.getElementById('v');
+  assert_equals(v.canPlayType('application/x-unknown'), '', 'unknown type → ""');
+  assert_equals(v.canPlayType('video/mp4'), 'maybe', 'container only → maybe');
+  assert_equals(v.canPlayType('video/mp4; codecs="avc1.42E01E"'), 'probably', 'with codecs → probably');
+}, 'canPlayType reports support');
+
+test(function () {
+  var a = document.getElementById('a');
+  assert_true(a.controls, 'controls reflected');
+  assert_true(a.loop, 'loop reflected');
+  assert_false(a.autoplay, 'autoplay absent');
+  assert_equals(a.src, 'song.mp3', 'src reflected');
+  a.muted = true;
+  assert_true(a.muted, 'muted settable');
+}, 'media attributes reflect');
+
+test(function () {
+  var v = document.getElementById('v');
+  assert_equals(v.currentSrc, 'clip.webm', 'first playable <source> is chosen');
+}, '<source> selection skips unsupported types');
+
+test(function () {
+  var v = document.getElementById('v');
+  assert_true(v.paused, 'a fresh media element is paused');
+  assert_equals(v.readyState, 0, 'readyState starts at HAVE_NOTHING');
+}, 'initial media state');
+
+// play() fires the lifecycle events in order, and the simulated timeline reaches the end.
+async_test(function (t) {
+  var v = document.getElementById('v');
+  var seen = [];
+  ['loadedmetadata', 'play', 'playing', 'timeupdate', 'ended'].forEach(function (type) {
+    v.addEventListener(type, function () { if (seen.indexOf(type) < 0) seen.push(type); });
+  });
+  v.addEventListener('ended', t.step_func_done(function () {
+    assert_equals(seen.indexOf('loadedmetadata') > -1, true, 'loadedmetadata fired');
+    assert_true(seen.indexOf('play') < seen.indexOf('playing'), 'play before playing');
+    assert_true(seen.indexOf('playing') < seen.indexOf('timeupdate'), 'playing before timeupdate');
+    assert_true(seen.indexOf('timeupdate') < seen.indexOf('ended'), 'timeupdate before ended');
+    assert_true(v.ended, 'ended is true');
+    assert_true(v.paused, 'paused after ending');
+  }));
+  v.play();
+}, 'play() drives loadedmetadata → play → playing → timeupdate → ended');
+</script>
+</body>
+</html>
