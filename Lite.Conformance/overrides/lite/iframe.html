@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>iframe: nested browsing context, contentDocument, postMessage, frameElement</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+</head>
+<body>
+<iframe id="f" width="200" height="100"
+  srcdoc="<!doctype html><html><body><p id='inner'>child</p>
+    <script>
+      window.addEventListener('message', function (e) {
+        // Echo back to the sender, reporting parent visibility + this frame's element id.
+        var info = 'echo:' + e.data + '|framed=' + (window.parent !== window) +
+                   '|frameId=' + (window.frameElement ? window.frameElement.id : 'none');
+        e.source.postMessage(info, '*');
+      });
+    </script>
+  </body></html>"></iframe>
+
+<script>
+// The iframe hosts a real nested document with its own DOM.
+test(function () {
+  var f = document.getElementById('f');
+  assert_true(f.contentDocument !== null, 'iframe has a contentDocument');
+  assert_equals(f.contentDocument.getElementById('inner').textContent, 'child',
+    'parent can read into the same-origin child document');
+}, 'iframe.contentDocument exposes the child browsing context');
+
+test(function () {
+  var f = document.getElementById('f');
+  assert_true(f.contentWindow !== null && f.contentWindow !== window,
+    'contentWindow is a distinct WindowProxy');
+}, 'iframe.contentWindow is a separate window');
+
+// The iframe load event fires after the child document has loaded.
+async_test(function (t) {
+  var f = document.getElementById('f');
+  f.addEventListener('load', t.step_func_done(function () {
+    assert_true(true, 'iframe load fired');
+  }));
+}, 'iframe fires a load event');
+
+// Full postMessage round trip: parent -> child -> parent, exercising event.source, event.data,
+// the child's window.parent, and frameElement.
+async_test(function (t) {
+  var f = document.getElementById('f');
+  window.addEventListener('message', t.step_func_done(function (e) {
+    assert_equals(e.data, 'echo:ping|framed=true|frameId=f',
+      'child echoed data, saw its parent, and resolved frameElement');
+  }));
+  f.contentWindow.postMessage('ping', '*');
+}, 'postMessage round-trips between parent and child, with frameElement + window.parent');
+</script>
+</body>
+</html>

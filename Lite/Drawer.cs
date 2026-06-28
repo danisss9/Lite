@@ -347,6 +347,10 @@ internal static class Drawer
                 PaintHorizontalRule(canvas, node);
                 return;
 
+            case "IFRAME":
+                PaintIframe(canvas, node);
+                return;
+
             case "SVG":
                 SvgRenderer.Render(canvas, node);
                 return;
@@ -693,6 +697,53 @@ internal static class Drawer
                 using var altFont = new SKFont { Size = 12 };
                 canvas.DrawText(node.Alt, destRect.Left + 4, destRect.Top + 14, SKTextAlign.Left, altFont, altPaint);
             }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Iframe (nested browsing context)
+    // -------------------------------------------------------------------------
+
+    /// <summary>Paints an &lt;iframe&gt;: its own background/border, then the child Page rendered
+    /// into a sub-bitmap sized to the content box and clipped into place. The nested DrawToBitmap
+    /// resets the shared paint statics, so they're snapshotted and restored around it.</summary>
+    private static void PaintIframe(SKCanvas canvas, LayoutNode node)
+    {
+        PaintBlockDecorations(canvas, node);
+
+        var page = node.ChildPage;
+        if (page is null) return;
+        var content = node.Box.ContentBox;
+        int cw = Math.Max(1, (int)Math.Round(content.Width));
+        int ch = Math.Max(1, (int)Math.Round(content.Height));
+
+        // Snapshot the parent's paint statics — the recursive DrawToBitmap clobbers them.
+        var savedHit = _hitRegions;
+        var savedScrollY = _viewportScrollY;
+        var savedH = _viewportHeight;
+        var savedW = _viewportWidth;
+        var savedSelect = new Dictionary<int, int>(SelectOptionMap);
+        var savedDropdown = _pendingDropdown;
+
+        SKBitmap childBmp;
+        try { childBmp = DrawToBitmap(cw, ch, page.Root, page.Viewport); }
+        finally
+        {
+            _hitRegions = savedHit;
+            _viewportScrollY = savedScrollY;
+            _viewportHeight = savedH;
+            _viewportWidth = savedW;
+            _pendingDropdown = savedDropdown;
+            SelectOptionMap.Clear();
+            foreach (var (k, v) in savedSelect) SelectOptionMap[k] = v;
+        }
+
+        using (childBmp)
+        {
+            canvas.Save();
+            canvas.ClipRect(content);
+            canvas.DrawBitmap(childBmp, content.Left, content.Top);
+            canvas.Restore();
         }
     }
 

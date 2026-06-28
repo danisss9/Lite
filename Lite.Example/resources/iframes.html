@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iframes &amp; Nested Browsing Contexts — Lite Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="back-btn">&larr; Back to index</a>
+    <h1>Iframes &amp; Nested Browsing Contexts</h1>
+    <p class="subtitle">Each iframe is an independent document with its own DOM and JS engine</p>
+  </header>
+
+  <main>
+
+    <!-- A self-contained child document via srcdoc -->
+    <section class="card">
+      <h2>Inline child document (srcdoc)</h2>
+      <p>The frame below is a full document parsed from the <code>srcdoc</code> attribute. It has its
+        own stylesheet and renders independently of this page.</p>
+      <iframe width="520" height="140" style="border:2px solid #888"
+        srcdoc="<!doctype html><html><body style='margin:0;font-family:sans-serif;background:#10243e;color:#fff'>
+          <div style='padding:16px'>
+            <h3 style='margin:0 0 8px'>Hello from inside the iframe</h3>
+            <p style='margin:0;color:#9fd3ff'>This paragraph lives in a separate browsing context.</p>
+          </div></body></html>"></iframe>
+    </section>
+
+    <!-- Cross-document messaging: parent <-> child via postMessage -->
+    <section class="card">
+      <h2>postMessage round-trip</h2>
+      <p>Type a message and send it to the child frame. The child appends a reply and posts it back
+        to this page through <code>event.source.postMessage</code>.</p>
+
+      <input id="msg" type="text" value="ping" />
+      <button id="send">Send to frame</button>
+      <div id="log" class="demo-log">Replies will appear here.</div>
+
+      <iframe id="child" width="520" height="80" style="border:2px solid #888"
+        srcdoc="<!doctype html><html><body style='margin:0;font-family:sans-serif;background:#1b2b1b;color:#cfe'>
+          <div id='box' style='padding:14px'>Child frame ready. window.parent !== window is <b id='framed'></b>.</div>
+          <script>
+            document.getElementById('framed').textContent = (window.parent !== window);
+            window.addEventListener('message', function (e) {
+              document.getElementById('box').textContent = 'Child received: ' + e.data;
+              e.source.postMessage('child replied to \'' + e.data + '\' (from ' + (frameElement ? frameElement.id : '?') + ')', '*');
+            });
+          </script></body></html>"></iframe>
+    </section>
+
+    <script>
+      window.addEventListener('message', function (e) {
+        document.getElementById('log').textContent = 'Parent received: ' + e.data;
+      });
+      document.getElementById('send').addEventListener('click', function () {
+        var text = document.getElementById('msg').value;
+        document.getElementById('child').contentWindow.postMessage(text, '*');
+      });
+    </script>
+
+  </main>
+
+  <footer>
+    <p>Lite Browser &mdash; built with SkiaSharp &amp; AngleSharp</p>
+  </footer>
+
+</body>
+</html>

@@ -8,6 +8,10 @@ lite/smoke.html
 # ---- Phase B item 2: script execution timing (in-position / defer / async) + document.write ----
 lite/script-timing.html
 
+# ---- Phase C: iframe / nested browsing contexts (contentDocument, contentWindow,
+#      postMessage round-trip, frameElement, window.parent, iframe load) ----
+lite/iframe.html
+
 # ---- Phase 2: navigation (history / location / title) ----
 lite/navigation.html
 

@@ -71,7 +71,7 @@ public class JsElement
 
     // ---- ownerDocument ----
     public JsDocument? ownerDocument =>
-        JsEngine.Instance is { } eng ? new JsDocument(eng.RawEngine, GetRootNode()) : null;
+        JsEngine.For(_engine) is { } eng ? new JsDocument(eng.RawEngine, GetRootNode()) : null;
 
     private LayoutNode GetRootNode()
     {
@@ -356,7 +356,7 @@ public class JsElement
     /// <summary>Queues a non-bubbling event of <paramref name="type"/> on this node (macrotask).</summary>
     private void FireSimpleEvent(string type)
     {
-        if (JsEngine.Instance is not { } eng) return;
+        if (JsEngine.For(_engine) is not { } eng) return;
         eng.EnqueueMacrotask(() =>
         {
             var evt = new JsEvent();
@@ -396,6 +396,15 @@ public class JsElement
     /// <summary>HTMLTemplateElement.content — the inert DocumentFragment holding the template's
     /// parsed content (null on non-template elements).</summary>
     public JsElement? content => Node.TemplateContent is { } frag ? For(_engine, frag) : null;
+
+    // ---- iframe nested browsing context (Phase C) ----
+    /// <summary>HTMLIFrameElement.contentWindow — a WindowProxy into the child Page (same-origin).</summary>
+    public object? contentWindow =>
+        Node.ChildPage is { } p && JsEngine.For(_engine) is { } eng ? new JsWindowProxy(eng, p.Engine) : null;
+
+    /// <summary>HTMLIFrameElement.contentDocument — the child Page's document (same-origin).</summary>
+    public JsDocument? contentDocument =>
+        Node.ChildPage is { } p ? new JsDocument(p.Engine.RawEngine, p.Root) : null;
 
     /// <summary>HTMLImageElement.src / HTMLSourceElement.src — reflects the <c>src</c> attribute.</summary>
     public string src
@@ -456,14 +465,14 @@ public class JsElement
     {
         if (Node.TagName != "FORM") return;
         var sub = FormSubmitter.BuildSubmission(Node, Parser.BaseUrl);
-        JsEngine.Instance?.RequestNavigation(sub.Url);
+        JsEngine.For(_engine)?.RequestNavigation(sub.Url);
     }
 
     /// <summary>HTMLFormElement.requestSubmit() — fires a cancelable submit event first, then
     /// submits only if it wasn't prevented.</summary>
     public void requestSubmit(JsElement? submitter = null)
     {
-        if (Node.TagName != "FORM" || JsEngine.Instance is not { } engine) return;
+        if (Node.TagName != "FORM" || JsEngine.For(_engine) is not { } engine) return;
         var evt = new JsEvent();
         evt.initEvent("submit", true, true);
         evt.target = For(_engine, Node);
@@ -907,7 +916,7 @@ public class JsElement
     public bool dispatchEvent(JsEvent evt)
     {
         evt.target = this;
-        if (JsEngine.Instance is { } engine)
+        if (JsEngine.For(_engine) is { } engine)
             EventDispatcher.DispatchEvent(Node, evt, engine);
         return !evt.DefaultPrevented;
     }
@@ -965,7 +974,7 @@ public class JsElement
     // ---- geometry (Phase 7) ----
     // Querying geometry forces layout so the boxes reflect the current DOM/styles
     // (matches browser forced-reflow; required for headless geometry reads).
-    private static void EnsureLayout() => JsEngine.Instance?.EnsureLayout();
+    private void EnsureLayout() => JsEngine.For(_engine)?.EnsureLayout();
 
     public JsBoundingClientRect getBoundingClientRect() { EnsureLayout(); return new(Node); }
 

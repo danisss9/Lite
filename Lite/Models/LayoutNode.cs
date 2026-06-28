@@ -27,6 +27,9 @@ public class LayoutNode
     public List<LayoutNode> Children { get; } = [];
     public BoxDimensions Box { get; set; }
     public SKBitmap? Image { get; set; }
+    /// <summary>For an &lt;iframe&gt;: the nested browsing context (child Page) it hosts. The
+    /// iframe is laid out as a replaced box and the child Page is painted clipped into it.</summary>
+    internal Page? ChildPage { get; set; }
     public int IntrinsicWidth { get; set; }
     public int IntrinsicHeight { get; set; }
     public string? Alt { get; set; }

@@ -24,10 +24,10 @@ internal static class HeadlessPage
         while (sw.ElapsedMilliseconds < timeoutMs)
         {
             if (done()) return true;
-            var worked = engine.DrainTasks();
-            engine.FlushMicrotasks();
+            var worked = engine.DrainTree();
+            engine.FlushMicrotasksTree();
             rafClock += 16;
-            worked |= engine.FlushRAF(rafClock);
+            worked |= engine.FlushRAFTree(rafClock);
             if (!worked) Thread.Sleep(5);
         }
         return done();
@@ -41,11 +41,11 @@ internal static class HeadlessPage
         double rafClock = 0;
         while (sw.ElapsedMilliseconds < timeoutMs)
         {
-            var worked = engine.DrainTasks();
-            engine.FlushMicrotasks();
+            var worked = engine.DrainTree();
+            engine.FlushMicrotasksTree();
             rafClock += 16;
-            worked |= engine.FlushRAF(rafClock);
-            if (!worked && !engine.HasPendingTasks && !engine.HasPendingRAF) return;
+            worked |= engine.FlushRAFTree(rafClock);
+            if (!worked && !engine.HasPendingTreeTasks && !engine.HasPendingTreeRAF) return;
             if (!worked) Thread.Sleep(5);
         }
     }

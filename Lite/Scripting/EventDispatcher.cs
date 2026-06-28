@@ -30,6 +30,16 @@ internal static class EventDispatcher
         return DispatchEvent(node, evt, engine);
     }
 
+    /// <summary>Dispatches a simple named event to a specific node through the given engine
+    /// (e.g. an iframe's <c>load</c>). Builds the JsEvent and runs the full propagation path.</summary>
+    internal static bool DispatchToNode(LayoutNode node, string eventType, JsEngine engine, bool bubbles = false)
+    {
+        var evt = new JsEvent();
+        evt.initEvent(eventType.ToLowerInvariant(), bubbles, false);
+        evt.target = JsElement.For(engine.RawEngine, node);
+        return DispatchEvent(node, evt, engine);
+    }
+
     /// <summary>
     /// Dispatches a JsEvent through the full capture → target → bubble path.
     /// </summary>

@@ -175,8 +175,8 @@ public class BrowserWindow
             // Reflect the parsed document's <title> in the caption.
             if (Parser.Document?.Title is { Length: > 0 } docTitle)
                 SetWindowTitle(hWnd, docTitle);
-            // Flush any tasks already queued during initial script execution.
-            if (jsEngine.HasPendingTasks)
+            // Flush any tasks already queued during initial script execution (incl. iframe load).
+            if (jsEngine.HasPendingTreeTasks)
                 User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
         }
 
@@ -238,13 +238,13 @@ public class BrowserWindow
                     // A drained task may itself start a navigation (e.g. location.href = …).
                     // Skip the live redraw while a loading/reveal overlay owns the screen so we
                     // don't clobber its frame; the animation timer keeps it updated instead.
-                    if (taskEngine.DrainTasks() && _loading == null && _pageTransition == null)
+                    if (taskEngine.DrainTree() && _loading == null && _pageTransition == null)
                     {
                         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                         User32.InvalidateRect(hWnd, IntPtr.Zero, false);
                     }
                     // If a drained task queued more work, make sure we come back for it.
-                    if (taskEngine.HasPendingTasks)
+                    if (taskEngine.HasPendingTreeTasks)
                         User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
                 }
                 break;
@@ -298,11 +298,11 @@ public class BrowserWindow
 
                     // Flush requestAnimationFrame callbacks
                     var engine = JsEngine.Instance;
-                    var rafRan = engine?.FlushRAF(_rafStopwatch.Elapsed.TotalMilliseconds) ?? false;
+                    var rafRan = engine?.FlushRAFTree(_rafStopwatch.Elapsed.TotalMilliseconds) ?? false;
 
                     (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                     User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    if (!stillRunning && !(engine?.HasPendingRAF ?? false))
+                    if (!stillRunning && !(engine?.HasPendingTreeRAF ?? false))
                         StopAnimationTimer(hWnd);
                 }
                 break;
@@ -1004,8 +1004,8 @@ public class BrowserWindow
             toImage?.Dispose();
         }
 
-        // Run any tasks queued while scripts executed during the load.
-        if (JsEngine.Instance is { HasPendingTasks: true })
+        // Run any tasks queued while scripts executed during the load (incl. iframe load events).
+        if (JsEngine.Instance is { HasPendingTreeTasks: true })
             User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
 
         User32.InvalidateRect(hWnd, IntPtr.Zero, false);

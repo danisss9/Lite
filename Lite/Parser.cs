@@ -128,6 +128,15 @@ internal static class Parser
 
         var context = BrowsingContext.New(config);
         var document = context.OpenAsync(address).Result;
+        return ParseOpenedDocument(document, address, viewportWidth, viewportHeight).Root;
+    }
+
+    /// <summary>Core parse pipeline shared by the top-level load and child (iframe) loads. The
+    /// caller must have already set the parse statics (base URL, viewport, cleared script lists)
+    /// and opened <paramref name="document"/>. Inlines stylesheets, traverses to a LayoutNode tree,
+    /// creates the JS engine, runs scripts, and returns the resulting <see cref="Page"/>.</summary>
+    private static Page ParseOpenedDocument(IDocument document, string address, int viewportWidth, int viewportHeight)
+    {
         Document = document;
 
         // <base href> overrides the base used for resolving relative URLs (not the document URL).
@@ -203,6 +212,11 @@ internal static class Parser
         // even when there are no external or inline script blocks.
         var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight);
 
+        // Now that the parent engine exists, wire each nested <iframe>'s child context
+        // (parent/top/frameElement) and queue its load event. Done before the parent's scripts run
+        // so they can immediately use iframe.contentWindow.
+        WireChildFrames(root, jsEngine);
+
         // 1) In-position classic scripts (inline + external without defer/async), in document order.
         //    document.write() during these appends to the body (see JsDocument.write).
         foreach (var script in _pendingScripts)
@@ -234,7 +248,106 @@ internal static class Parser
         // Fire the window 'load' event for listeners registered via addEventListener.
         jsEngine.DispatchLoad();
 
-        return root;
+        return new Page
+        {
+            Root = root,
+            Engine = jsEngine,
+            Document = document,
+            BaseUrl = _documentBaseUrl,
+            ViewportWidth = viewportWidth,
+            ViewportHeight = viewportHeight,
+        };
+    }
+
+    /// <summary>Wires every nested &lt;iframe&gt; with a child Page into the parent browsing context:
+    /// sets the child's parent/top/frameElement and queues the iframe's <c>load</c> event (deferred
+    /// onto the parent's task queue so listeners added by parent scripts are attached first).</summary>
+    private static void WireChildFrames(LayoutNode root, JsEngine parentEngine)
+    {
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            if (node.TagName == "IFRAME" && node.ChildPage is { } child)
+            {
+                var frameEl = Scripting.Dom.JsElement.For(parentEngine.RawEngine, node);
+                child.Engine.SetParentContext(parentEngine, frameEl);
+                var captured = node;
+                parentEngine.EnqueueMacrotask(() =>
+                    Scripting.EventDispatcher.DispatchToNode(captured, "load", parentEngine));
+            }
+            foreach (var c in node.Children) stack.Push(c);
+        }
+    }
+
+    /// <summary>
+    /// Parses an iframe's child document into an independent <see cref="Page"/> (its own LayoutNode
+    /// tree and JS engine), without disturbing the parent's parse. The parent's parse statics and
+    /// the <see cref="JsEngine.Instance"/> singleton are saved and restored around the child parse;
+    /// the child Page keeps its own engine (reachable via <see cref="JsEngine.For"/>).
+    /// </summary>
+    /// <param name="content">A URL when <paramref name="isSrcdoc"/> is false, else inline HTML.</param>
+    internal static Page ParseChildPage(string content, bool isSrcdoc, string baseUrl, int viewportWidth, int viewportHeight)
+    {
+        var savedBaseUrl = _baseUrl;
+        var savedDocBaseUrl = _documentBaseUrl;
+        var savedDocument = Document;
+        var savedVw = ViewportWidth;
+        var savedVh = ViewportHeight;
+        var savedInstance = JsEngine.Instance;
+        var savedRules = new List<CssRule>(CssRules);
+        // The child parse reuses the per-parse accumulators; snapshot them so the parent's
+        // in-progress traversal (it is mid-Traverse when it hits the iframe) is not disturbed.
+        var savedPending = new List<string>(_pendingScripts);
+        var savedDeferred = new List<string>(_deferredScripts);
+        var savedAsync = new List<string>(_asyncScripts);
+        var savedModules = new List<(string, string?)>(_pendingModules);
+        var savedModuleCounter = _inlineModuleCounter;
+        var savedCounters = _counters.ToDictionary(kv => kv.Key, kv => new List<int>(kv.Value));
+
+        try
+        {
+            _baseUrl = baseUrl;
+            _documentBaseUrl = baseUrl;
+            _pendingScripts.Clear();
+            _deferredScripts.Clear();
+            _asyncScripts.Clear();
+            _pendingModules.Clear();
+            _inlineModuleCounter = 0;
+            _counters.Clear();
+            ViewportWidth = viewportWidth;
+            ViewportHeight = viewportHeight;
+
+            var config = Configuration.Default
+                .WithDefaultLoader(new LoaderOptions { IsResourceLoadingEnabled = true })
+                .WithCss()
+                .WithRenderDevice();
+            var context = BrowsingContext.New(config);
+            var document = isSrcdoc
+                ? context.OpenAsync(req => req.Address(baseUrl).Content(content)).Result
+                : context.OpenAsync(content).Result;
+
+            return ParseOpenedDocument(document, isSrcdoc ? baseUrl : content, viewportWidth, viewportHeight);
+        }
+        finally
+        {
+            _baseUrl = savedBaseUrl;
+            _documentBaseUrl = savedDocBaseUrl;
+            Document = savedDocument;
+            ViewportWidth = savedVw;
+            ViewportHeight = savedVh;
+            JsEngine.Instance = savedInstance;
+            CssRules.Clear();
+            CssRules.AddRange(savedRules);
+            _pendingScripts.Clear(); _pendingScripts.AddRange(savedPending);
+            _deferredScripts.Clear(); _deferredScripts.AddRange(savedDeferred);
+            _asyncScripts.Clear(); _asyncScripts.AddRange(savedAsync);
+            _pendingModules.Clear(); _pendingModules.AddRange(savedModules);
+            _inlineModuleCounter = savedModuleCounter;
+            _counters.Clear();
+            foreach (var (k, v) in savedCounters) _counters[k] = v;
+        }
     }
 
     /// <summary>
@@ -635,14 +748,51 @@ internal static class Parser
             node.StyleOverrides["height"] = canvasH;
         }
 
+        // <iframe> — a replaced element hosting a nested browsing context (child Page). Default
+        // 300×150 (CSS 2.1 / HTML); width/height attributes give an explicit box. The child
+        // document is parsed into its own Page (independent layout tree + JS engine).
+        if (tag == "IFRAME")
+        {
+            var fw = element.GetAttribute("width");
+            var fh = element.GetAttribute("height");
+            if (string.IsNullOrEmpty(fw)) fw = "300";
+            if (string.IsNullOrEmpty(fh)) fh = "150";
+            int cw = int.TryParse(fw.Replace("px", ""), out var pw) ? pw : 300;
+            int ch = int.TryParse(fh.Replace("px", ""), out var ph) ? ph : 150;
+            node.StyleOverrides["display"] = "block";
+            node.StyleOverrides["width"] = fw.EndsWith("px") ? fw : fw + "px";
+            node.StyleOverrides["height"] = fh.EndsWith("px") ? fh : fh + "px";
+            foreach (var attr in new[] { "src", "srcdoc", "name", "sandbox" })
+            {
+                var v = element.GetAttribute(attr);
+                if (v != null) node.Attributes[attr] = v;
+            }
+
+            try
+            {
+                var srcdoc = element.GetAttribute("srcdoc");
+                var src = element.GetAttribute("src");
+                var baseForChild = _documentBaseUrl ?? _baseUrl ?? "about://lite/";
+                if (!string.IsNullOrEmpty(srcdoc))
+                    node.ChildPage = ParseChildPage(srcdoc, isSrcdoc: true, baseForChild, cw, ch);
+                else if (!string.IsNullOrEmpty(src) && !src.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var childUrl = ResolveUrl(src) ?? src;
+                    node.ChildPage = ParseChildPage(childUrl, isSrcdoc: false, childUrl, cw, ch);
+                }
+            }
+            catch (Exception ex) { Console.WriteLine($"[iframe load] {ex.Message}"); }
+        }
+
         // Apply CSS counters (counter-reset/counter-increment) in document order BEFORE traversing
         // children, and snapshot the resulting state onto the node (for counter()/counters() and the
         // ::before/::after generated content). The pushed instances are popped after the subtree.
         ApplyCounters(node, out var pushedCounters);
 
-        if (objectShowsImage)
+        if (objectShowsImage || tag == "IFRAME")
         {
-            // Replaced <object> showing an image: its fallback children are not rendered.
+            // Replaced elements: a loaded <object> shows its image (fallback children dropped);
+            // an <iframe> hosts its child Page (its element children are inert fallback content).
         }
         else if (hasMixedChildren)
         {

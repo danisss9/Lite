@@ -9,7 +9,16 @@ namespace Lite.Scripting;
 
 internal class JsEngine
 {
-    public static JsEngine? Instance { get; private set; }
+    public static JsEngine? Instance { get; internal set; }
+
+    // Maps a raw Jint Engine to its owning JsEngine. DOM proxies (JsElement, JsDocument, …) hold
+    // the raw Engine they were created with, so they can reach their page's JsEngine via For(...)
+    // instead of the global Instance singleton — essential once multiple pages (iframes) coexist,
+    // each with its own engine. Keys are weak so a disposed page's mapping is collected.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Engine, JsEngine> _byRaw = new();
+
+    /// <summary>The JsEngine that owns a given raw Jint engine, or null if unknown.</summary>
+    public static JsEngine? For(Engine raw) => _byRaw.TryGetValue(raw, out var e) ? e : null;
 
     private readonly Engine _engine;
     private readonly JsWindow _jsWindow;
@@ -214,6 +223,7 @@ internal class JsEngine
         });
 
         _root = root;
+        _byRaw.AddOrUpdate(_engine, this);
         CurrentUrl = baseUrl;
         History = new Dom.JsHistory(this, baseUrl);
         Location = new Dom.JsLocation(this);
@@ -416,6 +426,88 @@ internal class JsEngine
         finally { _layingOut = false; }
     }
     private bool _layingOut;
+
+    /// <summary>The document's origin (scheme://host:port), or "null" for non-hierarchical
+    /// schemes (about:, data:). Used as the <c>origin</c> on cross-context message events.</summary>
+    internal string Origin
+    {
+        get
+        {
+            try
+            {
+                return Uri.TryCreate(CurrentUrl, UriKind.Absolute, out var u) && u.IsAbsoluteUri && !u.IsFile && u.Host.Length > 0
+                    ? u.GetLeftPart(UriPartial.Authority)
+                    : "null";
+            }
+            catch { return "null"; }
+        }
+    }
+
+    /// <summary>Delivers a postMessage to this window: dispatches a <c>message</c> event carrying
+    /// <paramref name="data"/> (already structured-cloned into the CLR graph), the sender's
+    /// <paramref name="origin"/>, and a WindowProxy back to the sender as <c>source</c>.</summary>
+    internal void DeliverMessage(object? data, string origin, Dom.JsWindowProxy source)
+    {
+        var evt = JsValue.FromObject(_engine, new { type = "message", data, origin, source });
+        _jsWindow.DispatchEvent("message", evt);
+    }
+
+    /// <summary>Wires this (child) engine into a parent browsing context: sets <c>parent</c>,
+    /// <c>top</c>, and <c>frameElement</c> as real cross-context references. Called by the parent
+    /// once both engines exist (the child is parsed before its parent's engine is created).</summary>
+    internal void SetParentContext(JsEngine parent, object frameElement)
+    {
+        var parentProxy = new Dom.JsWindowProxy(this, parent);
+        _engine.SetValue("parent", parentProxy);
+        _engine.SetValue("top", parentProxy);   // single level: top == parent (nested frames approximate)
+        _engine.SetValue("frameElement", frameElement);
+    }
+
+    // ---- nested browsing contexts (iframes) ----
+    // Each child Page has its own engine + task queue; the host event loop must pump the whole
+    // tree, not just the top page, so iframe timers/postMessage/observers actually run.
+
+    /// <summary>The engines of this page's direct child &lt;iframe&gt; contexts.</summary>
+    internal IEnumerable<JsEngine> NestedEngines()
+    {
+        var stack = new Stack<LayoutNode>();
+        stack.Push(_root);
+        while (stack.Count > 0)
+        {
+            var n = stack.Pop();
+            if (n.TagName == "IFRAME" && n.ChildPage is { } cp) { yield return cp.Engine; continue; }
+            foreach (var c in n.Children) stack.Push(c);
+        }
+    }
+
+    /// <summary>Drains this engine's task queue and those of all nested iframe engines (recursively).</summary>
+    internal bool DrainTree()
+    {
+        bool ran = DrainTasks();
+        foreach (var child in NestedEngines()) ran |= child.DrainTree();
+        return ran;
+    }
+
+    /// <summary>Runs Promise microtasks for this engine and all nested iframe engines.</summary>
+    internal void FlushMicrotasksTree()
+    {
+        FlushMicrotasks();
+        foreach (var child in NestedEngines()) child.FlushMicrotasksTree();
+    }
+
+    /// <summary>Flushes rAF callbacks for this engine and all nested iframe engines.</summary>
+    internal bool FlushRAFTree(double timestamp)
+    {
+        bool ran = FlushRAF(timestamp);
+        foreach (var child in NestedEngines()) ran |= child.FlushRAFTree(timestamp);
+        return ran;
+    }
+
+    /// <summary>True if this engine or any nested iframe engine has pending macrotasks.</summary>
+    internal bool HasPendingTreeTasks => HasPendingTasks || NestedEngines().Any(e => e.HasPendingTreeTasks);
+
+    /// <summary>True if this engine or any nested iframe engine has pending rAF callbacks.</summary>
+    internal bool HasPendingTreeRAF => HasPendingRAF || NestedEngines().Any(e => e.HasPendingTreeRAF);
 
     /// <summary>Dispatches the window <c>load</c> event to listeners registered via
     /// addEventListener. Fired once after all page scripts have executed.</summary>

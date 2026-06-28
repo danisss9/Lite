@@ -6,12 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **`<iframe>` / nested browsing contexts** — an iframe parses its child document (from `srcdoc` or a same-origin `src`) into an independent `Page` with its own layout tree and JS engine, rendered clipped into the frame box (default 300×150). The host event loop pumps the whole page tree so child timers, observers, and messages run (`Parser`, `Drawer`, `BrowserWindow`)
+- **Cross-context JS wiring** — `iframe.contentWindow` (a WindowProxy) and `contentDocument` (same-origin); a child's `window.parent` / `top` / `frameElement`; `window.postMessage` round-trips between parent and child, delivering a `message` event with `data` / `origin` / `source` (`JsWindowProxy`, `JsElement`, `JsEngine`)
+- **iframe `load` event** — fired on the iframe element after its child document finishes loading (`Parser`, `EventDispatcher`)
+- **`Page` abstraction** — bundles a browsing context's root layout tree, JS engine, document, base URL, and viewport; the first step in replacing the Parser/Drawer/JsEngine static singletons. DOM proxies now resolve their owning engine via `JsEngine.For(rawEngine)` instead of the global `Instance`, so multiple pages coexist (`Page`, `JsEngine`)
 - **Acid2 (partial) + gate** — the Acid2 test and its `position:fixed` scroll variant render deterministically and are gated against approved baselines (`baselines/acid2.png`, `baselines/acid2-scrolled.png`). The render is a recognizable smiley (head, eyes, scalp, chin); the mouth/nose detail awaits the deferred CSS 2.1 anonymous-box / margin-collapse work. The harness scrolls to `#top` (as following the in-page link would) so the face comes into view (`AcidRunner`, `RefTestRunner`)
 - **`<object>` nested fallback** — an `<object>` renders its `data` resource as a replaced image; when the resource can't be displayed it falls through to its child content, which may be a nested `<object>` (Acid2's eyes are a 3-deep chain) (`Parser`, `Drawer`, `BoxEngine`)
 - **`background-attachment: fixed`** — fixed backgrounds are positioned relative to the viewport and clipped to the element box, so they stay put as the element scrolls (`Drawer`, `DrawCommandExtensions`)
 - **Appendix/alternate stylesheets** — `<link>` elements whose `rel` token set contains `stylesheet` (e.g. `rel="appendix stylesheet"`) are loaded, including `data:` CSS hrefs; `alternate` stylesheets are skipped (`Parser`)
 - **min/max-width & min/max-height clamping for absolute/fixed boxes** — `ResolveAbsoluteBox` clamps the resolved width/height to the min/max box (min wins over max, CSS 2.1 §10.4/§10.7), and approximates shrink-to-fit width from the widest explicit child width instead of defaulting to half the containing block (`BoxEngine`)
-- **Tests** — new `AcidPrereqTests` covering percent-encoded `data:` images, straight-alpha PNG decode, `<object>` nested fallback, `background-attachment: fixed`, and max-width clamping
+- **Tests** — new `IframeTests` (srcdoc child page, default sizing, child rendering, contentDocument, postMessage round-trip, parent/frameElement) with a WPT-style `lite/iframe.html` gate and an **Iframes** Example demo page; new `AcidPrereqTests` covering percent-encoded `data:` images, straight-alpha PNG decode, `<object>` nested fallback, `background-attachment: fixed`, and max-width clamping
 
 ### Fixed
 
@@ -19,6 +23,10 @@ All notable changes to this project will be documented in this file.
 - **Percent-encoded base64 `data:` images** — `data:image/...;base64,` payloads whose `/` and `=` are percent-encoded (`%2F`, `%3D`, as Acid2 encodes them) now decode correctly (`DataUri`, `ResourceLoader`)
 - **Alpha PNG compositing** — images decode with straight (un-premultiplied) alpha so partly-transparent PNGs composite correctly with source-over (Acid2's eyes are two offset transparent PNGs that must overlap into solid yellow) (`ResourceLoader`)
 - **Debug logging removed** — the parser's per-element and per-property `[CSS]` console spam (previously always on) is gone (`Parser`)
+
+### Known limitations
+
+- iframe hit-testing does not yet route clicks into child frames (parent-level UI works); cross-document navigation does not dispose child pages; a child's *runtime* class-based restyle reads the active page's cascade (its initial render is fully correct); nested-frame `top` is approximated as `parent`
 
 ## [0.0.9] - 2026-06-25
 

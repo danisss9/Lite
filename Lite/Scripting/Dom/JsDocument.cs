@@ -21,7 +21,7 @@ public class JsDocument
     public JsElement? documentElement => _root.Children.Count > 0 ? JsElement.For(_engine, _root) : null;
 
     /// <summary>Returns the window object (document.defaultView).</summary>
-    public object? defaultView => JsEngine.Instance?.RawEngine.GetValue("window").ToObject();
+    public object? defaultView => JsEngine.For(_engine)?.RawEngine.GetValue("window").ToObject();
 
     public JsElement? body =>
         FindFirst(_root, n => n.TagName == "BODY") is { } b ? JsElement.For(_engine, b) : null;
@@ -136,14 +136,14 @@ public class JsDocument
         {
             _title = value ?? string.Empty;
             if (Parser.Document is { } doc) doc.Title = _title;
-            JsEngine.Instance?.OnTitleChange?.Invoke(_title);
+            JsEngine.For(_engine)?.OnTitleChange?.Invoke(_title);
         }
     }
 
     /// <summary>document.location — same object as window.location.</summary>
-    public JsLocation? location => JsEngine.Instance?.Location;
+    public JsLocation? location => JsEngine.For(_engine)?.Location;
 
-    public string URL => JsEngine.Instance?.CurrentUrl ?? Parser.BaseUrl ?? "";
+    public string URL => JsEngine.For(_engine)?.CurrentUrl ?? Parser.BaseUrl ?? "";
     public string domain
     {
         get
