@@ -75,11 +75,20 @@ dom/nodes/getElementsByClassName-whitespace-class-names.html
 dom/nodes/insertion-removing-steps/later-script-removed-by-earlier-script.html
 dom/nodes/moveBefore/preserve-render-blocking-script.html
 
-# Representative documented gaps surfaced by the dom/nodes survey (fast, clean
-# failures — NOT process-crashers). They guard against silent regression AND flag
-# as XPASS the day the gap is closed, so they're a live backlog:
-dom/nodes/CharacterData-appendData.html [expected-fail: CharacterData mutation API (appendData/insertData/deleteData/replaceData/substringData) not implemented]
-dom/nodes/CharacterData-deleteData.html [expected-fail: CharacterData.deleteData not implemented]
+# CharacterData mutation API + DOMException + createComment/createProcessingInstruction
+# (implemented 2026-06-29): appendData/insertData/deleteData/replaceData/substringData with
+# spec IndexSizeError (host-raised DOMException), WebIDL unsigned-long offset/string coercion,
+# and Comment/PI nodes. All fully pass:
+dom/nodes/CharacterData-appendData.html
+dom/nodes/CharacterData-data.html
+dom/nodes/CharacterData-deleteData.html
+dom/nodes/CharacterData-insertData.html
+dom/nodes/CharacterData-replaceData.html
+dom/nodes/CharacterData-substringData.html
+dom/nodes/CharacterData-surrogates.html
+
+# Remaining dom/nodes gaps (documented expected-fail; fast clean failures):
+dom/nodes/CharacterData-appendChild.html [expected-fail: CharacterData nodes should reject children with HierarchyRequestError; appendChild on a Text/Comment node is not guarded]
 
 # ----------------------------------------------------------------------------
 # Real upstream WPT dom/events testharness tests (same vendoring/measurement).

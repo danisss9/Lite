@@ -218,7 +218,10 @@ internal class JsEngine
         var baseUrl = Parser.BaseUrl ?? "about://lite/";
         _engine = new Engine(opts =>
         {
-            opts.CatchClrExceptions();
+            // Wrap CLR exceptions from host code as JS errors — EXCEPT JavaScriptException, which
+            // is already a JS throw (e.g. a DOMException a host DOM method raised): letting it
+            // propagate preserves its error object (name/code) instead of flattening it to Error.
+            opts.CatchClrExceptions(ex => ex is not Jint.Runtime.JavaScriptException);
             opts.EnableModules(new HttpModuleLoader(baseUrl));
         });
 
@@ -361,6 +364,37 @@ internal class JsEngine
           globalThis.addEventListener = function (t, fn, o) { return __jsWindow.addEventListener(t, fn, o); };
           globalThis.removeEventListener = function (t, fn, o) { return __jsWindow.removeEventListener(t, fn, o); };
           globalThis.dispatchEvent = function (e) { return __jsWindow.dispatchEvent(e); };
+          // DOMException: name + spec error code, so assert_throws_dom (and page code) can
+          // inspect e.name / e.code. Host DOM methods raise these via __lite_domException.
+          if (typeof globalThis.DOMException !== 'function') {
+            var __domCodes = {
+              IndexSizeError: 1, HierarchyRequestError: 3, WrongDocumentError: 4,
+              InvalidCharacterError: 5, NoModificationAllowedError: 7, NotFoundError: 8,
+              NotSupportedError: 9, InUseAttributeError: 10, InvalidStateError: 11,
+              SyntaxError: 12, InvalidModificationError: 13, NamespaceError: 14,
+              InvalidAccessError: 15, TypeMismatchError: 17, SecurityError: 18,
+              NetworkError: 19, AbortError: 20, URLMismatchError: 21, TimeoutError: 23,
+              InvalidNodeTypeError: 24, DataCloneError: 25
+            };
+            var DOMException = function (message, name) {
+              this.message = message === undefined ? '' : String(message);
+              this.name = name === undefined ? 'Error' : String(name);
+              this.code = __domCodes[this.name] || 0;
+            };
+            DOMException.prototype = Object.create(Error.prototype);
+            DOMException.prototype.constructor = DOMException;
+            Object.defineProperty(DOMException.prototype, 'toString',
+              { value: function () { return this.name + ': ' + this.message; }, configurable: true, writable: true });
+            globalThis.DOMException = DOMException;
+          }
+          globalThis.__lite_domException = function (name, message) {
+            return new globalThis.DOMException(message, name);
+          };
+          // Host DOM methods call this to raise a DOMException: throwing in JS (rather than
+          // marshalling a CLR exception out) preserves the object so catch(e) sees e.name/e.code.
+          globalThis.__lite_throwDom = function (name, message) {
+            throw new globalThis.DOMException(message, name);
+          };
           // Live window dimensions / scroll offsets as global accessors.
           Object.defineProperty(globalThis, 'innerWidth', { get: __innerWidth, configurable: true });
           Object.defineProperty(globalThis, 'innerHeight', { get: __innerHeight, configurable: true });

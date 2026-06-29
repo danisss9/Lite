@@ -100,6 +100,23 @@ public class JsDocument
         return JsElement.For(_engine, node);
     }
 
+    /// <summary>document.createComment(data) — a Comment (CharacterData) node. Never rendered.</summary>
+    public JsElement createComment(string data)
+    {
+        var node = new LayoutNode(null, "#comment", data ?? string.Empty, _root.Style);
+        node.StyleOverrides["display"] = "none"; // comments produce no box
+        return JsElement.For(_engine, node);
+    }
+
+    /// <summary>document.createProcessingInstruction(target, data) — a PI (CharacterData) node.</summary>
+    public JsElement createProcessingInstruction(string target, string data)
+    {
+        var node = new LayoutNode(null, "#pi", data ?? string.Empty, _root.Style);
+        node.StyleOverrides["display"] = "none";
+        node.Attributes["_pi_target"] = target ?? string.Empty;
+        return JsElement.For(_engine, node);
+    }
+
     /// <summary>document.createAttribute(name) — a detached Attr to attach via setAttributeNode.</summary>
     public JsAttr createAttribute(string name) => new(name);
 

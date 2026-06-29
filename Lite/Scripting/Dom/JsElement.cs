@@ -41,23 +41,121 @@ public class JsElement
     public string localName => Node.TagName.ToLowerInvariant();
 
     // ---- DOM Core Level 2 ----
-    public int nodeType => Node.TagName == "#text" ? 3 : Node.TagName == "#document-fragment" ? 11 : Node.TagName == "#document" ? 9 : 1; // ELEMENT_NODE=1, TEXT_NODE=3, DOCUMENT_FRAGMENT_NODE=11
-    public string nodeName => Node.TagName == "#text" ? "#text" : Node.TagName.ToUpperInvariant();
-    public string? nodeValue
+    /// <summary>True for the CharacterData node kinds: Text, Comment, ProcessingInstruction.</summary>
+    private bool IsCharacterData => Node.TagName is "#text" or "#comment" or "#pi";
+
+    public int nodeType => Node.TagName switch
     {
-        get => Node.TagName == "#text" ? Node.DisplayText : null;
-        set { if (Node.TagName == "#text") Node.TextOverride = value; }
+        "#text" => 3,            // TEXT_NODE
+        "#pi" => 7,              // PROCESSING_INSTRUCTION_NODE
+        "#comment" => 8,         // COMMENT_NODE
+        "#document" => 9,        // DOCUMENT_NODE
+        "#document-fragment" => 11, // DOCUMENT_FRAGMENT_NODE
+        _ => 1,                  // ELEMENT_NODE
+    };
+    public string nodeName => Node.TagName switch
+    {
+        "#text" => "#text",
+        "#comment" => "#comment",
+        "#pi" => Node.Attributes.GetValueOrDefault("_pi_target", ""),
+        _ => Node.TagName.ToUpperInvariant(),
+    };
+
+    /// <summary>ProcessingInstruction.target.</summary>
+    public string? target => Node.TagName == "#pi" ? Node.Attributes.GetValueOrDefault("_pi_target", "") : null;
+
+    public JsValue nodeValue
+    {
+        get => IsCharacterData ? (JsValue)(Node.DisplayText ?? "") : JsValue.Null;
+        // nodeValue is [LegacyNullToEmptyString]: null → "".
+        set { if (IsCharacterData) Node.TextOverride = CoerceLegacyNull(value); }
     }
 
-    /// <summary>CharacterData.data — alias for nodeValue on text nodes.</summary>
-    public string? data
+    /// <summary>CharacterData.data — the text of a Text/Comment/PI node.</summary>
+    public JsValue data
     {
-        get => Node.TagName == "#text" ? Node.DisplayText : null;
-        set { if (Node.TagName == "#text") Node.TextOverride = value; }
+        get => IsCharacterData ? (JsValue)(Node.DisplayText ?? "") : JsValue.Undefined;
+        // data is [LegacyNullToEmptyString]: null → "".
+        set { if (IsCharacterData) Node.TextOverride = CoerceLegacyNull(value); }
     }
 
-    /// <summary>CharacterData.length — length of text data.</summary>
-    public int length => Node.TagName == "#text" ? (Node.DisplayText?.Length ?? 0) : Node.Children.Count;
+    /// <summary>CharacterData.length — code-unit length of the data (else child count for elements).</summary>
+    public int length => IsCharacterData ? (Node.DisplayText?.Length ?? 0) : Node.Children.Count;
+
+    // ---- CharacterData mutation API (§ DOM CharacterData) ----
+    // offset/count are WebIDL unsigned long (ToUint32): JS strings, doubles, and negatives all
+    // coerce — e.g. -1 → 4294967295, -0x100000000+2 → 2 — so the bounds checks match the spec.
+    // The trailing params array lets WebIDL "extra arguments are ignored" calls (e.g.
+    // substringData(0, 1, 2)) bind — Jint won't otherwise match a call with surplus args.
+    public string substringData(JsValue offset, JsValue count, params JsValue[] _)
+    {
+        var s = Node.DisplayText ?? "";
+        long o = ToU32(offset);
+        if (o > s.Length) ThrowDom("IndexSizeError", "offset is greater than length");
+        long c = Math.Min(ToU32(count), s.Length - o);
+        return s.Substring((int)o, (int)c);
+    }
+
+    public void appendData(JsValue data, params JsValue[] _) =>
+        Node.TextOverride = (Node.DisplayText ?? "") + CoerceString(data);
+
+    public void insertData(JsValue offset, JsValue data, params JsValue[] _) => replaceData(offset, JsNumber.Create(0), data);
+
+    public void deleteData(JsValue offset, JsValue count, params JsValue[] _) => replaceData(offset, count, (JsValue)"");
+
+    public void replaceData(JsValue offset, JsValue count, JsValue data, params JsValue[] _)
+    {
+        var s = Node.DisplayText ?? "";
+        long o = ToU32(offset);
+        if (o > s.Length) ThrowDom("IndexSizeError", "offset is greater than length");
+        long c = Math.Min(ToU32(count), s.Length - o);
+        Node.TextOverride = string.Concat(s.AsSpan(0, (int)o), CoerceString(data), s.AsSpan((int)(o + c)));
+    }
+
+    /// <summary>WebIDL DOMString coercion (null → "null", undefined → "undefined", else ToString).</summary>
+    private static string CoerceString(JsValue v) => Jint.Runtime.TypeConverter.ToString(v);
+
+    /// <summary>WebIDL [LegacyNullToEmptyString] DOMString coercion: null → "".</summary>
+    private static string CoerceLegacyNull(JsValue v) => v.IsNull() ? "" : Jint.Runtime.TypeConverter.ToString(v);
+
+    /// <summary>WebIDL unsigned-long (ToUint32) coercion: truncate, modulo 2^32, into [0, 2^32).</summary>
+    private static long ToU32(JsValue v)
+    {
+        var n = Jint.Runtime.TypeConverter.ToNumber(v);
+        if (double.IsNaN(n) || double.IsInfinity(n)) return 0;
+        var m = Math.Truncate(n) % 4294967296.0;
+        if (m < 0) m += 4294967296.0;
+        return (long)m;
+    }
+
+    private static readonly Dictionary<string, int> DomCodes = new()
+    {
+        ["IndexSizeError"] = 1, ["HierarchyRequestError"] = 3, ["WrongDocumentError"] = 4,
+        ["InvalidCharacterError"] = 5, ["NoModificationAllowedError"] = 7, ["NotFoundError"] = 8,
+        ["NotSupportedError"] = 9, ["InvalidStateError"] = 11, ["SyntaxError"] = 12,
+        ["NamespaceError"] = 14, ["InvalidNodeTypeError"] = 24,
+    };
+
+    /// <summary>Raises a JS-catchable DOMException (e.name / e.code / e.message, and
+    /// e.constructor === DOMException so assert_throws_dom's same-global check passes). Builds the
+    /// object directly via the shim's DOMException.prototype — re-entering the engine (Invoke/
+    /// Evaluate/Construct) from inside a host method hangs Jint — and throws it via
+    /// JavaScriptException, which propagates intact now that CatchClrExceptions skips it.</summary>
+    private void ThrowDom(string name, string message)
+    {
+        var err = new JsObject(_engine);
+        Prop(err, "name", name);
+        Prop(err, "message", message);
+        Prop(err, "code", JsNumber.Create(DomCodes.GetValueOrDefault(name)));
+        // assert_throws_dom verifies e.constructor === DOMException (its "same global" check).
+        // Expose it as an own property — setting the [[Prototype]] needs an internal Jint API.
+        var ctor = _engine.GetValue("DOMException");
+        if (ctor.IsObject()) Prop(err, "constructor", ctor);
+        throw new Jint.Runtime.JavaScriptException(err);
+
+        static void Prop(JsObject o, string key, JsValue value) =>
+            o.FastSetProperty(key, new Jint.Runtime.Descriptors.PropertyDescriptor(value, writable: true, enumerable: false, configurable: true));
+    }
 
     // ---- Node type constants (exposed on every element, like browsers do) ----
     public int ELEMENT_NODE => 1;
@@ -93,9 +191,13 @@ public class JsElement
 
     private static string GetTextContentRecursive(LayoutNode node)
     {
-        if (node.TagName == "#text") return node.DisplayText;
+        // A node's OWN textContent: CharacterData returns its data; an element concatenates the
+        // textContent of its descendants — but Comment/PI data does NOT contribute to an ancestor's.
+        if (node.TagName is "#text" or "#comment" or "#pi") return node.DisplayText;
         if (node.Children.Count == 0) return node.DisplayText;
-        return string.Concat(node.Children.Select(c => GetTextContentRecursive(c)));
+        return string.Concat(node.Children
+            .Where(c => c.TagName is not ("#comment" or "#pi"))
+            .Select(GetTextContentRecursive));
     }
 
     public string innerHTML
