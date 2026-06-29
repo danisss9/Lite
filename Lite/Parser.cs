@@ -835,7 +835,9 @@ internal static class Parser
                     if (IsPlayableMediaType(s.GetAttribute("type"))) { currentSrc = ss; break; }
                 }
             }
-            if (!string.IsNullOrEmpty(currentSrc)) node.Attributes["_currentSrc"] = currentSrc;
+            // Resolve against the document base so the media backend gets an absolute URL
+            // (VLC treats bare relative strings as filesystem paths, not http:// URLs).
+            if (!string.IsNullOrEmpty(currentSrc)) node.Attributes["_currentSrc"] = ResolveAgainstBase(currentSrc);
 
             if (tag == "VIDEO")
             {

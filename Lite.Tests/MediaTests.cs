@@ -75,7 +75,9 @@ public static class MediaTests
             "<source src='other.mp4' type='video/mp4'>" +
             "</video>");
         e.Execute("globalThis.cs = document.getElementById('v').currentSrc;");
-        Equal("good.webm", (string?)Val(e, "cs"));
+        // currentSrc is the absolute resolved URL of the chosen resource (HTML spec),
+        // resolved against this page's base (http://test/).
+        Equal("http://test/good.webm", (string?)Val(e, "cs"));
     }
 
     [Test]

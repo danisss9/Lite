@@ -57,6 +57,7 @@ internal static class Program
         {
             return suite.ToLowerInvariant() switch
             {
+                "wpt" when survey is not null => WptRunner.Survey(survey, surveyLimit),
                 "wpt" => WptRunner.Run(filter),
                 "css21" when survey is not null => RefTestRunner.Survey(survey, surveyLimit),
                 "css21" => RefTestRunner.Run(filter),

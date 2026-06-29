@@ -34,7 +34,10 @@ test(function () {
 
 test(function () {
   var v = document.getElementById('v');
-  assert_equals(v.currentSrc, 'clip.webm', 'first playable <source> is chosen');
+  // currentSrc is the absolute resolved URL of the chosen resource (HTML spec), not the raw
+  // relative attribute. Match host/port-independently: an absolute http(s) URL ending in clip.webm.
+  assert_true(/^https?:\/\/.+\/clip\.webm$/.test(v.currentSrc),
+    'first playable <source> is chosen (absolute currentSrc), got: ' + v.currentSrc);
 }, '<source> selection skips unsupported types');
 
 test(function () {

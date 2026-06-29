@@ -45,3 +45,61 @@ css/CSS2/normal-flow/unresolvable-min-height.html
 # ---- Phase 4: interactive elements / forms / observers ----
 # html/semantics/interactive-elements/the-details-element/toggleEvent.html
 # dom/nodes/MutationObserver-attributes.html
+
+# ============================================================================
+# Phase 5 (priority #1): REAL upstream WPT dom/nodes testharness tests.
+# Vendored at WPT commit 4fea7806 by scripts\fetch-tests.ps1; measured with
+#   dotnet run --project Lite.Conformance -c Release -- --suite wpt --survey dom/nodes
+# These all FULLY pass through the real Lite pipeline (DOM tree traversal,
+# ParentNode/ChildNode, getElementsByClassName, live childNodes caching, script
+# insertion/removal ordering). Keep the gate monotonic: a survey-green test moves
+# up here; a regression here means a real DOM bug.
+# ----------------------------------------------------------------------------
+dom/nodes/Element-childElement-null.html
+dom/nodes/Element-childElementCount.html
+dom/nodes/Element-childElementCount-nochild.html
+dom/nodes/Element-childElementCount-dynamic-add.html
+dom/nodes/Element-childElementCount-dynamic-remove.html
+dom/nodes/Element-firstElementChild.html
+dom/nodes/Element-lastElementChild.html
+dom/nodes/Element-nextElementSibling.html
+dom/nodes/Element-previousElementSibling.html
+dom/nodes/Element-siblingElement-null.html
+dom/nodes/Element-hasAttributes.html
+dom/nodes/Node-childNodes-cache.html
+dom/nodes/Node-childNodes-cache-2.html
+dom/nodes/DocumentFragment-querySelectorAll-after-modification.html
+dom/nodes/ParentNode-querySelectorAll-removed-elements.html
+dom/nodes/getElementsByClassName-32.html
+dom/nodes/getElementsByClassName-whitespace-class-names.html
+dom/nodes/insertion-removing-steps/later-script-removed-by-earlier-script.html
+dom/nodes/moveBefore/preserve-render-blocking-script.html
+
+# Representative documented gaps surfaced by the dom/nodes survey (fast, clean
+# failures — NOT process-crashers). They guard against silent regression AND flag
+# as XPASS the day the gap is closed, so they're a live backlog:
+dom/nodes/CharacterData-appendData.html [expected-fail: CharacterData mutation API (appendData/insertData/deleteData/replaceData/substringData) not implemented]
+dom/nodes/CharacterData-deleteData.html [expected-fail: CharacterData.deleteData not implemented]
+
+# ----------------------------------------------------------------------------
+# Real upstream WPT dom/events testharness tests (same vendoring/measurement).
+#   dotnet run --project Lite.Conformance -c Release -- --suite wpt --survey dom/events
+# These fully pass: Event type/dispatch basics, stopImmediatePropagation, the
+# legacy KeyEvent.initKeyEvent path, and event-handler-attribute passive replace.
+# (Most of dom/events times out headlessly — it needs testdriver-synthesised user
+# input — or fails on un-implemented legacy init* APIs; see survey + xfails below.)
+# NOTE: two dom/events tests are in Wpt\survey-skip.txt because re-entrant dispatch
+# overflows the CLR stack (a Jint recursion limitation), so they can't go in the gate.
+# ----------------------------------------------------------------------------
+dom/events/Event-type.html
+dom/events/Event-type-empty.html
+dom/events/Event-stopImmediatePropagation.html
+dom/events/KeyEvent-initKeyEvent.html
+dom/events/event-handler-attribute-replace-preserves-passive.html
+dom/events/label-default-action.html
+# dom/events/Event-dispatch-click.tentative.html — passes today, held out of the gate
+#   because it is a .tentative (unstable-spec) test.
+
+# Representative dom/events gaps (fast clean failures):
+dom/events/EventTarget-add-remove-listener.any.js [expected-fail: EventTarget is not exposed as a constructible global]
+dom/events/Event-initEvent.html [expected-fail: legacy Event.initEvent / Event.returnValue not implemented]

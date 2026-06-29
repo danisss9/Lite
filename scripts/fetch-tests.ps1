@@ -6,18 +6,22 @@
 
 $ErrorActionPreference = 'Stop'
 
-$WptSha     = 'latest'   # github.com/web-platform-tests/wpt
-$Test262Sha = 'latest'   # github.com/tc39/test262
+$WptSha     = '4fea7806db1bfd92a8b7c9c63263f98beeffd6be'   # github.com/web-platform-tests/wpt
+$Test262Sha = 'latest'                                      # github.com/tc39/test262
 
-# Directories to sparse-checkout (keep in sync with the curated manifests)
+# Directories to sparse-checkout (cone mode). Keep in sync with the curated manifests
+# (Wpt\wpt-manifest.txt, Css21\css21-manifest.txt) and the survey targets — a clean fetch
+# MUST reproduce every subtree the gate and surveys read, or the gate breaks on a fresh box.
+#   - resources / common: testharness.js, check-layout-th.js, /common helpers tests pull in.
+#   - css/CSS2 + css/support: the CSS 2.1 reftests and the css21 survey (normal-flow / box-display).
+#   - dom/* + html/semantics/*: the HTML5/DOM testharness suites the wpt survey measures.
 $WptDirs = @(
     'resources',
     'common',
-    'infrastructure',
-    'url',
+    'css/CSS2',
+    'css/support',
     'dom/nodes',
     'dom/events',
-    'html/browsers/history',
     'html/semantics/interactive-elements',
     'html/semantics/embedded-content/the-iframe-element'
 )
