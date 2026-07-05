@@ -87,16 +87,17 @@ dom/nodes/CharacterData-replaceData.html
 dom/nodes/CharacterData-substringData.html
 dom/nodes/CharacterData-surrogates.html
 
-# Remaining dom/nodes gaps (documented expected-fail; fast clean failures):
-dom/nodes/CharacterData-appendChild.html [expected-fail: CharacterData nodes should reject children with HierarchyRequestError; appendChild on a Text/Comment node is not guarded]
+# CharacterData nodes reject children with HierarchyRequestError (appendChild/insertBefore/replaceChild guarded).
+dom/nodes/CharacterData-appendChild.html
 
 # ----------------------------------------------------------------------------
 # Real upstream WPT dom/events testharness tests (same vendoring/measurement).
 #   dotnet run --project Lite.Conformance -c Release -- --suite wpt --survey dom/events
 # These fully pass: Event type/dispatch basics, stopImmediatePropagation, the
-# legacy KeyEvent.initKeyEvent path, and event-handler-attribute passive replace.
-# (Most of dom/events times out headlessly — it needs testdriver-synthesised user
-# input — or fails on un-implemented legacy init* APIs; see survey + xfails below.)
+# legacy KeyEvent.initKeyEvent path, event-handler-attribute passive replace,
+# EventTarget construction, and legacy Event.initEvent / returnValue.
+# (Most of dom/events still times out headlessly — it needs testdriver-synthesised
+# user input.)
 # NOTE: two dom/events tests are in Wpt\survey-skip.txt because re-entrant dispatch
 # overflows the CLR stack (a Jint recursion limitation), so they can't go in the gate.
 # ----------------------------------------------------------------------------
@@ -109,6 +110,7 @@ dom/events/label-default-action.html
 # dom/events/Event-dispatch-click.tentative.html — passes today, held out of the gate
 #   because it is a .tentative (unstable-spec) test.
 
-# Representative dom/events gaps (fast clean failures):
-dom/events/EventTarget-add-remove-listener.any.js [expected-fail: EventTarget is not exposed as a constructible global]
-dom/events/Event-initEvent.html [expected-fail: legacy Event.initEvent / Event.returnValue not implemented]
+# EventTarget is a constructible global (new EventTarget()); legacy Event.initEvent /
+# returnValue / isTrusted / srcElement / cancelBubble are implemented.
+dom/events/EventTarget-add-remove-listener.any.js
+dom/events/Event-initEvent.html

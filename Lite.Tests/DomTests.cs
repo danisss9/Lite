@@ -346,4 +346,74 @@ public static class DomTests
         True(Val(engine, "detachedOwner") is null, "a detached Attr has no ownerElement");
         True(Val(engine, "afterRemove") is null, "removeNamedItem deletes the attribute");
     }
+
+    [Test]
+    public static void EventTarget_Constructible_OnceAndPreventDefault()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute(@"
+            var et = new EventTarget();
+            var count = 0;
+            et.addEventListener('x', function () { count++; }, { once: true });
+            et.dispatchEvent(new Event('x'));
+            et.dispatchEvent(new Event('x'));   // once-listener already removed
+
+            var et2 = new EventTarget();
+            et2.addEventListener('y', function (e) { e.preventDefault(); });
+            var canceled = et2.dispatchEvent(new Event('y', { cancelable: true }));
+            var notCanceled = et2.dispatchEvent(new Event('z', { cancelable: true }));");
+        Equal(1, System.Convert.ToInt32(Val(engine, "count")));
+        True(Val(engine, "canceled") is false, "dispatchEvent returns false when a listener calls preventDefault");
+        True(Val(engine, "notCanceled") is true, "dispatchEvent returns true with no matching listener");
+    }
+
+    [Test]
+    public static void CharacterData_AppendChild_ThrowsHierarchyRequestError()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute(@"
+            var name = '', code = -1;
+            try { document.createTextNode('a').appendChild(document.createComment('b')); }
+            catch (e) { name = e.name; code = e.code; }");
+        Equal("HierarchyRequestError", (string?)Val(engine, "name"));
+        Equal(3, System.Convert.ToInt32(Val(engine, "code")));
+    }
+
+    [Test]
+    public static void Event_LegacyInitAndReturnValue()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute(@"
+            var e = document.createEvent('Event');
+            e.initEvent('t', true, true);
+            var rv0 = e.returnValue, trusted = e.isTrusted, src = e.srcElement;
+            e.returnValue = false;               // legacy alias for preventDefault
+            var dp = e.defaultPrevented;
+            var ue = new UIEvent('resize');
+            var ueType = ue.type;
+            var mandatory = '';
+            try { document.createEvent('Event').initEvent(); } catch (err) { mandatory = err.name; }");
+        True(Val(engine, "rv0") is true, "returnValue defaults to true");
+        True(Val(engine, "trusted") is false, "script-created events are untrusted");
+        True(Val(engine, "src") is null, "srcElement is null before dispatch");
+        True(Val(engine, "dp") is true, "returnValue = false cancels the event");
+        Equal("resize", (string?)Val(engine, "ueType"));
+        Equal("TypeError", (string?)Val(engine, "mandatory"));
+    }
+
+    [Test]
+    public static void Event_ReentrantDispatch_ThrowsInvalidState()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute(@"
+            var el = document.createElement('div');
+            var reErr = '';
+            var e = document.createEvent('Event');
+            e.initEvent('re', true, true);
+            el.addEventListener('re', function () {
+                try { el.dispatchEvent(e); } catch (err) { reErr = err.name; }
+            });
+            el.dispatchEvent(e);");
+        Equal("InvalidStateError", (string?)Val(engine, "reErr"));
+    }
 }

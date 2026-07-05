@@ -158,7 +158,7 @@ internal class JsEngine
         try
         {
             var evt = new Dom.JsEvent { state = state };
-            evt.initEvent("popstate");
+            evt.Init("popstate");
             _jsWindow.DispatchEvent("popstate", JsValue.FromObject(_engine, evt));
         }
         catch (Exception ex) { Console.WriteLine($"[popstate] {ex.Message}"); }
@@ -170,7 +170,7 @@ internal class JsEngine
         try
         {
             var evt = new Dom.JsEvent { oldURL = oldUrl, newURL = newUrl };
-            evt.initEvent("hashchange");
+            evt.Init("hashchange");
             _jsWindow.DispatchEvent("hashchange", JsValue.FromObject(_engine, evt));
         }
         catch (Exception ex) { Console.WriteLine($"[hashchange] {ex.Message}"); }
@@ -288,13 +288,17 @@ internal class JsEngine
         _engine.SetValue("ResizeObserver", typeof(Dom.JsResizeObserver));
         _engine.SetValue("IntersectionObserver", typeof(Dom.JsIntersectionObserver));
 
-        // Event / CustomEvent constructors (JsEvent is a superset of both)
+        // Event / CustomEvent constructors (JsEvent is a superset of all event interfaces)
         _engine.SetValue("Event", typeof(JsEvent));
         _engine.SetValue("CustomEvent", typeof(JsEvent));
+        _engine.SetValue("UIEvent", typeof(JsEvent));
         _engine.SetValue("MouseEvent", typeof(JsEvent));
         _engine.SetValue("KeyboardEvent", typeof(JsEvent));
         _engine.SetValue("WheelEvent", typeof(JsEvent));
         _engine.SetValue("PointerEvent", typeof(JsEvent));
+
+        // EventTarget base interface — constructible (new EventTarget()) with its own listener list.
+        _engine.SetValue("EventTarget", typeof(Dom.JsEventTarget));
 
         // NodeFilter constants
         _engine.SetValue("NodeFilter", new

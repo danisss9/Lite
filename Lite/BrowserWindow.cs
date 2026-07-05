@@ -777,7 +777,7 @@ public class BrowserWindow
                         if (jsEngine != null)
                         {
                             var evt = new Scripting.Dom.JsEvent();
-                            evt.initEvent(eventType, true, true);
+                            evt.Init(eventType, true, true);
                             evt.key = keyName;
                             evt.keyCode = vk;
                             evt.code = MapVirtualKeyToCode(vk);
@@ -1078,7 +1078,7 @@ public class BrowserWindow
         if (engine == null || _rootNode == null) return;
 
         var evt = new Scripting.Dom.JsEvent();
-        evt.initEvent("submit", true, true);
+        evt.Init("submit", true, true);
         evt.target = Scripting.Dom.JsElement.For(engine.RawEngine, form);
         EventDispatcher.DispatchEvent(form, evt, engine);
 
@@ -1182,7 +1182,7 @@ public class BrowserWindow
     {
         if (node is null || JsEngine.Instance is not { } engine) return false;
         var evt = new Scripting.Dom.JsEvent();
-        evt.initEvent("wheel", true, true);
+        evt.Init("wheel", true, true);
         evt.clientX = x;
         evt.clientY = y;
         evt.pageX = x;
@@ -1204,7 +1204,7 @@ public class BrowserWindow
     private void DispatchPointerOrMouse(string eventType, LayoutNode node, int x, int y, float contentY, JsEngine engine, bool isPointer)
     {
         var evt = new Scripting.Dom.JsEvent();
-        evt.initEvent(eventType, true, true);
+        evt.Init(eventType, true, true);
         evt.clientX = x;
         evt.clientY = y;
         evt.pageX = x;
@@ -1224,7 +1224,7 @@ public class BrowserWindow
         if (engine == null) return false;
 
         var evt = new Scripting.Dom.JsEvent();
-        evt.initEvent("click", true, true);
+        evt.Init("click", true, true);
         evt.clientX = x;
         evt.clientY = y;
         evt.pageX = x;

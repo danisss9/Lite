@@ -24,7 +24,7 @@ internal static class EventDispatcher
         if (engine is null) return false;
 
         var evt = new JsEvent();
-        evt.initEvent(eventType.ToLowerInvariant(), true, true);
+        evt.Init(eventType.ToLowerInvariant(), true, true);
         evt.target = JsElement.For(engine.RawEngine, node);
 
         return DispatchEvent(node, evt, engine);
@@ -35,7 +35,7 @@ internal static class EventDispatcher
     internal static bool DispatchToNode(LayoutNode node, string eventType, JsEngine engine, bool bubbles = false)
     {
         var evt = new JsEvent();
-        evt.initEvent(eventType.ToLowerInvariant(), bubbles, false);
+        evt.Init(eventType.ToLowerInvariant(), bubbles, false);
         evt.target = JsElement.For(engine.RawEngine, node);
         return DispatchEvent(node, evt, engine);
     }
@@ -45,8 +45,13 @@ internal static class EventDispatcher
     /// </summary>
     internal static bool DispatchEvent(LayoutNode targetNode, JsEvent evt, JsEngine engine)
     {
+        // Dispatch flag (DOM §2.9): an event already travelling its path can't be re-dispatched.
+        if (evt.Dispatching)
+            throw JsErrors.Dom("InvalidStateError", "Failed to execute 'dispatchEvent': The event is already being dispatched.");
+
         var handled = false;
         var eventType = evt.type;
+        evt.Dispatching = true;
 
         // Build ancestor chain (root → ... → parent)
         var ancestors = new List<LayoutNode>();
@@ -111,6 +116,7 @@ internal static class EventDispatcher
         }
 
         evt.eventPhase = 0;
+        evt.Dispatching = false;
         // Run Promise continuations scheduled by the handlers (microtask checkpoint).
         engine.FlushMicrotasks();
         return handled;
@@ -124,6 +130,9 @@ internal static class EventDispatcher
             if (listener.EventType != eventType) continue;
             if (listener.Capture != capturePhase) continue;
             if (evt.ImmediatePropagationStopped) break;
+
+            // A `once` listener is removed before it runs, so re-entrant dispatch can't re-invoke it.
+            if (listener.Once) node.EventListeners.Remove(listener);
 
             try
             {

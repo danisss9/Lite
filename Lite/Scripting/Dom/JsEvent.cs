@@ -1,5 +1,6 @@
 using Jint;
 using Jint.Native;
+using Jint.Runtime;
 
 namespace Lite.Scripting.Dom;
 
@@ -99,7 +100,31 @@ public class JsEvent
     internal bool PropagationStopped { get; private set; }
     internal bool ImmediatePropagationStopped { get; private set; }
 
+    /// <summary>The "dispatch flag": set while the event travels its propagation path. While set,
+    /// <see cref="initEvent"/> is a no-op and re-dispatching the same event throws InvalidStateError.</summary>
+    internal bool Dispatching { get; set; }
+
     public bool defaultPrevented => DefaultPrevented;
+
+    /// <summary>Untrusted for script-created events; only user-agent-generated events are trusted.</summary>
+    public bool isTrusted { get; internal set; }
+
+    /// <summary>Legacy alias for <see cref="target"/>.</summary>
+    public JsElement? srcElement => target;
+
+    /// <summary>Legacy accessor for the stop-propagation flag (true once stopPropagation ran).</summary>
+    public bool cancelBubble
+    {
+        get => PropagationStopped;
+        set { if (value) stopPropagation(); }
+    }
+
+    /// <summary>Legacy IE-style flag: reads !defaultPrevented; setting it false cancels the event.</summary>
+    public bool returnValue
+    {
+        get => !DefaultPrevented;
+        set { if (!value) preventDefault(); }
+    }
 
     public void preventDefault()
     {
@@ -114,10 +139,65 @@ public class JsEvent
         ImmediatePropagationStopped = true;
     }
 
-    public void initEvent(string typeArg, bool bubblesArg = false, bool cancelableArg = false)
+    /// <summary>Legacy Event.initEvent(type, bubbles?, cancelable?). Per DOM §2.9: the type arg is
+    /// mandatory (0 args → TypeError), the call is a no-op while the event is being dispatched, and it
+    /// resets the stop-propagation / stop-immediate / canceled flags. <paramref name="typeArg"/> is a
+    /// JsValue so a missing first arg is detectable; the bool args are JsValue? so they coerce (and
+    /// default to false when omitted).</summary>
+    public void initEvent(JsValue? typeArg = null, JsValue? bubblesArg = null, JsValue? cancelableArg = null)
+    {
+        if (typeArg is null || typeArg.IsUndefined())
+            throw JsErrors.Native("TypeError", "Failed to execute 'initEvent' on 'Event': 1 argument required, but only 0 present.");
+        if (Dispatching) return; // dispatch flag set: the setter must short-circuit.
+
+        type = TypeConverter.ToString(typeArg);
+        bubbles = bubblesArg is not null && TypeConverter.ToBoolean(bubblesArg);
+        cancelable = cancelableArg is not null && TypeConverter.ToBoolean(cancelableArg);
+        DefaultPrevented = false;
+        PropagationStopped = false;
+        ImmediatePropagationStopped = false;
+    }
+
+    /// <summary>Internal, strongly-typed initializer used by host dispatch code (not the JS surface).</summary>
+    internal void Init(string typeArg, bool bubblesArg = false, bool cancelableArg = false)
     {
         type = typeArg;
         bubbles = bubblesArg;
         cancelable = cancelableArg;
+        DefaultPrevented = false;
+        PropagationStopped = false;
+        ImmediatePropagationStopped = false;
+    }
+
+    /// <summary>Legacy CustomEvent.initCustomEvent(type, bubbles?, cancelable?, detail?).</summary>
+    public void initCustomEvent(JsValue typeArg, JsValue? bubblesArg = null, JsValue? cancelableArg = null, JsValue? detailArg = null)
+    {
+        initEvent(typeArg, bubblesArg, cancelableArg);
+        if (!Dispatching && detailArg is not null && !detailArg.IsUndefined()) detail = detailArg;
+    }
+
+    /// <summary>Legacy MouseEvent.initMouseEvent — only the subset this engine tracks is stored.</summary>
+    public void initMouseEvent(JsValue typeArg, JsValue? bubblesArg = null, JsValue? cancelableArg = null,
+        JsValue? view = null, JsValue? detailArg = null, JsValue? screenXArg = null, JsValue? screenYArg = null,
+        JsValue? clientXArg = null, JsValue? clientYArg = null, JsValue? ctrl = null, JsValue? alt = null,
+        JsValue? shift = null, JsValue? meta = null, JsValue? btn = null, params JsValue[] _)
+    {
+        initEvent(typeArg, bubblesArg, cancelableArg);
+        if (Dispatching) return;
+        if (clientXArg is not null && clientXArg.IsNumber()) clientX = (float)clientXArg.AsNumber();
+        if (clientYArg is not null && clientYArg.IsNumber()) clientY = (float)clientYArg.AsNumber();
+        if (btn is not null && btn.IsNumber()) button = (int)btn.AsNumber();
+        if (ctrl is not null && ctrl.IsBoolean()) ctrlKey = ctrl.AsBoolean();
+        if (alt is not null && alt.IsBoolean()) altKey = alt.AsBoolean();
+        if (shift is not null && shift.IsBoolean()) shiftKey = shift.AsBoolean();
+        if (meta is not null && meta.IsBoolean()) metaKey = meta.AsBoolean();
+    }
+
+    /// <summary>Legacy KeyboardEvent.initKeyboardEvent — subset stored.</summary>
+    public void initKeyboardEvent(JsValue typeArg, JsValue? bubblesArg = null, JsValue? cancelableArg = null,
+        JsValue? view = null, JsValue? keyArg = null, params JsValue[] _)
+    {
+        initEvent(typeArg, bubblesArg, cancelableArg);
+        if (!Dispatching && keyArg is not null && keyArg.IsString()) key = keyArg.AsString();
     }
 }

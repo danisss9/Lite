@@ -462,7 +462,7 @@ public class JsElement
         eng.EnqueueMacrotask(() =>
         {
             var evt = new JsEvent();
-            evt.initEvent(type, false, false);
+            evt.Init(type, false, false);
             evt.target = For(eng.RawEngine, Node);
             EventDispatcher.DispatchEvent(Node, evt, eng);
         });
@@ -658,7 +658,7 @@ public class JsElement
     {
         if (Node.TagName != "FORM" || JsEngine.For(_engine) is not { } engine) return;
         var evt = new JsEvent();
-        evt.initEvent("submit", true, true);
+        evt.Init("submit", true, true);
         evt.target = For(_engine, Node);
         EventDispatcher.DispatchEvent(Node, evt, engine);
         if (evt.DefaultPrevented) return;
@@ -888,6 +888,9 @@ public class JsElement
 
     public JsElement appendChild(JsElement child)
     {
+        // CharacterData (Text/Comment/PI) and other leaf node types cannot contain children.
+        if (IsCharacterData)
+            ThrowDom("HierarchyRequestError", $"A {nodeName} node cannot have children.");
         if (IsAncestor(child.Node, Node))
             throw new InvalidOperationException("The new child element contains the parent.");
         // Remove from old parent if attached
@@ -913,6 +916,8 @@ public class JsElement
 
     public JsElement insertBefore(JsElement newNode, JsElement? refNode)
     {
+        if (IsCharacterData)
+            ThrowDom("HierarchyRequestError", $"A {nodeName} node cannot have children.");
         if (IsAncestor(newNode.Node, Node))
             throw new InvalidOperationException("The new child element contains the parent.");
         newNode.Node.Parent?.Children.Remove(newNode.Node);
@@ -934,6 +939,8 @@ public class JsElement
 
     public JsElement replaceChild(JsElement newNode, JsElement oldNode)
     {
+        if (IsCharacterData)
+            ThrowDom("HierarchyRequestError", $"A {nodeName} node cannot have children.");
         if (IsAncestor(newNode.Node, Node))
             throw new InvalidOperationException("The new child element contains the parent.");
         // Remove newNode from its old parent first (may shift indices)
@@ -1066,17 +1073,20 @@ public class JsElement
     // ---- events ----
     public void addEventListener(string type, JsValue handler, JsValue? options = null)
     {
-        bool capture = false;
+        bool capture = false, once = false;
         if (options is not null)
         {
             if (options.IsBoolean()) capture = options.AsBoolean();
             else if (options.IsObject())
             {
-                var captureVal = options.AsObject().Get("capture");
+                var o = options.AsObject();
+                var captureVal = o.Get("capture");
                 if (captureVal.IsBoolean()) capture = captureVal.AsBoolean();
+                var onceVal = o.Get("once");
+                if (onceVal.IsBoolean()) once = onceVal.AsBoolean();
             }
         }
-        Node.EventListeners.Add(new EventListenerEntry(type.ToLowerInvariant(), handler, null, capture));
+        Node.EventListeners.Add(new EventListenerEntry(type.ToLowerInvariant(), handler, null, capture, once));
     }
 
     public void removeEventListener(string type, JsValue handler, JsValue? options = null)
@@ -1109,7 +1119,7 @@ public class JsElement
     public void click()
     {
         var evt = new JsEvent();
-        evt.initEvent("click", true, true);
+        evt.Init("click", true, true);
         dispatchEvent(evt);
     }
 

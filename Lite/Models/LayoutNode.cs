@@ -9,8 +9,9 @@ namespace Lite.Models;
 /// <summary>A CSS property/value pair that is conditional on a media query.</summary>
 public record MediaConditionalStyle(string MediaText, string Property, string Value, string Target);
 
-/// <summary>An event listener entry supporting both capture and bubble phases.</summary>
-public record EventListenerEntry(string EventType, JsValue? Handler, Action? LegacyHandler, bool Capture);
+/// <summary>An event listener entry supporting both capture and bubble phases. <c>Once</c> listeners
+/// are removed from the node before they are invoked (DOM §2.9), so re-entrant dispatch can't re-run them.</summary>
+public record EventListenerEntry(string EventType, JsValue? Handler, Action? LegacyHandler, bool Capture, bool Once = false);
 
 public class LayoutNode
 {
