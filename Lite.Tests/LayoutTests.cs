@@ -319,4 +319,75 @@ public static class LayoutTests
         True(empty.Red > 150 && Math.Abs(empty.Red - empty.Blue) < 20 && Math.Abs(empty.Red - empty.Green) < 20,
             $"empty region should be the grey track, got {empty}");
     }
+
+    // -------------------------------------------------------------------------
+    // Intrinsic sizing / shrink-to-fit (§10.3.5 / §10.3.7)
+    // -------------------------------------------------------------------------
+
+    private static LayoutNode InlineBlock(Dictionary<string, string> styles, params LayoutNode[] children)
+    {
+        var node = Block(styles, children);
+        node.StyleOverrides["display"] = "inline-block";
+        return node;
+    }
+
+    [Test]
+    public static void ShrinkToFit_AbsPos_UsesChildMaxContentWidth()
+    {
+        // An auto-width abs-pos box shrinks to fit: its max-content is its widest block child's
+        // outer width. child content 120 + padding 10*2 = 140.
+        var child = Block(new() { ["width"] = "120px", ["padding-left"] = "10px", ["padding-right"] = "10px", ["height"] = "20px" });
+        var abs = Block(new() { ["position"] = "absolute", ["width"] = "auto" }, child);
+        LayoutTree(Block(new() { ["width"] = "800px" }, abs));
+        True(Math.Abs(abs.Box.ContentBox.Width - 140f) < 0.5f,
+            $"abs-pos shrink-to-fit width should be child outer 140, got {abs.Box.ContentBox.Width}");
+    }
+
+    [Test]
+    public static void ShrinkToFit_StackedBlocks_TakeWidest()
+    {
+        // Block children stack, so max-content is the widest — 100, not 60 and not their sum.
+        var a = Block(new() { ["width"] = "60px", ["height"] = "20px" });
+        var b = Block(new() { ["width"] = "100px", ["height"] = "20px" });
+        var abs = Block(new() { ["position"] = "absolute", ["width"] = "auto" }, a, b);
+        LayoutTree(Block(new() { ["width"] = "800px" }, abs));
+        True(Math.Abs(abs.Box.ContentBox.Width - 100f) < 0.5f,
+            $"stacked-block shrink-to-fit should take the widest child (100), got {abs.Box.ContentBox.Width}");
+    }
+
+    [Test]
+    public static void ShrinkToFit_InlineChildren_SumAcrossLine()
+    {
+        // Two inline-blocks flow on one line, so max-content is their sum (50 + 50 = 100) — the key
+        // improvement over the old "widest single child" heuristic (which returned 50).
+        var a = InlineBlock(new() { ["width"] = "50px", ["height"] = "20px" });
+        var b = InlineBlock(new() { ["width"] = "50px", ["height"] = "20px" });
+        var abs = Block(new() { ["position"] = "absolute", ["width"] = "auto" }, a, b);
+        LayoutTree(Block(new() { ["width"] = "800px" }, abs));
+        True(Math.Abs(abs.Box.ContentBox.Width - 100f) < 0.5f,
+            $"inline children should sum across the line (100), got {abs.Box.ContentBox.Width}");
+    }
+
+    [Test]
+    public static void ShrinkToFit_MinContentFloorsAboveAvailable()
+    {
+        // min-content can exceed the available width: a fixed 300px child fixes both min and max to
+        // 300, so the box overflows its 200px containing block rather than shrinking below content.
+        var child = Block(new() { ["width"] = "300px", ["height"] = "20px" });
+        var abs = Block(new() { ["position"] = "absolute", ["width"] = "auto" }, child);
+        LayoutTree(Block(new() { ["width"] = "200px" }, abs));
+        True(Math.Abs(abs.Box.ContentBox.Width - 300f) < 0.5f,
+            $"min-content (300) should floor shrink-to-fit above the 200px available, got {abs.Box.ContentBox.Width}");
+    }
+
+    [Test]
+    public static void ShrinkToFit_Float_UsesIntrinsicWidth()
+    {
+        // A float with auto width and an explicit-width child shrinks to that child's outer width.
+        var child = Block(new() { ["width"] = "90px", ["height"] = "20px" });
+        var flt = Block(new() { ["float"] = "left", ["width"] = "auto" }, child);
+        LayoutTree(Block(new() { ["width"] = "800px" }, flt));
+        True(Math.Abs(flt.Box.ContentBox.Width - 90f) < 0.5f,
+            $"float shrink-to-fit width should be child 90, got {flt.Box.ContentBox.Width}");
+    }
 }

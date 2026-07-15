@@ -165,21 +165,14 @@ internal static class BoxEngine
             contentW = Math.Max(0, cbRect.Width - left - right - margin.Left - margin.Right - border.Left - border.Right - padding.Left - padding.Right);
         else
         {
-            // Shrink-to-fit (§10.3.7). For text, measure the text. For a block container we lack a
-            // true max-content pass, so approximate the shrink-to-fit width by the widest explicit
-            // (non-auto) width among the children's subtree; fall back to half the container.
-            if (!string.IsNullOrEmpty(node.DisplayText))
-            {
-                using var shrinkFont = TextMeasure.CreateFont(node);
-                contentW = shrinkFont.MeasureText(node.DisplayText);
-            }
-            else
-            {
-                var intrinsic = MeasureExplicitMaxWidth(node, cbRect.Width, viewportHeight);
-                contentW = intrinsic > 0
-                    ? Math.Min(intrinsic, cbRect.Width)
-                    : Math.Max(0, cbRect.Width * 0.5f);
-            }
+            // Shrink-to-fit (§10.3.7): min(max(min-content, available), max-content), where the
+            // available content width is what remains of the containing block after this box's own
+            // margins, border, padding and any set left/right offset are removed.
+            var availW = cbRect.Width - margin.Left - margin.Right
+                       - border.Left - border.Right - padding.Left - padding.Right;
+            if (!float.IsNaN(left)) availW -= left;
+            else if (!float.IsNaN(right)) availW -= right;
+            contentW = IntrinsicSizer.ShrinkToFit(node, Math.Max(0f, availW), viewportHeight);
         }
 
         // Clamp to min/max-width (§10.4) — min wins over max. (Acid2's fixed scalp uses
@@ -267,34 +260,6 @@ internal static class BoxEngine
             Border = border,
             Margin = margin,
         };
-    }
-
-    /// <summary>
-    /// Approximates the shrink-to-fit width of an auto-width container without a full max-content
-    /// pass: the widest explicit (non-auto) outer width (content+padding+border+margin) found in
-    /// the subtree, or 0 if none. Lets an absolutely-positioned block with explicit-width children
-    /// (Acid2's eyes: two 10em boxes) shrink to fit rather than defaulting to half its container.
-    /// </summary>
-    private static float MeasureExplicitMaxWidth(LayoutNode node, float cbWidth, float viewportHeight)
-    {
-        float best = 0f;
-        foreach (var child in node.Children)
-        {
-            if (child.GetDisplay() == DisplayType.None) continue;
-            var fontSize = child.GetFontSize();
-            var w = child.GetWidth(cbWidth, fontSize);
-            if (w > 0)
-            {
-                var pad = child.GetPadding(cbWidth, 0, fontSize);
-                var bord = child.GetBorderWidth();
-                var marg = child.GetMargin(cbWidth, 0, fontSize);
-                best = Math.Max(best, w + pad.Left + pad.Right + bord.Left + bord.Right
-                                     + Math.Max(0, marg.Left) + Math.Max(0, marg.Right));
-            }
-            else
-                best = Math.Max(best, MeasureExplicitMaxWidth(child, cbWidth, viewportHeight));
-        }
-        return best;
     }
 
     // -------------------------------------------------------------------------
@@ -606,14 +571,8 @@ internal static class BoxEngine
         }
         else
         {
-            // Shrink-to-fit: measure text or use half container
-            if (!string.IsNullOrEmpty(child.DisplayText) && child.Children.Count == 0)
-            {
-                using var font = TextMeasure.CreateFont(child);
-                childContentW = Math.Min(font.MeasureText(child.DisplayText), maxAvail);
-            }
-            else
-                childContentW = Math.Min(maxAvail, contentW * 0.5f);
+            // Shrink-to-fit (§10.3.5): min(max(min-content, available), max-content).
+            childContentW = IntrinsicSizer.ShrinkToFit(child, Math.Max(0f, maxAvail), viewportHeight);
         }
         childContentW = Math.Max(0, childContentW);
 
