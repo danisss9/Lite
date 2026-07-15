@@ -51,6 +51,18 @@ internal static class HtmlSerializer
             sb.Append(Escape(node.DisplayText));
             return;
         }
+        if (node.TagName == "#comment")
+        {
+            // Comment data is serialized raw (no character-reference escaping).
+            sb.Append("<!--").Append(node.DisplayText).Append("-->");
+            return;
+        }
+        if (node.TagName == "#pi")
+        {
+            sb.Append("<?").Append(node.Attributes.GetValueOrDefault("_pi_target", ""))
+              .Append(' ').Append(node.DisplayText).Append('>');
+            return;
+        }
         if (node.TagName.StartsWith('#'))
         {
             // document-fragment / document — emit children only.

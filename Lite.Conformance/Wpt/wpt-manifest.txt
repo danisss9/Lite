@@ -19,6 +19,9 @@ lite/media.html
 # ---- Phase 2: navigation (history / location / title) ----
 lite/navigation.html
 
+# ---- DOMContentLoaded + document.readyState (loading → interactive → complete) ----
+lite/domcontentloaded.html
+
 # ---- Phase 3: check-layout-th.js layout tests (exercise layout-on-demand + % CB-width) ----
 css/CSS2/normal-flow/containing-block-percent-margin-top.html
 css/CSS2/normal-flow/containing-block-percent-margin-bottom.html
@@ -90,6 +93,13 @@ dom/nodes/CharacterData-surrogates.html
 # CharacterData nodes reject children with HierarchyRequestError (appendChild/insertBefore/replaceChild guarded).
 dom/nodes/CharacterData-appendChild.html
 
+# ChildNode before/after/replaceWith: comment/PI serialization in innerHTML, WebIDL
+# stringification of non-Node args (null → "null"), and viable-sibling anchoring
+# (the node itself may be among the arguments).
+dom/nodes/ChildNode-after.html
+dom/nodes/ChildNode-before.html
+dom/nodes/ChildNode-replaceWith.html
+
 # ----------------------------------------------------------------------------
 # Real upstream WPT dom/events testharness tests (same vendoring/measurement).
 #   dotnet run --project Lite.Conformance -c Release -- --suite wpt --survey dom/events
@@ -98,8 +108,6 @@ dom/nodes/CharacterData-appendChild.html
 # EventTarget construction, and legacy Event.initEvent / returnValue.
 # (Most of dom/events still times out headlessly — it needs testdriver-synthesised
 # user input.)
-# NOTE: two dom/events tests are in Wpt\survey-skip.txt because re-entrant dispatch
-# overflows the CLR stack (a Jint recursion limitation), so they can't go in the gate.
 # ----------------------------------------------------------------------------
 dom/events/Event-type.html
 dom/events/Event-type-empty.html
@@ -114,3 +122,53 @@ dom/events/label-default-action.html
 # returnValue / isTrusted / srcElement / cancelBubble are implemented.
 dom/events/EventTarget-add-remove-listener.any.js
 dom/events/Event-initEvent.html
+
+# Re-entrant dispatch guard (dispatch flag → InvalidStateError) + once-listener
+# removal-before-invoke: these two previously overflowed the CLR stack (survey-skipped).
+dom/events/EventTarget-dispatchEvent.html
+dom/events/remove-all-listeners.html
+
+# Promoted from the 2026-07-10 dom/events survey (23/162 fully passing after the
+# dispatch "inner invoke" fix, document EventTarget, createEvent initialized flag,
+# and case-sensitive event types). Event-dispatch-click.tentative.html also passes
+# but stays held out (.tentative = unstable spec).
+dom/events/AddEventListenerOptions-once.any.js
+dom/events/CustomEvent.html
+dom/events/Event-defaultPrevented.html
+dom/events/Event-defaultPrevented-after-dispatch.html
+dom/events/Event-dispatch-bubble-canceled.html
+dom/events/Event-dispatch-detached-click.html
+dom/events/Event-dispatch-order.html
+dom/events/Event-dispatch-propagation-stopped.html
+dom/events/Event-returnValue.html
+dom/events/EventTarget-dispatchEvent-returnvalue.html
+dom/events/event-src-element-nullable.html
+dom/events/non-cancelable-when-passive/generic-events-stay-cancelable.html
+
+# ----------------------------------------------------------------------------
+# Real upstream WPT html/semantics/interactive-elements tests, promoted from the
+# 2026-07-10 survey (8/103 fully passing; details/summary/dialog implemented in
+# Phase B). focus-previous-iframe.tentative.html also passes but stays held out.
+# ----------------------------------------------------------------------------
+html/semantics/interactive-elements/the-details-element/display-table-with-rt-crash.html
+html/semantics/interactive-elements/the-dialog-element/dialog-open.html
+html/semantics/interactive-elements/the-dialog-element/dialog-open-2.html
+html/semantics/interactive-elements/the-dialog-element/dialog-showModal-remove.html
+html/semantics/interactive-elements/the-dialog-element/synthetic-click-inert.html
+html/semantics/interactive-elements/the-summary-element/display-table-with-rt-crash.html
+html/semantics/interactive-elements/the-summary-element/summary-untrusted-key-event.html
+
+# ----------------------------------------------------------------------------
+# Real upstream WPT the-iframe-element tests, promoted from the 2026-07-10
+# survey (10/103 fully passing; iframe implemented in Phase C).
+# ----------------------------------------------------------------------------
+html/semantics/embedded-content/the-iframe-element/historical.html
+html/semantics/embedded-content/the-iframe-element/iframe-nosrc.html
+html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller.html
+html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-horizontal.html
+html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-horizontal-far.html
+html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested.html
+html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-2.html
+html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-3.html
+html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-4.html
+html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-5.html

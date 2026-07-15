@@ -24,7 +24,7 @@ internal static class EventDispatcher
         if (engine is null) return false;
 
         var evt = new JsEvent();
-        evt.Init(eventType.ToLowerInvariant(), true, true);
+        evt.Init(eventType, true, true);
         evt.target = JsElement.For(engine.RawEngine, node);
 
         return DispatchEvent(node, evt, engine);
@@ -35,7 +35,7 @@ internal static class EventDispatcher
     internal static bool DispatchToNode(LayoutNode node, string eventType, JsEngine engine, bool bubbles = false)
     {
         var evt = new JsEvent();
-        evt.Init(eventType.ToLowerInvariant(), bubbles, false);
+        evt.Init(eventType, bubbles, false);
         evt.target = JsElement.For(engine.RawEngine, node);
         return DispatchEvent(node, evt, engine);
     }
@@ -130,6 +130,12 @@ internal static class EventDispatcher
             if (listener.EventType != eventType) continue;
             if (listener.Capture != capturePhase) continue;
             if (evt.ImmediatePropagationStopped) break;
+
+            // The snapshot is taken at phase start, but DOM "inner invoke" checks the live list:
+            // a listener removed by an earlier listener (or a nested dispatch) must not run.
+            // Reference identity — a remove + re-add during dispatch is a new listener that was
+            // not in the snapshot, so neither the old nor the new entry fires this dispatch.
+            if (!node.EventListeners.Any(l => ReferenceEquals(l, listener))) continue;
 
             // A `once` listener is removed before it runs, so re-entrant dispatch can't re-invoke it.
             if (listener.Once) node.EventListeners.Remove(listener);

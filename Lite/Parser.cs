@@ -236,6 +236,10 @@ internal static class Parser
             jsEngine.ImportModule(specifier);
         }
 
+        // Parsing + deferred scripts + modules are done: readyState → "interactive" and
+        // DOMContentLoaded fires at the document, before async scripts and the load event.
+        jsEngine.DispatchDomContentLoaded();
+
         // 4) Async classic scripts run on the task queue, not in document order (after the sync phase).
         foreach (var script in _asyncScripts)
         {

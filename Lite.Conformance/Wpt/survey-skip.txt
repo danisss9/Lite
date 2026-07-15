@@ -5,6 +5,6 @@
 #
 # These are engine limitations, not Lite layout/DOM bugs. Re-evaluate if Jint gains proper
 # tail calls or a configurable recursion limit.
-
-dom/events/EventTarget-dispatchEvent.html | re-entrant dispatchEvent recurses infinitely: Lite's dispatch has no "dispatch flag" guard (should throw InvalidStateError), so a listener that re-dispatches the same event overflows the CLR stack
-dom/events/remove-all-listeners.html | re-entrant dispatch from a once-listener recurses infinitely: Lite doesn't remove the once listener before invoking it under re-entrancy, so it re-fires and overflows the CLR stack
+#
+# (The two dom/events re-entrant-dispatch crashers formerly listed here were fixed by the
+# dispatch-flag guard + removed-listener skip and now pass in the gate manifest.)

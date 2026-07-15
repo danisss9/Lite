@@ -394,6 +394,19 @@ internal class JsEngine
           globalThis.__lite_domException = function (name, message) {
             return new globalThis.DOMException(message, name);
           };
+          // Constructible CharacterData globals (new Comment(data) / new Text(data)) — delegate
+          // to the document factories so the result is a normal wrapped node. Class syntax makes
+          // a call without `new` throw TypeError, as the spec requires.
+          if (typeof globalThis.Comment !== 'function') {
+            globalThis.Comment = class Comment {
+              constructor(data) { return document.createComment(data === undefined ? '' : String(data)); }
+            };
+          }
+          if (typeof globalThis.Text !== 'function') {
+            globalThis.Text = class Text {
+              constructor(data) { return document.createTextNode(data === undefined ? '' : String(data)); }
+            };
+          }
           // Host DOM methods call this to raise a DOMException: throwing in JS (rather than
           // marshalling a CLR exception out) preserves the object so catch(e) sees e.name/e.code.
           globalThis.__lite_throwDom = function (name, message) {
@@ -547,9 +560,28 @@ internal class JsEngine
     /// <summary>True if this engine or any nested iframe engine has pending rAF callbacks.</summary>
     internal bool HasPendingTreeRAF => HasPendingRAF || NestedEngines().Any(e => e.HasPendingTreeRAF);
 
+    /// <summary>document.readyState: "loading" while parsing/in-position scripts run,
+    /// "interactive" once DOMContentLoaded fires, "complete" once the load event fires.</summary>
+    internal string DocumentReadyState { get; private set; } = "loading";
+
+    /// <summary>Fires <c>DOMContentLoaded</c> at the document (bubbling) and at window listeners,
+    /// after parsing + deferred scripts and before the load event (HTML §"the end").</summary>
+    internal void DispatchDomContentLoaded()
+    {
+        DocumentReadyState = "interactive";
+        EventDispatcher.DispatchToNode(_root, "readystatechange", this);
+        EventDispatcher.DispatchToNode(_root, "DOMContentLoaded", this, bubbles: true);
+        _jsWindow.DispatchEvent("DOMContentLoaded");
+    }
+
     /// <summary>Dispatches the window <c>load</c> event to listeners registered via
     /// addEventListener. Fired once after all page scripts have executed.</summary>
-    internal void DispatchLoad() => _jsWindow.DispatchEvent("load");
+    internal void DispatchLoad()
+    {
+        DocumentReadyState = "complete";
+        EventDispatcher.DispatchToNode(_root, "readystatechange", this);
+        _jsWindow.DispatchEvent("load");
+    }
 
     /// <summary>Dispatches a named window-level event (e.g. hashchange, popstate).</summary>
     internal void DispatchWindowEvent(string type) => _jsWindow.DispatchEvent(type);

@@ -1,4 +1,5 @@
 using Jint;
+using Jint.Native;
 using Lite.Models;
 
 namespace Lite.Scripting.Dom;
@@ -18,6 +19,10 @@ public class JsDocument
     // ---- identity ----
     public string nodeName => "#document";
     public int nodeType => 9;
+
+    /// <summary>"loading" → "interactive" (DOMContentLoaded) → "complete" (load). The state lives
+    /// on the page's JsEngine so every JsDocument facade over this document agrees.</summary>
+    public string readyState => JsEngine.For(_engine)?.DocumentReadyState ?? "complete";
     public JsElement? documentElement => _root.Children.Count > 0 ? JsElement.For(_engine, _root) : null;
 
     /// <summary>Returns the window object (document.defaultView).</summary>
@@ -120,10 +125,35 @@ public class JsDocument
     /// <summary>document.createAttribute(name) — a detached Attr to attach via setAttributeNode.</summary>
     public JsAttr createAttribute(string name) => new(name);
 
+    /// <summary>The legacy createEvent alias table (DOM §4.5). All aliases map onto the superset
+    /// <see cref="JsEvent"/>; matching is ASCII case-insensitive; anything else → NotSupportedError.</summary>
+    private static readonly HashSet<string> _createEventAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "beforeunloadevent", "compositionevent", "customevent", "devicemotionevent",
+        "deviceorientationevent", "dragevent", "event", "events", "focusevent", "hashchangeevent",
+        "htmlevents", "keyboardevent", "keyevents", "messageevent", "mouseevent", "mouseevents",
+        "storageevent", "svgevents", "textevent", "touchevent", "uievent", "uievents",
+    };
+
     public JsEvent createEvent(string type)
     {
-        return new JsEvent();
+        if (!_createEventAliases.Contains(type ?? string.Empty))
+            throw JsErrors.Dom("NotSupportedError",
+                $"Failed to execute 'createEvent' on 'Document': The provided event type ('{type}') is invalid.");
+        // Born uninitialized: dispatching before initEvent() throws InvalidStateError.
+        return new JsEvent { Initialized = false };
     }
+
+    // ---- EventTarget ----
+    // The document shares the root node's listener list, so document-level listeners
+    // participate in the normal capture/bubble path of every dispatch.
+    public void addEventListener(string type, JsValue handler, JsValue? options = null) =>
+        JsElement.For(_engine, _root).addEventListener(type, handler, options);
+
+    public void removeEventListener(string type, JsValue handler, JsValue? options = null) =>
+        JsElement.For(_engine, _root).removeEventListener(type, handler, options);
+
+    public bool dispatchEvent(JsEvent? evt = null) => JsElement.For(_engine, _root).dispatchEvent(evt);
 
     // ---- document.write / open / close ----
     // Minimal model: each write() parses its markup and appends the result to <body>. Because the

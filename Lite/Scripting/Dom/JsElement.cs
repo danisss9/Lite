@@ -1,5 +1,6 @@
 using Jint;
 using Jint.Native;
+using Jint.Runtime;
 using Lite.Interaction;
 using Lite.Layout;
 using Lite.Models;
@@ -981,34 +982,86 @@ public class JsElement
         }
     }
 
-    /// <summary>Inserts nodes/strings into this element's parent, just before it.</summary>
+    /// <summary>Inserts nodes/strings into this element's parent, just before it. Anchored at the
+    /// first preceding sibling not among the inserted nodes (DOM §4.2.8 "viable previous sibling"),
+    /// so this node itself may be one of the arguments.</summary>
     public void before(params JsValue[] items)
     {
+        var parent = Node.Parent;
+        if (parent is null) return;
         var nodes = ToNodes(items);
-        foreach (var n in nodes) n.Parent?.Children.Remove(n);
-        InsertNodesBefore(nodes, Node);
-        foreach (var n in nodes) StyleResolver.ApplyTree(n);
+        LayoutNode? viablePrev = null;
+        for (int i = parent.Children.IndexOf(Node) - 1; i >= 0; i--)
+            if (!nodes.Contains(parent.Children[i])) { viablePrev = parent.Children[i]; break; }
+        DetachAll(nodes);
+        var idx = viablePrev is null ? 0 : parent.Children.IndexOf(viablePrev) + 1;
+        InsertNodesAt(parent, idx, nodes);
     }
 
-    /// <summary>Inserts nodes/strings into this element's parent, just after it.</summary>
+    /// <summary>Inserts nodes/strings into this element's parent, just after it. Anchored at the
+    /// first following sibling not among the inserted nodes (DOM §4.2.8 "viable next sibling").</summary>
     public void after(params JsValue[] items)
     {
+        var parent = Node.Parent;
+        if (parent is null) return;
         var nodes = ToNodes(items);
-        foreach (var n in nodes) n.Parent?.Children.Remove(n);
-        InsertNodesAfter(nodes, Node);
-        foreach (var n in nodes) StyleResolver.ApplyTree(n);
+        var viableNext = ViableNextSibling(parent, nodes);
+        DetachAll(nodes);
+        var idx = viableNext is null ? parent.Children.Count : parent.Children.IndexOf(viableNext);
+        InsertNodesAt(parent, idx, nodes);
     }
 
-    /// <summary>Replaces this element with the given nodes/strings.</summary>
+    /// <summary>Replaces this element with the given nodes/strings. This node itself may be among
+    /// the arguments; the insertion point then falls back to the viable next sibling (DOM §4.2.8).</summary>
     public void replaceWith(params JsValue[] items)
     {
-        if (Node.Parent is null) return;
+        var parent = Node.Parent;
+        if (parent is null) return;
         var nodes = ToNodes(items);
-        foreach (var n in nodes) n.Parent?.Children.Remove(n);
-        InsertNodesBefore(nodes, Node);
-        Node.Parent.Children.Remove(Node);
-        Node.Parent = null;
-        foreach (var n in nodes) StyleResolver.ApplyTree(n);
+        var viableNext = ViableNextSibling(parent, nodes);
+        DetachAll(nodes);
+        int idx;
+        if (Node.Parent == parent)
+        {
+            idx = parent.Children.IndexOf(Node);
+            parent.Children.RemoveAt(idx);
+            Node.Parent = null;
+        }
+        else
+        {
+            // This node was one of the arguments and has already been detached above.
+            idx = viableNext is null ? parent.Children.Count : parent.Children.IndexOf(viableNext);
+        }
+        InsertNodesAt(parent, idx, nodes);
+    }
+
+    /// <summary>Removes the nodes from their parents, clearing <c>Parent</c> so a node that was
+    /// among the arguments no longer reads as attached (replaceWith relies on that).</summary>
+    private static void DetachAll(List<LayoutNode> nodes)
+    {
+        foreach (var n in nodes)
+        {
+            n.Parent?.Children.Remove(n);
+            n.Parent = null;
+        }
+    }
+
+    /// <summary>First sibling after this node that is not among <paramref name="nodes"/>.</summary>
+    private LayoutNode? ViableNextSibling(LayoutNode parent, List<LayoutNode> nodes)
+    {
+        for (int i = parent.Children.IndexOf(Node) + 1; i < parent.Children.Count; i++)
+            if (!nodes.Contains(parent.Children[i])) return parent.Children[i];
+        return null;
+    }
+
+    private static void InsertNodesAt(LayoutNode parent, int idx, List<LayoutNode> nodes)
+    {
+        foreach (var n in nodes)
+        {
+            n.Parent = parent;
+            parent.Children.Insert(idx++, n);
+            StyleResolver.ApplyTree(n);
+        }
     }
 
     /// <summary>Removes this element from its parent.</summary>
@@ -1018,21 +1071,26 @@ public class JsElement
         Node.Parent = null;
     }
 
-    /// <summary>Coerces append/before/after arguments (JsElement or string) into LayoutNodes.</summary>
+    /// <summary>Coerces append/before/after arguments (Node or DOMString) into LayoutNodes.</summary>
     private List<LayoutNode> ToNodes(JsValue[] items)
     {
         var result = new List<LayoutNode>();
         foreach (var item in items)
         {
-            if (item.IsString())
+            if (item.ToObject() is JsElement el)
             {
-                var textNode = new LayoutNode(null, "#text", item.AsString(), Node.Style);
+                // A node passed twice ends up at its last argument position (appending an
+                // already-appended node to the conversion fragment moves it).
+                result.Remove(el.Node);
+                result.Add(el.Node);
+            }
+            else
+            {
+                // WebIDL (Node or DOMString): every non-Node argument stringifies, including
+                // null → "null" and undefined → "undefined".
+                var textNode = new LayoutNode(null, "#text", TypeConverter.ToString(item), Node.Style);
                 textNode.StyleOverrides["display"] = "inline";
                 result.Add(textNode);
-            }
-            else if (item.ToObject() is JsElement el)
-            {
-                result.Add(el.Node);
             }
         }
         return result;
@@ -1086,7 +1144,8 @@ public class JsElement
                 if (onceVal.IsBoolean()) once = onceVal.AsBoolean();
             }
         }
-        Node.EventListeners.Add(new EventListenerEntry(type.ToLowerInvariant(), handler, null, capture, once));
+        // Event types are case-sensitive (DOM §2.7) — "DOMContentLoaded" must not be folded.
+        Node.EventListeners.Add(new EventListenerEntry(type, handler, null, capture, once));
     }
 
     public void removeEventListener(string type, JsValue handler, JsValue? options = null)
@@ -1101,14 +1160,19 @@ public class JsElement
                 if (captureVal.IsBoolean()) capture = captureVal.AsBoolean();
             }
         }
-        var normalizedType = type.ToLowerInvariant();
         Node.EventListeners.RemoveAll(l =>
-            l.EventType == normalizedType && l.Capture == capture && l.Handler == handler);
+            l.EventType == type && l.Capture == capture && l.Handler == handler);
     }
 
     // ---- dispatchEvent ----
-    public bool dispatchEvent(JsEvent evt)
+    public bool dispatchEvent(JsEvent? evt = null)
     {
+        if (evt is null)
+            throw JsErrors.Native("TypeError",
+                "Failed to execute 'dispatchEvent': parameter 1 is not of type 'Event'.");
+        if (!evt.Initialized)
+            throw JsErrors.Dom("InvalidStateError",
+                "Failed to execute 'dispatchEvent': The event provided is uninitialized.");
         evt.target = this;
         if (JsEngine.For(_engine) is { } engine)
             EventDispatcher.DispatchEvent(Node, evt, engine);

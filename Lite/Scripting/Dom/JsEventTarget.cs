@@ -34,9 +34,14 @@ public class JsEventTarget
         _listeners.RemoveAll(l => l.Type == type && Equals(l.Handler, handler) && l.Capture == capture);
     }
 
-    public bool dispatchEvent(JsEvent evt)
+    public bool dispatchEvent(JsEvent? evt = null)
     {
-        if (evt is null) return true;
+        if (evt is null)
+            throw JsErrors.Native("TypeError",
+                "Failed to execute 'dispatchEvent': parameter 1 is not of type 'Event'.");
+        if (!evt.Initialized)
+            throw JsErrors.Dom("InvalidStateError",
+                "Failed to execute 'dispatchEvent': The event provided is uninitialized.");
         if (evt.Dispatching)
             throw JsErrors.Dom("InvalidStateError", "Failed to execute 'dispatchEvent': The event is already being dispatched.");
 
@@ -49,6 +54,9 @@ public class JsEventTarget
             {
                 if (l.Type != evt.type) continue;
                 if (evt.ImmediatePropagationStopped) break;
+                // DOM "inner invoke": a listener removed during this dispatch must not run.
+                // (Add dedupes, so value equality identifies the entry.)
+                if (!_listeners.Contains(l)) continue;
                 if (l.Once) _listeners.RemoveAll(x => x.Equals(l)); // remove before invoking (spec §2.9)
                 try { raw?.Invoke(l.Handler, evt); }
                 catch (Exception ex) { Console.WriteLine($"[JS EventListener] {ex.Message}"); }

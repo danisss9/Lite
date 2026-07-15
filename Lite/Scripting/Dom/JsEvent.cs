@@ -104,6 +104,11 @@ public class JsEvent
     /// <see cref="initEvent"/> is a no-op and re-dispatching the same event throws InvalidStateError.</summary>
     internal bool Dispatching { get; set; }
 
+    /// <summary>The "initialized flag" (DOM §2.9): constructor-built events are born initialized,
+    /// but <c>document.createEvent(...)</c> events are not until <see cref="initEvent"/> runs —
+    /// dispatching an uninitialized event throws InvalidStateError.</summary>
+    internal bool Initialized { get; set; } = true;
+
     public bool defaultPrevented => DefaultPrevented;
 
     /// <summary>Untrusted for script-created events; only user-agent-generated events are trusted.</summary>
@@ -153,6 +158,7 @@ public class JsEvent
         type = TypeConverter.ToString(typeArg);
         bubbles = bubblesArg is not null && TypeConverter.ToBoolean(bubblesArg);
         cancelable = cancelableArg is not null && TypeConverter.ToBoolean(cancelableArg);
+        Initialized = true;
         DefaultPrevented = false;
         PropagationStopped = false;
         ImmediatePropagationStopped = false;
@@ -164,6 +170,7 @@ public class JsEvent
         type = typeArg;
         bubbles = bubblesArg;
         cancelable = cancelableArg;
+        Initialized = true;
         DefaultPrevented = false;
         PropagationStopped = false;
         ImmediatePropagationStopped = false;

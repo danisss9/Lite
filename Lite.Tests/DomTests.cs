@@ -416,4 +416,65 @@ public static class DomTests
             el.dispatchEvent(e);");
         Equal("InvalidStateError", (string?)Val(engine, "reErr"));
     }
+
+    [Test]
+    public static void CommentText_ConstructibleGlobals()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute(@"
+            var c = new Comment('hi');
+            var t = new Text('there');
+            var cType = c.nodeType, cData = c.data;
+            var tType = t.nodeType, tData = t.data;
+            var emptyData = new Comment().data;
+            var noNew = '';
+            try { Comment('x'); } catch (err) { noNew = err.constructor.name; }");
+        Equal(8, System.Convert.ToInt32(Val(engine, "cType")));
+        Equal("hi", (string?)Val(engine, "cData"));
+        Equal(3, System.Convert.ToInt32(Val(engine, "tType")));
+        Equal("there", (string?)Val(engine, "tData"));
+        Equal("", (string?)Val(engine, "emptyData"));
+        Equal("TypeError", (string?)Val(engine, "noNew"));
+    }
+
+    [Test]
+    public static void CreateEvent_UninitializedAndUnknownAlias()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute(@"
+            var e = document.createEvent('MouseEvents');
+            var preType = e.type;
+            var uninit = '';
+            try { document.dispatchEvent(e); } catch (err) { uninit = err.name; }
+            var unknown = '';
+            try { document.createEvent('BogusEvent'); } catch (err) { unknown = err.name; }");
+        Equal("", (string?)Val(engine, "preType"));
+        Equal("InvalidStateError", (string?)Val(engine, "uninit"));
+        Equal("NotSupportedError", (string?)Val(engine, "unknown"));
+    }
+
+    [Test]
+    public static void Dispatch_ListenerRemovedMidDispatchDoesNotFire()
+    {
+        // DOM "inner invoke": the listener list is snapshotted per phase, but a listener removed
+        // by an earlier listener must be skipped, and one added during dispatch must not run.
+        var (_, _, engine) = NewPage();
+        engine.Execute(@"
+            var el = document.createElement('div');
+            var calls = [];
+            function l2() { calls.push('l2'); }
+            function l3() { calls.push('l3'); }
+            el.addEventListener('t', function () {
+                calls.push('l1');
+                el.removeEventListener('t', l2);
+                el.addEventListener('t', l3);
+            });
+            el.addEventListener('t', l2);
+            el.dispatchEvent(new Event('t'));
+            var firstPass = calls.join(',');
+            el.dispatchEvent(new Event('t'));
+            var secondPass = calls.join(',');");
+        Equal("l1", (string?)Val(engine, "firstPass"));
+        Equal("l1,l1,l3", (string?)Val(engine, "secondPass"));
+    }
 }
