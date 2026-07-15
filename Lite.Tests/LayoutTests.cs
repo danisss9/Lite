@@ -130,6 +130,54 @@ public static class LayoutTests
             $"promoted span height should be the block child's 50px, got {span.Box.ContentBox.Height}");
     }
 
+    /// <summary>An inline SPAN (zeroed box model) wrapping the given children — used for
+    /// block-in-inline propagation tests.</summary>
+    private static LayoutNode Span(params LayoutNode[] children)
+    {
+        var span = new LayoutNode(null, "SPAN", "", _styleCache.Style);
+        span.StyleOverrides["display"] = "inline";
+        foreach (var side in new[] { "top", "right", "bottom", "left" })
+        {
+            span.StyleOverrides[$"margin-{side}"] = "0";
+            span.StyleOverrides[$"padding-{side}"] = "0";
+            span.StyleOverrides[$"border-{side}-width"] = "0";
+        }
+        foreach (var c in children) span.AddChild(c);
+        return span;
+    }
+
+    [Test]
+    public static void FirstChildMargin_PropagatesOutOfParent()
+    {
+        // CSS 2.1 §8.3.1: a block with no top border/padding does not contain its first in-flow
+        // child's top margin — it collapses through and appears ABOVE the block. green h=50; then
+        // wrapper (no border/padding) whose first child has margin-top:30 → the 30 shows between
+        // green's bottom and the wrapper's content, so inner starts at 50+30 = 80 (not 50).
+        var green = Block(new() { ["height"] = "50px" });
+        var inner = Block(new() { ["height"] = "40px", ["margin-top"] = "30px" });
+        var wrapper = Block(new() { }, inner);
+        var container = Block(new() { ["width"] = "200px" }, green, wrapper);
+        LayoutTree(container);
+        True(Math.Abs(inner.Box.ContentBox.Top - 80f) < 0.5f,
+            $"first child's margin-top should propagate out of the wrapper (inner at 80), got {inner.Box.ContentBox.Top}");
+    }
+
+    [Test]
+    public static void BlockInInline_NegativeMbCollapsesWithPositiveMt()
+    {
+        // WPT block-in-inline-negative-mb-collapses-with-positive-mt: two spans each wrap a block.
+        // first: h20, mb-20 (propagates out of span1 as -20); second: h20, mt50 (propagates out of
+        // span2 as +50). Collapsed gap = 50 + (-20) = 30, so second starts at 20 + 30 = 50.
+        var first = Block(new() { ["width"] = "100px", ["height"] = "20px", ["margin-bottom"] = "-20px" });
+        var second = Block(new() { ["width"] = "100px", ["height"] = "20px", ["margin-top"] = "50px" });
+        var container = Block(new() { ["width"] = "100px" }, Span(first), Span(second));
+        LayoutTree(container);
+        True(Math.Abs(first.Box.ContentBox.Top - 0f) < 0.5f,
+            $"first block should sit at the top (0), got {first.Box.ContentBox.Top}");
+        True(Math.Abs(second.Box.ContentBox.Top - 50f) < 0.5f,
+            $"second block should sit at 50 (20 + collapsed gap 30), got {second.Box.ContentBox.Top}");
+    }
+
     [Test]
     public static void ParentLastChild_MarginCollapsesThrough()
     {

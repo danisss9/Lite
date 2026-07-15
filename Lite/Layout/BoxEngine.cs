@@ -485,6 +485,49 @@ internal static class BoxEngine
         => RawStyle(node, prop)?.TrimEnd().EndsWith("%") == true;
 
     /// <summary>
+    /// The margin that collapses outward at a block's TOP edge (CSS 2.1 §8.3.1): the block's own
+    /// margin-top collapsed with the effective top margins of its first in-flow block children,
+    /// following the chain as long as each block has no top border/padding and establishes no block
+    /// formatting context. Stops at a border/padding/BFC boundary, or when the first in-flow child
+    /// is inline (non-empty text or inline-level box) — either of which contains the margin.
+    /// <para>Percentage margins resolve against <paramref name="cbWidth"/> (the parent content
+    /// width); descendant percentages reuse it as an approximation since the true per-level
+    /// containing-block width isn't known before layout.</para>
+    /// </summary>
+    private static float GetEffectiveTopMargin(LayoutNode node, float cbWidth)
+    {
+        var fontSize = node.GetFontSize();
+        var ownTop = node.GetMarginTop(total: cbWidth, size: fontSize);
+
+        if (node.GetDisplay() is not (DisplayType.Block or DisplayType.ListItem)) return ownTop;
+        if (EstablishesBlockFormattingContext(node)) return ownTop;
+        var padding = node.GetPadding(cbWidth, 0, fontSize);
+        var border = node.GetBorderWidth();
+        if (padding.Top != 0f || border.Top != 0f) return ownTop;
+
+        foreach (var child in node.Children)
+        {
+            var d = child.GetDisplay();
+            if (d == DisplayType.None) continue;
+            var pos = child.GetPosition();
+            if (pos == PositionType.Absolute || pos == PositionType.Fixed) continue;
+            if (child.TagName == "#text")
+            {
+                // Whitespace-only text is skipped by the flow (inter-block artifact); real text is
+                // inline content that contains the margin.
+                if (string.IsNullOrWhiteSpace(child.DisplayText)) continue;
+                return ownTop;
+            }
+            if (child.GetFloat() != FloatType.None) continue; // floats don't collapse margins
+            var isBlock = d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex or DisplayType.Table;
+            if (!isBlock) return ownTop; // inline-level first child contains the margin
+            // First in-flow block child: its effective top margin collapses with this block's.
+            return CollapseMargins(ownTop, GetEffectiveTopMargin(child, cbWidth));
+        }
+        return ownTop; // no in-flow children
+    }
+
+    /// <summary>
     /// Collapses two adjoining vertical margins per CSS 2.1 §8.3.1: the result is the sum of
     /// the largest positive and the most-negative margin (max(positives) + min(negatives)).
     /// </summary>
@@ -758,13 +801,20 @@ internal static class BoxEngine
                 // Percentage margins resolve against the containing-block WIDTH (§8.3), so the
                 // collapse math must use contentW — matching what LayoutBlock's GetMargin uses.
                 var childMarginTop = child.GetMarginTop(total: contentW, size: childFontSize);
+                // §8.3.1: when the child has no top border/padding and isn't a BFC, its own first
+                // in-flow block child's top margin collapses THROUGH and propagates outward. The
+                // effective top margin — the whole collapsed first-child chain — is what collapses
+                // with the running margin, so it materialises as space ABOVE the child rather than
+                // being absorbed inside it. (Positioning below still uses the child's OWN margin,
+                // since the propagated grandchild margins are placed by the child's own recursion.)
+                var childEffectiveTop = GetEffectiveTopMargin(child, contentW);
 
                 // First in-flow child: its top margin collapses with the parent's (the child is
                 // placed at the parent's content-box top) when the parent has no border/padding top
                 // and does not establish a BFC (§8.3.1). Otherwise it collapses with the running
                 // margin — max(positives)+min(negatives) so negative margins pull boxes together.
                 var firstChildCollapse = !firstBlockSeen && parentBorderPaddingTop == 0f && !parentEstablishesBfc;
-                var gap = firstChildCollapse ? 0f : CollapseMargins(pendingMargin, childMarginTop);
+                var gap = firstChildCollapse ? 0f : CollapseMargins(pendingMargin, childEffectiveTop);
                 firstBlockSeen = true;
 
                 var borderTop = runY + gap;
@@ -779,7 +829,7 @@ internal static class BoxEngine
                 // margin, and the box contributes no height (so neighbouring margins collapse through).
                 if (borderBoxH <= 0.01f && !EstablishesBlockFormattingContext(child))
                 {
-                    var own = CollapseMargins(childMarginTop, childBottomMargin);
+                    var own = CollapseMargins(childEffectiveTop, childBottomMargin);
                     pendingMargin = firstChildCollapse ? own : CollapseMargins(pendingMargin, own);
                 }
                 else
