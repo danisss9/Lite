@@ -11,6 +11,11 @@ namespace Lite;
 internal static class Drawer
 {
     private static List<HitRegion> _hitRegions = [];
+    /// <summary>In-flow atomic inline boxes (inline-block/table/flex) deferred by the current
+    /// stacking-context root so they paint in Appendix-E step 5 (above in-flow block backgrounds).
+    /// While non-null, <see cref="PaintNode"/> skips these during the block pass; the SC root paints
+    /// them afterward. Saved/restored around each SC root's block pass so nesting is isolated.</summary>
+    private static HashSet<LayoutNode>? _deferredInlines;
     /// <summary>Maps HitRegion index → select option index for dropdown options.</summary>
     internal static Dictionary<int, int> SelectOptionMap { get; } = [];
     /// <summary>Deferred dropdown to draw on top of everything.</summary>
@@ -137,6 +142,10 @@ internal static class Drawer
     {
         var display = node.GetDisplay();
         if (display == DisplayType.None) return;
+
+        // Deferred to Appendix-E step 5 by an ancestor stacking-context root — painted later, above
+        // in-flow block backgrounds. (Skipped only during the block pass, when the set is active.)
+        if (_deferredInlines != null && _deferredInlines.Contains(node)) return;
 
         // Skip fixed nodes in the normal tree pass — painted separately after scroll restore
         if (node.GetPosition() == PositionType.Fixed) return;
@@ -580,6 +589,27 @@ internal static class Drawer
         }
     }
 
+    /// <summary>An in-flow inline-level atomic box (inline-block / inline-table / inline-flex).
+    /// Per CSS 2.1 Appendix E these paint in step 5 — ABOVE in-flow block-level backgrounds
+    /// and borders (step 3), unlike Lite's default single doc-order pass.</summary>
+    private static bool IsAtomicInlineBox(LayoutNode n)
+        => n.GetDisplay() is DisplayType.InlineBlock or DisplayType.InlineTable or DisplayType.InlineFlex;
+
+    /// <summary>Collects the in-flow atomic inline boxes of a stacking context (descending through
+    /// non-stacking, non-fixed boxes, stopping at each atomic inline and each nested stacking
+    /// context) so the SC root can paint them in Appendix-E step 5.</summary>
+    private static void CollectDeferredInlines(LayoutNode node, List<LayoutNode> items)
+    {
+        foreach (var child in node.Children)
+        {
+            if (child.GetDisplay() == DisplayType.None) continue;
+            if (child.GetPosition() == PositionType.Fixed) continue;
+            if (EstablishesStackingContext(child)) continue;   // painted by the SC collection (step 6)
+            if (IsAtomicInlineBox(child)) items.Add(child);    // step 5 — don't descend
+            else CollectDeferredInlines(child, items);
+        }
+    }
+
     /// <summary>
     /// Paints a node's descendants per CSS 2.1 Appendix E. The node's own background/borders are
     /// already painted by the caller, so the order here is: negative-z stacking contexts → in-flow
@@ -618,8 +648,19 @@ internal static class Drawer
         var negativeZ = items.Where(c => c.GetZIndex() < 0).OrderBy(c => c.GetZIndex()).ToList();
         var nonNegativeZ = items.Where(c => c.GetZIndex() >= 0).OrderBy(c => c.GetZIndex()).ToList();
 
+        // Appendix E: in-flow atomic inline boxes (step 5) paint after in-flow block content
+        // (step 3/4) but before z-index:auto/positive stacking contexts (step 6).
+        var deferredInlines = new List<LayoutNode>();
+        CollectDeferredInlines(node, deferredInlines);
+
         foreach (var c in negativeZ) PaintNode(canvas, c, viewportWidth);
+
+        var savedDeferred = _deferredInlines;
+        _deferredInlines = deferredInlines.Count > 0 ? new HashSet<LayoutNode>(deferredInlines) : null;
         PaintInFlow();
+        _deferredInlines = savedDeferred;
+
+        foreach (var c in deferredInlines) PaintNode(canvas, c, viewportWidth); // step 5
         foreach (var c in nonNegativeZ) PaintNode(canvas, c, viewportWidth);
     }
 

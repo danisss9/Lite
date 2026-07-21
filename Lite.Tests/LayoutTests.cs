@@ -500,6 +500,25 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void InlineLevelContent_PaintsAboveLaterBlockBackground()
+    {
+        // CSS 2.1 Appendix E: in-flow INLINE-level content (step 5) paints ABOVE in-flow BLOCK
+        // backgrounds (step 3). A green inline-table in div1, overlapped by a LATER red block
+        // (margin-top pulls it up over div1) → the green must win in the overlap region.
+        var cell = Block(new() { ["width"] = "40px", ["height"] = "40px" });
+        var itable = Block(new() { ["display"] = "inline-table", ["border-spacing"] = "0", ["background-color"] = "#008000" }, cell);
+        var div1 = Block(new() { }, itable);
+        var red = Block(new() { ["width"] = "40px", ["height"] = "40px", ["background-color"] = "#ff0000", ["margin-top"] = "-40px" });
+        var root = LayoutTree(Block(new() { ["width"] = "200px" }, div1, red));
+
+        using var bmp = Drawer.DrawToBitmap(800, 600, root, new Viewport { ViewportHeight = 600 });
+        var b = itable.Box.ContentBox;
+        var px = bmp.GetPixel((int)(b.Left + b.Width / 2f), (int)(b.Top + b.Height / 2f));
+        True(px.Green > 120 && px.Red < 120,
+            $"inline-table (green) should paint above the later block's red background, got {px}");
+    }
+
+    [Test]
     public static void ShrinkToFit_Float_UsesIntrinsicWidth()
     {
         // A float with auto width and an explicit-width child shrinks to that child's outer width.

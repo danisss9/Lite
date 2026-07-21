@@ -1125,6 +1125,9 @@ internal static class BoxEngine
                 var contentX2 = margin.Left + border.Left + padding.Left;
                 var contentY2 = margin.Top + border.Top + padding.Top;
                 var h = Math.Max(0f, TableEngine.LayoutTable(node, contentX2, contentY2, w, viewportWidth, viewportHeight));
+                // An explicit height on the table acts as a minimum for the table box (§17.5.3).
+                if (!node.IsAutoHeight())
+                    h = Math.Max(h, node.GetHeight(viewportHeight, 0, viewportHeight));
 
                 var totalW = margin.Left + border.Left + padding.Left + w + padding.Right + border.Right + margin.Right;
                 var totalH = margin.Top + border.Top + padding.Top + h + padding.Bottom + border.Bottom + margin.Bottom;
