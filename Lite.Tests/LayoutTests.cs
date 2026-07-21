@@ -467,6 +467,26 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void TableRowGroup_DisplayRecursesForRows()
+    {
+        // display:table-row-group (on a non-TBODY element) must be recognized so CollectRows
+        // recurses into it — otherwise it maps to Inline and the table finds no rows.
+        var cell = TableCell("Hi");
+        cell.StyleOverrides["width"] = "40px";
+        var row = Tagged("SPAN", new() { ["display"] = "table-row" });
+        row.AddChild(cell);
+        var group = Tagged("SPAN", new() { ["display"] = "table-row-group" });
+        group.AddChild(row);
+        var table = Tagged("TABLE", new() { ["display"] = "table", ["border-spacing"] = "0" });
+        table.AddChild(group);
+        LayoutTree(Block(new() { ["width"] = "400px" }, table));
+        True(group.GetDisplay() == Lite.Extensions.DisplayType.TableRowGroup,
+            $"table-row-group should map to TableRowGroup, got {group.GetDisplay()}");
+        True(Math.Abs(cell.Box.ContentBox.Width - 40f) < 1f,
+            $"cell inside a table-row-group should lay out with its 40px width, got {cell.Box.ContentBox.Width}");
+    }
+
+    [Test]
     public static void InlineTable_ShrinkToFitWidth()
     {
         // An inline-table shrinks to fit its content: a single 60px cell → table content width ~60

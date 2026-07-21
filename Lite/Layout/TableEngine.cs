@@ -376,7 +376,7 @@ internal static class TableEngine
                     .ToList();
                 rows.Add(new RowInfo(child, cells));
             }
-            else if (child.TagName is "TBODY" or "THEAD" or "TFOOT")
+            else if (child.GetDisplay() == DisplayType.TableRowGroup || child.TagName is "TBODY" or "THEAD" or "TFOOT")
             {
                 CollectRowsFrom(child.Children, rows);
             }

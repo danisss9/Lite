@@ -158,7 +158,7 @@ internal static class BoxEngine
             NormalizeTableBoxes(child);
 
         var display = node.GetDisplay();
-        var isRowGroup = node.TagName is "TBODY" or "THEAD" or "TFOOT";
+        var isRowGroup = display == DisplayType.TableRowGroup || node.TagName is "TBODY" or "THEAD" or "TFOOT";
         if (display is DisplayType.Table or DisplayType.InlineTable || isRowGroup)
             WrapAnonymousTableBoxes(node, wrapAsRow: true);
         else if (display == DisplayType.TableRow)
@@ -224,7 +224,7 @@ internal static class BoxEngine
     {
         if (atTableLevel)
         {
-            if (child.GetDisplay() == DisplayType.TableRow) return true;
+            if (child.GetDisplay() is DisplayType.TableRow or DisplayType.TableRowGroup) return true;
             return child.TagName is "TBODY" or "THEAD" or "TFOOT" or "CAPTION" or "COL" or "COLGROUP";
         }
         return child.GetDisplay() == DisplayType.TableCell;
