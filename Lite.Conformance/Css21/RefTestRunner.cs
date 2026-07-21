@@ -131,11 +131,14 @@ internal static class RefTestRunner
 
         ConformanceServer.Start();
 
+        // Optional filename substring filter (LITE_SURVEY_FILTER) for drilling into one category.
+        var nameFilter = Environment.GetEnvironmentVariable("LITE_SURVEY_FILTER");
         var tests = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
             .Where(f => f.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||
                         f.EndsWith(".xht", StringComparison.OrdinalIgnoreCase) ||
                         f.EndsWith(".xhtml", StringComparison.OrdinalIgnoreCase))
             .Where(f => !IsReferenceFile(f))
+            .Where(f => nameFilter is null || Path.GetFileName(f).Contains(nameFilter, StringComparison.OrdinalIgnoreCase))
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
         if (limit > 0) tests = tests.Take(limit).ToList();

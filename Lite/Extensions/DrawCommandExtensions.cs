@@ -21,7 +21,7 @@ public sealed class LinearGradient
     public List<(SKColor Color, float? Position)> Stops { get; set; } = [];
 }
 
-public enum DisplayType { Block, Inline, InlineBlock, ListItem, Flex, InlineFlex, Table, TableRow, TableCell, None }
+public enum DisplayType { Block, Inline, InlineBlock, ListItem, Flex, InlineFlex, Table, InlineTable, TableRow, TableCell, None }
 public enum TextAlign { Left, Center, Right, Justify }
 public enum WhiteSpace { Normal, NoWrap, Pre, PreWrap, PreLine }
 public enum PositionType { Static, Relative, Absolute, Fixed, Sticky }
@@ -68,6 +68,7 @@ public static class StyleExtensions
             "flex" => DisplayType.Flex,
             "inline-flex" => DisplayType.InlineFlex,
             "table" => DisplayType.Table,
+            "inline-table" => DisplayType.InlineTable,
             "table-row" => DisplayType.TableRow,
             "table-cell" => DisplayType.TableCell,
             "none" => DisplayType.None,

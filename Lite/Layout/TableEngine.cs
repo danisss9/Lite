@@ -384,6 +384,49 @@ internal static class TableEngine
     }
 
     /// <summary>
+    /// Shrink-to-fit content width of a table/inline-table (CSS 2.1 §17.5.2): the sum of the
+    /// columns' max-content (preferred) widths plus border-spacing, clamped to
+    /// <paramref name="availW"/> but never below the columns' min-content sum. An explicit table
+    /// <c>width</c> wins. Used to size an inline-table (which shrink-wraps like inline-block).
+    /// </summary>
+    public static float MeasureTableWidth(LayoutNode table, float availW, float viewportW, float viewportH)
+    {
+        var explicitTableW = table.GetWidth(availW);
+        var rows = CollectRows(table);
+        if (rows.Count == 0) return Math.Max(0f, explicitTableW);
+
+        var spacing = IsBorderCollapse(table) ? 0f : GetBorderSpacing(table);
+        var placements = BuildGrid(rows, out var colCount, out _);
+        if (colCount == 0) return Math.Max(0f, explicitTableW);
+
+        var colMin = new float[colCount];
+        var colMax = new float[colCount];
+        foreach (var p in placements)
+        {
+            if (p.ColSpan != 1) continue;
+            var explicitCol = p.Cell.GetWidth(availW);
+            float cMin, cMax;
+            if (explicitCol > 0f)
+            {
+                var fs = p.Cell.GetFontSize();
+                var pad = p.Cell.GetPadding(availW, viewportH, fs);
+                var bord = p.Cell.GetBorderWidth();
+                cMin = cMax = explicitCol + pad.Left + pad.Right + bord.Left + bord.Right;
+            }
+            else
+                (cMin, cMax) = MeasureCellIntrinsic(p.Cell, availW, viewportH);
+            colMin[p.Col] = Math.Max(colMin[p.Col], cMin);
+            colMax[p.Col] = Math.Max(colMax[p.Col], cMax);
+        }
+
+        var spacingTotal = spacing * (colCount + 1);
+        if (explicitTableW > 0f) return explicitTableW;
+        var sumMax = colMax.Sum() + spacingTotal;
+        var sumMin = colMin.Sum() + spacingTotal;
+        return Math.Max(sumMin, Math.Min(sumMax, availW));
+    }
+
+    /// <summary>
     /// Determines pixel width for each column (CSS 2.1 §17.5.2.2 automatic layout).
     /// Cells with an explicit width (colspan=1) fix their column; the remaining width is
     /// distributed to the auto columns according to their measured content min/max widths

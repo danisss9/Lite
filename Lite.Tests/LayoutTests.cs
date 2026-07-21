@@ -428,6 +428,57 @@ public static class LayoutTests
             $"min-content (300) should floor shrink-to-fit above the 200px available, got {abs.Box.ContentBox.Width}");
     }
 
+    // -------------------------------------------------------------------------
+    // Anonymous table boxes (§17.2.1) + inline-table
+    // -------------------------------------------------------------------------
+
+    [Test]
+    public static void AnonymousTableBoxes_WrapBareContent()
+    {
+        // CSS 2.1 §17.2.1: a display:table with bare (non-row) content generates an anonymous
+        // table-row and table-cell around it, so the content lays out as a real cell.
+        var content = Block(new() { ["width"] = "60px", ["height"] = "20px" });
+        var table = Block(new() { ["display"] = "table", ["border-spacing"] = "0" }, content);
+        LayoutTree(Block(new() { ["width"] = "400px" }, table));
+
+        True(content.Parent is { TagName: "#anon-cell" },
+            $"bare content should be reparented under an anonymous cell, got {content.Parent?.TagName}");
+        True(content.Parent!.Parent is { TagName: "#anon-row" },
+            $"the anonymous cell should sit under an anonymous row, got {content.Parent!.Parent?.TagName}");
+        True(Math.Abs(content.Box.ContentBox.Height - 20f) < 1f,
+            $"bare content should lay out (h20) inside the anonymous cell, got {content.Box.ContentBox.Height}");
+    }
+
+    [Test]
+    public static void AnonymousTableBoxes_ProperTableUntouched()
+    {
+        // A well-formed TABLE>TR>TD is left exactly as authored — no anonymous wrapping.
+        var cell = TableCell("Hi");
+        var row = new LayoutNode(null, "TR", "", _styleCache.Style);
+        row.StyleOverrides["display"] = "table-row";
+        row.AddChild(cell);
+        var table = new LayoutNode(null, "TABLE", "", _styleCache.Style);
+        table.StyleOverrides["display"] = "table";
+        table.AddChild(row);
+        LayoutTree(Block(new() { ["width"] = "400px" }, table));
+        True(table.Children.Count == 1 && ReferenceEquals(table.Children[0], row),
+            "a proper table's row should not be wrapped in an anonymous box");
+        True(cell.Parent is { TagName: "TR" }, "a proper cell should stay under its TR");
+    }
+
+    [Test]
+    public static void InlineTable_ShrinkToFitWidth()
+    {
+        // An inline-table shrinks to fit its content: a single 60px cell → table content width ~60
+        // (border-spacing:0). It also participates as an atomic inline (gets a Box).
+        var cellContent = Block(new() { ["width"] = "60px", ["height"] = "20px" });
+        var itable = Block(new() { ["display"] = "inline-table", ["border-spacing"] = "0" }, cellContent);
+        var container = Block(new() { ["width"] = "400px" }, itable);
+        LayoutTree(container);
+        True(Math.Abs(itable.Box.ContentBox.Width - 60f) < 2f,
+            $"inline-table should shrink-to-fit its 60px content, got {itable.Box.ContentBox.Width}");
+    }
+
     [Test]
     public static void ShrinkToFit_Float_UsesIntrinsicWidth()
     {

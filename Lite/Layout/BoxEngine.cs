@@ -18,6 +18,7 @@ internal static class BoxEngine
 
         NormalizeBlockInInline(root);
         NormalizeInteractive(root);
+        NormalizeTableBoxes(root);
 
         LayoutBlock(root, 0, 0, viewportWidth, viewportWidth, viewportHeight, viewportHeight); // root: margin-box discarded
         // Second pass: lay out all absolute/fixed nodes now that normal-flow boxes are finalised
@@ -140,6 +141,93 @@ internal static class BoxEngine
             else n.StyleOverrides["display"] = n.DetailsSavedDisplay;
             n.DetailsSavedDisplay = null;
         }
+    }
+
+    /// <summary>
+    /// CSS 2.1 §17.2.1 (anonymous table objects): a table / inline-table (or a row group) whose
+    /// children include non-row content wraps consecutive misparented children in an anonymous
+    /// table-row; a table-row whose children include non-cell content wraps them in an anonymous
+    /// table-cell. This lets bare text/blocks inside a table lay out (and paint) as real cells —
+    /// the common shape of the inline-table tests. Idempotent: generated boxes carry
+    /// table-row/table-cell display, so a re-run treats them as proper children and does not re-wrap.
+    /// A well-formed TABLE&gt;TR&gt;TD is left byte-for-byte untouched (no anonymous box is created).
+    /// </summary>
+    private static void NormalizeTableBoxes(LayoutNode node)
+    {
+        foreach (var child in node.Children)
+            NormalizeTableBoxes(child);
+
+        var display = node.GetDisplay();
+        var isRowGroup = node.TagName is "TBODY" or "THEAD" or "TFOOT";
+        if (display is DisplayType.Table or DisplayType.InlineTable || isRowGroup)
+            WrapAnonymousTableBoxes(node, wrapAsRow: true);
+        else if (display == DisplayType.TableRow)
+            WrapAnonymousTableBoxes(node, wrapAsRow: false);
+    }
+
+    /// <summary>Wraps runs of misparented children into anonymous table-rows (<paramref name="wrapAsRow"/>)
+    /// or table-cells. Only rebuilds the child list if at least one anonymous box is created, so
+    /// proper tables are untouched. Whitespace-only runs between real boxes are dropped, not wrapped.</summary>
+    private static void WrapAnonymousTableBoxes(LayoutNode parent, bool wrapAsRow)
+    {
+        var newChildren = new List<LayoutNode>();
+        var run = new List<LayoutNode>();
+        var created = false;
+
+        void FlushRun()
+        {
+            if (run.Count == 0) return;
+            var anon = new LayoutNode(null, wrapAsRow ? "#anon-row" : "#anon-cell", "", parent.Style);
+            anon.StyleOverrides["display"] = wrapAsRow ? "table-row" : "table-cell";
+            foreach (var side in new[] { "top", "right", "bottom", "left" })
+            {
+                anon.StyleOverrides[$"margin-{side}"] = "0";
+                anon.StyleOverrides[$"padding-{side}"] = "0";
+                anon.StyleOverrides[$"border-{side}-width"] = "0";
+            }
+            anon.Parent = parent;
+            foreach (var c in run) { c.Parent = anon; anon.Children.Add(c); }
+            run.Clear();
+            // Content inside a freshly-made anonymous row still needs an anonymous cell.
+            if (wrapAsRow) WrapAnonymousTableBoxes(anon, wrapAsRow: false);
+            newChildren.Add(anon);
+            created = true;
+        }
+
+        foreach (var child in parent.Children)
+        {
+            // Whitespace-only text between table boxes is not content — discard it (CSS 2.1
+            // white-space handling) so it never becomes (or pads) an anonymous cell.
+            if (child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText))
+                continue;
+
+            if (IsProperTableChild(child, atTableLevel: wrapAsRow))
+            {
+                FlushRun();
+                newChildren.Add(child);
+            }
+            else
+            {
+                run.Add(child);
+            }
+        }
+        FlushRun();
+
+        if (!created) return; // nothing wrapped — leave the original list (and its whitespace) intact
+        parent.Children.Clear();
+        parent.Children.AddRange(newChildren);
+    }
+
+    /// <summary>True when a child already occupies a proper slot in its table parent: a row / row
+    /// group / caption / column(-group) at the table level, or a cell at the row level.</summary>
+    private static bool IsProperTableChild(LayoutNode child, bool atTableLevel)
+    {
+        if (atTableLevel)
+        {
+            if (child.GetDisplay() == DisplayType.TableRow) return true;
+            return child.TagName is "TBODY" or "THEAD" or "TFOOT" or "CAPTION" or "COL" or "COLGROUP";
+        }
+        return child.GetDisplay() == DisplayType.TableCell;
     }
 
     private static void ResolveAbsoluteBox(LayoutNode node, BoxDimensions cb,
@@ -319,6 +407,11 @@ internal static class BoxEngine
         var contentX = x + margin.Left + border.Left + padding.Left;
         var contentY = y + margin.Top + border.Top + padding.Top;
 
+        // A block-level table with auto width shrink-wraps to its content (CSS 2.1 §17.5.2), unlike
+        // a normal block which fills its container. An explicit width already flowed into contentW.
+        if (explicitW <= 0 && node.GetDisplay() == DisplayType.Table)
+            contentW = TableEngine.MeasureTableWidth(node, contentW, viewportWidth, viewportHeight);
+
         // Resolve this node's explicit height using parentContentHeight for % and viewportHeight for vh/vw.
         // height:auto is content-based — GetHeight returns the containing-block height for auto (the
         // width-style "fill" behaviour of GetSize), which must NOT be treated as an explicit height.
@@ -470,7 +563,7 @@ internal static class BoxEngine
         if (node.GetOverflow() != OverflowType.Visible) return true;
         var display = node.GetDisplay();
         if (display is DisplayType.InlineBlock or DisplayType.Flex or DisplayType.InlineFlex
-            or DisplayType.TableCell or DisplayType.Table) return true;
+            or DisplayType.TableCell or DisplayType.Table or DisplayType.InlineTable) return true;
         // display: flow-root explicitly establishes a BFC (it maps to Block in GetDisplay).
         if (RawStyle(node, "display") == "flow-root") return true;
         return false;
@@ -902,7 +995,7 @@ internal static class BoxEngine
         float viewportWidth, float viewportHeight)
     {
         var items = new List<InlineItem>();
-        CollectInlineItems(nodes, items, viewportWidth, viewportHeight);
+        CollectInlineItems(nodes, items, maxWidth, viewportWidth, viewportHeight);
 
         if (items.Count == 0) return 0f;
 
@@ -980,7 +1073,7 @@ internal static class BoxEngine
 
         foreach (var (item, relX, relY) in placed)
         {
-            ApplyInlineItem(item, originX + relX, originY + relY);
+            ApplyInlineItem(item, originX + relX, originY + relY, viewportWidth, viewportHeight);
         }
 
         return lineY;
@@ -992,6 +1085,7 @@ internal static class BoxEngine
     private static void CollectInlineItems(
         IEnumerable<LayoutNode> nodes,
         List<InlineItem> items,
+        float maxWidth,
         float viewportWidth, float viewportHeight)
     {
         foreach (var node in nodes)
@@ -1010,6 +1104,33 @@ internal static class BoxEngine
                 var brH = brFont.Size * 1.4f;
                 items.Add(new InlineItem(InlineItemKind.LineBreak, node, null, 0, brH,
                            default, default, default, 0, brH));
+                continue;
+            }
+
+            if (display == DisplayType.InlineTable)
+            {
+                // §17.2 / §9.2.2: an inline-table participates in the line box like inline-block,
+                // laying out internally as a table shrink-wrapped to its content (clamped to the
+                // available line width).
+                var fontSize = node.GetFontSize();
+                var margin = node.GetMargin(0, viewportHeight, fontSize);
+                var padding = node.GetPadding(0, viewportHeight, fontSize);
+                var border = node.GetBorderWidth();
+
+                var avail = maxWidth > 0 ? maxWidth : viewportWidth;
+                var availContent = Math.Max(0f, avail - margin.Left - margin.Right
+                    - border.Left - border.Right - padding.Left - padding.Right);
+                var w = Math.Max(0f, TableEngine.MeasureTableWidth(node, availContent, viewportWidth, viewportHeight));
+
+                var contentX2 = margin.Left + border.Left + padding.Left;
+                var contentY2 = margin.Top + border.Top + padding.Top;
+                var h = Math.Max(0f, TableEngine.LayoutTable(node, contentX2, contentY2, w, viewportWidth, viewportHeight));
+
+                var totalW = margin.Left + border.Left + padding.Left + w + padding.Right + border.Right + margin.Right;
+                var totalH = margin.Top + border.Top + padding.Top + h + padding.Bottom + border.Bottom + margin.Bottom;
+
+                items.Add(new InlineItem(InlineItemKind.InlineTable, node, null, totalW, totalH,
+                           margin, padding, border, w, h));
                 continue;
             }
 
@@ -1106,16 +1227,36 @@ internal static class BoxEngine
             }
             else if (node.Children.Count > 0)
             {
-                CollectInlineItems(node.Children, items, viewportWidth, viewportHeight);
+                CollectInlineItems(node.Children, items, maxWidth, viewportWidth, viewportHeight);
             }
         }
     }
 
-    private static void ApplyInlineItem(InlineItem item, float absX, float absY)
+    private static void ApplyInlineItem(InlineItem item, float absX, float absY,
+        float viewportWidth, float viewportHeight)
     {
         var node = item.Node;
         switch (item.Kind)
         {
+            case InlineItemKind.InlineTable:
+                {
+                    var m = item.Margin;
+                    var p = item.Padding;
+                    var b = item.Border;
+                    var contentX = absX + m.Left + b.Left + p.Left;
+                    var contentY = absY + m.Top + b.Top + p.Top;
+                    node.Box = new BoxDimensions
+                    {
+                        ContentBox = new SKRect(contentX, contentY,
+                                                contentX + item.ContentW, contentY + item.ContentH),
+                        Margin = m,
+                        Padding = p,
+                        Border = b,
+                    };
+                    // Re-run table layout at the resolved position so cells get their final boxes.
+                    TableEngine.LayoutTable(node, contentX, contentY, item.ContentW, viewportWidth, viewportHeight);
+                    break;
+                }
             case InlineItemKind.InlineBlock:
                 {
                     var m = item.Margin;
@@ -1169,7 +1310,7 @@ internal static class BoxEngine
     // Inline item model
     // -------------------------------------------------------------------------
 
-    private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, LineBreak }
+    private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, InlineTable, LineBreak }
 
     private record InlineItem(
         InlineItemKind Kind,
