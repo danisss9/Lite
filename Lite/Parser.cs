@@ -187,6 +187,18 @@ internal static class Parser
             catch (Exception ex) { Console.WriteLine($"[CSS load error] {href}: {ex.Message}"); }
         }
 
+        // Decode HTML entities in author <style> text. Per HTML5, <style> is a raw-text element
+        // (its content is never entity-decoded by an HTML parser) — but these vendored CSS2.1
+        // reftests are authored as XHTML, where <style> content is normal PCDATA and a real
+        // browser (parsing them as application/xhtml+xml) decodes it. Without this, a combinator
+        // written as "body &gt; div" reaches the CSS parser as the literal, meaningless token
+        // "&gt;" and the selector silently misbehaves. A style block with no entities is unchanged.
+        foreach (var styleEl in document.QuerySelectorAll("style"))
+        {
+            var decoded = System.Net.WebUtility.HtmlDecode(styleEl.TextContent);
+            if (decoded != styleEl.TextContent) styleEl.TextContent = decoded;
+        }
+
         // Process @import in author <style> elements (skip the UA sheet, which has none).
         foreach (var styleEl in document.QuerySelectorAll("style"))
         {

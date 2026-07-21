@@ -358,6 +358,26 @@ internal static class TableEngine
         return w;
     }
 
+    /// <summary>CSS 2.1 §17.5.3: "the baseline of a table is the baseline of the first row".
+    /// Must be called after <see cref="LayoutTable"/> has positioned the table's rows/cells.
+    /// Returns null if the table has no rows or the first row has no baseline-contributing
+    /// content (e.g. all cells empty) — callers fall back to the table's bottom margin edge.</summary>
+    public static float? GetFirstRowBaseline(LayoutNode table)
+    {
+        var rows = CollectRows(table);
+        if (rows.Count == 0) return null;
+
+        // A row's baseline is the lowest baseline among its cells (CSS 2.1 §17.5.3: the cell
+        // whose content needs the most room above the shared baseline sets it).
+        float? best = null;
+        foreach (var cell in rows[0].Cells)
+        {
+            var y = BoxEngine.FindFirstBaselineY(cell);
+            if (y.HasValue && (!best.HasValue || y.Value > best.Value)) best = y.Value;
+        }
+        return best;
+    }
+
     private static List<RowInfo> CollectRows(LayoutNode table)
     {
         var rows = new List<RowInfo>();

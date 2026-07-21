@@ -81,8 +81,21 @@ internal static class TextMeasure
     public static (float Width, float Height, float Ascent) MeasureSingleLine(string text, SKFont font, float lineHeight = 0f)
     {
         if (lineHeight <= 0f) lineHeight = font.Size * 1.4f;
+        return (font.MeasureText(text), lineHeight, ComputeAscent(font, lineHeight));
+    }
+
+    /// <summary>
+    /// CSS 2.1 §10.8.1 half-leading: within a text box of the given line-height, the font's own
+    /// ascent+descent is centred, splitting the extra "leading" evenly above and below. Returns
+    /// the distance from the top of that box down to the baseline — i.e. the value inline layout
+    /// needs to align this box against a shared line baseline.
+    /// </summary>
+    public static float ComputeAscent(SKFont font, float lineHeight)
+    {
         var ascent = -font.Metrics.Ascent;
-        return (font.MeasureText(text), lineHeight, ascent);
+        var descent = font.Metrics.Descent;
+        var halfLeading = (lineHeight - (ascent + descent)) / 2f;
+        return ascent + halfLeading;
     }
 
     /// <summary>
@@ -119,7 +132,7 @@ internal static class TextMeasure
     private static List<TextLine> WrapCollapsed(string text, float maxWidth, SKFont font, float lineHeight)
     {
         var lines = new List<TextLine>();
-        var ascent = -font.Metrics.Ascent;
+        var ascent = ComputeAscent(font, lineHeight);
 
         // Fast path: text already fits — return it verbatim so that leading/trailing
         // spaces (significant in inline runs like " and ") are preserved.
@@ -163,7 +176,7 @@ internal static class TextMeasure
     {
         var lines = new List<TextLine>();
         if (lineHeight <= 0f) lineHeight = font.Size * 1.4f;
-        var ascent = -font.Metrics.Ascent;
+        var ascent = ComputeAscent(font, lineHeight);
 
         var rawLines = text.Split('\n');
         foreach (var raw in rawLines)

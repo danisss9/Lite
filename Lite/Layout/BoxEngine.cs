@@ -160,9 +160,40 @@ internal static class BoxEngine
         var display = node.GetDisplay();
         var isRowGroup = display == DisplayType.TableRowGroup || node.TagName is "TBODY" or "THEAD" or "TFOOT";
         if (display is DisplayType.Table or DisplayType.InlineTable || isRowGroup)
+        {
+            MigrateOwnTextToChild(node);
             WrapAnonymousTableBoxes(node, wrapAsRow: true);
+        }
         else if (display == DisplayType.TableRow)
+        {
+            MigrateOwnTextToChild(node);
             WrapAnonymousTableBoxes(node, wrapAsRow: false);
+        }
+    }
+
+    /// <summary>
+    /// A table/row-group/row whose only content is bare text (e.g. a leaf <c>&lt;div
+    /// display:inline-table&gt;some text&lt;/div&gt;</c>) holds that text as its OWN
+    /// <see cref="LayoutNode.Text"/> rather than a <c>#text</c> child — the parser only splits
+    /// text into an ordered child when the element also has element children (see
+    /// <c>Parser.Traverse</c>'s <c>hasMixedChildren</c> check). <see cref="WrapAnonymousTableBoxes"/>
+    /// only wraps <c>Children</c>, so that text would otherwise be invisible to anonymous-box
+    /// generation (§17.2.1) and the table would end up with zero rows. Splitting it into a real
+    /// <c>#text</c> child first makes it "misparented content" like any other, so the normal
+    /// wrapping path picks it up. Scoped to nodes with NO existing children, so a node that
+    /// already has its text ordered among element children (the common, already-correct case) is
+    /// never touched — avoids duplicating content.
+    /// </summary>
+    private static void MigrateOwnTextToChild(LayoutNode node)
+    {
+        if (node.Children.Count > 0 || string.IsNullOrEmpty(node.Text)) return;
+        var textChild = new LayoutNode(null, "#text", node.Text, node.Style) { Parent = node };
+        // The child's Style object is shared with `node` (the usual #text convention), which
+        // leaks node's own NON-inherited "display" (here table/inline-table) onto it — without
+        // this override the text would be mistaken for another nested table (CollectInlineItems
+        // dispatches purely on GetDisplay()), which is both wrong and pathologically slow.
+        textChild.StyleOverrides["display"] = "inline";
+        node.Children.Add(textChild);
     }
 
     /// <summary>Wraps runs of misparented children into anonymous table-rows (<paramref name="wrapAsRow"/>)
@@ -1001,32 +1032,43 @@ internal static class BoxEngine
 
         var lineX = 0f;
         var lineY = 0f;
-        var lineHeight = 0f;
+
+        // Running CSS 2.1 §10.8.1 baseline-alignment accumulators for the line under construction:
+        // maxAbove/maxBelow track the tallest reach above/below the shared baseline among items
+        // aligned baseline/sub/super/middle; maxTopH/maxBottomH track the tallest 'top'/'bottom'
+        // aligned items, which anchor to the line box's own edges instead of the baseline.
+        var maxAbove = 0f;
+        var maxBelow = 0f;
+        var maxTopH = 0f;
+        var maxBottomH = 0f;
 
         var placed = new List<(InlineItem item, float relX, float relY)>();
         var lineStart = 0;
 
         void CommitLine()
         {
+            // Resolve the final line-box height: start from the baseline-aligned items' reach,
+            // then grow outward (below for 'top', above for 'bottom') if those need more room.
+            var above = maxAbove;
+            var below = maxBelow;
+            if (maxTopH > above + below) below = maxTopH - above;
+            if (maxBottomH > above + below) above = maxBottomH - below;
+            var thisLineHeight = above + below > 0f ? above + below : Math.Max(maxTopH, maxBottomH);
+
             for (var k = lineStart; k < placed.Count; k++)
             {
                 var (it, rx, _) = placed[k];
                 var vAlign = it.Node.GetVerticalAlign();
                 float yOffset = vAlign switch
                 {
-                    VerticalAlignType.Top => 0f,
-                    VerticalAlignType.Bottom => lineHeight - it.Height,
-                    VerticalAlignType.Middle => (lineHeight - it.Height) / 2f,
-                    VerticalAlignType.Sub => lineHeight - it.Height + it.Height * 0.15f,
-                    VerticalAlignType.Super => -it.Height * 0.15f,
-                    VerticalAlignType.TextTop => 0f,
-                    VerticalAlignType.TextBottom => lineHeight - it.Height,
-                    _ => lineHeight - it.Height, // baseline: align bottoms
+                    VerticalAlignType.Top or VerticalAlignType.TextTop => 0f,
+                    VerticalAlignType.Bottom or VerticalAlignType.TextBottom => thisLineHeight - it.Height,
+                    _ => above - AboveBaselineComponent(it, vAlign),
                 };
                 placed[k] = (it, rx, lineY + yOffset);
             }
-            lineY += lineHeight;
-            lineHeight = 0f;
+            lineY += thisLineHeight;
+            maxAbove = maxBelow = maxTopH = maxBottomH = 0f;
             lineX = 0f;
             lineStart = placed.Count;
         }
@@ -1035,8 +1077,12 @@ internal static class BoxEngine
         {
             if (item.Kind == InlineItemKind.LineBreak)
             {
-                // Force a new line; ensure minimum height from the <br>'s font
-                if (lineHeight == 0f) lineHeight = item.Height;
+                // An otherwise-empty line still needs the <br>'s own font metrics for its height.
+                if (maxAbove + maxBelow + maxTopH + maxBottomH <= 0f)
+                {
+                    maxAbove = item.Ascent;
+                    maxBelow = item.Height - item.Ascent;
+                }
                 CommitLine();
                 continue;
             }
@@ -1065,9 +1111,23 @@ internal static class BoxEngine
                 }
             }
 
+            var va = effectiveItem.Node.GetVerticalAlign();
+            switch (va)
+            {
+                case VerticalAlignType.Top or VerticalAlignType.TextTop:
+                    maxTopH = Math.Max(maxTopH, effectiveItem.Height);
+                    break;
+                case VerticalAlignType.Bottom or VerticalAlignType.TextBottom:
+                    maxBottomH = Math.Max(maxBottomH, effectiveItem.Height);
+                    break;
+                default:
+                    maxAbove = Math.Max(maxAbove, AboveBaselineComponent(effectiveItem, va));
+                    maxBelow = Math.Max(maxBelow, effectiveItem.Height - AboveBaselineComponent(effectiveItem, va));
+                    break;
+            }
+
             placed.Add((effectiveItem, lineX, lineY));
             lineX += effectiveItem.Width;
-            lineHeight = Math.Max(lineHeight, effectiveItem.Height);
         }
         if (placed.Count > lineStart) CommitLine();
 
@@ -1077,6 +1137,25 @@ internal static class BoxEngine
         }
 
         return lineY;
+    }
+
+    /// <summary>
+    /// For an item aligned baseline/sub/super/middle, the distance from ITS OWN top down to
+    /// wherever it aligns against the line's shared baseline (CSS 2.1 §10.8.1). 'baseline' uses
+    /// the item's intrinsic ascent directly; 'sub'/'super' shift it down/up by ~0.15em (matching
+    /// the ratio Drawer/the old code already used); 'middle' aligns the item's vertical centre
+    /// with the baseline plus half an x-height (approximated as a quarter of the font size).
+    /// </summary>
+    private static float AboveBaselineComponent(InlineItem item, VerticalAlignType vAlign)
+    {
+        var fontSize = item.Node.GetFontSize();
+        return vAlign switch
+        {
+            VerticalAlignType.Middle => item.Height / 2f + fontSize * 0.25f,
+            VerticalAlignType.Sub => item.Ascent - fontSize * 0.15f,
+            VerticalAlignType.Super => item.Ascent + fontSize * 0.15f,
+            _ => item.Ascent, // baseline
+        };
     }
 
     /// <summary>
@@ -1103,7 +1182,7 @@ internal static class BoxEngine
                 using var brFont = TextMeasure.CreateFont(node);
                 var brH = brFont.Size * 1.4f;
                 items.Add(new InlineItem(InlineItemKind.LineBreak, node, null, 0, brH,
-                           default, default, default, 0, brH));
+                           default, default, default, 0, brH, TextMeasure.ComputeAscent(brFont, brH)));
                 continue;
             }
 
@@ -1132,8 +1211,14 @@ internal static class BoxEngine
                 var totalW = margin.Left + border.Left + padding.Left + w + padding.Right + border.Right + margin.Right;
                 var totalH = margin.Top + border.Top + padding.Top + h + padding.Bottom + border.Bottom + margin.Bottom;
 
+                // §17.5.3: the baseline of an inline-table is the baseline of its first row. The
+                // preliminary LayoutTable call above already positioned rows/cells in this item's
+                // own (0,0)-anchored frame, so the offset it finds is directly usable as Ascent.
+                // No baseline content (e.g. an empty table) falls back to the bottom margin edge.
+                var tableAscent = TableEngine.GetFirstRowBaseline(node) ?? totalH;
+
                 items.Add(new InlineItem(InlineItemKind.InlineTable, node, null, totalW, totalH,
-                           margin, padding, border, w, h));
+                           margin, padding, border, w, h, tableAscent));
                 continue;
             }
 
@@ -1165,7 +1250,7 @@ internal static class BoxEngine
                 var totalH = margin.Top + border.Top + padding.Top + h + padding.Bottom + border.Bottom + margin.Bottom;
 
                 items.Add(new InlineItem(InlineItemKind.InlineFlex, node, null, totalW, totalH,
-                           margin, padding, border, w, h));
+                           margin, padding, border, w, h, totalH));
                 continue;
             }
 
@@ -1211,28 +1296,68 @@ internal static class BoxEngine
                 var totalH = margin.Top + border.Top + padding.Top + h + padding.Bottom + border.Bottom + margin.Bottom;
 
                 items.Add(new InlineItem(InlineItemKind.InlineBlock, node, null, totalW, totalH,
-                           margin, padding, border, w, h));
+                           margin, padding, border, w, h, totalH));
             }
             else if (node.TagName == "IMG" || (node.TagName == "OBJECT" && node.Image != null))
             {
                 var w = node.IntrinsicWidth > 0 ? (float)node.IntrinsicWidth : node.Image?.Width ?? 100f;
                 var h = node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight : node.Image?.Height ?? 100f;
+                // Replaced elements have no baseline of their own — CSS 2.1 §10.8's fallback rule
+                // aligns their bottom margin edge with the line's baseline (Ascent = full height).
                 items.Add(new InlineItem(InlineItemKind.Image, node, null, w, h,
-                           default, default, default, w, h));
+                           default, default, default, w, h, h));
             }
             else if (!string.IsNullOrEmpty(node.DisplayText) && !node.Children.Any())
             {
                 using var font = TextMeasure.CreateFont(node);
                 var lh = node.GetLineHeight(node.GetFontSize());
-                var (w, h, _) = TextMeasure.MeasureSingleLine(node.DisplayText, font, lh);
+                var (w, h, ascent) = TextMeasure.MeasureSingleLine(node.DisplayText, font, lh);
                 items.Add(new InlineItem(InlineItemKind.Text, node, node.DisplayText, w, h,
-                           default, default, default, w, h));
+                           default, default, default, w, h, ascent));
             }
             else if (node.Children.Count > 0)
             {
                 CollectInlineItems(node.Children, items, maxWidth, viewportWidth, viewportHeight);
             }
         }
+    }
+
+    /// <summary>
+    /// Finds the baseline of the first in-flow line box under <paramref name="node"/>, as an
+    /// absolute Y in whatever coordinate space <c>node</c>'s subtree was just laid out in (the
+    /// caller subtracts its own reference point). Used for §17.5.3 ("the baseline of an
+    /// inline-table is the baseline of the first row"), so this only looks at the FIRST
+    /// baseline-contributing descendant in document order — display:none and out-of-flow nodes
+    /// are skipped, but visibility:hidden ones still occupy space and so still count (visibility
+    /// doesn't affect layout). Returns null if the subtree has no baseline content at all (e.g.
+    /// empty cells), so callers can fall back to a bottom-edge alignment.
+    /// </summary>
+    internal static float? FindFirstBaselineY(LayoutNode node)
+    {
+        if (node.GetDisplay() == DisplayType.None) return null;
+        var pos = node.GetPosition();
+        if (pos == PositionType.Absolute || pos == PositionType.Fixed) return null;
+
+        // A leaf with its own text (a bare-text element, or a synthesized #text node) got its own
+        // Box set directly by ApplyInlineItem's Text case — its content-box top is the line top.
+        if (!string.IsNullOrEmpty(node.DisplayText) && node.Children.Count == 0)
+        {
+            if (node.DisplayText.Trim().Length == 0) return null; // whitespace-only: no line box
+            using var font = TextMeasure.CreateFont(node);
+            var lh = node.GetLineHeight(node.GetFontSize());
+            return node.Box.ContentBox.Top + TextMeasure.ComputeAscent(font, lh);
+        }
+        // Replaced elements have no baseline of their own — bottom margin edge (§10.8 fallback).
+        if (node.TagName == "IMG" || (node.TagName == "OBJECT" && node.Image != null))
+            return node.Box.ContentBox.Bottom;
+
+        foreach (var child in node.Children)
+        {
+            if (child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText)) continue;
+            var y = FindFirstBaselineY(child);
+            if (y.HasValue) return y;
+        }
+        return null;
     }
 
     private static void ApplyInlineItem(InlineItem item, float absX, float absY,
@@ -1315,6 +1440,12 @@ internal static class BoxEngine
 
     private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, InlineTable, LineBreak }
 
+    /// <summary><see cref="Ascent"/> is the distance from this item's own top (margin edge) down
+    /// to the baseline it should align on (CSS 2.1 §10.8). Text uses the font's half-leading
+    /// ascent; a replaced box (image) or one with no baseline of its own (inline-block,
+    /// inline-flex) uses its full height, so 'baseline' alignment reduces to aligning its bottom
+    /// margin edge with the line's baseline — the spec's fallback rule. inline-table uses the
+    /// baseline of its first row (§17.5.3).</summary>
     private record InlineItem(
         InlineItemKind Kind,
         LayoutNode Node,
@@ -1325,6 +1456,7 @@ internal static class BoxEngine
         EdgeSizes Padding,
         EdgeSizes Border,
         float ContentW,
-        float ContentH
+        float ContentH,
+        float Ascent
     );
 }

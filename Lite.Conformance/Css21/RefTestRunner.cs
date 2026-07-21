@@ -160,7 +160,13 @@ internal static class RefTestRunner
                 var diff = PixelDiff.Compare(refBmp, testBmp);
                 var ok = mismatch ? !diff.Match : diff.Match;
                 if (ok) pass++;
-                else { fail++; if (failed.Count < 40) failed.Add(urlPath); }
+                else
+                {
+                    fail++;
+                    if (failed.Count < 40) failed.Add(urlPath);
+                    if (Environment.GetEnvironmentVariable("LITE_SURVEY_DUMP") == "1")
+                        PixelDiff.WriteFailureArtifacts(SafeName(urlPath), refBmp, testBmp);
+                }
             }
             catch (Exception ex) { crash++; if (failed.Count < 40) failed.Add($"{urlPath} (crash: {ex.GetType().Name})"); }
         }
