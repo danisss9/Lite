@@ -60,39 +60,251 @@ internal static class BoxEngine
     }
 
     /// <summary>
-    /// CSS 2.1 §9.2.1.1 (block-in-inline): when an inline-level box contains an in-flow
-    /// block-level box, the inline is broken around the block and anonymous block boxes wrap
-    /// the inline pieces. We approximate this by promoting such an inline element to a block
-    /// container — its text/inline runs then become anonymous block line-boxes via
-    /// <see cref="LayoutChildren"/>, which is the visible result the spec requires.
+    /// CSS 2.1 §9.2.1.1 (block-in-inline): "When an inline box contains an in-flow block-level
+    /// box, the inline box (and its inline ancestors within the same block box) are broken around
+    /// the block-level box … splitting the inline box into two boxes (even if either side is
+    /// empty), one on each side of the block-level box. The line boxes before the break and after
+    /// the break are enclosed in anonymous block boxes, and the block-level box becomes a sibling
+    /// of those anonymous boxes."
+    /// <para>We implement this by restructuring each <b>block container</b>'s child list: an inline
+    /// child that (transitively, through inline boxes) contains an in-flow block is replaced by the
+    /// flattened sequence of its pieces — clones of the inline carrying its style around each run of
+    /// inline content, with the block-level descendants hoisted out to sibling position. The
+    /// existing mixed inline/block flow in <see cref="LayoutChildrenImpl"/> then wraps the inline
+    /// pieces in anonymous line boxes and stacks the blocks, exactly as the spec requires. This is
+    /// materially more correct than the previous "promote the whole inline to a block" heuristic,
+    /// which painted the inline's background/borders behind the nested block (wrong for
+    /// backgrounds/empty pieces) and forced a preceding sibling of the inline onto its own line.</para>
+    /// <para>Runs before <see cref="NormalizeTableBoxes"/> and is idempotent: the emitted pieces
+    /// contain no in-flow block (so they never re-trigger) and the hoisted blocks are block-level
+    /// siblings (so they are not inline children to split).</para>
     /// </summary>
     private static void NormalizeBlockInInline(LayoutNode node)
     {
+        // Resolve descendants first so a hoisted block's own subtree is already normalized and a
+        // deeper block container splits its own inline children before we look at this level.
         foreach (var child in node.Children)
             NormalizeBlockInInline(child);
 
-        if (node.TagName.StartsWith('#')) return;
-        // Only pure inline boxes break around a block. inline-block is already a block
-        // container *and* inline-level — promoting it to block would wrongly pull it out of
-        // its line, so leave it alone.
-        if (node.GetDisplay() is not DisplayType.Inline) return;
+        if (!IsBlockContainerForSplit(node)) return;
+        if (!node.Children.Any(IsBreakableInline)) return;
 
-        bool hasBlockChild = node.Children.Any(c =>
-            !c.TagName.StartsWith('#') &&
-            c.GetDisplay() is DisplayType.Block or DisplayType.ListItem or DisplayType.Table);
-        if (hasBlockChild)
+        var rebuilt = new List<LayoutNode>();
+        foreach (var child in node.Children)
         {
-            node.StyleOverrides["display"] = "block";
-            // §9.2.1.1: when an inline box is broken around a block, the inline's vertical margins,
-            // padding and borders have no effect (they must not shift the block) — drop them on the
-            // promoted anonymous block container. The horizontal box-model still applies.
-            node.StyleOverrides["margin-top"] = "0";
-            node.StyleOverrides["margin-bottom"] = "0";
-            node.StyleOverrides["padding-top"] = "0";
-            node.StyleOverrides["padding-bottom"] = "0";
-            node.StyleOverrides["border-top-width"] = "0";
-            node.StyleOverrides["border-bottom-width"] = "0";
+            if (IsBreakableInline(child))
+                rebuilt.AddRange(SplitInline(child));
+            else
+                rebuilt.Add(child);
         }
+        node.Children.Clear();
+        foreach (var c in rebuilt) { c.Parent = node; node.Children.Add(c); }
+    }
+
+    /// <summary>True for nodes whose children flow as a block container (mixed block/inline), i.e.
+    /// the boxes that can hold the anonymous block boxes §9.2.1.1 generates. Excludes inline boxes
+    /// (they bubble the break up to their block-container ancestor), flex containers (children are
+    /// blockified flex items) and table boxes (handled by <see cref="NormalizeTableBoxes"/>).</summary>
+    private static bool IsBlockContainerForSplit(LayoutNode node)
+        => node.GetDisplay() is DisplayType.Block or DisplayType.ListItem
+            or DisplayType.TableCell or DisplayType.InlineBlock;
+
+    /// <summary>True when a box participates in its parent's normal flow — i.e. it is neither
+    /// floated nor absolutely/fixed-positioned. A #text node never floats even if it inherited a
+    /// float from a shared parent style (floats apply to elements only).</summary>
+    private static bool IsInFlow(LayoutNode n)
+    {
+        var pos = n.GetPosition();
+        if (pos == PositionType.Absolute || pos == PositionType.Fixed) return false;
+        if (n.TagName != "#text" && n.GetFloat() != FloatType.None) return false;
+        return true;
+    }
+
+    /// <summary>A non-anonymous element with <c>display:inline</c> — the only box kind broken
+    /// around a block (inline-block/-table/-flex are inline-level but are themselves block
+    /// containers, so a block inside them stays inside).</summary>
+    private static bool IsSplittableInline(LayoutNode n)
+        => !n.TagName.StartsWith('#') && n.GetDisplay() == DisplayType.Inline;
+
+    /// <summary>An in-flow inline that contains an in-flow block and so must be broken (the trigger
+    /// used at a block container's level and when weaving nested inlines). Excludes floated/abs
+    /// inlines: those are blockified/out of flow, and a block they contain stays inside them rather
+    /// than breaking any ancestor inline (this is what keeps Acid2's floated
+    /// <c>span&gt;em&gt;strong</c> smile intact).</summary>
+    private static bool IsBreakableInline(LayoutNode n)
+        => IsSplittableInline(n) && IsInFlow(n) && InlineContainsInFlowBlock(n);
+
+    /// <summary>True when <paramref name="n"/> is an in-flow block-level box (the trigger for a
+    /// block-in-inline break). Floats and absolutely/fixed-positioned boxes are out of flow and do
+    /// not break the inline. Character-data nodes (<c>#text</c>/<c>#comment</c>/<c>#pi</c>) are
+    /// always inline-level content — never a block — even if one inherited a non-inherited
+    /// <c>display:block</c> from a shared/JS-created style (the same shared-#text-style hazard the
+    /// flow already guards against for float/clear). Generated content (<c>#pseudo-*</c>) and
+    /// anonymous boxes are NOT excluded — a <c>display:block</c> <c>::after</c> is a real block.</summary>
+    private static bool IsInFlowBlockLevel(LayoutNode n)
+        => n.TagName is not ("#text" or "#comment" or "#pi") && IsInFlow(n)
+            && n.GetDisplay() is DisplayType.Block or DisplayType.ListItem
+                or DisplayType.Flex or DisplayType.Table;
+
+    /// <summary>Whether an inline box (transitively, through <b>in-flow</b> nested inline boxes)
+    /// contains an in-flow block-level box, so it must be broken. Recursion stops at out-of-flow
+    /// nested inlines — a float/abs inline is its own formatting root and any block within it does
+    /// not break this inline.</summary>
+    private static bool InlineContainsInFlowBlock(LayoutNode inline)
+    {
+        foreach (var c in inline.Children)
+        {
+            if (IsInFlowBlockLevel(c)) return true;
+            if (IsSplittableInline(c) && IsInFlow(c) && InlineContainsInFlowBlock(c)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>Breaks a single inline box around the in-flow block(s) it contains, returning the
+    /// flattened parent-level sequence: clones of the inline wrapping each run of inline content
+    /// (empty/whitespace-only runs dropped — §9.2.1.1 "if empty, will not show any background"),
+    /// interleaved with the hoisted block-level descendants in document order. Nested inline
+    /// ancestors that also contain the block are broken too (their inline pieces nest inside this
+    /// inline's piece; their blocks bubble to this level).</summary>
+    private static List<LayoutNode> SplitInline(LayoutNode inline)
+    {
+        var result = new List<LayoutNode>();
+        var piece = CloneInlineShell(inline);
+
+        void FlushPiece()
+        {
+            if (PieceHasVisibleContent(piece)) result.Add(piece);
+            piece = CloneInlineShell(inline);
+        }
+
+        void EmitBlock(LayoutNode block)
+        {
+            FlushPiece();
+            // §9.2.1.1 last sentence: relative positioning of the inline (and its inline ancestors)
+            // also translates the block-level box it was broken around.
+            PropagateRelativePosition(inline, block);
+            SuppressSharedStyleBorder(inline, block);
+            result.Add(block);
+        }
+
+        void HoistFloat(LayoutNode f)
+        {
+            // A float inside a broken inline is laid out in the enclosing block container's
+            // formatting context, not inside an inline piece — the inline-run collector has no way
+            // to place a float, so one left inside a piece would simply be dropped. Hoist it to
+            // sibling position (it does not break the surrounding inline content, so the piece is
+            // left open to keep leading/trailing text on one line).
+            PropagateRelativePosition(inline, f);
+            result.Add(f);
+        }
+
+        void AddToPiece(LayoutNode n) { n.Parent = piece; piece.Children.Add(n); }
+
+        foreach (var child in inline.Children)
+        {
+            if (IsInFlowBlockLevel(child)) EmitBlock(child);
+            else if (IsFloated(child)) HoistFloat(child);
+            else if (IsBreakableInline(child))
+            {
+                // A nested in-flow inline that itself contains a block: split it, weaving its inline
+                // pieces into the current piece and hoisting its blocks/floats (already
+                // relpos-propagated for the nested inline) up to this level, where they also take
+                // this inline's relpos.
+                foreach (var part in SplitInline(child))
+                {
+                    if (IsInFlowBlockLevel(part)) EmitBlock(part);
+                    else if (IsFloated(part)) HoistFloat(part);
+                    else AddToPiece(part);
+                }
+            }
+            else AddToPiece(child);
+        }
+        FlushPiece();
+        return result;
+    }
+
+    /// <summary>True for a floated element (never a #text node, which cannot float even if it shares
+    /// a floated parent's computed style).</summary>
+    private static bool IsFloated(LayoutNode n)
+        => n.TagName != "#text" && n.GetFloat() != FloatType.None;
+
+    /// <summary>Generated content (a <c>::before</c>/<c>::after</c> node) shares its originating
+    /// element's <see cref="LayoutNode.Style"/> object, which carries that element's non-inherited
+    /// border. Once such a pseudo is <c>display:block</c> and hoisted to sibling position by the
+    /// block-in-inline break, that inherited border would wrongly paint as a full box. When the
+    /// hoisted block literally shares the broken inline's Style (so the border is the inline's, not
+    /// the block's own) and declares no border of its own, suppress the border paint. Scoped by
+    /// reference-equality so real block children (which have their own Style) are never touched.</summary>
+    private static void SuppressSharedStyleBorder(LayoutNode inline, LayoutNode block)
+    {
+        if (!ReferenceEquals(block.Style, inline.Style)) return;
+        if (block.StyleOverrides.Keys.Any(k => k.StartsWith("border", StringComparison.OrdinalIgnoreCase))) return;
+        foreach (var side in new[] { "top", "right", "bottom", "left" })
+        {
+            block.StyleOverrides[$"border-{side}-style"] = "none";
+            block.StyleOverrides[$"border-{side}-width"] = "0";
+        }
+    }
+
+    /// <summary>An empty inline piece (or one holding only collapsible whitespace) generates no
+    /// line box and must paint no background, so it is dropped rather than emitted.</summary>
+    private static bool PieceHasVisibleContent(LayoutNode piece)
+    {
+        foreach (var c in piece.Children)
+        {
+            if (c.GetDisplay() == DisplayType.None) continue;
+            if (c.TagName == "#text")
+            {
+                if (!string.IsNullOrWhiteSpace(c.DisplayText)) return true;
+            }
+            else return true;
+        }
+        return false;
+    }
+
+    /// <summary>Creates an empty inline box carrying <paramref name="inline"/>'s identity and style
+    /// (shared <see cref="LayoutNode.Style"/> plus copies of every override map), so each broken
+    /// piece paints the inline's background/color/relpos behind its own content. Children are added
+    /// by the caller; attributes (incl. id) are intentionally not copied — the pieces are anonymous.</summary>
+    private static LayoutNode CloneInlineShell(LayoutNode inline)
+    {
+        var clone = new LayoutNode(null, inline.TagName, "", inline.Style);
+        CopyDict(inline.StyleOverrides, clone.StyleOverrides);
+        CopyDict(inline.HoverStyles, clone.HoverStyles);
+        CopyDict(inline.FocusStyles, clone.FocusStyles);
+        CopyDict(inline.ActiveStyles, clone.ActiveStyles);
+        CopyDict(inline.MediaOverrides, clone.MediaOverrides);
+        CopyDict(inline.AnimationOverrides, clone.AnimationOverrides);
+        CopyDict(inline.CustomProperties, clone.CustomProperties);
+        // display:inline is the whole point of a piece; guarantee it even if the source read its
+        // inline display from the shared Style rather than an override.
+        clone.StyleOverrides["display"] = "inline";
+        return clone;
+    }
+
+    private static void CopyDict(Dictionary<string, string> from, Dictionary<string, string> to)
+    {
+        foreach (var (k, v) in from) to[k] = v;
+    }
+
+    /// <summary>Applies a relatively-positioned inline's translation to a block hoisted out of it
+    /// (§9.2.1.1). Only length/percentage offsets on an otherwise-static block are handled (the
+    /// common corpus case, e.g. an inline <c>left:2em</c> shifting its block child); a block that is
+    /// already positioned keeps its own offsets.</summary>
+    private static void PropagateRelativePosition(LayoutNode inline, LayoutNode block)
+    {
+        if (inline.GetPosition() != PositionType.Relative) return;
+        if (block.GetPosition() != PositionType.Static) return;
+
+        var copied = false;
+        foreach (var side in new[] { "left", "top", "right", "bottom" })
+        {
+            var v = RawStyle(inline, side);
+            if (string.IsNullOrEmpty(v) || v == "auto") continue;
+            block.StyleOverrides[side] = v;
+            copied = true;
+        }
+        if (copied) block.StyleOverrides["position"] = "relative";
     }
 
     /// <summary>

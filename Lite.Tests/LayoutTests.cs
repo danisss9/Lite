@@ -107,27 +107,55 @@ public static class LayoutTests
     }
 
     [Test]
-    public static void BlockInInline_PromotesInlineToBlock()
+    public static void BlockInInline_BreaksInlineAroundBlock()
     {
-        // CSS 2.1 §9.2.1.1: an inline box containing a block is broken around it. We model
-        // that by promoting the inline to a block container, so the block child stacks.
+        // CSS 2.1 §9.2.1.1: an inline box containing an in-flow block is broken around it — the
+        // block is hoisted to sibling position in the nearest block container and stacks as a
+        // full-width block. Text before/after become anonymous line boxes (inline pieces).
         var blockChild = Block(new() { ["height"] = "50px" });
-        var span = new LayoutNode(null, "SPAN", "", _styleCache.Style);
-        span.StyleOverrides["display"] = "inline";
-        foreach (var side in new[] { "top", "right", "bottom", "left" })
-        {
-            span.StyleOverrides[$"margin-{side}"] = "0";
-            span.StyleOverrides[$"padding-{side}"] = "0";
-            span.StyleOverrides[$"border-{side}-width"] = "0";
-        }
-        span.AddChild(blockChild);
-        var container = Block(new() { ["width"] = "200px" }, span);
+        var before = new LayoutNode(null, "#text", "before", _styleCache.Style) { };
+        before.StyleOverrides["display"] = "inline";
+        var after = new LayoutNode(null, "#text", "after", _styleCache.Style) { };
+        after.StyleOverrides["display"] = "inline";
+        var container = Block(new() { ["width"] = "200px" }, Span(before, blockChild, after));
         LayoutTree(container);
 
-        True(span.GetDisplay() == Lite.Extensions.DisplayType.Block,
-            "inline span containing a block child should be promoted to a block container");
-        True(Math.Abs(span.Box.ContentBox.Height - 50f) < 1f,
-            $"promoted span height should be the block child's 50px, got {span.Box.ContentBox.Height}");
+        // The block child was hoisted out of the span and laid out as a real block: full container
+        // width (200) and its own 50px height, positioned below the leading "before" line box.
+        True(Math.Abs(blockChild.Box.ContentBox.Width - 200f) < 1f,
+            $"hoisted block should fill the 200px container width, got {blockChild.Box.ContentBox.Width}");
+        True(Math.Abs(blockChild.Box.ContentBox.Height - 50f) < 1f,
+            $"hoisted block should keep its 50px height, got {blockChild.Box.ContentBox.Height}");
+        True(blockChild.Box.ContentBox.Top > 1f,
+            $"hoisted block should sit below the leading inline piece, got top {blockChild.Box.ContentBox.Top}");
+        // The block is hoisted to sibling position: its parent is the block container itself.
+        True(blockChild.Parent == container,
+            "hoisted block's parent should be the block container, not the original span");
+    }
+
+    [Test]
+    public static void BlockInInline_MultipleBlocksStackWithMargins()
+    {
+        // block-in-inline-007 shape: A <block/> <block/> D — the two blocks (margin-top 10) are
+        // hoisted out of the inline and stack; text A and D become inline pieces. Each block's
+        // top margin collapses correctly against the running flow.
+        var b1 = Block(new() { ["height"] = "10px", ["margin-top"] = "10px", ["margin-bottom"] = "10px" });
+        var b2 = Block(new() { ["height"] = "10px", ["margin-top"] = "10px", ["margin-bottom"] = "10px" });
+        var a = new LayoutNode(null, "#text", "A", _styleCache.Style);
+        a.StyleOverrides["display"] = "inline";
+        var d = new LayoutNode(null, "#text", "D", _styleCache.Style);
+        d.StyleOverrides["display"] = "inline";
+        var container = Block(new() { ["width"] = "200px" }, Span(a, b1, b2, d));
+        LayoutTree(container);
+
+        // Both blocks are full-width siblings; b2 sits below b1 with their 10px margins collapsed.
+        True(Math.Abs(b1.Box.ContentBox.Width - 200f) < 1f,
+            $"b1 should fill container width, got {b1.Box.ContentBox.Width}");
+        True(Math.Abs(b2.Box.ContentBox.Width - 200f) < 1f,
+            $"b2 should fill container width, got {b2.Box.ContentBox.Width}");
+        var gap = b2.Box.ContentBox.Top - b1.Box.ContentBox.Bottom;
+        True(Math.Abs(gap - 10f) < 1f,
+            $"collapsed margin between the two hoisted blocks should be 10px, got {gap}");
     }
 
     /// <summary>An inline SPAN (zeroed box model) wrapping the given children — used for
@@ -144,6 +172,65 @@ public static class LayoutTests
         }
         foreach (var c in children) span.AddChild(c);
         return span;
+    }
+
+    [Test]
+    public static void BlockInInline_EmptyPiecesAreDroppedBlockHoisted()
+    {
+        // CSS 2.1 §9.2.1.1: an inline whose only in-flow content is a block (no text on either side)
+        // produces empty pieces that show nothing — only the block is laid out, hoisted to sibling
+        // position at the container's content top (this is the block-in-inline-003 "no red" shape).
+        var block = Block(new() { ["height"] = "40px" });
+        var container = Block(new() { ["width"] = "200px" }, Span(block));
+        LayoutTree(container);
+
+        True(block.Parent == container, "the block should be hoisted to the block container");
+        True(container.Children.Count == 1 && container.Children[0] == block,
+            "no empty inline pieces should be emitted around a block that is the inline's only content");
+        True(Math.Abs(block.Box.ContentBox.Top - 0f) < 0.5f,
+            $"the hoisted block should sit at the container content top (0), got {block.Box.ContentBox.Top}");
+    }
+
+    [Test]
+    public static void BlockInInline_FloatedInlineContainingBlockIsNotBroken()
+    {
+        // A block inside a FLOATED inline is out of flow relative to the outer inline, so §9.2.1.1
+        // does NOT break the outer inline around it (the float is its own formatting root). This
+        // guards Acid2's floated span>em>strong smile, which must stay nested (regression guard).
+        var strong = Block(new() { ["width"] = "60px", ["height"] = "10px" });
+        var em = new LayoutNode(null, "EM", "", _styleCache.Style);
+        em.StyleOverrides["display"] = "inline";
+        em.StyleOverrides["float"] = "left";
+        em.AddChild(strong);
+        var span = Span(em);
+        var container = Block(new() { ["width"] = "200px" }, span);
+        LayoutTree(container);
+
+        True(container.Children.Count == 1 && container.Children[0] == span,
+            "the span must not be split when its block is inside a floated descendant");
+        True(em.Parent == span && strong.Parent == em,
+            "the floated em and its block must stay nested inside the span (not hoisted)");
+    }
+
+    [Test]
+    public static void BlockInInline_RelativePositionPropagatesToHoistedBlock()
+    {
+        // CSS 2.1 §9.2.1.1 last sentence: relative positioning of the broken inline also translates
+        // the block-level box hoisted out of it (block-in-inline-relpos-001). The propagation stamps
+        // the inline's position/offsets onto the otherwise-static hoisted block.
+        var block = Block(new() { ["height"] = "20px" });
+        var span = new LayoutNode(null, "SPAN", "", _styleCache.Style);
+        span.StyleOverrides["display"] = "inline";
+        span.StyleOverrides["position"] = "relative";
+        span.StyleOverrides["left"] = "20px";
+        span.AddChild(block);
+        var container = Block(new() { ["width"] = "200px" }, span);
+        LayoutTree(container);
+
+        True(block.StyleOverrides.GetValueOrDefault("position") == "relative",
+            "the hoisted block should inherit the inline's relative positioning");
+        True(block.StyleOverrides.GetValueOrDefault("left") == "20px",
+            $"the hoisted block should take the inline's left offset, got '{block.StyleOverrides.GetValueOrDefault("left")}'");
     }
 
     [Test]
