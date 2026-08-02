@@ -7,17 +7,22 @@
 $ErrorActionPreference = 'Stop'
 
 $WptSha     = '4fea7806db1bfd92a8b7c9c63263f98beeffd6be'   # github.com/web-platform-tests/wpt
-$Test262Sha = 'latest'                                      # github.com/tc39/test262
+$Test262Sha = 'de8e621cdba4f40cff3cf244e6cfb8cb48746b4a'    # github.com/tc39/test262
 
 # Directories to sparse-checkout (cone mode). Keep in sync with the curated manifests
 # (Wpt\wpt-manifest.txt, Css21\css21-manifest.txt) and the survey targets — a clean fetch
 # MUST reproduce every subtree the gate and surveys read, or the gate breaks on a fresh box.
 #   - resources / common: testharness.js, check-layout-th.js, /common helpers tests pull in.
+#   - fonts: Ahem. Hundreds of CSS 2.1 reftests link /fonts/ahem.css and rely on Ahem's
+#     uniform 1em glyph box for the test and its reference to line up exactly; without it
+#     they render in a proportional fallback and fail on sub-pixel metrics. It loads through
+#     the normal @font-face path (Lite\Layout\FontRegistry.cs) - no engine support needed.
 #   - css/CSS2 + css/support: the CSS 2.1 reftests and the css21 survey (normal-flow / box-display).
 #   - dom/* + html/semantics/*: the HTML5/DOM testharness suites the wpt survey measures.
 $WptDirs = @(
     'resources',
     'common',
+    'fonts',
     'css/CSS2',
     'css/support',
     'dom/nodes',

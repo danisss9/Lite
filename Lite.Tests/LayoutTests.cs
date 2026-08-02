@@ -606,6 +606,69 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void VisibilityHidden_SuppressesOwnPaintButNotVisibleChild()
+    {
+        // CSS 2.1 §11.2: a visibility:hidden box still occupies its layout space but paints
+        // nothing of its own, while a descendant that is visible IS still painted. The child
+        // here carries no visibility override, so it resolves to the initial 'visible' —
+        // exactly the case that must survive the parent's suppression.
+        var child = Block(new() { ["width"] = "50px", ["height"] = "50px", ["background-color"] = "#008000" });
+        var hidden = Block(new()
+        {
+            ["visibility"] = "hidden",
+            ["width"] = "100px",
+            ["height"] = "100px",
+            ["background-color"] = "#ff0000",
+        }, child);
+        var root = LayoutTree(hidden);
+
+        using var bmp = Drawer.DrawToBitmap(800, 600, root, new Viewport { ViewportHeight = 600 });
+
+        // Sample below the child, still inside the hidden parent: its red must not be painted, so
+        // the canvas shows through. Red is (255,0,0) and the canvas is white, so the green channel
+        // — not the red one — is what distinguishes them.
+        var hb = hidden.Box.ContentBox;
+        var own = bmp.GetPixel((int)(hb.Left + hb.Width / 2f), (int)(hb.Bottom - 10f));
+        True(own.Green > 200 && own.Blue > 200,
+            $"visibility:hidden box must not paint its own background, got {own}");
+
+        // The visible child still paints.
+        var cb = child.Box.ContentBox;
+        var kid = bmp.GetPixel((int)(cb.Left + cb.Width / 2f), (int)(cb.Top + cb.Height / 2f));
+        True(kid.Green > 120 && kid.Red < 120,
+            $"a visible child of a hidden box must still paint, got {kid}");
+
+        // The box keeps its place in the flow: hiding is a paint effect, not display:none.
+        True(Math.Abs(hb.Height - 100f) < 0.5f,
+            $"hidden box should still occupy 100px of layout, got {hb.Height}");
+    }
+
+    [Test]
+    public static void StyleCdataMarkers_DoNotSwallowTheFirstRule()
+    {
+        // The vendored CSS 2.1 reftests are XHTML wrapping <style> content in <![CDATA[ ... ]]>.
+        // Served as text/html, <style> is raw text, so the markers reach the CSS parser, which
+        // consumes the FIRST rule while recovering. Both rules must survive the strip.
+        var page = Parser.ParseChildPage(
+            "<html><head><style type=\"text/css\"><![CDATA[\n" +
+            "  #first { width: 123px; height: 10px; }\n" +
+            "  #second { width: 234px; height: 10px; }\n" +
+            "]]></style></head><body><div id='first'></div><div id='second'></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        LayoutNode? Find(LayoutNode n, string id) =>
+            n.Id == id ? n : n.Children.Select(c => Find(c, id)).FirstOrDefault(r => r != null);
+
+        var first = Find(page.Root, "first");
+        var second = Find(page.Root, "second");
+        True(first != null && Math.Abs(first.Box.ContentBox.Width - 123f) < 0.5f,
+            $"the first rule inside CDATA must apply, got {first?.Box.ContentBox.Width}");
+        True(second != null && Math.Abs(second.Box.ContentBox.Width - 234f) < 0.5f,
+            $"the second rule inside CDATA must apply, got {second?.Box.ContentBox.Width}");
+    }
+
+    [Test]
     public static void ShrinkToFit_Float_UsesIntrinsicWidth()
     {
         // A float with auto width and an explicit-width child shrinks to that child's outer width.

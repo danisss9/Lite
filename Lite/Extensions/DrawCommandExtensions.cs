@@ -336,6 +336,13 @@ public static class StyleExtensions
         return raw?.Trim().Equals("rtl", StringComparison.OrdinalIgnoreCase) == true ? "rtl" : "ltr";
     }
 
+    /// <summary>CSS 2.1 §11.2: true when this box generates a box that affects layout but is not
+    /// painted. Callers must still descend into the subtree — an invisible box's descendant that
+    /// sets visibility:visible IS painted, because visibility is inherited rather than structural.
+    /// ('collapse' behaves as 'hidden' outside table rows and columns; row/column collapsing is a
+    /// layout effect, modelled for flex items in <see cref="Layout.FlexEngine"/> only.)</summary>
+    public static bool IsInvisible(this LayoutNode node) => node.GetVisibility() != Visibility.Visible;
+
     /// <summary>Returns the computed line-height in pixels. Falls back to fontSize * 1.4.</summary>
     public static float GetLineHeight(this LayoutNode node, float fontSize)
     {

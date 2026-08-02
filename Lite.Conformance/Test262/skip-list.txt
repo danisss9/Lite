@@ -15,6 +15,13 @@ $262.agent
 cross-realm
 proto-from-ctor-realm
 
+# Source-phase imports (`import source x from "..."`, features: source-phase-imports) are a
+# post-ES2020 stage-3 proposal, so they are out of scope for an ES2020 gate rather than a Jint
+# gap. These arrived with test/language/module-code, which the fetch script listed but had
+# never actually checked out until the corpus was re-vendored.
+source-phase-import
+namespace-unambiguous-if-import-source-and-export
+
 # import('') with an empty/invalid specifier: the spec requires import() to REJECT the
 # returned promise; Jint throws the ModuleResolutionException synchronously instead. The
 # syntax these tests target does parse correctly (a Jint runtime quirk, not a parse gap).

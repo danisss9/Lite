@@ -193,10 +193,21 @@ internal static class Parser
         // browser (parsing them as application/xhtml+xml) decodes it. Without this, a combinator
         // written as "body &gt; div" reaches the CSS parser as the literal, meaningless token
         // "&gt;" and the selector silently misbehaves. A style block with no entities is unchanged.
+        // Strip XML CDATA markers for the same reason: an XHTML author writes
+        //   <style type="text/css"><![CDATA[ ... ]]></style>
+        // and the XML parser removes the wrapper before the CSS parser ever sees it. Parsed as
+        // text/html, <style> is raw text, so the literal "<![CDATA[" is handed to the CSS parser,
+        // which cannot tokenise it and drops the rules that follow. ~19% of the vendored CSS 2.1
+        // corpus is authored this way. The markers are not valid CSS in any context, so removing
+        // them unconditionally is safe; the common legacy "/* <![CDATA[ */ ... /* ]]> */" form
+        // just leaves behind empty comments.
         foreach (var styleEl in document.QuerySelectorAll("style"))
         {
-            var decoded = System.Net.WebUtility.HtmlDecode(styleEl.TextContent);
-            if (decoded != styleEl.TextContent) styleEl.TextContent = decoded;
+            var text = styleEl.TextContent;
+            var cleaned = System.Net.WebUtility.HtmlDecode(text)
+                .Replace("<![CDATA[", string.Empty, StringComparison.Ordinal)
+                .Replace("]]>", string.Empty, StringComparison.Ordinal);
+            if (cleaned != text) styleEl.TextContent = cleaned;
         }
 
         // Process @import in author <style> elements (skip the UA sheet, which has none).

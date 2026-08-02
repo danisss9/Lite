@@ -145,6 +145,15 @@ internal static class RefTestRunner
 
         int pass = 0, fail = 0, noref = 0, crash = 0;
         var failed = new List<string>();
+        var passedTests = new List<string>();
+
+        // The failure list is capped so a broad survey stays readable. Set LITE_SURVEY_FAIL_LIMIT=0
+        // for the full list (or LITE_SURVEY_LIST_PASSES=1 for the passing set) when attributing a
+        // regression: comparing the two runs' per-test sets is the only reliable way to see which
+        // tests actually flipped, since aggregate counts hide equal-sized wins and losses.
+        var failLimit = int.TryParse(Environment.GetEnvironmentVariable("LITE_SURVEY_FAIL_LIMIT"), out var fl)
+            ? fl : 40;
+        bool listPasses = Environment.GetEnvironmentVariable("LITE_SURVEY_LIST_PASSES") == "1";
 
         foreach (var file in tests)
         {
@@ -159,16 +168,20 @@ internal static class RefTestRunner
                 using var refBmp = Render(reference);
                 var diff = PixelDiff.Compare(refBmp, testBmp);
                 var ok = mismatch ? !diff.Match : diff.Match;
-                if (ok) pass++;
+                if (ok) { pass++; if (listPasses) passedTests.Add(urlPath); }
                 else
                 {
                     fail++;
-                    if (failed.Count < 40) failed.Add(urlPath);
+                    if (failLimit <= 0 || failed.Count < failLimit) failed.Add(urlPath);
                     if (Environment.GetEnvironmentVariable("LITE_SURVEY_DUMP") == "1")
                         PixelDiff.WriteFailureArtifacts(SafeName(urlPath), refBmp, testBmp);
                 }
             }
-            catch (Exception ex) { crash++; if (failed.Count < 40) failed.Add($"{urlPath} (crash: {ex.GetType().Name})"); }
+            catch (Exception ex)
+            {
+                crash++;
+                if (failLimit <= 0 || failed.Count < failLimit) failed.Add($"{urlPath} (crash: {ex.GetType().Name})");
+            }
         }
 
         int total = pass + fail + crash;
@@ -176,6 +189,7 @@ internal static class RefTestRunner
         Console.WriteLine($"=== survey {relDir}: {pass}/{total} passed " +
                           $"({(total == 0 ? 0 : 100.0 * pass / total):F1}%), {crash} crashed, {noref} skipped (no ref) ===");
         foreach (var f in failed) Console.WriteLine($"  fail: {f}");
+        foreach (var p in passedTests) Console.WriteLine($"  pass: {p}");
         return 0;
     }
 

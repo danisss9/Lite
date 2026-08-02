@@ -273,11 +273,14 @@ internal static class Drawer
 
         // Apply per-element scroll offset
         var scrollState = node.ScrollState;
+        // §11.2: an invisible box paints nothing of its own, but still scrolls/clips its
+        // descendants (which may be visibility:visible). Keep the translate, drop the paint.
+        var invisible = node.IsInvisible();
         if (scrollState != null && scrollState.NeedsScrollbar)
         {
             // Draw background, borders, and shadows at their fixed layout position
             // before the scroll translate so they don't scroll away with the content.
-            PaintBlockDecorations(canvas, node);
+            if (!invisible) PaintBlockDecorations(canvas, node);
             canvas.Translate(0, -scrollState.ScrollY);
         }
 
@@ -287,7 +290,7 @@ internal static class Drawer
         if (scrollState != null && scrollState.NeedsScrollbar)
         {
             canvas.Translate(0, scrollState.ScrollY); // Undo scroll offset for scrollbar
-            DrawElementScrollbar(canvas, node, scrollState);
+            if (!invisible) DrawElementScrollbar(canvas, node, scrollState);
         }
 
         if (cssClipped) canvas.Restore();
@@ -299,6 +302,18 @@ internal static class Drawer
     private static void PaintNodeContent(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
         var display = node.GetDisplay();
+
+        // CSS 2.1 §11.2: 'visibility: hidden' suppresses this box's own rendering — background,
+        // borders, text, replaced content and list marker — while the box keeps its place in the
+        // layout. Descendants are NOT skipped: visibility is inherited, so a child normally
+        // inherits 'hidden', but one that declares visibility:visible must still be painted.
+        // Going straight to PaintChildrenSorted also drops the hit regions the per-control paint
+        // helpers register, which is correct: an invisible box is not a hit-test target.
+        if (node.IsInvisible())
+        {
+            PaintChildrenSorted(canvas, node, viewportWidth);
+            return;
+        }
 
         switch (node.TagName)
         {
