@@ -20,12 +20,19 @@ internal static class TableEngine
         return raw?.Trim() == "collapse";
     }
 
-    /// <summary>Returns the border-spacing value in px (default 2px).</summary>
+    /// <summary>
+    /// Returns the border-spacing value in px. CSS 2.1 §17.6.1 gives 'border-spacing' an initial
+    /// value of 0; the familiar 2px comes from the HTML UA stylesheet's <c>table { border-spacing:
+    /// 2px }</c>, which matches the TABLE *element* only. A box that is merely
+    /// <c>display: table</c> (including an anonymous table box, or a <c>::after</c> with
+    /// <c>display:table</c>) therefore gets 0 — defaulting it to 2px indents its content.
+    /// </summary>
     private static float GetBorderSpacing(LayoutNode table)
     {
+        var uaDefault = table.TagName == "TABLE" ? 2f : 0f;
         var raw = table.TryResolveStyle("border-spacing", out var ov)
             ? ov : table.Style.GetPropertyValueSafe("border-spacing");
-        if (string.IsNullOrWhiteSpace(raw)) return 2f;
+        if (string.IsNullOrWhiteSpace(raw)) return uaDefault;
         raw = raw.Trim().Split(' ')[0]; // Use first value (horizontal)
         if (raw.EndsWith("px") && float.TryParse(raw[..^2],
             System.Globalization.NumberStyles.Float,
@@ -34,7 +41,7 @@ internal static class TableEngine
         if (float.TryParse(raw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var plain))
             return plain;
-        return 2f;
+        return uaDefault;
     }
 
     public static float LayoutTable(

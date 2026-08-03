@@ -582,9 +582,15 @@ internal static class Parser
             return ct != "SCRIPT" && !SkipTags.Contains(ct);
         });
 
+        // Trimming is right when this text is the whole line: CSS 2.1 §16.6.1 drops spaces at the
+        // start and end of a LINE. It is wrong when a ::before/::after continues the line, so keep
+        // the untrimmed form for CreatePseudoElementChildren to restore the adjacent boundary space.
+        var directTextRaw = hasMixedChildren
+            ? ""
+            : string.Concat(element.ChildNodes.OfType<IText>().Select(t => t.Data));
         var directText = hasMixedChildren
             ? ""   // text nodes become ordered #TEXT children below
-            : string.Concat(element.ChildNodes.OfType<IText>().Select(t => t.Data)).Trim();
+            : directTextRaw.Trim();
 
         var href = tag == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, tag, directText, element.ComputeCurrentStyle(), href);
@@ -953,7 +959,7 @@ internal static class Parser
         PopCounters(pushedCounters);
 
         // Create ::before and ::after pseudo-element children (using the snapshot taken above)
-        CreatePseudoElementChildren(node);
+        CreatePseudoElementChildren(node, directTextRaw);
 
         return node;
     }
@@ -1010,7 +1016,10 @@ internal static class Parser
     /// If the node has ::before or ::after styles with a content property,
     /// creates synthetic inline children at the start/end of the children list.
     /// </summary>
-    private static void CreatePseudoElementChildren(LayoutNode node)
+    /// <param name="directTextRaw">The element's own text before it was trimmed, so a boundary
+    /// space that sits between the text and an adjacent pseudo-element can be restored — that
+    /// space is mid-line, not end-of-line, so §16.6.1 keeps it.</param>
+    private static void CreatePseudoElementChildren(LayoutNode node, string directTextRaw = "")
     {
         bool hasBefore = node.BeforeStyles != null && node.BeforeStyles.TryGetValue("content", out var beforeContent)
                          && ParseContentValue(beforeContent!, node) != null;
@@ -1023,7 +1032,12 @@ internal static class Parser
         // pseudo-elements and the original text flow together as inline children.
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
-            var textChild = new LayoutNode(null, "#text", node.DisplayText, node.Style);
+            // Put back the single collapsed space on whichever side a pseudo-element continues the
+            // line, e.g. "<div>Filler text </div>" + a ::after must render "Filler text Filler text".
+            var keepLead = hasBefore && directTextRaw.Length > 0 && char.IsWhiteSpace(directTextRaw[0]);
+            var keepTrail = hasAfter && directTextRaw.Length > 0 && char.IsWhiteSpace(directTextRaw[^1]);
+            var ownText = (keepLead ? " " : "") + node.DisplayText + (keepTrail ? " " : "");
+            var textChild = new LayoutNode(null, "#text", ownText, node.Style);
             textChild.StyleOverrides["display"] = "inline";
             textChild.Parent = node;
             node.Children.Add(textChild);
@@ -1034,10 +1048,12 @@ internal static class Parser
         {
             var text = ParseContentValue(node.BeforeStyles!["content"], node);
             var pseudoNode = new LayoutNode(null, "#pseudo-before", text!, node.Style);
-            pseudoNode.StyleOverrides["display"] = node.BeforeStyles!.GetValueOrDefault("display", "inline");
+            pseudoNode.StyleOverrides["display"] = ResolvePseudoDisplay(node, node.BeforeStyles!);
             foreach (var (p, v) in node.BeforeStyles!)
             {
-                if (p != "content") pseudoNode.StyleOverrides[p] = v;
+                // 'display' is skipped: it was already resolved above (css-wide keywords), and
+                // copying the raw value here would overwrite that with e.g. the literal "inherit".
+                if (p != "content" && p != "display") pseudoNode.StyleOverrides[p] = v;
             }
             pseudoNode.Parent = node;
             node.Children.Insert(0, pseudoNode);
@@ -1047,14 +1063,39 @@ internal static class Parser
         {
             var text = ParseContentValue(node.AfterStyles!["content"], node);
             var pseudoNode = new LayoutNode(null, "#pseudo-after", text!, node.Style);
-            pseudoNode.StyleOverrides["display"] = node.AfterStyles!.GetValueOrDefault("display", "inline");
+            pseudoNode.StyleOverrides["display"] = ResolvePseudoDisplay(node, node.AfterStyles!);
             foreach (var (p, v) in node.AfterStyles!)
             {
-                if (p != "content") pseudoNode.StyleOverrides[p] = v;
+                // 'display' is skipped: it was already resolved above (css-wide keywords), and
+                // copying the raw value here would overwrite that with e.g. the literal "inherit".
+                if (p != "content" && p != "display") pseudoNode.StyleOverrides[p] = v;
             }
             pseudoNode.Parent = node;
             node.Children.Add(pseudoNode);
         }
+    }
+
+    /// <summary>
+    /// The 'display' a ::before/::after box should use. Defaults to 'inline' (the initial value for
+    /// generated content). 'inherit' has to be resolved here against the originating element: these
+    /// pseudo styles are written straight into StyleOverrides, so the cascade's css-wide-keyword
+    /// resolution never sees them and the literal string "inherit" would reach GetDisplay, which
+    /// does not recognise it and would silently fall back to 'inline'.
+    /// </summary>
+    private static string ResolvePseudoDisplay(LayoutNode host, Dictionary<string, string> pseudoStyles)
+    {
+        var display = pseudoStyles.GetValueOrDefault("display", "inline").Trim();
+        if (!display.Equals("inherit", StringComparison.OrdinalIgnoreCase)) return display;
+
+        var hostDisplay = host.TryResolveStyle(AngleSharp.Css.PropertyNames.Display, out var ov)
+            ? ov : host.Style.GetPropertyValueSafe(AngleSharp.Css.PropertyNames.Display);
+        hostDisplay = hostDisplay?.Trim();
+        // Guard against the host itself computing to 'inherit' (or to nothing) — fall back to the
+        // initial value rather than looping.
+        return string.IsNullOrEmpty(hostDisplay)
+               || hostDisplay.Equals("inherit", StringComparison.OrdinalIgnoreCase)
+            ? "inline"
+            : hostDisplay;
     }
 
     /// <summary>Parses a CSS content property value, stripping quotes and handling basic values.

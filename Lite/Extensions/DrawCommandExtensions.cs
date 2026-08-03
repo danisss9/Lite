@@ -72,6 +72,14 @@ public static class StyleExtensions
             "table-row-group" or "table-header-group" or "table-footer-group" => DisplayType.TableRowGroup,
             "table-row" => DisplayType.TableRow,
             "table-cell" => DisplayType.TableCell,
+            // A caption is a block-level box laid out beside the table (TableEngine positions a real
+            // <caption>); outside a table it simply behaves as a block.
+            "table-caption" => DisplayType.Block,
+            // CSS 2.1 §17.2: the contents of 'table-column' and 'table-column-group' boxes are not
+            // rendered — a column box only contributes to column widths and backgrounds. Lite does
+            // not implement column backgrounds, so not generating a box at all is the closest
+            // correct behaviour; without this the column's text would render as an inline box.
+            "table-column" or "table-column-group" => DisplayType.None,
             "none" => DisplayType.None,
             _ => DisplayType.Inline,
         };

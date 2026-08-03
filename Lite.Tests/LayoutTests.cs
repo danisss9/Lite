@@ -643,29 +643,106 @@ public static class LayoutTests
             $"hidden box should still occupy 100px of layout, got {hb.Height}");
     }
 
+    // NOTE: the CDATA-in-<style> regression is guarded by the css21 reftest `cdata-style`, not
+    // by a unit test here. The in-process ParseChildPage path does not reproduce it - only a
+    // document loaded through the normal page pipeline does - so a unit test passes either way and
+    // would give false confidence as a regression guard.
+
+    private static LayoutNode? FindNode(LayoutNode n, Func<LayoutNode, bool> pred) =>
+        pred(n) ? n : n.Children.Select(c => FindNode(c, pred)).FirstOrDefault(r => r != null);
+
     [Test]
-    public static void StyleCdataMarkers_DoNotSwallowTheFirstRule()
+    public static void InlineBlock_AlignsOnItsOwnTextBaselineNotItsBottomEdge()
     {
-        // The vendored CSS 2.1 reftests are XHTML wrapping <style> content in <![CDATA[ ... ]]>.
-        // Served as text/html, <style> is raw text, so the markers reach the CSS parser, which
-        // consumes the FIRST rule while recovering. Both rules must survive the strip.
+        // CSS 2.1 §10.8.1: an inline-block with overflow:visible aligns the baseline of its last
+        // line box with the parent's baseline — NOT its bottom margin edge. Both boxes here use
+        // the same font and line-height, so their ascents are equal and their tops must line up.
+        // With the old bottom-edge rule the inline-block rode higher by (its height − its ascent).
         var page = Parser.ParseChildPage(
-            "<html><head><style type=\"text/css\"><![CDATA[\n" +
-            "  #first { width: 123px; height: 10px; }\n" +
-            "  #second { width: 234px; height: 10px; }\n" +
-            "]]></style></head><body><div id='first'></div><div id='second'></div></body></html>",
+            "<html><head><style>#ib { display: inline-block; }</style></head>" +
+            "<body><div>abc<span id='ib'>xyz</span></div></body></html>",
             isSrcdoc: true, "http://test/", 800, 600);
         BoxEngine.Layout(page.Root, 800, 600);
 
-        LayoutNode? Find(LayoutNode n, string id) =>
-            n.Id == id ? n : n.Children.Select(c => Find(c, id)).FirstOrDefault(r => r != null);
+        var ib = FindNode(page.Root, n => n.Id == "ib");
+        var text = FindNode(page.Root, n => n.TagName == "#text" && n.DisplayText.Trim() == "abc");
+        True(ib != null && text != null, "expected both the inline-block and the sibling text node");
+        True(Math.Abs(ib!.Box.ContentBox.Top - text!.Box.ContentBox.Top) < 1.5f,
+            $"inline-block should share the sibling text's baseline: inline-block top " +
+            $"{ib.Box.ContentBox.Top} vs text top {text.Box.ContentBox.Top}");
+    }
 
-        var first = Find(page.Root, "first");
-        var second = Find(page.Root, "second");
-        True(first != null && Math.Abs(first.Box.ContentBox.Width - 123f) < 0.5f,
-            $"the first rule inside CDATA must apply, got {first?.Box.ContentBox.Width}");
-        True(second != null && Math.Abs(second.Box.ContentBox.Width - 234f) < 0.5f,
-            $"the second rule inside CDATA must apply, got {second?.Box.ContentBox.Width}");
+    [Test]
+    public static void PseudoElement_KeepsBoundarySpaceBeforeGeneratedContent()
+    {
+        // The element's own text is trimmed because spaces at the start/end of a LINE are dropped
+        // (§16.6.1) — but an ::after continues the line, so the space between them is mid-line and
+        // must survive. Otherwise "<div>abc </div>" + ::after renders as "abcxyz".
+        var page = Parser.ParseChildPage(
+            "<html><head><style>#d::after { content: \"xyz\"; }</style></head>" +
+            "<body><div id='d'>abc </div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+
+        var textChild = FindNode(page.Root, n => n.TagName == "#text" && n.DisplayText.Contains("abc"));
+        True(textChild != null, "expected the element's text to become a #text child next to ::after");
+        True(textChild!.DisplayText.EndsWith(" "),
+            $"the space before generated content must be kept, got \"{textChild.DisplayText}\"");
+    }
+
+    [Test]
+    public static void PseudoDisplayInherit_ResolvesToHostDisplay()
+    {
+        // 'display: inherit' on generated content must take the originating element's display.
+        // Pseudo styles are written straight into StyleOverrides, bypassing the cascade's
+        // css-wide-keyword resolution, so the literal "inherit" would otherwise reach GetDisplay
+        // and fall through to 'inline'.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>#d::after { content: \"xyz\"; display: inherit; }</style>" +
+            "</head><body><div id='d'>abc</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+
+        var pseudo = FindNode(page.Root, n => n.TagName == "#pseudo-after");
+        True(pseudo != null, "expected a ::after pseudo node to be generated");
+        True(pseudo!.GetDisplay() == DisplayType.Block,
+            $"display:inherit should resolve to the host's 'block', got {pseudo.GetDisplay()} " +
+            $"(override=\"{pseudo.StyleOverrides.GetValueOrDefault("display")}\")");
+    }
+
+    [Test]
+    public static void MisparentedTableCell_GetsAnonymousRowAndTable()
+    {
+        // CSS 2.1 §17.2.1 "generate missing parents": a display:table-cell whose parent is a plain
+        // block needs BOTH an anonymous table-row and an anonymous table generated around it.
+        var cell = Block(new() { ["display"] = "table-cell", ["width"] = "40px", ["height"] = "20px" });
+        var container = Block(new() { ["width"] = "200px" }, cell);
+        var root = LayoutTree(container);
+
+        True(cell.Parent?.TagName == "#anon-row",
+            $"cell should gain an anonymous row parent, got {cell.Parent?.TagName}");
+        True(cell.Parent?.Parent?.TagName == "#anon-table",
+            $"the anonymous row should sit inside an anonymous table, got {cell.Parent?.Parent?.TagName}");
+        True(cell.Parent?.Parent?.Parent == container,
+            "the anonymous table should take the cell's place in the original container");
+
+        // Normalization re-runs on every layout pass, so it must be idempotent — a second pass
+        // must not wrap the already-generated boxes in yet another table.
+        BoxEngine.Layout(root, 800, 600);
+        True(cell.Parent?.Parent?.Parent == container,
+            "a second layout pass must not nest another anonymous table");
+    }
+
+    [Test]
+    public static void AdjacentMisparentedTableRows_ShareOneAnonymousTable()
+    {
+        // Consecutive misparented internal table boxes belong to the SAME generated table, so two
+        // adjacent display:table-row boxes become two rows of one table rather than two tables.
+        var r1 = Block(new() { ["display"] = "table-row", ["height"] = "20px" });
+        var r2 = Block(new() { ["display"] = "table-row", ["height"] = "20px" });
+        var container = Block(new() { ["width"] = "200px" }, r1, r2);
+        LayoutTree(container);
+
+        True(r1.Parent?.TagName == "#anon-table" && ReferenceEquals(r1.Parent, r2.Parent),
+            $"both rows should share one anonymous table, got {r1.Parent?.TagName} / {r2.Parent?.TagName}");
     }
 
     [Test]

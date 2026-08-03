@@ -381,6 +381,81 @@ internal static class BoxEngine
             MigrateOwnTextToChild(node);
             WrapAnonymousTableBoxes(node, wrapAsRow: false);
         }
+        else
+        {
+            // Everything else is not a table container, so any internal table box among its
+            // children is missing its ancestors (§17.2.1 "generate missing parents").
+            WrapMisparentedTableBoxes(node);
+        }
+    }
+
+    /// <summary>
+    /// CSS 2.1 §17.2.1: an internal table box (row-group / row / cell) whose parent is not a table
+    /// container must have the missing ancestor boxes generated AROUND it — the "upward" half of
+    /// anonymous table generation, as opposed to <see cref="WrapAnonymousTableBoxes"/>, which only
+    /// fills in missing children. Consecutive misparented siblings share one generated table, so
+    /// e.g. two adjacent <c>display:table-row</c> boxes become two rows of the SAME table.
+    /// Once the anonymous table exists, the normal downward pass fills in any rows/cells it needs.
+    /// Idempotent: the generated box has display:table, so on a re-run its children are no longer
+    /// misparented and nothing new is created.
+    /// </summary>
+    private static void WrapMisparentedTableBoxes(LayoutNode node)
+    {
+        // Cheap pre-check: the overwhelming majority of boxes have no table children at all.
+        var anyMisparented = false;
+        foreach (var c in node.Children)
+            if (IsMisparentedTableBox(c)) { anyMisparented = true; break; }
+        if (!anyMisparented) return;
+
+        var newChildren = new List<LayoutNode>();
+        var run = new List<LayoutNode>();
+
+        void FlushRun()
+        {
+            if (run.Count == 0) return;
+            var anon = new LayoutNode(null, "#anon-table", "", node.Style);
+            anon.StyleOverrides["display"] = "table";
+            foreach (var side in new[] { "top", "right", "bottom", "left" })
+            {
+                anon.StyleOverrides[$"margin-{side}"] = "0";
+                anon.StyleOverrides[$"padding-{side}"] = "0";
+                anon.StyleOverrides[$"border-{side}-width"] = "0";
+            }
+            anon.Parent = node;
+            foreach (var c in run) { c.Parent = anon; anon.Children.Add(c); }
+            run.Clear();
+            // A bare cell still needs a row between it and the table.
+            WrapAnonymousTableBoxes(anon, wrapAsRow: true);
+            newChildren.Add(anon);
+        }
+
+        foreach (var child in node.Children)
+        {
+            if (IsMisparentedTableBox(child)) { run.Add(child); continue; }
+            // Whitespace between misparented table boxes is not content and must not break the run
+            // (or it would split one table into several).
+            if (run.Count > 0 && child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText))
+                continue;
+            FlushRun();
+            newChildren.Add(child);
+        }
+        FlushRun();
+
+        node.Children.Clear();
+        node.Children.AddRange(newChildren);
+    }
+
+    /// <summary>True for an in-flow internal table box sitting outside any table container. Floated
+    /// and absolutely-positioned boxes are blockified by CSS and never participate in table
+    /// structure, so they are left alone.</summary>
+    private static bool IsMisparentedTableBox(LayoutNode child)
+    {
+        var d = child.GetDisplay();
+        if (d is not (DisplayType.TableRowGroup or DisplayType.TableRow or DisplayType.TableCell))
+            return false;
+        if (child.GetFloat() != FloatType.None) return false;
+        var pos = child.GetPosition();
+        return pos != PositionType.Absolute && pos != PositionType.Fixed;
     }
 
     /// <summary>
@@ -1481,6 +1556,9 @@ internal static class BoxEngine
                 var isRadio = node.TagName == "INPUT" && inputType == "radio";
                 var isRange = node.TagName == "INPUT" && inputType == "range";
                 float defaultW, defaultH;
+                // Form controls are sized (and baseline-aligned) as replaced boxes; everything else
+                // is a real inline-block whose baseline comes from its own content.
+                bool isFormControl = true;
                 if (isCheckbox) { defaultW = FormLayout.CheckboxSize; defaultH = FormLayout.CheckboxSize; }
                 else if (isRadio) { defaultW = FormLayout.RadioSize; defaultH = FormLayout.RadioSize; }
                 else if (isRange) { defaultW = FormLayout.RangeWidth; defaultH = FormLayout.RangeHeight; }
@@ -1489,7 +1567,7 @@ internal static class BoxEngine
                 else if (node.TagName == "SELECT") { defaultW = FormLayout.SelectWidth; defaultH = FormLayout.SelectHeight; }
                 else if (node.TagName == "PROGRESS") { defaultW = FormLayout.ProgressWidth; defaultH = FormLayout.ProgressHeight; }
                 else if (node.TagName == "METER") { defaultW = FormLayout.MeterWidth; defaultH = FormLayout.MeterHeight; }
-                else { defaultW = FormLayout.TextInputWidth; defaultH = FormLayout.TextInputHeight; }
+                else { defaultW = FormLayout.TextInputWidth; defaultH = FormLayout.TextInputHeight; isFormControl = false; }
 
                 var w = explicitW > 0 ? explicitW : defaultW;
                 var h = explicitH > 0 ? explicitH : defaultH;
@@ -1507,8 +1585,27 @@ internal static class BoxEngine
                 var totalW = margin.Left + border.Left + padding.Left + w + padding.Right + border.Right + margin.Right;
                 var totalH = margin.Top + border.Top + padding.Top + h + padding.Bottom + border.Bottom + margin.Bottom;
 
+                // CSS 2.1 §10.8.1: the baseline of an inline-block is the baseline of its LAST
+                // in-flow line box — NOT its bottom margin edge. The bottom edge is only correct
+                // when the box has no in-flow line boxes or its 'overflow' computes to something
+                // other than 'visible' (and for replaced boxes, handled elsewhere). Without this a
+                // text-bearing inline-block rides above the surrounding text's baseline by roughly
+                // its leading. Only the leaf case (the box's content is its own text, e.g. a
+                // generated-content ::after) is resolved here: a box with element children has not
+                // had them laid out at this point, so it keeps the bottom-edge fallback.
+                var ascent = totalH;
+                if (!isFormControl
+                    && node.Children.Count == 0
+                    && !string.IsNullOrEmpty(node.DisplayText)
+                    && node.GetOverflow() == OverflowType.Visible)
+                {
+                    using var ibFont = TextMeasure.CreateFont(node);
+                    ascent = margin.Top + border.Top + padding.Top
+                             + TextMeasure.ComputeAscent(ibFont, node.GetLineHeight(fontSize));
+                }
+
                 items.Add(new InlineItem(InlineItemKind.InlineBlock, node, null, totalW, totalH,
-                           margin, padding, border, w, h, totalH));
+                           margin, padding, border, w, h, ascent));
             }
             else if (node.TagName == "IMG" || (node.TagName == "OBJECT" && node.Image != null))
             {
