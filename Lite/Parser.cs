@@ -586,15 +586,25 @@ internal static class Parser
         // Trimming is right when this text is the whole line: CSS 2.1 §16.6.1 drops spaces at the
         // start and end of a LINE. It is wrong when a ::before/::after continues the line, so keep
         // the untrimmed form for CreatePseudoElementChildren to restore the adjacent boundary space.
+        // Collapse here too, not just on the mixed-children path: with 'white-space: normal' a
+        // newline or tab is collapsible whitespace and therefore a line-break opportunity. Line
+        // breaking splits on U+0020 alone, so leaving raw newlines in meant source-wrapped text
+        // with no spaces on a line (very common in the CSS 2.1 suite) never wrapped and overflowed.
+        // ...but only when 'white-space' actually allows collapsing: pre / pre-wrap preserve every
+        // space and newline, and pre-line preserves newlines as forced breaks while still
+        // collapsing spaces. Collapsing unconditionally destroys those line breaks.
+        var elementStyle = element.ComputeCurrentStyle();
+        var ws = elementStyle.GetPropertyValueSafe("white-space")?.Trim().ToLowerInvariant();
         var directTextRaw = hasMixedChildren
             ? ""
-            : string.Concat(element.ChildNodes.OfType<IText>().Select(t => t.Data));
+            : NormalizeTextWhitespace(
+                string.Concat(element.ChildNodes.OfType<IText>().Select(t => t.Data)), ws);
         var directText = hasMixedChildren
             ? ""   // text nodes become ordered #TEXT children below
             : directTextRaw.Trim();
 
         var href = tag == "A" ? element.GetAttribute("href") : null;
-        var node = new LayoutNode(element.Id, tag, directText, element.ComputeCurrentStyle(), href);
+        var node = new LayoutNode(element.Id, tag, directText, elementStyle, href);
 
         // Extract flex-related CSS properties that AngleSharp doesn't cascade
         ExtractMatchedCssProperties(element, node);
@@ -2120,14 +2130,44 @@ internal static class Parser
     /// Collapses runs of whitespace to a single space but does NOT trim boundary spaces.
     /// Boundary spaces are significant in inline content (e.g. " and " between two inline elements).
     /// </summary>
-    private static string CollapseWhitespace(string text)
+    /// <summary>
+    /// Applies CSS 2.1 §16.6 white-space processing to an element's own text.
+    /// <c>pre</c>/<c>pre-wrap</c> preserve everything; <c>pre-line</c> collapses spaces and tabs
+    /// but keeps newlines as forced breaks; anything else collapses all runs to a single space.
+    /// </summary>
+    private static string NormalizeTextWhitespace(string text, string? whiteSpace)
     {
-        if (string.IsNullOrEmpty(text)) return "";
+        if (whiteSpace is "pre" or "pre-wrap") return text;
+        if (whiteSpace is not "pre-line") return CollapseWhitespace(text);
+
+        // pre-line: collapse horizontal whitespace only, keeping '\n'.
         var sb = new System.Text.StringBuilder(text.Length);
         var lastWasSpace = false;
         foreach (var ch in text)
         {
-            if (char.IsWhiteSpace(ch))
+            if (ch == '\n') { sb.Append('\n'); lastWasSpace = false; continue; }
+            if (ch == '\r') continue;
+            if (char.IsWhiteSpace(ch) && ch != '\u00A0')
+            {
+                if (!lastWasSpace) { sb.Append(' '); lastWasSpace = true; }
+            }
+            else { sb.Append(ch); lastWasSpace = false; }
+        }
+        return sb.ToString();
+    }
+
+    private static string CollapseWhitespace(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        const char NoBreakSpace = '\u00A0';
+        var sb = new System.Text.StringBuilder(text.Length);
+        var lastWasSpace = false;
+        foreach (var ch in text)
+        {
+            // U+00A0 NO-BREAK SPACE is whitespace to char.IsWhiteSpace but NOT collapsible
+            // whitespace in CSS (§16.6.1) — it must survive as a real character and must never
+            // become a line-break opportunity. That is the whole point of authoring it.
+            if (char.IsWhiteSpace(ch) && ch != NoBreakSpace)
             {
                 if (!lastWasSpace) { sb.Append(' '); lastWasSpace = true; }
             }

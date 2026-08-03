@@ -695,6 +695,30 @@ public static class LayoutTests
     // fix; only comparing a bordered box against a background-filled one reproduces it.
 
     [Test]
+    public static void TextWhitespace_CollapsesNewlinesKeepsNbspAndHonoursPreLine()
+    {
+        // CSS 2.1 §16.6: a newline is collapsible whitespace and therefore a line-break
+        // opportunity — line breaking splits on U+0020, so an uncollapsed newline meant
+        // source-wrapped text never wrapped. U+00A0 is NOT collapsible (that is its purpose), and
+        // 'pre-line' keeps newlines as forced breaks.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>#p { white-space: pre-line; }</style></head><body>" +
+            "<div id='n'>a\nb</div><div id='s'>a\u00A0b</div><div id='p'>a\nb</div>" +
+            "</body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+
+        var n = FindNode(page.Root, x => x.Id == "n");
+        var s = FindNode(page.Root, x => x.Id == "s");
+        var p = FindNode(page.Root, x => x.Id == "p");
+        True(n?.DisplayText == "a b",
+            $"a newline must collapse to a space so the line can break, got \"{n?.DisplayText}\"");
+        True(s?.DisplayText == "a\u00A0b",
+            $"U+00A0 must survive collapsing, got \"{s?.DisplayText}\"");
+        True(p?.DisplayText.Contains('\n') == true,
+            $"white-space:pre-line must keep the newline, got \"{p?.DisplayText}\"");
+    }
+
+    [Test]
     public static void BorderShorthandWithoutWidth_UsesMediumNotZero()
     {
         // CSS 2.1 §8.5.1: 'border-width' has an initial value of 'medium' (3px), so
