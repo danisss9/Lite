@@ -1425,11 +1425,53 @@ public static class StyleExtensions
         // Border widths may use any length unit (px/em/rem/…). AngleSharp already resolves the
         // used width to 0 when border-style is none, so we just convert whatever length it gives,
         // resolving em/rem against the element's own font-size.
+        // NOTE: this deliberately reads node.Style directly rather than going through
+        // TryResolveStyle — making it honour StyleOverrides globally has been tried and breaks
+        // Acid2, which relies on the current pseudo/anonymous-box border behaviour.
         var raw = node.Style.GetProperty(propertyName).RawValue;
-        if (raw is Length borderLength)
-            return CssUnits.ToPx(borderLength, node.GetFontSize(), 0, 0, 0);
+        var computed = raw is Length borderLength
+            ? CssUnits.ToPx(borderLength, node.GetFontSize(), 0, 0, 0)
+            : node.Style.GetPropertyValueSafe(propertyName)?.Trim().ToLowerInvariant() switch
+            {
+                "thin" => 1f,
+                "medium" => 3f,
+                "thick" => 5f,
+                _ => 0f,
+            };
+        if (computed > 0f) return computed;
+
+        // A computed 0 is usually genuine, but AngleSharp gets ONE case wrong: in the `border`
+        // shorthand with the width omitted (`border: solid black`) it sets border-*-style correctly
+        // yet computes border-*-width to 0px instead of the initial 'medium'. That form is very
+        // common in the CSS 2.1 suite, and the border silently does not paint at all.
+        // Detect it from the shorthand's own text: if it declares a visible style but contains no
+        // width token, the used width is 'medium'. An authored zero (`border: 0 solid black`,
+        // `border-width: 0`) still has a width token, or no shorthand, so it stays 0.
+        var side = propertyName.Replace("border-", "").Replace("-width", "");
+        foreach (var shorthand in new[] { $"border-{side}", "border" })
+        {
+            var decl = node.TryResolveStyle(shorthand, out var dv)
+                ? dv : node.Style.GetPropertyValueSafe(shorthand);
+            if (string.IsNullOrWhiteSpace(decl)) continue;
+
+            string? style = null;
+            var hasWidthToken = false;
+            foreach (var token in decl.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var t = token.Trim().ToLowerInvariant();
+                if (BorderStyleKeywords.Contains(t)) style = t;
+                else if (t is "thin" or "medium" or "thick") hasWidthToken = true;
+                else if (CssUnits.TryParse(t, node.GetFontSize(), 0, 0, 0, out _)) hasWidthToken = true;
+                // Anything else (a colour, including a multi-token rgba(...)) is ignored.
+            }
+            if (hasWidthToken) return 0f;                       // the zero was authored
+            if (style is not null and not "none" and not "hidden") return 3f;   // initial 'medium'
+        }
         return 0f;
     }
+
+    private static readonly HashSet<string> BorderStyleKeywords = new(StringComparer.Ordinal)
+    { "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset" };
 
     /// <summary>Returns a size property value or <paramref name="defaultValue"/> when unset/auto/none.</summary>
     private static float GetSizeOrDefault(LayoutNode node, string propertyName, float total, float size, float defaultValue, float viewportSize = -1f)

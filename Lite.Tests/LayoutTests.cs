@@ -690,6 +690,31 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void BorderShorthandWithoutWidth_UsesMediumNotZero()
+    {
+        // CSS 2.1 §8.5.1: 'border-width' has an initial value of 'medium' (3px), so
+        // `border: solid black` paints a 3px border. AngleSharp expands that shorthand's style
+        // correctly but computes the omitted width to 0px, which made such borders vanish.
+        // An authored zero must still be honoured.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "#a { border: solid black; } #z { border: 0 solid black; } #s { border-style: solid; }" +
+            "</style></head><body><div id='a'></div><div id='z'></div><div id='s'></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var a = FindNode(page.Root, n => n.Id == "a");
+        var z = FindNode(page.Root, n => n.Id == "z");
+        var s = FindNode(page.Root, n => n.Id == "s");
+        True(a != null && Math.Abs(a.Box.Border.Top - 3f) < 0.5f,
+            $"`border: solid black` should be 3px (medium), got {a?.Box.Border.Top}");
+        True(s != null && Math.Abs(s.Box.Border.Top - 3f) < 0.5f,
+            $"`border-style: solid` should be 3px (medium), got {s?.Box.Border.Top}");
+        True(z != null && z.Box.Border.Top < 0.5f,
+            $"an authored `border: 0 solid black` must stay 0, got {z?.Box.Border.Top}");
+    }
+
+    [Test]
     public static void PseudoDisplayInherit_ResolvesToHostDisplay()
     {
         // 'display: inherit' on generated content must take the originating element's display.

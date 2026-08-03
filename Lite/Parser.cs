@@ -207,6 +207,7 @@ internal static class Parser
             var cleaned = System.Net.WebUtility.HtmlDecode(text)
                 .Replace("<![CDATA[", string.Empty, StringComparison.Ordinal)
                 .Replace("]]>", string.Empty, StringComparison.Ordinal);
+            cleaned = NormalizeSignedZero(cleaned);
             if (cleaned != text) styleEl.TextContent = cleaned;
         }
 
@@ -1074,6 +1075,20 @@ internal static class Parser
             node.Children.Add(pseudoNode);
         }
     }
+
+    /// <summary>
+    /// Rewrites a signed unitless zero (<c>-0</c> / <c>+0</c>) to plain <c>0</c>. Both are valid CSS
+    /// numbers and mean exactly zero, but AngleSharp fails to parse them and DROPS the whole
+    /// declaration — so <c>border-bottom-width: -0</c> silently becomes "no width specified", which
+    /// is indistinguishable from a shorthand that omits the width and would wrongly resolve to the
+    /// initial 'medium'. Only a sign directly followed by a lone 0 is touched: the negative
+    /// lookahead leaves <c>-0.5</c>, <c>-05</c> and any identifier alone, and <c>-0px</c> is
+    /// rewritten to <c>0px</c>, which is the same value.
+    /// </summary>
+    private static string NormalizeSignedZero(string css) =>
+        string.IsNullOrEmpty(css) || (!css.Contains("-0") && !css.Contains("+0"))
+            ? css
+            : System.Text.RegularExpressions.Regex.Replace(css, @"(?<=[:\s,(])[+-]0(?![\d.])", "0");
 
     /// <summary>
     /// The 'display' a ::before/::after box should use. Defaults to 'inline' (the initial value for
