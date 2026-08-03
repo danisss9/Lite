@@ -1687,6 +1687,23 @@ internal static class Drawer
             return;
         }
 
+        // A solid side is an axis-aligned rectangle, so fill it directly instead of stroking a
+        // centred line. A stroke spreads width/2 to each side of the centre and antialiases the
+        // result, which leaves a soft fringe on the two long edges; a background of the same size
+        // is a crisp rect fill. CSS 2.1 reftests constantly compare a bordered box against a
+        // background-filled one, so the fringe alone fails them. Dashed/dotted still need the
+        // stroke path effect.
+        if (style == BorderStyle.Solid)
+        {
+            var half = width / 2f;
+            var rect = Math.Abs(y1 - y2) < 0.01f
+                ? new SKRect(Math.Min(x1, x2), y1 - half, Math.Max(x1, x2), y1 + half)   // horizontal
+                : new SKRect(x1 - half, Math.Min(y1, y2), x1 + half, Math.Max(y1, y2));  // vertical
+            using var fill = new SKPaint { Color = color, IsAntialias = true };
+            canvas.DrawRect(rect, fill);
+            return;
+        }
+
         using var paint = new SKPaint { Color = color, StrokeWidth = width, IsAntialias = true };
         ApplyBorderStyle(paint, style);
         canvas.DrawLine(x1, y1, x2, y2, paint);

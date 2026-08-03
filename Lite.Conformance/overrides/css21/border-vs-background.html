@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head>
+<title>A solid border paints the same pixels as an equivalent background</title>
+<!-- The CSS 2.1 suite constantly compares a bordered box against a background-filled one.
+     Stroking a centred line for the border does not rasterise identically to a crisp background
+     fill; a solid border side must be filled as the rectangle it is. The leading <p> matters:
+     it pushes the bars to a non-integer offset, which is where the two paths diverge. -->
+<style>
+  #div1 { border-bottom: 5px solid blue; }
+  #div2 { border-top: 5px solid orange; }
+</style>
+</head>
+<body>
+<p>Test passes if there is <strong>no space between</strong> the blue and orange lines.</p>
+<div id="div1"></div>
+<div id="div2"></div>
+</body>
+</html>

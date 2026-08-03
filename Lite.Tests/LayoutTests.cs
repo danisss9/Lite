@@ -689,6 +689,11 @@ public static class LayoutTests
             $"the space before generated content must be kept, got \"{textChild.DisplayText}\"");
     }
 
+    // NOTE: the solid-border crisp-edge behaviour is guarded by the css21 reftest
+    // border-vs-background, not by a unit test. A synthetic bordered box happens to rasterise
+    // identically either way at integer coordinates, so a unit test passes with and without the
+    // fix; only comparing a bordered box against a background-filled one reproduces it.
+
     [Test]
     public static void BorderShorthandWithoutWidth_UsesMediumNotZero()
     {

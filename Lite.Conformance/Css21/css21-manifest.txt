@@ -51,4 +51,11 @@ css/CSS2/box-display/block-in-inline-self-collapsing-only-child.html | css/CSS2/
 # ---- Phase B: interactive elements — <datalist> is display:none per the UA stylesheet ----
 css21/datalist-hidden.html | css21/datalist-hidden-ref.html
 
+# ---- A solid border side must be FILLED as a rectangle, not stroked as a centred line: a stroke
+#      antialiases the long edges and no longer matches an equivalent background fill. The CSS 2.1
+#      suite compares bordered boxes against background-filled ones constantly, so the fringe alone
+#      failed ~44 margin-padding-clear tests. Guarded here rather than in Lite.Tests because a
+#      synthetic bordered box rasterises identically either way at integer coordinates. ----
+css21/border-vs-background.html | css21/border-vs-background-ref.html
+
 # ---- Phase 3 additions (full anonymous-box splitting, z-index:auto subtlety...) ----
