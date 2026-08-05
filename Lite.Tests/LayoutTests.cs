@@ -719,6 +719,26 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void PseudoElementRule_DoesNotStyleTheOriginatingElement()
+    {
+        // A pseudo-ELEMENT rule styles a generated or partial box, never the element itself.
+        // AngleSharp matches `div:first-letter` against the DIV, so the whole element took the
+        // first-letter font-size and colour; the rules are now lifted out of the cascade and
+        // re-applied only as FirstLetterStyles.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>#d:first-letter { color: green; font-size: 36px; }" +
+            "</style></head><body><div id='d'>Text</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+
+        var d = FindNode(page.Root, n => n.Id == "d");
+        True(d != null, "expected the div");
+        True(d!.FirstLetterStyles?.ContainsKey("font-size") == true,
+            "the ::first-letter rule must still be captured as FirstLetterStyles");
+        True(d.GetFontSize() < 30f,
+            $"the element itself must not take the ::first-letter font-size, got {d.GetFontSize()}");
+    }
+
+    [Test]
     public static void BorderShorthandWithoutWidth_UsesMediumNotZero()
     {
         // CSS 2.1 §8.5.1: 'border-width' has an initial value of 'medium' (3px), so

@@ -1628,6 +1628,30 @@ internal static class Drawer
                         bw.Left, node.GetBorderLeftColor(), node.GetBorderStyleLeft());
     }
 
+    /// <summary>
+    /// Length of the ::first-letter run per CSS 2.1 §5.12.1: the first letter plus any punctuation
+    /// that <em>precedes or follows</em> it — Unicode classes Ps (open), Pe (close), Pi/Pf (quotes)
+    /// and Po (other). So <c>)T)est</c> has a three-character first letter, not one.
+    /// Returns 0 when the text holds no letter at all, in which case nothing is styled.
+    /// </summary>
+    private static int FirstLetterLength(string text)
+    {
+        static bool IsFirstLetterPunctuation(char c) =>
+            System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) is
+                System.Globalization.UnicodeCategory.OpenPunctuation or
+                System.Globalization.UnicodeCategory.ClosePunctuation or
+                System.Globalization.UnicodeCategory.InitialQuotePunctuation or
+                System.Globalization.UnicodeCategory.FinalQuotePunctuation or
+                System.Globalization.UnicodeCategory.OtherPunctuation;
+
+        var i = 0;
+        while (i < text.Length && IsFirstLetterPunctuation(text[i])) i++;
+        if (i >= text.Length) return 0;   // punctuation only: no first letter to style
+        i++;                              // the letter itself
+        while (i < text.Length && IsFirstLetterPunctuation(text[i])) i++;
+        return i;
+    }
+
     private static void DrawBorderSide(SKCanvas canvas, float x1, float y1, float x2, float y2,
                                         float width, SKColor color, BorderStyle style)
     {
@@ -2218,8 +2242,9 @@ internal static class Drawer
             if (isFirstLine && !firstLetterDrawn && firstLetterStyles != null && line.Text.Length > 0)
             {
                 firstLetterDrawn = true;
-                var firstChar = line.Text[0..1];
-                var restText = line.Text[1..];
+                var flLen = FirstLetterLength(line.Text);
+                var firstChar = line.Text[..flLen];
+                var restText = line.Text[flLen..];
 
                 // Create first-letter font/paint
                 using var flPaint = new SKPaint { Color = linePaint.Color, IsAntialias = true };

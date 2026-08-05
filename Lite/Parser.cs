@@ -227,6 +227,11 @@ internal static class Parser
         FontRegistry.Clear();
         CollectFontFaces(document);
 
+        // Lift ::before/::after/::first-letter/::first-line rules out of the sheets BEFORE any
+        // element style is computed — AngleSharp would otherwise match them against the element
+        // itself. They are re-applied per element inside Traverse.
+        NeutralizePseudoElementRules(document);
+
         var root = Traverse(document.DocumentElement, 0);
 
         // Collect all CSS rules for dynamic class-based style re-evaluation
@@ -362,6 +367,9 @@ internal static class Parser
         var savedModules = new List<(string, string?)>(_pendingModules);
         var savedModuleCounter = _inlineModuleCounter;
         var savedCounters = _counters.ToDictionary(kv => kv.Key, kv => new List<int>(kv.Value));
+        // The parent is mid-Traverse when it reaches the iframe; without this its remaining
+        // elements would be styled with the CHILD document's pseudo-element rules.
+        var savedPseudoRules = new List<(string, ICssStyleDeclaration)>(_pseudoElementRules);
 
         try
         {
@@ -404,6 +412,8 @@ internal static class Parser
             _inlineModuleCounter = savedModuleCounter;
             _counters.Clear();
             foreach (var (k, v) in savedCounters) _counters[k] = v;
+            _pseudoElementRules.Clear();
+            _pseudoElementRules.AddRange(savedPseudoRules);
         }
     }
 
@@ -1487,6 +1497,11 @@ internal static class Parser
         {
             ProcessRules(sheet.Rules, element, node, mediaText: null);
         }
+
+        // Pseudo-element rules were lifted out of the sheets before the cascade ran (see
+        // NeutralizePseudoElementRules), so they are applied here from the recorded originals.
+        foreach (var (selector, style) in _pseudoElementRules)
+            TryExtractPseudoElementRule(element, node, selector, style);
     }
 
     /// <summary>
@@ -1822,8 +1837,11 @@ internal static class Parser
     /// matches the base selector, and stores all properties for later synthetic child creation.
     /// </summary>
     private static bool TryExtractPseudoElementRule(IElement element, LayoutNode node, ICssStyleRule rule)
+        => TryExtractPseudoElementRule(element, node, rule.SelectorText, rule.Style);
+
+    private static bool TryExtractPseudoElementRule(
+        IElement element, LayoutNode node, string? selector, ICssStyleDeclaration ruleStyle)
     {
-        var selector = rule.SelectorText;
         if (selector is null) return false;
 
         bool isBefore = selector.Contains("::before") || selector.Contains(":before");
@@ -1844,7 +1862,7 @@ internal static class Parser
         try { if (!element.Matches(baseSelector)) return true; }
         catch { return true; }
 
-        var cssText = rule.Style.CssText;
+        var cssText = ruleStyle.CssText;
         if (string.IsNullOrEmpty(cssText)) return true;
 
         var props = ParseCssTextToDict(cssText);
@@ -2387,9 +2405,73 @@ internal static class Parser
             {
                 var s = sel.Trim();
                 if (s.Length == 0) continue;
+                // A pseudo-ELEMENT rule styles a generated/partial box, never the element itself:
+                // `div:first-letter { color: green }` must not turn the whole div green. Those rules
+                // are captured separately into Before/After/FirstLetter/FirstLineStyles by
+                // TryExtractPseudoElementRule. Pseudo-CLASSES (:hover, :first-child) are unaffected.
+                if (IsPseudoElementSelector(s)) continue;
                 CssRules.Add(new CssRule(s, ComputeSpecificity(s), CssRules.Count, props, important));
             }
         }
+    }
+
+    /// <summary>
+    /// Pseudo-element rules lifted out of the stylesheets before the cascade runs, kept so
+    /// <see cref="TryExtractPseudoElementRule"/> can still see their original selectors.
+    /// </summary>
+    private static readonly List<(string Selector, ICssStyleDeclaration Style)> _pseudoElementRules = [];
+
+    /// <summary>
+    /// Removes pseudo-element rules from the CSSOM so they cannot style the originating element.
+    /// AngleSharp matches <c>div:first-letter</c> against the DIV itself, so a rule meant for the
+    /// first letter turned the WHOLE element green — and nothing downstream can undo that, because
+    /// by then it is indistinguishable from an authored declaration. The rules are recorded first
+    /// and re-applied per element as ::before/::after/::first-letter/::first-line styles.
+    /// The selector is rewritten (rather than the rule deleted) to keep every other index stable.
+    /// </summary>
+    private static void NeutralizePseudoElementRules(AngleSharp.Dom.IDocument document)
+    {
+        _pseudoElementRules.Clear();
+        if (document.StyleSheets is null) return;
+        foreach (var sheet in document.StyleSheets.OfType<ICssStyleSheet>())
+            NeutralizePseudoElementRules(sheet.Rules);
+    }
+
+    private static void NeutralizePseudoElementRules(ICssRuleList rules)
+    {
+        foreach (var rule in rules)
+        {
+            if (rule is ICssMediaRule mediaRule) { NeutralizePseudoElementRules(mediaRule.Rules); continue; }
+            if (rule is not ICssStyleRule styleRule) continue;
+            var selector = styleRule.SelectorText;
+            if (string.IsNullOrEmpty(selector) || !IsPseudoElementSelector(selector)) continue;
+
+            _pseudoElementRules.Add((selector, styleRule.Style));
+            // A tag name that cannot occur in an HTML document, so the cascade never matches it.
+            try { styleRule.SelectorText = "lite-neutralized-pseudo-element"; }
+            catch { /* read-only CSSOM: leave it; the element-level leak stays for this rule */ }
+        }
+    }
+
+    /// <summary>
+    /// True when a selector targets a pseudo-ELEMENT (::before, ::after, ::first-letter,
+    /// ::first-line, including their legacy single-colon spellings). Deliberately does NOT match
+    /// pseudo-classes such as <c>:first-child</c>, which merely share a prefix with
+    /// <c>:first-letter</c>.
+    /// </summary>
+    private static bool IsPseudoElementSelector(string selector)
+    {
+        if (selector.Contains("::", StringComparison.Ordinal)) return true;
+        foreach (var legacy in new[] { ":before", ":after", ":first-letter", ":first-line" })
+        {
+            var idx = selector.IndexOf(legacy, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) continue;
+            // Must be the whole token: ":first-letter" matches, ":first-letters" does not.
+            var end = idx + legacy.Length;
+            if (end == selector.Length || !char.IsLetterOrDigit(selector[end]) && selector[end] != '-')
+                return true;
+        }
+        return false;
     }
 
     /// <summary>Parses a declaration block, separating normal and !important declarations.</summary>
