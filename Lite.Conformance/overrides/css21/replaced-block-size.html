@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+<title>A replaced box keeps its intrinsic size when block-level or floated (CSS 2.1 §10.3.2/§10.6.2)</title>
+<!-- Only the inline path consulted an image's intrinsic size. A block-level image therefore
+     filled its containing block horizontally, and a block-level, floated or absolutely
+     positioned one collapsed to zero height, because those paths derive height from children
+     and a replaced box has none. -->
+<style>
+  #wrap { width: 300px; }
+  #block { display: block; }
+  #float { float: left; clear: left; }
+</style>
+</head>
+<body>
+<p>Test passes if there are two 96&times;96 blue squares at the left edge.</p>
+<div id="wrap">
+  <img id="block" src="/css/CSS2/floats-clear/support/blue15x15.png" width="96" height="96" alt="" />
+  <img id="float" src="/css/CSS2/floats-clear/support/blue15x15.png" width="96" height="96" alt="" />
+</div>
+</body>
+</html>

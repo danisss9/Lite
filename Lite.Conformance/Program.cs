@@ -31,6 +31,8 @@ internal static class Program
                     break;
                 case "--geom" when i + 2 < args.Length:
                     return RefTestRunner.ProbeGeometry(args[i + 1], args[i + 2]);
+                case "--render" when i + 1 < args.Length:
+                    return RefTestRunner.RenderToFile(args[i + 1], i + 2 < args.Length ? args[i + 2] : null);
                 case "--survey-limit" when i + 1 < args.Length:
                     int.TryParse(args[++i], out surveyLimit);
                     break;
@@ -101,6 +103,8 @@ internal static class Program
             Options:
               --filter <substring>   Only run tests whose path contains the substring
               --update-baselines     (acid) Approve the current render as the new baseline
+              --geom <url> <sel>     Print the geometry of elements matching a selector
+              --render <url> [name]  Render one page to artifacts/<name>.png
 
             Test files are vendored by scripts\fetch-tests.ps1 (pinned commits).
             Exit code 0 = green (no unexpected failures, no unexpected passes).

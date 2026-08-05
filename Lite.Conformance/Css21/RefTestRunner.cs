@@ -193,6 +193,23 @@ internal static class RefTestRunner
         return 0;
     }
 
+    /// <summary>Renders one page to a PNG under artifacts/ — the diagnostic companion to
+    /// <see cref="ProbeGeometry"/>. Reading the render is what actually identifies a paint bug;
+    /// geometry numbers alone repeatedly point the wrong way.</summary>
+    public static int RenderToFile(string urlPath, string? outName = null)
+    {
+        ConformanceServer.Start();
+        using var bmp = Render(urlPath);
+        var dir = ConformancePaths.EnsureArtifacts();
+        var path = Path.Combine(dir, (outName ?? SafeName(urlPath)) + ".png");
+        using (var image = SKImage.FromBitmap(bmp))
+        using (var data = image.Encode(SKEncodedImageFormat.Png, 100))
+        using (var stream = File.OpenWrite(path))
+            data.SaveTo(stream);
+        Console.WriteLine($"rendered {urlPath} -> {path}");
+        return 0;
+    }
+
     /// <summary>Loads a page, runs its scripts, then prints the geometry of elements matching
     /// a selector — a diagnostic for check-layout-style tests.</summary>
     public static int ProbeGeometry(string urlPath, string selector)

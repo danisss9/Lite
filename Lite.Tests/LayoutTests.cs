@@ -829,4 +829,141 @@ public static class LayoutTests
         True(Math.Abs(flt.Box.ContentBox.Width - 90f) < 0.5f,
             $"float shrink-to-fit width should be child 90, got {flt.Box.ContentBox.Width}");
     }
+
+    /// <summary>A replaced box: an IMG carrying an intrinsic size, as the parser records from the
+    /// width/height content attributes.</summary>
+    private static LayoutNode Img(int intrinsicW, int intrinsicH, Dictionary<string, string>? styles = null)
+    {
+        var node = new LayoutNode(null, "IMG", "", _styleCache.Style);
+        // The shared fallback style is a DIV's, so 'display' must be reset to the UA value for an
+        // image or it would resolve to block and never reach the inline formatting context.
+        node.StyleOverrides["display"] = "inline";
+        foreach (var side in new[] { "top", "right", "bottom", "left" })
+        {
+            node.StyleOverrides[$"margin-{side}"] = "0";
+            node.StyleOverrides[$"padding-{side}"] = "0";
+            node.StyleOverrides[$"border-{side}-width"] = "0";
+        }
+        node.IntrinsicWidth = intrinsicW;
+        node.IntrinsicHeight = intrinsicH;
+        if (styles is not null) foreach (var (k, v) in styles) node.StyleOverrides[k] = v;
+        return node;
+    }
+
+    [Test]
+    public static void ReplacedBox_UsesIntrinsicSizeWhenBlockFloatedOrAbsolute()
+    {
+        // CSS 2.1 §10.3.2/§10.6.2: an 'auto' dimension of a replaced box takes the intrinsic one.
+        // Only the inline path consulted it, so a block-level image filled its container and every
+        // out-of-flow image collapsed to zero height (there are no children to measure).
+        var blockImg = Img(96, 96, new() { ["display"] = "block" });
+        var floatImg = Img(96, 96, new() { ["float"] = "left" });
+        var absImg = Img(96, 96, new() { ["position"] = "absolute", ["top"] = "0", ["left"] = "0" });
+        LayoutTree(Block(new() { ["width"] = "400px" }, blockImg, floatImg, absImg));
+
+        foreach (var (name, img) in new[] { ("block", blockImg), ("float", floatImg), ("abs", absImg) })
+        {
+            True(Math.Abs(img.Box.ContentBox.Width - 96f) < 0.5f,
+                $"{name} replaced width should be the intrinsic 96, got {img.Box.ContentBox.Width}");
+            True(Math.Abs(img.Box.ContentBox.Height - 96f) < 0.5f,
+                $"{name} replaced height should be the intrinsic 96, got {img.Box.ContentBox.Height}");
+        }
+    }
+
+    [Test]
+    public static void ReplacedBox_DerivesMissingDimensionFromIntrinsicRatio()
+    {
+        // §10.6.2: with only 'width' given, the used height preserves the intrinsic ratio.
+        var img = Img(200, 100, new() { ["display"] = "block", ["width"] = "50px" });
+        LayoutTree(Block(new() { ["width"] = "400px" }, img));
+        True(Math.Abs(img.Box.ContentBox.Height - 25f) < 0.5f,
+            $"height should follow the 2:1 intrinsic ratio (25), got {img.Box.ContentBox.Height}");
+    }
+
+    [Test]
+    public static void TextAlignRight_MovesInlineLevelBoxesNotJustText()
+    {
+        // CSS 2.1 §16.2 aligns the whole LINE BOX. text-align had a single consumer in the text
+        // painter, so an image or inline-block on the line ignored it entirely.
+        var img = Img(96, 96);
+        var cb = Block(new() { ["width"] = "400px", ["text-align"] = "right" }, img);
+        LayoutTree(cb);
+        var expected = cb.Box.ContentBox.Right - 96f;
+        True(Math.Abs(img.Box.ContentBox.Left - expected) < 0.5f,
+            $"right-aligned image should start at {expected}, got {img.Box.ContentBox.Left}");
+    }
+
+    [Test]
+    public static void FloatedTableCell_IsBlockified()
+    {
+        // CSS 2.1 §9.7: a floated box is block-level, so 'display: table-cell' computes to 'block'
+        // (and it is laid out as one) instead of waiting for a table that will never exist.
+        var cell = Block(new() { ["display"] = "table-cell", ["float"] = "right", ["width"] = "96px", ["height"] = "96px" });
+        var cb = Block(new() { ["width"] = "400px" }, cell);
+        LayoutTree(cb);
+
+        True(cell.GetDisplay() == DisplayType.Block,
+            $"a floated table-cell should compute to display:block, got {cell.GetDisplay()}");
+        True(Math.Abs(cell.Box.ContentBox.Right - cb.Box.ContentBox.Right) < 0.5f,
+            $"it should float to the right edge {cb.Box.ContentBox.Right}, got {cell.Box.ContentBox.Right}");
+    }
+
+    [Test]
+    public static void FloatAfterInlineContent_SitsOnTheCurrentLineBox()
+    {
+        // CSS 2.1 §9.5.1: the top of a float aligns with the top of the CURRENT line box, so a
+        // float written after inline content sits beside it rather than dropping below the line.
+        var img = Img(20, 60);
+        var flt = Block(new() { ["float"] = "right", ["width"] = "20px", ["height"] = "20px" });
+        var cb = Block(new() { ["width"] = "400px" }, img, flt);
+        LayoutTree(cb);
+
+        True(Math.Abs(flt.Box.ContentBox.Top - img.Box.ContentBox.Top) < 0.5f,
+            $"float should share the line box top {img.Box.ContentBox.Top}, got {flt.Box.ContentBox.Top}");
+    }
+
+    [Test]
+    public static void InlineBlock_PaintsBackgroundAndBorder()
+    {
+        // display:inline-block was missing from the paint dispatch's block-container list (which
+        // already had inline-table and inline-flex), so one with no text painted nothing at all
+        // and one with text got only a content-box fill and no border.
+        var ib = Block(new()
+        {
+            ["display"] = "inline-block",
+            ["width"] = "40px",
+            ["height"] = "40px",
+            ["background-color"] = "#008000",
+        });
+        var root = LayoutTree(Block(new() { ["width"] = "200px" }, ib));
+
+        using var bmp = Drawer.DrawToBitmap(800, 600, root, new Viewport { ViewportHeight = 600 });
+        var b = ib.Box.ContentBox;
+        var px = bmp.GetPixel((int)(b.Left + b.Width / 2f), (int)(b.Top + b.Height / 2f));
+        True(px.Green > 120 && px.Red < 120,
+            $"an empty sized inline-block must paint its background, got {px}");
+    }
+
+    [Test]
+    public static void FixedPositionBox_IsPainted()
+    {
+        // position:fixed boxes are skipped by the normal paint pass and left to PaintFixedNodes,
+        // which routed straight back into that same skip — so they laid out correctly and were
+        // then never painted at all.
+        var fixedBox = Block(new()
+        {
+            ["position"] = "fixed",
+            ["top"] = "0",
+            ["left"] = "0",
+            ["width"] = "40px",
+            ["height"] = "40px",
+            ["background-color"] = "#008000",
+        });
+        var root = LayoutTree(Block(new() { ["width"] = "200px" }, fixedBox));
+
+        using var bmp = Drawer.DrawToBitmap(800, 600, root, new Viewport { ViewportHeight = 600 });
+        var px = bmp.GetPixel(20, 20);
+        True(px.Green > 120 && px.Red < 120,
+            $"a position:fixed box must paint (expected green at 20,20), got {px}");
+    }
 }

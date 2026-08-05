@@ -58,4 +58,21 @@ css21/datalist-hidden.html | css21/datalist-hidden-ref.html
 #      synthetic bordered box rasterises identically either way at integer coordinates. ----
 css21/border-vs-background.html | css21/border-vs-background-ref.html
 
+# ---- §16.2: 'text-align' aligns the whole LINE BOX, so inline-level BOXES move with it, not
+#      just text. It had one consumer (the text painter), which meant the suite's own reference
+#      files — which position swatches with text-align — rendered wrong, so the affected tests
+#      could never match no matter what the test side did. ----
+css21/text-align-inline-box.html | css21/text-align-inline-box-ref.html
+
+# ---- §10.3.2/§10.6.2: a replaced box takes its intrinsic size for any 'auto' dimension. Only
+#      the inline path did; block-level images filled the container and every out-of-flow image
+#      collapsed to zero height. Guarded end-to-end here because the failure needs a real
+#      decoded image, which the synthetic unit harness does not have. ----
+css21/replaced-block-size.html | css21/replaced-block-size-ref.html
+
+# ---- §9.6.1: a position:fixed box must be painted. The dedicated fixed pass called back into
+#      the paint entry point that skips fixed boxes, so it was a no-op and no fixed box ever
+#      painted — invisible in the suite because a blank test matches a blank reference. ----
+css21/fixed-position-paint.html | css21/fixed-position-paint-ref.html
+
 # ---- Phase 3 additions (full anonymous-box splitting, z-index:auto subtlety...) ----

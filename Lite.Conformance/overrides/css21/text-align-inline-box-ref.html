@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+<title>Reference: the same squares placed with margins instead of text-align</title>
+<style>
+  #box { width: 300px; }
+  #box span { display: inline-block; width: 60px; height: 60px; background-color: blue; }
+  #right span { margin-left: 240px; }
+  #center span { margin-left: 120px; }
+</style>
+</head>
+<body>
+<p>Test passes if the first blue square is at the right edge and the second is centred.</p>
+<div id="box"><div id="right"><span></span></div><div id="center"><span></span></div></div>
+</body>
+</html>

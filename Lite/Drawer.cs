@@ -131,7 +131,10 @@ internal static class Drawer
             var node = stack.Pop();
             if (!visited.Add(node)) continue;
             if (node.GetPosition() == PositionType.Fixed)
-                PaintNode(canvas, node, viewportWidth);
+                // PaintNodeInner, not PaintNode: PaintNode skips every fixed box so the normal
+                // tree pass leaves them for this one. Routing back through it made this pass a
+                // no-op, so a position:fixed box was laid out correctly and then never painted.
+                PaintNodeInner(canvas, node, viewportWidth);
             else
                 for (int i = node.Children.Count - 1; i >= 0; i--)
                     stack.Push(node.Children[i]);
@@ -395,8 +398,15 @@ internal static class Drawer
             return;
         }
 
+        // inline-block belongs here with the other atomic inline-level boxes: it is a block
+        // CONTAINER, so it paints a background, borders and a background-image over its padding
+        // box. Leaving it out sent an inline-block with no text straight to the child recursion,
+        // which paints nothing at all — an empty sized inline-block was simply invisible — and
+        // one with text to the generic-inline branch, which fills only the content box and draws
+        // no border. (Form controls never reach here; they are dispatched by tag name above.)
         if (display == DisplayType.Block || display == DisplayType.Flex || display == DisplayType.InlineFlex
             || display == DisplayType.Table || display == DisplayType.InlineTable
+            || display == DisplayType.InlineBlock
             || display == DisplayType.TableRowGroup || display == DisplayType.TableRow || display == DisplayType.TableCell)
         {
             PaintBlock(canvas, node, viewportWidth);

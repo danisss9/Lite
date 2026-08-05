@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head>
+<title>A position:fixed box is painted (CSS 2.1 §9.6.1)</title>
+<!-- Fixed boxes are skipped by the normal paint pass and left to a dedicated one that runs after
+     the scroll transform is restored; that pass routed straight back into the same skip, so a
+     fixed box was laid out correctly and then never painted. Nothing else in the suite covered
+     it because a blank test matching a blank reference still counts as a match. -->
+<style>
+  #fixed { position: fixed; top: 40px; right: 0; width: 96px; height: 96px; background-color: green; }
+</style>
+</head>
+<body>
+<p>Test passes if there is a filled green square at the top right.</p>
+<div id="fixed"></div>
+</body>
+</html>

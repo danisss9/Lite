@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+<head>
+<title>text-align aligns the whole line box, not only its text (CSS 2.1 §16.2)</title>
+<!-- 'text-align' had a single consumer, the text painter, so an inline-level BOX on the line
+     (image, inline-block, inline-table) ignored it completely. The CSS 2.1 suite positions
+     swatches this way constantly, including inside its own reference files, so the property
+     failing on boxes broke tests from the reference side. -->
+<style>
+  #box { width: 300px; }
+  #box span { display: inline-block; width: 60px; height: 60px; background-color: blue; }
+  #right { text-align: right; }
+  #center { text-align: center; }
+</style>
+</head>
+<body>
+<p>Test passes if the first blue square is at the right edge and the second is centred.</p>
+<div id="box"><div id="right"><span></span></div><div id="center"><span></span></div></div>
+</body>
+</html>
