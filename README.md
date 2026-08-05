@@ -8,7 +8,7 @@ Lite is a lightweight HTML/CSS/JS rendering engine for Windows, written in C#. I
 
 ## Projects
 
-| Project       | Type          | Description                                                          |
+| Project       | Type          | Description                                                         |
 | ------------- | ------------- | ------------------------------------------------------------------- |
 | `Lite/`       | Class library | The rendering engine and `BrowserWindow` API                        |
 | `Lite.Media/` | Class library | Optional LibVLC-backed audio/video playback (`VlcMedia.Register()`) |
@@ -96,12 +96,17 @@ BrowserWindow          Native window + message loop; in-page navigation (backgro
 │                       bitmap; returns the pixel buffer and hit regions
 │
 ├── BoxEngine           Two-pass CSS box model layout (block + inline line boxes,
-│                       absolute/fixed positioning, floats)
+│                       absolute/fixed positioning, floats, margin collapsing,
+│                       block-in-inline splitting)
+│
+├── IntrinsicSizer      min-content / max-content intrinsic widths for
+│                       shrink-to-fit contexts (floats, abspos, tables)
 │
 ├── FlexEngine          CSS Flexbox Level 1 layout (flex-grow/shrink, wrapping,
 │                       alignment, gap, order, baseline)
 │
-├── TableEngine         Table layout (display:table, tr, td/th — two-pass row sizing)
+├── TableEngine         Table layout (display:table/inline-table, anonymous box
+│                       wrapping, tr, td/th — two-pass row sizing)
 │
 ├── AnimationEngine     CSS transitions and @keyframes animations with easing
 │   └── AnimationRegistry  Global @keyframes store
@@ -125,7 +130,9 @@ BrowserWindow          Native window + message loop; in-page navigation (backgro
 │   ├── JsComputedStyle Read-only computed style proxy for getComputedStyle()
 │   ├── JsCanvasContext2D  CanvasRenderingContext2D (paths, rects, text, transforms)
 │   ├── JsEvent         Event / MouseEvent / KeyboardEvent / CustomEvent (target,
-│   │                   bubbling, preventDefault, coordinates, key/modifiers, detail)
+│   │                   bubbling, preventDefault, coordinates, key/modifiers, detail);
+│   │                   legacy initEvent / returnValue / srcElement
+│   ├── JsEventTarget   Constructible EventTarget (once, capture, dispatchEvent)
 │   ├── JsTreeWalker    DOM tree traversal (nextNode, previousNode, parentNode)
 │   ├── JsXmlHttpRequest  Synchronous XMLHttpRequest (GET)
 │   ├── JsFetch         fetch() backing — background HTTP, resolved on the event loop
@@ -145,124 +152,125 @@ BrowserWindow          Native window + message loop; in-page navigation (backgro
 
 ## Supported HTML Elements
 
-| Element                                                                                 | Behaviour                                                                                                            |
-| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `div`, `section`, `header`, `footer`, `main`, `article`, `nav`, `aside`, `form`, `span` | Generic block or inline containers                                                                                   |
-| `h1`–`h6`                                                                               | Headings with computed font size and weight                                                                          |
-| `p`                                                                                     | Paragraph with block layout                                                                                          |
-| `a`                                                                                     | Link — same-origin links navigate in-page (with a loading animation); cross-origin links open in the system browser  |
-| `img`                                                                                   | Image loaded via HTTP or `data:` URI (incl. percent-encoded base64); straight-alpha compositing; placeholder + alt   |
-| `object`                                                                                | Renders its `data` resource as a replaced image; falls back to child content (incl. nested `<object>`) on failure    |
-| `iframe`                                                                                | Hosts a nested document (`srcdoc` or same-origin `src`) with its own DOM/JS; `contentWindow`/`contentDocument`, `postMessage`, `window.parent`/`frameElement`, `load` |
+| Element                                                                                 | Behaviour                                                                                                                                                                                                                                   |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `div`, `section`, `header`, `footer`, `main`, `article`, `nav`, `aside`, `form`, `span` | Generic block or inline containers                                                                                                                                                                                                          |
+| `h1`–`h6`                                                                               | Headings with computed font size and weight                                                                                                                                                                                                 |
+| `p`                                                                                     | Paragraph with block layout                                                                                                                                                                                                                 |
+| `a`                                                                                     | Link — same-origin links navigate in-page (with a loading animation); cross-origin links open in the system browser                                                                                                                         |
+| `img`                                                                                   | Image loaded via HTTP or `data:` URI (incl. percent-encoded base64); straight-alpha compositing; placeholder + alt                                                                                                                          |
+| `object`                                                                                | Renders its `data` resource as a replaced image; falls back to child content (incl. nested `<object>`) on failure                                                                                                                           |
+| `iframe`                                                                                | Hosts a nested document (`srcdoc` or same-origin `src`) with its own DOM/JS; `contentWindow`/`contentDocument`, `postMessage`, `window.parent`/`frameElement`, `load`                                                                       |
 | `audio`, `video`                                                                        | HTMLMediaElement API (`play`/`pause`/`currentTime`/`duration`/`canPlayType`…), `<source>` selection, poster, controls bar, and media events; simulated timeline by default, or real playback via the optional `Lite.Media` (LibVLC) backend |
-| `input` (text)                                                                          | Focusable text field with keyboard input and backspace                                                               |
-| `input` (password)                                                                      | Masked text field with bullet characters                                                                             |
-| `input` (number)                                                                        | Numeric input with up/down stepper arrows; `min`, `max`, `step`                                                      |
-| `input` (range)                                                                         | Range slider with click and drag support; `min`, `max`, `step`                                                       |
-| `input` (checkbox)                                                                      | Toggle on click                                                                                                      |
-| `input` (radio)                                                                         | Radio button with group selection logic by `name` attribute                                                          |
-| `textarea`                                                                              | Multi-line text input with placeholder, Enter key, monospace font                                                    |
-| `select`                                                                                | Dropdown with option list overlay, click to select                                                                   |
-| `button`, `input[type=submit]`                                                          | Triggers `click` handlers; submit controls submit the containing `<form>`                                            |
-| `form`                                                                                  | Submits on Enter / submit button — builds a query and navigates to `action` (cancelable `submit` event)             |
-| `label`                                                                                 | Inline by default                                                                                                    |
-| `strong`, `b`                                                                           | Bold text                                                                                                            |
-| `em`, `i`, `cite`, `dfn`                                                                | Italic text                                                                                                          |
-| `u`, `ins`                                                                              | Underline                                                                                                            |
-| `s`, `del`, `strike`                                                                    | Strikethrough                                                                                                        |
-| `small`, `sub`, `sup`                                                                   | Smaller text / subscript / superscript                                                                               |
-| `mark`                                                                                  | Yellow highlight                                                                                                     |
-| `code`, `kbd`, `samp`, `var`, `tt`                                                      | Monospace font                                                                                                       |
-| `pre`                                                                                   | Preformatted block with preserved whitespace                                                                         |
-| `blockquote`                                                                            | Indented block quote                                                                                                 |
-| `hr`                                                                                    | Horizontal rule                                                                                                      |
-| `br`                                                                                    | Forced line break                                                                                                    |
-| `ul`, `ol`, `li`                                                                        | Unordered (bullet) and ordered (numbered) lists                                                                      |
-| `dl`, `dt`, `dd`                                                                        | Definition lists                                                                                                     |
-| `table`, `thead`, `tbody`, `tfoot`, `tr`, `td`, `th`                                    | Table layout                                                                                                         |
-| `svg`                                                                                   | Inline SVG with `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`, `path`, `text`, `g`; viewBox, transforms |
-| `canvas`                                                                                | HTML5 Canvas with `CanvasRenderingContext2D` via JavaScript                                                          |
-| `script`                                                                                | Inline and `src` scripts executed after parse                                                                        |
+| `input` (text)                                                                          | Focusable text field with keyboard input and backspace                                                                                                                                                                                      |
+| `input` (password)                                                                      | Masked text field with bullet characters                                                                                                                                                                                                    |
+| `input` (number)                                                                        | Numeric input with up/down stepper arrows; `min`, `max`, `step`                                                                                                                                                                             |
+| `input` (range)                                                                         | Range slider with click and drag support; `min`, `max`, `step`                                                                                                                                                                              |
+| `input` (checkbox)                                                                      | Toggle on click                                                                                                                                                                                                                             |
+| `input` (radio)                                                                         | Radio button with group selection logic by `name` attribute                                                                                                                                                                                 |
+| `textarea`                                                                              | Multi-line text input with placeholder, Enter key, monospace font                                                                                                                                                                           |
+| `select`                                                                                | Dropdown with option list overlay, click to select                                                                                                                                                                                          |
+| `button`, `input[type=submit]`                                                          | Triggers `click` handlers; submit controls submit the containing `<form>`                                                                                                                                                                   |
+| `form`                                                                                  | Submits on Enter / submit button — builds a query and navigates to `action` (cancelable `submit` event)                                                                                                                                     |
+| `label`                                                                                 | Inline by default                                                                                                                                                                                                                           |
+| `strong`, `b`                                                                           | Bold text                                                                                                                                                                                                                                   |
+| `em`, `i`, `cite`, `dfn`                                                                | Italic text                                                                                                                                                                                                                                 |
+| `u`, `ins`                                                                              | Underline                                                                                                                                                                                                                                   |
+| `s`, `del`, `strike`                                                                    | Strikethrough                                                                                                                                                                                                                               |
+| `small`, `sub`, `sup`                                                                   | Smaller text / subscript / superscript                                                                                                                                                                                                      |
+| `mark`                                                                                  | Yellow highlight                                                                                                                                                                                                                            |
+| `code`, `kbd`, `samp`, `var`, `tt`                                                      | Monospace font                                                                                                                                                                                                                              |
+| `pre`                                                                                   | Preformatted block with preserved whitespace                                                                                                                                                                                                |
+| `blockquote`                                                                            | Indented block quote                                                                                                                                                                                                                        |
+| `hr`                                                                                    | Horizontal rule                                                                                                                                                                                                                             |
+| `br`                                                                                    | Forced line break                                                                                                                                                                                                                           |
+| `ul`, `ol`, `li`                                                                        | Unordered (bullet) and ordered (numbered) lists                                                                                                                                                                                             |
+| `dl`, `dt`, `dd`                                                                        | Definition lists                                                                                                                                                                                                                            |
+| `table`, `thead`, `tbody`, `tfoot`, `tr`, `td`, `th`                                    | Table layout                                                                                                                                                                                                                                |
+| `svg`                                                                                   | Inline SVG with `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`, `path`, `text`, `g`; viewBox, transforms                                                                                                                        |
+| `canvas`                                                                                | HTML5 Canvas with `CanvasRenderingContext2D` via JavaScript                                                                                                                                                                                 |
+| `script`                                                                                | Inline and `src` scripts executed after parse                                                                                                                                                                                               |
 
 ---
 
 ## Supported CSS Properties
 
-| Property                                             | Values                                                                                                                  |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `display`                                            | `block`, `inline`, `inline-block`, `list-item`, `flex`, `inline-flex`, `table`, `table-row`, `table-cell`, `none`       |
-| `width`, `height`                                    | `px`, `%`, `vh`, `vw`, `auto`, `calc()`                                                                                 |
-| `min-width`, `max-width`, `min-height`, `max-height` | `px`, `%`, `calc()`                                                                                                     |
-| `margin`, `padding`                                  | Shorthand and individual sides; `px`, `%`, `em`, `auto`, `calc()`                                                       |
-| `border-width`                                       | `px` per side                                                                                                           |
-| `border-color`                                       | Any CSS color per side                                                                                                  |
-| `border-style`                                       | `solid`, `dotted`, `dashed`, `double`, `groove`, `ridge`, `inset`, `outset`, `none` per side                            |
-| `border-radius`                                      | `px`, `%`                                                                                                               |
-| `box-sizing`                                         | `border-box`, `content-box`                                                                                             |
-| `box-shadow`                                         | Multi-layer; offset, blur, spread, color, `inset`                                                                       |
-| `text-shadow`                                        | Offset, blur, color                                                                                                     |
-| `background-color`                                   | Any CSS color                                                                                                           |
-| `background-image`                                   | `url()`; raster formats (PNG, JPEG)                                                                                     |
-| `background-repeat`                                  | `repeat`, `repeat-x`, `repeat-y`, `no-repeat`                                                                           |
-| `background-position`                                | Keywords, `px`, `%`                                                                                                     |
-| `background-size`                                    | `cover`, `contain`, `auto`, `px`, `%`                                                                                   |
-| `background-attachment`                              | `scroll`, `fixed` (fixed backgrounds pin to the viewport)                                                              |
-| `color`                                              | Any CSS color                                                                                                           |
-| `opacity`                                            | `0`–`1`                                                                                                                 |
-| `font-size`                                          | `px`, `em`, keyword sizes                                                                                               |
-| `font-weight`                                        | `bold` / normal                                                                                                         |
-| `font-style`                                         | `italic` / normal                                                                                                       |
-| `font-family`                                        | Named families; `monospace` → Consolas, `system-ui` → Segoe UI                                                          |
-| `line-height`                                        | `px`, `em`, `%`, unitless multiplier                                                                                    |
-| `text-decoration`                                    | `underline`, `line-through`                                                                                             |
-| `text-transform`                                     | `uppercase`, `lowercase`, `capitalize`, `none`                                                                          |
-| `text-align`                                         | `left`, `center`, `right`, `justify`                                                                                    |
-| `text-indent`                                        | `px`, `em`, `%`                                                                                                         |
-| `letter-spacing`                                     | `px`, `em`                                                                                                              |
-| `word-spacing`                                       | `px`, `em`                                                                                                              |
-| `vertical-align`                                     | `baseline`, `top`, `middle`, `bottom`, `text-top`, `text-bottom`, `sub`, `super`                                        |
-| `white-space`                                        | `normal`, `nowrap`, `pre`, `pre-wrap`, `pre-line`                                                                       |
-| `position`                                           | `static`, `relative`, `absolute`, `fixed`, `sticky`                                                                     |
-| `top`, `right`, `bottom`, `left`                     | `px`, `%`, `calc()`                                                                                                     |
-| `z-index`                                            | Integer                                                                                                                 |
-| `overflow`                                           | `visible`, `hidden`, `scroll`, `auto`                                                                                   |
-| `visibility`                                         | `visible`, `hidden`, `collapse`                                                                                         |
-| `float`                                              | `none`, `left`, `right`                                                                                                 |
-| `clear`                                              | `none`, `left`, `right`, `both`                                                                                         |
-| `flex-direction`                                     | `row`, `row-reverse`, `column`, `column-reverse`                                                                        |
-| `flex-wrap`                                          | `nowrap`, `wrap`, `wrap-reverse`                                                                                        |
-| `flex-grow`, `flex-shrink`                           | Number                                                                                                                  |
-| `flex-basis`                                         | `px`, `%`, `auto`, `calc()`                                                                                             |
-| `flex`                                               | Shorthand                                                                                                               |
-| `justify-content`                                    | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `space-evenly`                                     |
-| `align-items`, `align-self`                          | `stretch`, `flex-start`, `flex-end`, `center`, `baseline`                                                               |
-| `align-content`                                      | `stretch`, `flex-start`, `flex-end`, `center`, `space-between`, `space-around`                                          |
-| `flex-flow`                                          | Shorthand                                                                                                               |
-| `gap`, `row-gap`, `column-gap`                       | `px`, `em`, `%`, `calc()`                                                                                               |
-| `order`                                              | Integer                                                                                                                 |
-| `outline`                                            | `outline-width`, `outline-color`, `outline-style`, `outline-offset`                                                     |
-| `list-style-type`                                    | `disc`, `circle`, `square`, `decimal`, `lower-alpha`, `upper-alpha`, `lower-roman`, `upper-roman`, `none`               |
-| `list-style-position`                                | `outside`, `inside`                                                                                                     |
-| `border-collapse`                                    | `collapse`, `separate`                                                                                                  |
-| `border-spacing`                                     | `px`                                                                                                                    |
-| `cursor`                                             | `pointer`, `text`, `default`                                                                                            |
-| `text-overflow`                                      | `ellipsis`, `clip`                                                                                                      |
-| `aspect-ratio`                                       | `width / height`, single value                                                                                          |
-| `pointer-events`                                     | `none`, `auto`                                                                                                          |
-| `transform`                                          | `rotate()`, `scale()`, `scaleX/Y()`, `translate()`, `translateX/Y()`, `skew()`, `skewX/Y()`; deg/rad/turn               |
-| `filter`                                             | `blur()`, `grayscale()`, `sepia()`, `brightness()`, `contrast()`, `saturate()`, `hue-rotate()`, `invert()`, `opacity()` |
-| `background-image` (gradient)                        | `linear-gradient()` with angle keywords, `Ndeg`, and multi-stop color lists                                             |
-| `animation-play-state`                               | `running`, `paused`                                                                                                     |
-| `transition`                                         | `property`, `duration`, `delay`, `timing-function`                                                                      |
-| `animation`                                          | `name`, `duration`, `delay`, `timing-function`, `iteration-count`, `direction`, `fill-mode`                             |
-| `calc()`                                             | `+`, `-`, `*`, `/`; `px`, `%`, `em`, `rem`, `vw`, `vh`                                                                  |
-| `--*` custom properties                              | Declared on any element; inherited via ancestor chain                                                                   |
-| `var()`                                              | `var(--name)`, `var(--name, fallback)`; recursive resolution                                                            |
-| `@media`                                             | `min-width`, `max-width`, `min-height`, `max-height`, `orientation`; `and`, `not`, comma                                |
-| `@keyframes`                                         | `from`/`to`, percentage offsets                                                                                         |
-| `:hover`, `:focus`, `:active`                        | Pseudo-class state with interactive re-render                                                                           |
+| Property                                             | Values                                                                                                                                                          |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `display`                                            | `block`, `inline`, `inline-block`, `list-item`, `flex`, `inline-flex`, `table`, `inline-table`, `table-row-group`, `table-row`, `table-cell`, `none`            |
+| `width`, `height`                                    | `px`, `%`, `vh`, `vw`, `auto`, `calc()`                                                                                                                         |
+| `min-width`, `max-width`, `min-height`, `max-height` | `px`, `%`, `calc()`                                                                                                                                             |
+| `margin`, `padding`                                  | Shorthand and individual sides; `px`, `%`, `em`, `auto`, `calc()`                                                                                               |
+| `border-width`                                       | `px` per side                                                                                                                                                   |
+| `border-color`                                       | Any CSS color per side                                                                                                                                          |
+| `border-style`                                       | `solid`, `dotted`, `dashed`, `double`, `groove`, `ridge`, `inset`, `outset`, `none` per side                                                                    |
+| `border-radius`                                      | `px`, `%`                                                                                                                                                       |
+| `box-sizing`                                         | `border-box`, `content-box`                                                                                                                                     |
+| `box-shadow`                                         | Multi-layer; offset, blur, spread, color, `inset`                                                                                                               |
+| `text-shadow`                                        | Offset, blur, color                                                                                                                                             |
+| `background-color`                                   | Any CSS color                                                                                                                                                   |
+| `background-image`                                   | `url()`; raster formats (PNG, JPEG)                                                                                                                             |
+| `background-repeat`                                  | `repeat`, `repeat-x`, `repeat-y`, `no-repeat`                                                                                                                   |
+| `background-position`                                | Keywords, `px`, `%`                                                                                                                                             |
+| `background-size`                                    | `cover`, `contain`, `auto`, `px`, `%`                                                                                                                           |
+| `background-attachment`                              | `scroll`, `fixed` (fixed backgrounds pin to the viewport)                                                                                                       |
+| `color`                                              | Any CSS color                                                                                                                                                   |
+| `opacity`                                            | `0`–`1`                                                                                                                                                         |
+| `font-size`                                          | `px`, `em`, keyword sizes                                                                                                                                       |
+| `font-weight`                                        | `bold` / normal                                                                                                                                                 |
+| `font-style`                                         | `italic` / normal                                                                                                                                               |
+| `font-family`                                        | Named families; `monospace` → Consolas, `system-ui` → Segoe UI                                                                                                  |
+| `line-height`                                        | `px`, `em`, `%`, unitless multiplier                                                                                                                            |
+| `text-decoration`                                    | `underline`, `line-through`                                                                                                                                     |
+| `text-transform`                                     | `uppercase`, `lowercase`, `capitalize`, `none`                                                                                                                  |
+| `text-align`                                         | `left`, `center`, `right`, `justify`                                                                                                                            |
+| `text-indent`                                        | `px`, `em`, `%`                                                                                                                                                 |
+| `letter-spacing`                                     | `px`, `em`                                                                                                                                                      |
+| `word-spacing`                                       | `px`, `em`                                                                                                                                                      |
+| `vertical-align`                                     | `baseline`, `top`, `middle`, `bottom`, `text-top`, `text-bottom`, `sub`, `super`                                                                                |
+| `white-space`                                        | `normal`, `nowrap`, `pre`, `pre-wrap`, `pre-line`                                                                                                               |
+| `position`                                           | `static`, `relative`, `absolute`, `fixed`, `sticky`                                                                                                             |
+| `top`, `right`, `bottom`, `left`                     | `px`, `%`, `calc()`                                                                                                                                             |
+| `z-index`                                            | Integer                                                                                                                                                         |
+| `overflow`                                           | `visible`, `hidden`, `scroll`, `auto`                                                                                                                           |
+| `visibility`                                         | `visible`, `hidden`, `collapse`                                                                                                                                 |
+| `float`                                              | `none`, `left`, `right`                                                                                                                                         |
+| `clear`                                              | `none`, `left`, `right`, `both`                                                                                                                                 |
+| `flex-direction`                                     | `row`, `row-reverse`, `column`, `column-reverse`                                                                                                                |
+| `flex-wrap`                                          | `nowrap`, `wrap`, `wrap-reverse`                                                                                                                                |
+| `flex-grow`, `flex-shrink`                           | Number                                                                                                                                                          |
+| `flex-basis`                                         | `px`, `%`, `auto`, `calc()`                                                                                                                                     |
+| `flex`                                               | Shorthand                                                                                                                                                       |
+| `justify-content`                                    | `flex-start`, `flex-end`, `center`, `space-between`, `space-around`, `space-evenly`                                                                             |
+| `align-items`, `align-self`                          | `stretch`, `flex-start`, `flex-end`, `center`, `baseline`                                                                                                       |
+| `align-content`                                      | `stretch`, `flex-start`, `flex-end`, `center`, `space-between`, `space-around`                                                                                  |
+| `flex-flow`                                          | Shorthand                                                                                                                                                       |
+| `gap`, `row-gap`, `column-gap`                       | `px`, `em`, `%`, `calc()`                                                                                                                                       |
+| `order`                                              | Integer                                                                                                                                                         |
+| `outline`                                            | `outline-width`, `outline-color`, `outline-style`, `outline-offset`                                                                                             |
+| `list-style-type`                                    | `disc`, `circle`, `square`, `decimal`, `lower-alpha`, `upper-alpha`, `lower-roman`, `upper-roman`, `none`                                                       |
+| `list-style-position`                                | `outside`, `inside`                                                                                                                                             |
+| `border-collapse`                                    | `collapse`, `separate`                                                                                                                                          |
+| `border-spacing`                                     | `px`                                                                                                                                                            |
+| `cursor`                                             | `pointer`, `text`, `default`                                                                                                                                    |
+| `text-overflow`                                      | `ellipsis`, `clip`                                                                                                                                              |
+| `aspect-ratio`                                       | `width / height`, single value                                                                                                                                  |
+| `pointer-events`                                     | `none`, `auto`                                                                                                                                                  |
+| `transform`                                          | `rotate()`, `scale()`, `scaleX/Y()`, `translate()`, `translateX/Y()`, `skew()`, `skewX/Y()`; deg/rad/turn                                                       |
+| `filter`                                             | `blur()`, `grayscale()`, `sepia()`, `brightness()`, `contrast()`, `saturate()`, `hue-rotate()`, `invert()`, `opacity()`                                         |
+| `background-image` (gradient)                        | `linear-gradient()` with angle keywords, `Ndeg`, and multi-stop color lists                                                                                     |
+| `animation-play-state`                               | `running`, `paused`                                                                                                                                             |
+| `transition`                                         | `property`, `duration`, `delay`, `timing-function`                                                                                                              |
+| `animation`                                          | `name`, `duration`, `delay`, `timing-function`, `iteration-count`, `direction`, `fill-mode`                                                                     |
+| `calc()`                                             | `+`, `-`, `*`, `/`; `px`, `%`, `em`, `rem`, `vw`, `vh`                                                                                                          |
+| `--*` custom properties                              | Declared on any element; inherited via ancestor chain                                                                                                           |
+| `var()`                                              | `var(--name)`, `var(--name, fallback)`; recursive resolution                                                                                                    |
+| `@media`                                             | `min-width`, `max-width`, `min-height`, `max-height`, `orientation`; `and`, `not`, comma                                                                        |
+| `@keyframes`                                         | `from`/`to`, percentage offsets                                                                                                                                 |
+| `:hover`, `:focus`, `:active`                        | Pseudo-class state with interactive re-render                                                                                                                   |
 | Structural / form pseudo-classes                     | `:first-child`, `:last-child`, `:nth-child()`, `:not()`, `:empty`, `:checked`, `:disabled`, `:enabled`, `:link`, `:required`, `:optional`, `:valid`, `:invalid` |
-| `::before`, `::after`                                | Pseudo-elements with `content` property (strings, `open-quote`/`close-quote`, unicode escapes)                          |
+| `::before`, `::after`                                | Pseudo-elements with `content` property (strings, `open-quote`/`close-quote`, unicode escapes)                                                                  |
+| `::first-letter`, `::first-line`                     | First-letter (incl. surrounding punctuation per CSS 2.1 §5.12.1) and first-line styling                                                                         |
 
 ---
 
@@ -279,12 +287,22 @@ document.querySelectorAll(selector); // → Element[]
 document.createElement(tagName); // → Element
 document.createElementNS(ns, tagName); // → Element
 document.createTextNode(text); // → Element (#text node)
+document.createComment(data); // → Comment node
+document.createProcessingInstruction(target, data); // → PI node
 document.createDocumentFragment(); // → Element (lightweight container)
 document.createTreeWalker(root, whatToShow); // → TreeWalker
+document.createEvent(type); // → uninitialized Event (call initEvent on it)
 
 document.URL; // current page URL
 document.domain; // host of the current page
 document.cookie; // get/set (single in-memory cookie jar)
+document.readyState; // "loading" | "interactive" | "complete"
+
+// The document is an EventTarget; DOMContentLoaded fires after parsing +
+// deferred scripts, load fires last:
+document.addEventListener('DOMContentLoaded', fn);
+document.removeEventListener(type, fn);
+document.dispatchEvent(evt);
 ```
 
 Selectors support: `#id`, `.class`, `tag`, compound (`tag.class#id`), attribute (`[attr=val]`, `[attr^=val]`, `[attr$=val]`, `[attr*=val]`, `[attr~=val]`), combinators (descendant, `>`, `+`, `~`), pseudo-classes (`:first-child`, `:last-child`, `:nth-child()`, `:not()`, `:empty`, `:checked`, `:disabled`, `:enabled`, `:required`, `:optional`, `:valid`, `:invalid`, `:hover`, `:focus`, `:active`), and comma-separated lists.
@@ -354,9 +372,24 @@ element.classList.remove(cls);
 element.classList.contains(cls); // → boolean
 element.classList.toggle(cls);
 
-element.addEventListener(type, fn);
+element.addEventListener(type, fn, { capture, once });
 element.removeEventListener(type, fn);
+element.dispatchEvent(evt);
 element.click();
+```
+
+### Text / Comment nodes (CharacterData)
+
+```js
+var text = new Comment('note'); // or document.createComment / createTextNode
+node.data; // get/set character data
+node.nodeValue; // alias for data on CharacterData nodes
+node.length; // character count
+node.appendData(s);
+node.insertData(offset, s);
+node.deleteData(offset, count);
+node.replaceData(offset, count, s);
+node.substringData(offset, count); // → string
 ```
 
 ### Canvas
@@ -473,9 +506,17 @@ element.addEventListener('click', function (event) {
 // Constructors
 new Event('my-event', { bubbles: true, cancelable: true });
 new CustomEvent('my-event', { detail: { count: 1 } }); // event.detail
+new EventTarget(); // standalone target: addEventListener / dispatchEvent
+
+// Legacy APIs
+event.initEvent(type, bubbles, cancelable);
+event.returnValue = false; // cancels the event
+event.srcElement; // alias for target
+event.cancelBubble; // legacy stop-propagation flag
+event.isTrusted; // false for script-created events
 ```
 
-Dispatched DOM events include `click`, `mousedown` / `mouseup` / `mousemove`, `keydown` / `keyup`, `input`, `change`, and `submit`.
+Dispatched DOM events include `click`, `mousedown` / `mouseup` / `mousemove`, `keydown` / `keyup`, `input`, `change`, `submit`, `readystatechange`, `DOMContentLoaded`, and `load`.
 
 ### Inline event attributes
 

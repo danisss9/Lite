@@ -2,7 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.11] - 2026-06-28 (current)
+## [0.0.13] - 2026-08-05 (current)
+
+### Added
+
+- **`::first-letter` / `::first-line` pseudo-elements** — pseudo-element rules (`::before` / `::after` / `::first-letter` / `::first-line`) are lifted out of the cascade so they no longer style the originating element, and apply only to the generated/partial boxes; `::first-letter` matches the first letter plus surrounding punctuation (Unicode Ps/Pe/Pi/Pf/Po) per CSS 2.1 §5.12.1, with punctuation-only text yielding no styled run; iframe documents keep the parent document's pseudo-element rules (`Parser`, `Drawer`)
+- **Whitespace collapsing (CSS 2.1 §16.6)** — newlines and tabs in source text collapse to a single space under normal `white-space` processing, while NBSP and `pre` / `pre-line` line breaks are preserved (`Parser`)
+- **Conformance CLI `--render`** — `Lite.Conformance --render <url> [name]` dumps a headless page render to `artifacts/<name>.png`; new CSS 2.1 paint reftests cover border-vs-background crisp edges, `text-align` line-box alignment, intrinsic sizing of block-level replaced elements, and `position: fixed` painting; the survey mode gains pass/fail listing controls via `LITE_SURVEY_FAIL_LIMIT` / `LITE_SURVEY_LIST_PASSES` (`Program`, `RefTestRunner`, `css21-manifest`)
+
+### Fixed
+
+- **Block-in-inline splitting (§9.2.1.1)** — in-flow blocks are now hoisted out of inline boxes to a sibling position (proper anonymous-block wrapping) instead of promoting the inline box to a block; handles multiple split blocks and margin collapsing; Acid2 baselines re-approved (`BoxEngine`)
+- **Inline-block baseline & painting (§10.8.1)** — inline-blocks align on the baseline of their last line box rather than their bottom edge; an empty sized inline-block now paints its background/borders (it was previously invisible); `display: inherit` on pseudo-elements resolves to the originating element's display; boundary spaces before generated content are preserved (`BoxEngine`, `Drawer`, `Parser`)
+- **`visibility: hidden` painting (§11.2)** — an invisible box no longer paints its own background, borders, text or replaced content, but still paints descendants that declare `visibility: visible`, and registers no hit regions (`Drawer`, `DrawCommandExtensions`)
+- **`position: fixed` painting** — fixed boxes were laid out correctly but never painted (the fixed pass re-entered the code path that skips them); they now render (`Drawer`)
+- **Float/abspos blockification (§9.7)** — floated or absolutely-positioned boxes blockify their specified `display`: `inline-table` → `table`, `inline` / `inline-block` / internal table types → `block` (`DrawCommandExtensions`)
+- **`border` shorthand default width (§8.5.1)** — an omitted border width now computes to `medium` instead of zero, so `border: solid red` shows a border (`DrawCommandExtensions`, `Parser`)
+
+## [0.0.12] - 2026-07-21
+
+### Added
+
+- **True intrinsic sizing** — new `IntrinsicSizer` computes real `min-content` / `max-content` widths (longest unbreakable unit vs. never-wrapped line, with `<br>` forcing fresh lines), so floats, absolutely-positioned boxes and other shrink-to-fit contexts size per CSS 2.1 §10.3.5/§10.3.7 instead of the old "widest explicit child" approximation; percentages resolve against an indefinite basis during the pass (`IntrinsicSizer`, `BoxEngine`)
+- **Anonymous table boxes & `inline-table`** — bare text, rows or cells inside table display types are wrapped in generated anonymous table boxes per CSS 2.1 §17.2.1; `display: inline-table` lays out as an atomic inline-level box; `display: table-row-group` works on non-`TBODY` elements (`TableEngine`, `BoxEngine`)
+- **Constructible `EventTarget`** — `new EventTarget()` with `addEventListener` / `removeEventListener` / `dispatchEvent`; `{ once: true }` listeners are removed before invocation; `dispatchEvent` rejects non-Event arguments (TypeError) and uninitialized events (InvalidStateError); a listener removed mid-dispatch no longer runs (DOM "inner invoke") (`JsEventTarget`, `EventDispatcher`)
+- **Legacy event APIs** — `Event.initEvent(type, bubbles, cancelable)`, `event.returnValue`, `srcElement`, `cancelBubble`, and `isTrusted`; `document.createEvent()` accepts the legacy alias table and throws NotSupportedError otherwise (`JsEvent`, `JsDocument`)
+- **JS-catchable host errors** — `JsErrors` builds `DOMException` / `TypeError` objects (with `name` / `message` / `code` / `constructor`) from host code without re-entering the engine, so WPT testharness `assert_throws_dom` / `assert_throws_js` checks pass (`JsErrors`)
+- **CharacterData API** — `data` / `length` / `nodeValue` and `appendData` / `insertData` / `deleteData` / `replaceData` / `substringData` on text, comment and processing-instruction nodes; `document.createComment()` / `createProcessingInstruction()`; constructible `new Comment(data)` / `new Text(data)` globals; comments and PIs serialize in `innerHTML`; CharacterData nodes reject children with HierarchyRequestError (`JsElement`, `JsDocument`, `HtmlSerializer`)
+- **Document lifecycle events** — `document.readyState` (`loading` → `interactive` → `complete`), with `DOMContentLoaded` fired after parsing and deferred scripts, before async scripts and the `load` event; the document itself is an EventTarget whose listeners join the normal capture/bubble path (`JsEngine`, `Parser`, `JsDocument`)
+- **Spec-correct DOM insertion** — `before()` / `after()` / `replaceWith()` anchor at the "viable previous/next sibling" (DOM §4.2.8), so the target node itself may be one of the arguments; non-node arguments now stringify per WebIDL (`null` → `"null"`) (`JsElement`)
+- **WPT survey mode** — the conformance runner can survey WPT pages against baselines to measure pass rates (`WptRunner`)
+
+### Fixed
+
+- **First-child margin collapse chains (§8.3.1)** — a block's effective top margin now collapses with the whole chain of first in-flow block children (stopping at border/padding, BFC boundaries, or inline content), so nested margins materialize as space above the outermost block (`BoxEngine`)
+- **Paint order (Appendix E)** — in-flow atomic inline-level boxes (images, inline-blocks) now paint above the backgrounds of later block boxes, as the CSS 2.1 painting order requires (`Drawer`)
+- **Acid2 baselines** re-approved for the intrinsic-sizing corrections
+
+## [0.0.11] - 2026-06-28
 
 ### Added
 
@@ -37,7 +74,7 @@ All notable changes to this project will be documented in this file.
 
 ### Known limitations
 
-- iframe hit-testing does not yet route clicks into child frames (parent-level UI works); cross-document navigation does not dispose child pages; a child's *runtime* class-based restyle reads the active page's cascade (its initial render is fully correct); nested-frame `top` is approximated as `parent`
+- iframe hit-testing does not yet route clicks into child frames (parent-level UI works); cross-document navigation does not dispose child pages; a child's _runtime_ class-based restyle reads the active page's cascade (its initial render is fully correct); nested-frame `top` is approximated as `parent`
 
 ## [0.0.9] - 2026-06-25
 
