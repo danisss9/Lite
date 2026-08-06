@@ -207,6 +207,14 @@ public class LayoutNode
     public string DisplayText => TextOverride ?? Text;
     public List<EventListenerEntry> EventListeners { get; } = [];
     /// <summary>
+    /// Per-line-box band for this text node when floats make the available width vary down the
+    /// paragraph (CSS 2.1 §9.5): the absolute left edge and width of each successive line. Layout
+    /// wraps against these, and the painter draws each line at its own X, so both agree. Null when
+    /// no float shortens the text.
+    /// </summary>
+    public List<(float X, float Width)>? LineBands { get; set; }
+
+    /// <summary>
     /// The element's 'font-size' as a computed length in px (CSS 2.1 §15.7), resolved once by the
     /// Parser against the parent's computed size. Descendants inherit this number, so a relative
     /// unit is never applied twice. Null on nodes the Parser did not build (JS-created elements),

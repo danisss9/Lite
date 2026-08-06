@@ -62,7 +62,8 @@ internal static class TextMeasure
     /// Wraps text into lines that fit within maxWidth, respecting the node's white-space mode.
     /// Each TextLine carries the text, measured width, line height, and baseline ascent.
     /// </summary>
-    public static List<TextLine> WrapText(string text, float maxWidth, SKFont font, WhiteSpace whiteSpace = WhiteSpace.Normal, float lineHeight = 0f)
+    public static List<TextLine> WrapText(string text, float maxWidth, SKFont font, WhiteSpace whiteSpace = WhiteSpace.Normal, float lineHeight = 0f,
+        IReadOnlyList<float>? lineWidths = null)
     {
         if (lineHeight <= 0f) lineHeight = font.Size * 1.4f;
         return whiteSpace switch
@@ -71,9 +72,16 @@ internal static class TextMeasure
             WhiteSpace.PreWrap => SplitPreserved(text, font, wrap: true, maxWidth, lineHeight),
             WhiteSpace.PreLine => SplitPreLine(text, maxWidth, font, lineHeight),
             WhiteSpace.NoWrap => WrapCollapsed(text, float.MaxValue, font, lineHeight),
-            _ => WrapCollapsed(text, maxWidth, font, lineHeight),
+            _ => WrapCollapsed(text, maxWidth, font, lineHeight, lineWidths),
         };
     }
+
+    /// <summary>The width available to line <paramref name="index"/>: <paramref name="widths"/>
+    /// when the caller supplied a per-line band (text beside a float, CSS 2.1 §9.5), otherwise the
+    /// single <paramref name="fallback"/>. Past the end of the list the last band repeats — below
+    /// the lowest float the band no longer changes.</summary>
+    internal static float LineWidthAt(IReadOnlyList<float>? widths, int index, float fallback)
+        => widths is null or { Count: 0 } ? fallback : widths[Math.Min(index, widths.Count - 1)];
 
     /// <summary>
     /// Measures text without wrapping — returns total width and single-line height.
@@ -129,14 +137,15 @@ internal static class TextMeasure
     // -------------------------------------------------------------------------
 
     /// <summary>Collapse whitespace and word-wrap at maxWidth (normal / nowrap).</summary>
-    private static List<TextLine> WrapCollapsed(string text, float maxWidth, SKFont font, float lineHeight)
+    private static List<TextLine> WrapCollapsed(string text, float maxWidth, SKFont font, float lineHeight,
+        IReadOnlyList<float>? lineWidths = null)
     {
         var lines = new List<TextLine>();
         var ascent = ComputeAscent(font, lineHeight);
 
         // Fast path: text already fits — return it verbatim so that leading/trailing
         // spaces (significant in inline runs like " and ") are preserved.
-        if (font.MeasureText(text) <= maxWidth)
+        if (font.MeasureText(text) <= LineWidthAt(lineWidths, 0, maxWidth))
         {
             lines.Add(new TextLine(text, font.MeasureText(text), lineHeight, ascent));
             return lines;
@@ -144,14 +153,19 @@ internal static class TextMeasure
 
         var words = text.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var sb = new System.Text.StringBuilder();
+        // Each line is measured against ITS OWN width: beside a float the available width changes
+        // from line to line, so a single maxWidth would wrap the whole paragraph to the narrow
+        // band even below the float's bottom edge.
+        var limit = LineWidthAt(lineWidths, 0, maxWidth);
 
         foreach (var word in words)
         {
             var candidate = sb.Length == 0 ? word : sb + " " + word;
-            if (font.MeasureText(candidate) > maxWidth && sb.Length > 0)
+            if (font.MeasureText(candidate) > limit && sb.Length > 0)
             {
                 var lineText = sb.ToString();
                 lines.Add(new TextLine(lineText, font.MeasureText(lineText), lineHeight, ascent));
+                limit = LineWidthAt(lineWidths, lines.Count, maxWidth);
                 sb.Clear();
                 sb.Append(word);
             }
