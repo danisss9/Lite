@@ -607,9 +607,13 @@ internal static class Parser
             ? ""
             : NormalizeTextWhitespace(
                 string.Concat(element.ChildNodes.OfType<IText>().Select(t => t.Data)), ws);
+        // Trimming implements §16.6.1's "remove the spaces at the start and end of a line", so it
+        // only applies where 'white-space' collapses at all: under pre / pre-wrap every space is
+        // significant, and a cell holding one space is a space wide, not zero.
+        var preservesSpaces = ws is "pre" or "pre-wrap";
         var directText = hasMixedChildren
             ? ""   // text nodes become ordered #TEXT children below
-            : directTextRaw.Trim();
+            : preservesSpaces ? directTextRaw : directTextRaw.Trim();
 
         var href = tag == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, tag, directText, elementStyle, href);
@@ -949,6 +953,7 @@ internal static class Parser
                     if (text.Length > 0)
                     {
                         var textChild = new LayoutNode(null, "#text", text, parentStyle);
+                        textChild.ResetNonInheritedStyles();
                         textChild.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "inline";
                         node.AddChild(textChild);
                     }
@@ -1068,6 +1073,7 @@ internal static class Parser
             var keepTrail = hasAfter && directTextRaw.Length > 0 && char.IsWhiteSpace(directTextRaw[^1]);
             var ownText = (keepLead ? " " : "") + node.DisplayText + (keepTrail ? " " : "");
             var textChild = new LayoutNode(null, "#text", ownText, node.Style);
+            textChild.ResetNonInheritedStyles();
             textChild.StyleOverrides["display"] = "inline";
             textChild.Parent = node;
             node.Children.Add(textChild);
@@ -1310,11 +1316,13 @@ internal static class Parser
         if (len <= 0) return;
 
         var letter = new LayoutNode(null, "#pseudo-first-letter", text[..len], host.Style);
+        letter.ResetNonInheritedStyles();
         letter.StyleOverrides["display"] = "inline";
         foreach (var (p, v) in styles)
             if (p != "content" && p != "display") letter.StyleOverrides[p] = v;
 
         var rest = new LayoutNode(null, "#text", text[len..], host.Style);
+        rest.ResetNonInheritedStyles();
         rest.StyleOverrides["display"] = "inline";
 
         // The host keeps its box (and its own styles) but hands its text to the two new children,

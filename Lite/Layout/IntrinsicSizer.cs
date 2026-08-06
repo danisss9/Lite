@@ -68,6 +68,15 @@ internal static class IntrinsicSizer
         if (node.Children.Count == 0 && !string.IsNullOrEmpty(node.DisplayText))
             return TextMinMax(node);
 
+        // A table is sized by its COLUMNS, not by a line of inline content. Its rows and row
+        // groups are neither block-level nor inline, so the generic walk below collected them
+        // into an empty inline run and returned zero — which then shrink-to-fit a table inside a
+        // float or an abs-pos box down to nothing.
+        var nodeDisplay = node.GetDisplay();
+        if (nodeDisplay is DisplayType.Table or DisplayType.InlineTable
+            or DisplayType.TableRowGroup or DisplayType.TableRow)
+            return TableMinMax(node, viewportHeight);
+
         // Container: block children stack (widest wins); consecutive inline children flow into a run
         // (min = widest atomic unit, max = widest line). Mirrors BoxEngine.LayoutChildrenImpl grouping.
         float min = 0f, max = 0f;
@@ -112,6 +121,30 @@ internal static class IntrinsicSizer
                 min = Math.Max(min, rMin);
                 max = Math.Max(max, rMax);
             }
+        }
+        return (min, max);
+    }
+
+    /// <summary>
+    /// Intrinsic widths of a table box. Cells in a row sit side by side, so a row sums its cells;
+    /// a table (or row group) is as wide as its widest row. This is the column model auto table
+    /// layout uses, reduced to the two intrinsic sizes.
+    /// </summary>
+    private static (float Min, float Max) TableMinMax(LayoutNode node, float viewportHeight)
+    {
+        var display = node.GetDisplay();
+        var sumsChildren = display == DisplayType.TableRow;
+        float min = 0f, max = 0f;
+
+        foreach (var child in node.Children)
+        {
+            if (child.GetDisplay() == DisplayType.None) continue;
+            // Whitespace between rows/cells is not content (§17.2.1 discards it).
+            if (child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText)) continue;
+
+            var (cMin, cMax) = OuterMinMax(child, viewportHeight);
+            if (sumsChildren) { min += cMin; max += cMax; }
+            else { min = Math.Max(min, cMin); max = Math.Max(max, cMax); }
         }
         return (min, max);
     }
