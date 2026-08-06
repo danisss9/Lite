@@ -104,3 +104,23 @@ css/CSS2/floats/floats-wrap-bfc-with-margin-001.html
 # ---- §10.3.7 / §10.6.4: with left/top auto an absolutely positioned box takes its static
 #      position — where it would have been in normal flow — not its containing block's origin. ----
 css/CSS2/abspos/hypothetical-box-dynamic.html
+
+# ---- §4.4: a stylesheet is decoded by its BOM, then @charset, then the HTTP charset, then the
+#      linking element and the referring document. Decoding everything as UTF-8 both mangled a
+#      sheet in a legacy encoding and left a U+FEFF breaking the first selector of one with a
+#      BOM. (The harness serves WPT's "<file>.headers" sidecars so the HTTP charset is visible.)
+css/CSS2/syntax/at-charset-001.xht
+css/CSS2/syntax/at-charset-003.xht
+
+# ---- §10.4: min-width / max-width clamp an in-flow block, not just an absolutely positioned one.
+css/CSS2/normal-flow/max-width-001.xht
+
+# ---- §10.3.2: a CSS width/height sizes a replaced element, and HTML's width/height attributes
+#      are presentational hints for those properties rather than the intrinsic size.
+css/CSS2/backgrounds/background-001.xht
+
+# ---- attr() in 'content' needs the authored attribute to reach the layout node.
+css/CSS2/generated-content/content-002.xht
+
+# ---- 'line-height: 0' collapses the line box; 0 was being read as "unspecified".
+css/CSS2/linebox/line-height-002.xht

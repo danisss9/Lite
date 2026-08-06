@@ -4,13 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [0.0.14] - 2026-08-06 (current)
 
-CSS 2.1 conformance pass: **+1000 upstream reftests**. The WPT `css/CSS2` suite goes from
-**2554/6266 (40.8%)** to **3554/6266 (56.7%)**, with no directory regressing. The largest
-movers are `selectors` 93 → 495, `normal-flow` 183 → 369, `margin-padding-clear` 388 → 527,
-`positioning` 203 → 282 and `borders` 296 → 358.
+CSS 2.1 conformance pass: **+1258 upstream reftests**. The WPT `css/CSS2` suite goes from
+**2554/6266 (40.8%)** to **3812/6266 (60.8%)**. The largest movers are `selectors` 93 → 495,
+`normal-flow` 183 → 480, `margin-padding-clear` 388 → 528, `positioning` 203 → 299,
+`borders` 296 → 370, `linebox` 82 → 117, `tables` 39 → 72, `backgrounds` 136 → 169,
+`syntax` 180 → 210, `generated-content` 99 → 129 and `floats-clear` 42 → 72. One directory
+regressed: `abspos` 7 → 5, both cases styling the root element itself as a fixed-position
+table.
 
 ### Added
 
+- **Stylesheet character encoding (§4.4)** — a stylesheet is decoded by its byte-order mark, then an `@charset` rule, then the HTTP `Content-Type` charset, then the linking element's `charset` attribute, then the referring document's or importing sheet's encoding, then UTF-8; the encoding a sheet resolves to becomes the referrer charset for what it imports. Legacy code pages (Shift_JIS, windows-125x, koi8-r, iso-8859-x) are registered via `System.Text.Encoding.CodePages`, which .NET Core does not ship in the shared framework (`Parser`)
 - **`::first-letter` as a real inline box (§5.12.1)** — the pseudo-element is generated during parsing instead of being re-drawn at paint time, so it contributes its font metrics, `line-height` and width to the line box and paints every property (background, border, margins, …) through the ordinary inline path. The old paint-time version supported only `color` / `font-size` / `font-weight` and never affected layout. Upstream `css/CSS2/selectors`: 93/545 → 495/545 (`Parser`, `Drawer`)
 - **Static position for out-of-flow boxes (§10.3.7 / §10.6.4)** — with `left` / `top` auto, an absolutely positioned box is placed where it would have been in normal flow: the flow pass records the position each out-of-flow child passes over, and one inside an inline run rides along on the line as a zero-sized marker (so it also no longer splits that line in two). Previously such a box was pinned to its containing block's origin (`BoxEngine`, `LayoutNode`)
 - **Text flows around floats line by line (§9.5)** — each line box gets the band the floats leave at its own vertical position, wrapping is measured per line, and the bands are recorded on the text node so painting breaks the lines exactly where layout did. Rule 7 is implemented too: a line too narrow for its first word or atomic box shifts down past the float instead of overflowing (`BoxEngine`, `TextMeasure`, `Drawer`)
@@ -23,7 +27,17 @@ movers are `selectors` 93 → 495, `normal-flow` 183 → 369, `margin-padding-cl
 - **Explicit zero sizes** — `width: 0` / `height: 0` were read as "no size specified" (layout tested `GetWidth() > 0`), so a zero-width box filled its container and a zero-height box grew to its content (`BoxEngine`, `DrawCommandExtensions`)
 - **Invalid negative lengths** — a negative `width`, `height`, `min-`/`max-` pair or `border-width` is invalid, so the declaration is dropped and the property keeps its initial value; `border-top-width: -1px` beside a visible `border-top-style` now paints the initial `medium` (`DrawCommandExtensions`)
 - **Root-relative URL resolution** — `Uri.TryCreate(…, UriKind.Absolute)` accepts `/fonts/ahem.css` as an implicit `file:` URI on Unix, so every root-relative stylesheet, image and form action was handed to the HTTP client unresolved. All resolution goes through a shared `UrlUtils` that treats only a real scheme as absolute (`UrlUtils` and all callers)
-- **CDATA-wrapped inline scripts** — XHTML wraps inline scripts in `<![CDATA[ … ]]>`; those characters are not JavaScript, so the script failed to parse on its first token and nothing it defined existed (`Parser`)
+- **`min-width` / `max-width` on in-flow blocks (§10.4)** — only the absolutely-positioned path clamped, so neither property had any effect on a normal block; a box the clamp gives a known width to now centres under auto margins like an explicitly-sized one (`BoxEngine`)
+- **Replaced-element sizing (§10.3.2 / §10.6.2)** — a CSS `width`/`height` on an inline `<img>` is honoured (the inline path read only the intrinsic pixel size), and HTML's `width`/`height` content attributes are treated as presentational hints for those properties rather than as the intrinsic size — reading them as intrinsic dropped percentages outright and mixed axes, so `width="100%" height="50"` on a 1×1 image derived a height of 39200px (`BoxEngine`, `Parser`)
+- **Anonymous table boxes** — a synthesized box borrows its originating element's style object, so a parent's non-inherited `position: absolute` or `float` read back as its own and took it out of flow; a table's intrinsic width came out zero because its rows are neither block-level nor inline. Both are fixed, so an anonymous table inside a float or an abs-pos box now shrink-wraps and lays its cells out side by side (`LayoutNode`, `IntrinsicSizer`, `BoxEngine`)
+- **Attributes** — every authored attribute reaches the layout node, so attribute selectors, `getAttribute` and `attr()` in `content` see what the markup declared; only `data-*` and a per-tag whitelist used to survive (`Parser`)
+- **`line-height: 0`** — text measurement used 0 as the sentinel for "unspecified" and silently substituted the 1.4em default (`TextMeasure`)
+- **`letter-spacing` / `word-spacing` in layout** — measured with the plain font metrics while being painted with the spacing applied, so the box reserved for the text was too narrow and following inline boxes sat in the wrong place (`TextMeasure`, `BoxEngine`)
+- **Preformatted newlines in an inline run (§16.6)** — a newline under `pre` / `pre-wrap` / `pre-line` is a forced break; an inline run measured the whole string as one item, so a preformatted `<span>` drew its lines on top of each other (`BoxEngine`)
+- **Inline fragments** — an inline box broken over several line boxes now has one fragment per line, so its background and text paint on each rather than only the last (`LayoutNode`, `BoxEngine`, `Drawer`)
+- **Whitespace under `pre`** — trimming an element's text implements §16.6.1's "remove the spaces at the start and end of a line", so it must not apply where white-space is preserved: a cell holding a single space is a space wide, not zero (`Parser`)
+- **CDATA-wrapped inline scripts** — XHTML wraps inline scripts in `<![CDATA[ … ]]>`; those characters are not JavaScript, so the script failed to parse on its first token (`Parser`)
+- **Crash parsing a lone quote in `content`** — the value both starts and ends with a quote, and stripping one off each end asked for a negative-length slice (`Parser`)
 - **Restored §9.7 / §10.3.2 / §9.5.1 layout work** that had been reverted while its unit tests stayed in the tree: float and abs-pos blockification, replaced-box intrinsic sizing, `position: fixed` painting, inline-block background/border painting, and a float joining the current line box
 
 ## [0.0.13] - 2026-08-05
