@@ -1182,6 +1182,7 @@ public static class StyleExtensions
     /// callers must NOT treat as an explicit height — auto height is content-based.</summary>
     public static bool IsAutoHeight(this LayoutNode node)
     {
+        if (IsNegativeSize(node, PropertyNames.Height)) return true;   // invalid → as if unset
         if (node.TryResolveStyle(PropertyNames.Height, out var h))
             return string.IsNullOrEmpty(h) || h.Trim() is "auto";
         var raw = node.Style.GetProperty(PropertyNames.Height).RawValue;
@@ -1195,6 +1196,7 @@ public static class StyleExtensions
     /// perfectly good used width, and treating it as auto made such a box fill its container.</summary>
     public static bool IsAutoWidth(this LayoutNode node)
     {
+        if (IsNegativeSize(node, PropertyNames.Width)) return true;    // invalid → as if unset
         if (node.TryResolveStyle(PropertyNames.Width, out var w))
             return string.IsNullOrEmpty(w) || w.Trim() is "auto";
         var raw = node.Style.GetProperty(PropertyNames.Width).RawValue;
@@ -1496,6 +1498,20 @@ public static class StyleExtensions
             };
         if (computed > 0f) return computed;
 
+        var side = propertyName.Replace("border-", "").Replace("-width", "");
+
+        // A NEGATIVE width is invalid: the declaration is dropped, so the initial 'medium' applies
+        // wherever that side has a visible style (`border-top-width: -1px` next to
+        // `border-top-style: solid` still paints a 3px line). Checked before the shorthand probe
+        // below, whose serialized text would report the invalid length as an authored width.
+        if (computed < 0f)
+        {
+            var styleProp = $"border-{side}-style";
+            var declaredStyle = (node.TryResolveStyle(styleProp, out var sv)
+                ? sv : node.Style.GetPropertyValueSafe(styleProp))?.Trim().ToLowerInvariant();
+            return !string.IsNullOrEmpty(declaredStyle) && declaredStyle is not ("none" or "hidden") ? 3f : 0f;
+        }
+
         // A computed 0 is usually genuine, but AngleSharp gets ONE case wrong: in the `border`
         // shorthand with the width omitted (`border: solid black`) it sets border-*-style correctly
         // yet computes border-*-width to 0px instead of the initial 'medium'. That form is very
@@ -1503,7 +1519,6 @@ public static class StyleExtensions
         // Detect it from the shorthand's own text: if it declares a visible style but contains no
         // width token, the used width is 'medium'. An authored zero (`border: 0 solid black`,
         // `border-width: 0`) still has a width token, or no shorthand, so it stays 0.
-        var side = propertyName.Replace("border-", "").Replace("-width", "");
         foreach (var shorthand in new[] { $"border-{side}", "border" })
         {
             var decl = node.TryResolveStyle(shorthand, out var dv)
@@ -1523,13 +1538,18 @@ public static class StyleExtensions
             if (hasWidthToken) return 0f;                       // the zero was authored
             if (style is not null and not "none" and not "hidden") return 3f;   // initial 'medium'
         }
+
         return 0f;
     }
 
     private static readonly HashSet<string> BorderStyleKeywords = new(StringComparer.Ordinal)
     { "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset" };
 
-    /// <summary>Returns a size property value or <paramref name="defaultValue"/> when unset/auto/none.</summary>
+    /// <summary>Returns a size property value or <paramref name="defaultValue"/> when unset/auto/none.
+    /// A negative value is invalid for every box dimension ('width', 'height', the min/max pair),
+    /// so the declaration is dropped and the property falls back to its initial value — AngleSharp
+    /// keeps such a declaration, and using it produced a zero-sized box where the spec asks for
+    /// the auto/none behaviour.</summary>
     private static float GetSizeOrDefault(LayoutNode node, string propertyName, float total, float size, float defaultValue, float viewportSize = -1f)
     {
         var vp = viewportSize >= 0 ? viewportSize : total;
@@ -1538,15 +1558,26 @@ public static class StyleExtensions
         {
             overrideStr = overrideStr.Trim();
             if (overrideStr is "" or "auto" or "none") return defaultValue;
-            if (TryEvalCalc(overrideStr, total, size, vp, out var calcPx)) return calcPx;
-            if (CssUnits.TryParse(overrideStr, size, total, vp, vp, out var lp)) return lp;
+            if (TryEvalCalc(overrideStr, total, size, vp, out var calcPx)) return calcPx < 0f ? defaultValue : calcPx;
+            if (CssUnits.TryParse(overrideStr, size, total, vp, vp, out var lp)) return lp < 0f ? defaultValue : lp;
         }
 
         var raw = node.Style.GetProperty(propertyName).RawValue;
         if (raw is null or Constant<Length>) return defaultValue; // auto/none/unset
         if (raw is not Length length) return defaultValue;
 
-        return CssUnits.ToPx(length, size, total, vp, vp);
+        var px = CssUnits.ToPx(length, size, total, vp, vp);
+        return px < 0f ? defaultValue : px;
+    }
+
+    /// <summary>True when a size property's declared value is a negative length — invalid, so the
+    /// property behaves as if it had not been declared at all.</summary>
+    private static bool IsNegativeSize(LayoutNode node, string propertyName)
+    {
+        if (node.TryResolveStyle(propertyName, out var ov) && !string.IsNullOrWhiteSpace(ov))
+            return CssUnits.TryParse(ov.Trim(), node.GetFontSize(), 0, 0, 0, out var opx) && opx < 0f;
+        return node.Style.GetProperty(propertyName).RawValue is Length l &&
+               CssUnits.ToPx(l, node.GetFontSize(), 0, 0, 0) < 0f;
     }
 
     /// <summary>
