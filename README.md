@@ -13,6 +13,8 @@ Lite is a lightweight HTML/CSS/JS rendering engine for Windows, written in C#. I
 | `Lite/`       | Class library | The rendering engine and `BrowserWindow` API                        |
 | `Lite.Media/` | Class library | Optional LibVLC-backed audio/video playback (`VlcMedia.Register()`) |
 | `Example/`    | Executable    | Demo app using the library with a local HTML/CSS/JS site            |
+| `Lite.Tests/` | Executable    | Zero-dependency unit-test runner (`dotnet run --project Lite.Tests`) |
+| `Lite.Conformance/` | Executable | CSS 2.1 / WPT / test262 / Acid conformance harness                  |
 
 ---
 
@@ -536,6 +538,35 @@ dotnet run --project Example
 ```
 
 The example serves the `Example/resources/` folder on `http://localhost:4444` and opens it in a `BrowserWindow`. It is a multi-page site — typography, colors, layout, lists & tables, forms, graphics, transforms & animations, and JavaScript DOM — linked by an in-app nav bar, so clicking through it exercises in-page navigation and the loading animation. Between them the pages cover inline text elements, lists, forms (text, password, number, range, radio, checkbox, textarea, select) with submission and validation, flexbox layouts, tables, positioning, z-index, overflow clipping, percentage sizing, pseudo-classes (:hover/:focus/:active and structural/form), pseudo-elements (::before/::after), responsive design (@media), CSS animations/transitions (with lifecycle events), calc() expressions, CSS custom properties (var()), text transforms, letter/word spacing, border styles, outlines, background images, vertical alignment, table border collapse, linear gradients, CSS 2D transforms, CSS filters, text-overflow ellipsis, position:sticky, aspect-ratio, pointer-events, dataset, animation-play-state, programmatic scrolling, fetch, Web Storage, and ES modules.
+
+---
+
+## Conformance
+
+`Lite.Conformance` runs the engine against real test suites. Test files are vendored by
+`scripts/fetch-tests.ps1` at pinned commits and are not checked in.
+
+```bash
+dotnet run --project Lite.Conformance -- --suite css21     # curated CSS 2.1 reftest gate
+dotnet run --project Lite.Conformance -- --suite wpt       # Web Platform Tests
+dotnet run --project Lite.Conformance -- --suite test262   # JavaScript
+dotnet run --project Lite.Conformance -- --suite acid      # Acid1 / Acid2 against approved baselines
+```
+
+Exit code 0 means green: no unexpected failures and no unexpected passes. Both sides of a
+reftest are rendered by Lite and pixel-compared, so font rasterization differences cancel
+out and only layout/paint differences register.
+
+Beyond the curated gate, `--survey <dir>` measures a whole upstream directory and reports a
+pass rate — informational, never gating:
+
+```bash
+dotnet run --project Lite.Conformance -- --suite css21 --survey css/CSS2/normal-flow
+```
+
+Across the full upstream `css/CSS2` reftest suite Lite currently passes **3554 / 6266 (56.7%)**.
+Diagnostics: `--render <url> [name]` dumps one page to `artifacts/<name>.png`, and
+`--geom <url> <selector>` prints the resolved geometry of matching elements.
 
 ---
 
