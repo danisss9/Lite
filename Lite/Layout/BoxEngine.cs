@@ -715,20 +715,6 @@ internal static class BoxEngine
         var usedW = replaced?.Width ?? explicitW;
         var boxWidth = hasUsedW ? usedW : availableWidth - margin.Left - margin.Right;
 
-        // margin: auto centering — when the used width is known and one or both horizontal margins are auto
-        if (hasUsedW)
-        {
-            var leftAuto = node.IsAutoMarginLeft();
-            var rightAuto = node.IsAutoMarginRight();
-            if (leftAuto || rightAuto)
-            {
-                var remaining = availableWidth - usedW - border.Left - border.Right - padding.Left - padding.Right;
-                if (leftAuto && rightAuto) { margin.Left = margin.Right = MathF.Max(0, remaining / 2f); }
-                else if (leftAuto) { margin.Left = MathF.Max(0, remaining); }
-                else { margin.Right = MathF.Max(0, remaining); }
-            }
-        }
-
         // box-sizing: with content-box (the default), an explicit `width` IS the content width —
         // padding/border are added outside it. Only border-box (and the auto/fill case) subtracts
         // padding+border from the box width. (Height already honors this below.)
@@ -736,6 +722,44 @@ internal static class BoxEngine
         var contentW = (hasUsedW && !isBorderBoxW)
             ? Math.Max(0f, usedW)
             : Math.Max(0f, boxWidth - border.Left - border.Right - padding.Left - padding.Right);
+
+        // CSS 2.1 §10.4: clamp the tentative used width to max-width, then min-width (min wins),
+        // and re-run the width rules with the clamped value. Only the absolutely-positioned path
+        // did this, so 'min-width' and 'max-width' had no effect at all on an in-flow block.
+        // A percentage that cannot be resolved (no containing-block width) computes to 'none'/0.
+        var clampedW = contentW;
+        var maxW = node.GetMaxWidth(availableWidth, fontSize);
+        if (maxW < float.PositiveInfinity && !(IsPercentValue(node, "max-width") && availableWidth <= 0f))
+        {
+            var maxContent = isBorderBoxW
+                ? Math.Max(0f, maxW - border.Left - border.Right - padding.Left - padding.Right) : maxW;
+            if (clampedW > maxContent) clampedW = maxContent;
+        }
+        var minW = node.GetMinWidth(availableWidth, fontSize);
+        if (minW > 0f && !(IsPercentValue(node, "min-width") && availableWidth <= 0f))
+        {
+            var minContent = isBorderBoxW
+                ? Math.Max(0f, minW - border.Left - border.Right - padding.Left - padding.Right) : minW;
+            if (clampedW < minContent) clampedW = minContent;
+        }
+        // A clamped box has a known width, so auto margins centre it like an explicit one does.
+        var widthIsKnown = hasUsedW || clampedW != contentW;
+        contentW = clampedW;
+
+        // margin: auto centering — when the used width is known and one or both horizontal margins are auto
+        if (widthIsKnown)
+        {
+            var leftAuto = node.IsAutoMarginLeft();
+            var rightAuto = node.IsAutoMarginRight();
+            if (leftAuto || rightAuto)
+            {
+                var remaining = availableWidth - contentW - border.Left - border.Right - padding.Left - padding.Right;
+                if (leftAuto && rightAuto) { margin.Left = margin.Right = MathF.Max(0, remaining / 2f); }
+                else if (leftAuto) { margin.Left = MathF.Max(0, remaining); }
+                else { margin.Right = MathF.Max(0, remaining); }
+            }
+        }
+
         var contentX = x + margin.Left + border.Left + padding.Left;
         var contentY = y + margin.Top + border.Top + padding.Top;
 

@@ -1147,4 +1147,23 @@ public static class LayoutTests
         True(wide.Box.ContentBox.Top >= 40f - 0.5f,
             $"and below the 40px float, got {wide.Box.ContentBox.Top}");
     }
+
+    [Test]
+    public static void MinAndMaxWidth_ClampAnInFlowBlock()
+    {
+        // CSS 2.1 §10.4. Only the absolutely-positioned path clamped, so 'min-width' and
+        // 'max-width' had no effect at all on a normal block: it just filled its container.
+        var capped = Block(new() { ["max-width"] = "40px", ["height"] = "10px" });
+        var floored = Block(new() { ["width"] = "10px", ["min-width"] = "70px", ["height"] = "10px" });
+        // min-width wins over max-width when they conflict.
+        var both = Block(new() { ["min-width"] = "80px", ["max-width"] = "20px", ["height"] = "10px" });
+        LayoutTree(Block(new() { ["width"] = "200px" }, capped, floored, both));
+
+        True(Math.Abs(capped.Box.ContentBox.Width - 40f) < 0.5f,
+            $"max-width should cap the fill width at 40, got {capped.Box.ContentBox.Width}");
+        True(Math.Abs(floored.Box.ContentBox.Width - 70f) < 0.5f,
+            $"min-width should raise the used width to 70, got {floored.Box.ContentBox.Width}");
+        True(Math.Abs(both.Box.ContentBox.Width - 80f) < 0.5f,
+            $"min-width wins over max-width, expected 80, got {both.Box.ContentBox.Width}");
+    }
 }
