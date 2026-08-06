@@ -477,4 +477,19 @@ public static class DomTests
         Equal("l1", (string?)Val(engine, "firstPass"));
         Equal("l1,l1,l3", (string?)Val(engine, "secondPass"));
     }
+
+    [Test]
+    public static void InlineScript_RunsWhenWrappedInACdataSection()
+    {
+        // XHTML wraps inline scripts in <![CDATA[ ... ]]> to keep the markup well-formed XML.
+        // Those characters are not JavaScript: left in place the script failed to parse on its
+        // first token and nothing it defined ever existed.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><script type=\"text/javascript\">//<![CDATA[\n" +
+            "globalThis.__cdata = 42;\n//]]></script></head><body><p>x</p></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var engine = page.Engine!;
+        True(Convert.ToInt32(engine.RawEngine.GetValue("__cdata").ToObject()) == 42,
+            "a CDATA-wrapped inline script must run");
+    }
 }

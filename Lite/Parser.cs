@@ -1580,9 +1580,24 @@ internal static class Parser
         else if (!string.IsNullOrWhiteSpace(scriptEl.TextContent))
         {
             // Inline scripts always run in document position (defer/async do not apply).
-            if (isModule) _pendingModules.Add((NextInlineModuleSpecifier(), scriptEl.TextContent));
-            else _pendingScripts.Add(scriptEl.TextContent);
+            var inlineCode = StripCdata(scriptEl.TextContent);
+            if (isModule) _pendingModules.Add((NextInlineModuleSpecifier(), inlineCode));
+            else _pendingScripts.Add(inlineCode);
         }
+    }
+
+    /// <summary>
+    /// Unwraps the <c>&lt;![CDATA[ … ]]&gt;</c> section XHTML documents wrap inline scripts in, so
+    /// the markup stays well-formed XML. The characters are not JavaScript: left in place the whole
+    /// script fails to parse on its first token, and any function it defines never exists. Most of
+    /// the CSS 2.1 suite's scripted tests are XHTML and written this way.
+    /// </summary>
+    private static string StripCdata(string code)
+    {
+        var trimmed = code.Trim();
+        if (!trimmed.StartsWith("<![CDATA[", StringComparison.Ordinal)) return code;
+        var end = trimmed.LastIndexOf("]]>", StringComparison.Ordinal);
+        return end < 9 ? trimmed[9..] : trimmed[9..end];
     }
 
     /// <summary>Routes an external classic script's code into the in-position, deferred, or async
