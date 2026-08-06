@@ -214,6 +214,9 @@ public class LayoutNode
     /// of flow — an anonymous table inside an abs-pos box was skipped by its own parent's layout
     /// for exactly that reason. Inherited properties (colour, font, text-align, …) are left alone:
     /// a synthesized box is supposed to inherit those.
+    /// <para>Only the properties that decide where a box goes and how big it is are reset.
+    /// 'background' deliberately is not: an inline box's background is painted by the #text child
+    /// that carries its content, so clearing it there would lose the background entirely.</para>
     /// </summary>
     public void ResetNonInheritedStyles()
     {
@@ -227,7 +230,6 @@ public class LayoutNode
         ("float", "none"), ("clear", "none"), ("z-index", "auto"), ("overflow", "visible"),
         ("width", "auto"), ("height", "auto"),
         ("min-width", "0"), ("min-height", "0"), ("max-width", "none"), ("max-height", "none"),
-        ("background-color", "transparent"), ("background-image", "none"),
     ];
 
     /// <summary>
