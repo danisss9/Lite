@@ -30,6 +30,10 @@
     <PackageReference Include="AngleSharp.Css" Version="0.17.0" />
     <PackageReference Include="Jint" Version="4.9.3" />
     <PackageReference Include="SkiaSharp" Version="3.119.0" />
+    <!-- Legacy single- and multi-byte charsets (Shift_JIS, windows-125x, koi8-r, iso-8859-x).
+         .NET Core dropped them from the shared framework; a stylesheet or document that
+         declares one is otherwise decoded as UTF-8 and comes out as mojibake. -->
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
