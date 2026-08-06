@@ -76,3 +76,31 @@ css21/replaced-block-size.html | css21/replaced-block-size-ref.html
 css21/fixed-position-paint.html | css21/fixed-position-paint-ref.html
 
 # ---- Phase 3 additions (full anonymous-box splitting, z-index:auto subtlety...) ----
+
+# ---- §5.12.1: ::first-letter is a real inline box, so its font metrics and 'line-height' size
+#      the line box it sits on. Styling it at paint time (re-drawing the first characters larger)
+#      left the line box sized for the parent's font. Upstream css/CSS2/selectors 93 -> 495. ----
+css/CSS2/selectors/first-letter-punctuation-001.xht
+css/CSS2/selectors/first-letter-nested-005.xht
+
+# ---- A background must paint whole device pixels, like the replaced content the suite's own
+#      references use in its place. Anti-aliasing a box that lands on a fractional y left a
+#      half-covered fringe row, which alone blew the pixel budget in ~370 normal-flow tests. ----
+css/CSS2/normal-flow/width-050.xht
+
+# ---- §15.7: 'font-size' computes to a length and descendants inherit THAT. Re-resolving the
+#      inherited specified value ("2em") at every level doubled the size again each time — the
+#      Gecko-imported anonymous-table tests reached 1024px and painted glyphs across the page. ----
+css/CSS2/tables/table-anonymous-objects-015.xht
+
+# ---- A negative 'border-width' is invalid, so the side falls back to the initial 'medium'
+#      wherever it still has a visible style. ----
+css/CSS2/borders/border-top-width-001.xht
+
+# ---- §9.5 rule 7: a line box too narrow for its content shifts down past the float instead of
+#      overflowing it, and lines below the float get the full width back. ----
+css/CSS2/floats/floats-wrap-bfc-with-margin-001.html
+
+# ---- §10.3.7 / §10.6.4: with left/top auto an absolutely positioned box takes its static
+#      position — where it would have been in normal flow — not its containing block's origin. ----
+css/CSS2/abspos/hypothetical-box-dynamic.html
