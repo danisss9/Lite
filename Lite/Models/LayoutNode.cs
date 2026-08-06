@@ -233,6 +233,14 @@ public class LayoutNode
     ];
 
     /// <summary>
+    /// The line-box fragments this inline node was broken into, when it produced more than one:
+    /// each carries the rect it occupies and the slice of text drawn there. An inline box that
+    /// spans several lines has one box per line, so its background and borders paint on each —
+    /// with a single Box only the last fragment was painted.
+    /// </summary>
+    public List<(SKRect Rect, string Text)>? InlineFragments { get; set; }
+
+    /// <summary>
     /// Per-line-box band for this text node when floats make the available width vary down the
     /// paragraph (CSS 2.1 §9.5): the absolute left edge and width of each successive line. Layout
     /// wraps against these, and the painter draws each line at its own X, so both agree. Null when
