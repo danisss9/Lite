@@ -966,4 +966,82 @@ public static class LayoutTests
         True(px.Green > 120 && px.Red < 120,
             $"a position:fixed box must paint (expected green at 20,20), got {px}");
     }
+
+    [Test]
+    public static void FirstLetter_BecomesARealInlineBoxThatSizesTheLine()
+    {
+        // CSS 2.1 §5.12.1 + §10.8: ::first-letter is a real inline box, so its font and
+        // 'line-height' size the line box it sits on. Styling it only at paint time (re-drawing
+        // the first characters larger) left the line box sized for the parent's font, so the
+        // block was too short and the letter overlapped whatever was above it.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "div:first-letter { color: green; font-size: 36px; line-height: 2; }" +
+            "</style></head><body><div id='d'>)T)est</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var d = FindNode(page.Root, n => n.Id == "d");
+        var letter = FindNode(page.Root, n => n.TagName == "#pseudo-first-letter");
+        True(letter != null, "::first-letter must generate an inline box");
+        // Leading AND trailing punctuation belong to the first letter (Ps/Pe/Pi/Pf/Po).
+        Equal(")T)", letter!.DisplayText);
+        True(Math.Abs(letter.GetFontSize() - 36f) < 0.5f,
+            $"the first-letter box must take the pseudo-element font-size, got {letter.GetFontSize()}");
+        // line-height:2 on a 36px box makes the line box 72px tall.
+        True(d!.Box.ContentBox.Height > 60f,
+            $"the first-letter box must size the line box, got {d.Box.ContentBox.Height}");
+    }
+
+    [Test]
+    public static void FirstLetter_PunctuationOnlyTextGetsNoBox()
+    {
+        // No letter to style: the run is punctuation all the way down, so no box is generated
+        // and the text is left exactly as authored.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>div:first-letter { color: green; }" +
+            "</style></head><body><div id='d'>...</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        True(FindNode(page.Root, n => n.TagName == "#pseudo-first-letter") is null,
+            "punctuation-only text must not produce a ::first-letter box");
+    }
+
+    [Test]
+    public static void AbsPos_AutoOffsetsUseTheStaticPosition()
+    {
+        // CSS 2.1 §10.3.7 / §10.6.4: with left/top auto the box goes where it WOULD have been in
+        // normal flow, not at the containing block's origin. The abs-pos box here follows a 50px
+        // block inside an unpositioned wrapper, so it belongs at y=50 — the old code pinned it to
+        // the containing block (the relative outer div) at y=0.
+        var spacer = Block(new() { ["height"] = "50px" });
+        var abs = Block(new() { ["position"] = "absolute", ["width"] = "20px", ["height"] = "20px" });
+        var wrapper = Block(new() { ["margin-left"] = "30px" }, spacer, abs);
+        var outer = Block(new() { ["position"] = "relative", ["width"] = "200px" }, wrapper);
+        LayoutTree(outer);
+
+        True(Math.Abs(abs.Box.ContentBox.Top - 50f) < 0.5f,
+            $"static position should put the box below the 50px block, got {abs.Box.ContentBox.Top}");
+        True(Math.Abs(abs.Box.ContentBox.Left - 30f) < 0.5f,
+            $"static position should follow the wrapper's left edge (30), got {abs.Box.ContentBox.Left}");
+    }
+
+    [Test]
+    public static void LineBoxes_WidenBelowAFloatTheyAreNoLongerBesideIt()
+    {
+        // CSS 2.1 §9.5: each line box gets its own band. A float 20px tall narrows only the lines
+        // beside it; the lines below start back at the container's left edge. The engine used to
+        // compute one band for the whole run, so every line stayed indented.
+        var flt = Block(new() { ["float"] = "left", ["width"] = "60px", ["height"] = "20px" });
+        var one = Block(new() { ["display"] = "inline-block", ["width"] = "100px", ["height"] = "30px" });
+        var two = Block(new() { ["display"] = "inline-block", ["width"] = "100px", ["height"] = "30px" });
+        var container = Block(new() { ["width"] = "150px" }, flt, one, two);
+        LayoutTree(container);
+
+        True(Math.Abs(one.Box.ContentBox.Left - 60f) < 0.5f,
+            $"the first line sits beside the float (x=60), got {one.Box.ContentBox.Left}");
+        True(Math.Abs(two.Box.ContentBox.Left - 0f) < 0.5f,
+            $"the second line clears the 20px float and starts at x=0, got {two.Box.ContentBox.Left}");
+    }
 }

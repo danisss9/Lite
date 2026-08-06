@@ -48,8 +48,8 @@ internal static class FlexEngine
             if (pos == PositionType.Absolute || pos == PositionType.Fixed)
             {
                 // Static position = flex-start of main axis, cross-start
-                c.FlexStaticX = isRow ? (isReverse ? contentX + contentW : contentX) : contentX;
-                c.FlexStaticY = isRow ? contentY : (isReverse ? contentY + mainSize : contentY);
+                c.StaticX = isRow ? (isReverse ? contentX + contentW : contentX) : contentX;
+                c.StaticY = isRow ? contentY : (isReverse ? contentY + mainSize : contentY);
             }
         }
 

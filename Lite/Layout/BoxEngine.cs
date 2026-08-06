@@ -562,8 +562,10 @@ internal static class BoxEngine
         var bottom = node.GetOffsetBottom(cbRect.Height, fontSize);
         var left = node.GetOffsetLeft(cbRect.Width, fontSize);
 
-        // Resolve width
-        var explicitW = node.GetWidth(cbRect.Width);
+        // Resolve width. An absolutely positioned replaced box takes its size from the image
+        // (§10.3.7's shrink-to-fit and the children-derived height below never see it).
+        var replaced = TryResolveReplacedSize(node, cbRect.Width, cbRect.Height, viewportHeight);
+        var explicitW = replaced?.Width ?? node.GetWidth(cbRect.Width);
         float contentW;
         if (explicitW > 0)
             contentW = explicitW;
@@ -578,6 +580,9 @@ internal static class BoxEngine
                        - border.Left - border.Right - padding.Left - padding.Right;
             if (!float.IsNaN(left)) availW -= left;
             else if (!float.IsNaN(right)) availW -= right;
+            // Both offsets auto: the box starts at its static position, so only what is left of
+            // the containing block from there is available to it (§10.3.7 rule 3).
+            else if (node.StaticX is { } sx) availW -= Math.Max(0f, sx - cbRect.Left);
             contentW = IntrinsicSizer.ShrinkToFit(node, Math.Max(0f, availW), viewportHeight);
         }
 
@@ -586,14 +591,14 @@ internal static class BoxEngine
         contentW = Math.Min(contentW, node.GetMaxWidth(cbRect.Width, fontSize));
         contentW = Math.Max(contentW, node.GetMinWidth(cbRect.Width, fontSize));
 
-        // Resolve X — §4.1: use FlexStaticX as static position when left/right are both auto
+        // Resolve X — §4.1: use StaticX as static position when left/right are both auto
         float contentX;
         if (!float.IsNaN(left))
             contentX = cbRect.Left + left + margin.Left + border.Left + padding.Left;
         else if (!float.IsNaN(right))
             contentX = cbRect.Right - right - margin.Right - border.Right - padding.Right - contentW;
-        else if (node.FlexStaticX.HasValue)
-            contentX = node.FlexStaticX.Value + margin.Left + border.Left + padding.Left;
+        else if (node.StaticX.HasValue)
+            contentX = node.StaticX.Value + margin.Left + border.Left + padding.Left;
         else
             contentX = cbRect.Left + margin.Left + border.Left + padding.Left;
 
@@ -638,20 +643,21 @@ internal static class BoxEngine
         }
         else if (autoHeight && !float.IsNaN(top) && !float.IsNaN(bottom))
             contentH = Math.Max(0, cbRect.Height - top - bottom - margin.Top - margin.Bottom - border.Top - border.Bottom - padding.Top - padding.Bottom);
+        if (replaced.HasValue) contentH = replaced.Value.Height;
 
         // Clamp to min/max-height (§10.7) — min wins over max (Acid2's scalp: min-height:1em
         // overrides max-height:2mm).
         contentH = Math.Min(contentH, node.GetMaxHeight(cbRect.Height, fontSize));
         contentH = Math.Max(contentH, node.GetMinHeight(cbRect.Height, fontSize));
 
-        // Resolve Y — §4.1: use FlexStaticY as static position when top/bottom are both auto
+        // Resolve Y — §4.1: use StaticY as static position when top/bottom are both auto
         float contentY;
         if (!float.IsNaN(top))
             contentY = cbRect.Top + top + margin.Top + border.Top + padding.Top;
         else if (!float.IsNaN(bottom))
             contentY = cbRect.Bottom - bottom - margin.Bottom - border.Bottom - padding.Bottom - contentH;
-        else if (node.FlexStaticY.HasValue)
-            contentY = node.FlexStaticY.Value + margin.Top + border.Top + padding.Top;
+        else if (node.StaticY.HasValue)
+            contentY = node.StaticY.Value + margin.Top + border.Top + padding.Top;
         else
             contentY = cbRect.Top + margin.Top + border.Top + padding.Top;
 
@@ -699,16 +705,20 @@ internal static class BoxEngine
 
         // Explicit width or fill available (pass size=0 so unset width returns 0, not fontSize)
         var explicitW = node.GetWidth(availableWidth);
-        var boxWidth = explicitW > 0 ? explicitW : availableWidth - margin.Left - margin.Right;
+        // A block-level replaced box is sized from the image (§10.3.4 defers to §10.3.2's rules),
+        // so its used width behaves like an explicit one for centering and box-sizing purposes.
+        var replaced = TryResolveReplacedSize(node, availableWidth, parentContentHeight, viewportHeight);
+        var usedW = replaced?.Width ?? explicitW;
+        var boxWidth = usedW > 0 ? usedW : availableWidth - margin.Left - margin.Right;
 
-        // margin: auto centering — when explicit width is set and one or both horizontal margins are auto
-        if (explicitW > 0)
+        // margin: auto centering — when the used width is known and one or both horizontal margins are auto
+        if (usedW > 0)
         {
             var leftAuto = node.IsAutoMarginLeft();
             var rightAuto = node.IsAutoMarginRight();
             if (leftAuto || rightAuto)
             {
-                var remaining = availableWidth - explicitW - border.Left - border.Right - padding.Left - padding.Right;
+                var remaining = availableWidth - usedW - border.Left - border.Right - padding.Left - padding.Right;
                 if (leftAuto && rightAuto) { margin.Left = margin.Right = MathF.Max(0, remaining / 2f); }
                 else if (leftAuto) { margin.Left = MathF.Max(0, remaining); }
                 else { margin.Right = MathF.Max(0, remaining); }
@@ -719,8 +729,8 @@ internal static class BoxEngine
         // padding/border are added outside it. Only border-box (and the auto/fill case) subtracts
         // padding+border from the box width. (Height already honors this below.)
         var isBorderBoxW = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
-        var contentW = (explicitW > 0 && !isBorderBoxW)
-            ? Math.Max(0f, explicitW)
+        var contentW = (usedW > 0 && !isBorderBoxW)
+            ? Math.Max(0f, usedW)
             : Math.Max(0f, boxWidth - border.Left - border.Right - padding.Left - padding.Right);
         var contentX = x + margin.Left + border.Left + padding.Left;
         var contentY = y + margin.Top + border.Top + padding.Top;
@@ -812,6 +822,10 @@ internal static class BoxEngine
             node.ScrollState = null;
         }
 
+        // A replaced box's height is the image's (or the ratio-derived) one — it has no in-flow
+        // content to measure, so the child/text-derived height above does not apply to it.
+        if (replaced.HasValue) contentH = replaced.Value.Height;
+
         // CSS 2.1 §10.7: clamp the resolved height to min-height/max-height. Percentages resolve
         // against the containing block height; when that is auto (parentContentHeight == 0) an
         // unresolvable percentage max-height computes to 'none' and min-height to 0.
@@ -851,6 +865,35 @@ internal static class BoxEngine
     /// Vertical margins between adjacent block children are collapsed (CSS 2.1 §8.3.1).
     /// Returns total content height consumed.
     /// </summary>
+    /// <summary>
+    /// CSS 2.1 §10.3.2 / §10.6.2 — the used content size of a REPLACED box (an <c>&lt;img&gt;</c>,
+    /// or an <c>&lt;object&gt;</c> that decoded an image). An 'auto' dimension takes the intrinsic
+    /// one, and when only one of width/height is specified the other is derived from the intrinsic
+    /// ratio. Returns null for a non-replaced box, whose size comes from its content instead.
+    /// <para>Only the inline path used to consult the intrinsic size, so a replaced box that was
+    /// block-level, floated or absolutely positioned filled its container horizontally (or
+    /// shrink-to-fit) and collapsed to zero height — it has no children to measure. §9.7 makes a
+    /// floated or absolutely positioned image block-level, so all three paths need this.</para>
+    /// </summary>
+    internal static (float Width, float Height)? TryResolveReplacedSize(
+        LayoutNode node, float cbWidth, float cbHeight, float viewportHeight)
+    {
+        if (node.TagName != "IMG" && !(node.TagName == "OBJECT" && node.Image != null)) return null;
+
+        // The width/height content attributes are captured as the intrinsic size (Parser), so this
+        // covers both a real bitmap and an attribute-declared size; CSS width/height still wins.
+        float iw = node.IntrinsicWidth > 0 ? node.IntrinsicWidth : node.Image?.Width ?? 0f;
+        float ih = node.IntrinsicHeight > 0 ? node.IntrinsicHeight : node.Image?.Height ?? 0f;
+
+        var specW = node.GetWidth(cbWidth);
+        var specH = node.IsAutoHeight() ? 0f : node.GetHeight(cbHeight, 0, viewportHeight);
+
+        if (specW > 0 && specH > 0) return (specW, specH);
+        if (specW > 0) return (specW, iw > 0 && ih > 0 ? specW * ih / iw : ih);
+        if (specH > 0) return (iw > 0 && ih > 0 ? specH * iw / ih : iw, specH);
+        return (iw, ih);
+    }
+
     /// <summary>Exposed for FlexEngine to lay out flex item children.</summary>
     internal static float LayoutChildrenPublic(
         List<LayoutNode> children,
@@ -1001,11 +1044,14 @@ internal static class BoxEngine
     /// <summary>
     /// Lays out a single floated child (shrink-to-fit width) and returns the ActiveFloat descriptor.
     /// </summary>
+    /// <param name="openLineY">Top of the line box the float would join (NaN when none is open),
+    /// with <paramref name="openLineUsedW"/> the width its content already occupies.</param>
     private static ActiveFloat LayoutFloat(
         LayoutNode child, FloatType side,
         List<ActiveFloat> floats,
         float contentX, float cursorY, float contentW,
-        float viewportWidth, float viewportHeight, float parentContentHeight)
+        float viewportWidth, float viewportHeight, float parentContentHeight,
+        float openLineY = float.NaN, float openLineUsedW = 0f)
     {
         var fontSize = child.GetFontSize();
         var margin = child.GetMargin(contentW, viewportHeight, fontSize);
@@ -1014,6 +1060,10 @@ internal static class BoxEngine
 
         // Shrink-to-fit: use explicit width or half container as heuristic
         var explicitW = child.GetWidth(contentW);
+        // A floated replaced box (§9.7 makes it block-level) is sized from the image, not
+        // shrink-to-fit over children it does not have.
+        var replaced = TryResolveReplacedSize(child, contentW, parentContentHeight, viewportHeight);
+        if (replaced.HasValue) explicitW = replaced.Value.Width;
         var maxAvail = contentW - margin.Left - margin.Right - border.Left - border.Right - padding.Left - padding.Right;
         float childContentW;
         if (explicitW > 0)
@@ -1034,6 +1084,16 @@ internal static class BoxEngine
 
         // Find placement Y — must not overlap existing floats on the same side
         var placeY = cursorY;
+
+        // CSS 2.1 §9.5.1 (rules 5-6): the top of a float is aligned with the top of the CURRENT
+        // line box — a float written after inline content sits beside that content, and only drops
+        // below the line when it no longer fits there (rule 7). Without this, `text <img
+        // style="float:right">` pushed the image onto its own line under the text.
+        if (!float.IsNaN(openLineY) && openLineY < placeY)
+        {
+            var (lbx, lbw) = AvailableBand(floats, openLineY, 1, contentX, contentW);
+            if (outerW <= lbw - openLineUsedW + 0.5f) placeY = openLineY;
+        }
         // Determine X based on side, respecting existing floats
         float placeContentX;
         // Try to place; if it doesn't fit, slide down
@@ -1088,6 +1148,7 @@ internal static class BoxEngine
             childContentH = isBorderBox
                 ? Math.Max(0, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
                 : explicitH;
+        if (replaced.HasValue) childContentH = replaced.Value.Height;
 
         child.Box = new BoxDimensions
         {
@@ -1154,6 +1215,10 @@ internal static class BoxEngine
         var pendingMargin = 0f;
         var firstBlockSeen = false;
         var lastPlacedWasBlock = false;
+        // The line box a following float may join (§9.5.1): NaN once a block-level box has been
+        // placed, since there is then no open line.
+        var openLineY = float.NaN;
+        var openLineUsedW = 0f;
         var i = 0;
 
         while (i < children.Count)
@@ -1168,10 +1233,18 @@ internal static class BoxEngine
                 continue;
             }
 
-            // Absolute/fixed elements are removed from normal flow
+            // Absolute/fixed elements are removed from normal flow, but the flow position they
+            // WOULD have taken is their static position (§10.3.7 / §10.6.4) — the used value of
+            // an 'auto' left/top. It is the current flow point: after the preceding in-flow
+            // content (including the margin still collapsing below it), at the left edge of the
+            // band left free by any floats there.
             var pos = child.GetPosition();
             if (pos == PositionType.Absolute || pos == PositionType.Fixed)
             {
+                var staticY = runY + pendingMargin;
+                var (staticBandX, _) = AvailableBand(floats, staticY, 1, contentX, contentW);
+                child.StaticX = staticBandX;
+                child.StaticY = staticY;
                 i++;
                 continue;
             }
@@ -1200,7 +1273,8 @@ internal static class BoxEngine
             if (floatSide != FloatType.None)
             {
                 var af = LayoutFloat(child, floatSide, floats, contentX, runY + pendingMargin, contentW,
-                                     viewportWidth, viewportHeight, parentContentHeight);
+                                     viewportWidth, viewportHeight, parentContentHeight,
+                                     openLineY, openLineUsedW);
                 floats.Add(af);
                 i++;
                 continue;
@@ -1251,6 +1325,7 @@ internal static class BoxEngine
                     pendingMargin = childBottomMargin;
                 }
                 lastPlacedWasBlock = true;
+                openLineY = float.NaN; // a block-level box closes any open line box
                 i++;
             }
             else
@@ -1264,8 +1339,17 @@ internal static class BoxEngine
                 while (i < children.Count)
                 {
                     var d = children[i].GetDisplay();
-                    if (d == DisplayType.Block || d == DisplayType.ListItem || d == DisplayType.Flex || d == DisplayType.Table) break;
-                    if (children[i].TagName != "#text" && children[i].GetFloat() != FloatType.None) break;
+                    // An out-of-flow box mid-run neither ends the line nor takes part in it: it
+                    // stays in the run so the line it sits on is its static position, and so the
+                    // inline content around it is not split onto two lines. (§9.7 blockifies it,
+                    // so this test must precede the block-level one.)
+                    var childPos = children[i].GetPosition();
+                    var outOfFlow = childPos == PositionType.Absolute || childPos == PositionType.Fixed;
+                    if (!outOfFlow)
+                    {
+                        if (d == DisplayType.Block || d == DisplayType.ListItem || d == DisplayType.Flex || d == DisplayType.Table) break;
+                        if (children[i].TagName != "#text" && children[i].GetFloat() != FloatType.None) break;
+                    }
                     run.Add(children[i]);
                     i++;
                 }
@@ -1278,8 +1362,12 @@ internal static class BoxEngine
                 // line box) and lays out at the committed position.
                 runY += pendingMargin;
                 pendingMargin = 0f;
-                var (effX, effW) = AvailableBand(floats, runY, 1, contentX, contentW);
-                var runH = LayoutInlineRun(run, effX, runY, effW, viewportWidth, viewportHeight);
+                var runH = LayoutInlineRun(run, contentX, runY, contentW, viewportWidth, viewportHeight,
+                                           floats, out var lastLineTop, out var lastLineWidth);
+                // Remember where the run's last line box sits: a float that comes right after it
+                // belongs ON that line, not below it (§9.5.1).
+                openLineY = runY + lastLineTop;
+                openLineUsedW = lastLineWidth;
                 runY += runH;
                 lastPlacedWasBlock = false;
             }
@@ -1305,19 +1393,47 @@ internal static class BoxEngine
     /// <summary>
     /// Lays out a run of inline/inline-block nodes within a line box.
     /// Returns total height consumed by all line boxes.
+    /// <para>CSS 2.1 §9.5: floats shorten the line boxes they are beside, and each line box gets
+    /// its own band — a float that ends partway down the run stops narrowing the lines below it,
+    /// which is how text flows around a float. <paramref name="floats"/> is the block formatting
+    /// context's active-float list and <paramref name="originX"/>/<paramref name="maxWidth"/>
+    /// the containing block's full content band; the band actually available is recomputed for
+    /// every line.</para>
     /// </summary>
+    /// <param name="lastLineTop">Offset from <paramref name="originY"/> to the top of the LAST line
+    /// box this run produced, and <paramref name="lastLineWidth"/> the width its content used.
+    /// A float that follows this run belongs on that line if it still fits (CSS 2.1 §9.5.1).</param>
     private static float LayoutInlineRun(
         List<LayoutNode> nodes,
         float originX, float originY,
         float maxWidth,
-        float viewportWidth, float viewportHeight)
+        float viewportWidth, float viewportHeight,
+        List<ActiveFloat> floats,
+        out float lastLineTop, out float lastLineWidth)
     {
+        lastLineTop = 0f;
+        lastLineWidth = 0f;
         var items = new List<InlineItem>();
-        CollectInlineItems(nodes, items, maxWidth, viewportWidth, viewportHeight);
+        // Items are measured against the first line's band; a line that turns out wider re-measures
+        // its text below.
+        var (firstX, firstW) = AvailableBand(floats, originY, 1, originX, maxWidth);
+        CollectInlineItems(nodes, items, firstW, viewportWidth, viewportHeight);
 
         if (items.Count == 0) return 0f;
 
-        var lineX = 0f;
+        // CSS 2.1 §16.2: 'text-align' aligns the inline-level content of each LINE BOX, not just
+        // text — an image, inline-block or inline-table on the line moves with it. It applies to
+        // block containers and is inherited, so the value that governs this run is the containing
+        // block's (an inline child may declare its own, which has no effect on the line box).
+        // 'justify' is handled at paint time by Drawer.DrawWrappedText and left alone here.
+        var container = nodes.Count > 0 ? nodes[0].Parent : null;
+        var lineAlign = (container ?? nodes[0]).GetTextAlign();
+
+        // The band available to the line under construction, as offsets from originX. Recomputed
+        // for every line: a float only shortens the lines it is actually beside (§9.5).
+        var bandLeft = firstX - originX;
+        var bandRight = bandLeft + firstW;
+        var lineX = bandLeft;
         var lineY = 0f;
 
         // Running CSS 2.1 §10.8.1 baseline-alignment accumulators for the line under construction:
@@ -1332,6 +1448,11 @@ internal static class BoxEngine
         var placed = new List<(InlineItem item, float relX, float relY)>();
         var lineStart = 0;
 
+        // Locals rather than the out parameters directly: C# forbids touching an 'out' parameter
+        // from inside a local function.
+        var committedLineTop = 0f;
+        var committedLineWidth = 0f;
+
         void CommitLine()
         {
             // Resolve the final line-box height: start from the baseline-aligned items' reach,
@@ -1342,21 +1463,52 @@ internal static class BoxEngine
             if (maxBottomH > above + below) above = maxBottomH - below;
             var thisLineHeight = above + below > 0f ? above + below : Math.Max(maxTopH, maxBottomH);
 
+            // The line's used width, ignoring trailing collapsible whitespace — it is removed at
+            // the end of a line (§16.6.1), so counting it would land a right-aligned line a space
+            // short and would overstate how much room a following float needs.
+            var lineRight = 0f;
+            for (var k = placed.Count - 1; k >= lineStart; k--)
+            {
+                var (it, rx, _) = placed[k];
+                if (it.Kind == InlineItemKind.OutOfFlow) continue;
+                if (it.Kind is InlineItemKind.Text or InlineItemKind.LineBreak &&
+                    string.IsNullOrWhiteSpace(it.Text)) continue;
+                lineRight = rx + it.Width;
+                break;
+            }
+            committedLineTop = lineY;
+            // Reported to the caller as the width used WITHIN the line's band, so it can decide
+            // whether a following float still fits on that line.
+            committedLineWidth = Math.Max(0f, lineRight - bandLeft);
+
+            // §16.2 horizontal alignment: shift the whole line by the space left unused in ITS
+            // band (which floats may have narrowed), not in the containing block.
+            var dx = 0f;
+            if (lineAlign is TextAlign.Center or TextAlign.Right)
+            {
+                var slack = bandRight - lineRight;
+                if (slack > 0f) dx = lineAlign == TextAlign.Center ? slack / 2f : slack;
+            }
+
             for (var k = lineStart; k < placed.Count; k++)
             {
                 var (it, rx, _) = placed[k];
                 var vAlign = it.Node.GetVerticalAlign();
-                float yOffset = vAlign switch
+                float yOffset = it.Kind == InlineItemKind.OutOfFlow ? 0f : vAlign switch
                 {
                     VerticalAlignType.Top or VerticalAlignType.TextTop => 0f,
                     VerticalAlignType.Bottom or VerticalAlignType.TextBottom => thisLineHeight - it.Height,
                     _ => above - AboveBaselineComponent(it, vAlign),
                 };
-                placed[k] = (it, rx, lineY + yOffset);
+                placed[k] = (it, rx + dx, lineY + yOffset);
             }
             lineY += thisLineHeight;
             maxAbove = maxBelow = maxTopH = maxBottomH = 0f;
-            lineX = 0f;
+            // The next line sits lower, so it may clear a float the previous line was beside.
+            var (nx, nw) = AvailableBand(floats, originY + lineY, 1, originX, maxWidth);
+            bandLeft = nx - originX;
+            bandRight = bandLeft + nw;
+            lineX = bandLeft;
             lineStart = placed.Count;
         }
 
@@ -1374,11 +1526,19 @@ internal static class BoxEngine
                 continue;
             }
 
-            if (lineX > 0 && lineX + item.Width > maxWidth)
+            // An out-of-flow marker takes no space and must not contribute to the line's height
+            // or its used width: it only records where the line had got to.
+            if (item.Kind == InlineItemKind.OutOfFlow)
+            {
+                placed.Add((item, lineX, lineY));
+                continue;
+            }
+
+            if (lineX > bandLeft && lineX + item.Width > bandRight)
                 CommitLine();
 
             // Skip whitespace-only text at the start of a line
-            if (lineX == 0 && item.Kind == InlineItemKind.Text &&
+            if (lineX <= bandLeft && item.Kind == InlineItemKind.Text &&
                 item.Text != null && item.Text.Trim().Length == 0)
                 continue;
 
@@ -1386,7 +1546,7 @@ internal static class BoxEngine
             var effectiveItem = item;
             if (item.Kind == InlineItemKind.Text && item.Text != null)
             {
-                var availW = maxWidth - lineX;
+                var availW = bandRight - lineX;
                 if (availW > 0 && item.Width > availW)
                 {
                     using var font = TextMeasure.CreateFont(item.Node);
@@ -1423,6 +1583,8 @@ internal static class BoxEngine
             ApplyInlineItem(item, originX + relX, originY + relY, viewportWidth, viewportHeight);
         }
 
+        lastLineTop = committedLineTop;
+        lastLineWidth = committedLineWidth;
         return lineY;
     }
 
@@ -1459,9 +1621,16 @@ internal static class BoxEngine
             var display = node.GetDisplay();
             if (display == DisplayType.None) continue;
 
-            // Absolute/fixed are out of flow — skip in inline runs
+            // Absolute/fixed are out of flow: they add nothing to the line, but a zero-sized
+            // marker rides along so the line box position they would have occupied is recorded
+            // as their static position (§10.3.7 / §10.6.4).
             var nodePos = node.GetPosition();
-            if (nodePos == PositionType.Absolute || nodePos == PositionType.Fixed) continue;
+            if (nodePos == PositionType.Absolute || nodePos == PositionType.Fixed)
+            {
+                items.Add(new InlineItem(InlineItemKind.OutOfFlow, node, null, 0, 0,
+                           default, default, default, 0, 0, 0));
+                continue;
+            }
 
             // <br> → forced line break item
             if (node.TagName == "BR")
@@ -1730,6 +1899,13 @@ internal static class BoxEngine
                     FlexEngine.LayoutFlex(node, contentX, contentY, item.ContentW, item.ContentH, 0, 0);
                     break;
                 }
+            case InlineItemKind.OutOfFlow:
+                {
+                    // Records only — the box itself is laid out later by the positioned pass.
+                    node.StaticX = absX;
+                    node.StaticY = absY;
+                    break;
+                }
             case InlineItemKind.Image:
             case InlineItemKind.Text:
             case InlineItemKind.LineBreak:
@@ -1747,7 +1923,10 @@ internal static class BoxEngine
     // Inline item model
     // -------------------------------------------------------------------------
 
-    private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, InlineTable, LineBreak }
+    /// <summary><see cref="OutOfFlow"/> is a zero-sized marker for an absolutely positioned box
+    /// met inside an inline run: it occupies no space on the line but rides along with it, so the
+    /// line position it lands on is the box's static position (§10.3.7 / §10.6.4).</summary>
+    private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, InlineTable, LineBreak, OutOfFlow }
 
     /// <summary><see cref="Ascent"/> is the distance from this item's own top (margin edge) down
     /// to the baseline it should align on (CSS 2.1 §10.8). Text uses the font's half-leading

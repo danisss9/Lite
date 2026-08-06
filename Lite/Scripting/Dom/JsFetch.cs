@@ -85,11 +85,6 @@ internal static class JsFetch
         return new FetchResult { ok = true, status = 200, statusText = "OK", body = text };
     }
 
-    private static string ResolveUrl(string src, string? baseUrl)
-    {
-        if (Uri.TryCreate(src, UriKind.Absolute, out _)) return src;
-        if (baseUrl is not null && Uri.TryCreate(new Uri(baseUrl), src, out var resolved))
-            return resolved.ToString();
-        return src;
-    }
+    private static string ResolveUrl(string src, string? baseUrl) =>
+        Lite.Network.UrlUtils.Resolve(src, baseUrl) ?? src;
 }
