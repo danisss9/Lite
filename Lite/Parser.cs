@@ -635,11 +635,16 @@ internal static class Parser
             node.Alt = element.GetAttribute("alt") ?? string.Empty;
             if (src != null) node.Attributes["src"] = src;   // source of truth for .src / .currentSrc
 
-            if (int.TryParse(element.GetAttribute("width"), out var w)) node.IntrinsicWidth = w;
-            if (int.TryParse(element.GetAttribute("height"), out var h)) node.IntrinsicHeight = h;
-
             if (!string.IsNullOrEmpty(src))
                 node.Image = ResourceLoader.FetchImage(src, _baseUrl);
+
+            // HTML presentational hints: width/height are lengths in px, or (HTML 4) percentages.
+            // They are CSS declarations, not the image's intrinsic size — mixing the two derived
+            // the "missing" dimension from the attribute of one axis and the bitmap of the other
+            // (width="100%" height="50" on a 1x1 image gave a height of 39200). The intrinsic size
+            // is the bitmap's; the attributes only stand in for it when there is no bitmap.
+            ApplyDimensionAttribute(element, node, "width", "width");
+            ApplyDimensionAttribute(element, node, "height", "height");
         }
 
         // <object>: a replaced element that renders its `data` resource, falling back to its
@@ -1197,6 +1202,40 @@ internal static class Parser
     }
 
     private static bool _codePagesRegistered;
+
+    /// <summary>
+    /// Maps an HTML <c>width</c>/<c>height</c> content attribute onto the node: a plain number is
+    /// the replaced element's intrinsic size in px, a percentage is a CSS length that resolves
+    /// against the containing block. Presentational hints lose to any author declaration, so they
+    /// are only applied where the element does not already carry one.
+    /// </summary>
+    private static void ApplyDimensionAttribute(IElement element, LayoutNode node, string attribute, string property)
+    {
+        var raw = element.GetAttribute(attribute)?.Trim();
+        if (string.IsNullOrEmpty(raw)) return;
+
+        if (raw.EndsWith("%", StringComparison.Ordinal) &&
+            float.TryParse(raw[..^1], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var pct))
+        {
+            var declared = element.ComputeCurrentStyle().GetPropertyValueSafe(property)?.Trim();
+            if (string.IsNullOrEmpty(declared) || declared == "auto")
+                node.StyleOverrides[property] = $"{pct.ToString(System.Globalization.CultureInfo.InvariantCulture)}%";
+            return;
+        }
+        if (int.TryParse(raw, out var px))
+        {
+            var declared = element.ComputeCurrentStyle().GetPropertyValueSafe(property)?.Trim();
+            if (string.IsNullOrEmpty(declared) || declared == "auto")
+                node.StyleOverrides[property] = $"{px}px";
+            // With no bitmap to measure, the attribute is all the intrinsic size there is.
+            if (node.Image is null)
+            {
+                if (property == "width") node.IntrinsicWidth = px;
+                else node.IntrinsicHeight = px;
+            }
+        }
+    }
 
     /// <summary>The initial font size — the value the root element inherits.</summary>
     internal const float DefaultFontSizePx = 16f;
