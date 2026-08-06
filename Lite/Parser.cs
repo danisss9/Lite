@@ -796,10 +796,14 @@ internal static class Parser
         if (element.ClassName != null)
             node.Attributes["class"] = element.ClassName;
 
-        // Capture data-* attributes for attribute selectors and getAttribute
+        // Capture every authored attribute, so attribute selectors, getAttribute and attr() in
+        // 'content' all see what the markup actually declared — only data-* and a per-tag
+        // whitelist used to survive, which left e.g. `td:before { content: attr(abbr) }` empty.
+        // Values the tag-specific blocks above normalised (an <input>'s value, a resolved src)
+        // are already in place and keep priority.
         foreach (var attr in element.Attributes)
         {
-            if (attr.Name.StartsWith("data-"))
+            if (!node.Attributes.ContainsKey(attr.Name))
                 node.Attributes[attr.Name] = attr.Value;
         }
 
@@ -1420,9 +1424,11 @@ internal static class Parser
         // Check if this is a simple single-token value
         if (!value.Contains("counter(") && !value.Contains("counters(") && !value.Contains("attr("))
         {
-            // Simple single value
-            if ((value.StartsWith('"') && value.EndsWith('"')) ||
-                (value.StartsWith('\'') && value.EndsWith('\'')))
+            // Simple single value. The length check matters: a lone quote character both starts
+            // and ends with a quote, and stripping one off each end of it asks for a -1 slice.
+            if (value.Length >= 2 &&
+                ((value.StartsWith('"') && value.EndsWith('"')) ||
+                 (value.StartsWith('\'') && value.EndsWith('\''))))
             {
                 var inner = value[1..^1];
                 return DecodeCssEscapes(inner);
