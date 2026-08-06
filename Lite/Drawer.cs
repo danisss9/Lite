@@ -707,10 +707,7 @@ internal static class Drawer
         if (bgColor != SKColors.Transparent)
         {
             var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
-            // A square background is snapped to whole device pixels (no anti-aliasing), which is
-            // what a browser does and what replaced content already does here. Anti-aliasing a
-            // box that lands on a fractional y left a half-covered fringe row, so a background
-            // and an image of the same size in the same place did not paint the same pixels.
+            // Square backgrounds paint unantialiased — see PaintBlockDecorations.
             using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
             if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
             else canvas.DrawRect(box.PaddingBox, bgPaint);
@@ -1404,10 +1401,7 @@ internal static class Drawer
         if (bgColor != SKColors.Transparent)
         {
             var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
-            // A square background is snapped to whole device pixels (no anti-aliasing), which is
-            // what a browser does and what replaced content already does here. Anti-aliasing a
-            // box that lands on a fractional y left a half-covered fringe row, so a background
-            // and an image of the same size in the same place did not paint the same pixels.
+            // Square backgrounds paint unantialiased — see PaintBlockDecorations.
             using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
             if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
             else canvas.DrawRect(box.PaddingBox, bgPaint);

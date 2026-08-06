@@ -2,7 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.13] - 2026-08-05 (current)
+## [0.0.14] - 2026-08-06 (current)
+
+CSS 2.1 conformance pass: **+1000 upstream reftests**. The WPT `css/CSS2` suite goes from
+**2554/6266 (40.8%)** to **3554/6266 (56.7%)**, with no directory regressing. The largest
+movers are `selectors` 93 → 495, `normal-flow` 183 → 369, `margin-padding-clear` 388 → 527,
+`positioning` 203 → 282 and `borders` 296 → 358.
+
+### Added
+
+- **`::first-letter` as a real inline box (§5.12.1)** — the pseudo-element is generated during parsing instead of being re-drawn at paint time, so it contributes its font metrics, `line-height` and width to the line box and paints every property (background, border, margins, …) through the ordinary inline path. The old paint-time version supported only `color` / `font-size` / `font-weight` and never affected layout. Upstream `css/CSS2/selectors`: 93/545 → 495/545 (`Parser`, `Drawer`)
+- **Static position for out-of-flow boxes (§10.3.7 / §10.6.4)** — with `left` / `top` auto, an absolutely positioned box is placed where it would have been in normal flow: the flow pass records the position each out-of-flow child passes over, and one inside an inline run rides along on the line as a zero-sized marker (so it also no longer splits that line in two). Previously such a box was pinned to its containing block's origin (`BoxEngine`, `LayoutNode`)
+- **Text flows around floats line by line (§9.5)** — each line box gets the band the floats leave at its own vertical position, wrapping is measured per line, and the bands are recorded on the text node so painting breaks the lines exactly where layout did. Rule 7 is implemented too: a line too narrow for its first word or atomic box shifts down past the float instead of overflowing (`BoxEngine`, `TextMeasure`, `Drawer`)
+- **Conformance guards** — the curated CSS 2.1 reftest gate grows from 22 to 29 entries, promoting upstream tests for each fix below (`css21-manifest`)
+
+### Fixed
+
+- **`font-size` compounding (§15.7)** — `font-size` computes to a length and descendants inherit *that*; the engine re-resolved the inherited specified value (`2em`) at every level, doubling the size again each time. A four-deep subtree under one such rule reached 512px. Each element's own cascaded declaration (inline style, then author/UA rules by `!important`, specificity and source order, including the `font` shorthand) is now resolved once against the parent's computed size (`Parser`, `DrawCommandExtensions`, `LayoutNode`)
+- **Pixel snapping for square backgrounds and borders** — a box landing on a fractional coordinate painted a half-covered anti-aliased fringe row, while replaced content in the same place paints whole pixels. Square fills now snap like a browser; rounded corners keep anti-aliasing (`Drawer`)
+- **Explicit zero sizes** — `width: 0` / `height: 0` were read as "no size specified" (layout tested `GetWidth() > 0`), so a zero-width box filled its container and a zero-height box grew to its content (`BoxEngine`, `DrawCommandExtensions`)
+- **Invalid negative lengths** — a negative `width`, `height`, `min-`/`max-` pair or `border-width` is invalid, so the declaration is dropped and the property keeps its initial value; `border-top-width: -1px` beside a visible `border-top-style` now paints the initial `medium` (`DrawCommandExtensions`)
+- **Root-relative URL resolution** — `Uri.TryCreate(…, UriKind.Absolute)` accepts `/fonts/ahem.css` as an implicit `file:` URI on Unix, so every root-relative stylesheet, image and form action was handed to the HTTP client unresolved. All resolution goes through a shared `UrlUtils` that treats only a real scheme as absolute (`UrlUtils` and all callers)
+- **CDATA-wrapped inline scripts** — XHTML wraps inline scripts in `<![CDATA[ … ]]>`; those characters are not JavaScript, so the script failed to parse on its first token and nothing it defined existed (`Parser`)
+- **Restored §9.7 / §10.3.2 / §9.5.1 layout work** that had been reverted while its unit tests stayed in the tree: float and abs-pos blockification, replaced-box intrinsic sizing, `position: fixed` painting, inline-block background/border painting, and a float joining the current line box
+
+## [0.0.13] - 2026-08-05
 
 ### Added
 
