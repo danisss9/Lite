@@ -1034,8 +1034,8 @@ public static class LayoutTests
         // beside it; the lines below start back at the container's left edge. The engine used to
         // compute one band for the whole run, so every line stayed indented.
         var flt = Block(new() { ["float"] = "left", ["width"] = "60px", ["height"] = "20px" });
-        var one = Block(new() { ["display"] = "inline-block", ["width"] = "100px", ["height"] = "30px" });
-        var two = Block(new() { ["display"] = "inline-block", ["width"] = "100px", ["height"] = "30px" });
+        var one = Block(new() { ["display"] = "inline-block", ["width"] = "60px", ["height"] = "30px" });
+        var two = Block(new() { ["display"] = "inline-block", ["width"] = "60px", ["height"] = "30px" });
         var container = Block(new() { ["width"] = "150px" }, flt, one, two);
         LayoutTree(container);
 
@@ -1129,5 +1129,22 @@ public static class LayoutTests
             $"an invalid negative width falls back to auto (fills the block), got {w.Box.ContentBox.Width}");
         True(Math.Abs(b.Box.Border.Top - 3f) < 0.5f,
             $"an invalid negative border-width falls back to medium (3px), got {b.Box.Border.Top}");
+    }
+
+    [Test]
+    public static void LineTooNarrowForItsContent_ShiftsBelowTheFloat()
+    {
+        // CSS 2.1 §9.5 rule 7: "if a shortened line box is too small to contain any content, it
+        // is shifted downward until either it fits or there are no more floats present". The
+        // engine used to leave the content overflowing the narrow band beside the float.
+        var flt = Block(new() { ["float"] = "left", ["width"] = "60px", ["height"] = "40px" });
+        var wide = Block(new() { ["display"] = "inline-block", ["width"] = "90px", ["height"] = "20px" });
+        var container = Block(new() { ["width"] = "100px" }, flt, wide);
+        LayoutTree(container);
+
+        True(Math.Abs(wide.Box.ContentBox.Left) < 0.5f,
+            $"the shifted line starts at the container's left edge, got {wide.Box.ContentBox.Left}");
+        True(wide.Box.ContentBox.Top >= 40f - 0.5f,
+            $"and below the 40px float, got {wide.Box.ContentBox.Top}");
     }
 }

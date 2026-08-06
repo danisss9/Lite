@@ -2107,6 +2107,11 @@ internal static class Drawer
         canvas.DrawRect(outlineRect, paint);
     }
 
+    /// <summary>The width of line <paramref name="index"/>'s float band, or <paramref name="fallback"/>
+    /// when the run has none.</summary>
+    private static float LineBandWidth(List<(float X, float Width)>? bands, int index, float fallback)
+        => bands is { Count: > 0 } ? bands[Math.Min(index, bands.Count - 1)].Width : fallback;
+
     private static void DrawWrappedText(SKCanvas canvas, LayoutNode node, string text,
                                         float x, float y, float maxWidth,
                                         SKFont font, SKPaint paint)
@@ -2126,7 +2131,12 @@ internal static class Drawer
         // Apply text-transform
         text = StyleExtensions.ApplyTextTransform(text, textTransform);
 
-        var lines = TextMeasure.WrapText(text, maxWidth, font, whiteSpace, node.GetLineHeight(node.GetFontSize()));
+        // Layout may have wrapped this text against a per-line band (text beside a float, CSS 2.1
+        // §9.5). Painting has to use exactly the same bands or the lines break in different places
+        // than they were measured.
+        var bands = node.LineBands;
+        var lines = TextMeasure.WrapText(text, maxWidth, font, whiteSpace, node.GetLineHeight(node.GetFontSize()),
+                                          bands?.Select(b => b.Width).ToList());
 
         // text-overflow: ellipsis — when overflow is clipped and only one line, truncate with "…"
         // Check node itself OR its parent block (text-overflow is non-inherited; inline children
@@ -2159,26 +2169,34 @@ internal static class Drawer
             // the available width (CSS 2.1 §16.2). Last lines and single-word lines stay unmodified.
             var lineWordSpacing = wordSpacing;
             var justified = false;
-            if (textAlign == TextAlign.Justify && lineIndex != lastLineIndex && lineWidth < maxWidth)
+            if (textAlign == TextAlign.Justify && lineIndex != lastLineIndex && lineWidth < LineBandWidth(bands, lineIndex, maxWidth))
             {
                 var gaps = line.Text.Count(c => c == ' ');
                 if (gaps > 0)
                 {
-                    lineWordSpacing = wordSpacing + (maxWidth - lineWidth) / gaps;
+                    lineWordSpacing = wordSpacing + (LineBandWidth(bands, lineIndex, maxWidth) - lineWidth) / gaps;
                     justified = true;
                 }
             }
 
-            // Compute x offset for text-align
+            // Compute x offset for text-align, within this line's own band when floats gave it one.
+            var lineX0 = x;
+            var lineMaxW = maxWidth;
+            if (bands is { Count: > 0 })
+            {
+                var band = bands[Math.Min(lineIndex, bands.Count - 1)];
+                lineX0 = band.X;
+                lineMaxW = band.Width;
+            }
             var drawX = textAlign switch
             {
-                TextAlign.Center => x + (maxWidth - lineWidth) / 2f,
-                TextAlign.Right => x + maxWidth - lineWidth,
-                _ => x,
+                TextAlign.Center => lineX0 + (lineMaxW - lineWidth) / 2f,
+                TextAlign.Right => lineX0 + lineMaxW - lineWidth,
+                _ => lineX0,
             };
 
             // A justified line visually spans the full width (used for underline/strike extents).
-            var drawnWidth = justified ? maxWidth : lineWidth;
+            var drawnWidth = justified ? LineBandWidth(bands, lineIndex, maxWidth) : lineWidth;
 
             // Apply text-indent on first line
             if (isFirstLine && textIndent != 0f)

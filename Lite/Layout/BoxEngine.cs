@@ -1040,6 +1040,70 @@ internal static class BoxEngine
         return (left, Math.Max(0, right - left));
     }
 
+    /// <summary>The nearest float bottom strictly below <paramref name="y"/>, or null when no
+    /// float reaches past it — i.e. the next Y at which the available band can only get wider.</summary>
+    private static float? NextFloatBottom(List<ActiveFloat> floats, float y)
+    {
+        float? best = null;
+        foreach (var f in floats)
+            if (f.Bottom > y + 0.5f && (best is null || f.Bottom < best))
+                best = f.Bottom;
+        return best;
+    }
+
+    /// <summary>Width of the narrowest thing that must fit on the first line before it may be
+    /// shortened any further: the first atomic inline box, or the first word of the first text
+    /// item. Whitespace-only items are skipped — they are dropped at the start of a line.</summary>
+    private static float FirstUnbreakableWidth(List<InlineItem> items)
+    {
+        foreach (var item in items)
+        {
+            switch (item.Kind)
+            {
+                case InlineItemKind.OutOfFlow or InlineItemKind.LineBreak:
+                    continue;
+                case InlineItemKind.Text when item.Text is { } t:
+                    var trimmed = t.TrimStart();
+                    if (trimmed.Length == 0) continue;
+                    if (item.Node.GetWhiteSpace() is WhiteSpace.NoWrap or WhiteSpace.Pre) return item.Width;
+                    var end = trimmed.IndexOf(' ');
+                    var word = end < 0 ? trimmed : trimmed[..end];
+                    using (var font = TextMeasure.CreateFont(item.Node))
+                        return font.MeasureText(word);
+                default:
+                    return item.Width;
+            }
+        }
+        return 0f;
+    }
+
+    /// <summary>
+    /// The band (absolute left edge and width) of each successive line box of a wrapped text run
+    /// starting at <paramref name="startY"/>, ending once no float reaches any lower — from there
+    /// on every line has the containing block's full width, which the last entry carries.
+    /// Returns null when no float shortens any of them.
+    /// </summary>
+    private static List<(float X, float Width)>? LineBandsFor(
+        List<ActiveFloat> floats, float startX, float startY, float lineHeight,
+        float contentX, float contentW, float firstLineWidth)
+    {
+        if (floats.Count == 0 || lineHeight <= 0f) return null;
+        var lowest = floats.Max(f => f.Bottom);
+        if (lowest <= startY + 0.5f) return null;
+
+        var bands = new List<(float X, float Width)> { (startX, firstLineWidth) };
+        var y = startY + lineHeight;
+        // Bounded by the lowest float, so this cannot run away on a tall block.
+        while (y < lowest && bands.Count < 512)
+        {
+            var (bx, bw) = AvailableBand(floats, y, lineHeight, contentX, contentW);
+            bands.Add((bx, bw));
+            y += lineHeight;
+        }
+        bands.Add((contentX, contentW));   // below every float: the full band
+        return bands;
+    }
+
     /// <summary>Remove floats whose bottom edge is at or above <paramref name="y"/>.</summary>
     private static void RetireFloats(List<ActiveFloat> floats, float y)
     {
@@ -1436,10 +1500,23 @@ internal static class BoxEngine
 
         // The band available to the line under construction, as offsets from originX. Recomputed
         // for every line: a float only shortens the lines it is actually beside (§9.5).
+        var lineY = 0f;
+
+        // §9.5 rule 7: "if a shortened line box is too small to contain any content, it is shifted
+        // downward until either it fits or there are no more floats present". Without this an
+        // unbreakable word simply overflowed the narrow band beside the float.
+        var firstContentW = FirstUnbreakableWidth(items);
+        while (firstContentW > firstW + 0.5f)
+        {
+            var drop = NextFloatBottom(floats, originY + lineY);
+            if (drop is not { } nextY) break;
+            lineY = nextY - originY;
+            (firstX, firstW) = AvailableBand(floats, originY + lineY, 1, originX, maxWidth);
+        }
+
         var bandLeft = firstX - originX;
         var bandRight = bandLeft + firstW;
         var lineX = bandLeft;
-        var lineY = 0f;
 
         // Running CSS 2.1 §10.8.1 baseline-alignment accumulators for the line under construction:
         // maxAbove/maxBelow track the tallest reach above/below the shared baseline among items
@@ -1557,10 +1634,19 @@ internal static class BoxEngine
                     using var font = TextMeasure.CreateFont(item.Node);
                     var ws = item.Node.GetWhiteSpace();
                     var lh = item.Node.GetLineHeight(item.Node.GetFontSize());
-                    var wrapLines = TextMeasure.WrapText(item.Text, Math.Max(availW, 1f), font, ws, lh);
+                    // The paragraph wraps line by line against the band each line actually has:
+                    // beside a float the first lines are narrow and the ones below it are not.
+                    var bands = LineBandsFor(floats, originX + lineX, originY + lineY, lh,
+                                             originX, maxWidth, availW);
+                    var wrapLines = TextMeasure.WrapText(item.Text, Math.Max(availW, 1f), font, ws, lh,
+                                                         bands?.Select(b => b.Width).ToList());
                     var wrappedH = wrapLines.Sum(l => l.Height);
-                    effectiveItem = item with { Width = availW, Height = wrappedH, ContentW = availW, ContentH = wrappedH };
+                    var usedW = wrapLines.Count > 0 ? wrapLines.Max(l => l.Width) : availW;
+                    item.Node.LineBands = bands;
+                    effectiveItem = item with { Width = Math.Max(availW, usedW), Height = wrappedH,
+                                                ContentW = availW, ContentH = wrappedH };
                 }
+                else item.Node.LineBands = null;
             }
 
             var va = effectiveItem.Node.GetVerticalAlign();
