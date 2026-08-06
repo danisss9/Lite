@@ -1267,4 +1267,44 @@ public static class LayoutTests
         True(z.Box.ContentBox.Height < 1f,
             $"line-height:0 collapses every line box, expected height 0, got {z.Box.ContentBox.Height}");
     }
+
+    [Test]
+    public static void LetterSpacing_WidensTheBoxLayoutReservesForText()
+    {
+        // 'letter-spacing' widens the text the painter draws, so it has to widen the box layout
+        // reserves for it too — measuring without it put every following inline box in the wrong
+        // place. The span here is 3 characters, so it gains 2 gaps of 10px.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>#a { letter-spacing: 10px } " +
+            "span { font-size: 16px }</style></head>" +
+            "<body><div><span id='a'>abc</span><span id='b'>x</span></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var a = FindNode(page.Root, n => n.Id == "a")!;
+        var b = FindNode(page.Root, n => n.Id == "b")!;
+        True(a.Box.ContentBox.Width > 20f + 20f,
+            $"three letters plus two 10px gaps, got {a.Box.ContentBox.Width}");
+        True(b.Box.ContentBox.Left >= a.Box.ContentBox.Right - 0.5f,
+            $"the next inline box starts after the spaced text, got {b.Box.ContentBox.Left} vs {a.Box.ContentBox.Right}");
+    }
+
+    [Test]
+    public static void InlinePreformattedText_BreaksAtItsNewlines()
+    {
+        // §16.6: under 'white-space: pre' a newline is a forced break. An inline run measured the
+        // whole string as one unbroken item, so a preformatted <span> holding two lines drew them
+        // on top of each other.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>#p { white-space: pre }</style></head>" +
+            "<body><div id='d'><span id='p'>XX\nXX</span></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var d = FindNode(page.Root, n => n.Id == "d")!;
+        var p = FindNode(page.Root, n => n.Id == "p")!;
+        True(d.Box.ContentBox.Height > p.Box.ContentBox.Height * 1.5f,
+            $"the preformatted newline makes two line boxes, got block height {d.Box.ContentBox.Height} " +
+            $"for a line of {p.Box.ContentBox.Height}");
+    }
 }

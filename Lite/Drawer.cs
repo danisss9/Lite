@@ -2297,18 +2297,8 @@ internal static class Drawer
         }
     }
 
-    /// <summary>Measures text width including letter-spacing and word-spacing.</summary>
+    /// <summary>Measures text width including letter-spacing and word-spacing. Shared with layout
+    /// (<see cref="TextMeasure.MeasureWithSpacing"/>) so the two agree on how wide the text is.</summary>
     private static float MeasureWithSpacing(string text, SKFont font, float letterSpacing, float wordSpacing)
-    {
-        if (string.IsNullOrEmpty(text)) return 0f;
-        float w = 0f;
-        foreach (var ch in text)
-        {
-            w += font.MeasureText(ch.ToString()) + letterSpacing;
-            if (ch == ' ') w += wordSpacing;
-        }
-        // Remove trailing letter-spacing
-        w -= letterSpacing;
-        return Math.Max(0f, w);
-    }
+        => TextMeasure.MeasureWithSpacing(text, font, letterSpacing, wordSpacing);
 }

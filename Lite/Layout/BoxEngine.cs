@@ -1913,9 +1913,29 @@ internal static class BoxEngine
             {
                 using var font = TextMeasure.CreateFont(node);
                 var lh = node.GetLineHeight(node.GetFontSize());
-                var (w, h, ascent) = TextMeasure.MeasureSingleLine(node.DisplayText, font, lh);
-                items.Add(new InlineItem(InlineItemKind.Text, node, node.DisplayText, w, h,
-                           default, default, default, w, h, ascent));
+                // 'letter-spacing' / 'word-spacing' widen the text the painter draws, so they have
+                // to widen the box layout reserves for it too — measuring without them put every
+                // following inline box in the wrong place.
+                var (ls, wsp) = TextMeasure.SpacingOf(node);
+
+                // §16.6: under pre / pre-wrap / pre-line a newline is a FORCED line break. An
+                // inline run measured the whole string as one unbroken item, so a preformatted
+                // <span> holding two lines drew them on top of each other.
+                var ws = node.GetWhiteSpace();
+                var segments = ws is WhiteSpace.Pre or WhiteSpace.PreWrap or WhiteSpace.PreLine
+                               && node.DisplayText.Contains('\n')
+                    ? node.DisplayText.Split('\n')
+                    : [node.DisplayText];
+
+                for (var si = 0; si < segments.Length; si++)
+                {
+                    if (si > 0)
+                        items.Add(new InlineItem(InlineItemKind.LineBreak, node, null, 0, lh,
+                                   default, default, default, 0, lh, TextMeasure.ComputeAscent(font, lh)));
+                    var (w, h, ascent) = TextMeasure.MeasureSingleLine(segments[si], font, lh, ls, wsp);
+                    items.Add(new InlineItem(InlineItemKind.Text, node, segments[si], w, h,
+                               default, default, default, w, h, ascent));
+                }
             }
             else if (node.Children.Count > 0)
             {
