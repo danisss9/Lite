@@ -1166,4 +1166,59 @@ public static class LayoutTests
         True(Math.Abs(both.Box.ContentBox.Width - 80f) < 0.5f,
             $"min-width wins over max-width, expected 80, got {both.Box.ContentBox.Width}");
     }
+
+    [Test]
+    public static void SynthesizedBoxes_DoNotInheritTheParentsPositionOrFloat()
+    {
+        // An anonymous table box borrows its originating element's style object, so a parent's
+        // NON-inherited 'position: absolute' read back as the anonymous box's own and took it out
+        // of its parent's flow — the parent then measured no content and shrank to nothing, and
+        // the cells stacked vertically instead of sitting side by side.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body><div style='position: relative'>" +
+            "<div id='abs' style='position: absolute; top: 0'>" +
+            "<span style='display: table-cell'>ab</span>" +
+            "<span style='display: table-cell'>cd</span>" +
+            "</div></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var abs = FindNode(page.Root, n => n.Id == "abs")!;
+        var table = FindNode(abs, n => n.TagName == "#anon-table");
+        True(table != null, "the bare cells must be wrapped in an anonymous table");
+        True(table!.GetPosition() == PositionType.Static,
+            "an anonymous box must not pick up the parent's position");
+        True(abs.Box.ContentBox.Width > 10f,
+            $"the abs-pos box shrink-wraps to its table, got {abs.Box.ContentBox.Width}");
+        var cells = new List<LayoutNode>();
+        void Collect(LayoutNode n)
+        {
+            if (n.GetDisplay() == DisplayType.TableCell) cells.Add(n);
+            foreach (var c in n.Children) Collect(c);
+        }
+        Collect(abs);
+        True(cells.Count == 2 && Math.Abs(cells[0].Box.ContentBox.Top - cells[1].Box.ContentBox.Top) < 0.5f,
+            "the two cells share a row, so they sit at the same top");
+        True(cells[1].Box.ContentBox.Left > cells[0].Box.ContentBox.Left,
+            "and side by side");
+    }
+
+    [Test]
+    public static void PreFormattedText_KeepsItsLeadingAndTrailingSpaces()
+    {
+        // §16.6.1's "remove spaces at the start and end of a line" only applies where white-space
+        // collapses. Trimming unconditionally made a `white-space: pre` cell holding one space
+        // zero pixels wide.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body>" +
+            "<span id='p' style='display: inline-block; white-space: pre'> </span>" +
+            "</body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var p = FindNode(page.Root, n => n.Id == "p")!;
+        Equal(" ", p.DisplayText);
+        True(p.Box.ContentBox.Width > 1f,
+            $"a preserved space must have width, got {p.Box.ContentBox.Width}");
+    }
 }

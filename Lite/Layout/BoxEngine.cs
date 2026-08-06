@@ -414,6 +414,7 @@ internal static class BoxEngine
         {
             if (run.Count == 0) return;
             var anon = new LayoutNode(null, "#anon-table", "", node.Style);
+            anon.ResetNonInheritedStyles();
             anon.StyleOverrides["display"] = "table";
             foreach (var side in new[] { "top", "right", "bottom", "left" })
             {
@@ -496,6 +497,7 @@ internal static class BoxEngine
         {
             if (run.Count == 0) return;
             var anon = new LayoutNode(null, wrapAsRow ? "#anon-row" : "#anon-cell", "", parent.Style);
+            anon.ResetNonInheritedStyles();
             anon.StyleOverrides["display"] = wrapAsRow ? "table-row" : "table-cell";
             foreach (var side in new[] { "top", "right", "bottom", "left" })
             {

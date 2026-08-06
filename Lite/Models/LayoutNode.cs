@@ -207,6 +207,30 @@ public class LayoutNode
     public string DisplayText => TextOverride ?? Text;
     public List<EventListenerEntry> EventListeners { get; } = [];
     /// <summary>
+    /// Neutralises the NON-INHERITED properties a synthesized box (an anonymous table box, a
+    /// generated-content box, a #text child split off an element) would otherwise pick up from
+    /// the style object it borrows from its originating element. Such a box shares that object,
+    /// so a parent's 'position: absolute' or 'float' would read back as its own and take it out
+    /// of flow — an anonymous table inside an abs-pos box was skipped by its own parent's layout
+    /// for exactly that reason. Inherited properties (colour, font, text-align, …) are left alone:
+    /// a synthesized box is supposed to inherit those.
+    /// </summary>
+    public void ResetNonInheritedStyles()
+    {
+        foreach (var prop in NonInheritedResets)
+            StyleOverrides[prop.Key] = prop.Value;
+    }
+
+    private static readonly (string Key, string Value)[] NonInheritedResets =
+    [
+        ("position", "static"), ("top", "auto"), ("right", "auto"), ("bottom", "auto"), ("left", "auto"),
+        ("float", "none"), ("clear", "none"), ("z-index", "auto"), ("overflow", "visible"),
+        ("width", "auto"), ("height", "auto"),
+        ("min-width", "0"), ("min-height", "0"), ("max-width", "none"), ("max-height", "none"),
+        ("background-color", "transparent"), ("background-image", "none"),
+    ];
+
+    /// <summary>
     /// Per-line-box band for this text node when floats make the available width vary down the
     /// paragraph (CSS 2.1 §9.5): the absolute left edge and width of each successive line. Layout
     /// wraps against these, and the painter draws each line at its own X, so both agree. Null when
