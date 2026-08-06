@@ -4,11 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [0.0.14] - 2026-08-06 (current)
 
-CSS 2.1 conformance pass: **+1258 upstream reftests**. The WPT `css/CSS2` suite goes from
-**2554/6266 (40.8%)** to **3812/6266 (60.8%)**. The largest movers are `selectors` 93 → 495,
+CSS 2.1 conformance pass: **+1260 upstream reftests**. The WPT `css/CSS2` suite goes from
+**2554/6266 (40.8%)** to **3814/6266 (60.9%)**. The largest movers are `selectors` 93 → 495,
 `normal-flow` 183 → 480, `margin-padding-clear` 388 → 528, `positioning` 203 → 299,
 `borders` 296 → 370, `linebox` 82 → 117, `tables` 39 → 72, `backgrounds` 136 → 169,
-`syntax` 180 → 210, `generated-content` 99 → 129 and `floats-clear` 42 → 72. One directory
+`syntax` 180 → 211, `generated-content` 99 → 130 and `floats-clear` 42 → 72. One directory
 regressed: `abspos` 7 → 5, both cases styling the root element itself as a fixed-position
 table.
 
