@@ -1107,4 +1107,27 @@ public static class LayoutTests
         True(Math.Abs(Fs("own") - 64f) < 0.5f, $"a re-declared 2em does scale again, got {Fs("own")}");
         True(Math.Abs(Fs("sh") - 96f) < 0.5f, $"the 'font' shorthand sets the size (1in), got {Fs("sh")}");
     }
+
+    [Test]
+    public static void NegativeLengths_AreInvalidAndFallBackToTheInitialValue()
+    {
+        // CSS 2.1: a negative 'width'/'height'/'border-width' is invalid, so the declaration is
+        // dropped and the property keeps its initial value. AngleSharp hands the negative length
+        // through, which turned `width: -1px` into a zero-width box and dropped a border whose
+        // side still had a visible style.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "#w { width: -1px; height: 20px; }" +
+            "#b { border-top-style: solid; border-top-width: -1px; height: 20px; }" +
+            "</style></head><body><div id='w'></div><div id='b'></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var w = FindNode(page.Root, n => n.Id == "w")!;
+        var b = FindNode(page.Root, n => n.Id == "b")!;
+        True(w.Box.ContentBox.Width > 100f,
+            $"an invalid negative width falls back to auto (fills the block), got {w.Box.ContentBox.Width}");
+        True(Math.Abs(b.Box.Border.Top - 3f) < 0.5f,
+            $"an invalid negative border-width falls back to medium (3px), got {b.Box.Border.Top}");
+    }
 }
