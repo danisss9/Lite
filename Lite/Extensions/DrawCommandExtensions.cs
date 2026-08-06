@@ -1177,6 +1177,17 @@ public static class StyleExtensions
     public static float GetWidth(this LayoutNode node, float total = 0, float size = 0)
         => GetSizeOrDefault(node, PropertyNames.Width, total, size > 0 ? size : node.GetFontSize(), 0f);
 
+    /// <summary>True when width is auto/unset — the companion of <see cref="IsAutoHeight"/>.
+    /// Layout must not use "GetWidth() &gt; 0" to mean "a width was specified": 'width: 0' is a
+    /// perfectly good used width, and treating it as auto made such a box fill its container.</summary>
+    public static bool IsAutoWidth(this LayoutNode node)
+    {
+        if (node.TryResolveStyle(PropertyNames.Width, out var w))
+            return string.IsNullOrEmpty(w) || w.Trim() is "auto";
+        var raw = node.Style.GetProperty(PropertyNames.Width).RawValue;
+        return raw is null or Constant<Length>;
+    }
+
     // Margins
     public static float GetMarginTop(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginTop, total, size);
     public static float GetMarginRight(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginRight, total, size);

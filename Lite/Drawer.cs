@@ -445,8 +445,12 @@ internal static class Drawer
         var bgColor = node.GetBackgroundColor();
         if (bgColor != SKColors.Transparent)
         {
-            using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
             var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+            // A square background is snapped to whole device pixels (no anti-aliasing), which is
+            // what a browser does and what replaced content already does here. Anti-aliasing a
+            // box that lands on a fractional y left a half-covered fringe row, so a background
+            // and an image of the same size in the same place did not paint the same pixels.
+            using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
             if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
             else canvas.DrawRect(box.PaddingBox, bgPaint);
         }
@@ -484,8 +488,8 @@ internal static class Drawer
             var bgColor = node.GetBackgroundColor();
             if (bgColor != SKColors.Transparent)
             {
-                using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
                 var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+                using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
                 if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
                 else canvas.DrawRect(box.PaddingBox, bgPaint);
             }
@@ -702,8 +706,12 @@ internal static class Drawer
         var bgColor = node.GetBackgroundColor();
         if (bgColor != SKColors.Transparent)
         {
-            using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
             var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+            // A square background is snapped to whole device pixels (no anti-aliasing), which is
+            // what a browser does and what replaced content already does here. Anti-aliasing a
+            // box that lands on a fractional y left a half-covered fringe row, so a background
+            // and an image of the same size in the same place did not paint the same pixels.
+            using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
             if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
             else canvas.DrawRect(box.PaddingBox, bgPaint);
         }
@@ -1395,8 +1403,12 @@ internal static class Drawer
         var bgColor = node.GetBackgroundColor();
         if (bgColor != SKColors.Transparent)
         {
-            using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
             var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+            // A square background is snapped to whole device pixels (no anti-aliasing), which is
+            // what a browser does and what replaced content already does here. Anti-aliasing a
+            // box that lands on a fractional y left a half-covered fringe row, so a background
+            // and an image of the same size in the same place did not paint the same pixels.
+            using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
             if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
             else canvas.DrawRect(box.PaddingBox, bgPaint);
         }
@@ -1638,30 +1650,6 @@ internal static class Drawer
                         bw.Left, node.GetBorderLeftColor(), node.GetBorderStyleLeft());
     }
 
-    /// <summary>
-    /// Length of the ::first-letter run per CSS 2.1 §5.12.1: the first letter plus any punctuation
-    /// that <em>precedes or follows</em> it — Unicode classes Ps (open), Pe (close), Pi/Pf (quotes)
-    /// and Po (other). So <c>)T)est</c> has a three-character first letter, not one.
-    /// Returns 0 when the text holds no letter at all, in which case nothing is styled.
-    /// </summary>
-    private static int FirstLetterLength(string text)
-    {
-        static bool IsFirstLetterPunctuation(char c) =>
-            System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) is
-                System.Globalization.UnicodeCategory.OpenPunctuation or
-                System.Globalization.UnicodeCategory.ClosePunctuation or
-                System.Globalization.UnicodeCategory.InitialQuotePunctuation or
-                System.Globalization.UnicodeCategory.FinalQuotePunctuation or
-                System.Globalization.UnicodeCategory.OtherPunctuation;
-
-        var i = 0;
-        while (i < text.Length && IsFirstLetterPunctuation(text[i])) i++;
-        if (i >= text.Length) return 0;   // punctuation only: no first letter to style
-        i++;                              // the letter itself
-        while (i < text.Length && IsFirstLetterPunctuation(text[i])) i++;
-        return i;
-    }
-
     private static void DrawBorderSide(SKCanvas canvas, float x1, float y1, float x2, float y2,
                                         float width, SKColor color, BorderStyle style)
     {
@@ -1733,7 +1721,9 @@ internal static class Drawer
             var rect = Math.Abs(y1 - y2) < 0.01f
                 ? new SKRect(Math.Min(x1, x2), y1 - half, Math.Max(x1, x2), y1 + half)   // horizontal
                 : new SKRect(x1 - half, Math.Min(y1, y2), x1 + half, Math.Max(y1, y2));  // vertical
-            using var fill = new SKPaint { Color = color, IsAntialias = true };
+            // Snapped to whole device pixels like the background fill above, so a border and an
+            // equally-sized background agree pixel for pixel on a fractional boundary.
+            using var fill = new SKPaint { Color = color, IsAntialias = false };
             canvas.DrawRect(rect, fill);
             return;
         }
