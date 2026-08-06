@@ -207,11 +207,14 @@ public class LayoutNode
     public string DisplayText => TextOverride ?? Text;
     public List<EventListenerEntry> EventListeners { get; } = [];
     /// <summary>
-    /// Static position within a flex container, set by FlexEngine for abs-pos children.
-    /// Used by BoxEngine.ResolveAbsoluteBox when top/left are auto.
+    /// CSS 2.1 §10.3.7 / §10.6.4 static position: the left/top MARGIN edge of the hypothetical
+    /// box this element would have generated if its 'position' were 'static', in absolute layout
+    /// coordinates. Recorded by the normal-flow pass (BoxEngine) and by FlexEngine as each
+    /// out-of-flow child is passed over, and used by BoxEngine.ResolveAbsoluteBox when the
+    /// corresponding offsets are 'auto'.
     /// </summary>
-    public float? FlexStaticX { get; set; }
-    public float? FlexStaticY { get; set; }
+    public float? StaticX { get; set; }
+    public float? StaticY { get; set; }
 
     public LayoutNode(string? id, string tagName, string text, ICssStyleDeclaration style, string? href = null)
     {

@@ -114,7 +114,8 @@ internal class JsEngine
     internal string? ResolveAgainstCurrent(string? url)
     {
         if (url is null) return null;
-        if (Uri.TryCreate(url, UriKind.Absolute, out var abs)) return abs.AbsoluteUri;
+        if (Lite.Network.UrlUtils.IsAbsolute(url) && Uri.TryCreate(url, UriKind.Absolute, out var abs))
+            return abs.AbsoluteUri;
         if (Uri.TryCreate(CurrentUrl, UriKind.Absolute, out var baseUri) &&
             Uri.TryCreate(baseUri, url, out var resolved))
             return resolved.AbsoluteUri;

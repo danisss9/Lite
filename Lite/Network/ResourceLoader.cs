@@ -80,11 +80,5 @@ internal static class ResourceLoader
         return SKBitmap.Decode(bytes);
     }
 
-    private static string? ResolveUrl(string src, string? baseUrl)
-    {
-        if (Uri.TryCreate(src, UriKind.Absolute, out _)) return src;
-        if (baseUrl != null && Uri.TryCreate(new Uri(baseUrl), src, out var resolved))
-            return resolved.ToString();
-        return null;
-    }
+    private static string? ResolveUrl(string src, string? baseUrl) => UrlUtils.Resolve(src, baseUrl);
 }

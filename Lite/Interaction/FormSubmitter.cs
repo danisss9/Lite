@@ -175,10 +175,7 @@ internal static class FormSubmitter
     private static string Resolve(string action, string? baseUrl)
     {
         if (string.IsNullOrEmpty(action)) return baseUrl ?? "";
-        if (Uri.TryCreate(action, UriKind.Absolute, out _)) return action;
-        if (baseUrl is not null && Uri.TryCreate(new Uri(baseUrl), action, out var resolved))
-            return resolved.ToString();
-        return action;
+        return Lite.Network.UrlUtils.Resolve(action, baseUrl) ?? action;
     }
 
     private static IEnumerable<LayoutNode> Descendants(LayoutNode root)

@@ -131,7 +131,10 @@ internal static class Drawer
             var node = stack.Pop();
             if (!visited.Add(node)) continue;
             if (node.GetPosition() == PositionType.Fixed)
-                PaintNode(canvas, node, viewportWidth);
+                // PaintNodeInner, not PaintNode: PaintNode skips every fixed box so the normal
+                // tree pass leaves them for this one. Routing back through it made this pass a
+                // no-op, so a position:fixed box was laid out correctly and then never painted.
+                PaintNodeInner(canvas, node, viewportWidth);
             else
                 for (int i = node.Children.Count - 1; i >= 0; i--)
                     stack.Push(node.Children[i]);
@@ -395,8 +398,15 @@ internal static class Drawer
             return;
         }
 
+        // inline-block belongs here with the other atomic inline-level boxes: it is a block
+        // CONTAINER, so it paints a background, borders and a background-image over its padding
+        // box. Leaving it out sent an inline-block with no text straight to the child recursion,
+        // which paints nothing at all — an empty sized inline-block was simply invisible — and
+        // one with text to the generic-inline branch, which fills only the content box and draws
+        // no border. (Form controls never reach here; they are dispatched by tag name above.)
         if (display == DisplayType.Block || display == DisplayType.Flex || display == DisplayType.InlineFlex
             || display == DisplayType.Table || display == DisplayType.InlineTable
+            || display == DisplayType.InlineBlock
             || display == DisplayType.TableRowGroup || display == DisplayType.TableRow || display == DisplayType.TableCell)
         {
             PaintBlock(canvas, node, viewportWidth);
@@ -2120,8 +2130,7 @@ internal static class Drawer
         var wordSpacing = node.GetWordSpacing(font.Size);
         var textIndent = node.GetTextIndent(maxWidth, font.Size);
 
-        // Resolve ::first-letter and ::first-line styles from node or parent
-        var firstLetterStyles = node.FirstLetterStyles ?? node.Parent?.FirstLetterStyles;
+        // ::first-line styles are resolved from the node or its parent block.
         var firstLineStyles = node.FirstLineStyles ?? node.Parent?.FirstLineStyles;
 
         // Apply text-transform
@@ -2145,7 +2154,6 @@ internal static class Drawer
         var lineY = y;
         var textShadow = node.GetTextShadow();
         var isFirstLine = true;
-        var firstLetterDrawn = false;
 
         var lastLineIndex = lines.Count - 1;
         var lineIndex = -1;
@@ -2238,49 +2246,10 @@ internal static class Drawer
                 DrawTextWithSpacing(canvas, line.Text, drawX + ts.OffsetX, baseline + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing);
             }
 
-            // Handle ::first-letter on the first character of the first line
-            if (isFirstLine && !firstLetterDrawn && firstLetterStyles != null && line.Text.Length > 0)
-            {
-                firstLetterDrawn = true;
-                var flLen = FirstLetterLength(line.Text);
-                var firstChar = line.Text[..flLen];
-                var restText = line.Text[flLen..];
-
-                // Create first-letter font/paint
-                using var flPaint = new SKPaint { Color = linePaint.Color, IsAntialias = true };
-                var flFontSize = lineFont.Size;
-                var flTypeface = lineFont.Typeface;
-
-                if (firstLetterStyles.TryGetValue("color", out var flcColor))
-                    flPaint.Color = Rendering.SvgRenderer.ParseColor(flcColor);
-                if (firstLetterStyles.TryGetValue("font-size", out var flcSize))
-                {
-                    if (flcSize.EndsWith("em") && float.TryParse(flcSize[..^2],
-                        System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture, out var em))
-                        flFontSize = lineFont.Size * em;
-                    else if (flcSize.EndsWith("px") && float.TryParse(flcSize[..^2],
-                        System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture, out var px))
-                        flFontSize = px;
-                }
-                if (firstLetterStyles.TryGetValue("font-weight", out var flcWeight) && flcWeight == "bold")
-                {
-                    flTypeface = SKTypeface.FromFamilyName(flTypeface.FamilyName, (int)SKFontStyleWeight.Bold,
-                        (int)flTypeface.FontStyle.Width, flTypeface.FontStyle.Slant) ?? flTypeface;
-                }
-
-                using var flFont = new SKFont(flTypeface, flFontSize);
-                var flWidth = flFont.MeasureText(firstChar, out _);
-
-                DrawTextWithSpacing(canvas, firstChar, drawX, baseline, flFont, flPaint, 0, 0);
-                if (restText.Length > 0)
-                    DrawTextWithSpacing(canvas, restText, drawX + flWidth, baseline, lineFont, linePaint, letterSpacing, lineWordSpacing);
-            }
-            else
-            {
-                DrawTextWithSpacing(canvas, line.Text, drawX, baseline, lineFont, linePaint, letterSpacing, lineWordSpacing);
-            }
+            // ::first-letter is not handled here: the Parser splits it into a real inline box
+            // (#pseudo-first-letter) so it takes part in layout, and it paints as ordinary inline
+            // content through this same routine.
+            DrawTextWithSpacing(canvas, line.Text, drawX, baseline, lineFont, linePaint, letterSpacing, lineWordSpacing);
 
             if (underline)
             {

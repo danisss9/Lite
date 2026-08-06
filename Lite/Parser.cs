@@ -464,14 +464,8 @@ internal static class Parser
         }
     }
 
-    private static string? ResolveUrl(string src)
-    {
-        if (Uri.TryCreate(src, UriKind.Absolute, out _)) return src;
-        var baseUrl = _documentBaseUrl ?? _baseUrl;
-        if (baseUrl != null && Uri.TryCreate(new Uri(baseUrl), src, out var resolved))
-            return resolved.ToString();
-        return null;
-    }
+    private static string? ResolveUrl(string src) =>
+        Lite.Network.UrlUtils.Resolve(src, _documentBaseUrl ?? _baseUrl);
 
     /// <summary>
     /// Recursively inlines <c>@import</c> rules (CSS 2.1 §6.3): fetches each imported sheet
@@ -493,10 +487,8 @@ internal static class Parser
         {
             var importUrl = m.Groups[1].Value.Trim();
             var media = m.Groups[2].Value.Trim();
-            string resolved;
-            if (Uri.TryCreate(importUrl, UriKind.Absolute, out var abs)) resolved = abs.ToString();
-            else if (Uri.TryCreate(new Uri(baseUrl), importUrl, out var rel)) resolved = rel.ToString();
-            else return "";
+            var resolved = Lite.Network.UrlUtils.Resolve(importUrl, baseUrl);
+            if (resolved is null) return "";
             try
             {
                 var imported = _httpClient.GetStringAsync(resolved).Result;
@@ -981,6 +973,9 @@ internal static class Parser
 
         // Create ::before and ::after pseudo-element children (using the snapshot taken above)
         CreatePseudoElementChildren(node, directTextRaw);
+        // ::first-letter runs after them: the spec includes ::before content in the first letter,
+        // and the split needs the final child list.
+        CreateFirstLetterChild(node);
 
         return node;
     }
@@ -1094,6 +1089,88 @@ internal static class Parser
             pseudoNode.Parent = node;
             node.Children.Add(pseudoNode);
         }
+    }
+
+    /// <summary>
+    /// CSS 2.1 §5.12.1: splits off the first letter of a block's first line into a real inline
+    /// box carrying the <c>::first-letter</c> declarations, so it takes part in layout — it
+    /// contributes its own font metrics and 'line-height' to the line box, its width to line
+    /// breaking, and it paints backgrounds, borders and every other property through the ordinary
+    /// inline path. Styling it at paint time instead (re-drawing the first characters in another
+    /// font) left the line box sized for the parent's font, so a larger first letter overlapped
+    /// the line above and the whole block sat at the wrong height.
+    /// <para>The "first letter" is the first letter plus any Ps/Pe/Pi/Pf/Po punctuation that
+    /// precedes or follows it. Text that is only punctuation yields no first-letter box.</para>
+    /// </summary>
+    private static void CreateFirstLetterChild(LayoutNode node)
+    {
+        if (node.FirstLetterStyles is not { Count: > 0 } styles) return;
+        // Only a block container gets a ::first-letter; an inline one inherits its block's.
+        if (node.StyleOverrides.TryGetValue("display", out var d) && d is "none" or "inline") return;
+
+        // The first letter comes from the first in-flow text in the block: the node's own text, or
+        // the first descendant that has some (a leading ::before box, or an inline child).
+        var host = FindFirstTextHost(node);
+        if (host is null) return;
+
+        var text = host.DisplayText;
+        var len = FirstLetterLength(text);
+        if (len <= 0) return;
+
+        var letter = new LayoutNode(null, "#pseudo-first-letter", text[..len], host.Style);
+        letter.StyleOverrides["display"] = "inline";
+        foreach (var (p, v) in styles)
+            if (p != "content" && p != "display") letter.StyleOverrides[p] = v;
+
+        var rest = new LayoutNode(null, "#text", text[len..], host.Style);
+        rest.StyleOverrides["display"] = "inline";
+
+        // The host keeps its box (and its own styles) but hands its text to the two new children,
+        // which flow inside it as ordinary inline content.
+        host.TextOverride = "";
+        letter.Parent = host;
+        rest.Parent = host;
+        host.Children.Insert(0, rest);
+        host.Children.Insert(0, letter);
+    }
+
+    /// <summary>The nearest node in document order whose own text would start
+    /// <paramref name="node"/>'s first line: the node itself, or its first inline descendant with
+    /// text. Stops at anything that is not inline-level — a block child starts its own first line
+    /// and gets its own ::first-letter.</summary>
+    private static LayoutNode? FindFirstTextHost(LayoutNode node)
+    {
+        if (!string.IsNullOrEmpty(node.DisplayText)) return node;
+        foreach (var child in node.Children)
+        {
+            if (child.StyleOverrides.TryGetValue("display", out var cd) && cd is not ("inline" or "inline-block"))
+                return null;
+            if (!string.IsNullOrWhiteSpace(child.DisplayText)) return child;
+            if (child.Children.Count > 0 && FindFirstTextHost(child) is { } inner) return inner;
+        }
+        return null;
+    }
+
+    /// <summary>Length of the ::first-letter run at the start of <paramref name="text"/>: any
+    /// leading Ps/Pe/Pi/Pf/Po punctuation, the letter itself, and any punctuation directly after
+    /// it (CSS 2.1 §5.12.1). Zero when there is no letter at all.</summary>
+    internal static int FirstLetterLength(string text)
+    {
+        static bool IsFirstLetterPunctuation(char c) =>
+            System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) is
+                System.Globalization.UnicodeCategory.OpenPunctuation or
+                System.Globalization.UnicodeCategory.ClosePunctuation or
+                System.Globalization.UnicodeCategory.InitialQuotePunctuation or
+                System.Globalization.UnicodeCategory.FinalQuotePunctuation or
+                System.Globalization.UnicodeCategory.OtherPunctuation;
+
+        var i = 0;
+        while (i < text.Length && char.IsWhiteSpace(text[i])) i++;
+        while (i < text.Length && IsFirstLetterPunctuation(text[i])) i++;
+        if (i >= text.Length) return 0;   // punctuation only: no first letter to style
+        i++;                              // the letter itself
+        while (i < text.Length && IsFirstLetterPunctuation(text[i])) i++;
+        return i;
     }
 
     /// <summary>

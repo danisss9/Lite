@@ -55,11 +55,43 @@ public static class StyleExtensions
         catch { return ""; }
     }
 
+    /// <summary>
+    /// CSS 2.1 §9.7: a floated or absolutely-positioned box is always block-level, so its
+    /// specified 'display' is "blockified" — 'inline-table' becomes 'table', and 'inline',
+    /// 'inline-block', 'table-caption' and every internal table display becomes 'block'.
+    /// Everything else (including 'block', 'table' and 'list-item') is left as specified.
+    /// <para>Only real elements are considered. Synthesized nodes (<c>#text</c>, the anonymous
+    /// table boxes, generated content) share their originating element's
+    /// <see cref="LayoutNode.Style"/> object, so a floated parent's non-inherited 'float' would
+    /// otherwise read back as their own — the same trap that once spawned phantom floats from
+    /// whitespace text nodes.</para>
+    /// </summary>
+    private static string BlockifyForFloatOrPosition(LayoutNode node, string raw)
+    {
+        if (node.TagName.Length > 0 && node.TagName[0] == '#') return raw;
+        if (raw is "none" or "block" or "table" or "list-item" or "flex" or "") return raw;
+
+        var pos = node.GetPosition();
+        if (node.GetFloat() == FloatType.None &&
+            pos != PositionType.Absolute && pos != PositionType.Fixed) return raw;
+
+        return raw switch
+        {
+            "inline-table" => "table",
+            "inline-flex" => "flex",
+            "inline" or "inline-block" or "table-caption" or "table-row-group" or "table-row" or
+            "table-cell" or "table-column" or "table-column-group" or "table-header-group" or
+            "table-footer-group" => "block",
+            _ => raw,
+        };
+    }
+
     public static DisplayType GetDisplay(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.Display, out var ov)
             ? ov
             : node.Style.GetPropertyValueSafe(PropertyNames.Display);
+        raw = BlockifyForFloatOrPosition(node, raw);
         return raw switch
         {
             "block" or "flow-root" => DisplayType.Block,
@@ -444,7 +476,7 @@ public static class StyleExtensions
         var close = raw.IndexOf(')');
         if (!raw.StartsWith("rect", StringComparison.OrdinalIgnoreCase) || open < 0 || close < 0) return null;
 
-        var parts = raw[(open + 1)..close].Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
+        var parts = raw[(open + 1)..close].Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 4) return null;
 
         var box = node.Box.BorderBox;
