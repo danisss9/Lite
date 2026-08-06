@@ -73,4 +73,29 @@ public static class CssWideKeywordTests
         b.StyleOverrides["list-style"] = "square url(\"http://x/dot.gif\") inside";
         Equal("http://x/dot.gif", b.GetListStyleImage());
     }
+
+    [Test]
+    public static void StylesheetEncoding_FollowsBomThenAtCharsetThenHttp()
+    {
+        // CSS 2.1 §4.4. Decoding every sheet as UTF-8 both mangles one in a legacy encoding and
+        // leaves the U+FEFF of a BOM at the front of the text, which breaks its first selector.
+        var utf8 = System.Text.Encoding.UTF8;
+
+        var bom = utf8.GetPreamble().Concat(utf8.GetBytes("#a { color: green }")).ToArray();
+        Equal("#a { color: green }", Parser.DecodeCss(bom, "iso-8859-5", null, null, out var used1));
+        Equal("utf-8", used1);
+
+        // @charset outranks the HTTP header, and a legacy code page decodes correctly.
+        var declared = "@charset \"shift-JIS\";\n.\u5e73\u548c { color: green }";
+        var sjis = System.Text.Encoding.GetEncoding("shift_jis").GetBytes(declared);
+        True(Parser.DecodeCss(sjis, "utf-8", null, null, out _).Contains("\u5e73\u548c"),
+            "an @charset-declared encoding must win over the HTTP charset");
+
+        // With neither, the linking element's charset attribute is consulted before the fallback.
+        var plain = System.Text.Encoding.GetEncoding("shift_jis").GetBytes(".\u5e73\u548c { color: green }");
+        True(Parser.DecodeCss(plain, null, "shift-JIS", null, out _).Contains("\u5e73\u548c"),
+            "the link element's charset attribute must be honoured");
+        True(Parser.DecodeCss(plain, null, null, "shift-JIS", out _).Contains("\u5e73\u548c"),
+            "and the referring document's encoding after it");
+    }
 }

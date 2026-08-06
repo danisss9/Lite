@@ -8,6 +8,7 @@ using Lite.Layout;
 using Lite.Models;
 using Lite.Network;
 using Lite.Scripting;
+using System.Text;
 
 namespace Lite;
 
@@ -167,6 +168,7 @@ internal static class Parser
             {
                 string css;
                 string cssBase;
+                var sheetCharset = document.CharacterSet;
                 if (DataUri.IsDataUri(href))
                 {
                     if (!DataUri.TryDecodeText(href, out css, out _)) continue;
@@ -176,10 +178,13 @@ internal static class Parser
                 {
                     var cssUrl = ResolveUrl(href);
                     if (cssUrl is null) continue;
-                    css = _httpClient.GetStringAsync(cssUrl).Result;
+                    // §4.4 also consults the linking element's charset attribute and, failing
+                    // that, the referring document's own encoding.
+                    css = FetchCssText(cssUrl, link.GetAttribute("charset"), document.CharacterSet,
+                                       out sheetCharset);
                     cssBase = cssUrl;
                 }
-                css = InlineImports(css, cssBase);
+                css = InlineImports(css, cssBase, sheetCharset);
                 var styleEl = document.CreateElement("style");
                 styleEl.TextContent = css;
                 head.AppendChild(styleEl);
@@ -473,7 +478,7 @@ internal static class Parser
     /// (resolved against <paramref name="baseUrl"/>), inlines ITS imports, and substitutes the
     /// text. A media-qualified import (<c>@import url(x) print;</c>) is wrapped in an @media block.
     /// </summary>
-    private static string InlineImports(string css, string baseUrl, int depth = 0)
+    private static string InlineImports(string css, string baseUrl, string? referrerCharset = null, int depth = 0)
     {
         if (depth > 8 || string.IsNullOrEmpty(css) ||
             !css.Contains("@import", StringComparison.OrdinalIgnoreCase))
@@ -492,8 +497,8 @@ internal static class Parser
             if (resolved is null) return "";
             try
             {
-                var imported = _httpClient.GetStringAsync(resolved).Result;
-                imported = InlineImports(imported, resolved, depth + 1);
+                var imported = FetchCssText(resolved, null, referrerCharset, out var importedCharset);
+                imported = InlineImports(imported, resolved, importedCharset, depth + 1);
                 return string.IsNullOrEmpty(media) ? imported : $"@media {media} {{\n{imported}\n}}";
             }
             catch (Exception ex)
@@ -1099,6 +1104,89 @@ internal static class Parser
             node.Children.Add(pseudoNode);
         }
     }
+
+    /// <summary>
+    /// Fetches a stylesheet and decodes its bytes per CSS 2.1 §4.4, in the spec's priority order:
+    /// a byte-order mark, then an <c>@charset</c> rule at the very start of the sheet, then the
+    /// HTTP <c>Content-Type</c> charset, then UTF-8. Decoding everything as UTF-8 (what
+    /// GetStringAsync does without a charset) both mangles a sheet in another encoding and leaves
+    /// a U+FEFF at the front of one that carries a BOM — which silently breaks its first selector.
+    /// </summary>
+    private static string FetchCssText(string url, string? linkCharset, string? referrerCharset,
+        out string usedCharset)
+    {
+        using var response = _httpClient.GetAsync(url).Result;
+        response.EnsureSuccessStatusCode();
+        var bytes = response.Content.ReadAsByteArrayAsync().Result;
+        return DecodeCss(bytes, response.Content.Headers.ContentType?.CharSet,
+                         linkCharset, referrerCharset, out usedCharset);
+    }
+
+    /// <summary>Decodes stylesheet bytes; see <see cref="FetchCssText"/> for the priority order.
+    /// <paramref name="usedCharset"/> receives the encoding actually applied, which becomes the
+    /// referrer charset for any sheet this one imports. Exposed for tests.</summary>
+    internal static string DecodeCss(byte[] bytes, string? httpCharset, string? linkCharset,
+        string? referrerCharset, out string usedCharset)
+    {
+        usedCharset = "utf-8";
+        // 1. BOM — authoritative, and consumed rather than decoded into the text.
+        if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+            return Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
+        if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+        {
+            usedCharset = "utf-16le";
+            return Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
+        }
+        if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+        {
+            usedCharset = "utf-16be";
+            return Encoding.BigEndianUnicode.GetString(bytes, 2, bytes.Length - 2);
+        }
+
+        // 2. @charset at the very start of the sheet. Its own name has to be readable as ASCII,
+        //    which it is in every encoding CSS 2.1 allows here.
+        var probe = Encoding.ASCII.GetString(bytes, 0, Math.Min(bytes.Length, 128));
+        if (probe.StartsWith("@charset \"", StringComparison.Ordinal))
+        {
+            var end = probe.IndexOf("\";", 10, StringComparison.Ordinal);
+            if (end > 10 && TryGetEncoding(probe[10..end]) is { } declared)
+            {
+                usedCharset = declared.WebName;
+                return declared.GetString(bytes);
+            }
+        }
+
+        // 3. HTTP, 4. the linking element's charset attribute, 5. the referring sheet/document's
+        //    encoding, 6. UTF-8.
+        foreach (var candidate in new[] { httpCharset, linkCharset, referrerCharset })
+            if (TryGetEncoding(candidate) is { } enc)
+            {
+                usedCharset = enc.WebName;
+                return enc.GetString(bytes);
+            }
+        return Encoding.UTF8.GetString(bytes);
+    }
+
+    /// <summary>Resolves a charset name to an encoding, or null when it is unknown. The legacy
+    /// code pages (Shift_JIS, windows-125x, koi8-r, iso-8859-x) are not in .NET's shared framework,
+    /// so the CodePages provider is registered once here to make them resolvable.</summary>
+    private static Encoding? TryGetEncoding(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        if (!_codePagesRegistered)
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            _codePagesRegistered = true;
+        }
+        // CSS 2.1 names it "shift-JIS"; the registry knows it as "shift_jis".
+        var cleaned = name.Trim().Trim('"').Replace('-', '_');
+        try { return Encoding.GetEncoding(cleaned); }
+        catch (ArgumentException) { }
+        try { return Encoding.GetEncoding(name.Trim().Trim('"')); }
+        catch (ArgumentException) { return null; }
+    }
+
+    private static bool _codePagesRegistered;
 
     /// <summary>The initial font size — the value the root element inherits.</summary>
     internal const float DefaultFontSizePx = 16f;

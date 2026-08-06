@@ -39,6 +39,32 @@ internal static class ConformanceServer
         contentTypes.Mappings[".xht"] = "text/html";
         contentTypes.Mappings[".xhtml"] = "text/html";
 
+        // WPT convention: a sibling "<file>.headers" supplies the response headers for <file>.
+        // Several CSS 2.1 encoding tests declare the stylesheet's charset only that way, so
+        // without this the engine never sees the header it is being tested on.
+        app.Use(async (ctx, next) =>
+        {
+            var path = ctx.Request.Path.Value ?? "";
+            var file = ResolveFile(path);
+            if (file is not null && File.Exists(file + ".headers"))
+            {
+                foreach (var line in await File.ReadAllLinesAsync(file + ".headers"))
+                {
+                    var colon = line.IndexOf(':');
+                    if (colon <= 0) continue;
+                    var name = line[..colon].Trim();
+                    var value = line[(colon + 1)..].Trim();
+                    if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+                        ctx.Response.ContentType = value;
+                    else
+                        ctx.Response.Headers[name] = value;
+                }
+                await ctx.Response.SendFileAsync(file);
+                return;
+            }
+            await next();
+        });
+
         // WPT .any.js tests are addressed as <name>.any.html — generate the standard wrapper.
         app.Use(async (ctx, next) =>
         {
