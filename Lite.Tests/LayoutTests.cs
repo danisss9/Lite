@@ -1044,4 +1044,43 @@ public static class LayoutTests
         True(Math.Abs(two.Box.ContentBox.Left - 0f) < 0.5f,
             $"the second line clears the 20px float and starts at x=0, got {two.Box.ContentBox.Left}");
     }
+
+    [Test]
+    public static void ExplicitZeroSize_IsNotTreatedAsAuto()
+    {
+        // 'width: 0' / 'height: 0' are used values, not "unspecified". The engine tested for a
+        // specified size with "GetWidth() > 0", so a zero-sized box filled its container's width
+        // and grew to its content's height instead of collapsing.
+        var zero = Block(new() { ["width"] = "0", ["height"] = "0" },
+                         Block(new() { ["height"] = "40px" }));
+        LayoutTree(Block(new() { ["width"] = "200px" }, zero));
+
+        True(Math.Abs(zero.Box.ContentBox.Width) < 0.5f,
+            $"width:0 must stay 0, got {zero.Box.ContentBox.Width}");
+        True(Math.Abs(zero.Box.ContentBox.Height) < 0.5f,
+            $"height:0 must stay 0, got {zero.Box.ContentBox.Height}");
+    }
+
+    [Test]
+    public static void BackgroundOnAFractionalBoundary_PaintsWholePixels()
+    {
+        // A background is snapped to device pixels like replaced content is, so a box whose edges
+        // land on a fraction paints solid rows rather than a half-covered anti-aliased fringe.
+        // Reftests constantly compare a filled box against an image of the same size, and the
+        // fringe alone was enough to blow the pixel budget.
+        var box = Block(new()
+        {
+            ["margin-top"] = "10.4px",
+            ["width"] = "50px",
+            ["height"] = "20px",
+            ["background-color"] = "#000000",
+        });
+        var root = LayoutTree(Block(new() { ["width"] = "200px" }, box));
+
+        using var bmp = Drawer.DrawToBitmap(800, 600, root, new Viewport { ViewportHeight = 600 });
+        var top = (int)MathF.Round(box.Box.PaddingBox.Top);
+        var px = bmp.GetPixel(10, top);
+        True(px.Red == 0 && px.Green == 0 && px.Blue == 0,
+            $"the top row of the background must be solid, got {px}");
+    }
 }

@@ -703,16 +703,20 @@ internal static class BoxEngine
         var padding = node.GetPadding(availableWidth, viewportHeight, fontSize);
         var border = node.GetBorderWidth();
 
-        // Explicit width or fill available (pass size=0 so unset width returns 0, not fontSize)
-        var explicitW = node.GetWidth(availableWidth);
+        // Explicit width or fill available (pass size=0 so unset width returns 0, not fontSize).
+        // "Specified" is IsAutoWidth, not "> 0": 'width: 0' is a used width of zero, and reading it
+        // as auto made a zero-width box fill its container instead.
+        var hasExplicitW = !node.IsAutoWidth();
+        var explicitW = hasExplicitW ? node.GetWidth(availableWidth) : 0f;
         // A block-level replaced box is sized from the image (§10.3.4 defers to §10.3.2's rules),
         // so its used width behaves like an explicit one for centering and box-sizing purposes.
         var replaced = TryResolveReplacedSize(node, availableWidth, parentContentHeight, viewportHeight);
+        var hasUsedW = replaced.HasValue || hasExplicitW;
         var usedW = replaced?.Width ?? explicitW;
-        var boxWidth = usedW > 0 ? usedW : availableWidth - margin.Left - margin.Right;
+        var boxWidth = hasUsedW ? usedW : availableWidth - margin.Left - margin.Right;
 
         // margin: auto centering — when the used width is known and one or both horizontal margins are auto
-        if (usedW > 0)
+        if (hasUsedW)
         {
             var leftAuto = node.IsAutoMarginLeft();
             var rightAuto = node.IsAutoMarginRight();
@@ -729,7 +733,7 @@ internal static class BoxEngine
         // padding/border are added outside it. Only border-box (and the auto/fill case) subtracts
         // padding+border from the box width. (Height already honors this below.)
         var isBorderBoxW = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
-        var contentW = (usedW > 0 && !isBorderBoxW)
+        var contentW = (hasUsedW && !isBorderBoxW)
             ? Math.Max(0f, usedW)
             : Math.Max(0f, boxWidth - border.Left - border.Right - padding.Left - padding.Right);
         var contentX = x + margin.Left + border.Left + padding.Left;
@@ -737,15 +741,16 @@ internal static class BoxEngine
 
         // A block-level table with auto width shrink-wraps to its content (CSS 2.1 §17.5.2), unlike
         // a normal block which fills its container. An explicit width already flowed into contentW.
-        if (explicitW <= 0 && node.GetDisplay() == DisplayType.Table)
+        if (!hasExplicitW && node.GetDisplay() == DisplayType.Table)
             contentW = TableEngine.MeasureTableWidth(node, contentW, viewportWidth, viewportHeight);
 
         // Resolve this node's explicit height using parentContentHeight for % and viewportHeight for vh/vw.
         // height:auto is content-based — GetHeight returns the containing-block height for auto (the
         // width-style "fill" behaviour of GetSize), which must NOT be treated as an explicit height.
         var isBorderBox = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
-        var explicitH = node.IsAutoHeight() ? 0f : node.GetHeight(parentContentHeight, 0, viewportHeight);
-        var knownContentH = explicitH > 0
+        var hasExplicitH = !node.IsAutoHeight();
+        var explicitH = hasExplicitH ? node.GetHeight(parentContentHeight, 0, viewportHeight) : 0f;
+        var knownContentH = hasExplicitH
             ? (isBorderBox ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitH)
             : 0f;
 
@@ -790,7 +795,7 @@ internal static class BoxEngine
             contentH += trailingMargin;
 
         // Explicit height overrides — respect box-sizing: border-box
-        if (explicitH > 0)
+        if (hasExplicitH)
         {
             var clampedH = isBorderBox
                 ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
