@@ -492,4 +492,25 @@ public static class DomTests
         True(Convert.ToInt32(engine.RawEngine.GetValue("__cdata").ToObject()) == 42,
             "a CDATA-wrapped inline script must run");
     }
+
+    [Test]
+    public static void ArbitraryAttributes_AreCapturedForSelectorsAndAttr()
+    {
+        // Only data-* and a per-tag whitelist used to reach the layout node, so an attribute
+        // selector or attr() naming anything else saw nothing at all.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>td:before { content: attr(abbr); }</style></head>" +
+            "<body><table><tr><td id='c' abbr='PASS' axis='x'></td></tr></table></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+
+        var td = FindNodeByTag(page.Root, n => n.Id == "c")!;
+        Equal("PASS", td.Attributes.GetValueOrDefault("abbr"));
+        Equal("x", td.Attributes.GetValueOrDefault("axis"));
+        var before = td.Children.FirstOrDefault(c => c.TagName == "#pseudo-before");
+        True(before != null && before.DisplayText == "PASS",
+            $"content: attr(abbr) should generate \"PASS\", got \"{before?.DisplayText}\"");
+    }
+
+    private static LayoutNode? FindNodeByTag(LayoutNode n, Func<LayoutNode, bool> pred) =>
+        pred(n) ? n : n.Children.Select(c => FindNodeByTag(c, pred)).FirstOrDefault(r => r != null);
 }
