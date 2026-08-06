@@ -1301,10 +1301,13 @@ public static class LayoutTests
             isSrcdoc: true, "http://test/", 800, 600);
         BoxEngine.Layout(page.Root, 800, 600);
 
-        var d = FindNode(page.Root, n => n.Id == "d")!;
         var p = FindNode(page.Root, n => n.Id == "p")!;
-        True(d.Box.ContentBox.Height > p.Box.ContentBox.Height * 1.5f,
-            $"the preformatted newline makes two line boxes, got block height {d.Box.ContentBox.Height} " +
-            $"for a line of {p.Box.ContentBox.Height}");
+        var frags = p.InlineFragments;
+        True(frags is { Count: 2 },
+            $"the preformatted newline makes two line-box fragments, got {frags?.Count ?? 0}");
+        True(frags![1].Rect.Top > frags[0].Rect.Top + 1f,
+            $"the second fragment sits below the first, got {frags[0].Rect.Top} then {frags[1].Rect.Top}");
+        Equal("XX", frags[0].Text);
+        Equal("XX", frags[1].Text);
     }
 }

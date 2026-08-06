@@ -1695,6 +1695,10 @@ internal static class BoxEngine
         }
         if (placed.Count > lineStart) CommitLine();
 
+        // A node can end up with several fragments (a forced break inside it, or a run that wrapped);
+        // start each layout pass from a clean list so a re-layout does not accumulate stale ones.
+        foreach (var (item, _, _) in placed) item.Node.InlineFragments = null;
+
         foreach (var (item, relX, relY) in placed)
         {
             ApplyInlineItem(item, originX + relX, originY + relY, viewportWidth, viewportHeight);
@@ -2054,10 +2058,16 @@ internal static class BoxEngine
             case InlineItemKind.Text:
             case InlineItemKind.LineBreak:
                 {
-                    node.Box = new BoxDimensions
+                    var rect = new SKRect(absX, absY, absX + item.ContentW, absY + item.ContentH);
+                    // Record every fragment, and let Box span them all: an inline box broken over
+                    // two lines has one rect per line, and painting only the last one lost the
+                    // background and borders of every line above it.
+                    if (item.Kind == InlineItemKind.Text)
                     {
-                        ContentBox = new SKRect(absX, absY, absX + item.ContentW, absY + item.ContentH),
-                    };
+                        (node.InlineFragments ??= []).Add((rect, item.Text ?? ""));
+                        if (node.InlineFragments.Count > 1) rect = SKRect.Union(node.Box.ContentBox, rect);
+                    }
+                    node.Box = new BoxDimensions { ContentBox = rect };
                     break;
                 }
         }

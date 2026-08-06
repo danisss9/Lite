@@ -417,13 +417,31 @@ internal static class Drawer
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
             var bgColor = node.GetBackgroundColor();
+            using var font = TextMeasure.CreateFont(node);
+            using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+
+            // An inline box broken over several line boxes has one fragment per line, each with
+            // the slice of text drawn there. Painting node.Box alone covered only the last line,
+            // so a preformatted <span> spanning two lines showed one background, not two.
+            if (node.InlineFragments is { Count: > 1 } fragments)
+            {
+                foreach (var (rect, text) in fragments)
+                {
+                    if (bgColor != SKColors.Transparent)
+                    {
+                        using var fragBg = new SKPaint { Color = bgColor };
+                        canvas.DrawRect(rect, fragBg);
+                    }
+                    DrawWrappedText(canvas, node, text, rect.Left, rect.Top, rect.Width, font, paint);
+                }
+                return;
+            }
+
             if (bgColor != SKColors.Transparent)
             {
                 using var bgPaint = new SKPaint { Color = bgColor };
                 canvas.DrawRect(node.Box.ContentBox, bgPaint);
             }
-            using var font = TextMeasure.CreateFont(node);
-            using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
             DrawWrappedText(canvas, node, node.DisplayText,
                 node.Box.ContentBox.Left, node.Box.ContentBox.Top,
                 node.Box.ContentBox.Width, font, paint);
