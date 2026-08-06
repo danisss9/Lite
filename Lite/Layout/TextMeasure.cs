@@ -86,14 +86,41 @@ internal static class TextMeasure
         => widths is null or { Count: 0 } ? fallback : widths[Math.Min(index, widths.Count - 1)];
 
     /// <summary>
+    /// Measures text with 'letter-spacing' and 'word-spacing' applied — the width the painter
+    /// will actually draw. Spacing goes after each character (and after each space for
+    /// word-spacing); the trailing letter-space is dropped, as it is when painting.
+    /// </summary>
+    public static float MeasureWithSpacing(string text, SKFont font, float letterSpacing, float wordSpacing)
+    {
+        if (string.IsNullOrEmpty(text)) return 0f;
+        if (letterSpacing == 0f && wordSpacing == 0f) return font.MeasureText(text);
+
+        float w = 0f;
+        foreach (var ch in text)
+        {
+            w += font.MeasureText(ch.ToString()) + letterSpacing;
+            if (ch == ' ') w += wordSpacing;
+        }
+        return Math.Max(0f, w - letterSpacing);
+    }
+
+    /// <summary>The spacing a node's text is laid out with, so measurement and painting agree.</summary>
+    public static (float Letter, float Word) SpacingOf(LayoutNode node)
+    {
+        var fs = node.GetFontSize();
+        return (node.GetLetterSpacing(fs), node.GetWordSpacing(fs));
+    }
+
+    /// <summary>
     /// Measures text without wrapping — returns total width and single-line height.
     /// </summary>
-    public static (float Width, float Height, float Ascent) MeasureSingleLine(string text, SKFont font, float lineHeight = -1f)
+    public static (float Width, float Height, float Ascent) MeasureSingleLine(string text, SKFont font, float lineHeight = -1f,
+        float letterSpacing = 0f, float wordSpacing = 0f)
     {
         // Negative means "caller did not say"; a line-height of exactly 0 is a real value
         // ('line-height: 0' collapses the line box) and must not be replaced.
         if (lineHeight < 0f) lineHeight = font.Size * 1.4f;
-        return (font.MeasureText(text), lineHeight, ComputeAscent(font, lineHeight));
+        return (MeasureWithSpacing(text, font, letterSpacing, wordSpacing), lineHeight, ComputeAscent(font, lineHeight));
     }
 
     /// <summary>
