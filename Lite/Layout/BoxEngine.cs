@@ -1895,8 +1895,15 @@ internal static class BoxEngine
             }
             else if (node.TagName == "IMG" || (node.TagName == "OBJECT" && node.Image != null))
             {
-                var w = node.IntrinsicWidth > 0 ? (float)node.IntrinsicWidth : node.Image?.Width ?? 100f;
-                var h = node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight : node.Image?.Height ?? 100f;
+                // §10.3.2 / §10.6.2: a CSS 'width'/'height' on a replaced element overrides its
+                // intrinsic size, and one specified dimension derives the other from the intrinsic
+                // ratio. The inline path used to read the intrinsic size alone, so `width: 100%`
+                // (or the HTML width="100%" hint) left the image at its natural pixel width.
+                var sized = TryResolveReplacedSize(node, maxWidth, viewportHeight, viewportHeight);
+                var w = sized is { Width: > 0 } ? sized.Value.Width
+                        : node.IntrinsicWidth > 0 ? (float)node.IntrinsicWidth : node.Image?.Width ?? 100f;
+                var h = sized is { Height: > 0 } ? sized.Value.Height
+                        : node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight : node.Image?.Height ?? 100f;
                 // Replaced elements have no baseline of their own — CSS 2.1 §10.8's fallback rule
                 // aligns their bottom margin edge with the line's baseline (Ascent = full height).
                 items.Add(new InlineItem(InlineItemKind.Image, node, null, w, h,

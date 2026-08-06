@@ -1221,4 +1221,33 @@ public static class LayoutTests
         True(p.Box.ContentBox.Width > 1f,
             $"a preserved space must have width, got {p.Box.ContentBox.Width}");
     }
+
+    [Test]
+    public static void ReplacedElement_HonoursCssSizeAndPresentationalHints()
+    {
+        // §10.3.2 / §10.6.2: a CSS width/height on a replaced element overrides its intrinsic
+        // size, and HTML's width/height content attributes are presentational hints for those
+        // properties — not the intrinsic size. Reading them as intrinsic derived the missing
+        // dimension from one axis's attribute and the other axis's bitmap: width="100%" with
+        // height="50" on a 1x1 image came out 39200px tall. The inline path ignored CSS size
+        // altogether, so a percentage width left the image at its natural pixel width.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body><div id='cb' style='width: 200px'>" +
+            "<img id='pct' width='50%' height='20' alt='x'/>" +
+            "<img id='px' width='30' height='40' alt='x'/>" +
+            "</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var pct = FindNode(page.Root, n => n.Id == "pct")!;
+        var px = FindNode(page.Root, n => n.Id == "px")!;
+        True(Math.Abs(pct.Box.ContentBox.Width - 100f) < 1f,
+            $"width=\"50%\" of a 200px block is 100, got {pct.Box.ContentBox.Width}");
+        True(Math.Abs(pct.Box.ContentBox.Height - 20f) < 1f,
+            $"height=\"20\" stays 20, got {pct.Box.ContentBox.Height}");
+        True(Math.Abs(px.Box.ContentBox.Width - 30f) < 1f,
+            $"width=\"30\" is 30, got {px.Box.ContentBox.Width}");
+        True(Math.Abs(px.Box.ContentBox.Height - 40f) < 1f,
+            $"height=\"40\" is 40, got {px.Box.ContentBox.Height}");
+    }
 }
