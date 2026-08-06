@@ -1250,4 +1250,21 @@ public static class LayoutTests
         True(Math.Abs(px.Box.ContentBox.Height - 40f) < 1f,
             $"height=\"40\" is 40, got {px.Box.ContentBox.Height}");
     }
+
+    [Test]
+    public static void ZeroLineHeight_CollapsesTheLineBox()
+    {
+        // 'line-height: 0' is a real value — it collapses the line box so the text overflows its
+        // own box. Text measurement used 0 as the sentinel for "the caller did not say", so it
+        // silently substituted the 1.4em default and the block came out several lines tall.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>#z { line-height: 0; font-size: 20px; width: 20px }" +
+            "</style></head><body><div id='z'>X X X</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var z = FindNode(page.Root, n => n.Id == "z")!;
+        True(z.Box.ContentBox.Height < 1f,
+            $"line-height:0 collapses every line box, expected height 0, got {z.Box.ContentBox.Height}");
+    }
 }

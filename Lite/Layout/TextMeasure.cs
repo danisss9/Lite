@@ -62,10 +62,12 @@ internal static class TextMeasure
     /// Wraps text into lines that fit within maxWidth, respecting the node's white-space mode.
     /// Each TextLine carries the text, measured width, line height, and baseline ascent.
     /// </summary>
-    public static List<TextLine> WrapText(string text, float maxWidth, SKFont font, WhiteSpace whiteSpace = WhiteSpace.Normal, float lineHeight = 0f,
+    public static List<TextLine> WrapText(string text, float maxWidth, SKFont font, WhiteSpace whiteSpace = WhiteSpace.Normal, float lineHeight = -1f,
         IReadOnlyList<float>? lineWidths = null)
     {
-        if (lineHeight <= 0f) lineHeight = font.Size * 1.4f;
+        // Negative means "caller did not say"; a line-height of exactly 0 is a real value
+        // ('line-height: 0' collapses the line box) and must not be replaced.
+        if (lineHeight < 0f) lineHeight = font.Size * 1.4f;
         return whiteSpace switch
         {
             WhiteSpace.Pre => SplitPreserved(text, font, wrap: false, lineHeight: lineHeight),
@@ -86,9 +88,11 @@ internal static class TextMeasure
     /// <summary>
     /// Measures text without wrapping — returns total width and single-line height.
     /// </summary>
-    public static (float Width, float Height, float Ascent) MeasureSingleLine(string text, SKFont font, float lineHeight = 0f)
+    public static (float Width, float Height, float Ascent) MeasureSingleLine(string text, SKFont font, float lineHeight = -1f)
     {
-        if (lineHeight <= 0f) lineHeight = font.Size * 1.4f;
+        // Negative means "caller did not say"; a line-height of exactly 0 is a real value
+        // ('line-height: 0' collapses the line box) and must not be replaced.
+        if (lineHeight < 0f) lineHeight = font.Size * 1.4f;
         return (font.MeasureText(text), lineHeight, ComputeAscent(font, lineHeight));
     }
 
@@ -186,10 +190,12 @@ internal static class TextMeasure
     }
 
     /// <summary>Preserve whitespace and newlines; optionally wrap long lines (pre / pre-wrap).</summary>
-    private static List<TextLine> SplitPreserved(string text, SKFont font, bool wrap, float maxWidth = float.MaxValue, float lineHeight = 0f)
+    private static List<TextLine> SplitPreserved(string text, SKFont font, bool wrap, float maxWidth = float.MaxValue, float lineHeight = -1f)
     {
         var lines = new List<TextLine>();
-        if (lineHeight <= 0f) lineHeight = font.Size * 1.4f;
+        // Negative means "caller did not say"; a line-height of exactly 0 is a real value
+        // ('line-height: 0' collapses the line box) and must not be replaced.
+        if (lineHeight < 0f) lineHeight = font.Size * 1.4f;
         var ascent = ComputeAscent(font, lineHeight);
 
         var rawLines = text.Split('\n');
