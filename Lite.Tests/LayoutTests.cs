@@ -1083,4 +1083,28 @@ public static class LayoutTests
         True(px.Red == 0 && px.Green == 0 && px.Blue == 0,
             $"the top row of the background must be solid, got {px}");
     }
+
+    [Test]
+    public static void RelativeFontSize_IsComputedOnceAndInheritedAsALength()
+    {
+        // CSS 2.1 §15.7: 'font-size' computes to a length and descendants inherit THAT. The style
+        // engine handed every descendant the specified value ("2em") and re-resolved it against
+        // the parent's already-scaled size, so one `font-size: 2em` doubled again at every level:
+        // a four-deep subtree reached 512px. Only an element that declares its own font-size may
+        // rescale.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>#big { font-size: 2em } #own { font-size: 2em }" +
+            " #sh { font: 1in monospace }</style></head><body>" +
+            "<div id='big'><div id='mid'><span id='deep'>x</span></div><div id='own'>y</div></div>" +
+            "<div id='sh'>z</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        float Fs(string id) => FindNode(page.Root, n => n.Id == id)!.GetFontSize();
+        True(Math.Abs(Fs("big") - 32f) < 0.5f, $"2em of 16px is 32, got {Fs("big")}");
+        True(Math.Abs(Fs("mid") - 32f) < 0.5f, $"an inherited font-size must not rescale, got {Fs("mid")}");
+        True(Math.Abs(Fs("deep") - 32f) < 0.5f, $"nor two levels down, got {Fs("deep")}");
+        True(Math.Abs(Fs("own") - 64f) < 0.5f, $"a re-declared 2em does scale again, got {Fs("own")}");
+        True(Math.Abs(Fs("sh") - 96f) < 0.5f, $"the 'font' shorthand sets the size (1in), got {Fs("sh")}");
+    }
 }

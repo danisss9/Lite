@@ -232,10 +232,11 @@ internal static class Parser
         // itself. They are re-applied per element inside Traverse.
         NeutralizePseudoElementRules(document);
 
-        var root = Traverse(document.DocumentElement, 0);
-
-        // Collect all CSS rules for dynamic class-based style re-evaluation
+        // Collect all CSS rules for dynamic class-based style re-evaluation — and, before the
+        // traversal, so it can ask which elements declare their own 'font-size'.
         CollectCssRules(document);
+
+        var root = Traverse(document.DocumentElement, 0, DefaultFontSizePx);
 
         // Always create the JS engine so inline onclick/on* handlers work,
         // even when there are no external or inline script blocks.
@@ -566,7 +567,7 @@ internal static class Parser
         return src[start..end].Trim();
     }
 
-    private static LayoutNode Traverse(IElement element, int indent)
+    private static LayoutNode Traverse(IElement element, int indent, float parentFontPx = 16f)
     {
         // Normalize tag name to uppercase — AngleSharp returns lowercase for SVG namespace elements
         var tag = element.TagName.ToUpperInvariant();
@@ -607,6 +608,14 @@ internal static class Parser
 
         var href = tag == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, tag, directText, elementStyle, href);
+
+        // CSS 2.1 §15.7: font-size COMPUTES to a length, and that length is what descendants
+        // inherit. AngleSharp hands every descendant the specified value instead ("2em"), which
+        // layout then re-resolved against the parent's already-scaled size, so a single
+        // `font-size: 2em` doubled again at every level below it. Resolve it once here, against
+        // the parent's computed size, and hand the result down.
+        var fontPx = ResolveOwnFontSize(element, parentFontPx);
+        node.ComputedFontSize = fontPx;
 
         // Extract flex-related CSS properties that AngleSharp doesn't cascade
         ExtractMatchedCssProperties(element, node);
@@ -948,7 +957,7 @@ internal static class Parser
                         continue;
                     }
                     if (SkipTags.Contains(childTag)) { CollectScriptsRecursive(childEl); continue; }
-                    node.AddChild(Traverse(childEl, indent + 1));
+                    node.AddChild(Traverse(childEl, indent + 1, fontPx));
                 }
             }
         }
@@ -959,7 +968,7 @@ internal static class Parser
                 var childTag = child.TagName.ToUpperInvariant();
                 if (childTag == "SCRIPT") { CollectScript(child); continue; }
                 if (SkipTags.Contains(childTag)) { CollectScriptsRecursive(child); continue; }
-                node.AddChild(Traverse(child, indent + 1));
+                node.AddChild(Traverse(child, indent + 1, fontPx));
             }
         }
 
@@ -1089,6 +1098,101 @@ internal static class Parser
             pseudoNode.Parent = node;
             node.Children.Add(pseudoNode);
         }
+    }
+
+    /// <summary>The initial font size — the value the root element inherits.</summary>
+    internal const float DefaultFontSizePx = 16f;
+
+    /// <summary>
+    /// The used font size of <paramref name="element"/> in px: its OWN cascaded 'font-size'
+    /// declaration resolved against <paramref name="parentPx"/>, or the inherited
+    /// <paramref name="parentPx"/> when it declares none. Only a declaration on the element
+    /// itself may re-scale a relative unit — an inherited 'font-size' is already a computed
+    /// length and must not be applied a second time.
+    /// </summary>
+    private static float ResolveOwnFontSize(IElement element, float parentPx)
+    {
+        var declared = OwnFontSizeDeclaration(element);
+        return declared is null ? parentPx : ResolveFontSizeValue(declared, parentPx);
+    }
+
+    /// <summary>The winning 'font-size' declaration for the element itself (inline style, then
+    /// author/UA rules ordered by !important, specificity and source order), or null when none
+    /// of them names the property.</summary>
+    private static string? OwnFontSizeDeclaration(IElement element)
+    {
+        string? best = null;
+        var bestKey = (Important: false, Specificity: -1, Order: -1);
+
+        foreach (var rule in CssRules)
+        {
+            if (FontSizeOf(rule.Properties) is not { } val) continue;
+            try { if (!element.Matches(rule.Selector)) continue; }
+            catch { continue; }
+            var key = (rule.ImportantProps.Contains("font-size") || rule.ImportantProps.Contains("font"),
+                       rule.Specificity, rule.Order);
+            if (best is null || key.CompareTo(bestKey) > 0) { best = val; bestKey = key; }
+        }
+
+        // An inline declaration outranks every non-important rule (CSS 2.1 §6.4.3).
+        if (element.GetAttribute("style") is { Length: > 0 } inline && !bestKey.Important)
+        {
+            var (props, _) = ParseDeclarations(inline);
+            if (FontSizeOf(props) is { } iv) return iv;
+        }
+        return best;
+    }
+
+    /// <summary>The font-size a declaration block sets, either directly or through the 'font'
+    /// shorthand (§15.8) — <c>font: 1in Ahem</c> is how most of the CSS 2.1 suite sizes text, and
+    /// missing it would leave those elements at the inherited size.</summary>
+    private static string? FontSizeOf(Dictionary<string, string> props)
+    {
+        if (props.TryGetValue("font-size", out var direct) && !string.IsNullOrWhiteSpace(direct))
+            return direct;
+        if (!props.TryGetValue("font", out var shorthand) || string.IsNullOrWhiteSpace(shorthand))
+            return null;
+        // <style> <variant> <weight> <size>[/<line-height>] <family>: the size is the last token
+        // before the family list, so scan for the first token that parses as a length/percentage.
+        foreach (var token in shorthand.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var t = token.Split('/')[0].Trim();
+            if (t.Length == 0 || t.EndsWith(",", StringComparison.Ordinal)) continue;
+            if (t.EndsWith("%", StringComparison.Ordinal)) return t;
+            if (char.IsAsciiDigit(t[0]) || t[0] == '.') return t;
+            if (t.ToLowerInvariant() is "xx-small" or "x-small" or "small" or "medium" or "large"
+                or "x-large" or "xx-large" or "larger" or "smaller") return t;
+        }
+        return null;
+    }
+
+    /// <summary>Resolves one 'font-size' value against the parent's computed size, including the
+    /// absolute/relative keywords (§15.7).</summary>
+    private static float ResolveFontSizeValue(string value, float parentPx)
+    {
+        value = value.Trim();
+        switch (value.ToLowerInvariant())
+        {
+            case "xx-small": return 9f;
+            case "x-small": return 10f;
+            case "small": return 13f;
+            case "medium": return 16f;
+            case "large": return 18f;
+            case "x-large": return 24f;
+            case "xx-large": return 32f;
+            case "larger": return parentPx * 1.2f;
+            case "smaller": return parentPx / 1.2f;
+            case "inherit": case "unset": return parentPx;
+            case "initial": return DefaultFontSizePx;
+        }
+        if (value.EndsWith("%", StringComparison.Ordinal) &&
+            float.TryParse(value[..^1], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var pct))
+            return parentPx * pct / 100f;
+        // em/ex resolve against the PARENT size for this property alone; rem against the root.
+        // A used size of 0 is legitimate ('font-size: 0' hides text) — only an unparseable value
+        // falls back to the inherited size, and a negative one is invalid, so it clamps to 0.
+        return CssUnits.TryParse(value, parentPx, parentPx, 0, 0, out var px) ? Math.Max(0f, px) : parentPx;
     }
 
     /// <summary>

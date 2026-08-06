@@ -1153,10 +1153,23 @@ public static class StyleExtensions
     // font-size to a px length already, so that common case returns immediately without recursing.
     public static float GetFontSize(this LayoutNode node)
     {
-        if (!node.TryResolveStyle(PropertyNames.FontSize, out _) &&
-            node.Style.GetProperty(PropertyNames.FontSize).RawValue is Length l && l.Type == Length.Unit.Px)
+        // A value set on the node itself (an author/pseudo-element declaration the Parser stored,
+        // or element.style.fontSize from script) wins and resolves against the parent's size.
+        if (node.TryResolveStyle(PropertyNames.FontSize, out var own) && !string.IsNullOrEmpty(own))
+        {
+            var basis = node.Parent?.GetFontSize() ?? Parser.DefaultFontSizePx;
+            return GetSize(node, PropertyNames.FontSize, total: basis, size: basis, defaultValue: basis);
+        }
+        // Otherwise the Parser's computed length, which descendants inherit as-is.
+        if (node.ComputedFontSize is { } computed) return computed;
+        // Synthesized boxes (#text, anonymous table boxes, generated content) share their parent's
+        // style object, so re-resolving a relative 'font-size' there would scale it a second time.
+        if (node.TagName.Length > 0 && node.TagName[0] == '#' && node.Parent is { } synthParent)
+            return synthParent.GetFontSize();
+
+        if (node.Style.GetProperty(PropertyNames.FontSize).RawValue is Length l && l.Type == Length.Unit.Px)
             return (float)l.Value;
-        var parentFs = node.Parent?.GetFontSize() ?? 16f;
+        var parentFs = node.Parent?.GetFontSize() ?? Parser.DefaultFontSizePx;
         return GetSize(node, PropertyNames.FontSize, total: parentFs, size: parentFs, defaultValue: parentFs);
     }
     // em/rem in width/height resolve against the element's own font-size; auto/unset → 0 so the

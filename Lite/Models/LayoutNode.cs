@@ -207,6 +207,14 @@ public class LayoutNode
     public string DisplayText => TextOverride ?? Text;
     public List<EventListenerEntry> EventListeners { get; } = [];
     /// <summary>
+    /// The element's 'font-size' as a computed length in px (CSS 2.1 §15.7), resolved once by the
+    /// Parser against the parent's computed size. Descendants inherit this number, so a relative
+    /// unit is never applied twice. Null on nodes the Parser did not build (JS-created elements),
+    /// which fall back to resolving the style value.
+    /// </summary>
+    public float? ComputedFontSize { get; set; }
+
+    /// <summary>
     /// CSS 2.1 §10.3.7 / §10.6.4 static position: the left/top MARGIN edge of the hypothetical
     /// box this element would have generated if its 'position' were 'static', in absolute layout
     /// coordinates. Recorded by the normal-flow pass (BoxEngine) and by FlexEngine as each
