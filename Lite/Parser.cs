@@ -1237,6 +1237,82 @@ internal static class Parser
         }
     }
 
+    /// <summary>
+    /// Splits a 'background' shorthand into the longhands the painter reads (§14.2). AngleSharp
+    /// drops the whole declaration when any component is one it will not parse — `background:
+    /// bottom green` loses the colour as well as the position — and the shorthand also has to
+    /// reset the components it does not mention, which is what makes `background: green` clear an
+    /// inherited-looking image. Tokens are classified by shape, so their order does not matter.
+    /// </summary>
+    private static void ExpandBackgroundShorthand(LayoutNode node, string value)
+    {
+        var v = value.Trim();
+        if (v.Length == 0) return;
+        if (v is "initial" or "unset" or "none")
+        {
+            node.StyleOverrides["background-image"] = "none";
+            node.StyleOverrides["background-repeat"] = "repeat";
+            node.StyleOverrides["background-position"] = "0% 0%";
+            node.StyleOverrides["background-color"] = "transparent";
+            return;
+        }
+        if (v == "inherit") return;   // leave the cascade to it
+
+        string? image = null, repeat = null, attachment = null, color = null;
+        var position = new List<string>();
+
+        foreach (var token in SplitBackgroundTokens(v))
+        {
+            var t = token.Trim();
+            if (t.Length == 0) continue;
+            var lower = t.ToLowerInvariant();
+
+            if (lower.StartsWith("url(", StringComparison.Ordinal) || lower == "none") image = t;
+            else if (lower is "repeat" or "repeat-x" or "repeat-y" or "no-repeat") repeat = lower;
+            else if (lower is "scroll" or "fixed" or "local") attachment = lower;
+            else if (lower is "left" or "right" or "top" or "bottom" or "center"
+                     || lower.EndsWith("%", StringComparison.Ordinal)
+                     || char.IsAsciiDigit(lower[0]) || lower[0] == '.' || lower[0] == '-')
+                position.Add(lower);
+            else color = t;   // a colour keyword or function
+        }
+
+        // The shorthand resets everything it does not name to its initial value.
+        node.StyleOverrides["background-image"] = image ?? "none";
+        node.StyleOverrides["background-repeat"] = repeat ?? "repeat";
+        node.StyleOverrides["background-attachment"] = attachment ?? "scroll";
+        node.StyleOverrides["background-position"] = position.Count switch
+        {
+            0 => "0% 0%",
+            1 => position[0],
+            _ => $"{position[0]} {position[1]}",
+        };
+        if (color is not null) node.StyleOverrides["background-color"] = color;
+        else node.StyleOverrides.Remove("background-color");
+    }
+
+    /// <summary>Splits a shorthand value on whitespace while keeping bracketed functions
+    /// (<c>url(…)</c>, <c>rgba(…)</c>) in one piece.</summary>
+    private static List<string> SplitBackgroundTokens(string value)
+    {
+        var tokens = new List<string>();
+        var depth = 0;
+        var start = 0;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '(') depth++;
+            else if (c == ')') depth = Math.Max(0, depth - 1);
+            else if (char.IsWhiteSpace(c) && depth == 0)
+            {
+                if (i > start) tokens.Add(value[start..i]);
+                start = i + 1;
+            }
+        }
+        if (start < value.Length) tokens.Add(value[start..]);
+        return tokens;
+    }
+
     /// <summary>The initial font size — the value the root element inherits.</summary>
     internal const float DefaultFontSizePx = 16f;
 
@@ -1977,7 +2053,11 @@ internal static class Parser
 
     private static void StoreProp(LayoutNode node, string prop, string val)
     {
-        if (prop == "gap")
+        if (prop == "background")
+        {
+            ExpandBackgroundShorthand(node, val);
+        }
+        else if (prop == "gap")
         {
             var parts = val.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             node.StyleOverrides["row-gap"] = parts[0];
@@ -2163,8 +2243,10 @@ internal static class Parser
                 continue;
             }
 
-            // Only extract our target properties
-            if (Array.IndexOf(s_extraProps, prop) >= 0)
+            // Only extract our target properties. 'background' is handled from the DECLARED text
+            // only — never from AngleSharp's synthesized shorthand, which every rule reports a
+            // value for and would reset the longhands of rules that never mentioned it.
+            if (prop == "background" || Array.IndexOf(s_extraProps, prop) >= 0)
                 StoreProp(node, prop, val);
         }
     }
