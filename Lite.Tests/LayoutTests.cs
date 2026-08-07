@@ -1310,4 +1310,53 @@ public static class LayoutTests
         Equal("XX", frags[0].Text);
         Equal("XX", frags[1].Text);
     }
+
+    [Test]
+    public static void AbsPos_AutoMarginsAbsorbTheLeftoverSpace()
+    {
+        // CSS 2.1 §10.3.7 / §10.6.4: with the offsets and the size all given, an auto margin takes
+        // the space left over, and two of them split it — which is how an absolutely positioned
+        // box is centred in its containing block. Auto margins used to compute to zero, so such a
+        // box sat at its 'left' offset. A non-auto margin on the other side comes off the top of
+        // the remainder first.
+        var centred = Block(new()
+        {
+            ["position"] = "absolute", ["left"] = "0", ["right"] = "0",
+            ["width"] = "100px", ["height"] = "20px",
+            ["margin-left"] = "auto", ["margin-right"] = "auto",
+        });
+        var oneSided = Block(new()
+        {
+            ["position"] = "absolute", ["left"] = "0", ["right"] = "0",
+            ["width"] = "100px", ["height"] = "20px",
+            ["margin-left"] = "auto", ["margin-right"] = "50px",
+        });
+        var outer = Block(new() { ["position"] = "relative", ["width"] = "400px", ["height"] = "100px" },
+                          centred, oneSided);
+        LayoutTree(outer);
+
+        True(Math.Abs(centred.Box.ContentBox.Left - 150f) < 0.5f,
+            $"a 100px box in a 400px block centres at x=150, got {centred.Box.ContentBox.Left}");
+        True(Math.Abs(oneSided.Box.ContentBox.Left - 250f) < 0.5f,
+            $"400 - 100 - 50 leaves 250 for the auto left margin, got {oneSided.Box.ContentBox.Left}");
+    }
+
+    [Test]
+    public static void AbsPos_RtlContainingBlockPlacesTheStaticPositionOnTheRight()
+    {
+        // §10.3.7 rule 1: with left and right both auto the box takes its static position, and
+        // under 'direction: rtl' that is measured from the right edge.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "#cb { position: relative; direction: rtl; width: 200px; height: 100px }" +
+            "#b { position: absolute; width: 50px; height: 20px }" +
+            "</style></head><body><div id='cb'><div id='b'></div></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var cb = FindNode(page.Root, n => n.Id == "cb")!;
+        var b = FindNode(page.Root, n => n.Id == "b")!;
+        True(Math.Abs(b.Box.ContentBox.Right - cb.Box.ContentBox.Right) < 0.5f,
+            $"an RTL containing block puts it flush right ({cb.Box.ContentBox.Right}), got {b.Box.ContentBox.Right}");
+    }
 }
