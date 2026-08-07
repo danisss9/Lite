@@ -366,6 +366,14 @@ internal static class BoxEngine
     /// </summary>
     private static void NormalizeTableBoxes(LayoutNode node)
     {
+        // Anonymous boxes are a FUNCTION of the current display values, so a pass that only ever
+        // adds wrappers cannot track a change to one. `t.style.display = 'none'` made the engine
+        // wrap that cell in an anonymous cell + table (a display:none box is not a proper table
+        // child), and restoring 'table-cell' left the wrappers in place — the cell stayed nested
+        // in a table of its own. Dropping the previously generated boxes first makes each pass
+        // rebuild them from the element tree, so normalization tracks the DOM.
+        UnwrapGeneratedTableBoxes(node);
+
         foreach (var child in node.Children)
             NormalizeTableBoxes(child);
 
@@ -386,6 +394,28 @@ internal static class BoxEngine
             // Everything else is not a table container, so any internal table box among its
             // children is missing its ancestors (§17.2.1 "generate missing parents").
             WrapMisparentedTableBoxes(node);
+        }
+    }
+
+    /// <summary>Replaces this node's previously generated anonymous table boxes with their own
+    /// children, in place, so the next pass regenerates them from the current display values.
+    /// Only the boxes this engine synthesized (<c>#anon-…</c>) are dissolved; real elements and
+    /// the text nodes migrated into them are kept exactly where they are.</summary>
+    private static void UnwrapGeneratedTableBoxes(LayoutNode node)
+    {
+        for (var i = node.Children.Count - 1; i >= 0; i--)
+        {
+            var child = node.Children[i];
+            if (!child.TagName.StartsWith("#anon-", StringComparison.Ordinal)) continue;
+
+            UnwrapGeneratedTableBoxes(child);      // dissolve inside-out
+            node.Children.RemoveAt(i);
+            for (var j = child.Children.Count - 1; j >= 0; j--)
+            {
+                var grandChild = child.Children[j];
+                grandChild.Parent = node;
+                node.Children.Insert(i, grandChild);
+            }
         }
     }
 
