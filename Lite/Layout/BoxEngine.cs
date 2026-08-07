@@ -437,6 +437,12 @@ internal static class BoxEngine
             if (IsMisparentedTableBox(c)) { anyMisparented = true; break; }
         if (!anyMisparented) return;
 
+        // §17.2.1: "If the box's parent is an inline box, generate an anonymous INLINE-table box;
+        // otherwise, an anonymous table box." A block-level table inside an inline box broke the
+        // line in two, so cells written between inline text — `a <span table-cell>b</span>c` —
+        // landed on their own line instead of flowing with it.
+        var inlineContext = node.GetDisplay() == DisplayType.Inline;
+
         var newChildren = new List<LayoutNode>();
         var run = new List<LayoutNode>();
 
@@ -445,7 +451,7 @@ internal static class BoxEngine
             if (run.Count == 0) return;
             var anon = new LayoutNode(null, "#anon-table", "", node.Style);
             anon.ResetNonInheritedStyles();
-            anon.StyleOverrides["display"] = "table";
+            anon.StyleOverrides["display"] = inlineContext ? "inline-table" : "table";
             foreach (var side in new[] { "top", "right", "bottom", "left" })
             {
                 anon.StyleOverrides[$"margin-{side}"] = "0";
