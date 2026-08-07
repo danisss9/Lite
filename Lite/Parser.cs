@@ -1966,6 +1966,7 @@ internal static class Parser
         // NeutralizePseudoElementRules), so they are applied here from the recorded originals.
         foreach (var (selector, style) in _pseudoElementRules)
             TryExtractPseudoElementRule(element, node, selector, style);
+
     }
 
     /// <summary>
@@ -2957,10 +2958,16 @@ internal static class Parser
             if (colon < 0) continue;
             var prop = decl[..colon].Trim().ToLowerInvariant();
             var raw = decl[(colon + 1)..].Trim();
-            if (raw.EndsWith("!important", StringComparison.OrdinalIgnoreCase))
+            // "!important" may be written with whitespace after the bang ("! important"), which
+            // is what the CSS 2.1 test suite does — matching the literal token alone missed it.
+            if (raw.EndsWith("important", StringComparison.OrdinalIgnoreCase))
             {
-                raw = raw[..^"!important".Length].Trim();
-                important.Add(prop);
+                var head = raw[..^"important".Length].TrimEnd();
+                if (head.EndsWith('!'))
+                {
+                    raw = head[..^1].TrimEnd();
+                    important.Add(prop);
+                }
             }
             if (!string.IsNullOrEmpty(raw)) props[prop] = raw;
         }
