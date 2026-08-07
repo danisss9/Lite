@@ -2,7 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.14] - 2026-08-06 (current)
+## [0.0.15] - 2026-08-07 (current)
+
+Second CSS 2.1 conformance pass, on inline formatting: **+125 upstream reftests**. The WPT
+`css/CSS2` suite goes from **3917/6266 (62.5%)** to **4042/6266 (64.5%)**. `normal-flow`
+479 → 537, `backgrounds` 184 → 215, `borders` 370 → 379, `css1` 46 → 54, `text` 254 → 260,
+`floats-clear` 72 → 76, `linebox` 117 → 120 and `positioning` 314 → 317. Two directories give
+ground, both for the same reason: nothing paints a border on an inline box yet, so
+`margin-padding-clear` 528 → 526 and `box` 9 → 8 lose the tests that draw one.
+
+### Added
+
+- **Line boxes have a strut (§10.8.1)** — every line box now begins with the zero-width inline box its block container implies, so a line holding only a 96px image is still at least as tall as the text that would have sat on its baseline. Three details the naive version gets wrong are handled: the strut's reach *below* the baseline is negative when `line-height` is smaller than the font's ascent+descent (clamping it to zero stretched a `line-height: 10px` line back out); §9.4.2 keeps a line with no content, no forced break and no in-flow boxes at zero height, so a stray run of collapsible whitespace is not resurrected; and under `line-height: normal` the strut uses the font's own ascent+descent rather than the engine's more generous 1.4em, which would otherwise poke out above a 16px image (`BoxEngine`, `DrawCommandExtensions`)
+- **Conformance guards** — the curated CSS 2.1 gate grows from 40 to 52 entries, promoting an upstream reftest for each fix below; `--geom` also reports the resolved background properties (`css21-manifest`, `RefTestRunner`)
+
+### Fixed
+
+- **Inline replaced boxes reserve their edges (§8.4)** — an `<img>` on a line was measured at the bitmap's used size alone, so `img { padding-right: 20px }` advanced the line by nothing and the next image sat flush against it. The item is now built from the margin box, the node's own box starts inside its edges, and the image paints its background/border/outline like any other replaced box. This lands on two shared reftest references that the whole `height` / `min-height` / `max-height` family matches against, which is most of `normal-flow`'s gain (`BoxEngine`, `Drawer`)
+- **`auto` margins on inline boxes (§10.3.1 / §10.3.2 / §10.6.2)** — `auto` has a used value of 0 on an inline box, replaced or not. The engine read it as the block-level "take the free space in the containing block" rule, so once inline margins were honoured an `img { margin-top: auto; margin-bottom: auto }` grew a 96px line box and left the bitmap floating in the middle of it (`BoxEngine`, `DrawCommandExtensions`)
+- **Inline boxes reserve their horizontal margins and padding (§8.4)** — a non-replaced inline box's horizontal margins and padding take part in layout; only its vertical edges are ignored, and those only for the line box's height. The background is painted over the padding box so it covers what the line reserved. An inline box broken around a block child (§9.2.1.1) gets no edges rather than a duplicate set on every fragment, and neither does one under `direction: rtl`, whose edges belong to fragments a strictly left-to-right line cannot place (`BoxEngine`, `Drawer`, `DrawCommandExtensions`)
+- **`letter-spacing` / `word-spacing` units (§16.4 / §16.5)** — both take any length, but only `px` and `em` were parsed by hand; `72pt`, `6pc` and `2.54cm` computed to 0, so every non-px spacing test drew its text unspaced (`DrawCommandExtensions`)
+- **CSS colour keywords reaching the painter** — `SKColor.TryParse` understands hex only, so a keyword arriving through the engine's own cascade — which is how every colour pulled out of a shorthand looks — silently fell through to whatever AngleSharp had computed, normally a lower-specificity rule's colour. Keywords now resolve through AngleSharp's colour table (`DrawCommandExtensions`)
+- **`background` shorthands AngleSharp drops (§14.2)** — AngleSharp.Css refuses a `background` whose position is a bare keyword and discards the whole declaration, so `background: bottom green` and `background: red url(x.png) right repeat-y` left the element with a weaker rule's background. The shorthand is read back out of the stylesheet source for rules where AngleSharp kept nothing of the background family, so a longhand written after the shorthand still wins. The source scan follows §4.2 error handling: backslash escapes and strings are not block delimiters, a declaration containing a block is malformed and dropped whole, and a selector that declares a background more than once is left alone because source order between them is not recoverable from a CSSOM rule (`Parser`)
+
+### Known limitations
+
+- An inline box's **borders** are still not painted. Reserving room for them in the line and stroking them was measured against the suite and came out flat: it fixes the tests that expect a visible inline border and breaks the same number of block-in-inline ones, which need one fragment box per piece before the edges can land in the right places.
+
+## [0.0.14] - 2026-08-06
 
 CSS 2.1 conformance pass: **+1363 upstream reftests**. The WPT `css/CSS2` suite goes from
 **2554/6266 (40.8%)** to **3917/6266 (62.5%)**. The largest movers are `selectors` 93 → 495,
