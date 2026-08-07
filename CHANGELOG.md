@@ -4,11 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [0.0.14] - 2026-08-06 (current)
 
-CSS 2.1 conformance pass: **+1260 upstream reftests**. The WPT `css/CSS2` suite goes from
-**2554/6266 (40.8%)** to **3814/6266 (60.9%)**. The largest movers are `selectors` 93 → 495,
-`normal-flow` 183 → 480, `margin-padding-clear` 388 → 528, `positioning` 203 → 299,
-`borders` 296 → 370, `linebox` 82 → 117, `tables` 39 → 72, `backgrounds` 136 → 169,
-`syntax` 180 → 211, `generated-content` 99 → 130 and `floats-clear` 42 → 72. One directory
+CSS 2.1 conformance pass: **+1288 upstream reftests**. The WPT `css/CSS2` suite goes from
+**2554/6266 (40.8%)** to **3842/6266 (61.3%)**. The largest movers are `selectors` 93 → 495,
+`normal-flow` 183 → 479, `margin-padding-clear` 388 → 528, `positioning` 203 → 314,
+`borders` 296 → 370, `backgrounds` 136 → 184, `linebox` 82 → 117, `tables` 39 → 72,
+`generated-content` 99 → 130, `syntax` 180 → 210 and `floats-clear` 42 → 72. One directory
 regressed: `abspos` 7 → 5, both cases styling the root element itself as a fixed-position
 table.
 
@@ -27,6 +27,8 @@ table.
 - **Explicit zero sizes** — `width: 0` / `height: 0` were read as "no size specified" (layout tested `GetWidth() > 0`), so a zero-width box filled its container and a zero-height box grew to its content (`BoxEngine`, `DrawCommandExtensions`)
 - **Invalid negative lengths** — a negative `width`, `height`, `min-`/`max-` pair or `border-width` is invalid, so the declaration is dropped and the property keeps its initial value; `border-top-width: -1px` beside a visible `border-top-style` now paints the initial `medium` (`DrawCommandExtensions`)
 - **Root-relative URL resolution** — `Uri.TryCreate(…, UriKind.Absolute)` accepts `/fonts/ahem.css` as an implicit `file:` URI on Unix, so every root-relative stylesheet, image and form action was handed to the HTTP client unresolved. All resolution goes through a shared `UrlUtils` that treats only a real scheme as absolute (`UrlUtils` and all callers)
+- **Auto margins on absolutely positioned boxes (§10.3.7 / §10.6.4)** — with the offsets and the size all given, an auto margin takes the space the containing block has left over and two of them split it, which is how such a box is centred; they used to compute to zero. Rule 1's static position also follows `direction`, so an RTL containing block puts a box with both offsets auto flush right. Auto-margin detection reads the node's own resolved value, so a margin set by script or by the engine's cascade counts (`BoxEngine`, `DrawCommandExtensions`)
+- **`background` shorthand and its longhands (§14.2)** — the shorthand is expanded from the rule's declared text (tokens classified by shape, so order does not matter) and resets the components it omits; `background-repeat` and `background-position` no longer pass AngleSharp's literal `"initial"` and tuple form `"(initial, 50%)"` through to the painter, which read as "no repeat" and "position 0" respectively (`Parser`, `DrawCommandExtensions`)
 - **`min-width` / `max-width` on in-flow blocks (§10.4)** — only the absolutely-positioned path clamped, so neither property had any effect on a normal block; a box the clamp gives a known width to now centres under auto margins like an explicitly-sized one (`BoxEngine`)
 - **Replaced-element sizing (§10.3.2 / §10.6.2)** — a CSS `width`/`height` on an inline `<img>` is honoured (the inline path read only the intrinsic pixel size), and HTML's `width`/`height` content attributes are treated as presentational hints for those properties rather than as the intrinsic size — reading them as intrinsic dropped percentages outright and mixed axes, so `width="100%" height="50"` on a 1×1 image derived a height of 39200px (`BoxEngine`, `Parser`)
 - **Anonymous table boxes** — a synthesized box borrows its originating element's style object, so a parent's non-inherited `position: absolute` or `float` read back as its own and took it out of flow; a table's intrinsic width came out zero because its rows are neither block-level nor inline. Both are fixed, so an anonymous table inside a float or an abs-pos box now shrink-wraps and lays its cells out side by side (`LayoutNode`, `IntrinsicSizer`, `BoxEngine`)
