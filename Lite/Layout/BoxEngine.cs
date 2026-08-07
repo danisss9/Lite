@@ -2013,6 +2013,13 @@ internal static class BoxEngine
                 // meant `img { padding-right: 20px }` advanced the line by nothing at all.
                 var imgFontSize = node.GetFontSize();
                 var imgMargin = node.GetMargin(maxWidth, viewportHeight, imgFontSize);
+                // §10.3.2 / §10.6.2: on an INLINE replaced box every 'auto' margin has a used
+                // value of 0. GetMargin's 'auto' means "centre in the containing block", which is
+                // the block-level rule — applying it here pushed the image into mid-air.
+                if (node.IsAutoMarginTop()) imgMargin.Top = 0f;
+                if (node.IsAutoMarginBottom()) imgMargin.Bottom = 0f;
+                if (node.IsAutoMarginLeft()) imgMargin.Left = 0f;
+                if (node.IsAutoMarginRight()) imgMargin.Right = 0f;
                 var imgPadding = node.GetPadding(maxWidth, viewportHeight, imgFontSize);
                 var imgBorder = node.GetBorderWidth();
                 var imgW = imgMargin.Left + imgBorder.Left + imgPadding.Left + w

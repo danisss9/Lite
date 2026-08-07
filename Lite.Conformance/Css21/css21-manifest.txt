@@ -148,3 +148,7 @@ css/CSS2/tables/table-anonymous-objects-012.xht
 #      and reserving only the content size collapsed those gaps to nothing. ----
 css/CSS2/normal-flow/min-height-006.xht
 css/CSS2/normal-flow/min-height-067.xht
+
+# ---- §10.3.2 / §10.6.2: 'auto' margins on an inline replaced box have a used value of 0, not
+#      the block-level "centre in the containing block" rule. ----
+css/CSS2/normal-flow/inline-replaced-height-001.xht
