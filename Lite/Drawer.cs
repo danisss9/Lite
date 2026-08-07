@@ -448,6 +448,11 @@ internal static class Drawer
                 using var bgPaint = new SKPaint { Color = bgColor };
                 canvas.DrawRect(node.Box.PaddingBox, bgPaint);
             }
+            // NOTE: an inline box's BORDERS are still not drawn. Reserving room for them in the
+            // line and stroking them here was measured against the CSS 2.1 suite and came out
+            // flat: it fixes the tests that expect a visible inline border, and breaks the same
+            // number of block-in-inline ones, where an inline box broken around a block needs one
+            // fragment box per piece before its edges can land in the right places.
             DrawWrappedText(canvas, node, node.DisplayText,
                 node.Box.ContentBox.Left, node.Box.ContentBox.Top,
                 node.Box.ContentBox.Width, font, paint);

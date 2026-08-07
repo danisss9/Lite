@@ -229,6 +229,21 @@ public static class StyleExtensions
     public static float GetMaxHeight(this LayoutNode node, float total = 0, float size = 0)
         => GetSizeOrDefault(node, PropertyNames.MaxHeight, total, size, float.PositiveInfinity);
 
+    /// <summary>CSS 2.1 §9.2.1.1: an inline box containing a BLOCK-level box is broken around it,
+    /// and its margins/borders/padding belong to the first and last fragment only. Neither the
+    /// line (which sees one fragment at a time) nor the painter (which has no fragment boxes for
+    /// a non-leaf inline box) can place those edges correctly, so both leave them off entirely
+    /// rather than repeat them on every piece.</summary>
+    public static bool IsBrokenAroundBlock(this LayoutNode node)
+    {
+        if (node.GetDisplay() is not (DisplayType.Inline or DisplayType.None)) return false;
+        foreach (var child in node.Children)
+            if (child.GetDisplay() is DisplayType.Block or DisplayType.Flex or DisplayType.Table
+                                    or DisplayType.ListItem)
+                return true;
+        return false;
+    }
+
     public static bool IsAutoMarginTop(this LayoutNode node) => IsAutoMargin(node, PropertyNames.MarginTop);
     public static bool IsAutoMarginBottom(this LayoutNode node) => IsAutoMargin(node, PropertyNames.MarginBottom);
 

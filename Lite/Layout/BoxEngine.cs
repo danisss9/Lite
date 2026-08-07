@@ -1903,8 +1903,6 @@ internal static class BoxEngine
     /// CSS 2.1 §8.4: the HORIZONTAL margins and padding of a non-replaced inline box are laid out
     /// — they push whatever follows along the line — while its vertical ones do not affect the
     /// line box's height. Returns the widths to reserve before and after the box's own content.
-    /// <para>Borders are deliberately left out: the painter draws no border on an inline box, so
-    /// reserving room for one would open a gap with nothing in it.</para>
     /// </summary>
     private static (float Leading, float Trailing) InlineBoxEdges(
         LayoutNode node, float maxWidth, float viewportHeight)
@@ -1913,13 +1911,7 @@ internal static class BoxEngine
         // from, so asking them for a margin would apply the parent's a second time.
         if (node.TagName.StartsWith('#')) return (0f, 0f);
 
-        // §9.2.1.1: an inline box holding a block-level child is BROKEN AROUND it, and the edges
-        // belong to the first and last fragment only. Each fragment is a separate inline run here,
-        // so emitting the edges per run would repeat them on every piece.
-        foreach (var child in node.Children)
-            if (child.GetDisplay() is DisplayType.Block or DisplayType.Flex or DisplayType.Table
-                                    or DisplayType.ListItem)
-                return (0f, 0f);
+        if (node.IsBrokenAroundBlock()) return (0f, 0f);
 
         var fontSize = node.GetFontSize();
         var margin = node.GetMargin(maxWidth, viewportHeight, fontSize);
@@ -2319,12 +2311,14 @@ internal static class BoxEngine
                     }
                     // The line already reserved this box's horizontal padding (§8.4), so record it
                     // here too — the painter fills the PADDING box, and without it the background
-                    // would stop short of the space the line gave the box.
+                    // would stop short of the space the line gave the box. Anonymous boxes (#text)
+                    // resolve their styles from the element that produced them, so taking padding
+                    // there would apply the parent's a second time.
+                    var noEdges = node.TagName.StartsWith('#') || node.IsBrokenAroundBlock();
                     node.Box = new BoxDimensions
                     {
                         ContentBox = rect,
-                        Padding = node.TagName.StartsWith('#')
-                            ? default : node.GetPadding(0, 0, node.GetFontSize()),
+                        Padding = noEdges ? default : node.GetPadding(0, 0, node.GetFontSize()),
                     };
                     break;
                 }
