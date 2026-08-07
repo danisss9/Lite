@@ -229,10 +229,18 @@ public static class StyleExtensions
     public static float GetMaxHeight(this LayoutNode node, float total = 0, float size = 0)
         => GetSizeOrDefault(node, PropertyNames.MaxHeight, total, size, float.PositiveInfinity);
 
-    public static bool IsAutoMarginTop(this LayoutNode node) =>
-        node.Style.GetProperty(PropertyNames.MarginTop).RawValue is Constant<Length>;
-    public static bool IsAutoMarginBottom(this LayoutNode node) =>
-        node.Style.GetProperty(PropertyNames.MarginBottom).RawValue is Constant<Length>;
+    public static bool IsAutoMarginTop(this LayoutNode node) => IsAutoMargin(node, PropertyNames.MarginTop);
+    public static bool IsAutoMarginBottom(this LayoutNode node) => IsAutoMargin(node, PropertyNames.MarginBottom);
+
+    /// <summary>True when a margin is 'auto'. Reads the node's own resolved value first, so a
+    /// margin set by script or by the engine's own cascade counts — checking only the AngleSharp
+    /// style made those invisible, and an auto margin that is not seen simply computes to 0.</summary>
+    private static bool IsAutoMargin(LayoutNode node, string property)
+    {
+        if (node.TryResolveStyle(property, out var ov))
+            return ov.Trim().Equals("auto", StringComparison.OrdinalIgnoreCase);
+        return node.Style.GetProperty(property).RawValue is Constant<Length>;
+    }
 
     /// <summary>Returns true when min-width is auto/unset (not explicitly set to a length).</summary>
     public static bool IsAutoMinWidth(this LayoutNode node)
@@ -1165,11 +1173,9 @@ public static class StyleExtensions
     }
 
     /// <summary>Returns true when the given horizontal margin side is 'auto'.</summary>
-    public static bool IsAutoMarginLeft(this LayoutNode node) =>
-        node.Style.GetProperty(PropertyNames.MarginLeft).RawValue is Constant<Length>;
+    public static bool IsAutoMarginLeft(this LayoutNode node) => IsAutoMargin(node, PropertyNames.MarginLeft);
 
-    public static bool IsAutoMarginRight(this LayoutNode node) =>
-        node.Style.GetProperty(PropertyNames.MarginRight).RawValue is Constant<Length>;
+    public static bool IsAutoMarginRight(this LayoutNode node) => IsAutoMargin(node, PropertyNames.MarginRight);
 
     public static SKColor GetBackgroundColor(this LayoutNode node) => GetColor(node, PropertyNames.BackgroundColor, SKColors.Transparent);
     public static SKColor GetColor(this LayoutNode node) => GetColor(node, PropertyNames.Color, SKColors.Black);

@@ -593,12 +593,44 @@ internal static class BoxEngine
         contentW = Math.Min(contentW, node.GetMaxWidth(cbRect.Width, fontSize));
         contentW = Math.Max(contentW, node.GetMinWidth(cbRect.Width, fontSize));
 
-        // Resolve X — §4.1: use StaticX as static position when left/right are both auto
+        // §10.3.7: when 'left', 'width' and 'right' are all given, an auto margin absorbs the
+        // space left over — two of them split it equally, which is how an absolutely positioned
+        // box is centred in its containing block. Auto margins used to compute to zero, so such a
+        // box sat at its 'left' offset instead.
+        var isRtl = node.GetDirection() == "rtl";
+        if (!float.IsNaN(left) && !float.IsNaN(right))
+        {
+            var mlAuto = node.IsAutoMarginLeft();
+            var mrAuto = node.IsAutoMarginRight();
+            if (mlAuto || mrAuto)
+            {
+                // Whatever the containing block has left after the offsets, the box and any
+                // margin that is NOT auto — that remainder is what the auto margins take.
+                var slack = cbRect.Width - left - right - contentW
+                            - border.Left - border.Right - padding.Left - padding.Right
+                            - (mlAuto ? 0f : margin.Left) - (mrAuto ? 0f : margin.Right);
+                if (mlAuto && mrAuto)
+                {
+                    // A negative remainder is pushed entirely onto the end side (§10.3.7 rule 4).
+                    if (slack >= 0f) margin.Left = margin.Right = slack / 2f;
+                    else if (isRtl) { margin.Right = 0f; margin.Left = slack; }
+                    else { margin.Left = 0f; margin.Right = slack; }
+                }
+                else if (mlAuto) margin.Left = slack;
+                else margin.Right = slack;
+            }
+        }
+
+        // Resolve X — §10.3.7 rule 1: with 'left' and 'right' both auto the box takes its static
+        // position, which under 'direction: rtl' is measured from the RIGHT edge — the hypothetical
+        // static box sits at the end of the line, so an RTL containing block puts it flush right.
         float contentX;
         if (!float.IsNaN(left))
             contentX = cbRect.Left + left + margin.Left + border.Left + padding.Left;
         else if (!float.IsNaN(right))
             contentX = cbRect.Right - right - margin.Right - border.Right - padding.Right - contentW;
+        else if (isRtl)
+            contentX = cbRect.Right - margin.Right - border.Right - padding.Right - contentW;
         else if (node.StaticX.HasValue)
             contentX = node.StaticX.Value + margin.Left + border.Left + padding.Left;
         else
@@ -651,6 +683,27 @@ internal static class BoxEngine
         // overrides max-height:2mm).
         contentH = Math.Min(contentH, node.GetMaxHeight(cbRect.Height, fontSize));
         contentH = Math.Max(contentH, node.GetMinHeight(cbRect.Height, fontSize));
+
+        // §10.6.4: the vertical axis works the same way — with 'top', 'height' and 'bottom' all
+        // given, auto margins share out what is left, centring the box vertically.
+        if (!float.IsNaN(top) && !float.IsNaN(bottom))
+        {
+            var mtAuto = node.IsAutoMarginTop();
+            var mbAuto = node.IsAutoMarginBottom();
+            if (mtAuto || mbAuto)
+            {
+                var slack = cbRect.Height - top - bottom - contentH
+                            - border.Top - border.Bottom - padding.Top - padding.Bottom
+                            - (mtAuto ? 0f : margin.Top) - (mbAuto ? 0f : margin.Bottom);
+                if (mtAuto && mbAuto)
+                {
+                    if (slack >= 0f) margin.Top = margin.Bottom = slack / 2f;
+                    else { margin.Top = 0f; margin.Bottom = slack; }
+                }
+                else if (mtAuto) margin.Top = slack;
+                else margin.Bottom = slack;
+            }
+        }
 
         // Resolve Y — §4.1: use StaticY as static position when top/bottom are both auto
         float contentY;
