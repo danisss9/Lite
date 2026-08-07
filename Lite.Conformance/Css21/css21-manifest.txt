@@ -152,3 +152,10 @@ css/CSS2/normal-flow/min-height-067.xht
 # ---- §10.3.2 / §10.6.2: 'auto' margins on an inline replaced box have a used value of 0, not
 #      the block-level "centre in the containing block" rule. ----
 css/CSS2/normal-flow/inline-replaced-height-001.xht
+
+# ---- §10.8.1's strut: every line box starts with a zero-width inline box carrying the block
+#      container's font and line-height, so a line holding only an image is still at least as tall
+#      as the text that would have sat on its baseline. -applies-to-001 places a background swatch
+#      against an inline image's line; line-height-127 checks the line box of an empty inline. ----
+css/CSS2/backgrounds/background-position-applies-to-001.xht
+css/CSS2/linebox/line-height-127.xht

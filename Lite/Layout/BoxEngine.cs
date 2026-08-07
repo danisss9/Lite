@@ -1651,6 +1651,29 @@ internal static class BoxEngine
         var maxBelow = 0f;
         var maxTopH = 0f;
         var maxBottomH = 0f;
+        // Whether anything on the current line aligns against the shared baseline. Only then does
+        // maxBelow hold a real measurement rather than its 0 starting value.
+        var hasBaselineItem = false;
+        var lineEndsWithBreak = false;
+
+        // §10.8.1's STRUT: every line box begins with a zero-width inline box carrying the block
+        // container's own font and line-height, so a line holding nothing but a 96px image is
+        // still at least as tall as the text that would have sat on its baseline. Measured once —
+        // the strut's metrics come from the block, not from whatever lands on the line.
+        var strutAbove = 0f;
+        var strutBelow = 0f;
+        if (container is not null)
+        {
+            using var strutFont = TextMeasure.CreateFont(container);
+            var strutLh = container.GetLineHeight(container.GetFontSize());
+            // With 'line-height: normal' the strut is exactly the font's own box — no leading to
+            // split. Our 'normal' is a flat 1.4em, which is generous enough that a strut using it
+            // would poke out above a 16px image on an otherwise-empty line and nudge it down.
+            if (container.IsNormalLineHeight())
+                strutLh = -strutFont.Metrics.Ascent + strutFont.Metrics.Descent;
+            strutAbove = TextMeasure.ComputeAscent(strutFont, strutLh);
+            strutBelow = strutLh - strutAbove;
+        }
 
         var placed = new List<(InlineItem item, float relX, float relY)>();
         var lineStart = 0;
@@ -1660,12 +1683,42 @@ internal static class BoxEngine
         var committedLineTop = 0f;
         var committedLineWidth = 0f;
 
+        // §9.4.2's test for a line box that "exists": any in-flow content at all — text that is
+        // not purely collapsible whitespace, a replaced box, an inline-block/flex/table, or a
+        // forced break.
+        bool LineHasContent()
+        {
+            if (lineEndsWithBreak) return true;
+            for (var k = lineStart; k < placed.Count; k++)
+            {
+                var it = placed[k].item;
+                if (it.Kind == InlineItemKind.OutOfFlow) continue;
+                if (it.Kind == InlineItemKind.Text && string.IsNullOrWhiteSpace(it.Text)) continue;
+                return true;
+            }
+            return false;
+        }
+
         void CommitLine()
         {
             // Resolve the final line-box height: start from the baseline-aligned items' reach,
             // then grow outward (below for 'top', above for 'bottom') if those need more room.
             var above = maxAbove;
             var below = maxBelow;
+
+            // The strut only counts on a line that actually has content. §9.4.2: a line box with
+            // no text, no in-flow content and no inline box with non-zero edges is a ZERO-height
+            // line box, so seeding the strut unconditionally would give every stray whitespace
+            // node a line of its own.
+            if (LineHasContent())
+            {
+                above = Math.Max(above, strutAbove);
+                // The strut's own reach below the baseline can be NEGATIVE (a line-height smaller
+                // than the font's ascent+descent gives negative half-leading), so it only counts
+                // when nothing else has claimed room down there — clamping it to 0 would stretch a
+                // `line-height: 10px` line back out to the full baseline.
+                below = hasBaselineItem ? Math.Max(below, strutBelow) : strutBelow;
+            }
             if (maxTopH > above + below) below = maxTopH - above;
             if (maxBottomH > above + below) above = maxBottomH - below;
             var thisLineHeight = above + below > 0f ? above + below : Math.Max(maxTopH, maxBottomH);
@@ -1711,6 +1764,8 @@ internal static class BoxEngine
             }
             lineY += thisLineHeight;
             maxAbove = maxBelow = maxTopH = maxBottomH = 0f;
+            hasBaselineItem = false;
+            lineEndsWithBreak = false;
             // The next line sits lower, so it may clear a float the previous line was beside.
             var (nx, nw) = AvailableBand(floats, originY + lineY, 1, originX, maxWidth);
             bandLeft = nx - originX;
@@ -1728,7 +1783,11 @@ internal static class BoxEngine
                 {
                     maxAbove = item.Ascent;
                     maxBelow = item.Height - item.Ascent;
+                    hasBaselineItem = true;
                 }
+                // §9.4.2 exempts a line that ends with a forced break from the zero-height rule,
+                // so an empty <br> line still gets the strut.
+                lineEndsWithBreak = true;
                 CommitLine();
                 continue;
             }
@@ -1786,6 +1845,7 @@ internal static class BoxEngine
                 default:
                     maxAbove = Math.Max(maxAbove, AboveBaselineComponent(effectiveItem, va));
                     maxBelow = Math.Max(maxBelow, effectiveItem.Height - AboveBaselineComponent(effectiveItem, va));
+                    hasBaselineItem = true;
                     break;
             }
 
