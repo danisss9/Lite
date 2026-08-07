@@ -193,4 +193,36 @@ public static class CascadeTests
         True(three.GetBackgroundImage().Contains("y.png", StringComparison.Ordinal),
             $"a longhand after the shorthand must win, got '{three.GetBackgroundImage()}'");
     }
+
+    [Test]
+    public static void BackgroundRescue_IgnoresMalformedAndAmbiguousSource()
+    {
+        // The source scan is a mini-parser, so it has to make the same calls CSS 2.1 §4.2 does:
+        //  * a declaration containing a BLOCK is malformed and dropped whole, so the `background`
+        //    nested inside one is not a declaration of the outer rule;
+        //  * `\{` is an escaped character, not the start of a block, so the rule that follows is
+        //    swallowed by the malformed selector rather than standing on its own;
+        //  * a selector that declares a background more than once is left to AngleSharp — source
+        //    order between them is not recoverable from a CSSOM rule on its own.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "#a { background: green; }" +
+            "#a { nested { background: red; }: not-a-declaration; }" +
+            "#b { background: green; }" +
+            "#b \\{ background: red; \\}" +
+            "#b { background: red; }" +
+            "</style></head><body><div id='a'></div><div id='b'></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+
+        LayoutNode? F(LayoutNode n, string id) =>
+            n.Id == id ? n : n.Children.Select(c => F(c, id)).FirstOrDefault(r => r != null);
+
+        foreach (var id in new[] { "a", "b" })
+        {
+            var node = F(page.Root, id)!;
+            var bg = node.GetBackgroundColor();
+            True(bg.Green > 100 && bg.Red < 100,
+                $"#{id} should keep its green background — the red one is malformed, got {bg}");
+        }
+    }
 }

@@ -2891,7 +2891,8 @@ internal static class Parser
     // agree; a selector declared twice keeps the last value, which is what the cascade would do
     // for equal specificity anyway.
 
-    private static readonly Dictionary<string, string> s_rawBackgrounds = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, (string Value, int Count)> s_rawBackgrounds =
+        new(StringComparer.Ordinal);
 
     private static void CollectRawBackgrounds(AngleSharp.Dom.IDocument document)
     {
@@ -2905,7 +2906,7 @@ internal static class Parser
         var i = 0;
         while (i < css.Length)
         {
-            var open = css.IndexOf('{', i);
+            var open = IndexOfSignificant(css, i, '{');
             if (open < 0) break;
             var close = MatchingBrace(css, open);
             if (close < 0) break;
@@ -2922,19 +2923,44 @@ internal static class Parser
             }
             else if (prelude.Length > 0 && LastBackgroundDeclaration(body) is { } bg)
             {
-                s_rawBackgrounds[CanonicalSelectorList(prelude)] = bg;
+                var key = CanonicalSelectorList(prelude);
+                var seen = s_rawBackgrounds.TryGetValue(key, out var prev) ? prev.Count : 0;
+                s_rawBackgrounds[key] = (bg, seen + 1);
             }
             i = close + 1;
         }
     }
 
+    /// <summary>Index of the next <paramref name="wanted"/> character that the CSS tokenizer would
+    /// actually see: one that is neither backslash-escaped nor inside a string. `p\{x` has no
+    /// block, and `content: "}"` does not close one — a scanner that misses either resynchronises
+    /// on the wrong brace and starts attributing declarations to the wrong selector.</summary>
+    private static int IndexOfSignificant(string s, int from, char wanted)
+    {
+        var quote = '\0';
+        for (var i = from; i < s.Length; i++)
+        {
+            var c = s[i];
+            if (c == '\\') { i++; continue; }
+            if (quote != '\0') { if (c == quote) quote = '\0'; continue; }
+            if (c is '"' or '\'') { quote = c; continue; }
+            if (c == wanted) return i;
+        }
+        return -1;
+    }
+
     private static int MatchingBrace(string s, int open)
     {
         var depth = 0;
+        var quote = '\0';
         for (var i = open; i < s.Length; i++)
         {
-            if (s[i] == '{') depth++;
-            else if (s[i] == '}' && --depth == 0) return i;
+            var c = s[i];
+            if (c == '\\') { i++; continue; }
+            if (quote != '\0') { if (c == quote) quote = '\0'; continue; }
+            if (c is '"' or '\'') { quote = c; continue; }
+            if (c == '{') depth++;
+            else if (c == '}' && --depth == 0) return i;
         }
         return -1;
     }
@@ -2962,18 +2988,32 @@ internal static class Parser
     {
         string? found = null;
         var depth = 0;
+        var braces = 0;
+        var sawBrace = false;
+        var quote = '\0';
         var start = 0;
         for (var i = 0; i <= body.Length; i++)
         {
             if (i < body.Length)
             {
-                if (body[i] == '(') { depth++; continue; }
-                if (body[i] == ')') { depth = Math.Max(0, depth - 1); continue; }
-                if (body[i] != ';' || depth != 0) continue;
+                var c = body[i];
+                if (c == '\\') { i++; continue; }
+                if (quote != '\0') { if (c == quote) quote = '\0'; continue; }
+                if (c is '"' or '\'') { quote = c; continue; }
+                if (c == '{') { braces++; sawBrace = true; continue; }
+                if (c == '}') { braces = Math.Max(0, braces - 1); continue; }
+                if (c == '(') { depth++; continue; }
+                if (c == ')') { depth = Math.Max(0, depth - 1); continue; }
+                if (c != ';' || depth != 0 || braces != 0) continue;
             }
             var decl = body[start..Math.Min(i, body.Length)];
             start = i + 1;
-            var colon = decl.IndexOf(':');
+            // A declaration containing a block is malformed (CSS 2.1 §4.2) and is dropped whole,
+            // so a `background` written inside one must not be read back out of it.
+            var hadBrace = sawBrace;
+            sawBrace = false;
+            if (hadBrace) continue;
+            var colon = IndexOfSignificant(decl, 0, ':');
             if (colon < 0) continue;
             if (!decl[..colon].Trim().Equals("background", StringComparison.OrdinalIgnoreCase)) continue;
             var value = decl[(colon + 1)..].Trim();
@@ -3025,16 +3065,20 @@ internal static class Parser
     /// <summary>The raw `background` shorthand declared for a rule's selector list, but only when
     /// AngleSharp lost the whole background family for that rule. When it kept anything — even a
     /// longhand written after the shorthand, which must win over it (§14.2 ordering) — its parse is
-    /// authoritative and re-expanding the source would clobber that ordering.</summary>
+    /// authoritative and re-expanding the source would clobber that ordering. A selector that
+    /// declares a background more than once is left alone too: the source order that decides
+    /// between them is not recoverable from the CSSOM rule alone, so abstaining keeps the engine
+    /// no worse than it was.</summary>
     private static string? RescuedBackgroundFor(ICssStyleRule styleRule)
     {
         if (string.IsNullOrEmpty(styleRule.SelectorText)) return null;
         if (!s_rawBackgrounds.TryGetValue(CanonicalSelectorList(styleRule.SelectorText), out var raw))
             return null;
+        if (raw.Count != 1) return null;
         var cssText = styleRule.Style?.CssText;
         if (!string.IsNullOrEmpty(cssText) &&
             cssText.Contains("background", StringComparison.OrdinalIgnoreCase)) return null;
-        return raw;
+        return raw.Value;
     }
 
     private static void CollectRulesFromSheet(ICssRuleList rules)

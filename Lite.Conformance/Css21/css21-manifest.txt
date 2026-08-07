@@ -174,3 +174,13 @@ css/CSS2/text/letter-spacing-019.xht
 #      keyword, so the shorthand is re-read from the stylesheet source for rules where it kept
 #      nothing of the family. background-position-004 writes `background: bottom green`. ----
 css/CSS2/backgrounds/background-position-004.xht
+
+# ---- §4.2 error handling as the raw-`background` source scan has to see it: a declaration
+#      containing a block is malformed and dropped whole (core-syntax-001), and `\{` is an escaped
+#      character rather than a block start (escapes-002). ----
+css/CSS2/syntax/core-syntax-001.xht
+css/CSS2/syntax/escapes-002.xht
+
+# ---- §9.4.2's bidi box model: under 'direction: rtl' an inline box's edges belong to its right
+#      and left fragments, which a strictly left-to-right line cannot place. ----
+css/CSS2/box/rtl-span-only.xht
