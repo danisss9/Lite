@@ -1913,6 +1913,12 @@ internal static class BoxEngine
 
         if (node.IsBrokenAroundBlock()) return (0f, 0f);
 
+        // §9.4.2's bidi box model puts the box's edges on its START and END fragments, which under
+        // 'direction: rtl' are its right and left sides. Lines here are always laid out
+        // left-to-right, so there is nowhere correct to put them; reserving the LTR pair would
+        // move the content the wrong way rather than leave it where it already is.
+        if (node.GetDirection() == "rtl") return (0f, 0f);
+
         var fontSize = node.GetFontSize();
         var margin = node.GetMargin(maxWidth, viewportHeight, fontSize);
         var padding = node.GetPadding(maxWidth, viewportHeight, fontSize);
