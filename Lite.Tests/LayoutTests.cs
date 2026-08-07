@@ -1440,4 +1440,26 @@ public static class LayoutTests
         True(cells.All(c => Math.Abs(c.Box.ContentBox.Top - cells[0].Box.ContentBox.Top) < 0.5f),
             "and they share the row's top");
     }
+
+    [Test]
+    public static void MisparentedCellsInAnInlineBox_GenerateAnInlineTable()
+    {
+        // §17.2.1: "If the box's parent is an inline box, generate an anonymous inline-table box;
+        // otherwise, an anonymous table box." A block-level table inside an inline box broke the
+        // line in two, so cells written between inline text landed on their own line.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body><div><span id='s'>a" +
+            "<span style='display: table-cell'>b</span><span style='display: table-cell'>c</span>" +
+            "d</span></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var table = FindNode(page.Root, n => n.TagName == "#anon-table")!;
+        True(table.GetDisplay() == DisplayType.InlineTable,
+            $"the generated table is inline-level inside an inline box, got {table.GetDisplay()}");
+        // Everything stays on one line: the table sits between the two text runs.
+        var s2 = FindNode(page.Root, n => n.Id == "s")!;
+        True(s2.Box.ContentBox.Height < 40f,
+            $"the run stays on one line, got height {s2.Box.ContentBox.Height}");
+    }
 }
