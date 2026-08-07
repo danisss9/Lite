@@ -653,11 +653,21 @@ internal static class BoxEngine
         else
             selfContentH = 0f;
 
-        // Lay out children to get content height
+        // Lay out children to get content height. The formatting context is the box's OWN display,
+        // exactly as LayoutBlock dispatches it: an absolutely positioned table or flex container
+        // used to fall through to plain block-children layout, which flowed its rows and cells as
+        // inline content — an abs-pos <table> came out as one long wrapping line of cell text.
+        float LayoutAbsChildren(float originY, float knownH) => node.GetDisplay() switch
+        {
+            DisplayType.Flex or DisplayType.InlineFlex =>
+                FlexEngine.LayoutFlex(node, contentX, originY, contentW, knownH, viewportWidth, viewportHeight),
+            DisplayType.Table or DisplayType.InlineTable =>
+                TableEngine.LayoutTable(node, contentX, originY, contentW, viewportWidth, viewportHeight),
+            _ => LayoutChildren(node.Children, contentX, originY, contentW, viewportWidth, viewportHeight, knownH),
+        };
+
         var contentY0 = cbRect.Top; // temp origin for children layout
-        var contentH = LayoutChildren(node.Children,
-            contentX, contentY0,
-            contentW, viewportWidth, viewportHeight, selfContentH);
+        var contentH = LayoutAbsChildren(contentY0, selfContentH);
 
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
         {
@@ -718,7 +728,7 @@ internal static class BoxEngine
 
         // Re-layout children at the correct absolute Y
         if (contentY != contentY0)
-            LayoutChildren(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight);
+            LayoutAbsChildren(contentY, selfContentH);
 
         node.Box = new BoxDimensions
         {

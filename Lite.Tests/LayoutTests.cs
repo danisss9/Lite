@@ -1359,4 +1359,53 @@ public static class LayoutTests
         True(Math.Abs(b.Box.ContentBox.Right - cb.Box.ContentBox.Right) < 0.5f,
             $"an RTL containing block puts it flush right ({cb.Box.ContentBox.Right}), got {b.Box.ContentBox.Right}");
     }
+
+    [Test]
+    public static void Table_CellSpacingAndCellPaddingAttributesApply()
+    {
+        // HTML 4 §11.2.1 presentational hints: cellspacing is 'border-spacing' on the table and
+        // cellpadding is 'padding' on each cell. Ignoring them left the UA defaults (2px spacing,
+        // 1px cell padding) in place, so a `cellpadding="0" cellspacing="0"` table sat 3px lower
+        // and wider than the CSS-equivalent it is meant to match.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body>" +
+            "<table id='t' cellspacing='0' cellpadding='0'><tr><td id='c'>a</td><td>b</td></tr></table>" +
+            "</body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var t = FindNode(page.Root, n => n.Id == "t")!;
+        var c = FindNode(page.Root, n => n.Id == "c")!;
+        Equal("0px", t.StyleOverrides.GetValueOrDefault("border-spacing"));
+        True(c.Box.Padding.Top == 0f && c.Box.Padding.Left == 0f,
+            $"cellpadding=0 clears the UA cell padding, got {c.Box.Padding.Top}/{c.Box.Padding.Left}");
+        True(Math.Abs(c.Box.BorderBox.Left - t.Box.ContentBox.Left) < 0.5f,
+            $"with no spacing the first cell starts at the table's content edge, " +
+            $"got {c.Box.BorderBox.Left} vs {t.Box.ContentBox.Left}");
+    }
+
+    [Test]
+    public static void AbsolutelyPositionedTable_LaysOutAsATable()
+    {
+        // An absolutely positioned box laid its children out as plain blocks whatever its own
+        // display was, so an abs-pos <table> flowed its rows and cells as inline content — one
+        // long wrapping line of cell text instead of a grid.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>#t { position: absolute; top: 0; left: 0 }</style></head>" +
+            "<body><table id='t' cellspacing='0' cellpadding='0'>" +
+            "<tr><td id='a'>a</td><td id='b'>b</td></tr>" +
+            "<tr><td id='c'>c</td><td>d</td></tr></table></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var a = FindNode(page.Root, n => n.Id == "a")!;
+        var b = FindNode(page.Root, n => n.Id == "b")!;
+        var c = FindNode(page.Root, n => n.Id == "c")!;
+        True(Math.Abs(a.Box.ContentBox.Top - b.Box.ContentBox.Top) < 0.5f,
+            "cells of one row share a top");
+        True(b.Box.ContentBox.Left > a.Box.ContentBox.Left,
+            "and sit side by side");
+        True(c.Box.ContentBox.Top > a.Box.ContentBox.Top,
+            "the second row is below the first");
+    }
 }
