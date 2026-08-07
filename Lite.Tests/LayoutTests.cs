@@ -881,6 +881,35 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void InlineReplacedBox_ReservesItsPaddingBorderAndMargin()
+    {
+        // CSS 2.1 §8.4: the horizontal AND vertical margin/border/padding of an inline REPLACED
+        // box take part in layout (unlike a non-replaced inline box, whose vertical edges do
+        // not). The inline path passed zero edges, so `img { padding-right: 20px }` advanced the
+        // line by nothing and a following image sat flush against the first.
+        var first = Img(96, 96, new()
+        {
+            ["padding-left"] = "5px",
+            ["padding-right"] = "20px",
+            ["margin-top"] = "10px",
+        });
+        var second = Img(80, 20);
+        var cb = Block(new() { ["width"] = "400px" }, first, second);
+        LayoutTree(cb);
+
+        // The bitmap starts past the left padding, and the next image starts past the right one.
+        True(Math.Abs(first.Box.ContentBox.Left - (cb.Box.ContentBox.Left + 5f)) < 0.5f,
+            $"image content should start after its 5px left padding, got {first.Box.ContentBox.Left}");
+        var expectedSecond = cb.Box.ContentBox.Left + 5f + 96f + 20f;
+        True(Math.Abs(second.Box.ContentBox.Left - expectedSecond) < 0.5f,
+            $"next image should start at {expectedSecond} (past the 20px padding), " +
+            $"got {second.Box.ContentBox.Left}");
+        // A top margin pushes the replaced box down inside the line box it grew.
+        True(first.Box.ContentBox.Top - cb.Box.ContentBox.Top >= 9.5f,
+            $"10px top margin should offset the image, got {first.Box.ContentBox.Top - cb.Box.ContentBox.Top}");
+    }
+
+    [Test]
     public static void TextAlignRight_MovesInlineLevelBoxesNotJustText()
     {
         // CSS 2.1 §16.2 aligns the whole LINE BOX. text-align had a single consumer in the text

@@ -2007,10 +2007,22 @@ internal static class BoxEngine
                         : node.IntrinsicWidth > 0 ? (float)node.IntrinsicWidth : node.Image?.Width ?? 100f;
                 var h = sized is { Height: > 0 } ? sized.Value.Height
                         : node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight : node.Image?.Height ?? 100f;
+                // §8.4: an inline REPLACED box's margins, borders and padding all take part in
+                // layout horizontally *and* vertically — unlike a non-replaced inline box, whose
+                // vertical edges do not affect line height. Reserving only the content size here
+                // meant `img { padding-right: 20px }` advanced the line by nothing at all.
+                var imgFontSize = node.GetFontSize();
+                var imgMargin = node.GetMargin(maxWidth, viewportHeight, imgFontSize);
+                var imgPadding = node.GetPadding(maxWidth, viewportHeight, imgFontSize);
+                var imgBorder = node.GetBorderWidth();
+                var imgW = imgMargin.Left + imgBorder.Left + imgPadding.Left + w
+                         + imgPadding.Right + imgBorder.Right + imgMargin.Right;
+                var imgH = imgMargin.Top + imgBorder.Top + imgPadding.Top + h
+                         + imgPadding.Bottom + imgBorder.Bottom + imgMargin.Bottom;
                 // Replaced elements have no baseline of their own — CSS 2.1 §10.8's fallback rule
                 // aligns their bottom margin edge with the line's baseline (Ascent = full height).
-                items.Add(new InlineItem(InlineItemKind.Image, node, null, w, h,
-                           default, default, default, w, h, h));
+                items.Add(new InlineItem(InlineItemKind.Image, node, null, imgW, imgH,
+                           imgMargin, imgPadding, imgBorder, w, h, imgH));
             }
             else if (!string.IsNullOrEmpty(node.DisplayText) && !node.Children.Any())
             {
@@ -2154,6 +2166,25 @@ internal static class BoxEngine
                     break;
                 }
             case InlineItemKind.Image:
+                {
+                    // The item spans the margin box; the node's own box starts inside the
+                    // margin/border/padding edges so the bitmap lands on the content box and
+                    // the decorations get a padding/border box to paint against.
+                    var m = item.Margin;
+                    var p = item.Padding;
+                    var b = item.Border;
+                    var contentX = absX + m.Left + b.Left + p.Left;
+                    var contentY = absY + m.Top + b.Top + p.Top;
+                    node.Box = new BoxDimensions
+                    {
+                        ContentBox = new SKRect(contentX, contentY,
+                                                contentX + item.ContentW, contentY + item.ContentH),
+                        Margin = m,
+                        Padding = p,
+                        Border = b,
+                    };
+                    break;
+                }
             case InlineItemKind.Text:
             case InlineItemKind.LineBreak:
                 {

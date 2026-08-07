@@ -141,3 +141,10 @@ css/CSS2/backgrounds/background-029.xht
 #      -168 needs the box generated inside an inline parent to be an inline-table. ----
 css/CSS2/tables/table-anonymous-objects-059.xht
 css/CSS2/tables/table-anonymous-objects-012.xht
+
+# ---- §8.4: an inline REPLACED box's margin/border/padding take part in layout on both axes.
+#      Both of these hinge on the shared references: height-006-ref places two 96x96 images with
+#      `img + img { padding-left: 4px }`, min-height-067-ref two with `img { padding-right: 20px }`,
+#      and reserving only the content size collapsed those gaps to nothing. ----
+css/CSS2/normal-flow/min-height-006.xht
+css/CSS2/normal-flow/min-height-067.xht

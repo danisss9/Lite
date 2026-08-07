@@ -332,6 +332,10 @@ internal static class Drawer
                 return;
 
             case "IMG":
+                // An image is a replaced box like any other: its own background, border and
+                // outline paint under/around the bitmap. The inline path reserves room for those
+                // edges, so skipping them here would leave a gap with nothing drawn in it.
+                PaintBlockDecorations(canvas, node);
                 PaintImage(canvas, node);
                 return;
 
