@@ -564,7 +564,7 @@ pass rate — informational, never gating:
 dotnet run --project Lite.Conformance -- --suite css21 --survey css/CSS2/normal-flow
 ```
 
-Across the full upstream `css/CSS2` reftest suite Lite currently passes **3917 / 6266 (62.5%)**.
+Across the full upstream `css/CSS2` reftest suite Lite currently passes **4042 / 6266 (64.5%)**.
 Diagnostics: `--render <url> [name]` dumps one page to `artifacts/<name>.png`, and
 `--geom <url> <selector>` prints the resolved geometry of matching elements.
 
