@@ -229,7 +229,9 @@ internal static class RefTestRunner
                         ' clientW=' + e.clientWidth + ' clientH=' + e.clientHeight +
                         ' fontSize=' + cs.fontSize + ' borderTop=' + cs.borderTopWidth +
                         ' width=' + cs.width + ' marginTop=' + cs.marginTop +
-                        ' lineHeight=' + cs.lineHeight);
+                        ' lineHeight=' + cs.lineHeight +
+                        ' bgColor=' + cs.backgroundColor + ' bgImage=' + cs.backgroundImage +
+                        ' bgPos=' + cs.backgroundPosition + ' bgRepeat=' + cs.backgroundRepeat);
                     for (var c=e.firstElementChild; c; c=c.nextElementSibling) {{
                         console.log('[GEOM]   child ' + c.tagName +
                             ' offsetW=' + c.offsetWidth + ' offsetH=' + c.offsetHeight +

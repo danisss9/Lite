@@ -152,4 +152,45 @@ public static class CascadeTests
         Equal("0%", c.GetBackgroundPosition().X);
         Equal("0%", c.GetBackgroundPosition().Y);
     }
+
+    [Test]
+    public static void BackgroundShorthand_WithKeywordPositionSurvivesAngleSharpDroppingIt()
+    {
+        // AngleSharp.Css refuses a `background` whose position is a bare keyword and drops the
+        // whole declaration, leaving the element with a lower-specificity rule's colour. The
+        // shorthand is read back out of the stylesheet source for exactly those rules — but only
+        // when AngleSharp kept nothing from the background family, so a longhand written AFTER the
+        // shorthand still wins (§14.2 ordering).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "div { background: yellow; }" +
+            "#one { background: red url('x.png') right repeat-y; }" +
+            "#two { background: bottom green; }" +
+            "#three { background: repeat-x; background-image: url('y.png'); }" +
+            "</style></head><body>" +
+            "<div id='one'></div><div id='two'></div><div id='three'></div>" +
+            "</body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+
+        LayoutNode? F(LayoutNode n, string id) =>
+            n.Id == id ? n : n.Children.Select(c => F(c, id)).FirstOrDefault(r => r != null);
+
+        var one = F(page.Root, "one")!;
+        Console.WriteLine($"[dbg] one style bg: '{one.Style.GetPropertyValueSafe("background-color")}'");
+        True(one.GetBackgroundColor().Red > 100 && one.GetBackgroundColor().Green < 100,
+            $"`background: red url(...) right repeat-y` should win over `div {{ background: yellow }}`, " +
+            $"got {one.GetBackgroundColor()}");
+        Equal("repeat-y", one.GetBackgroundRepeat());
+        Equal("right", one.GetBackgroundPosition().X);
+
+        var two = F(page.Root, "two")!;
+        True(two.GetBackgroundColor().Green > 100 && two.GetBackgroundColor().Red < 100,
+            $"`background: bottom green` should set green, got {two.GetBackgroundColor()}");
+
+        // AngleSharp parses this one, so its longhand ordering must be left alone: the explicit
+        // background-image comes after the shorthand and survives it.
+        var three = F(page.Root, "three")!;
+        True(three.GetBackgroundImage().Contains("y.png", StringComparison.Ordinal),
+            $"a longhand after the shorthand must win, got '{three.GetBackgroundImage()}'");
+    }
 }

@@ -627,25 +627,23 @@ public static class StyleExtensions
     }
 
     public static float GetLetterSpacing(this LayoutNode node, float fontSize = 16)
-    {
-        var raw = node.TryResolveStyle("letter-spacing", out var ov)
-            ? ov : node.Style.GetPropertyValueSafe("letter-spacing");
-        if (string.IsNullOrWhiteSpace(raw) || raw == "normal") return 0f;
-        raw = raw.Trim();
-        if (raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px)) return px;
-        if (raw.EndsWith("em") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var em)) return em * fontSize;
-        return 0f;
-    }
+        => GetSpacing(node, "letter-spacing", fontSize);
 
     public static float GetWordSpacing(this LayoutNode node, float fontSize = 16)
+        => GetSpacing(node, "word-spacing", fontSize);
+
+    /// <summary>'letter-spacing'/'word-spacing' take ANY length unit. Hand-parsing px and em only
+    /// silently dropped `72pt`, `2pc`, `2.54cm` and the rest to 0 — every non-px spacing test drew
+    /// its text unspaced.</summary>
+    private static float GetSpacing(LayoutNode node, string property, float fontSize)
     {
-        var raw = node.TryResolveStyle("word-spacing", out var ov)
-            ? ov : node.Style.GetPropertyValueSafe("word-spacing");
-        if (string.IsNullOrWhiteSpace(raw) || raw == "normal") return 0f;
+        var raw = node.TryResolveStyle(property, out var ov)
+            ? ov : node.Style.GetPropertyValueSafe(property);
+        if (string.IsNullOrWhiteSpace(raw)) return 0f;
         raw = raw.Trim();
-        if (raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px)) return px;
-        if (raw.EndsWith("em") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var em)) return em * fontSize;
-        return 0f;
+        if (raw.Equals("normal", StringComparison.OrdinalIgnoreCase)) return 0f;
+        if (TryEvalCalc(raw, 0f, fontSize, 0f, out var calcPx)) return calcPx;
+        return CssUnits.TryParse(raw, fontSize, 0f, 0f, 0f, out var px) ? px : 0f;
     }
 
     public static float GetTextIndent(this LayoutNode node, float totalWidth = 0, float fontSize = 16)
@@ -1517,9 +1515,17 @@ public static class StyleExtensions
             return Rendering.SvgRenderer.ParseHsl(lower);
         }
 
-        // Hex and named colours — SkiaSharp handles all CSS named colours and hex formats
+        // Hex formats.
         if (SKColor.TryParse(value, out var skColor))
             return skColor;
+
+        // CSS named colours. SKColor.TryParse only understands hex, so a keyword arriving here —
+        // which is how every colour written into StyleOverrides looks, e.g. the 'red' pulled out
+        // of a `background: red url(...)` shorthand — silently fell through to whatever AngleSharp
+        // had computed for the element, quietly losing to a lower-specificity rule.
+        var named = AngleSharp.Css.Values.Color.FromName(lower);
+        if (named.HasValue)
+            return new SKColor(named.Value.R, named.Value.G, named.Value.B, named.Value.A);
 
         return null;
     }

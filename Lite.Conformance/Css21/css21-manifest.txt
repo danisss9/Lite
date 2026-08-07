@@ -159,3 +159,18 @@ css/CSS2/normal-flow/inline-replaced-height-001.xht
 #      against an inline image's line; line-height-127 checks the line box of an empty inline. ----
 css/CSS2/backgrounds/background-position-applies-to-001.xht
 css/CSS2/linebox/line-height-127.xht
+
+# ---- §8.4: the horizontal margins and padding of a NON-replaced inline box are laid out (its
+#      vertical edges are not); §16.4/§16.5 letter-/word-spacing take any length unit; and a CSS
+#      colour KEYWORD reaching the painter through StyleOverrides has to parse — SKColor.TryParse
+#      only understands hex, so `background: red url(...)` used to fall back to whatever a
+#      lower-specificity rule had set. -imrgn-l/-ipadn-l need the inline edges AND the shorthand
+#      below; letter-spacing-019 is the px test's `72pt` twin. ----
+css/CSS2/css1/c5504-imrgn-l-000.xht
+css/CSS2/css1/c5509-ipadn-l-000.xht
+css/CSS2/text/letter-spacing-019.xht
+
+# ---- §14.2: AngleSharp.Css drops a whole `background` declaration whose position is a bare
+#      keyword, so the shorthand is re-read from the stylesheet source for rules where it kept
+#      nothing of the family. background-position-004 writes `background: bottom green`. ----
+css/CSS2/backgrounds/background-position-004.xht

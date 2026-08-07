@@ -910,6 +910,56 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void LetterAndWordSpacing_AcceptEveryLengthUnit()
+    {
+        // §16.4/§16.5 take any length. Hand-parsing px and em only meant `72pt`, `6pc`, `2.54cm`
+        // and the rest silently computed to 0 and the text drew unspaced.
+        var node = new LayoutNode(null, "SPAN", "x", _styleCache.Style);
+        foreach (var value in new[] { "96px", "72pt", "6pc", "2.54cm", "25.4mm", "1in" })
+        {
+            node.StyleOverrides["letter-spacing"] = value;
+            node.StyleOverrides["word-spacing"] = value;
+            True(Math.Abs(node.GetLetterSpacing(16f) - 96f) < 0.05f,
+                $"letter-spacing: {value} should be 96px, got {node.GetLetterSpacing(16f)}");
+            True(Math.Abs(node.GetWordSpacing(16f) - 96f) < 0.05f,
+                $"word-spacing: {value} should be 96px, got {node.GetWordSpacing(16f)}");
+        }
+        node.StyleOverrides["letter-spacing"] = "normal";
+        True(node.GetLetterSpacing(16f) == 0f, "'normal' letter-spacing adds nothing");
+    }
+
+    [Test]
+    public static void InlineBox_ReservesItsHorizontalMarginAndPadding()
+    {
+        // CSS 2.1 §8.4: a non-replaced inline box's horizontal margins and padding take part in
+        // layout — the next thing on the line starts past them. Only its VERTICAL edges are
+        // ignored, and those only for the line box's height.
+        var lead = new LayoutNode(null, "#text", "a", _styleCache.Style);
+        lead.StyleOverrides["display"] = "inline";
+        var span = new LayoutNode(null, "SPAN", "b", _styleCache.Style);
+        span.StyleOverrides["display"] = "inline";
+        span.StyleOverrides["margin-left"] = "40px";
+        span.StyleOverrides["padding-left"] = "10px";
+        span.StyleOverrides["padding-right"] = "20px";
+        var trail = new LayoutNode(null, "#text", "c", _styleCache.Style);
+        trail.StyleOverrides["display"] = "inline";
+        var cb = Block(new() { ["width"] = "400px" }, lead, span, trail);
+        LayoutTree(cb);
+
+        var expectedSpan = lead.Box.ContentBox.Right + 40f + 10f;
+        True(Math.Abs(span.Box.ContentBox.Left - expectedSpan) < 0.5f,
+            $"span text should start past its 40px margin and 10px padding ({expectedSpan}), " +
+            $"got {span.Box.ContentBox.Left}");
+        var expectedTrail = span.Box.ContentBox.Right + 20f;
+        True(Math.Abs(trail.Box.ContentBox.Left - expectedTrail) < 0.5f,
+            $"the next text should start past the span's 20px right padding ({expectedTrail}), " +
+            $"got {trail.Box.ContentBox.Left}");
+        // The background paints over the padding box, so it covers what the line reserved.
+        True(Math.Abs(span.Box.PaddingBox.Left - (span.Box.ContentBox.Left - 10f)) < 0.01f,
+            "the padding box must include the reserved left padding");
+    }
+
+    [Test]
     public static void LineBox_IncludesTheStrutOfItsBlockContainer()
     {
         // CSS 2.1 §10.8.1: every line box starts with a zero-width inline box carrying the block
