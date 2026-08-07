@@ -1185,7 +1185,7 @@ internal static class BoxEngine
         {
             switch (item.Kind)
             {
-                case InlineItemKind.OutOfFlow or InlineItemKind.LineBreak:
+                case InlineItemKind.OutOfFlow or InlineItemKind.LineBreak or InlineItemKind.InlineEdge:
                     continue;
                 case InlineItemKind.Text when item.Text is { } t:
                     var trimmed = t.TrimStart();
@@ -1833,6 +1833,15 @@ internal static class BoxEngine
                 else item.Node.LineBands = null;
             }
 
+            // §10.8: the vertical edges of a non-replaced inline box do not enter the line box's
+            // height calculation, so an edge spacer only advances the pen.
+            if (effectiveItem.Kind == InlineItemKind.InlineEdge)
+            {
+                placed.Add((effectiveItem, lineX, lineY));
+                lineX += effectiveItem.Width;
+                continue;
+            }
+
             var va = effectiveItem.Node.GetVerticalAlign();
             switch (va)
             {
@@ -1885,6 +1894,40 @@ internal static class BoxEngine
             VerticalAlignType.Super => item.Ascent + fontSize * 0.15f,
             _ => item.Ascent, // baseline
         };
+    }
+
+    private static InlineItem EdgeItem(LayoutNode node, float width) =>
+        new(InlineItemKind.InlineEdge, node, null, width, 0, default, default, default, width, 0, 0);
+
+    /// <summary>
+    /// CSS 2.1 §8.4: the HORIZONTAL margins and padding of a non-replaced inline box are laid out
+    /// — they push whatever follows along the line — while its vertical ones do not affect the
+    /// line box's height. Returns the widths to reserve before and after the box's own content.
+    /// <para>Borders are deliberately left out: the painter draws no border on an inline box, so
+    /// reserving room for one would open a gap with nothing in it.</para>
+    /// </summary>
+    private static (float Leading, float Trailing) InlineBoxEdges(
+        LayoutNode node, float maxWidth, float viewportHeight)
+    {
+        // Anonymous boxes (#text and friends) resolve their styles from the element they came
+        // from, so asking them for a margin would apply the parent's a second time.
+        if (node.TagName.StartsWith('#')) return (0f, 0f);
+
+        // §9.2.1.1: an inline box holding a block-level child is BROKEN AROUND it, and the edges
+        // belong to the first and last fragment only. Each fragment is a separate inline run here,
+        // so emitting the edges per run would repeat them on every piece.
+        foreach (var child in node.Children)
+            if (child.GetDisplay() is DisplayType.Block or DisplayType.Flex or DisplayType.Table
+                                    or DisplayType.ListItem)
+                return (0f, 0f);
+
+        var fontSize = node.GetFontSize();
+        var margin = node.GetMargin(maxWidth, viewportHeight, fontSize);
+        var padding = node.GetPadding(maxWidth, viewportHeight, fontSize);
+        // 'auto' is 0 on an inline box (§10.3.1), not the block-level centring rule.
+        var left = (node.IsAutoMarginLeft() ? 0f : margin.Left) + padding.Left;
+        var right = (node.IsAutoMarginRight() ? 0f : margin.Right) + padding.Right;
+        return (left, right);
     }
 
     /// <summary>
@@ -2109,6 +2152,8 @@ internal static class BoxEngine
                     ? node.DisplayText.Split('\n')
                     : [node.DisplayText];
 
+                var (leading, trailing) = InlineBoxEdges(node, maxWidth, viewportHeight);
+                if (leading != 0f) items.Add(EdgeItem(node, leading));
                 for (var si = 0; si < segments.Length; si++)
                 {
                     if (si > 0)
@@ -2118,10 +2163,14 @@ internal static class BoxEngine
                     items.Add(new InlineItem(InlineItemKind.Text, node, segments[si], w, h,
                                default, default, default, w, h, ascent));
                 }
+                if (trailing != 0f) items.Add(EdgeItem(node, trailing));
             }
             else if (node.Children.Count > 0)
             {
+                var (leading, trailing) = InlineBoxEdges(node, maxWidth, viewportHeight);
+                if (leading != 0f) items.Add(EdgeItem(node, leading));
                 CollectInlineItems(node.Children, items, maxWidth, viewportWidth, viewportHeight);
+                if (trailing != 0f) items.Add(EdgeItem(node, trailing));
             }
         }
     }
@@ -2232,6 +2281,10 @@ internal static class BoxEngine
                     node.StaticY = absY;
                     break;
                 }
+            case InlineItemKind.InlineEdge:
+                // Pure advance. The inline box's own painted geometry comes from the fragments its
+                // text children record, so writing a box here would overwrite it with a sliver.
+                break;
             case InlineItemKind.Image:
                 {
                     // The item spans the margin box; the node's own box starts inside the
@@ -2264,7 +2317,15 @@ internal static class BoxEngine
                         (node.InlineFragments ??= []).Add((rect, item.Text ?? ""));
                         if (node.InlineFragments.Count > 1) rect = SKRect.Union(node.Box.ContentBox, rect);
                     }
-                    node.Box = new BoxDimensions { ContentBox = rect };
+                    // The line already reserved this box's horizontal padding (§8.4), so record it
+                    // here too — the painter fills the PADDING box, and without it the background
+                    // would stop short of the space the line gave the box.
+                    node.Box = new BoxDimensions
+                    {
+                        ContentBox = rect,
+                        Padding = node.TagName.StartsWith('#')
+                            ? default : node.GetPadding(0, 0, node.GetFontSize()),
+                    };
                     break;
                 }
         }
@@ -2277,7 +2338,9 @@ internal static class BoxEngine
     /// <summary><see cref="OutOfFlow"/> is a zero-sized marker for an absolutely positioned box
     /// met inside an inline run: it occupies no space on the line but rides along with it, so the
     /// line position it lands on is the box's static position (§10.3.7 / §10.6.4).</summary>
-    private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, InlineTable, LineBreak, OutOfFlow }
+    /// <summary><see cref="InlineEdge"/> is the leading or trailing margin+border+padding of a
+    /// non-replaced inline box: it advances the line but has no height of its own (§8.4).</summary>
+    private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, InlineTable, LineBreak, OutOfFlow, InlineEdge }
 
     /// <summary><see cref="Ascent"/> is the distance from this item's own top (margin edge) down
     /// to the baseline it should align on (CSS 2.1 §10.8). Text uses the font's half-leading

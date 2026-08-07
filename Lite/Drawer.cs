@@ -443,8 +443,10 @@ internal static class Drawer
 
             if (bgColor != SKColors.Transparent)
             {
+                // §14.2: a background paints over the PADDING box. For an inline box that is the
+                // text plus whatever horizontal padding the line reserved for it (§8.4).
                 using var bgPaint = new SKPaint { Color = bgColor };
-                canvas.DrawRect(node.Box.ContentBox, bgPaint);
+                canvas.DrawRect(node.Box.PaddingBox, bgPaint);
             }
             DrawWrappedText(canvas, node, node.DisplayText,
                 node.Box.ContentBox.Left, node.Box.ContentBox.Top,

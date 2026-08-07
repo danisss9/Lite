@@ -1253,17 +1253,32 @@ internal static class Parser
     /// </summary>
     private static void ExpandBackgroundShorthand(LayoutNode node, string value)
     {
-        var v = value.Trim();
-        if (v.Length == 0) return;
-        if (v is "initial" or "unset" or "none")
+        var longhands = SplitBackgroundShorthand(value);
+        if (longhands is null) return;
+        foreach (var (prop, val) in longhands)
         {
-            node.StyleOverrides["background-image"] = "none";
-            node.StyleOverrides["background-repeat"] = "repeat";
-            node.StyleOverrides["background-position"] = "0% 0%";
-            node.StyleOverrides["background-color"] = "transparent";
-            return;
+            if (val is null) node.StyleOverrides.Remove(prop);
+            else node.StyleOverrides[prop] = val;
         }
-        if (v == "inherit") return;   // leave the cascade to it
+    }
+
+    /// <summary>Decomposes a `background` shorthand (§14.2) into its longhands. A null value in the
+    /// result means "no declaration" (only ever background-color, which the shorthand leaves to
+    /// whatever the cascade already had when it names no colour). Returns null for 'inherit',
+    /// which the cascade resolves on its own, and for an empty value.</summary>
+    private static List<(string Prop, string? Val)>? SplitBackgroundShorthand(string value)
+    {
+        var v = value.Trim();
+        if (v.Length == 0) return null;
+        if (v is "initial" or "unset" or "none")
+            return
+            [
+                ("background-image", "none"),
+                ("background-repeat", "repeat"),
+                ("background-position", "0% 0%"),
+                ("background-color", "transparent"),
+            ];
+        if (v == "inherit") return null;   // leave the cascade to it
 
         string? image = null, repeat = null, attachment = null, color = null;
         var position = new List<string>();
@@ -1285,17 +1300,19 @@ internal static class Parser
         }
 
         // The shorthand resets everything it does not name to its initial value.
-        node.StyleOverrides["background-image"] = image ?? "none";
-        node.StyleOverrides["background-repeat"] = repeat ?? "repeat";
-        node.StyleOverrides["background-attachment"] = attachment ?? "scroll";
-        node.StyleOverrides["background-position"] = position.Count switch
-        {
-            0 => "0% 0%",
-            1 => position[0],
-            _ => $"{position[0]} {position[1]}",
-        };
-        if (color is not null) node.StyleOverrides["background-color"] = color;
-        else node.StyleOverrides.Remove("background-color");
+        return
+        [
+            ("background-image", image ?? "none"),
+            ("background-repeat", repeat ?? "repeat"),
+            ("background-attachment", attachment ?? "scroll"),
+            ("background-position", position.Count switch
+            {
+                0 => "0% 0%",
+                1 => position[0],
+                _ => $"{position[0]} {position[1]}",
+            }),
+            ("background-color", color),
+        ];
     }
 
     /// <summary>Splits a shorthand value on whitespace while keeping bracketed functions
@@ -2010,6 +2027,10 @@ internal static class Parser
                         StoreProp(node, prop, val);
                 }
                 ParseCssTextForFlexProps(styleRule.Style.CssText, node);
+                // Same rescue as the cascade path: re-apply the shorthand from the source when
+                // AngleSharp dropped it, after the CssText pass so the source wins.
+                if (RescuedBackgroundFor(styleRule) is { } rawBg)
+                    ExpandBackgroundShorthand(node, rawBg);
                 ExtractTransitionAndAnimation(styleRule.Style.CssText, node);
             }
             else
@@ -2851,9 +2872,169 @@ internal static class Parser
     private static void CollectCssRules(AngleSharp.Dom.IDocument document)
     {
         CssRules.Clear();
+        CollectRawBackgrounds(document);
         if (document.StyleSheets is null) return;
         foreach (var sheet in document.StyleSheets.OfType<ICssStyleSheet>())
             CollectRulesFromSheet(sheet.Rules);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 'background' shorthands rescued from the raw stylesheet text
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // AngleSharp.Css drops a whole `background` declaration when the position is written as a bare
+    // keyword — `background: red url(x.png) right repeat-y` and `background: bottom green` both
+    // vanish, leaving the element with whatever a lower-specificity rule set. The value is
+    // perfectly good CSS 2.1 (§14.2), and the engine's own expander already understands it, so the
+    // shorthand is read straight out of the stylesheet source and re-applied over the CSSOM's
+    // version. Keyed by the rule's selector list, canonicalised so `body>div` and `body > div`
+    // agree; a selector declared twice keeps the last value, which is what the cascade would do
+    // for equal specificity anyway.
+
+    private static readonly Dictionary<string, string> s_rawBackgrounds = new(StringComparer.Ordinal);
+
+    private static void CollectRawBackgrounds(AngleSharp.Dom.IDocument document)
+    {
+        s_rawBackgrounds.Clear();
+        foreach (var styleEl in document.QuerySelectorAll("style"))
+            ScanRawBackgrounds(StripCssComments(styleEl.TextContent ?? string.Empty));
+    }
+
+    private static void ScanRawBackgrounds(string css)
+    {
+        var i = 0;
+        while (i < css.Length)
+        {
+            var open = css.IndexOf('{', i);
+            if (open < 0) break;
+            var close = MatchingBrace(css, open);
+            if (close < 0) break;
+
+            var prelude = css[i..open].Trim();
+            var body = css[(open + 1)..close];
+            if (prelude.StartsWith('@'))
+            {
+                // Conditional groups contain more style rules; everything else (@font-face,
+                // @keyframes, @page) has no selector to key on.
+                var name = prelude.Split(' ', '(', '\t', '\n', '\r')[0].ToLowerInvariant();
+                if (name is "@media" or "@supports" or "@document" or "@layer")
+                    ScanRawBackgrounds(body);
+            }
+            else if (prelude.Length > 0 && LastBackgroundDeclaration(body) is { } bg)
+            {
+                s_rawBackgrounds[CanonicalSelectorList(prelude)] = bg;
+            }
+            i = close + 1;
+        }
+    }
+
+    private static int MatchingBrace(string s, int open)
+    {
+        var depth = 0;
+        for (var i = open; i < s.Length; i++)
+        {
+            if (s[i] == '{') depth++;
+            else if (s[i] == '}' && --depth == 0) return i;
+        }
+        return -1;
+    }
+
+    private static string StripCssComments(string css)
+    {
+        if (!css.Contains("/*", StringComparison.Ordinal)) return css;
+        var sb = new System.Text.StringBuilder(css.Length);
+        var i = 0;
+        while (i < css.Length)
+        {
+            var start = css.IndexOf("/*", i, StringComparison.Ordinal);
+            if (start < 0) { sb.Append(css, i, css.Length - i); break; }
+            sb.Append(css, i, start - i);
+            var end = css.IndexOf("*/", start + 2, StringComparison.Ordinal);
+            if (end < 0) break;
+            i = end + 2;
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Returns the value of the last `background:` (not `background-*:`) declaration in a
+    /// rule body, with any !important flag removed, or null when the rule has none.</summary>
+    private static string? LastBackgroundDeclaration(string body)
+    {
+        string? found = null;
+        var depth = 0;
+        var start = 0;
+        for (var i = 0; i <= body.Length; i++)
+        {
+            if (i < body.Length)
+            {
+                if (body[i] == '(') { depth++; continue; }
+                if (body[i] == ')') { depth = Math.Max(0, depth - 1); continue; }
+                if (body[i] != ';' || depth != 0) continue;
+            }
+            var decl = body[start..Math.Min(i, body.Length)];
+            start = i + 1;
+            var colon = decl.IndexOf(':');
+            if (colon < 0) continue;
+            if (!decl[..colon].Trim().Equals("background", StringComparison.OrdinalIgnoreCase)) continue;
+            var value = decl[(colon + 1)..].Trim();
+            if (value.EndsWith("important", StringComparison.OrdinalIgnoreCase))
+            {
+                var head = value[..^"important".Length].TrimEnd();
+                if (head.EndsWith('!')) value = head[..^1].TrimEnd();
+            }
+            if (value.Length > 0) found = value;
+        }
+        return found;
+    }
+
+    /// <summary>Canonicalises a selector list so the stylesheet's own text and AngleSharp's
+    /// re-serialisation of it produce the same key: whitespace collapsed, spaces around
+    /// combinators removed, and the comma-separated parts sorted (order carries no meaning).</summary>
+    private static string CanonicalSelectorList(string selectors)
+    {
+        var parts = SplitSelectorList(selectors)
+            .Select(CanonicalSelector)
+            .Where(s => s.Length > 0)
+            .ToList();
+        parts.Sort(StringComparer.Ordinal);
+        return string.Join(',', parts);
+    }
+
+    private static string CanonicalSelector(string selector)
+    {
+        var sb = new System.Text.StringBuilder(selector.Length);
+        var pendingSpace = false;
+        foreach (var c in selector)
+        {
+            if (char.IsWhiteSpace(c)) { pendingSpace = sb.Length > 0; continue; }
+            if (c is '>' or '+' or '~')
+            {
+                while (sb.Length > 0 && sb[^1] == ' ') sb.Length--;
+                pendingSpace = false;
+            }
+            else if (pendingSpace && sb.Length > 0 && sb[^1] is not ('>' or '+' or '~'))
+            {
+                sb.Append(' ');
+            }
+            pendingSpace = false;
+            sb.Append(c);
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>The raw `background` shorthand declared for a rule's selector list, but only when
+    /// AngleSharp lost the whole background family for that rule. When it kept anything — even a
+    /// longhand written after the shorthand, which must win over it (§14.2 ordering) — its parse is
+    /// authoritative and re-expanding the source would clobber that ordering.</summary>
+    private static string? RescuedBackgroundFor(ICssStyleRule styleRule)
+    {
+        if (string.IsNullOrEmpty(styleRule.SelectorText)) return null;
+        if (!s_rawBackgrounds.TryGetValue(CanonicalSelectorList(styleRule.SelectorText), out var raw))
+            return null;
+        var cssText = styleRule.Style?.CssText;
+        if (!string.IsNullOrEmpty(cssText) &&
+            cssText.Contains("background", StringComparison.OrdinalIgnoreCase)) return null;
+        return raw;
     }
 
     private static void CollectRulesFromSheet(ICssRuleList rules)
@@ -2867,9 +3048,19 @@ internal static class Parser
             }
             if (rule is not ICssStyleRule styleRule) continue;
 
-            var (props, important) = ParseDeclarations(styleRule.Style.CssText);
-            if (props.Count == 0) continue;
             if (string.IsNullOrEmpty(styleRule.SelectorText)) continue;
+
+            var (props, important) = ParseDeclarations(styleRule.Style.CssText);
+            // A `background` AngleSharp refused to parse never reaches CssText, so it is merged in
+            // from the stylesheet source before the empty-rule check — a rule whose only
+            // declaration is such a shorthand would otherwise be dropped outright.
+            if (RescuedBackgroundFor(styleRule) is { } rawBg &&
+                SplitBackgroundShorthand(rawBg) is { } rawLonghands)
+            {
+                foreach (var (prop, val) in rawLonghands)
+                    if (val is not null) props[prop] = val;
+            }
+            if (props.Count == 0) continue;
 
             // A selector list ("a, b") gets one entry per selector so each keeps its own specificity.
             foreach (var sel in SplitSelectorList(styleRule.SelectorText))
