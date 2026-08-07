@@ -124,3 +124,13 @@ css/CSS2/generated-content/content-002.xht
 
 # ---- 'line-height: 0' collapses the line box; 0 was being read as "unspecified".
 css/CSS2/linebox/line-height-002.xht
+
+# ---- §10.3.7 / §10.6.4: with the offsets and the size all given, an auto margin takes the space
+#      left over and two of them split it. -002 also covers rule 1's RTL static position. ----
+css/CSS2/positioning/absolute-non-replaced-width-002.xht
+css/CSS2/positioning/absolute-non-replaced-width-003.xht
+
+# ---- §14.2: the 'background' shorthand is expanded from the declared text and resets what it
+#      omits; an unset longhand reported as the literal "initial" is the property's initial value,
+#      and the position pair arrives as a tuple, "(initial, 50%)". ----
+css/CSS2/backgrounds/background-029.xht
