@@ -1408,4 +1408,36 @@ public static class LayoutTests
         True(c.Box.ContentBox.Top > a.Box.ContentBox.Top,
             "the second row is below the first");
     }
+
+    [Test]
+    public static void AnonymousTableBoxes_TrackADynamicDisplayChange()
+    {
+        // Anonymous boxes are a function of the current display values. A pass that only ever
+        // added wrappers could not track a change to one: setting a cell to display:none wrapped
+        // it in an anonymous cell + table (a display:none box is not a proper table child), and
+        // restoring 'table-cell' left the wrappers behind, so the cell stayed nested in a table
+        // of its own instead of rejoining the row.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body><div id='d' style='display: block'>" +
+            "<span style='display: table-cell'>a</span>" +
+            "<span id='t' style='display: table-cell'>b</span>" +
+            "<span style='display: table-cell'>c</span>" +
+            "</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var t = FindNode(page.Root, n => n.Id == "t")!;
+        t.StyleOverrides["display"] = "none";
+        BoxEngine.Layout(page.Root, 800, 600);
+        t.StyleOverrides["display"] = "table-cell";
+        BoxEngine.Layout(page.Root, 800, 600);
+
+        var row = FindNode(page.Root, n => n.TagName == "#anon-row")!;
+        var cells = row.Children.Where(c => c.GetDisplay() == DisplayType.TableCell).ToList();
+        True(cells.Count == 3, $"all three cells rejoin the one row, got {cells.Count}");
+        True(FindNode(row, n => n.TagName == "#anon-cell") is null,
+            "no stale anonymous cell survives the round trip");
+        True(cells.All(c => Math.Abs(c.Box.ContentBox.Top - cells[0].Box.ContentBox.Top) < 0.5f),
+            "and they share the row's top");
+    }
 }
