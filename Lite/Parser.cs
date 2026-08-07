@@ -991,6 +991,13 @@ internal static class Parser
             }
         }
 
+        // <table cellspacing> / <table cellpadding>: HTML presentational hints for 'border-spacing'
+        // on the table and 'padding' on every cell in it. Ignoring them left the UA defaults
+        // (2px spacing, 1px cell padding) in place, so a `cellpadding="0" cellspacing="0"` table
+        // sat 3px lower and wider than the CSS-equivalent it is meant to match.
+        if (tag == "TABLE")
+            ApplyTableSpacingAttributes(element, node);
+
         // <picture>: now that the <img> and <source> children exist, pick the source the <img>
         // should display (media/type-based selection; falls back to the <img>'s own src).
         if (tag == "PICTURE")
@@ -1311,6 +1318,50 @@ internal static class Parser
         }
         if (start < value.Length) tokens.Add(value[start..]);
         return tokens;
+    }
+
+    /// <summary>
+    /// Applies the <c>cellspacing</c> and <c>cellpadding</c> content attributes (HTML 4 §11.2.1):
+    /// the first is 'border-spacing' on the table, the second 'padding' on each of its cells.
+    /// Presentational hints lose to an author declaration, so a cell that sets its own padding
+    /// keeps it. Called after the subtree is built, since it has to reach the cells.
+    /// </summary>
+    private static void ApplyTableSpacingAttributes(IElement element, LayoutNode node)
+    {
+        if (element.GetAttribute("cellspacing")?.Trim() is { Length: > 0 } spacing &&
+            float.TryParse(spacing.TrimEnd('%'), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var sp))
+        {
+            // An author declaration for 'border-spacing' is already in StyleOverrides (it is one of
+            // the properties the engine cascades itself), so its absence there means the attribute
+            // is free to apply. AngleSharp's computed value always reports something, so asking it
+            // would suppress the hint every time.
+            if (!node.StyleOverrides.ContainsKey("border-spacing"))
+                node.StyleOverrides["border-spacing"] = $"{sp.ToString(System.Globalization.CultureInfo.InvariantCulture)}px";
+        }
+
+        if (element.GetAttribute("cellpadding")?.Trim() is not { Length: > 0 } padding ||
+            !float.TryParse(padding.TrimEnd('%'), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var pad))
+            return;
+
+        var value = $"{pad.ToString(System.Globalization.CultureInfo.InvariantCulture)}px";
+        void ApplyToCells(LayoutNode n)
+        {
+            foreach (var child in n.Children)
+            {
+                if (child.TagName is "TD" or "TH")
+                    foreach (var side in new[] { "top", "right", "bottom", "left" })
+                    {
+                        // A cell that declares its own padding keeps it.
+                        var own = child.Style.GetPropertyValueSafe($"padding-{side}")?.Trim();
+                        if (string.IsNullOrEmpty(own) || own == "1px") child.StyleOverrides[$"padding-{side}"] = value;
+                    }
+                // A nested table has its own cellpadding; do not reach into it.
+                if (child.TagName != "TABLE") ApplyToCells(child);
+            }
+        }
+        ApplyToCells(node);
     }
 
     /// <summary>The initial font size — the value the root element inherits.</summary>
