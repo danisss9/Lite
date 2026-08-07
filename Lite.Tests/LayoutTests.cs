@@ -910,6 +910,29 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void LineBox_IncludesTheStrutOfItsBlockContainer()
+    {
+        // CSS 2.1 §10.8.1: every line box starts with a zero-width inline box carrying the block
+        // container's font and line-height — the "strut". A line holding only a short image is
+        // still at least the strut's height, and the image's baseline sits on the line's.
+        var img = Img(20, 4);
+        var cb = Block(new() { ["width"] = "400px", ["line-height"] = "40px" }, img);
+        LayoutTree(cb);
+        True(Math.Abs(cb.Box.ContentBox.Height - 40f) < 1f,
+            $"a 4px image on a line-height:40px line should still give a 40px line box, " +
+            $"got {cb.Box.ContentBox.Height}");
+
+        // §9.4.2: a run of collapsible whitespace alone is a ZERO-height line box, so the strut
+        // must not resurrect it.
+        var blank = new LayoutNode(null, "#text", "   ", _styleCache.Style);
+        blank.StyleOverrides["display"] = "inline";
+        var empty = Block(new() { ["width"] = "400px", ["line-height"] = "40px" }, blank);
+        LayoutTree(empty);
+        True(empty.Box.ContentBox.Height < 1f,
+            $"a whitespace-only run is a zero-height line box, got {empty.Box.ContentBox.Height}");
+    }
+
+    [Test]
     public static void TextAlignRight_MovesInlineLevelBoxesNotJustText()
     {
         // CSS 2.1 §16.2 aligns the whole LINE BOX. text-align had a single consumer in the text

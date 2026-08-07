@@ -426,6 +426,21 @@ public static class StyleExtensions
         return fontSize * 1.4f;
     }
 
+    /// <summary>True when 'line-height' computes to 'normal' — i.e. nothing declared a length or a
+    /// number, so <see cref="GetLineHeight"/> fell through to its font-size multiple.</summary>
+    public static bool IsNormalLineHeight(this LayoutNode node)
+    {
+        if (node.TryResolveStyle(PropertyNames.LineHeight, out var ov))
+        {
+            ov = ov.Trim();
+            if (ov.Length > 0 && !ov.Equals("normal", StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+        var str = node.Style.GetPropertyValueSafe(PropertyNames.LineHeight);
+        if (!string.IsNullOrEmpty(str) && str != "normal") return false;
+        return node.Style.GetProperty(PropertyNames.LineHeight).RawValue is not Length;
+    }
+
     public static WhiteSpace GetWhiteSpace(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.WhiteSpace, out var ov)
