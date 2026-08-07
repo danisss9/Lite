@@ -941,19 +941,44 @@ public static class StyleExtensions
     {
         var raw = node.TryResolveStyle("background-repeat", out var ov)
             ? ov : node.Style.GetPropertyValueSafe("background-repeat");
-        if (string.IsNullOrWhiteSpace(raw)) return "repeat";
-        return raw.Trim();
+        raw = raw?.Trim();
+        // AngleSharp reports an unset longhand of a shorthand as the literal "initial"; passing
+        // that on made `background: green` behave as though it had no repeat at all.
+        if (string.IsNullOrWhiteSpace(raw) || raw is "initial" or "unset") return "repeat";
+        return raw;
     }
 
+    /// <summary>
+    /// The two components of 'background-position' (CSS 2.1 §14.2.1). Handles the forms the value
+    /// actually arrives in: AngleSharp serialises the pair as a tuple ("(initial, 50%)"), reports
+    /// an unset longhand of a shorthand as "initial", and a single value leaves the other axis
+    /// centred — the old space-split produced "(initial," as the X component of all three.
+    /// </summary>
     public static (string X, string Y) GetBackgroundPosition(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("background-position", out var ov)
             ? ov : node.Style.GetPropertyValueSafe("background-position");
-        if (string.IsNullOrWhiteSpace(raw)) return ("0%", "0%");
-        var parts = raw.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var x = parts.Length > 0 ? parts[0] : "0%";
-        var y = parts.Length > 1 ? parts[1] : "50%";
-        return (x, y);
+        raw = raw?.Trim();
+        if (string.IsNullOrWhiteSpace(raw) || raw is "initial" or "unset") return ("0%", "0%");
+
+        // "(x, y)" → "x y"
+        if (raw.StartsWith('(') && raw.EndsWith(')'))
+            raw = raw[1..^1].Replace(',', ' ');
+
+        var parts = raw.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
+        static string Norm(string v) => v is "initial" or "unset" ? "0%" : v;
+        static bool IsVertical(string v) => v is "top" or "bottom";
+        static bool IsHorizontal(string v) => v is "left" or "right";
+
+        if (parts.Length == 0) return ("0%", "0%");
+        if (parts.Length == 1)
+            // One value sets its own axis; the other is centred.
+            return IsVertical(parts[0]) ? ("50%", parts[0]) : (Norm(parts[0]), "50%");
+
+        // The keywords may be written vertical-first ("bottom left").
+        return IsVertical(parts[0]) && IsHorizontal(parts[1])
+            ? (parts[1], parts[0])
+            : (Norm(parts[0]), Norm(parts[1]));
     }
 
     /// <summary>True when <c>background-attachment: fixed</c> — the background is positioned

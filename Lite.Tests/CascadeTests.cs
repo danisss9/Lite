@@ -1,4 +1,5 @@
 using Lite;
+using Lite.Extensions;
 using Lite.Layout;
 using Lite.Models;
 using Lite.Scripting;
@@ -122,5 +123,33 @@ public static class CascadeTests
         True(SelectorEngine.Matches(a, ":link"), "anchor with href should match :link");
         True(!SelectorEngine.Matches(plain, ":link"), "anchor without href should not match :link");
         True(!SelectorEngine.Matches(a, ":visited"), ":visited should never match (no history)");
+    }
+
+    [Test]
+    public static void BackgroundShorthand_ExpandsInAnyOrderAndResetsWhatItOmits()
+    {
+        // The shorthand is expanded from the declared text, classifying tokens by shape so their
+        // order does not matter, and resets the components it does not mention — AngleSharp
+        // reports an unset longhand of a shorthand as the literal "initial", which the painter
+        // then read as "no repeat at all".
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "#b { background: green url('x.png') repeat-x; }" +
+            "#c { background: green; }" +
+            "</style></head><body><div id='b'></div><div id='c'></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+
+        LayoutNode? F(LayoutNode n, string id) => n.Id == id ? n : n.Children.Select(c => F(c, id)).FirstOrDefault(r => r != null);
+        var b = F(page.Root, "b")!;
+        var c = F(page.Root, "c")!;
+
+        Equal("repeat-x", b.GetBackgroundRepeat());
+        True(b.GetBackgroundColor().Green > 100 && b.GetBackgroundColor().Red < 100,
+            $"the colour survives alongside an image and a repeat, got {b.GetBackgroundColor()}");
+
+        // Nothing else named, so the omitted components take their initial values.
+        Equal("repeat", c.GetBackgroundRepeat());
+        Equal("0%", c.GetBackgroundPosition().X);
+        Equal("0%", c.GetBackgroundPosition().Y);
     }
 }
