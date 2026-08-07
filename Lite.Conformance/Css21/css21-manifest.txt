@@ -134,3 +134,10 @@ css/CSS2/positioning/absolute-non-replaced-width-003.xht
 #      omits; an unset longhand reported as the literal "initial" is the property's initial value,
 #      and the position pair arrives as a tuple, "(initial, 50%)". ----
 css/CSS2/backgrounds/background-029.xht
+
+# ---- Anonymous table boxes (§17.2.1). -059 needs an absolutely positioned <table> to lay out as
+#      a table and the cellspacing/cellpadding attributes to reach the cells; -012 needs the
+#      generated boxes rebuilt after a display change (the test toggles a cell to 'none' and back);
+#      -168 needs the box generated inside an inline parent to be an inline-table. ----
+css/CSS2/tables/table-anonymous-objects-059.xht
+css/CSS2/tables/table-anonymous-objects-012.xht

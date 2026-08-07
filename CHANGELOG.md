@@ -4,10 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [0.0.14] - 2026-08-06 (current)
 
-CSS 2.1 conformance pass: **+1288 upstream reftests**. The WPT `css/CSS2` suite goes from
-**2554/6266 (40.8%)** to **3842/6266 (61.3%)**. The largest movers are `selectors` 93 → 495,
+CSS 2.1 conformance pass: **+1363 upstream reftests**. The WPT `css/CSS2` suite goes from
+**2554/6266 (40.8%)** to **3917/6266 (62.5%)**. The largest movers are `selectors` 93 → 495,
 `normal-flow` 183 → 479, `margin-padding-clear` 388 → 528, `positioning` 203 → 314,
-`borders` 296 → 370, `backgrounds` 136 → 184, `linebox` 82 → 117, `tables` 39 → 72,
+`tables` 39 → 145, `borders` 296 → 370, `backgrounds` 136 → 184, `linebox` 82 → 117,
 `generated-content` 99 → 130, `syntax` 180 → 210 and `floats-clear` 42 → 72. One directory
 regressed: `abspos` 7 → 5, both cases styling the root element itself as a fixed-position
 table.
@@ -31,6 +31,10 @@ table.
 - **`background` shorthand and its longhands (§14.2)** — the shorthand is expanded from the rule's declared text (tokens classified by shape, so order does not matter) and resets the components it omits; `background-repeat` and `background-position` no longer pass AngleSharp's literal `"initial"` and tuple form `"(initial, 50%)"` through to the painter, which read as "no repeat" and "position 0" respectively (`Parser`, `DrawCommandExtensions`)
 - **`min-width` / `max-width` on in-flow blocks (§10.4)** — only the absolutely-positioned path clamped, so neither property had any effect on a normal block; a box the clamp gives a known width to now centres under auto margins like an explicitly-sized one (`BoxEngine`)
 - **Replaced-element sizing (§10.3.2 / §10.6.2)** — a CSS `width`/`height` on an inline `<img>` is honoured (the inline path read only the intrinsic pixel size), and HTML's `width`/`height` content attributes are treated as presentational hints for those properties rather than as the intrinsic size — reading them as intrinsic dropped percentages outright and mixed axes, so `width="100%" height="50"` on a 1×1 image derived a height of 39200px (`BoxEngine`, `Parser`)
+- **Anonymous table boxes track the DOM** — the normalization pass only ever ADDED wrappers, so it could not follow a change to a display value: setting a cell to `display: none` wrapped it in an anonymous cell + table (a `display: none` box is not a proper table child) and restoring `table-cell` left the wrappers behind. Each pass now dissolves the boxes it generated before regenerating them. The box generated around cells misparented inside an *inline* box is an `inline-table` per §17.2.1, so cells written between inline text no longer break the line (`BoxEngine`)
+- **Absolutely positioned tables and flex containers** — an out-of-flow box laid its children out as plain blocks whatever its own display was, so an abs-pos `<table>` flowed its rows and cells as inline content. Child layout now dispatches on the box's own display, as the in-flow path does (`BoxEngine`)
+- **`cellspacing` / `cellpadding`** — the HTML 4 §11.2.1 presentational hints were ignored, so the UA defaults (2px `border-spacing`, 1px cell padding) stayed in place and a `cellpadding="0" cellspacing="0"` table sat 3px lower and wider than its CSS equivalent (`Parser`)
+- **`! important` with whitespace after the bang** — the declaration parser matched only the literal token, so the spaced form was read as part of the value (`Parser`)
 - **Anonymous table boxes** — a synthesized box borrows its originating element's style object, so a parent's non-inherited `position: absolute` or `float` read back as its own and took it out of flow; a table's intrinsic width came out zero because its rows are neither block-level nor inline. Both are fixed, so an anonymous table inside a float or an abs-pos box now shrink-wraps and lays its cells out side by side (`LayoutNode`, `IntrinsicSizer`, `BoxEngine`)
 - **Attributes** — every authored attribute reaches the layout node, so attribute selectors, `getAttribute` and `attr()` in `content` see what the markup declared; only `data-*` and a per-tag whitelist used to survive (`Parser`)
 - **`line-height: 0`** — text measurement used 0 as the sentinel for "unspecified" and silently substituted the 1.4em default (`TextMeasure`)
