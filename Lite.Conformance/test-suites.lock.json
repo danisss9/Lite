@@ -1,0 +1,65 @@
+{
+  "$schema": "./test-suites.lock.schema.json",
+  "schemaVersion": 1,
+  "suites": [
+    {
+      "id": "wpt",
+      "source": "git",
+      "repository": "https://github.com/web-platform-tests/wpt.git",
+      "revision": "4fea7806db1bfd92a8b7c9c63263f98beeffd6be",
+      "destination": "vendor/wpt",
+      "sparseCheckout": [
+        "resources",
+        "common",
+        "fonts",
+        "css/CSS2",
+        "css/support",
+        "dom/nodes",
+        "dom/events",
+        "html/semantics/interactive-elements",
+        "html/semantics/embedded-content/the-iframe-element"
+      ],
+      "applicabilityManifest": "Wpt/wpt-manifest.txt",
+      "scope": "sparse"
+    },
+    {
+      "id": "test262",
+      "source": "git",
+      "repository": "https://github.com/tc39/test262.git",
+      "revision": "de8e621cdba4f40cff3cf244e6cfb8cb48746b4a",
+      "destination": "vendor/test262",
+      "sparseCheckout": [
+        "harness",
+        "test/built-ins/Promise/allSettled",
+        "test/built-ins/String/prototype/matchAll",
+        "test/built-ins/BigInt",
+        "test/language/expressions/optional-chaining",
+        "test/language/expressions/coalesce",
+        "test/language/expressions/dynamic-import",
+        "test/language/expressions/import.meta",
+        "test/language/module-code"
+      ],
+      "applicabilityManifest": "Test262/es2020-applicability.json",
+      "dependencyExceptions": "Test262/skip-list.txt",
+      "scope": "sparse",
+      "checkedOutCandidateTests": 2051,
+      "upstreamCandidateTestsAtRevision": 53379
+    },
+    {
+      "id": "css21-official-20110323",
+      "source": "snapshot",
+      "repository": "https://www.w3.org/Style/CSS/Test/CSS2.1/20110323/",
+      "revision": "2011-03-23",
+      "destination": "vendor/css21-official-20110323",
+      "variants": [
+        "html4-screen",
+        "xhtml1-screen",
+        "other-formats-screen"
+      ],
+      "requiredBehaviorTests": 9191,
+      "totalTests": 9418,
+      "scope": "full-snapshot",
+      "vendored": false
+    }
+  ]
+}

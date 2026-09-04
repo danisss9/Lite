@@ -16,10 +16,10 @@ namespace Lite.Conformance.Harness;
 /// </summary>
 internal static class ConformanceServer
 {
-    public const int Port = 4455;
-    public static string BaseUrl => $"http://localhost:{Port}";
-
     private static WebApplication? _app;
+    private static string? _baseUrl;
+    public static string BaseUrl => _baseUrl
+        ?? throw new InvalidOperationException("The conformance server has not been started.");
 
     public static void Start()
     {
@@ -27,7 +27,13 @@ internal static class ConformanceServer
 
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
         builder.WebHost.UseKestrelCore();
-        builder.WebHost.UseUrls(BaseUrl);
+        // Port zero asks Kestrel for an unused loopback port, allowing shards to run in parallel.
+        // A fixed port remains available for diagnostics through LITE_CONFORMANCE_PORT.
+        var configuredPort = Environment.GetEnvironmentVariable("LITE_CONFORMANCE_PORT");
+        var port = int.TryParse(configuredPort, out var parsedPort) && parsedPort is > 0 and <= 65535
+            ? parsedPort
+            : 0;
+        builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
         builder.Services.AddRoutingCore();
 
         var app = builder.Build();
@@ -111,6 +117,7 @@ internal static class ConformanceServer
         }
 
         app.Start();
+        _baseUrl = app.Urls.Single();
         _app = app;
     }
 
@@ -130,5 +137,6 @@ internal static class ConformanceServer
     {
         _app?.StopAsync().GetAwaiter().GetResult();
         _app = null;
+        _baseUrl = null;
     }
 }

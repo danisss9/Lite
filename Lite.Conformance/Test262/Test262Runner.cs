@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Reflection;
+using System.Text.Json;
 using Jint;
 using Jint.Runtime;
 using Lite.Conformance.Harness;
@@ -15,12 +17,16 @@ internal static class Test262Runner
     private sealed record Frontmatter(
         List<string> Includes,
         HashSet<string> Flags,
+        HashSet<string> Features,
         string? NegativePhase,
         string? NegativeType);
 
+    private sealed record ExcludedFeature(string Feature, string Introduced);
+    private sealed record ApplicabilityManifest(List<ExcludedFeature> ExcludedFeatures);
+
     private static readonly Dictionary<string, string> _harnessCache = new();
 
-    public static int Run(string? filter)
+    public static int Run(string? filter, ShardSpec shard)
     {
         var test262Root = Path.Combine(ConformancePaths.Vendor, "test262");
         var testRoot = Path.Combine(test262Root, "test");
@@ -31,6 +37,7 @@ internal static class Test262Runner
         }
 
         var skipList = LoadSkipList();
+        var excludedFeatures = LoadExcludedFeatures();
         var files = Directory.EnumerateFiles(testRoot, "*.js", SearchOption.AllDirectories)
             .Where(f => !f.EndsWith("_FIXTURE.js", StringComparison.OrdinalIgnoreCase))
             .Select(f => Path.GetRelativePath(test262Root, f).Replace('\\', '/'))
@@ -39,6 +46,7 @@ internal static class Test262Runner
 
         if (!string.IsNullOrEmpty(filter))
             files = files.Where(f => f.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
+        files = shard.Apply(files).ToList();
 
         if (files.Count == 0)
         {
@@ -47,14 +55,26 @@ internal static class Test262Runner
         }
 
         var result = new SuiteResult();
-        int skipped = 0;
+        int dependencyExceptions = 0;
+        int profileExcluded = 0;
+        if (shard.Count > 1) Console.WriteLine($"  shard {shard}");
 
         foreach (var rel in files)
         {
-            var skip = skipList.FirstOrDefault(s => rel.Contains(s.Path, StringComparison.OrdinalIgnoreCase));
+            var fullPath = Path.Combine(test262Root, rel.Replace('/', Path.DirectorySeparatorChar));
+            var source = File.ReadAllText(fullPath);
+            var meta = ParseFrontmatter(source);
+
+            if (meta.Features.Overlaps(excludedFeatures.Keys))
+            {
+                profileExcluded++;
+                continue;
+            }
+
+            var skip = skipList.FirstOrDefault(s => rel.Equals(s.Path, StringComparison.Ordinal));
             if (skip is not null)
             {
-                skipped++;
+                dependencyExceptions++;
                 continue;
             }
 
@@ -68,7 +88,7 @@ internal static class Test262Runner
             string detail;
             try
             {
-                passed = RunOne(test262Root, rel, out detail);
+                passed = RunOne(test262Root, fullPath, source, meta, out detail);
             }
             catch (Exception ex)
             {
@@ -88,16 +108,13 @@ internal static class Test262Runner
             }
         }
 
-        Console.WriteLine($"  ({skipped} skipped via skip-list.txt)");
+        Console.WriteLine($"  ({profileExcluded} excluded as post-ES2020 by es2020-applicability.json)");
+        Console.WriteLine($"  ({dependencyExceptions} exact dependency exceptions via skip-list.txt)");
         return result.Report("test262");
     }
 
-    private static bool RunOne(string test262Root, string relPath, out string detail)
+    private static bool RunOne(string test262Root, string fullPath, string source, Frontmatter meta, out string detail)
     {
-        var fullPath = Path.Combine(test262Root, relPath.Replace('/', Path.DirectorySeparatorChar));
-        var source = File.ReadAllText(fullPath);
-        var meta = ParseFrontmatter(source);
-
         if (meta.Flags.Contains("raw"))
             return ExecuteMode(test262Root, fullPath, source, meta, strict: false, raw: true, out detail);
 
@@ -136,16 +153,19 @@ internal static class Test262Runner
             opts.TimeoutInterval(TimeSpan.FromSeconds(10));
             // Convert runaway recursion into a catchable Jint exception instead of a CLR
             // StackOverflowException (which would kill the whole runner process).
-            opts.LimitRecursion(2000);
+            // Proper-tail-call cases intentionally recurse far beyond the generic host guard;
+            // Jint 4.16.1 replaces those strict-function frames as required by ES2020.
+            if (!meta.Features.Contains("tail-call-optimization"))
+                opts.LimitRecursion(2000);
             opts.MaxStatements(10_000_000);
             // Enable modules for every test rooted at the test's directory: module-flagged
             // tests are imported directly, and classic-script tests may still use dynamic
             // import() with relative specifiers to sibling _FIXTURE.js files.
-            opts.EnableModules(testDir);
+            opts.EnableModules(new Test262ModuleLoader(testDir, Path.Combine(test262Root, "test")));
         });
 
         engine.SetValue("print", new Action<object?>(msg => asyncOutcome ??= msg?.ToString()));
-        engine.SetValue("$262", new Dollar262(engine));
+        InstallJintTest262Host(engine);
 
         Exception? error = null;
         try
@@ -267,12 +287,13 @@ internal static class Test262Runner
     {
         var includes = new List<string>();
         var flags = new HashSet<string>(StringComparer.Ordinal);
+        var features = new HashSet<string>(StringComparer.Ordinal);
         string? negPhase = null, negType = null;
 
         var start = source.IndexOf("/*---", StringComparison.Ordinal);
         var end = source.IndexOf("---*/", StringComparison.Ordinal);
         if (start < 0 || end < 0 || end <= start)
-            return new Frontmatter(includes, flags, negPhase, negType);
+            return new Frontmatter(includes, flags, features, negPhase, negType);
 
         var yaml = source[(start + 5)..end];
         string? currentKey = null;
@@ -301,6 +322,9 @@ internal static class Test262Runner
                     case "flags":
                         foreach (var f in ParseInlineList(value)) flags.Add(f);
                         break;
+                    case "features":
+                        foreach (var feature in ParseInlineList(value)) features.Add(feature);
+                        break;
                     case "negative":
                         inNegative = true;
                         break;
@@ -315,15 +339,16 @@ internal static class Test262Runner
                 if (key == "phase") negPhase = value;
                 else if (key == "type") negType = value;
             }
-            else if (trimmed.StartsWith('-') && currentKey is "includes" or "flags")
+            else if (trimmed.StartsWith('-') && currentKey is "includes" or "flags" or "features")
             {
                 var item = trimmed[1..].Trim();
                 if (currentKey == "includes") includes.Add(item);
-                else flags.Add(item);
+                else if (currentKey == "flags") flags.Add(item);
+                else features.Add(item);
             }
         }
 
-        return new Frontmatter(includes, flags, negPhase, negType);
+        return new Frontmatter(includes, flags, features, negPhase, negType);
     }
 
     private static IEnumerable<string> ParseInlineList(string value)
@@ -338,16 +363,35 @@ internal static class Test262Runner
     private static List<ManifestEntry> LoadSkipList() =>
         Manifest.Load(ConformancePaths.Manifest(Path.Combine("Test262", "skip-list.txt")));
 
+    private static Dictionary<string, ExcludedFeature> LoadExcludedFeatures()
+    {
+        var path = ConformancePaths.Manifest(Path.Combine("Test262", "es2020-applicability.json"));
+        var manifest = JsonSerializer.Deserialize<ApplicabilityManifest>(
+            File.ReadAllText(path),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+            ?? throw new InvalidDataException($"Invalid ES2020 applicability manifest: {path}");
+        return manifest.ExcludedFeatures.ToDictionary(f => f.Feature, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Jint includes its standards-accurate Test262 host in the pinned package, but keeps the
+    /// installer internal. The harness invokes that installer so realms and buffer detachment
+    /// exercise Jint's own realm implementation instead of CLR approximations.
+    /// </summary>
+    private static void InstallJintTest262Host(Engine engine)
+    {
+        var hostType = typeof(Engine).Assembly.GetType("Jint.Test262Object", throwOnError: true)!;
+        var install = hostType.GetMethod(
+            "Install",
+            BindingFlags.Public | BindingFlags.Static,
+            binder: null,
+            types: [typeof(Engine)],
+            modifiers: null)
+            ?? throw new MissingMethodException(hostType.FullName, "Install(Engine)");
+        install.Invoke(null, [engine]);
+    }
+
     private static string Truncate(string? s, int max = 200) =>
         s is null ? "" : s.Length <= max ? s : s[..max] + "…";
 
-    /// <summary>Minimal $262 host object — enough for the curated subset; tests needing
-    /// realms/agents belong on the skip list.</summary>
-    private sealed class Dollar262(Engine engine)
-    {
-        public object? evalScript(string code) => engine.Evaluate(code).ToObject();
-        public object? global => engine.Evaluate("globalThis");
-        public void gc() => GC.Collect();
-        public object? createRealm() => throw new NotSupportedException("realms not supported");
-    }
 }

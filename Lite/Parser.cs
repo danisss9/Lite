@@ -1,7 +1,9 @@
 using AngleSharp.Io;
 using AngleSharp;
+using AngleSharp.Css;
 using AngleSharp.Dom;
 using AngleSharp.Css.Dom;
+using AngleSharp.Css.Values;
 using Lite.Animation;
 using Lite.Extensions;
 using Lite.Layout;
@@ -572,7 +574,94 @@ internal static class Parser
         return src[start..end].Trim();
     }
 
-    private static LayoutNode Traverse(IElement element, int indent, float parentFontPx = 16f)
+    /// <summary>
+    /// Computes the cascade while tolerating values which AngleSharp.Css 1.0.2 parses but cannot
+    /// convert to pixels (notably a unitless <c>line-height</c> from the <c>font</c> shorthand).
+    /// Lite resolves relative and unitless values during layout, so retaining the cascaded value
+    /// is both sufficient and more accurate than discarding the declaration.
+    /// </summary>
+    private static ICssStyleDeclaration ComputeCurrentStyle(IElement element) =>
+        ComputeCurrentStyle(element, out _);
+
+    private static ICssStyleDeclaration ComputeCurrentStyle(IElement element, out string? deferredLineHeight)
+    {
+        deferredLineHeight = null;
+        var document = element.Owner
+            ?? throw new InvalidOperationException("Cannot compute style for a detached element.");
+        var window = document.DefaultView
+            ?? throw new InvalidOperationException("Cannot compute style without a browsing context.");
+        var device = document.Context.GetService<IRenderDevice>() ?? new DefaultRenderDevice();
+        var styles = window.GetStyleCollection(device);
+        var cascaded = styles.GetDeclarations(element);
+
+        try
+        {
+            var computed = styles.ComputeDeclarations(element);
+            RestoreRelativeLengths(computed, cascaded);
+            return computed;
+        }
+        catch (Exception ex) when (IsUnsupportedCssUnitConversion(ex))
+        {
+            // AngleSharp.Css 1.0.2 represents a unitless line-height as a length with Unit.None,
+            // then asks CssLengthValue.ToPixel to convert it. Temporarily neutralize only that
+            // declaration so every other longhand (including font-size/family from `font`) is
+            // still computed. Lite applies the saved multiplier during line layout.
+            var lineHeight = cascaded.GetPropertyValueSafe(PropertyNames.LineHeight)?.Trim();
+            if (double.TryParse(lineHeight, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out _))
+            {
+                var inline = element.GetStyle();
+                var savedInlineCss = inline.CssText;
+                try
+                {
+                    inline.SetProperty(PropertyNames.LineHeight, "normal", "important");
+                    var computed = styles.ComputeDeclarations(element);
+                    RestoreRelativeLengths(computed, cascaded);
+                    deferredLineHeight = lineHeight;
+                    return computed;
+                }
+                catch (Exception retry) when (IsUnsupportedCssUnitConversion(retry))
+                {
+                    // A second, unrelated unsupported conversion remains; retain the cascade.
+                }
+                finally
+                {
+                    inline.CssText = savedInlineCss;
+                }
+            }
+
+            return cascaded;
+        }
+    }
+
+    /// <summary>
+    /// AngleSharp.Css resolves em/rem/percentage values against one global render device. CSS
+    /// requires those units to use the element's computed context, which Lite owns. Preserve the
+    /// cascaded typed length so layout can resolve it against the correct font or containing box.
+    /// </summary>
+    private static void RestoreRelativeLengths(
+        ICssStyleDeclaration computed,
+        ICssStyleDeclaration cascaded)
+    {
+        foreach (var property in cascaded)
+        {
+            if (property.RawValue is not CssLengthValue length || length.Type == CssLengthValue.Unit.Px)
+                continue;
+
+            computed.SetProperty(
+                property.Name,
+                property.Value,
+                property.IsImportant ? "important" : null);
+        }
+    }
+
+    private static bool IsUnsupportedCssUnitConversion(Exception ex) =>
+        ex is InvalidOperationException &&
+            ex.Message.Equals("Unsupported unit cannot be converted.", StringComparison.Ordinal) ||
+        ex is ArgumentException &&
+            ex.Message.StartsWith("A non null render device", StringComparison.Ordinal);
+
+    private static LayoutNode Traverse(IElement element, int indent, float parentFontPx = DefaultFontSizePx)
     {
         // Normalize tag name to uppercase — AngleSharp returns lowercase for SVG namespace elements
         var tag = element.TagName.ToUpperInvariant();
@@ -601,7 +690,7 @@ internal static class Parser
         // ...but only when 'white-space' actually allows collapsing: pre / pre-wrap preserve every
         // space and newline, and pre-line preserves newlines as forced breaks while still
         // collapsing spaces. Collapsing unconditionally destroys those line breaks.
-        var elementStyle = element.ComputeCurrentStyle();
+        var elementStyle = ComputeCurrentStyle(element, out var deferredLineHeight);
         var ws = elementStyle.GetPropertyValueSafe("white-space")?.Trim().ToLowerInvariant();
         var directTextRaw = hasMixedChildren
             ? ""
@@ -617,6 +706,8 @@ internal static class Parser
 
         var href = tag == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, tag, directText, elementStyle, href);
+        if (deferredLineHeight is not null)
+            node.StyleOverrides[PropertyNames.LineHeight] = deferredLineHeight;
 
         // CSS 2.1 §15.7: font-size COMPUTES to a length, and that length is what descendants
         // inherit. AngleSharp hands every descendant the specified value instead ("2em"), which
@@ -798,7 +889,7 @@ internal static class Parser
         }
 
         // Capture HTML class attribute for selector matching
-        if (element.ClassName != null)
+        if (element.HasAttribute("class"))
             node.Attributes["class"] = element.ClassName;
 
         // Capture every authored attribute, so attribute selectors, getAttribute and attr() in
@@ -949,7 +1040,7 @@ internal static class Parser
         {
             // Walk ChildNodes in DOM order so text nodes keep their position among element siblings.
             // e.g. <p>Hello <strong>world</strong>!</p> → [#TEXT("Hello"), strong, #TEXT("!")]
-            var parentStyle = element.ComputeCurrentStyle();
+            var parentStyle = ComputeCurrentStyle(element);
             foreach (var childNode in element.ChildNodes)
             {
                 if (childNode is IText textNode)
@@ -2735,7 +2826,7 @@ internal static class Parser
                 {
                     var text = CollapseWhitespace(textNode.Data);
                     if (text.Length == 0) continue;
-                    var tn = new LayoutNode(null, "#text", text, container.ComputeCurrentStyle());
+                    var tn = new LayoutNode(null, "#text", text, ComputeCurrentStyle(container));
                     tn.StyleOverrides["display"] = "inline";
                     result.Add(tn);
                 }
@@ -2767,7 +2858,7 @@ internal static class Parser
     /// child nodes). Global counter state is preserved — template content must not perturb it.</summary>
     private static LayoutNode BuildTemplateContent(IElement templateEl)
     {
-        var fragStyle = templateEl.ComputeCurrentStyle();
+        var fragStyle = ComputeCurrentStyle(templateEl);
         var frag = new LayoutNode(null, "#document-fragment", string.Empty, fragStyle);
         if (templateEl is not AngleSharp.Html.Dom.IHtmlTemplateElement tmpl) return frag;
 

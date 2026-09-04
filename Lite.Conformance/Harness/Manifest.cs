@@ -45,10 +45,13 @@ internal static class Manifest
     }
 
     /// <summary>Applies a --filter substring to manifest entries.</summary>
-    public static List<ManifestEntry> Filter(List<ManifestEntry> entries, string? filter) =>
-        string.IsNullOrEmpty(filter)
+    public static List<ManifestEntry> Filter(List<ManifestEntry> entries, string? filter, ShardSpec shard)
+    {
+        var filtered = string.IsNullOrEmpty(filter)
             ? entries
             : entries.Where(e => e.Path.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
+        return shard.Apply(filtered).ToList();
+    }
 }
 
 /// <summary>Tally of suite results with "green = no unexpected outcomes" semantics.</summary>

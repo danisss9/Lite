@@ -1,7 +1,7 @@
 # Tests the WPT survey (--suite wpt --survey <dir>) must NOT run because they crash the
 # whole process rather than failing cleanly: deep JS recursion overflows the CLR stack
 # (an uncatchable StackOverflowException — the same Jint engine limitation documented for
-# test262 tco-*). Substring path match. Format: <path-substring> | <reason>
+# test262 tco-*). Exact, case-sensitive path match. Format: <exact-test-path> | <reason>
 #
 # These are engine limitations, not Lite layout/DOM bugs. Re-evaluate if Jint gains proper
 # tail calls or a configurable recursion limit.

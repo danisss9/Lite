@@ -254,7 +254,7 @@ public static class StyleExtensions
     {
         if (node.TryResolveStyle(property, out var ov))
             return ov.Trim().Equals("auto", StringComparison.OrdinalIgnoreCase);
-        return node.Style.GetProperty(property).RawValue is Constant<Length>;
+        return node.Style.GetProperty(property).RawValue is CssConstantValue<CssLengthValue>;
     }
 
     /// <summary>Returns true when min-width is auto/unset (not explicitly set to a length).</summary>
@@ -263,7 +263,7 @@ public static class StyleExtensions
         if (node.TryResolveStyle("min-width", out var ov) && ov.Trim() is not ("auto" or ""))
             return false;
         var raw = node.Style.GetProperty(PropertyNames.MinWidth).RawValue;
-        return raw is null or Constant<Length>;
+        return raw is null or CssConstantValue<CssLengthValue>;
     }
 
     /// <summary>Returns true when min-height is auto/unset (not explicitly set to a length).</summary>
@@ -272,7 +272,7 @@ public static class StyleExtensions
         if (node.TryResolveStyle("min-height", out var ov) && ov.Trim() is not ("auto" or ""))
             return false;
         var raw = node.Style.GetProperty(PropertyNames.MinHeight).RawValue;
-        return raw is null or Constant<Length>;
+        return raw is null or CssConstantValue<CssLengthValue>;
     }
 
     public static float GetFlexGrow(this LayoutNode node)
@@ -309,8 +309,8 @@ public static class StyleExtensions
             if (float.IsPositiveInfinity(containerMain) || containerMain == float.MaxValue) return float.NaN;
             return pct / 100f * containerMain;
         }
-        if (node.Style.GetProperty(PropertyNames.FlexBasis).RawValue is Length l)
-            return l.Type == Length.Unit.Px ? (float)l.Value : float.NaN;
+        if (node.Style.GetProperty(PropertyNames.FlexBasis).RawValue is CssLengthValue l)
+            return l.Type == CssLengthValue.Unit.Px ? (float)l.Value : float.NaN;
         return float.NaN;
     }
 
@@ -340,7 +340,7 @@ public static class StyleExtensions
         foreach (var name in new[] { prop, "grid-row-gap", "grid-column-gap" })
         {
             var raw = node.Style.GetProperty(name).RawValue;
-            if (raw is Length l)
+            if (raw is CssLengthValue l)
                 return CssUnits.ToPx(l, fontSize, total, total, total);
         }
         return 0f;
@@ -425,8 +425,8 @@ public static class StyleExtensions
 
         // A unitless line-height (e.g. `1`, `1.5`) is a font-size MULTIPLIER, not a pixel length —
         // and it inherits as the number (so it multiplies each element's own font-size). Check the
-        // computed string for a bare number BEFORE the Length branch, because AngleSharp surfaces
-        // it as a unitless Length that CssUnits.ToPx would otherwise treat as pixels (e.g. `1`→1px,
+        // computed string for a bare number BEFORE the length branch, because AngleSharp surfaces
+        // it as a unitless length that CssUnits.ToPx would otherwise treat as pixels (e.g. `1`→1px,
         // collapsing every line box to 1px tall). A value with any unit fails the bare-number parse.
         var str = node.Style.GetPropertyValueSafe(PropertyNames.LineHeight);
         if (!string.IsNullOrEmpty(str) && str != "normal" &&
@@ -435,7 +435,7 @@ public static class StyleExtensions
             return num * fontSize;
 
         var raw = node.Style.GetProperty(PropertyNames.LineHeight).RawValue;
-        if (raw is Length lh2)
+        if (raw is CssLengthValue lh2)
             return CssUnits.ToPx(lh2, fontSize, fontSize, fontSize, fontSize);
 
         return fontSize * 1.4f;
@@ -453,7 +453,7 @@ public static class StyleExtensions
         }
         var str = node.Style.GetPropertyValueSafe(PropertyNames.LineHeight);
         if (!string.IsNullOrEmpty(str) && str != "normal") return false;
-        return node.Style.GetProperty(PropertyNames.LineHeight).RawValue is not Length;
+        return node.Style.GetProperty(PropertyNames.LineHeight).RawValue is not CssLengthValue;
     }
 
     public static WhiteSpace GetWhiteSpace(this LayoutNode node)
@@ -1194,8 +1194,8 @@ public static class StyleExtensions
             if (TryEvalCalc(ov, total, size, total, out var calcPx)) return calcPx;
             if (CssUnits.TryParse(ov, size, total, total, total, out var lp)) return lp;
         }
-        if (node.Style.GetProperty(prop).RawValue is Constant<Length>) return float.NaN; // auto
-        if (node.Style.GetProperty(prop).RawValue is Length l)
+        if (node.Style.GetProperty(prop).RawValue is CssConstantValue<CssLengthValue>) return float.NaN; // auto
+        if (node.Style.GetProperty(prop).RawValue is CssLengthValue l)
             return CssUnits.ToPx(l, size, total, total, total);
         return float.NaN;
     }
@@ -1226,7 +1226,7 @@ public static class StyleExtensions
         if (node.TagName.Length > 0 && node.TagName[0] == '#' && node.Parent is { } synthParent)
             return synthParent.GetFontSize();
 
-        if (node.Style.GetProperty(PropertyNames.FontSize).RawValue is Length l && l.Type == Length.Unit.Px)
+        if (node.Style.GetProperty(PropertyNames.FontSize).RawValue is CssLengthValue l && l.Type == CssLengthValue.Unit.Px)
             return (float)l.Value;
         var parentFs = node.Parent?.GetFontSize() ?? Parser.DefaultFontSizePx;
         return GetSize(node, PropertyNames.FontSize, total: parentFs, size: parentFs, defaultValue: parentFs);
@@ -1245,7 +1245,7 @@ public static class StyleExtensions
         if (node.TryResolveStyle(PropertyNames.Height, out var h))
             return string.IsNullOrEmpty(h) || h.Trim() is "auto";
         var raw = node.Style.GetProperty(PropertyNames.Height).RawValue;
-        return raw is null or Constant<Length>;
+        return raw is null or CssConstantValue<CssLengthValue>;
     }
     public static float GetWidth(this LayoutNode node, float total = 0, float size = 0)
         => GetSizeOrDefault(node, PropertyNames.Width, total, size > 0 ? size : node.GetFontSize(), 0f);
@@ -1259,7 +1259,7 @@ public static class StyleExtensions
         if (node.TryResolveStyle(PropertyNames.Width, out var w))
             return string.IsNullOrEmpty(w) || w.Trim() is "auto";
         var raw = node.Style.GetProperty(PropertyNames.Width).RawValue;
-        return raw is null or Constant<Length>;
+        return raw is null or CssConstantValue<CssLengthValue>;
     }
 
     // Margins
@@ -1481,8 +1481,8 @@ public static class StyleExtensions
 
         if (IsCurrentColor(node.Style.GetPropertyValueSafe(propertyName))) return node.GetColor();
 
-        // Try RawValue (works when AngleSharp exposes the value as Color struct)
-        if (node.Style.GetProperty(propertyName).RawValue is Color color)
+        // Try RawValue (works when AngleSharp exposes the value as a CSS color value)
+        if (node.Style.GetProperty(propertyName).RawValue is CssColorValue color)
             return new SKColor(color.R, color.G, color.B, color.A);
 
         // Fallback: parse the serialized CSS string value (e.g. "#3b82f6", "rgb(59,130,246)")
@@ -1538,7 +1538,7 @@ public static class StyleExtensions
         // which is how every colour written into StyleOverrides looks, e.g. the 'red' pulled out
         // of a `background: red url(...)` shorthand — silently fell through to whatever AngleSharp
         // had computed for the element, quietly losing to a lower-specificity rule.
-        var named = AngleSharp.Css.Values.Color.FromName(lower);
+        var named = CssColorValue.FromName(lower);
         if (named.HasValue)
             return new SKColor(named.Value.R, named.Value.G, named.Value.B, named.Value.A);
 
@@ -1554,7 +1554,7 @@ public static class StyleExtensions
         // TryResolveStyle — making it honour StyleOverrides globally has been tried and breaks
         // Acid2, which relies on the current pseudo/anonymous-box border behaviour.
         var raw = node.Style.GetProperty(propertyName).RawValue;
-        var computed = raw is Length borderLength
+        var computed = raw is CssLengthValue borderLength
             ? CssUnits.ToPx(borderLength, node.GetFontSize(), 0, 0, 0)
             : node.Style.GetPropertyValueSafe(propertyName)?.Trim().ToLowerInvariant() switch
             {
@@ -1630,8 +1630,8 @@ public static class StyleExtensions
         }
 
         var raw = node.Style.GetProperty(propertyName).RawValue;
-        if (raw is null or Constant<Length>) return defaultValue; // auto/none/unset
-        if (raw is not Length length) return defaultValue;
+        if (raw is null or CssConstantValue<CssLengthValue>) return defaultValue; // auto/none/unset
+        if (raw is not CssLengthValue length) return defaultValue;
 
         var px = CssUnits.ToPx(length, size, total, vp, vp);
         return px < 0f ? defaultValue : px;
@@ -1643,7 +1643,7 @@ public static class StyleExtensions
     {
         if (node.TryResolveStyle(propertyName, out var ov) && !string.IsNullOrWhiteSpace(ov))
             return CssUnits.TryParse(ov.Trim(), node.GetFontSize(), 0, 0, 0, out var opx) && opx < 0f;
-        return node.Style.GetProperty(propertyName).RawValue is Length l &&
+        return node.Style.GetProperty(propertyName).RawValue is CssLengthValue l &&
                CssUnits.ToPx(l, node.GetFontSize(), 0, 0, 0) < 0f;
     }
 
@@ -1665,7 +1665,7 @@ public static class StyleExtensions
                 return lp;
         }
 
-        if (node.Style.GetProperty(propertyName).RawValue is Constant<Length>)
+        if (node.Style.GetProperty(propertyName).RawValue is CssConstantValue<CssLengthValue>)
         {
             return size == 0 ? total - size : (total - size) / 2f;
         }
@@ -1673,7 +1673,7 @@ public static class StyleExtensions
         // No usable length value → the property's default. Crucially this is NOT `size`
         // (the font-size, used as the em basis): returning it gave every element a phantom
         // 1em of padding/margin when the value was absent.
-        if (node.Style.GetProperty(propertyName).RawValue is not Length length)
+        if (node.Style.GetProperty(propertyName).RawValue is not CssLengthValue length)
         {
             return defaultValue;
         }

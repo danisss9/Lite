@@ -1,51 +1,37 @@
 # Fetches conformance test files into Lite.Conformance\vendor\ at pinned commits.
 # Run from anywhere: paths are resolved relative to this script.
 #
-# Commits are pinned below. To bump: set the variable to a new SHA (or 'latest' to take
-# the tip of the default branch — the resolved SHA is printed so it can be pinned).
+# Commits and sparse paths come from Lite.Conformance\test-suites.lock.json. To bump a suite,
+# update that file; the resolved revisions printed below must match it exactly.
 
 $ErrorActionPreference = 'Stop'
 
-$WptSha     = '4fea7806db1bfd92a8b7c9c63263f98beeffd6be'   # github.com/web-platform-tests/wpt
-$Test262Sha = 'de8e621cdba4f40cff3cf244e6cfb8cb48746b4a'    # github.com/tc39/test262
-
-# Directories to sparse-checkout (cone mode). Keep in sync with the curated manifests
-# (Wpt\wpt-manifest.txt, Css21\css21-manifest.txt) and the survey targets — a clean fetch
-# MUST reproduce every subtree the gate and surveys read, or the gate breaks on a fresh box.
-#   - resources / common: testharness.js, check-layout-th.js, /common helpers tests pull in.
-#   - fonts: Ahem. Hundreds of CSS 2.1 reftests link /fonts/ahem.css and rely on Ahem's
-#     uniform 1em glyph box for the test and its reference to line up exactly; without it
-#     they render in a proportional fallback and fail on sub-pixel metrics. It loads through
-#     the normal @font-face path (Lite\Layout\FontRegistry.cs) - no engine support needed.
-#   - css/CSS2 + css/support: the CSS 2.1 reftests and the css21 survey (normal-flow / box-display).
-#   - dom/* + html/semantics/*: the HTML5/DOM testharness suites the wpt survey measures.
-$WptDirs = @(
-    'resources',
-    'common',
-    'fonts',
-    'css/CSS2',
-    'css/support',
-    'dom/nodes',
-    'dom/events',
-    'html/semantics/interactive-elements',
-    'html/semantics/embedded-content/the-iframe-element'
-)
-$Test262Dirs = @(
-    'harness',
-    'test/built-ins/Promise/allSettled',
-    'test/built-ins/String/prototype/matchAll',
-    'test/built-ins/BigInt',
-    'test/built-ins/globalThis',
-    'test/language/expressions/optional-chaining',
-    'test/language/expressions/coalesce',
-    'test/language/expressions/dynamic-import',
-    'test/language/expressions/import.meta',
-    'test/language/module-code'
-)
-
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $Vendor = Join-Path $RepoRoot 'Lite.Conformance\vendor'
+$SuiteLockPath = Join-Path $RepoRoot 'Lite.Conformance\test-suites.lock.json'
+$SuiteLock = Get-Content -LiteralPath $SuiteLockPath -Raw | ConvertFrom-Json
+$WptPin = $SuiteLock.suites | Where-Object { $_.id -eq 'wpt' } | Select-Object -First 1
+$Test262Pin = $SuiteLock.suites | Where-Object { $_.id -eq 'test262' } | Select-Object -First 1
+if (-not $WptPin -or -not $Test262Pin) {
+    throw "The suite lock must contain wpt and test262 entries: $SuiteLockPath"
+}
+$WptSha = $WptPin.revision
+$Test262Sha = $Test262Pin.revision
+$WptDirs = @($WptPin.sparseCheckout)
+$Test262Dirs = @($Test262Pin.sparseCheckout)
 New-Item -ItemType Directory -Force $Vendor | Out-Null
+
+function Resolve-VendorDestination($RelativePath) {
+    $candidate = [IO.Path]::GetFullPath((Join-Path (Join-Path $RepoRoot 'Lite.Conformance') $RelativePath))
+    $vendorRoot = [IO.Path]::GetFullPath($Vendor).TrimEnd('\') + '\'
+    if (-not $candidate.StartsWith($vendorRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing suite destination outside the vendor directory: $candidate"
+    }
+    return $candidate
+}
+
+$WptDestination = Resolve-VendorDestination $WptPin.destination
+$Test262Destination = Resolve-VendorDestination $Test262Pin.destination
 
 function Fetch-SparseRepo($Url, $Dest, $Sha, $Dirs) {
     if (-not (Test-Path (Join-Path $Dest '.git'))) {
@@ -53,7 +39,11 @@ function Fetch-SparseRepo($Url, $Dest, $Sha, $Dirs) {
         # manually-downloaded file), clone into a temp dir and move it in, so we never
         # leave a non-repo dir that a later `git -C` would resolve against the PARENT repo.
         Write-Host "Cloning $Url (blobless, no checkout)..."
-        $tmp = "$Dest._clone_tmp"
+        $destinationFull = [IO.Path]::GetFullPath($Dest)
+        $tmp = [IO.Path]::GetFullPath("$destinationFull._clone_tmp")
+        if ($tmp -ne "$destinationFull._clone_tmp") {
+            throw "Refusing unexpected clone temporary directory: $tmp"
+        }
         if (Test-Path $tmp) { Remove-Item -Recurse -Force $tmp }
         git clone --filter=blob:none --no-checkout $Url $tmp
         if ($LASTEXITCODE -ne 0) { throw "git clone failed for $Url" }
@@ -101,10 +91,10 @@ function Fetch-File($Urls, $Dest) {
 }
 
 # ---- WPT ----
-$wptResolved = Fetch-SparseRepo 'https://github.com/web-platform-tests/wpt' (Join-Path $Vendor 'wpt') $WptSha $WptDirs
+$wptResolved = Fetch-SparseRepo $WptPin.repository $WptDestination $WptSha $WptDirs
 
 # ---- test262 ----
-$t262Resolved = Fetch-SparseRepo 'https://github.com/tc39/test262' (Join-Path $Vendor 'test262') $Test262Sha $Test262Dirs
+$t262Resolved = Fetch-SparseRepo $Test262Pin.repository $Test262Destination $Test262Sha $Test262Dirs
 
 # ---- Acid1 (W3C CSS1 test 5526c) ----
 $acid1Dir = Join-Path $Vendor 'acid\acid1'
@@ -125,6 +115,6 @@ Fetch-File @(
 ) (Join-Path $acid2Dir 'reference.html')
 
 Write-Host ''
-Write-Host 'Done. Resolved commits (pin these in this script):'
+Write-Host 'Done. Resolved commits (must match Lite.Conformance\test-suites.lock.json):'
 Write-Host "  WPT:     $wptResolved"
 Write-Host "  test262: $t262Resolved"

@@ -1,29 +1,6 @@
-# test262 paths (substring match) to skip, with reasons.
-# Tests requiring $262.createRealm / agents are not supported by the harness.
-
-# Tail-call optimization: Jint does not implement proper tail calls, so these tests
-# recurse millions of deep and overflow the CLR stack (uncatchable, kills the process).
-tco-pos
-tco-call
-tco-member
-tco-non-eval
-tco-eval
-
-# Realms / cross-agent tests need $262.createRealm / agent which the harness lacks.
-createRealm
-$262.agent
-cross-realm
-proto-from-ctor-realm
-
-# Source-phase imports (`import source x from "..."`, features: source-phase-imports) are a
-# post-ES2020 stage-3 proposal, so they are out of scope for an ES2020 gate rather than a Jint
-# gap. These arrived with test/language/module-code, which the fetch script listed but had
-# never actually checked out until the corpus was re-vendored.
-source-phase-import
-namespace-unambiguous-if-import-source-and-export
-
-# import('') with an empty/invalid specifier: the spec requires import() to REJECT the
-# returned promise; Jint throws the ModuleResolutionException synchronously instead. The
-# syntax these tests target does parse correctly (a Jint runtime quirk, not a parse gap).
-empty-str-is-valid
-new-covered-expression-is-valid
+# Exact stock-Jint dependency exceptions only: <test path> [expected-fail: reason and upstream issue URL]
+#
+# This file deliberately permits no substring or directory patterns. Post-ES2020 tests are
+# classified separately through their exact Test262 `features` metadata and
+# es2020-applicability.json. The Jint 4.16.1 migration currently has no known exception in the
+# checked-out ES2020 corpus.

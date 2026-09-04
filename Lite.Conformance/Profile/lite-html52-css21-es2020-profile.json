@@ -1,0 +1,453 @@
+{
+  "$schema": "./lite-html52-css21-es2020-profile.schema.json",
+  "schemaVersion": 1,
+  "name": "Lite HTML 5.2/CSS 2.1/ES2020 compatibility profile",
+  "claim": "development-non-conforming",
+  "platform": {
+    "operatingSystem": "Windows",
+    "architecture": "x64",
+    "cssMedia": "screen"
+  },
+  "targets": [
+    {
+      "id": "html52",
+      "title": "HTML 5.2, W3C Recommendation 14 December 2017",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/"
+    },
+    {
+      "id": "css21",
+      "title": "Cascading Style Sheets Level 2 Revision 1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/"
+    },
+    {
+      "id": "es2020",
+      "title": "ECMA-262, 11th edition, June 2020",
+      "url": "https://262.ecma-international.org/11.0/"
+    }
+  ],
+  "coverage": {
+    "normativeClauseInventoryComplete": false,
+    "unmappedApplicableClauseStatus": "untested",
+    "statusResolution": "most-specific-entry-wins; otherwise unmappedApplicableClauseStatus"
+  },
+  "requirements": [
+    {
+      "id": "html52.2",
+      "specification": "html52",
+      "clause": "2",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/infrastructure.html",
+      "title": "Common infrastructure",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Parser.cs", "Lite/Network", "Lite/Scripting"]
+    },
+    {
+      "id": "html52.3",
+      "specification": "html52",
+      "clause": "3",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/dom.html",
+      "title": "Semantics, structure, and APIs of HTML documents",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Parser.cs", "Lite/Scripting/Dom"]
+    },
+    {
+      "id": "html52.4",
+      "specification": "html52",
+      "clause": "4",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/semantics.html",
+      "title": "The elements of HTML",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Parser.cs", "Lite/Scripting/Dom", "Lite/Layout", "Lite/Drawer.cs"]
+    },
+    {
+      "id": "html52.5",
+      "specification": "html52",
+      "clause": "5",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/browsers.html",
+      "title": "Loading Web pages",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/BrowserWindow.cs", "Lite/Parser.cs", "Lite/Scripting"]
+    },
+    {
+      "id": "html52.6",
+      "specification": "html52",
+      "clause": "6",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/webappapis.html",
+      "title": "Web application APIs used by the rendering profile",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Scripting"]
+    },
+    {
+      "id": "html52.7",
+      "specification": "html52",
+      "clause": "7",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/editing.html",
+      "title": "User interaction",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Interaction", "Lite/Scripting/Dom"]
+    },
+    {
+      "id": "html52.8",
+      "specification": "html52",
+      "clause": "8",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/syntax.html",
+      "title": "The HTML syntax",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Parser.cs"]
+    },
+    {
+      "id": "html52.9",
+      "specification": "html52",
+      "clause": "9",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/the-xhtml-syntax.html",
+      "title": "The XHTML syntax",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Parser.cs"]
+    },
+    {
+      "id": "html52.10",
+      "specification": "html52",
+      "clause": "10",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/rendering.html",
+      "title": "Rendering",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Layout", "Lite/Drawer.cs"]
+    },
+    {
+      "id": "html52.4.11.details-open",
+      "specification": "html52",
+      "clause": "4.11.1 details open state",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/interactive-elements.html#the-details-element",
+      "title": "details open state reflection and rendering",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        { "suite": "wpt", "path": "html/semantics/interactive-elements/the-details-element/display-table-with-rt-crash.html" }
+      ],
+      "implementationAreas": ["Lite/Parser.cs", "Lite/Layout/BoxEngine.cs", "Lite/Scripting/Dom/JsElement.cs"],
+      "notes": "This status is limited to the cited assertion; it does not classify the whole details state machine."
+    },
+    {
+      "id": "html52.4.7.iframe-initial-document",
+      "specification": "html52",
+      "clause": "4.7.6 iframe initial document",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/semantics-embedded-content.html#the-iframe-element",
+      "title": "iframe without src has an initial child document",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        { "suite": "wpt", "path": "html/semantics/embedded-content/the-iframe-element/iframe-nosrc.html" }
+      ],
+      "implementationAreas": ["Lite/Parser.cs", "Lite/Scripting/Dom/JsElement.cs"]
+    },
+    {
+      "id": "html52.profile.browser-chrome",
+      "specification": "html52",
+      "clause": "Profile boundary: browser chrome",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/",
+      "title": "Browser chrome and end-user browser UI",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "Lite is an embeddable rendering engine; browser chrome is supplied by a host."
+    },
+    {
+      "id": "html52.profile.accessibility-platform",
+      "specification": "html52",
+      "clause": "Profile boundary: accessibility platform mappings",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/",
+      "title": "Operating-system accessibility API mappings",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "Platform accessibility mappings are outside this compatibility profile; DOM semantics remain included."
+    },
+    {
+      "id": "html52.profile.network-stack",
+      "specification": "html52",
+      "clause": "Profile boundary: general-purpose networking implementation",
+      "url": "https://www.w3.org/TR/2017/REC-html52-20171214/infrastructure.html",
+      "title": "General-purpose HTTP and TLS implementation",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": ["Lite/Network"],
+      "exclusionReason": "Transport is injected by the host. HTML-visible origin, CORS, redirect, referrer, MIME, and resource metadata behavior remains included."
+    },
+    {
+      "id": "css21.4-7",
+      "specification": "css21",
+      "clause": "4-7",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html",
+      "title": "Syntax, selectors, cascade, and media",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Parser.cs", "Lite/Layout/StyleResolver.cs"]
+    },
+    {
+      "id": "css21.8-10",
+      "specification": "css21",
+      "clause": "8-10",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html",
+      "title": "Box model and visual formatting model",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Layout"]
+    },
+    {
+      "id": "css21.11-12",
+      "specification": "css21",
+      "clause": "11-12",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visufx.html",
+      "title": "Visual effects, generated content, lists, and counters",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Drawer.cs", "Lite/Parser.cs"]
+    },
+    {
+      "id": "css21.14-18",
+      "specification": "css21",
+      "clause": "14-18",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/colors.html",
+      "title": "Colors, fonts, text, tables, and user interface",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Layout", "Lite/Drawer.cs"]
+    },
+    {
+      "id": "css21.appendix-e",
+      "specification": "css21",
+      "clause": "Appendix E",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/zindex.html",
+      "title": "Elaborate description of stacking contexts",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Drawer.cs"]
+    },
+    {
+      "id": "css21.8.percentage-padding",
+      "specification": "css21",
+      "clause": "8.4 percentage padding",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#padding-properties",
+      "title": "Percentage padding uses containing-block width",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        { "suite": "wpt", "path": "css/CSS2/normal-flow/containing-block-percent-padding-top.html" },
+        { "suite": "wpt", "path": "css/CSS2/normal-flow/containing-block-percent-padding-bottom.html" },
+        { "suite": "wpt", "path": "css/CSS2/normal-flow/containing-block-percent-padding-left.html" },
+        { "suite": "wpt", "path": "css/CSS2/normal-flow/containing-block-percent-padding-right.html" }
+      ],
+      "implementationAreas": ["Lite/Extensions/DrawCommandExtensions.cs", "Lite/Layout/BoxEngine.cs"]
+    },
+    {
+      "id": "css21.9.7.blockification",
+      "specification": "css21",
+      "clause": "9.7 relationships between display, position, and float",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#dis-pos-flo",
+      "title": "Specified display is blockified for floats and absolute/fixed positioning",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        { "suite": "unit", "path": "Lite.Tests/LayoutTests.cs#FloatedTableCell_IsBlockified" }
+      ],
+      "implementationAreas": ["Lite/Extensions/DrawCommandExtensions.cs"]
+    },
+    {
+      "id": "css21.9.5.floats",
+      "specification": "css21",
+      "clause": "9.5 floats",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#floats",
+      "title": "Float placement and clearance",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [
+        { "suite": "unit", "path": "Lite.Tests/LayoutTests.cs#FloatAfterInlineContent_SitsOnTheCurrentLineBox" }
+      ],
+      "implementationAreas": ["Lite/Layout/BoxEngine.cs"],
+      "notes": "Focused regression assertions pass, but the normative clause and official suite inventory have not been exhausted."
+    },
+    {
+      "id": "css21.appendix-e.fixed-paint",
+      "specification": "css21",
+      "clause": "Appendix E fixed-position paint participation",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/zindex.html",
+      "title": "Fixed-position descendants are painted outside viewport scrolling",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        { "suite": "css21-curated", "path": "css21/fixed-position-paint.html" }
+      ],
+      "implementationAreas": ["Lite/Drawer.cs"]
+    },
+    {
+      "id": "css21.acid2",
+      "specification": "css21",
+      "clause": "Cross-clause visual regression",
+      "url": "https://www.w3.org/Style/CSS/Test/CSS2.1/20110323/",
+      "title": "Acid2 visual regression",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        { "suite": "acid", "path": "acid/acid2/test.html" },
+        { "suite": "acid", "path": "acid/acid2/test.html#scrolled-50px" }
+      ],
+      "implementationAreas": ["Lite/Layout", "Lite/Drawer.cs"],
+      "notes": "The approved Lite regression baseline currently differs; the baseline is not independent conformance evidence."
+    },
+    {
+      "id": "css21.13",
+      "specification": "css21",
+      "clause": "13",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html",
+      "title": "Paged media",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "The compatibility target is the screen medium; print and paged-media rendering are outside the profile."
+    },
+    {
+      "id": "css21.appendix-a",
+      "specification": "css21",
+      "clause": "Appendix A",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/aural.html",
+      "title": "Aural style sheets",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "The compatibility target is visual screen rendering; aural rendering is outside the profile."
+    },
+    {
+      "id": "es2020.5-16",
+      "specification": "es2020",
+      "clause": "5-16",
+      "url": "https://262.ecma-international.org/11.0/#sec-ecmascript-language-source-code",
+      "title": "Language types, abstract operations, execution, syntax, and evaluation",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Lite/Scripting", "Jint 4.16.1"]
+    },
+    {
+      "id": "es2020.17-26",
+      "specification": "es2020",
+      "clause": "17-26",
+      "url": "https://262.ecma-international.org/11.0/#sec-ecmascript-standard-built-in-objects",
+      "title": "Standard built-in objects",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": ["Jint 4.16.1"]
+    },
+    {
+      "id": "es2020.optional-chaining",
+      "specification": "es2020",
+      "clause": "12.3 optional chaining",
+      "url": "https://262.ecma-international.org/11.0/#sec-optional-chaining",
+      "title": "Optional chaining operator",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        { "suite": "test262", "path": "test/language/expressions/optional-chaining/runtime-semantics-evaluation.js" },
+        { "suite": "test262", "path": "test/language/expressions/optional-chaining/short-circuiting.js" }
+      ],
+      "implementationAreas": ["Jint 4.16.1"]
+    },
+    {
+      "id": "es2020.nullish-coalescing",
+      "specification": "es2020",
+      "clause": "12.4 coalesce expression",
+      "url": "https://262.ecma-international.org/11.0/#sec-coalesce-expression",
+      "title": "Nullish coalescing operator",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        { "suite": "test262", "path": "test/language/expressions/coalesce/abrupt-is-a-short-circuit.js" },
+        { "suite": "test262", "path": "test/language/expressions/coalesce/cannot-chain-head-with-logical-and.js" }
+      ],
+      "implementationAreas": ["Jint 4.16.1"]
+    },
+    {
+      "id": "es2020.bigint",
+      "specification": "es2020",
+      "clause": "20.2 BigInt objects",
+      "url": "https://262.ecma-international.org/11.0/#sec-bigint-objects",
+      "title": "BigInt",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        { "suite": "test262", "path": "test/built-ins/BigInt/prototype/valueOf/return.js" },
+        { "suite": "test262", "path": "test/built-ins/BigInt/wrapper-object-ordinary-toprimitive.js" }
+      ],
+      "implementationAreas": ["Jint 4.16.1"]
+    },
+    {
+      "id": "es2020.promise-allsettled",
+      "specification": "es2020",
+      "clause": "25.6.4.1 Promise.allSettled",
+      "url": "https://262.ecma-international.org/11.0/#sec-promise.allsettled",
+      "title": "Promise.allSettled",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        { "suite": "test262", "path": "test/built-ins/Promise/allSettled/resolves-empty-array.js" },
+        { "suite": "test262", "path": "test/built-ins/Promise/allSettled/resolved-sequence-mixed.js" }
+      ],
+      "implementationAreas": ["Jint 4.16.1", "Lite.Conformance/Test262/Test262Runner.cs"]
+    },
+    {
+      "id": "es2020.string-matchall",
+      "specification": "es2020",
+      "clause": "21.1.3.14 String.prototype.matchAll",
+      "url": "https://262.ecma-international.org/11.0/#sec-string.prototype.matchall",
+      "title": "String.prototype.matchAll",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        { "suite": "test262", "path": "test/built-ins/String/prototype/matchAll/toString-this-val.js" },
+        { "suite": "test262", "path": "test/built-ins/String/prototype/matchAll/regexp-prototype-matchAll-invocation.js" }
+      ],
+      "implementationAreas": ["Jint 4.16.1"]
+    },
+    {
+      "id": "es2020.dynamic-import-host",
+      "specification": "es2020",
+      "clause": "15.2.1.17 HostImportModuleDynamically",
+      "url": "https://262.ecma-international.org/11.0/#sec-hostimportmoduledynamically",
+      "title": "Dynamic import host hook",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        { "suite": "test262", "path": "test/language/expressions/dynamic-import/custom-primitive.js" },
+        { "suite": "test262", "path": "test/language/expressions/dynamic-import/usage-from-eval.js" }
+      ],
+      "implementationAreas": ["Lite.Conformance/Test262/Test262ModuleLoader.cs", "Jint 4.16.1"]
+    }
+  ]
+}

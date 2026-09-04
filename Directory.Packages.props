@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="AngleSharp" Version="1.7.3" />
+    <PackageVersion Include="AngleSharp.Css" Version="1.0.2" />
+    <PackageVersion Include="Jint" Version="4.16.1" />
+    <PackageVersion Include="LibVLCSharp" Version="3.9.3" />
+    <PackageVersion Include="SkiaSharp" Version="3.119.0" />
+    <PackageVersion Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+    <PackageVersion Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
+  </ItemGroup>
+</Project>

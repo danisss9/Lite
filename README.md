@@ -568,6 +568,28 @@ Across the full upstream `css/CSS2` reftest suite Lite currently passes **4042 /
 Diagnostics: `--render <url> [name]` dumps one page to `artifacts/<name>.png`, and
 `--geom <url> <selector>` prints the resolved geometry of matching elements.
 
+## Compatibility profile
+
+Lite is working toward the **Lite HTML 5.2/CSS 2.1/ES2020 compatibility profile** on Windows x64 for the CSS `screen` medium. The pinned targets are the W3C HTML 5.2 Recommendation, CSS 2.1, and ECMA-262 11th edition. This is currently a development profile, not a claim of full standards conformance.
+
+The machine-readable contract is in `Lite.Conformance/Profile/lite-html52-css21-es2020-profile.json`; its schema rejects unclassified statuses and requires reasons or upstream issues for exclusions and dependency exceptions. `Lite.Conformance/test-suites.lock.json` is the single source of truth for WPT, Test262, and the official 23 March 2011 CSS 2.1 suite snapshot. The current normative-clause inventory is deliberately marked incomplete, and unmapped applicable requirements count as `untested`.
+
+Fetch and run the pinned evidence on Windows:
+
+```powershell
+./scripts/fetch-tests.ps1
+dotnet run --project Lite.Tests/Lite.Tests.csproj -c Release
+dotnet run --project Lite.Conformance -c Release -- --suite profile
+dotnet run --project Lite.Conformance -c Release -- --suite css21
+dotnet run --project Lite.Conformance -c Release -- --suite wpt
+dotnet run --project Lite.Conformance -c Release -- --suite test262
+dotnet run --project Lite.Conformance -c Release -- --suite acid
+```
+
+Use `--shard INDEX/COUNT` with a gate to select a stable zero-based shard. The `profile` command validates exact test references and writes a deterministic `artifacts/compatibility-report.json`. A structurally valid report can still say `releaseReady: false`; excluded, failing, untested, or dependency-exception entries are never counted as passes. The curated gates are regression evidence only. The official CSS 2.1 suite and complete applicable WPT/Test262 inventories remain release requirements.
+
+Release automation adds `--require-ready`, which turns any incomplete inventory, sparse suite, unvendored suite, exclusion, failure, untested requirement, or dependency exception into a hard release failure.
+
 ---
 
 ## Dependencies

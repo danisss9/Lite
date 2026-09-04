@@ -1,6 +1,7 @@
 using Lite.Conformance.Acid;
 using Lite.Conformance.Css21;
 using Lite.Conformance.Harness;
+using Lite.Conformance.Profile;
 using Lite.Conformance.Test262;
 using Lite.Conformance.Wpt;
 
@@ -15,6 +16,9 @@ internal static class Program
         string? survey = null;
         int surveyLimit = 0;
         bool updateBaselines = false;
+        string? reportPath = null;
+        var shard = ShardSpec.All;
+        bool requireReady = false;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -39,6 +43,19 @@ internal static class Program
                 case "--update-baselines":
                     updateBaselines = true;
                     break;
+                case "--report" when i + 1 < args.Length:
+                    reportPath = args[++i];
+                    break;
+                case "--shard" when i + 1 < args.Length:
+                    if (!ShardSpec.TryParse(args[++i], out shard))
+                    {
+                        Console.WriteLine("--shard must be INDEX/COUNT with 0 <= INDEX < COUNT.");
+                        return 2;
+                    }
+                    break;
+                case "--require-ready":
+                    requireReady = true;
+                    break;
                 case "--help" or "-h":
                     PrintUsage();
                     return 0;
@@ -60,12 +77,13 @@ internal static class Program
             return suite.ToLowerInvariant() switch
             {
                 "wpt" when survey is not null => WptRunner.Survey(survey, surveyLimit),
-                "wpt" => WptRunner.Run(filter),
+                "wpt" => WptRunner.Run(filter, shard),
                 "css21" when survey is not null => RefTestRunner.Survey(survey, surveyLimit),
-                "css21" => RefTestRunner.Run(filter),
-                "test262" => Test262Runner.Run(filter),
-                "acid" => AcidRunner.Run(filter, updateBaselines),
-                "all" => RunAll(filter),
+                "css21" => RefTestRunner.Run(filter, shard),
+                "test262" => Test262Runner.Run(filter, shard),
+                "acid" => AcidRunner.Run(filter, updateBaselines, shard),
+                "profile" => ProfileRunner.Run(reportPath, requireReady),
+                "all" => RunAll(filter, shard),
                 _ => Unknown(suite),
             };
         }
@@ -75,13 +93,13 @@ internal static class Program
         }
     }
 
-    private static int RunAll(string? filter)
+    private static int RunAll(string? filter, ShardSpec shard)
     {
         var exit = 0;
-        exit |= Test262Runner.Run(filter);
-        exit |= WptRunner.Run(filter);
-        exit |= RefTestRunner.Run(filter);
-        exit |= AcidRunner.Run(filter, updateBaselines: false);
+        exit |= Test262Runner.Run(filter, shard);
+        exit |= WptRunner.Run(filter, shard);
+        exit |= RefTestRunner.Run(filter, shard);
+        exit |= AcidRunner.Run(filter, updateBaselines: false, shard);
         return exit;
     }
 
@@ -98,13 +116,16 @@ internal static class Program
             Lite conformance harness
 
             Usage:
-              dotnet run --project Lite.Conformance -- --suite <wpt|css21|test262|acid|all> [options]
+              dotnet run --project Lite.Conformance -- --suite <wpt|css21|test262|acid|profile|all> [options]
 
             Options:
               --filter <substring>   Only run tests whose path contains the substring
               --update-baselines     (acid) Approve the current render as the new baseline
               --geom <url> <sel>     Print the geometry of elements matching a selector
               --render <url> [name]  Render one page to artifacts/<name>.png
+              --report <path>        (profile) Write the compatibility JSON report to this path
+              --shard <index/count>  Run one stable zero-based shard (for example 2/8)
+              --require-ready        (profile) Fail unless every release-readiness check passes
 
             Test files are vendored by scripts\fetch-tests.ps1 (pinned commits).
             Exit code 0 = green (no unexpected failures, no unexpected passes).

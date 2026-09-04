@@ -1,0 +1,20 @@
+{
+  "$schema": "./es2020-applicability.schema.json",
+  "target": "ECMA-262 11th edition (ES2020)",
+  "specification": "https://262.ecma-international.org/11.0/",
+  "excludedFeatures": [
+    { "feature": "arbitrary-module-namespace-names", "introduced": "ES2022" },
+    { "feature": "class-fields-private", "introduced": "ES2022" },
+    { "feature": "class-fields-public", "introduced": "ES2022" },
+    { "feature": "class-static-fields-private", "introduced": "ES2022" },
+    { "feature": "import-attributes", "introduced": "ES2025" },
+    { "feature": "import-defer", "introduced": "proposal" },
+    { "feature": "import-text", "introduced": "proposal" },
+    { "feature": "json-modules", "introduced": "ES2025" },
+    { "feature": "promise-with-resolvers", "introduced": "ES2024" },
+    { "feature": "regexp-v-flag", "introduced": "ES2024" },
+    { "feature": "source-phase-imports", "introduced": "proposal" },
+    { "feature": "source-phase-imports-module-source", "introduced": "proposal" },
+    { "feature": "top-level-await", "introduced": "ES2022" }
+  ]
+}

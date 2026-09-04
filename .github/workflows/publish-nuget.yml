@@ -24,8 +24,55 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      - name: Fetch pinned tests
+        shell: pwsh
+        run: ./scripts/fetch-tests.ps1
+
+      - name: Restore
+        run: dotnet restore Lite.sln
+
       - name: Build
-        run: dotnet build Lite/Lite.csproj --configuration Release /p:Version=${{ steps.version.outputs.VERSION }}
+        run: dotnet build Lite.sln --configuration Release --no-restore /p:Version=${{ steps.version.outputs.VERSION }}
+
+      - name: Audit vulnerable packages
+        shell: pwsh
+        run: |
+          $audit = (& dotnet list Lite.sln package --vulnerable --include-transitive 2>&1 | Out-String)
+          Write-Host $audit
+          if ($LASTEXITCODE -ne 0 -or $audit -match 'has the following vulnerable packages') {
+            throw 'NuGet vulnerability audit failed.'
+          }
+
+      - name: Generate compatibility report
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json
+
+      - name: Unit tests
+        run: dotnet run --project Lite.Tests/Lite.Tests.csproj --configuration Release --no-build --no-restore
+
+      - name: CSS 2.1 gate
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite css21
+
+      - name: WPT gate
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite wpt
+
+      - name: ES2020 gate
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite test262
+
+      - name: Acid regressions
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite acid
+
+      - name: Require release-ready compatibility report
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json --require-ready
+
+      - name: Upload compatibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-compatibility-evidence
+          path: |
+            compatibility-report.json
+            Lite.Conformance/artifacts
+          if-no-files-found: warn
 
       - name: Pack
         run: dotnet pack Lite/Lite.csproj --configuration Release --no-build /p:Version=${{ steps.version.outputs.VERSION }} --output nupkg
@@ -37,4 +84,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: v${{ steps.version.outputs.VERSION }}
-          files: nupkg/*.nupkg
+          files: |
+            nupkg/*.nupkg
+            compatibility-report.json

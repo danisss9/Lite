@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/danisss9/Lite/schemas/es2020-applicability.schema.json",
+  "type": "object",
+  "required": ["target", "specification", "excludedFeatures"],
+  "properties": {
+    "target": { "type": "string" },
+    "specification": { "type": "string", "format": "uri" },
+    "excludedFeatures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["feature", "introduced"],
+        "properties": {
+          "feature": { "type": "string", "minLength": 1 },
+          "introduced": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

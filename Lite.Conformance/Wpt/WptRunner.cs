@@ -26,9 +26,9 @@ internal static class WptRunner
         public bool Passed => Cat == Cat.Pass;
     }
 
-    public static int Run(string? filter)
+    public static int Run(string? filter, ShardSpec shard)
     {
-        var entries = Manifest.Filter(Manifest.Load(ConformancePaths.Manifest(Path.Combine("Wpt", "wpt-manifest.txt"))), filter);
+        var entries = Manifest.Filter(Manifest.Load(ConformancePaths.Manifest(Path.Combine("Wpt", "wpt-manifest.txt"))), filter, shard);
         if (entries.Count == 0)
         {
             Console.WriteLine("wpt: no manifest entries match.");
@@ -37,6 +37,7 @@ internal static class WptRunner
 
         ConformanceServer.Start();
         var result = new SuiteResult();
+        if (shard.Count > 1) Console.WriteLine($"  shard {shard}");
 
         foreach (var entry in entries)
         {
@@ -80,7 +81,7 @@ internal static class WptRunner
             var urlPath = Path.GetRelativePath(wptRoot, file).Replace('\\', '/');
             // Skip is a struct, so an unmatched FirstOrDefault yields default(Skip) (Path == null);
             // a real match always has a non-null Path.
-            var match = skip.FirstOrDefault(s => urlPath.Contains(s.Path, StringComparison.OrdinalIgnoreCase));
+            var match = skip.FirstOrDefault(s => urlPath.Equals(s.Path, StringComparison.Ordinal));
             if (match.Path is not null)
             {
                 skipped++;
@@ -117,7 +118,7 @@ internal static class WptRunner
 
     private readonly record struct Skip(string Path, string Reason);
 
-    /// <summary>Loads Wpt\survey-skip.txt: substring path-matches the survey must not run,
+    /// <summary>Loads Wpt\survey-skip.txt: exact paths the survey must not run,
     /// each with a reason. These are tests that crash the whole process (uncatchable CLR
     /// StackOverflow from deep JS recursion — a Jint limitation), so they can't simply fail.</summary>
     private static List<Skip> LoadSurveySkips()

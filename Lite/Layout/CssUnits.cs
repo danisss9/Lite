@@ -23,33 +23,33 @@ internal static class CssUnits
     /// defaults to the CSS initial 16px.</summary>
     public static float RootFontSize { get; set; } = 16f;
 
-    /// <summary>Converts an AngleSharp <see cref="Length"/> to pixels.</summary>
+    /// <summary>Converts an AngleSharp <see cref="CssLengthValue"/> to pixels.</summary>
     /// <param name="fontSize">The element's font-size (for em/ex/ch).</param>
     /// <param name="pctBasis">The basis for percentage values.</param>
     /// <param name="vw">Viewport width; <param name="vh">Viewport height (default to vw when unknown).</param></param>
-    public static float ToPx(Length length, float fontSize, float pctBasis, float vw, float vh) =>
+    public static float ToPx(CssLengthValue length, float fontSize, float pctBasis, float vw, float vh) =>
         ToPx(length.Type, length.Value, fontSize, pctBasis, vw, vh);
 
-    public static float ToPx(Length.Unit unit, double value, float fontSize, float pctBasis, float vw, float vh)
+    public static float ToPx(CssLengthValue.Unit unit, double value, float fontSize, float pctBasis, float vw, float vh)
     {
         var v = (float)value;
         return unit switch
         {
-            Length.Unit.Px => v,
-            Length.Unit.Em => v * fontSize,
-            Length.Unit.Rem => v * RootFontSize,
-            Length.Unit.Ex => v * fontSize * 0.5f,   // approximation: ex ≈ 0.5em
-            Length.Unit.Ch => v * fontSize * 0.5f,    // approximation: ch ≈ 0.5em
-            Length.Unit.Percent => v / 100f * pctBasis,
-            Length.Unit.Vw => v / 100f * vw,
-            Length.Unit.Vh => v / 100f * vh,
-            Length.Unit.Vmin => v / 100f * Math.Min(vw, vh),
-            Length.Unit.Vmax => v / 100f * Math.Max(vw, vh),
-            Length.Unit.Pt => v * PxPerPt,
-            Length.Unit.Pc => v * PxPerPc,
-            Length.Unit.In => v * PxPerIn,
-            Length.Unit.Cm => v * PxPerCm,
-            Length.Unit.Mm => v * PxPerMm,
+            CssLengthValue.Unit.Px => v,
+            CssLengthValue.Unit.Em => v * fontSize,
+            CssLengthValue.Unit.Rem => v * RootFontSize,
+            CssLengthValue.Unit.Ex => v * fontSize * 0.5f,   // approximation: ex ≈ 0.5em
+            CssLengthValue.Unit.Ch => v * fontSize * 0.5f,    // approximation: ch ≈ 0.5em
+            CssLengthValue.Unit.Percent => v / 100f * pctBasis,
+            CssLengthValue.Unit.Vw => v / 100f * vw,
+            CssLengthValue.Unit.Vh => v / 100f * vh,
+            CssLengthValue.Unit.Vmin => v / 100f * Math.Min(vw, vh),
+            CssLengthValue.Unit.Vmax => v / 100f * Math.Max(vw, vh),
+            CssLengthValue.Unit.Pt => v * PxPerPt,
+            CssLengthValue.Unit.Pc => v * PxPerPc,
+            CssLengthValue.Unit.In => v * PxPerIn,
+            CssLengthValue.Unit.Cm => v * PxPerCm,
+            CssLengthValue.Unit.Mm => v * PxPerMm,
             _ => v, // unknown unit: treat the number as px
         };
     }

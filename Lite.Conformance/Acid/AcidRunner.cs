@@ -27,12 +27,12 @@ internal static class AcidRunner
         new("acid2-scrolled", "acid/acid2/test.html", ScrollY: 50, Anchor: "top"),
     ];
 
-    public static int Run(string? filter, bool updateBaselines)
+    public static int Run(string? filter, bool updateBaselines, ShardSpec shard)
     {
         ConformanceServer.Start();
         var result = new SuiteResult();
 
-        foreach (var acidCase in Cases)
+        foreach (var acidCase in shard.Apply(Cases))
         {
             if (!string.IsNullOrEmpty(filter) &&
                 !acidCase.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))

@@ -16,9 +16,9 @@ internal static class RefTestRunner
     public const int Width = 600;
     public const int Height = 600;
 
-    public static int Run(string? filter)
+    public static int Run(string? filter, ShardSpec shard)
     {
-        var entries = Manifest.Filter(Manifest.Load(ConformancePaths.Manifest(Path.Combine("Css21", "css21-manifest.txt"))), filter);
+        var entries = Manifest.Filter(Manifest.Load(ConformancePaths.Manifest(Path.Combine("Css21", "css21-manifest.txt"))), filter, shard);
         if (entries.Count == 0)
         {
             Console.WriteLine("css21: no manifest entries match.");
@@ -27,6 +27,7 @@ internal static class RefTestRunner
 
         ConformanceServer.Start();
         var result = new SuiteResult();
+        if (shard.Count > 1) Console.WriteLine($"  shard {shard}");
 
         foreach (var entry in entries)
         {
@@ -222,13 +223,15 @@ internal static class RefTestRunner
             (function() {{
                 var els = document.querySelectorAll('{selector}');
                 for (var i=0;i<els.length;i++) {{
-                    var e = els[i];
-                    var cs = getComputedStyle(e);
-                    console.log('[GEOM] ' + (e.id||e.tagName) +
+                var e = els[i];
+                var cs = getComputedStyle(e);
+                console.log('[GEOM] ' + (e.id||e.tagName) +
                         ' offsetW=' + e.offsetWidth + ' offsetH=' + e.offsetHeight +
+                        ' offsetLeft=' + e.offsetLeft + ' offsetTop=' + e.offsetTop +
                         ' clientW=' + e.clientWidth + ' clientH=' + e.clientHeight +
                         ' fontSize=' + cs.fontSize + ' borderTop=' + cs.borderTopWidth +
                         ' width=' + cs.width + ' marginTop=' + cs.marginTop +
+                        ' paddingTop=' + cs.paddingTop + ' paddingBottom=' + cs.paddingBottom +
                         ' lineHeight=' + cs.lineHeight +
                         ' bgColor=' + cs.backgroundColor + ' bgImage=' + cs.backgroundImage +
                         ' bgPos=' + cs.backgroundPosition + ' bgRepeat=' + cs.backgroundRepeat);

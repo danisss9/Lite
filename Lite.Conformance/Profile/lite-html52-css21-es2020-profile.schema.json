@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/danisss9/Lite/schemas/lite-html52-css21-es2020-profile.schema.json",
+  "type": "object",
+  "required": ["schemaVersion", "name", "claim", "platform", "targets", "coverage", "requirements"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "name": { "const": "Lite HTML 5.2/CSS 2.1/ES2020 compatibility profile" },
+    "claim": { "enum": ["development-non-conforming", "compatibility-profile", "conforming"] },
+    "platform": {
+      "type": "object",
+      "required": ["operatingSystem", "architecture", "cssMedia"],
+      "properties": {
+        "operatingSystem": { "const": "Windows" },
+        "architecture": { "const": "x64" },
+        "cssMedia": { "const": "screen" }
+      },
+      "additionalProperties": false
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "url"],
+        "properties": {
+          "id": { "enum": ["html52", "css21", "es2020"] },
+          "title": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": ["normativeClauseInventoryComplete", "unmappedApplicableClauseStatus", "statusResolution"],
+      "properties": {
+        "normativeClauseInventoryComplete": { "type": "boolean" },
+        "unmappedApplicableClauseStatus": { "const": "untested" },
+        "statusResolution": { "const": "most-specific-entry-wins; otherwise unmappedApplicableClauseStatus" }
+      },
+      "additionalProperties": false
+    },
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/requirement" }
+    }
+  },
+  "$defs": {
+    "test": {
+      "type": "object",
+      "required": ["suite", "path"],
+      "properties": {
+        "suite": { "enum": ["unit", "wpt", "css21-curated", "css21-official", "test262", "acid", "manual"] },
+        "path": { "type": "string", "minLength": 1 },
+        "assertion": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "requirement": {
+      "type": "object",
+      "required": ["id", "specification", "clause", "url", "title", "applicability", "status", "tests", "implementationAreas"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$" },
+        "specification": { "enum": ["html52", "css21", "es2020"] },
+        "clause": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri" },
+        "title": { "type": "string", "minLength": 1 },
+        "applicability": { "enum": ["included", "excluded"] },
+        "status": { "enum": ["implemented", "failing", "untested", "profile-excluded", "dependency-exception"] },
+        "tests": { "type": "array", "items": { "$ref": "#/$defs/test" } },
+        "implementationAreas": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "exclusionReason": { "type": "string", "minLength": 1 },
+        "upstreamIssues": { "type": "array", "items": { "type": "string", "format": "uri" }, "minItems": 1 },
+        "notes": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "profile-excluded" } } },
+          "then": { "required": ["exclusionReason"], "properties": { "applicability": { "const": "excluded" } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "dependency-exception" } } },
+          "then": { "required": ["upstreamIssues"] }
+        }
+      ],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

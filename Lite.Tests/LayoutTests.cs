@@ -777,9 +777,11 @@ public static class LayoutTests
 
         var pseudo = FindNode(page.Root, n => n.TagName == "#pseudo-after");
         True(pseudo != null, "expected a ::after pseudo node to be generated");
-        True(pseudo!.GetDisplay() == DisplayType.Block,
-            $"display:inherit should resolve to the host's 'block', got {pseudo.GetDisplay()} " +
-            $"(override=\"{pseudo.StyleOverrides.GetValueOrDefault("display")}\")");
+        var requiredPseudo = pseudo!;
+        var resolvedDisplay = requiredPseudo.GetDisplay();
+        True(resolvedDisplay == DisplayType.Block,
+            $"display:inherit should resolve to the host's 'block', got {resolvedDisplay} " +
+            $"(override=\"{requiredPseudo.StyleOverrides.GetValueOrDefault("display")}\")");
     }
 
     [Test]
