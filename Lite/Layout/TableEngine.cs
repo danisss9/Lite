@@ -265,7 +265,7 @@ internal static class TableEngine
 
     private class CellPlacement
     {
-        public LayoutNode Cell;
+        public required LayoutNode Cell;
         public int Row, Col, ColSpan, RowSpan;
         public float MeasuredOuterH;
         public float MeasuredCW;

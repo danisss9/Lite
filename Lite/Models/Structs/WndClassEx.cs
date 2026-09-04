@@ -15,7 +15,7 @@ public struct WNDCLASSEX
     public IntPtr hCursor;
     public IntPtr hbrBackground;
     [MarshalAs(UnmanagedType.LPTStr)]
-    public string lpszMenuName;
+    public string? lpszMenuName;
     [MarshalAs(UnmanagedType.LPTStr)]
     public string lpszClassName;
     public IntPtr hIconSm;

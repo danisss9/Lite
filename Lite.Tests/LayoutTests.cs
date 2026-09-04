@@ -54,6 +54,19 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void UnsetDimensions_RemainAutoWithCurrentCssBackend()
+    {
+        var node = Parser.ParseFragment("<div>text</div>")[0];
+        var width = node.Style.GetPropertyValueSafe(AngleSharp.Css.PropertyNames.Width);
+        var height = node.Style.GetPropertyValueSafe(AngleSharp.Css.PropertyNames.Height);
+        var widthType = node.Style.GetProperty(AngleSharp.Css.PropertyNames.Width)?.RawValue?.GetType().Name ?? "null";
+        var heightType = node.Style.GetProperty(AngleSharp.Css.PropertyNames.Height)?.RawValue?.GetType().Name ?? "null";
+
+        True(node.IsAutoWidth(), $"unset width should be auto; value='{width}', raw={widthType}");
+        True(node.IsAutoHeight(), $"unset height should be auto; value='{height}', raw={heightType}");
+    }
+
+    [Test]
     public static void PercentMargin_ResolvesAgainstContainingBlockWidth()
     {
         var inner = Block(new() { ["margin-top"] = "25%", ["height"] = "40px" });

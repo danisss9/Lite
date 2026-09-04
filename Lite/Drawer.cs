@@ -228,7 +228,7 @@ internal static class Drawer
             var m = SKMatrix.CreateTranslation(ox, oy);
             m = m.PostConcat(transform.Value);
             m = m.PostConcat(SKMatrix.CreateTranslation(-ox, -oy));
-            canvas.Concat(ref m);
+            canvas.Concat(in m);
         }
 
         // CSS filter — applied as a layer effect

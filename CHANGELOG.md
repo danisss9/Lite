@@ -2,7 +2,49 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.15] - 2026-08-07 (current)
+## [0.0.14] - 2026-09-04 (current)
+
+This entry consolidates the previously staged, unreleased 0.0.14 and 0.0.15 work with the compatibility-program foundation for the **Lite HTML 5.2/CSS 2.1/ES2020 compatibility profile**. Before the dependency-foundation upgrade, the two CSS 2.1 passes moved the upstream `css/CSS2` survey from **2554/6266 (40.8%)** to **4042/6266 (64.5%)**, a net gain of **1488 reftests**. This candidate makes the standards target and its evidence auditable; it does not claim full conformance while the published report remains incomplete or failing.
+
+### Compatibility-program foundation
+
+#### Added
+
+- **Machine-readable compatibility contract** — `lite-html52-css21-es2020-profile.json` maps the current HTML 5.2, CSS 2.1, and ES2020 clause inventory to `implemented`, `failing`, `untested`, `profile-excluded`, or `dependency-exception`, with a schema, exact evidence paths, reasons, and upstream-issue requirements. Unmapped applicable clauses default to `untested` rather than silently passing (`ProfileRunner`)
+- **Pinned conformance inputs** — `test-suites.lock.json` records the exact WPT and Test262 commits, sparse-checkout scope, ES2020 applicability manifest, and the official 23 March 2011 CSS 2.1 suite target. `scripts/fetch-tests.ps1` now consumes that lock and verifies checkout revisions (`test-suites.lock`, `fetch-tests`)
+- **Deterministic compatibility report** — `--suite profile --report <path>` validates the contract and emits included, excluded, failing, untested, and dependency-exception totals. `--require-ready` fails while any release blocker remains (`ProfileRunner`, `Program`)
+- **Shardable conformance runs** — CSS, WPT, Test262, and Acid gates accept `--shard INDEX/COUNT`; the harness uses a dynamically allocated loopback port so shards can execute concurrently (`ShardSpec`, `ConformanceServer`)
+- **Windows compatibility CI** — every change restores, performs a transitive NuGet vulnerability audit, builds, runs the real executable unit suite, validates the profile, and exercises the curated CSS/WPT/Test262 and Acid1 gates. Tagged publication repeats the release evidence and requires a release-ready profile before packing or publishing (`ci.yml`, `publish-nuget.yml`)
+
+#### Changed
+
+- **Dependency foundation** — package versions are centrally pinned; AngleSharp is upgraded to 1.7.3, AngleSharp.Css to 1.0.2, Jint to 4.16.1, SkiaSharp to 3.119.0, and the optional LibVLC packages to their compatible current pins. Lite's CSS integration now uses the current typed-value API and preserves relative values for its own layout context (`Directory.Packages.props`, `Parser`, `CssUnits`, `DrawCommandExtensions`)
+- **ES2020 host coverage** — Test262 execution classifies post-ES2020 features explicitly, supports the upgraded Jint host hooks for realms and buffer detachment, resolves module imports within the pinned test root, and permits only exact published dependency exceptions (`Test262Runner`, `Test262ModuleLoader`)
+- **Exact test classification** — WPT survey exclusions and Test262 dependency exceptions are exact, case-sensitive test paths; broad substring skips are rejected by the profile validator and cannot be reported as passes (`WptRunner`, `ProfileRunner`)
+- **Release metadata** — the NuGet package version is now source-controlled as `0.0.14`, and the publish workflow rejects any `lite_*` tag whose version does not match the project.
+
+#### Fixed
+
+- **Regression gate restored** — fixed-position painting, floats, float/absolute blockification, inline-block painting, replaced sizing, and line-box text alignment are again covered by the executable unit and curated CSS gates.
+- **AngleSharp.Css upgrade compatibility** — unitless `line-height` no longer crashes computed-style conversion, relative CSS lengths remain available to Lite's layout engine, and authored empty `class` attributes remain distinguishable from absent attributes (`Parser`)
+- **Test262 module containment** — relative imports may traverse sibling fixture directories inside the pinned Test262 root, but cannot escape that root (`Test262ModuleLoader`)
+- **Warning-free clean build** — nullable handling now matches the upgraded CSS API and Win32 interop contract; table-cell initialization, Skia matrix passing, and nullable test assertions no longer produce compiler diagnostics.
+
+#### Release-candidate evidence
+
+- Unit suite: **190/190 passed**.
+- Curated CSS 2.1 gate: **52/52 passed**.
+- Curated WPT gate: **86/86 passed**.
+- Applicable sparse Test262 gate: **1304/1304 passed**, with **747** post-ES2020 tests explicitly excluded and no dependency exceptions.
+- NuGet audit: no known vulnerable direct or transitive packages; Release build: zero warnings and zero errors.
+- Acid1 passes. Acid2 remains a published failing profile entry: the clean 0.0.14 build differs from the existing Lite baseline by 41,678 pixels, and its scrolled variant by 41,289 pixels.
+
+#### Known limitations
+
+- The generated compatibility report is intentionally `releaseReady: false`: the normative-clause inventory is incomplete, 17 mapped entries remain untested, one entry is failing, five are profile-excluded, WPT and Test262 are sparse, and the official CSS 2.1 suite is not yet vendored. The guarded NuGet release job will not publish this candidate until those blockers are removed.
+- Acid baselines are Lite-created regression artifacts, not independent standards-conformance evidence. The Acid2 baseline was not changed to conceal the current mismatch.
+
+### CSS 2.1 inline-formatting pass
 
 Second CSS 2.1 conformance pass, on inline formatting: **+125 upstream reftests**. The WPT
 `css/CSS2` suite goes from **3917/6266 (62.5%)** to **4042/6266 (64.5%)**. `normal-flow`
@@ -11,12 +53,12 @@ Second CSS 2.1 conformance pass, on inline formatting: **+125 upstream reftests*
 ground, both for the same reason: nothing paints a border on an inline box yet, so
 `margin-padding-clear` 528 → 526 and `box` 9 → 8 lose the tests that draw one.
 
-### Added
+#### Added
 
-- **Line boxes have a strut (§10.8.1)** — every line box now begins with the zero-width inline box its block container implies, so a line holding only a 96px image is still at least as tall as the text that would have sat on its baseline. Three details the naive version gets wrong are handled: the strut's reach *below* the baseline is negative when `line-height` is smaller than the font's ascent+descent (clamping it to zero stretched a `line-height: 10px` line back out); §9.4.2 keeps a line with no content, no forced break and no in-flow boxes at zero height, so a stray run of collapsible whitespace is not resurrected; and under `line-height: normal` the strut uses the font's own ascent+descent rather than the engine's more generous 1.4em, which would otherwise poke out above a 16px image (`BoxEngine`, `DrawCommandExtensions`)
+- **Line boxes have a strut (§10.8.1)** — every line box now begins with the zero-width inline box its block container implies, so a line holding only a 96px image is still at least as tall as the text that would have sat on its baseline. Three details the naive version gets wrong are handled: the strut's reach _below_ the baseline is negative when `line-height` is smaller than the font's ascent+descent (clamping it to zero stretched a `line-height: 10px` line back out); §9.4.2 keeps a line with no content, no forced break and no in-flow boxes at zero height, so a stray run of collapsible whitespace is not resurrected; and under `line-height: normal` the strut uses the font's own ascent+descent rather than the engine's more generous 1.4em, which would otherwise poke out above a 16px image (`BoxEngine`, `DrawCommandExtensions`)
 - **Conformance guards** — the curated CSS 2.1 gate grows from 40 to 52 entries, promoting an upstream reftest for each fix below; `--geom` also reports the resolved background properties (`css21-manifest`, `RefTestRunner`)
 
-### Fixed
+#### Fixed
 
 - **Inline replaced boxes reserve their edges (§8.4)** — an `<img>` on a line was measured at the bitmap's used size alone, so `img { padding-right: 20px }` advanced the line by nothing and the next image sat flush against it. The item is now built from the margin box, the node's own box starts inside its edges, and the image paints its background/border/outline like any other replaced box. This lands on two shared reftest references that the whole `height` / `min-height` / `max-height` family matches against, which is most of `normal-flow`'s gain (`BoxEngine`, `Drawer`)
 - **`auto` margins on inline boxes (§10.3.1 / §10.3.2 / §10.6.2)** — `auto` has a used value of 0 on an inline box, replaced or not. The engine read it as the block-level "take the free space in the containing block" rule, so once inline margins were honoured an `img { margin-top: auto; margin-bottom: auto }` grew a 96px line box and left the bitmap floating in the middle of it (`BoxEngine`, `DrawCommandExtensions`)
@@ -25,11 +67,11 @@ ground, both for the same reason: nothing paints a border on an inline box yet, 
 - **CSS colour keywords reaching the painter** — `SKColor.TryParse` understands hex only, so a keyword arriving through the engine's own cascade — which is how every colour pulled out of a shorthand looks — silently fell through to whatever AngleSharp had computed, normally a lower-specificity rule's colour. Keywords now resolve through AngleSharp's colour table (`DrawCommandExtensions`)
 - **`background` shorthands AngleSharp drops (§14.2)** — AngleSharp.Css refuses a `background` whose position is a bare keyword and discards the whole declaration, so `background: bottom green` and `background: red url(x.png) right repeat-y` left the element with a weaker rule's background. The shorthand is read back out of the stylesheet source for rules where AngleSharp kept nothing of the background family, so a longhand written after the shorthand still wins. The source scan follows §4.2 error handling: backslash escapes and strings are not block delimiters, a declaration containing a block is malformed and dropped whole, and a selector that declares a background more than once is left alone because source order between them is not recoverable from a CSSOM rule (`Parser`)
 
-### Known limitations
+#### Known limitations
 
 - An inline box's **borders** are still not painted. Reserving room for them in the line and stroking them was measured against the suite and came out flat: it fixes the tests that expect a visible inline border and breaks the same number of block-in-inline ones, which need one fragment box per piece before the edges can land in the right places.
 
-## [0.0.14] - 2026-08-06
+### CSS 2.1 broad conformance pass
 
 CSS 2.1 conformance pass: **+1363 upstream reftests**. The WPT `css/CSS2` suite goes from
 **2554/6266 (40.8%)** to **3917/6266 (62.5%)**. The largest movers are `selectors` 93 → 495,
@@ -39,7 +81,7 @@ CSS 2.1 conformance pass: **+1363 upstream reftests**. The WPT `css/CSS2` suite 
 regressed: `abspos` 7 → 5, both cases styling the root element itself as a fixed-position
 table.
 
-### Added
+#### Added
 
 - **Stylesheet character encoding (§4.4)** — a stylesheet is decoded by its byte-order mark, then an `@charset` rule, then the HTTP `Content-Type` charset, then the linking element's `charset` attribute, then the referring document's or importing sheet's encoding, then UTF-8; the encoding a sheet resolves to becomes the referrer charset for what it imports. Legacy code pages (Shift_JIS, windows-125x, koi8-r, iso-8859-x) are registered via `System.Text.Encoding.CodePages`, which .NET Core does not ship in the shared framework (`Parser`)
 - **`::first-letter` as a real inline box (§5.12.1)** — the pseudo-element is generated during parsing instead of being re-drawn at paint time, so it contributes its font metrics, `line-height` and width to the line box and paints every property (background, border, margins, …) through the ordinary inline path. The old paint-time version supported only `color` / `font-size` / `font-weight` and never affected layout. Upstream `css/CSS2/selectors`: 93/545 → 495/545 (`Parser`, `Drawer`)
@@ -47,9 +89,9 @@ table.
 - **Text flows around floats line by line (§9.5)** — each line box gets the band the floats leave at its own vertical position, wrapping is measured per line, and the bands are recorded on the text node so painting breaks the lines exactly where layout did. Rule 7 is implemented too: a line too narrow for its first word or atomic box shifts down past the float instead of overflowing (`BoxEngine`, `TextMeasure`, `Drawer`)
 - **Conformance guards** — the curated CSS 2.1 reftest gate grows from 22 to 29 entries, promoting upstream tests for each fix below (`css21-manifest`)
 
-### Fixed
+#### Fixed
 
-- **`font-size` compounding (§15.7)** — `font-size` computes to a length and descendants inherit *that*; the engine re-resolved the inherited specified value (`2em`) at every level, doubling the size again each time. A four-deep subtree under one such rule reached 512px. Each element's own cascaded declaration (inline style, then author/UA rules by `!important`, specificity and source order, including the `font` shorthand) is now resolved once against the parent's computed size (`Parser`, `DrawCommandExtensions`, `LayoutNode`)
+- **`font-size` compounding (§15.7)** — `font-size` computes to a length and descendants inherit _that_; the engine re-resolved the inherited specified value (`2em`) at every level, doubling the size again each time. A four-deep subtree under one such rule reached 512px. Each element's own cascaded declaration (inline style, then author/UA rules by `!important`, specificity and source order, including the `font` shorthand) is now resolved once against the parent's computed size (`Parser`, `DrawCommandExtensions`, `LayoutNode`)
 - **Pixel snapping for square backgrounds and borders** — a box landing on a fractional coordinate painted a half-covered anti-aliased fringe row, while replaced content in the same place paints whole pixels. Square fills now snap like a browser; rounded corners keep anti-aliasing (`Drawer`)
 - **Explicit zero sizes** — `width: 0` / `height: 0` were read as "no size specified" (layout tested `GetWidth() > 0`), so a zero-width box filled its container and a zero-height box grew to its content (`BoxEngine`, `DrawCommandExtensions`)
 - **Invalid negative lengths** — a negative `width`, `height`, `min-`/`max-` pair or `border-width` is invalid, so the declaration is dropped and the property keeps its initial value; `border-top-width: -1px` beside a visible `border-top-style` now paints the initial `medium` (`DrawCommandExtensions`)
@@ -58,7 +100,7 @@ table.
 - **`background` shorthand and its longhands (§14.2)** — the shorthand is expanded from the rule's declared text (tokens classified by shape, so order does not matter) and resets the components it omits; `background-repeat` and `background-position` no longer pass AngleSharp's literal `"initial"` and tuple form `"(initial, 50%)"` through to the painter, which read as "no repeat" and "position 0" respectively (`Parser`, `DrawCommandExtensions`)
 - **`min-width` / `max-width` on in-flow blocks (§10.4)** — only the absolutely-positioned path clamped, so neither property had any effect on a normal block; a box the clamp gives a known width to now centres under auto margins like an explicitly-sized one (`BoxEngine`)
 - **Replaced-element sizing (§10.3.2 / §10.6.2)** — a CSS `width`/`height` on an inline `<img>` is honoured (the inline path read only the intrinsic pixel size), and HTML's `width`/`height` content attributes are treated as presentational hints for those properties rather than as the intrinsic size — reading them as intrinsic dropped percentages outright and mixed axes, so `width="100%" height="50"` on a 1×1 image derived a height of 39200px (`BoxEngine`, `Parser`)
-- **Anonymous table boxes track the DOM** — the normalization pass only ever ADDED wrappers, so it could not follow a change to a display value: setting a cell to `display: none` wrapped it in an anonymous cell + table (a `display: none` box is not a proper table child) and restoring `table-cell` left the wrappers behind. Each pass now dissolves the boxes it generated before regenerating them. The box generated around cells misparented inside an *inline* box is an `inline-table` per §17.2.1, so cells written between inline text no longer break the line (`BoxEngine`)
+- **Anonymous table boxes track the DOM** — the normalization pass only ever ADDED wrappers, so it could not follow a change to a display value: setting a cell to `display: none` wrapped it in an anonymous cell + table (a `display: none` box is not a proper table child) and restoring `table-cell` left the wrappers behind. Each pass now dissolves the boxes it generated before regenerating them. The box generated around cells misparented inside an _inline_ box is an `inline-table` per §17.2.1, so cells written between inline text no longer break the line (`BoxEngine`)
 - **Absolutely positioned tables and flex containers** — an out-of-flow box laid its children out as plain blocks whatever its own display was, so an abs-pos `<table>` flowed its rows and cells as inline content. Child layout now dispatches on the box's own display, as the in-flow path does (`BoxEngine`)
 - **`cellspacing` / `cellpadding`** — the HTML 4 §11.2.1 presentational hints were ignored, so the UA defaults (2px `border-spacing`, 1px cell padding) stayed in place and a `cellpadding="0" cellspacing="0"` table sat 3px lower and wider than its CSS equivalent (`Parser`)
 - **`! important` with whitespace after the bang** — the declaration parser matched only the literal token, so the spaced form was read as part of the value (`Parser`)

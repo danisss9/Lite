@@ -24,6 +24,14 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      - name: Validate tag matches project version
+        shell: pwsh
+        run: |
+          $projectVersion = dotnet msbuild Lite/Lite.csproj -getProperty:Version
+          if ($projectVersion.Trim() -ne '${{ steps.version.outputs.VERSION }}') {
+            throw "Tag version ${{ steps.version.outputs.VERSION }} does not match Lite.csproj version $projectVersion."
+          }
+
       - name: Fetch pinned tests
         shell: pwsh
         run: ./scripts/fetch-tests.ps1

@@ -190,8 +190,9 @@ public static class CascadeTests
         // AngleSharp parses this one, so its longhand ordering must be left alone: the explicit
         // background-image comes after the shorthand and survives it.
         var three = F(page.Root, "three")!;
-        True(three.GetBackgroundImage().Contains("y.png", StringComparison.Ordinal),
-            $"a longhand after the shorthand must win, got '{three.GetBackgroundImage()}'");
+        var backgroundImage = three.GetBackgroundImage();
+        True(backgroundImage?.Contains("y.png", StringComparison.Ordinal) == true,
+            $"a longhand after the shorthand must win, got '{backgroundImage}'");
     }
 
     [Test]

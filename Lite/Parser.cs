@@ -890,7 +890,7 @@ internal static class Parser
 
         // Capture HTML class attribute for selector matching
         if (element.HasAttribute("class"))
-            node.Attributes["class"] = element.ClassName;
+            node.Attributes["class"] = element.GetAttribute("class") ?? string.Empty;
 
         // Capture every authored attribute, so attribute selectors, getAttribute and attr() in
         // 'content' all see what the markup actually declared — only data-* and a per-tag
