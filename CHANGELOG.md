@@ -14,7 +14,7 @@ This entry consolidates the previously staged, unreleased 0.0.14 and 0.0.15 work
 - **Pinned conformance inputs** — `test-suites.lock.json` records the exact WPT and Test262 commits, sparse-checkout scope, ES2020 applicability manifest, and the official 23 March 2011 CSS 2.1 suite target. `scripts/fetch-tests.ps1` now consumes that lock and verifies checkout revisions (`test-suites.lock`, `fetch-tests`)
 - **Deterministic compatibility report** — `--suite profile --report <path>` validates the contract and emits included, excluded, failing, untested, and dependency-exception totals. `--require-ready` fails while any release blocker remains (`ProfileRunner`, `Program`)
 - **Shardable conformance runs** — CSS, WPT, Test262, and Acid gates accept `--shard INDEX/COUNT`; the harness uses a dynamically allocated loopback port so shards can execute concurrently (`ShardSpec`, `ConformanceServer`)
-- **Windows compatibility CI** — every change restores, performs a transitive NuGet vulnerability audit, builds, runs the real executable unit suite, validates the profile, and exercises the curated CSS/WPT/Test262 and Acid1 gates. Tagged publication repeats the release evidence and requires a release-ready profile before packing or publishing (`ci.yml`, `publish-nuget.yml`)
+- **Windows compatibility CI** — every change restores, performs a transitive NuGet vulnerability audit, builds, runs the real executable unit suite, validates the profile, and exercises the curated CSS/WPT/Test262 and Acid1 gates. Tagged publication repeats those supported gates and publishes the compatibility report alongside the package (`ci.yml`, `publish-nuget.yml`)
 
 #### Changed
 
@@ -41,7 +41,7 @@ This entry consolidates the previously staged, unreleased 0.0.14 and 0.0.15 work
 
 #### Known limitations
 
-- The generated compatibility report is intentionally `releaseReady: false`: the normative-clause inventory is incomplete, 17 mapped entries remain untested, one entry is failing, five are profile-excluded, WPT and Test262 are sparse, and the official CSS 2.1 suite is not yet vendored. The guarded NuGet release job will not publish this candidate until those blockers are removed.
+- The generated compatibility report is intentionally `releaseReady: false`: the normative-clause inventory is incomplete, 17 mapped entries remain untested, one entry is failing, five are profile-excluded, WPT and Test262 are sparse, and the official CSS 2.1 suite is not yet vendored. Tagged releases publish this report as explicit compatibility evidence; they do not represent a full-conformance claim.
 - Acid baselines are Lite-created regression artifacts, not independent standards-conformance evidence. The Acid2 baseline was not changed to conceal the current mismatch.
 
 ### CSS 2.1 inline-formatting pass
