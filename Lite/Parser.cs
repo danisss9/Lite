@@ -247,7 +247,8 @@ internal static class Parser
 
         // Always create the JS engine so inline onclick/on* handlers work,
         // even when there are no external or inline script blocks.
-        var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight);
+        var state = new DocumentState(document, address, _documentBaseUrl ?? address, CssRules.ToArray());
+        var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight, state);
 
         // Now that the parent engine exists, wire each nested <iframe>'s child context
         // (parent/top/frameElement) and queue its load event. Done before the parent's scripts run
@@ -344,8 +345,9 @@ internal static class Parser
                 var frameEl = Scripting.Dom.JsElement.For(parentEngine.RawEngine, node);
                 child.Engine.SetParentContext(parentEngine, frameEl);
                 var captured = node;
-                parentEngine.EnqueueMacrotask(() =>
-                    Scripting.EventDispatcher.DispatchToNode(captured, "load", parentEngine));
+                if (!child.IsInitialAboutBlank)
+                    parentEngine.EnqueueMacrotask(() =>
+                        Scripting.EventDispatcher.DispatchToNode(captured, "load", parentEngine));
             }
             foreach (var c in node.Children) stack.Push(c);
         }
@@ -966,12 +968,19 @@ internal static class Parser
                 var srcdoc = element.GetAttribute("srcdoc");
                 var src = element.GetAttribute("src");
                 var baseForChild = _documentBaseUrl ?? _baseUrl ?? "about://lite/";
-                if (!string.IsNullOrEmpty(srcdoc))
+                if (srcdoc is not null)
                     node.ChildPage = ParseChildPage(srcdoc, isSrcdoc: true, baseForChild, cw, ch);
                 else if (!string.IsNullOrEmpty(src) && !src.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
                 {
                     var childUrl = ResolveUrl(src) ?? src;
                     node.ChildPage = ParseChildPage(childUrl, isSrcdoc: false, childUrl, cw, ch);
+                }
+                else
+                {
+                    node.ChildPage = ParseChildPage("<!doctype html><html><head></head><body></body></html>",
+                        isSrcdoc: true, baseForChild, cw, ch);
+                    node.ChildPage.IsInitialAboutBlank = true;
+                    node.ChildPage.Engine.SetCurrentUrl("about:blank");
                 }
             }
             catch (Exception ex) { Console.WriteLine($"[iframe load] {ex.Message}"); }

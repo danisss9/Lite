@@ -37,7 +37,7 @@ internal static class JsFetch
             if (b.IsString()) requestBody = b.AsString();
         }
 
-        var baseUrl = Parser.BaseUrl;
+        var baseUrl = engine.DocumentBaseUrl;
         System.Threading.Tasks.Task.Run(() =>
         {
             var result = Execute(url, method, requestBody, baseUrl);

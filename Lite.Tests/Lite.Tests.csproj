@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Lite\Lite.csproj" />
+    <ProjectReference Include="..\Lite.Conformance\Lite.Conformance.csproj" />
   </ItemGroup>
 
 </Project>

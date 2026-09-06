@@ -1,0 +1,1027 @@
+{
+  "$schema": "./lite-html53-css21-es2020-profile.schema.json",
+  "schemaVersion": 2,
+  "name": "Lite HTML 5.3/CSS 2.1/ES2020 compatibility profile",
+  "claim": "development-non-conforming",
+  "platform": {
+    "operatingSystem": "Windows",
+    "architecture": "x64",
+    "cssMedia": "screen"
+  },
+  "targets": [
+    {
+      "id": "html53",
+      "title": "HTML 5.3, W3C Working Draft 18 October 2018",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/"
+    },
+    {
+      "id": "css21",
+      "title": "Cascading Style Sheets Level 2 Revision 1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/"
+    },
+    {
+      "id": "es2020",
+      "title": "ECMA-262, 11th edition, June 2020",
+      "url": "https://262.ecma-international.org/11.0/"
+    }
+  ],
+  "coverage": {
+    "normativeClauseInventoryComplete": false,
+    "unmappedApplicableClauseStatus": "untested",
+    "statusResolution": "most-specific-entry-wins; otherwise unmappedApplicableClauseStatus",
+    "html53ClauseInventoryComplete": false,
+    "html53TestInventoryComplete": false,
+    "html53RequiredDependencies": []
+  },
+  "requirements": [
+    {
+      "id": "html53.2",
+      "specification": "html53",
+      "clause": "2",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/infrastructure.html#infrastructure",
+      "title": "Common infrastructure",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Network",
+        "Lite/Scripting"
+      ]
+    },
+    {
+      "id": "html53.3",
+      "specification": "html53",
+      "clause": "3",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/dom.html#dom",
+      "title": "Semantics, structure, and APIs of HTML documents",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom"
+      ]
+    },
+    {
+      "id": "html53.4",
+      "specification": "html53",
+      "clause": "4",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/semantics.html#semantics",
+      "title": "The elements of HTML",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ]
+    },
+    {
+      "id": "html53.6",
+      "specification": "html53",
+      "clause": "6",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/browsers.html#browsers",
+      "title": "Loading Web pages",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/BrowserWindow.cs",
+        "Lite/Parser.cs",
+        "Lite/Scripting"
+      ]
+    },
+    {
+      "id": "html53.7",
+      "specification": "html53",
+      "clause": "7",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/webappapis.html#webappapis",
+      "title": "Web application APIs",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting"
+      ]
+    },
+    {
+      "id": "html53.5",
+      "specification": "html53",
+      "clause": "5",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/editing.html#editing",
+      "title": "User interaction",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Interaction",
+        "Lite/Scripting/Dom"
+      ]
+    },
+    {
+      "id": "html53.8",
+      "specification": "html53",
+      "clause": "8",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/syntax.html#syntax",
+      "title": "The HTML syntax",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ]
+    },
+    {
+      "id": "html53.9",
+      "specification": "html53",
+      "clause": "9",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/xhtml.html#xhtml",
+      "title": "The XML syntax",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ]
+    },
+    {
+      "id": "html53.10",
+      "specification": "html53",
+      "clause": "10",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/rendering.html#rendering",
+      "title": "Rendering",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ]
+    },
+    {
+      "id": "html53.4.11.details-open",
+      "specification": "html53",
+      "clause": "4.11.1 details open state",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/interactive-elements.html#the-details-element",
+      "title": "details open boolean attribute reflection",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "wpt",
+          "path": "lite/html53/details-reflection.html",
+          "assertion": "The details open IDL attribute reflects presence of the boolean content attribute"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Layout/BoxEngine.cs",
+        "Lite/Scripting/Dom/JsElement.cs"
+      ],
+      "notes": "Limited to the named assertion; the containing section remains untested until its complete normative inventory is covered."
+    },
+    {
+      "id": "html53.4.7.iframe-initial-document",
+      "specification": "html53",
+      "clause": "4.7.6 iframe initial document",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/semantics-embedded-content.html#the-iframe-element",
+      "title": "iframe without src or srcdoc has an initial HTML document",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "wpt",
+          "path": "lite/html53/iframe-initial-document.html",
+          "assertion": "An iframe without src or srcdoc has a non-null initial HTML document"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom/JsElement.cs"
+      ],
+      "notes": "Limited to the named assertion; the containing section remains untested until its complete normative inventory is covered."
+    },
+    {
+      "id": "html53.profile.browser-chrome",
+      "specification": "html53",
+      "clause": "Profile boundary: browser chrome",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/",
+      "title": "Browser chrome and end-user browser UI",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "Lite is an embeddable rendering engine; browser chrome is supplied by a host."
+    },
+    {
+      "id": "html53.profile.accessibility-platform",
+      "specification": "html53",
+      "clause": "Profile boundary: accessibility platform mappings",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/",
+      "title": "Operating-system accessibility API mappings",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "Platform accessibility mappings are outside this compatibility profile; DOM semantics remain included."
+    },
+    {
+      "id": "html53.profile.network-stack",
+      "specification": "html53",
+      "clause": "Profile boundary: general-purpose networking implementation",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/infrastructure.html",
+      "title": "General-purpose HTTP and TLS implementation",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Network"
+      ],
+      "exclusionReason": "Transport is injected by the host. HTML-visible origin, CORS, redirect, referrer, MIME, and resource metadata behavior remains included."
+    },
+    {
+      "id": "css21.4-7",
+      "specification": "css21",
+      "clause": "4-7",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html",
+      "title": "Syntax, selectors, cascade, and media",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Layout/StyleResolver.cs"
+      ]
+    },
+    {
+      "id": "css21.8-10",
+      "specification": "css21",
+      "clause": "8-10",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html",
+      "title": "Box model and visual formatting model",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout"
+      ]
+    },
+    {
+      "id": "css21.11-12",
+      "specification": "css21",
+      "clause": "11-12",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visufx.html",
+      "title": "Visual effects, generated content, lists, and counters",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Drawer.cs",
+        "Lite/Parser.cs"
+      ]
+    },
+    {
+      "id": "css21.14-18",
+      "specification": "css21",
+      "clause": "14-18",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/colors.html",
+      "title": "Colors, fonts, text, tables, and user interface",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ]
+    },
+    {
+      "id": "css21.appendix-e",
+      "specification": "css21",
+      "clause": "Appendix E",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/zindex.html",
+      "title": "Elaborate description of stacking contexts",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Drawer.cs"
+      ]
+    },
+    {
+      "id": "css21.8.percentage-padding",
+      "specification": "css21",
+      "clause": "8.4 percentage padding",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#padding-properties",
+      "title": "Percentage padding uses containing-block width",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "wpt",
+          "path": "css/CSS2/normal-flow/containing-block-percent-padding-top.html"
+        },
+        {
+          "suite": "wpt",
+          "path": "css/CSS2/normal-flow/containing-block-percent-padding-bottom.html"
+        },
+        {
+          "suite": "wpt",
+          "path": "css/CSS2/normal-flow/containing-block-percent-padding-left.html"
+        },
+        {
+          "suite": "wpt",
+          "path": "css/CSS2/normal-flow/containing-block-percent-padding-right.html"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Extensions/DrawCommandExtensions.cs",
+        "Lite/Layout/BoxEngine.cs"
+      ]
+    },
+    {
+      "id": "css21.9.7.blockification",
+      "specification": "css21",
+      "clause": "9.7 relationships between display, position, and float",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#dis-pos-flo",
+      "title": "Specified display is blockified for floats and absolute/fixed positioning",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/LayoutTests.cs#FloatedTableCell_IsBlockified"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Extensions/DrawCommandExtensions.cs"
+      ]
+    },
+    {
+      "id": "css21.9.5.floats",
+      "specification": "css21",
+      "clause": "9.5 floats",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#floats",
+      "title": "Float placement and clearance",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/LayoutTests.cs#FloatAfterInlineContent_SitsOnTheCurrentLineBox"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Layout/BoxEngine.cs"
+      ],
+      "notes": "Focused regression assertions pass, but the normative clause and official suite inventory have not been exhausted."
+    },
+    {
+      "id": "css21.appendix-e.fixed-paint",
+      "specification": "css21",
+      "clause": "Appendix E fixed-position paint participation",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/zindex.html",
+      "title": "Fixed-position descendants are painted outside viewport scrolling",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-curated",
+          "path": "css21/fixed-position-paint.html"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Drawer.cs"
+      ]
+    },
+    {
+      "id": "css21.acid2",
+      "specification": "css21",
+      "clause": "Cross-clause visual regression",
+      "url": "https://www.w3.org/Style/CSS/Test/CSS2.1/20110323/",
+      "title": "Acid2 visual regression",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "acid",
+          "path": "acid/acid2/test.html"
+        },
+        {
+          "suite": "acid",
+          "path": "acid/acid2/test.html#scrolled-50px"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "The approved Lite regression baseline currently differs; the baseline is not independent conformance evidence."
+    },
+    {
+      "id": "css21.13",
+      "specification": "css21",
+      "clause": "13",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html",
+      "title": "Paged media",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "The compatibility target is the screen medium; print and paged-media rendering are outside the profile."
+    },
+    {
+      "id": "css21.appendix-a",
+      "specification": "css21",
+      "clause": "Appendix A",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/aural.html",
+      "title": "Aural style sheets",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "The compatibility target is visual screen rendering; aural rendering is outside the profile."
+    },
+    {
+      "id": "es2020.5-16",
+      "specification": "es2020",
+      "clause": "5-16",
+      "url": "https://262.ecma-international.org/11.0/#sec-ecmascript-language-source-code",
+      "title": "Language types, abstract operations, execution, syntax, and evaluation",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting",
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.17-26",
+      "specification": "es2020",
+      "clause": "17-26",
+      "url": "https://262.ecma-international.org/11.0/#sec-ecmascript-standard-built-in-objects",
+      "title": "Standard built-in objects",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.optional-chaining",
+      "specification": "es2020",
+      "clause": "12.3 optional chaining",
+      "url": "https://262.ecma-international.org/11.0/#sec-optional-chaining",
+      "title": "Optional chaining operator",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/optional-chaining/runtime-semantics-evaluation.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/optional-chaining/short-circuiting.js"
+        }
+      ],
+      "implementationAreas": [
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.nullish-coalescing",
+      "specification": "es2020",
+      "clause": "12.4 coalesce expression",
+      "url": "https://262.ecma-international.org/11.0/#sec-coalesce-expression",
+      "title": "Nullish coalescing operator",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/coalesce/abrupt-is-a-short-circuit.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/coalesce/cannot-chain-head-with-logical-and.js"
+        }
+      ],
+      "implementationAreas": [
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.bigint",
+      "specification": "es2020",
+      "clause": "20.2 BigInt objects",
+      "url": "https://262.ecma-international.org/11.0/#sec-bigint-objects",
+      "title": "BigInt",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/built-ins/BigInt/prototype/valueOf/return.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/BigInt/wrapper-object-ordinary-toprimitive.js"
+        }
+      ],
+      "implementationAreas": [
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.promise-allsettled",
+      "specification": "es2020",
+      "clause": "25.6.4.1 Promise.allSettled",
+      "url": "https://262.ecma-international.org/11.0/#sec-promise.allsettled",
+      "title": "Promise.allSettled",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Promise/allSettled/resolves-empty-array.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Promise/allSettled/resolved-sequence-mixed.js"
+        }
+      ],
+      "implementationAreas": [
+        "Jint 4.16.1",
+        "Lite.Conformance/Test262/Test262Runner.cs"
+      ]
+    },
+    {
+      "id": "es2020.string-matchall",
+      "specification": "es2020",
+      "clause": "21.1.3.14 String.prototype.matchAll",
+      "url": "https://262.ecma-international.org/11.0/#sec-string.prototype.matchall",
+      "title": "String.prototype.matchAll",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/built-ins/String/prototype/matchAll/toString-this-val.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/String/prototype/matchAll/regexp-prototype-matchAll-invocation.js"
+        }
+      ],
+      "implementationAreas": [
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.dynamic-import-host",
+      "specification": "es2020",
+      "clause": "15.2.1.17 HostImportModuleDynamically",
+      "url": "https://262.ecma-international.org/11.0/#sec-hostimportmoduledynamically",
+      "title": "Dynamic import host hook",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/dynamic-import/custom-primitive.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/dynamic-import/usage-from-eval.js"
+        }
+      ],
+      "implementationAreas": [
+        "Lite.Conformance/Test262/Test262ModuleLoader.cs",
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "html53.2.microsyntaxes",
+      "specification": "html53",
+      "clause": "2.4",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/infrastructure.html#common-microsyntaxes",
+      "title": "Boolean and enumerated attributes, numbers, dates, tokens and colors",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.2.reflection",
+      "specification": "html53",
+      "clause": "2.7",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/infrastructure.html#common-dom-interfaces",
+      "title": "IDL attribute reflection and live collections",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.2.structured-data",
+      "specification": "html53",
+      "clause": "2.9",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/infrastructure.html#safe-passing-of-structured-data",
+      "title": "Structured serialization, cloning and transfer",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom/JsWindowProxy.cs",
+        "Lite/Scripting/Dom/JsHistory.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.3.document-model",
+      "specification": "html53",
+      "clause": "3.1",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/dom.html#documents",
+      "title": "Document metadata, modes, tree accessors and node identity",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/IframeTests.cs#Iframe_DocumentMetadataBelongsToItsOwnPage",
+          "assertion": "Iframe_DocumentMetadataBelongsToItsOwnPage"
+        },
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/IframeTests.cs#DomWrappers_AreStablePerNodeAndRealm",
+          "assertion": "DomWrappers_AreStablePerNodeAndRealm"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom/JsDocument.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.3.custom-elements",
+      "specification": "html53",
+      "clause": "3.2",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/dom.html#elements",
+      "title": "HTML constructors, custom element registry, upgrades and reactions",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.4.metadata",
+      "specification": "html53",
+      "clause": "4.2",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/document-metadata.html#document-metadata",
+      "title": "Metadata elements, dynamic base URLs, stylesheets and links",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.4.text",
+      "specification": "html53",
+      "clause": "4.3-4.6",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/semantics.html",
+      "title": "Sections, grouping, text semantics and edits",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.4.images",
+      "specification": "html53",
+      "clause": "4.7",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/semantics-embedded-content.html#semantics-embedded-content",
+      "title": "Responsive image selection, decoding, resource changes and fallback",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Network/ResourceLoader.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.4.frames",
+      "specification": "html53",
+      "clause": "4.7.6",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/semantics-embedded-content.html#the-iframe-element",
+      "title": "Iframe lifecycle, srcdoc and sandbox restrictions",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Models/Page.cs",
+        "Lite/Scripting/Dom/JsWindowProxy.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.4.media",
+      "specification": "html53",
+      "clause": "4.7.10-4.7.13",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/semantics-embedded-content.html",
+      "title": "Media resources, promises, errors, seeking and tracks",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Media",
+        "Lite/Scripting/Dom/JsElement.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.4.tables",
+      "specification": "html53",
+      "clause": "4.9",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/tabular-data.html#tabular-data",
+      "title": "Table model and table DOM interfaces",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout/TableEngine.cs",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.4.forms",
+      "specification": "html53",
+      "clause": "4.10",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/sec-forms.html#sec-forms",
+      "title": "Control state, ownership, validation and form submission",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/IframeTests.cs#Documents_KeepRuntimeStylesAndFormUrlsIndependent",
+          "assertion": "Documents_KeepRuntimeStylesAndFormUrlsIndependent"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Interaction",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.4.interactive",
+      "specification": "html53",
+      "clause": "4.11",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/interactive-elements.html#interactive-elements",
+      "title": "Details activation and dialog modal, focus and event behavior",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Interaction",
+        "Lite/Scripting/Dom/JsElement.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.4.scripting",
+      "specification": "html53",
+      "clause": "4.12",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/semantics-scripting.html#semantics-scripting",
+      "title": "Script elements, templates, slots and canvas",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting",
+        "Lite/Rendering/CanvasRenderer.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.6.contexts",
+      "specification": "html53",
+      "clause": "6.1",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/browsers.html#sec-browsing-contexts",
+      "title": "Browsing context identity, targeting and WindowProxy",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Models/Page.cs",
+        "Lite/Scripting/Dom/JsWindowProxy.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.6.origins",
+      "specification": "html53",
+      "clause": "6.2-6.5",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/browsers.html",
+      "title": "Origin access, sandboxing, navigation and resource policy",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Network",
+        "Lite/Scripting",
+        "Lite/BrowserWindow.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.6.history",
+      "specification": "html53",
+      "clause": "6.6-6.7",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/browsers.html",
+      "title": "Cross-document history, traversal and document lifecycle",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom/JsHistory.cs",
+        "Lite/BrowserWindow.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.7.execution",
+      "specification": "html53",
+      "clause": "7.1",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/webappapis.html#webappapis-scripting",
+      "title": "Script environments, event loop, microtasks and error reporting",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/JsEngine.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.7.dynamic-markup",
+      "specification": "html53",
+      "clause": "7.4",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/webappapis.html#dynamic-markup-insertion",
+      "title": "Document open, write, writeln and close",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom/JsDocument.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.5.focus",
+      "specification": "html53",
+      "clause": "5.4",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/editing.html#focus",
+      "title": "Focus, autofocus, activation and keyboard navigation",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/BrowserWindow.cs",
+        "Lite/Interaction"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.5.editing",
+      "specification": "html53",
+      "clause": "5.6-5.7",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/editing.html",
+      "title": "Contenteditable, designMode, selection and drag-and-drop",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/BrowserWindow.cs",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.8.parsing",
+      "specification": "html53",
+      "clause": "8",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/syntax.html#syntax",
+      "title": "Tokenization, tree construction, fragments and parser script insertion points",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.9.xhtml",
+      "specification": "html53",
+      "clause": "9",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/xhtml.html#xhtml",
+      "title": "XML parsing, namespaces, MIME dispatch and serialization",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Rendering/HtmlSerializer.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.10.rendering",
+      "specification": "html53",
+      "clause": "10",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/rendering.html#rendering",
+      "title": "Default styles, controls, ruby, bidi and replaced content",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.11.obsolete",
+      "specification": "html53",
+      "clause": "11",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/obsolete.html#obsolete",
+      "title": "Required user-agent processing of obsolete features",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.12.iana",
+      "specification": "html53",
+      "clause": "12",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/iana.html#iana",
+      "title": "HTML and XHTML media type processing",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Network",
+        "Lite/Parser.cs"
+      ],
+      "notes": "Workstream inventory entry; normative assertion coverage still requires review."
+    },
+    {
+      "id": "html53.changes",
+      "specification": "html53",
+      "clause": "Changes from HTML 5.2",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/changes.html",
+      "title": "HTML 5.2 to 5.3 changes, including focus events, nonce handling, email validation and reflection",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting",
+        "Lite/Parser.cs"
+      ],
+      "notes": "Cross-check against the draft change list; per-requirement inventory and evidence remain incomplete."
+    }
+  ]
+}

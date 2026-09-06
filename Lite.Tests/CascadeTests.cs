@@ -17,18 +17,19 @@ public static class CascadeTests
         var root = new LayoutNode(null, "HTML", "", sample.Style);
         var body = new LayoutNode(null, "BODY", "", sample.Style);
         root.AddChild(body);
-        return (root, body, JsEngine.Create(root));
+        return (root, body, JsEngine.Create(root, documentState: new DocumentState(Parser.Document, "http://test/", "http://test/", new List<Parser.CssRule>())));
     }
 
-    private static IDisposable Rules(params Parser.CssRule[] rules)
+    private static IDisposable Rules(JsEngine engine, params Parser.CssRule[] rules)
     {
-        foreach (var r in rules) Parser.CssRules.Add(r);
-        return new Cleanup(rules);
+        var target = (List<Parser.CssRule>)engine.DocumentState.StyleRules;
+        target.AddRange(rules);
+        return new Cleanup(target, rules);
     }
 
-    private sealed class Cleanup(Parser.CssRule[] rules) : IDisposable
+    private sealed class Cleanup(List<Parser.CssRule> target, Parser.CssRule[] rules) : IDisposable
     {
-        public void Dispose() { foreach (var r in rules) Parser.CssRules.Remove(r); }
+        public void Dispose() { foreach (var r in rules) target.Remove(r); }
     }
 
     private static Parser.CssRule Rule(string selector, (string, string)[] props, string[]? important = null)
@@ -52,7 +53,7 @@ public static class CascadeTests
     {
         var (_, body, engine) = NewPage();
         // Lower specificity declared LATER must still lose to higher specificity.
-        using (Rules(
+        using (Rules(engine,
             Rule("#target", new[] { ("color", "green") }),
             Rule(".cls", new[] { ("color", "red") })))
         {
@@ -66,7 +67,7 @@ public static class CascadeTests
     public static void Cascade_ImportantBeatsHigherSpecificity()
     {
         var (_, body, engine) = NewPage();
-        using (Rules(
+        using (Rules(engine,
             Rule("#target", new[] { ("color", "green") }),
             Rule(".cls", new[] { ("color", "red") }, important: new[] { "color" })))
         {
@@ -81,7 +82,7 @@ public static class CascadeTests
     public static void Cascade_InlineBeatsNormalButLosesToImportant()
     {
         var (_, body, engine) = NewPage();
-        using (Rules(Rule(".cls", new[] { ("color", "red") })))
+        using (Rules(engine, Rule(".cls", new[] { ("color", "red") })))
         {
             engine.Execute("var d=document.createElement('div'); d.className='cls'; d.style.color='blue'; document.body.appendChild(d);");
             var div = body.Children.First(c => c.TagName == "DIV");
@@ -89,7 +90,7 @@ public static class CascadeTests
         }
 
         var (_, body2, engine2) = NewPage();
-        using (Rules(Rule(".cls", new[] { ("color", "red") }, important: new[] { "color" })))
+        using (Rules(engine2, Rule(".cls", new[] { ("color", "red") }, important: new[] { "color" })))
         {
             engine2.Execute("var d=document.createElement('div'); d.className='cls'; d.style.color='blue'; document.body.appendChild(d);");
             var div = body2.Children.First(c => c.TagName == "DIV");
@@ -101,7 +102,7 @@ public static class CascadeTests
     public static void Inheritance_ColorFlowsToCreatedChild()
     {
         var (_, body, engine) = NewPage();
-        using (Rules(Rule(".parent", new[] { ("color", "purple") })))
+        using (Rules(engine, Rule(".parent", new[] { ("color", "purple") })))
         {
             engine.Execute(@"
                 var p = document.createElement('div'); p.className = 'parent';

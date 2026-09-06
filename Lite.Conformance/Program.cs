@@ -11,6 +11,8 @@ internal static class Program
 {
     public static int Main(string[] args)
     {
+        if (args.Length == 4 && args[0] == "--wpt-worker")
+            return WptRunner.Worker(args[1], args[2], args[3]);
         string? suite = null;
         string? filter = null;
         string? survey = null;
@@ -19,6 +21,8 @@ internal static class Program
         string? reportPath = null;
         var shard = ShardSpec.All;
         bool requireReady = false;
+        bool requireHtmlReady = false;
+        var evidencePaths = new List<string>();
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -56,6 +60,18 @@ internal static class Program
                 case "--require-ready":
                     requireReady = true;
                     break;
+                case "--require-html-ready":
+                    requireHtmlReady = true;
+                    break;
+                case "--evidence" when i + 1 < args.Length:
+                    evidencePaths.Add(args[++i]);
+                    break;
+                case "--wpt-base-url" when i + 1 < args.Length:
+                    var baseUrl = args[++i];
+                    if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var origin) || origin.Scheme is not ("http" or "https"))
+                    { Console.WriteLine("--wpt-base-url requires an HTTP(S) URL."); return 2; }
+                    Environment.SetEnvironmentVariable("LITE_WPT_BASE_URL", baseUrl);
+                    break;
                 case "--help" or "-h":
                     PrintUsage();
                     return 0;
@@ -72,17 +88,23 @@ internal static class Program
             return 2;
         }
 
+        if ((requireReady || requireHtmlReady || evidencePaths.Count > 0) && !suite.Equals("profile", StringComparison.OrdinalIgnoreCase))
+        { Console.WriteLine("Readiness and --evidence options require --suite profile."); return 2; }
+        if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html53"))
+        { Console.WriteLine("--report is supported by profile, wpt, and html53."); return 2; }
+
         try
         {
             return suite.ToLowerInvariant() switch
             {
-                "wpt" when survey is not null => WptRunner.Survey(survey, surveyLimit),
-                "wpt" => WptRunner.Run(filter, shard),
+                "wpt" when survey is not null => WptRunner.Survey(survey, surveyLimit, reportPath, shard),
+                "wpt" => WptRunner.Run(filter, shard, reportPath),
+                "html53" => WptRunner.RunHtml(filter, shard, reportPath),
                 "css21" when survey is not null => RefTestRunner.Survey(survey, surveyLimit),
                 "css21" => RefTestRunner.Run(filter, shard),
                 "test262" => Test262Runner.Run(filter, shard),
                 "acid" => AcidRunner.Run(filter, updateBaselines, shard),
-                "profile" => ProfileRunner.Run(reportPath, requireReady),
+                "profile" => ProfileRunner.Run(reportPath, requireReady, requireHtmlReady, evidencePaths),
                 "all" => RunAll(filter, shard),
                 _ => Unknown(suite),
             };
@@ -116,16 +138,19 @@ internal static class Program
             Lite conformance harness
 
             Usage:
-              dotnet run --project Lite.Conformance -- --suite <wpt|css21|test262|acid|profile|all> [options]
+              dotnet run --project Lite.Conformance -- --suite <wpt|html53|css21|test262|acid|profile|all> [options]
 
             Options:
               --filter <substring>   Only run tests whose path contains the substring
               --update-baselines     (acid) Approve the current render as the new baseline
               --geom <url> <sel>     Print the geometry of elements matching a selector
               --render <url> [name]  Render one page to artifacts/<name>.png
-              --report <path>        (profile) Write the compatibility JSON report to this path
+              --report <path>        (profile/wpt/html53) Write the JSON report to this path
               --shard <index/count>  Run one stable zero-based shard (for example 2/8)
               --require-ready        (profile) Fail unless every release-readiness check passes
+              --require-html-ready   (profile) Require completion of the HTML 5.3 profile
+              --evidence <path>      (profile) Consume executed evidence; may be repeated
+              --wpt-base-url <url>   Use an upstream wpt serve instance for vendored WPT tests
 
             Test files are vendored by scripts\fetch-tests.ps1 (pinned commits).
             Exit code 0 = green (no unexpected failures, no unexpected passes).

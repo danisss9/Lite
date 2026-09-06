@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Lite.Conformance.Wpt;
 
 namespace Lite.Conformance.Harness;
 
@@ -21,7 +22,14 @@ internal static class ConformanceServer
     public static string BaseUrl => _baseUrl
         ?? throw new InvalidOperationException("The conformance server has not been started.");
 
-    public static void Start()
+    internal static string TestUrl(string path)
+    {
+        var upstream = Environment.GetEnvironmentVariable("LITE_WPT_BASE_URL");
+        var local = path.StartsWith("lite/", StringComparison.Ordinal) || path.StartsWith("css21/", StringComparison.Ordinal);
+        return $"{(local || string.IsNullOrWhiteSpace(upstream) ? BaseUrl : upstream.TrimEnd('/'))}/{path.TrimStart('/')}";
+    }
+
+    public static void Start(bool cssRegressionMode = true)
     {
         if (_app is not null) return;
 
@@ -42,8 +50,8 @@ internal static class ConformanceServer
         contentTypes.Mappings[".any.js"] = "text/javascript";
         // WPT CSS reftests are frequently XHTML (.xht/.xhtml); serve as HTML so the parser
         // builds a document rather than treating the markup as plain text.
-        contentTypes.Mappings[".xht"] = "text/html";
-        contentTypes.Mappings[".xhtml"] = "text/html";
+        contentTypes.Mappings[".xht"] = cssRegressionMode ? "text/html" : "application/xhtml+xml";
+        contentTypes.Mappings[".xhtml"] = cssRegressionMode ? "text/html" : "application/xhtml+xml";
 
         // WPT convention: a sibling "<file>.headers" supplies the response headers for <file>.
         // Several CSS 2.1 encoding tests declare the stylesheet's charset only that way, so
@@ -75,28 +83,16 @@ internal static class ConformanceServer
         app.Use(async (ctx, next) =>
         {
             var path = ctx.Request.Path.Value ?? "";
-            if (path.EndsWith(".any.html", StringComparison.OrdinalIgnoreCase))
+            if (path.EndsWith(".any.html", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".window.html", StringComparison.OrdinalIgnoreCase))
             {
                 var jsPath = path[..^".html".Length] + ".js";
                 var file = ResolveFile(jsPath);
                 if (file is not null)
                 {
                     ctx.Response.ContentType = "text/html";
-                    await ctx.Response.WriteAsync($$"""
-                        <!doctype html>
-                        <meta charset="utf-8">
-                        <script>
-                        self.GLOBAL = {
-                          isWindow: function() { return true; },
-                          isWorker: function() { return false; },
-                          isShadowRealm: function() { return false; }
-                        };
-                        </script>
-                        <script src="/resources/testharness.js"></script>
-                        <script src="/resources/testharnessreport.js"></script>
-                        <div id="log"></div>
-                        <script src="{{jsPath}}"></script>
-                        """);
+                    var metadata = WptMetadata.Parse(await File.ReadAllTextAsync(file));
+                    if (!metadata.Window) { ctx.Response.StatusCode = 404; return; }
+                    await ctx.Response.WriteAsync(metadata.Wrapper(jsPath));
                     return;
                 }
             }
@@ -127,7 +123,8 @@ internal static class ConformanceServer
         var rel = urlPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
         foreach (var root in new[] { ConformancePaths.Overrides, Path.Combine(ConformancePaths.Vendor, "wpt"), ConformancePaths.Vendor })
         {
-            var candidate = Path.Combine(root, rel);
+            var candidate = Path.GetFullPath(Path.Combine(root, rel));
+            if (!candidate.StartsWith(Path.GetFullPath(root) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) continue;
             if (File.Exists(candidate)) return candidate;
         }
         return null;

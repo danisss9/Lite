@@ -28,9 +28,13 @@ internal class JsEngine
     // ---- navigation state (Phase 2) ----
     /// <summary>The document's current URL. Mutated by location/history without reload for
     /// same-document changes, and tracked across cross-document navigations.</summary>
-    public string CurrentUrl { get; private set; }
+    public string CurrentUrl { get => DocumentState.Url; private set => DocumentState.Url = value; }
     public Dom.JsHistory History { get; }
     public Dom.JsLocation Location { get; }
+    internal JsDocument DocumentFacade { get; }
+    internal DocumentState DocumentState { get; }
+    internal AngleSharp.Dom.IDocument? SourceDocument => DocumentState.Document;
+    internal string DocumentBaseUrl => DocumentState.BaseUrl;
 
     /// <summary>Set by the host to update the window title bar when document.title changes.</summary>
     internal Action<string>? OnTitleChange { get; set; }
@@ -214,16 +218,18 @@ internal class JsEngine
     /// reflect the loaded document.</summary>
     internal void NotifyNavigated(string url) => CurrentUrl = url;
 
-    private JsEngine(LayoutNode root, int viewportWidth = 800, int viewportHeight = 600)
+    private JsEngine(LayoutNode root, int viewportWidth, int viewportHeight, DocumentState? documentState)
     {
-        var baseUrl = Parser.BaseUrl ?? "about://lite/";
+        var baseUrl = documentState?.Address ?? Parser.BaseUrl ?? "about://lite/";
+        DocumentState = documentState ?? new DocumentState(Parser.Document, baseUrl, baseUrl, Parser.CssRules.ToArray());
+        DocumentState.Bind(root);
         _engine = new Engine(opts =>
         {
             // Wrap CLR exceptions from host code as JS errors — EXCEPT JavaScriptException, which
             // is already a JS throw (e.g. a DOMException a host DOM method raised): letting it
             // propagate preserves its error object (name/code) instead of flattening it to Error.
             opts.CatchClrExceptions(ex => ex is not Jint.Runtime.JavaScriptException);
-            opts.EnableModules(new HttpModuleLoader(baseUrl));
+            opts.EnableModules(new HttpModuleLoader(DocumentBaseUrl));
         });
 
         _root = root;
@@ -233,7 +239,7 @@ internal class JsEngine
         Location = new Dom.JsLocation(this);
 
         _jsWindow = new JsWindow(this, viewportWidth, viewportHeight);
-        var jsDocument = new JsDocument(_engine, root);
+        var jsDocument = DocumentFacade = new JsDocument(_engine, root);
 
         _engine.SetValue("console", new JsConsole());
         // The CLR window object is exposed under an internal name; the host shim makes the
@@ -333,7 +339,7 @@ internal class JsEngine
         var siteKey = "default";
         try
         {
-            if (Parser.BaseUrl is { } b && Uri.TryCreate(b, UriKind.Absolute, out var u))
+            if (Uri.TryCreate(DocumentState.Address, UriKind.Absolute, out var u))
                 siteKey = $"{u.Host}_{u.Port}";
         }
         catch { /* fall back to default site key */ }
@@ -439,18 +445,22 @@ internal class JsEngine
     /// Lets a host (e.g. the conformance harness) install globals like result reporters.</summary>
     internal static event Action<JsEngine>? OnCreated;
 
-    public static JsEngine Create(LayoutNode root, int viewportWidth = 800, int viewportHeight = 600)
+    public static JsEngine Create(LayoutNode root, int viewportWidth = 800, int viewportHeight = 600,
+        DocumentState? documentState = null)
     {
-        Instance = new JsEngine(root, viewportWidth, viewportHeight);
+        Instance = new JsEngine(root, viewportWidth, viewportHeight, documentState);
         OnCreated?.Invoke(Instance);
         return Instance;
     }
+
+    internal event Action<JsEngine>? ScriptExecuted;
 
     public void Execute(string script)
     {
         if (string.IsNullOrWhiteSpace(script)) return;
         try { _engine.Execute(script); }
         catch (Exception ex) { Console.WriteLine($"[JS Error] {ex.Message}"); }
+        finally { ScriptExecuted?.Invoke(this); }
     }
 
     /// <summary>Registers an inline module's source under a specifier so it can be imported.</summary>
@@ -487,7 +497,7 @@ internal class JsEngine
         {
             try
             {
-                return Uri.TryCreate(CurrentUrl, UriKind.Absolute, out var u) && u.IsAbsoluteUri && !u.IsFile && u.Host.Length > 0
+                return Uri.TryCreate(DocumentState.Address, UriKind.Absolute, out var u) && u.IsAbsoluteUri && !u.IsFile && u.Host.Length > 0
                     ? u.GetLeftPart(UriPartial.Authority)
                     : "null";
             }

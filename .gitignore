@@ -400,6 +400,7 @@ FodyWeavers.xsd
 # Lite.Conformance: fetched test suites and failure artifacts (baselines ARE checked in)
 Lite.Conformance/vendor/
 Lite.Conformance/artifacts/
+/compatibility-report.json
 
 # JetBrains Rider
 *.sln.iml

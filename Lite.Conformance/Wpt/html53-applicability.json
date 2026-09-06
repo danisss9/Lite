@@ -1,0 +1,448 @@
+{
+  "schemaVersion": 1,
+  "target": "https://www.w3.org/TR/2018/WD-html53-20181018/",
+  "inventoryComplete": false,
+  "defaultClassification": "unreviewed",
+  "tests": [
+    {
+      "path": "lite/smoke.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "lite/script-timing.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "lite/iframe.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "lite/media.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "lite/navigation.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "lite/domcontentloaded.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "css/CSS2/normal-flow/containing-block-percent-margin-top.html",
+      "classification": "regression-only",
+      "reason": "CSS regression; not currently mapped as an HTML dependency."
+    },
+    {
+      "path": "css/CSS2/normal-flow/containing-block-percent-margin-bottom.html",
+      "classification": "regression-only",
+      "reason": "CSS regression; not currently mapped as an HTML dependency."
+    },
+    {
+      "path": "css/CSS2/normal-flow/containing-block-percent-margin-left.html",
+      "classification": "regression-only",
+      "reason": "CSS regression; not currently mapped as an HTML dependency."
+    },
+    {
+      "path": "css/CSS2/normal-flow/containing-block-percent-margin-right.html",
+      "classification": "regression-only",
+      "reason": "CSS regression; not currently mapped as an HTML dependency."
+    },
+    {
+      "path": "css/CSS2/normal-flow/containing-block-percent-padding-top.html",
+      "classification": "regression-only",
+      "reason": "CSS regression; not currently mapped as an HTML dependency."
+    },
+    {
+      "path": "css/CSS2/normal-flow/containing-block-percent-padding-bottom.html",
+      "classification": "regression-only",
+      "reason": "CSS regression; not currently mapped as an HTML dependency."
+    },
+    {
+      "path": "css/CSS2/normal-flow/containing-block-percent-padding-left.html",
+      "classification": "regression-only",
+      "reason": "CSS regression; not currently mapped as an HTML dependency."
+    },
+    {
+      "path": "css/CSS2/normal-flow/containing-block-percent-padding-right.html",
+      "classification": "regression-only",
+      "reason": "CSS regression; not currently mapped as an HTML dependency."
+    },
+    {
+      "path": "css/CSS2/normal-flow/unresolvable-max-height.html",
+      "classification": "regression-only",
+      "reason": "CSS regression; not currently mapped as an HTML dependency."
+    },
+    {
+      "path": "css/CSS2/normal-flow/auto-margins-used-values.html",
+      "classification": "regression-only",
+      "reason": "CSS regression; not currently mapped as an HTML dependency."
+    },
+    {
+      "path": "css/CSS2/normal-flow/unresolvable-min-height.html",
+      "classification": "regression-only",
+      "reason": "CSS regression; not currently mapped as an HTML dependency."
+    },
+    {
+      "path": "dom/nodes/Element-childElement-null.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Element-childElementCount.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Element-childElementCount-nochild.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Element-childElementCount-dynamic-add.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Element-childElementCount-dynamic-remove.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Element-firstElementChild.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Element-lastElementChild.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Element-nextElementSibling.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Element-previousElementSibling.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Element-siblingElement-null.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Element-hasAttributes.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Node-childNodes-cache.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/Node-childNodes-cache-2.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/DocumentFragment-querySelectorAll-after-modification.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/ParentNode-querySelectorAll-removed-elements.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/getElementsByClassName-32.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/getElementsByClassName-whitespace-class-names.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/insertion-removing-steps/later-script-removed-by-earlier-script.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/moveBefore/preserve-render-blocking-script.html",
+      "classification": "post-target",
+      "reason": "Exercises a feature introduced after the 18 October 2018 HTML 5.3 snapshot; retained in the regression gate."
+    },
+    {
+      "path": "dom/nodes/CharacterData-appendData.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/CharacterData-data.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/CharacterData-deleteData.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/CharacterData-insertData.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/CharacterData-replaceData.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/CharacterData-substringData.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/CharacterData-surrogates.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/CharacterData-appendChild.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/ChildNode-after.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/ChildNode-before.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/nodes/ChildNode-replaceWith.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/Event-type.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/Event-type-empty.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/Event-stopImmediatePropagation.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/KeyEvent-initKeyEvent.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/event-handler-attribute-replace-preserves-passive.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/label-default-action.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/EventTarget-add-remove-listener.any.js",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/Event-initEvent.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/EventTarget-dispatchEvent.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/remove-all-listeners.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/AddEventListenerOptions-once.any.js",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/CustomEvent.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/Event-defaultPrevented.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/Event-defaultPrevented-after-dispatch.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/Event-dispatch-bubble-canceled.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/Event-dispatch-detached-click.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/Event-dispatch-order.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/Event-dispatch-propagation-stopped.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/Event-returnValue.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/EventTarget-dispatchEvent-returnvalue.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/event-src-element-nullable.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "dom/events/non-cancelable-when-passive/generic-events-stay-cancelable.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-details-element/display-table-with-rt-crash.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-open.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-open-2.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-showModal-remove.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/synthetic-click-inert.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-summary-element/display-table-with-rt-crash.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-summary-element/summary-untrusted-key-event.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/historical.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-nosrc.html",
+      "classification": "unreviewed",
+      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.3 snapshot."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller.html",
+      "classification": "post-target",
+      "reason": "Exercises a feature introduced after the 18 October 2018 HTML 5.3 snapshot; retained in the regression gate."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-horizontal.html",
+      "classification": "post-target",
+      "reason": "Exercises a feature introduced after the 18 October 2018 HTML 5.3 snapshot; retained in the regression gate."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-horizontal-far.html",
+      "classification": "post-target",
+      "reason": "Exercises a feature introduced after the 18 October 2018 HTML 5.3 snapshot; retained in the regression gate."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested.html",
+      "classification": "post-target",
+      "reason": "Exercises a feature introduced after the 18 October 2018 HTML 5.3 snapshot; retained in the regression gate."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-2.html",
+      "classification": "post-target",
+      "reason": "Exercises a feature introduced after the 18 October 2018 HTML 5.3 snapshot; retained in the regression gate."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-3.html",
+      "classification": "post-target",
+      "reason": "Exercises a feature introduced after the 18 October 2018 HTML 5.3 snapshot; retained in the regression gate."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-4.html",
+      "classification": "post-target",
+      "reason": "Exercises a feature introduced after the 18 October 2018 HTML 5.3 snapshot; retained in the regression gate."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-5.html",
+      "classification": "post-target",
+      "reason": "Exercises a feature introduced after the 18 October 2018 HTML 5.3 snapshot; retained in the regression gate."
+    },
+    {
+      "path": "lite/html53/details-reflection.html",
+      "classification": "included",
+      "reason": "Local assertion test for a requirement in the HTML 5.3 draft."
+    },
+    {
+      "path": "lite/html53/iframe-initial-document.html",
+      "classification": "included",
+      "reason": "Local assertion test for a requirement in the HTML 5.3 draft."
+    }
+  ]
+}

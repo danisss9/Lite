@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "target",
+    "sourceSha256",
+    "sectionIndexSha256",
+    "reviewComplete",
+    "sections"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "target": {
+      "const": "https://www.w3.org/TR/2018/WD-html53-20181018/"
+    },
+    "sourceSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sectionIndexSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reviewComplete": {
+      "type": "boolean"
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "clause",
+          "title",
+          "url",
+          "classification",
+          "rationale",
+          "requirementIds"
+        ],
+        "properties": {
+          "clause": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "classification": {
+            "enum": [
+              "unreviewed",
+              "user-agent",
+              "authoring",
+              "informative",
+              "optional",
+              "mixed",
+              "profile-excluded"
+            ]
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "requirementIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

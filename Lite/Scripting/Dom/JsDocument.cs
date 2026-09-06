@@ -9,11 +9,13 @@ public class JsDocument
 {
     private readonly Engine     _engine;
     private readonly LayoutNode _root;
+    private readonly AngleSharp.Dom.IDocument? _document;
 
     public JsDocument(Engine engine, LayoutNode root)
     {
         _engine = engine;
         _root   = root;
+        _document = JsEngine.For(engine)?.SourceDocument;
     }
 
     // ---- identity ----
@@ -175,15 +177,14 @@ public class JsDocument
     public void close() { /* no-op */ }
 
     // ---- document metadata ----
-    private string _title = Parser.Document?.Title ?? string.Empty;
     public string title
     {
-        get => _title;
+        get => _document?.Title ?? string.Empty;
         set
         {
-            _title = value ?? string.Empty;
-            if (Parser.Document is { } doc) doc.Title = _title;
-            JsEngine.For(_engine)?.OnTitleChange?.Invoke(_title);
+            var title = value ?? string.Empty;
+            if (_document is { } doc) doc.Title = title;
+            JsEngine.For(_engine)?.OnTitleChange?.Invoke(title);
         }
     }
 
@@ -195,11 +196,11 @@ public class JsDocument
     {
         get
         {
-            try { return Parser.BaseUrl is { } b && Uri.TryCreate(b, UriKind.Absolute, out var u) ? u.Host : ""; }
+            try { return JsEngine.For(_engine)?.Origin is { } b && Uri.TryCreate(b, UriKind.Absolute, out var u) ? u.Host : ""; }
             catch { return ""; }
         }
     }
-    public string compatMode => "CSS1Compat";
+    public string compatMode => _document?.CompatMode ?? "CSS1Compat";
 
     // ---- cookies (single in-memory jar for the current document) ----
     private static readonly Dictionary<string, string> _cookies = new(StringComparer.Ordinal);

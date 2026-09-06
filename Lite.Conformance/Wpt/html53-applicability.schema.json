@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "target",
+    "inventoryComplete",
+    "defaultClassification",
+    "tests"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "target": {
+      "const": "https://www.w3.org/TR/2018/WD-html53-20181018/"
+    },
+    "inventoryComplete": {
+      "type": "boolean"
+    },
+    "defaultClassification": {
+      "const": "unreviewed"
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "classification",
+          "reason"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "classification": {
+            "enum": [
+              "included",
+              "unreviewed",
+              "post-target",
+              "regression-only",
+              "profile-excluded"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

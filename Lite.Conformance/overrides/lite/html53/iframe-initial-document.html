@@ -1,0 +1,15 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HTML 5.3 initial iframe document</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<iframe id="frame"></iframe>
+<script>
+test(function () {
+  var frame = document.getElementById('frame');
+  assert_not_equals(frame.contentDocument, null);
+  assert_equals(frame.contentDocument.nodeType, 9);
+  assert_equals(frame.contentDocument.nodeName, '#document');
+  assert_not_equals(frame.contentDocument.documentElement, null);
+}, 'An iframe without src or srcdoc has a non-null initial HTML document');
+</script>

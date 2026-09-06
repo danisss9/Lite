@@ -40,6 +40,71 @@ public static class IframeTests
     }
 
     [Test]
+    public static void Iframe_BlankAndEmptySrcdocHaveStableDocuments()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><iframe id='blank'></iframe><iframe id='empty' src='http://invalid.test/' srcdoc=''></iframe>",
+            true, "http://parent.test/page", 400, 200);
+        var blank = FindById(page.Root, "blank")!.ChildPage;
+        var empty = FindById(page.Root, "empty")!.ChildPage;
+        True(blank is not null && empty is not null);
+        Equal("about:blank", blank!.Engine.CurrentUrl);
+        Equal("http://parent.test", blank.Engine.Origin);
+        page.Engine.RawEngine.Execute("var b=document.getElementById('blank'); globalThis.__stable=b.contentDocument!==null && b.contentDocument===b.contentDocument; globalThis.__url=b.contentDocument.URL;");
+        Equal(true, (bool)page.Engine.RawEngine.GetValue("__stable").ToObject()!);
+        Equal("about:blank", page.Engine.RawEngine.GetValue("__url").ToString());
+    }
+
+    [Test]
+    public static void Iframe_DocumentMetadataBelongsToItsOwnPage()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><title>parent</title><iframe id='frame' srcdoc=\"<title>child</title><p>content</p>\"></iframe>",
+            true, "http://parent.test/", 400, 200);
+        var child = FindById(page.Root, "frame")!.ChildPage!;
+        Equal("child", child.Engine.DocumentFacade.title);
+        child.Engine.DocumentFacade.title = "changed child";
+        Equal("parent", page.Engine.DocumentFacade.title);
+        Equal("changed child", child.Document!.Title);
+        Equal("CSS1Compat", page.Engine.DocumentFacade.compatMode);
+        Equal("BackCompat", child.Engine.DocumentFacade.compatMode);
+    }
+
+    [Test]
+    public static void Documents_KeepRuntimeStylesAndFormUrlsIndependent()
+    {
+        var first = Parser.ParseChildPage("<!doctype html><base href='/first/'><style>.selected { color: red }</style><form id=f action=send></form><p id=p>one</p>",
+            true, "http://one.test/page", 400, 200);
+        var second = Parser.ParseChildPage("<!doctype html><base href='/second/'><style>.selected { color: blue }</style><form id=f action=send></form><p id=p>two</p>",
+            true, "http://two.test/page", 400, 200);
+        string? firstUrl = null, secondUrl = null;
+        first.Engine.OnNavigate = url => firstUrl = url;
+        second.Engine.OnNavigate = url => secondUrl = url;
+        foreach (var page in new[] { first, second })
+        {
+            page.Engine.RawEngine.Execute("document.getElementById('p').className='selected'; document.getElementById('f').submit();");
+            page.Engine.DrainTasks();
+        }
+        Equal("rgba(255, 0, 0, 1)", FindById(first.Root, "p")!.StyleOverrides["color"]);
+        Equal("rgba(0, 0, 255, 1)", FindById(second.Root, "p")!.StyleOverrides["color"]);
+        True(firstUrl?.StartsWith("http://one.test/first/send", StringComparison.Ordinal) == true, firstUrl);
+        True(secondUrl?.StartsWith("http://two.test/second/send", StringComparison.Ordinal) == true, secondUrl);
+        Equal("http://one.test/page", first.Engine.CurrentUrl);
+        Equal("http://one.test", first.Engine.Origin);
+    }
+
+    [Test]
+    public static void DomWrappers_AreStablePerNodeAndRealm()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><p id=p>one</p>", true, "http://one.test/", 400, 200);
+        var other = Parser.ParseChildPage("<!doctype html><p>two</p>", true, "http://two.test/", 400, 200);
+        var node = FindById(page.Root, "p")!;
+        var original = Scripting.Dom.JsElement.For(page.Engine.RawEngine, node);
+        var foreign = Scripting.Dom.JsElement.For(other.Engine.RawEngine, node);
+        True(ReferenceEquals(original, Scripting.Dom.JsElement.For(page.Engine.RawEngine, node)));
+        True(ReferenceEquals(foreign, Scripting.Dom.JsElement.For(other.Engine.RawEngine, node)));
+        True(!ReferenceEquals(original, foreign));
+    }
+
+    [Test]
     public static void Iframe_DefaultSizeIs300x150()
     {
         var iframe = Parser.ParseFragment("<iframe srcdoc=\"<p>x</p>\"></iframe>")[0];

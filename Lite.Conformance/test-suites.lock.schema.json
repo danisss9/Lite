@@ -2,40 +2,102 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/danisss9/Lite/schemas/test-suites.lock.schema.json",
   "type": "object",
-  "required": ["schemaVersion", "suites"],
+  "required": [
+    "schemaVersion",
+    "suites"
+  ],
   "properties": {
-    "$schema": { "type": "string" },
-    "schemaVersion": { "const": 1 },
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
     "suites": {
       "type": "array",
       "minItems": 3,
       "items": {
         "type": "object",
-        "required": ["id", "source", "repository", "revision", "destination"],
+        "required": [
+          "id",
+          "source",
+          "repository",
+          "revision",
+          "destination"
+        ],
         "properties": {
-          "id": { "type": "string", "minLength": 1 },
-          "source": { "enum": ["git", "snapshot"] },
-          "repository": { "type": "string", "format": "uri" },
-          "revision": { "type": "string", "minLength": 1 },
-          "destination": { "type": "string", "minLength": 1 },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "enum": [
+              "git",
+              "snapshot"
+            ]
+          },
+          "repository": {
+            "type": "string",
+            "format": "uri"
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "destination": {
+            "type": "string",
+            "minLength": 1
+          },
           "sparseCheckout": {
             "type": "array",
-            "items": { "type": "string", "minLength": 1 },
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
             "uniqueItems": true
           },
-          "applicabilityManifest": { "type": "string" },
-          "dependencyExceptions": { "type": "string" },
-          "scope": { "enum": ["sparse", "full-snapshot"] },
-          "checkedOutCandidateTests": { "type": "integer", "minimum": 0 },
-          "upstreamCandidateTestsAtRevision": { "type": "integer", "minimum": 0 },
+          "applicabilityManifest": {
+            "type": "string"
+          },
+          "dependencyExceptions": {
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "sparse",
+              "full-snapshot"
+            ]
+          },
+          "checkedOutCandidateTests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "upstreamCandidateTestsAtRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
           "variants": {
             "type": "array",
-            "items": { "type": "string", "minLength": 1 },
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
             "uniqueItems": true
           },
-          "requiredBehaviorTests": { "type": "integer", "minimum": 0 },
-          "totalTests": { "type": "integer", "minimum": 0 },
-          "vendored": { "type": "boolean" }
+          "requiredBehaviorTests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalTests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "vendored": {
+            "type": "boolean"
+          },
+          "htmlApplicabilityManifest": {
+            "type": "string"
+          }
         },
         "additionalProperties": false
       }

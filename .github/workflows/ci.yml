@@ -47,22 +47,27 @@ jobs:
         run: dotnet build Lite.sln --configuration Release --no-restore
 
       - name: Unit tests
-        run: dotnet run --project Lite.Tests/Lite.Tests.csproj --configuration Release --no-build --no-restore
+        run: dotnet run --project Lite.Tests/Lite.Tests.csproj --configuration Release --no-build --no-restore -- --report Lite.Conformance/artifacts/unit-results.json
 
-      - name: Validate compatibility contract
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json
 
       - name: CSS 2.1 curated gate
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite css21
 
       - name: WPT curated gate
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite wpt
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite wpt --report Lite.Conformance/artifacts/wpt-results.json
 
       - name: ES2020 sparse Test262 gate
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite test262
 
       - name: Acid1 regression
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite acid --filter acid1
+
+      - name: HTML 5.3 reviewed assertion tests
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html53 --report Lite.Conformance/artifacts/html53-results.json
+
+      - name: Generate HTML 5.3 compatibility evidence
+        if: always()
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json --evidence Lite.Conformance/artifacts/unit-results.json --evidence Lite.Conformance/artifacts/wpt-results.json --evidence Lite.Conformance/artifacts/html53-results.json
 
       - name: Upload compatibility evidence
         if: always()

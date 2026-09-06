@@ -51,17 +51,15 @@ jobs:
             throw 'NuGet vulnerability audit failed.'
           }
 
-      - name: Generate compatibility report
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json
 
       - name: Unit tests
-        run: dotnet run --project Lite.Tests/Lite.Tests.csproj --configuration Release --no-build --no-restore
+        run: dotnet run --project Lite.Tests/Lite.Tests.csproj --configuration Release --no-build --no-restore -- --report Lite.Conformance/artifacts/unit-results.json
 
       - name: CSS 2.1 gate
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite css21
 
       - name: WPT gate
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite wpt
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite wpt --report Lite.Conformance/artifacts/wpt-results.json
 
       - name: ES2020 gate
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite test262
@@ -70,6 +68,13 @@ jobs:
       # regular CI by enforcing the approved Acid1 regression without presenting Acid2 as green.
       - name: Acid1 regression
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite acid --filter acid1
+
+      - name: HTML 5.3 reviewed assertion tests
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html53 --report Lite.Conformance/artifacts/html53-results.json
+
+      - name: Generate HTML 5.3 compatibility evidence
+        if: always()
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json --evidence Lite.Conformance/artifacts/unit-results.json --evidence Lite.Conformance/artifacts/wpt-results.json --evidence Lite.Conformance/artifacts/html53-results.json
 
       - name: Upload compatibility evidence
         if: always()

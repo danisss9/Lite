@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HTML 5.3 details open reflection</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<details id="details"><summary>Summary</summary>Content</details>
+<script>
+test(function () {
+  var details = document.getElementById('details');
+  assert_false(details.open);
+  details.open = true;
+  assert_true(details.hasAttribute('open'));
+  details.open = false;
+  assert_false(details.hasAttribute('open'));
+  details.setAttribute('open', 'false');
+  assert_true(details.open);
+  details.removeAttribute('open');
+  assert_false(details.open);
+}, 'The details open IDL attribute reflects presence of the boolean content attribute');
+</script>

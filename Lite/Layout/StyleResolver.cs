@@ -36,6 +36,7 @@ internal static class StyleResolver
         while (stack.Count > 0)
         {
             var node = stack.Pop();
+            if (node.Parent?.OwningDocument is { } document) node.DocumentState = document;
             if (node.NeedsStyleResolution)
             {
                 Apply(node);
@@ -60,7 +61,7 @@ internal static class StyleResolver
         // Gather matching rules, then order them: importance is decided per-property below,
         // so first sort all matches by (specificity, source order).
         var matches = new List<Parser.CssRule>();
-        foreach (var rule in Parser.CssRules)
+        foreach (var rule in node.OwningDocument?.StyleRules ?? Parser.CssRules)
         {
             bool ok;
             try { ok = SelectorEngine.Matches(node, rule.Selector); }

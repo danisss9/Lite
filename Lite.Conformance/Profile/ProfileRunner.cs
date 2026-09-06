@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lite.Conformance.Harness;
+using Lite.Conformance.Wpt;
 
 namespace Lite.Conformance.Profile;
 
@@ -14,7 +15,7 @@ namespace Lite.Conformance.Profile;
 /// </summary>
 internal static class ProfileRunner
 {
-    private const string ProfileFile = "Profile/lite-html52-css21-es2020-profile.json";
+    private const string ProfileFile = ExecutionEvidence.ProfileFile;
     private const string SuiteLockFile = "test-suites.lock.json";
 
     private static readonly HashSet<string> Statuses = new(StringComparer.Ordinal)
@@ -24,10 +25,11 @@ internal static class ProfileRunner
 
     private static readonly HashSet<string> SpecificationIds = new(StringComparer.Ordinal)
     {
-        "html52", "css21", "es2020",
+        "html53", "css21", "es2020",
     };
 
-    public static int Run(string? reportPath, bool requireReady)
+    public static int Run(string? reportPath, bool requireReady, bool requireHtmlReady = false,
+        IEnumerable<string>? evidencePaths = null)
     {
         var profilePath = ConformancePaths.Manifest(ProfileFile);
         var lockPath = ConformancePaths.Manifest(SuiteLockFile);
@@ -41,6 +43,11 @@ internal static class ProfileRunner
         ValidateProfile(profile, errors);
         ValidateSuiteLock(suiteLock, errors);
         ValidateExceptionManifests(profile, errors);
+        var htmlApplicability = ReadObject(ConformancePaths.Manifest(HtmlApplicability.FileName), "HTML applicability", errors);
+        if (htmlApplicability is not null) HtmlApplicability.Validate(htmlApplicability, errors);
+        var sections = ReadObject(ConformancePaths.Manifest(HtmlSectionInventory.FileName), "HTML section inventory", errors);
+        var sectionBlockers = sections is not null && errors.Count == 0
+            ? HtmlSectionInventory.Evaluate(sections, profile, errors) : [];
         if (errors.Count > 0)
             return ReportValidationErrors(errors);
 
@@ -69,10 +76,48 @@ internal static class ProfileRunner
         }
 
         var claim = profile["claim"]!.GetValue<string>();
+        var identity = ExecutionEvidence.CaptureIdentity();
+        var evidenceBlockers = new List<string>();
+        var evidence = ExecutionEvidence.ReadCurrent(evidencePaths ?? [], identity, evidenceBlockers);
+        var htmlBlockers = EvaluateHtmlReadiness(profile, evidence);
+        htmlBlockers.AddRange(sectionBlockers);
+        if (htmlApplicability?["inventoryComplete"]?.GetValue<bool>() != true)
+            htmlBlockers.Add("html53-applicability-review-incomplete");
+        if (htmlApplicability?["tests"] is JsonArray applicabilityTests)
+        {
+            var reviewed = applicabilityTests.OfType<JsonObject>().Select(t => Text(t, "path")).ToHashSet(StringComparer.Ordinal);
+            if (coverage["html53TestInventoryComplete"]?.GetValue<bool>() == true || htmlApplicability["inventoryComplete"]?.GetValue<bool>() == true)
+            {
+                // A hand-edited complete flag cannot turn omitted tests into passes.
+                foreach (var directory in HtmlApplicability.CandidateRoots)
+                {
+                    var root = Path.Combine(ConformancePaths.Vendor, "wpt", directory);
+                    if (!Directory.Exists(root)) { htmlBlockers.Add($"html53-missing-test-root:{directory}"); continue; }
+                    var missing = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories).Where(WptRunner.IsCandidateTest)
+                        .Select(f => Path.GetRelativePath(Path.Combine(ConformancePaths.Vendor, "wpt"), f).Replace('\\', '/'))
+                        .Count(p => !reviewed.Contains(p));
+                    if (missing > 0) htmlBlockers.Add($"html53-unclassified-tests:{directory}:{missing}");
+                }
+            }
+            foreach (var test in applicabilityTests.OfType<JsonObject>())
+            {
+                var classification = Text(test, "classification");
+                if (classification == "unreviewed") htmlBlockers.Add($"html53-unreviewed-test:{Text(test, "path")}");
+                if (classification == "included" && !HasMappedEvidence(evidence, "wpt", Text(test, "path"), null,
+                        requireUpstream: !Text(test, "path").StartsWith("lite/", StringComparison.Ordinal)))
+                    htmlBlockers.Add($"html53-missing-applicable-test:{Text(test, "path")}");
+            }
+        }
+        htmlBlockers.AddRange(evidenceBlockers);
+        var htmlReady = htmlBlockers.Count == 0;
+        // The combined claim must also have executed evidence for every included requirement.
+        foreach (var requirement in requirements.Where(r => Text(r, "applicability") == "included"))
+            AddEvidenceBlockers(requirement, evidence, evidenceBlockers);
+        foreach (var blocker in evidenceBlockers.Distinct()) blockers.Add(blocker);
         var releaseReady = inventoryComplete && blockers.Count == 0 && claim == "conforming";
         var report = new JsonObject
         {
-            ["reportFormatVersion"] = 1,
+            ["reportFormatVersion"] = 2,
             ["profileName"] = profile["name"]!.GetValue<string>(),
             ["claim"] = claim,
             ["profileSha256"] = Sha256(profilePath),
@@ -81,6 +126,10 @@ internal static class ProfileRunner
             ["coverage"] = coverage.DeepClone(),
             ["counts"] = counts,
             ["releaseReady"] = releaseReady,
+            ["html53ProfileReady"] = htmlReady,
+            ["html53Blockers"] = new JsonArray(htmlBlockers.Distinct().Select(b => JsonValue.Create(b)).ToArray()),
+            ["evidenceIdentity"] = System.Text.Json.JsonSerializer.SerializeToNode(identity, ExecutionEvidence.JsonOptions),
+            ["executedTestCount"] = evidence.Count,
             ["blockers"] = blockers,
             ["dependencyExceptions"] = new JsonArray(requirements
                 .Where(r => Text(r, "status") == "dependency-exception")
@@ -108,12 +157,65 @@ internal static class ProfileRunner
         Console.WriteLine($"        releaseReady={releaseReady.ToString().ToLowerInvariant()} " +
                           $"(normative inventory complete={inventoryComplete.ToString().ToLowerInvariant()})");
         Console.WriteLine($"        report: {destination}");
+        Console.WriteLine($"        html53ProfileReady={htmlReady.ToString().ToLowerInvariant()} ({htmlBlockers.Count} blockers)");
+        if (requireHtmlReady && !htmlReady)
+        {
+            Console.WriteLine("  FAIL  HTML 5.3 compatibility profile is not ready.");
+            return 1;
+        }
         if (requireReady && !releaseReady)
         {
             Console.WriteLine("  FAIL  compatibility profile is not release-ready.");
             return 1;
         }
         return 0;
+    }
+
+    internal static List<string> EvaluateHtmlReadiness(JsonObject profile, IReadOnlyList<TestEvidence> evidence)
+    {
+        var blockers = new List<string>();
+        var coverage = profile["coverage"]!.AsObject();
+        if (coverage["html53ClauseInventoryComplete"]?.GetValue<bool>() != true)
+            blockers.Add("html53-clause-inventory-incomplete");
+        if (coverage["html53TestInventoryComplete"]?.GetValue<bool>() != true)
+            blockers.Add("html53-test-inventory-incomplete");
+        var dependencies = coverage["html53RequiredDependencies"]?.AsArray()
+            .Select(n => n!.GetValue<string>()).ToHashSet(StringComparer.Ordinal) ?? [];
+        var requirements = profile["requirements"]!.AsArray().OfType<JsonObject>().ToArray();
+        if (!requirements.Any(r => Text(r, "specification") == "html53" && Text(r, "applicability") == "included"))
+            blockers.Add("html53-no-included-requirements");
+        foreach (var dependency in dependencies)
+            if (!requirements.Any(r => Text(r, "id") == dependency && Text(r, "applicability") == "included"))
+                blockers.Add($"html53-missing-dependency:{dependency}");
+        foreach (var requirement in requirements.Where(r =>
+                     (Text(r, "specification") == "html53" && Text(r, "applicability") == "included") ||
+                     dependencies.Contains(Text(r, "id"))))
+        {
+            if (Text(requirement, "status") != "implemented")
+                blockers.Add($"{Text(requirement, "status")}:{Text(requirement, "id")}");
+            AddEvidenceBlockers(requirement, evidence, blockers);
+        }
+        return blockers;
+    }
+
+    private static void AddEvidenceBlockers(JsonObject requirement, IReadOnlyList<TestEvidence> evidence,
+        ICollection<string> blockers)
+    {
+        var tests = requirement["tests"]!.AsArray().OfType<JsonObject>().ToArray();
+        if (tests.Length == 0) blockers.Add($"no-mapped-evidence:{Text(requirement, "id")}");
+        foreach (var test in tests)
+            if (!HasMappedEvidence(evidence, Text(test, "suite"), Text(test, "path"), Text(test, "assertion"),
+                    requireUpstream: Text(requirement, "specification") == "html53" && Text(test, "suite") == "wpt" &&
+                        !Text(test, "path").StartsWith("lite/", StringComparison.Ordinal)))
+                blockers.Add($"missing-or-failing-evidence:{Text(requirement, "id")}:{Text(test, "suite")}:{Text(test, "path")}");
+    }
+
+    internal static bool HasMappedEvidence(IReadOnlyList<TestEvidence> evidence, string suite, string path,
+        string? assertion, bool requireUpstream = false)
+    {
+        var paths = suite == "wpt" ? WptRunner.Expand(path, requireUpstream).ToArray() : [path];
+        // Worker-only or otherwise unexecutable mappings cannot pass vacuously.
+        return paths.Length > 0 && paths.All(p => ExecutionEvidence.HasPassingEvidence(evidence, suite, p, assertion, requireUpstream));
     }
 
     private static JsonObject? ReadObject(string path, string label, List<string> errors)
@@ -141,13 +243,21 @@ internal static class ProfileRunner
 
     private static void ValidateProfile(JsonObject profile, List<string> errors)
     {
+        if (profile["schemaVersion"]?.GetValue<int>() != 2) errors.Add("profile.schemaVersion must be 2.");
         RequireText(profile, "name", errors);
         RequireText(profile, "claim", errors);
+        if (Text(profile, "claim") is not ("development-non-conforming" or "compatibility-profile" or "conforming"))
+            errors.Add("Unknown compatibility claim.");
         var coverage = profile["coverage"] as JsonObject;
         if (coverage is null)
             errors.Add("profile.coverage must be an object.");
         else
         {
+            foreach (var property in new[] { "html53ClauseInventoryComplete", "html53TestInventoryComplete" })
+                if (coverage[property] is not JsonValue value || !value.TryGetValue<bool>(out _))
+                    errors.Add($"profile.coverage.{property} must be a boolean.");
+            if (coverage["html53RequiredDependencies"] is not JsonArray)
+                errors.Add("profile.coverage.html53RequiredDependencies must be an array.");
             if (coverage["normativeClauseInventoryComplete"] is not JsonValue)
                 errors.Add("profile.coverage.normativeClauseInventoryComplete must be present.");
             if (Text(coverage, "unmappedApplicableClauseStatus") != "untested")
@@ -216,6 +326,8 @@ internal static class ProfileRunner
             if (requirement["implementationAreas"] is not JsonArray)
                 errors.Add($"{id}: implementationAreas must be an array.");
             ValidateTests(id, requirement["tests"], errors);
+            if (status == "implemented" && requirement["tests"] is JsonArray mapped && mapped.Count == 0)
+                errors.Add($"{id}: implemented requirements must map executed assertions.");
         }
 
         var claim = Text(profile, "claim");
@@ -306,6 +418,8 @@ internal static class ProfileRunner
                     errors.Add($"{id}: vendored git checkout is missing or unreadable at '{destination}'.");
                 else if (!actual.Equals(revision, StringComparison.OrdinalIgnoreCase))
                     errors.Add($"{id}: vendored revision {actual} does not match lock {revision}.");
+                else if (!ExecutionEvidence.IsPristineSuite(destinationPath))
+                    errors.Add($"{id}: vendored checkout is modified; keep local regression changes in overrides.");
             }
             else if (item["vendored"]?.GetValue<bool>() == true && !Directory.Exists(destinationPath))
                 errors.Add($"{id}: suite is marked vendored but its directory is missing: '{destination}'.");

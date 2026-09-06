@@ -19,18 +19,16 @@ public class JsElement
     {
         _engine = engine;
         Node = node;
+        Node.DocumentState ??= JsEngine.For(engine)?.DocumentState;
     }
 
-    // Wrapper identity: a LayoutNode belongs to exactly one engine, so a node-keyed weak cache
-    // guarantees the same node always yields the SAME JsElement. This makes JS === and WPT
-    // assert_equals(node, node) work (e.g. getElementById('x') === getElementById('x')) and keeps
-    // per-element state (style, listeners) stable across accessor calls. Keys are weak, so wrappers
-    // for GC'd nodes are collected automatically.
-    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<LayoutNode, JsElement> _wrappers = new();
+    // Node identity is stable within each realm, including when another realm wraps the node.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Engine,
+        System.Runtime.CompilerServices.ConditionalWeakTable<LayoutNode, JsElement>> _wrappers = new();
 
-    /// <summary>Returns the canonical JsElement wrapper for a node (cached per node).</summary>
+    /// <summary>Returns the canonical JsElement wrapper for a node in this realm.</summary>
     public static JsElement For(Engine engine, LayoutNode node)
-        => _wrappers.GetValue(node, n => new JsElement(engine, n));
+        => _wrappers.GetValue(engine, _ => new()).GetValue(node, n => new JsElement(engine, n));
 
     // ---- identity ----
     public string id
@@ -507,7 +505,7 @@ public class JsElement
 
     /// <summary>HTMLIFrameElement.contentDocument — the child Page's document (same-origin).</summary>
     public JsDocument? contentDocument =>
-        Node.ChildPage is { } p ? new JsDocument(p.Engine.RawEngine, p.Root) : null;
+        Node.ChildPage is { } p ? p.Engine.DocumentFacade : null;
 
     /// <summary>HTMLImageElement.src / HTMLSourceElement.src — reflects the <c>src</c> attribute.</summary>
     public string src
@@ -649,7 +647,7 @@ public class JsElement
     public void submit()
     {
         if (Node.TagName != "FORM") return;
-        var sub = FormSubmitter.BuildSubmission(Node, Parser.BaseUrl);
+        var sub = FormSubmitter.BuildSubmission(Node, JsEngine.For(_engine)?.DocumentBaseUrl);
         JsEngine.For(_engine)?.RequestNavigation(sub.Url);
     }
 
@@ -663,7 +661,7 @@ public class JsElement
         evt.target = For(_engine, Node);
         EventDispatcher.DispatchEvent(Node, evt, engine);
         if (evt.DefaultPrevented) return;
-        engine.RequestNavigation(FormSubmitter.BuildSubmission(Node, Parser.BaseUrl).Url);
+        engine.RequestNavigation(FormSubmitter.BuildSubmission(Node, engine.DocumentBaseUrl).Url);
     }
 
     /// <summary>Resets the form's controls to their defaults (HTMLFormElement.reset).</summary>

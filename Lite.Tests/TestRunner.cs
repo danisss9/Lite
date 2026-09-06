@@ -1,4 +1,5 @@
 using System.Reflection;
+using Lite.Conformance.Harness;
 
 namespace Lite.Tests;
 
@@ -12,8 +13,14 @@ public static class TestRunner
     private static int _failed;
     private static readonly List<string> _failures = [];
 
-    public static int Main()
+    public static int Main(string[] args)
     {
+        string? reportPath = null;
+        if (args.Length == 2 && args[0] == "--report") reportPath = args[1];
+        else if (args.Length != 0) { Console.WriteLine("Usage: Lite.Tests [--report path]"); return 2; }
+        var identity = reportPath is null ? null : ExecutionEvidence.CaptureIdentity();
+        var started = DateTime.UtcNow;
+        var outcomes = new List<TestEvidence>();
         if (Environment.GetEnvironmentVariable("LITE_PROBE") == "1")
         {
             Probe.Dump();
@@ -34,6 +41,8 @@ public static class TestRunner
                 method.Invoke(null, null);
                 _passed++;
                 Console.WriteLine($"  PASS  {name}");
+                outcomes.Add(new("unit", $"Lite.Tests/{method.DeclaringType!.Name}.cs#{method.Name}", "pass", name,
+                    [new SubtestEvidence(method.Name, 0, null)]));
             }
             catch (Exception ex)
             {
@@ -41,11 +50,14 @@ public static class TestRunner
                 var msg = (ex.InnerException ?? ex).Message;
                 _failures.Add($"{name}: {msg}");
                 Console.WriteLine($"  FAIL  {name}: {msg}");
+                outcomes.Add(new("unit", $"Lite.Tests/{method.DeclaringType!.Name}.cs#{method.Name}", "fail", msg,
+                    [new SubtestEvidence(method.Name, 1, msg)]));
             }
         }
 
         Console.WriteLine();
         Console.WriteLine($"=== {_passed} passed, {_failed} failed ===");
+        if (reportPath is not null) ExecutionEvidence.Write(reportPath, identity!, started, outcomes);
         return _failed == 0 ? 0 : 1;
     }
 

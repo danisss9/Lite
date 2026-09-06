@@ -17,7 +17,7 @@ public static class DomTests
         var root = new LayoutNode(null, "HTML", "", style);
         var body = new LayoutNode(null, "BODY", "", style);
         root.AddChild(body);
-        var engine = JsEngine.Create(root);
+        var engine = JsEngine.Create(root, documentState: new DocumentState(Parser.Document, "http://test/", "http://test/", new List<Parser.CssRule>()));
         return (root, body, engine);
     }
 
@@ -80,7 +80,7 @@ public static class DomTests
     public static void StyleResolver_AppliesStylesheetRuleToCreatedElement()
     {
         var (_, body, engine) = NewPage();
-        Parser.CssRules.Add(new Parser.CssRule(".badge", Parser.ComputeSpecificity(".badge"), 0,
+        ((List<Parser.CssRule>)engine.DocumentState.StyleRules).Add(new Parser.CssRule(".badge", Parser.ComputeSpecificity(".badge"), 0,
             new Dictionary<string, string> { { "color", "red" } }, new HashSet<string>()));
         try
         {
@@ -90,7 +90,7 @@ public static class DomTests
         }
         finally
         {
-            Parser.CssRules.RemoveAll(r => r.Selector == ".badge");
+            ((List<Parser.CssRule>)engine.DocumentState.StyleRules).RemoveAll(r => r.Selector == ".badge");
         }
     }
 
@@ -98,7 +98,7 @@ public static class DomTests
     public static void StyleResolver_DoesNotClobberInlineStyle()
     {
         var (_, body, engine) = NewPage();
-        Parser.CssRules.Add(new Parser.CssRule(".badge", Parser.ComputeSpecificity(".badge"), 0,
+        ((List<Parser.CssRule>)engine.DocumentState.StyleRules).Add(new Parser.CssRule(".badge", Parser.ComputeSpecificity(".badge"), 0,
             new Dictionary<string, string> { { "color", "red" } }, new HashSet<string>()));
         try
         {
@@ -108,7 +108,7 @@ public static class DomTests
         }
         finally
         {
-            Parser.CssRules.RemoveAll(r => r.Selector == ".badge");
+            ((List<Parser.CssRule>)engine.DocumentState.StyleRules).RemoveAll(r => r.Selector == ".badge");
         }
     }
 

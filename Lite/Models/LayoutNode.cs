@@ -16,6 +16,8 @@ public record EventListenerEntry(string EventType, JsValue? Handler, Action? Leg
 public class LayoutNode
 {
     public Guid NodeKey { get; } = Guid.NewGuid();
+    internal DocumentState? DocumentState { get; set; }
+    internal DocumentState? OwningDocument => Parent?.OwningDocument ?? DocumentState;
     /// <summary>The element's id. Backed by <see cref="Attributes"/> so parser-built and
     /// JS-mutated ids stay in sync (selector matching reads one source of truth).</summary>
     public string? Id => Attributes.GetValueOrDefault("id");
