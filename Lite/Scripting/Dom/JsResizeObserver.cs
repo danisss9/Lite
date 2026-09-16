@@ -57,9 +57,9 @@ public class JsResizeObserver
 
     public JsResizeObserver(JsValue callback)
     {
-        _engine = JsEngine.Instance!.RawEngine;
+        _engine = callback.AsObject().Engine;
         _callback = callback;
-        ResizeObserverRegistry.Register(this);
+        ResizeObserverRegistry.Register(_engine, this);
     }
 
     public void observe(JsElement target, JsValue? options = null) => Targets[target.Node] = null;
@@ -89,15 +89,14 @@ public class JsResizeObserver
 /// <summary>Tracks all live ResizeObservers and delivers size changes after layout.</summary>
 internal static class ResizeObserverRegistry
 {
-    private static readonly List<JsResizeObserver> _observers = [];
-    public static void Reset() => _observers.Clear();
-    public static void Register(JsResizeObserver o) => _observers.Add(o);
-    public static bool HasObservers => _observers.Count > 0;
+    private static readonly ObserverRegistry<JsResizeObserver> Registrations = new();
+    public static void Register(Engine engine, JsResizeObserver observer) => Registrations.Register(engine, observer);
 
-    public static void DeliverAll()
+    public static void DeliverAll(Engine engine)
     {
-        if (_observers.Count == 0) return;
-        JsEngine.Instance?.EnsureLayout();
-        foreach (var o in _observers.ToArray()) o.Deliver();
+        var observers = Registrations.For(engine);
+        if (observers.Count == 0) return;
+        JsEngine.For(engine)?.EnsureLayout();
+        foreach (var o in observers.ToArray()) o.Deliver();
     }
 }

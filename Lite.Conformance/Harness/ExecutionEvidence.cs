@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Lite.Conformance.Wpt;
 
 namespace Lite.Conformance.Harness;
 
@@ -9,14 +11,19 @@ internal sealed record EvidenceIdentity(string SourceRevision, string SourceSha2
     string ProfileSha256, string SuiteLockSha256, string DependenciesSha256, string EngineSha256,
     string HarnessSha256, string SuiteInputsSha256, string Platform);
 internal sealed record SubtestEvidence(string Name, int Status, string? Message);
+internal sealed record EvidenceArtifact(string Path, string Sha256, string Kind);
+internal sealed record ManualEvidence(string Operator, string Procedure, string Environment, string ObservedUtc);
 internal sealed record TestEvidence(string Suite, string Path, string Outcome, string Detail,
-    IReadOnlyList<SubtestEvidence> Subtests, int? HarnessStatus = null, string Environment = "local", string? Url = null);
+    IReadOnlyList<SubtestEvidence> Subtests, int? HarnessStatus = null, string Environment = "local", string? Url = null,
+    string Context = "window", string Kind = "testharness", IReadOnlyList<EvidenceArtifact>? Artifacts = null,
+    ManualEvidence? Manual = null);
 internal sealed record EvidenceReport(int FormatVersion, EvidenceIdentity Identity,
     string StartedUtc, string FinishedUtc, bool Completed, IReadOnlyList<TestEvidence> Tests);
 
 /// <summary>Executed outcomes are useful only for the source, binaries and inputs that produced them.</summary>
 internal static class ExecutionEvidence
 {
+    internal const int FormatVersion = 3;
     internal const string ProfileFile = "Profile/lite-html53-css21-es2020-profile.json";
     internal static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -76,6 +83,8 @@ internal static class ExecutionEvidence
                          .Split('\0', StringSplitOptions.RemoveEmptyEntries).Order(StringComparer.Ordinal))
                 hash.AppendData(Encoding.UTF8.GetBytes(name + "\0" + HashFile(Path.Combine(root, name))));
         }
+        if (File.Exists(WptCatalog.ManifestPath))
+            hash.AppendData(Encoding.UTF8.GetBytes("wpt-manifest\0" + HashFile(WptCatalog.ManifestPath)));
         return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
     }
 
@@ -85,7 +94,7 @@ internal static class ExecutionEvidence
         var fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         // Changing sources during a run must not produce reusable evidence.
-        var report = new EvidenceReport(2, identity, started.ToUniversalTime().ToString("O"),
+        var report = new EvidenceReport(FormatVersion, identity, started.ToUniversalTime().ToString("O"),
             DateTime.UtcNow.ToString("O"), identity == CaptureIdentity(), tests);
         File.WriteAllText(fullPath, JsonSerializer.Serialize(report, JsonOptions) + Environment.NewLine);
     }
@@ -99,13 +108,33 @@ internal static class ExecutionEvidence
             try
             {
                 var report = JsonSerializer.Deserialize<EvidenceReport>(File.ReadAllText(path), JsonOptions);
-                if (report is null || report.FormatVersion != 2 || !report.Completed || report.Identity != identity)
+                if (report is null || report.FormatVersion != FormatVersion || !report.Completed || report.Identity != identity)
                 {
                     blockers.Add($"stale-or-incomplete-evidence:{path}");
                     continue;
                 }
                 if (report.Tests is null || report.Tests.Any(t => t is null || t.Subtests is null))
                     throw new InvalidDataException("Missing test outcomes or assertions.");
+                if (!DateTimeOffset.TryParse(report.StartedUtc, out var started) ||
+                    !DateTimeOffset.TryParse(report.FinishedUtc, out var finished) || finished < started)
+                    throw new InvalidDataException("Invalid execution timestamps.");
+                foreach (var test in report.Tests)
+                {
+                    if (string.IsNullOrWhiteSpace(test.Context) || string.IsNullOrWhiteSpace(test.Kind))
+                        throw new InvalidDataException("Missing execution context or test kind.");
+                    foreach (var artifact in test.Artifacts ?? [])
+                    {
+                        var file = ResolveArtifact(artifact.Path);
+                        if (!File.Exists(file) || HashFile(file) != artifact.Sha256)
+                            throw new InvalidDataException($"Missing or changed evidence artifact: {artifact.Path}");
+                    }
+                    if (test.Suite == "manual" && (test.Manual is not { } manual ||
+                        string.IsNullOrWhiteSpace(manual.Operator) || string.IsNullOrWhiteSpace(manual.Procedure) ||
+                        string.IsNullOrWhiteSpace(manual.Environment) || !DateTimeOffset.TryParse(manual.ObservedUtc, out var observed) ||
+                        observed < started || observed > finished ||
+                        test.Artifacts is not { Count: > 0 }))
+                        throw new InvalidDataException("Manual evidence needs an operator, procedure, environment, date and artifacts.");
+                }
                 tests.AddRange(report.Tests);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
@@ -117,16 +146,30 @@ internal static class ExecutionEvidence
     }
 
     internal static bool HasPassingEvidence(IEnumerable<TestEvidence> tests, string suite, string path, string? assertion,
-        bool requireUpstream = false)
+        bool requireUpstream = false, JsonObject? review = null, string? context = null)
     {
         var matches = tests.Where(t => t.Suite == suite && t.Path == path).ToArray();
         // Conflicting runs are blockers; ordering the input files cannot conceal a failure.
-        return matches.Length > 0 && matches.All(t => t.Outcome == "pass" &&
+        return matches.Length > 0 && matches.All(t =>
             (suite != "wpt" || t.HarnessStatus == 0) && t.Subtests.Count > 0 &&
             (!requireUpstream || t.Environment == "upstream-wpt") &&
-            t.Subtests.All(s => s.Status == 0) &&
-            (string.IsNullOrEmpty(assertion) || t.Subtests.Any(s => s.Name == assertion)));
+            (context is null || t.Context == context) &&
+            (review is null ? t.Outcome == "pass" && t.Subtests.All(s => s.Status == 0) &&
+                (string.IsNullOrEmpty(assertion) || t.Subtests.Any(s => s.Name == assertion)) :
+                HtmlApplicability.HasPassingAssertions(t, review, assertion)));
     }
+
+    internal static string ResolveArtifact(string path)
+    {
+        if (!WptCatalog.ValidPath(path)) throw new InvalidDataException("Artifact path must be relative to the artifacts directory.");
+        var root = Path.GetFullPath(ConformancePaths.EnsureArtifacts()) + Path.DirectorySeparatorChar;
+        var fullPath = Path.GetFullPath(Path.Combine(root, path));
+        if (!fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Artifact escapes evidence directory.");
+        return fullPath;
+    }
+
+    internal static EvidenceArtifact Artifact(string fullPath, string kind) => new(
+        Path.GetRelativePath(ConformancePaths.EnsureArtifacts(), fullPath).Replace('\\', '/'), HashFile(fullPath), kind);
 
     private static string Git(string root, params string[] args)
     {

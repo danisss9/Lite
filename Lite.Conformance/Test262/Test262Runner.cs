@@ -26,7 +26,7 @@ internal static class Test262Runner
 
     private static readonly Dictionary<string, string> _harnessCache = new();
 
-    public static int Run(string? filter, ShardSpec shard)
+    public static int Run(string? filter, ShardSpec shard, string? reportPath = null)
     {
         var test262Root = Path.Combine(ConformancePaths.Vendor, "test262");
         var testRoot = Path.Combine(test262Root, "test");
@@ -51,10 +51,13 @@ internal static class Test262Runner
         if (files.Count == 0)
         {
             Console.WriteLine("test262: no test files match.");
-            return 0;
+            return 2;
         }
 
         var result = new SuiteResult();
+        var identity = ExecutionEvidence.CaptureIdentity();
+        var started = DateTime.UtcNow;
+        var evidence = new List<TestEvidence>();
         int dependencyExceptions = 0;
         int profileExcluded = 0;
         if (shard.Count > 1) Console.WriteLine($"  shard {shard}");
@@ -68,6 +71,7 @@ internal static class Test262Runner
             if (meta.Features.Overlaps(excludedFeatures.Keys))
             {
                 profileExcluded++;
+                evidence.Add(new("test262", rel, "excluded", "Post-ES2020 feature", [], Context: "javascript", Kind: "language"));
                 continue;
             }
 
@@ -75,6 +79,7 @@ internal static class Test262Runner
             if (skip is not null)
             {
                 dependencyExceptions++;
+                evidence.Add(new("test262", rel, "skipped", "Dependency exception", [], Context: "javascript", Kind: "language"));
                 continue;
             }
 
@@ -96,6 +101,8 @@ internal static class Test262Runner
                 detail = $"runner crashed: {ex.Message}";
             }
 
+            evidence.Add(new("test262", rel, passed ? "pass" : "fail", detail,
+                [new("All required execution modes", passed ? 0 : 1, detail)], Context: "javascript", Kind: "language"));
             if (passed)
             {
                 result.Passed++;
@@ -110,6 +117,7 @@ internal static class Test262Runner
 
         Console.WriteLine($"  ({profileExcluded} excluded as post-ES2020 by es2020-applicability.json)");
         Console.WriteLine($"  ({dependencyExceptions} exact dependency exceptions via skip-list.txt)");
+        ExecutionEvidence.Write(reportPath ?? Path.Combine(ConformancePaths.EnsureArtifacts(), $"test262-{shard.Index}-of-{shard.Count}.json"), identity, started, evidence);
         return result.Report("test262");
     }
 

@@ -7,6 +7,8 @@ internal sealed class DocumentState(IDocument? document, string address, string 
     IReadOnlyList<Parser.CssRule> styleRules)
 {
     internal IDocument? Document { get; } = document;
+    internal Scripting.JsEngine? Engine { get; set; }
+    internal Parser.ParseState? ParserContext { get; init; }
     internal string Address { get; } = address;
     internal string Url { get; set; } = address;
     internal string BaseUrl { get; } = baseUrl;

@@ -16,17 +16,20 @@ internal static class RefTestRunner
     public const int Width = 600;
     public const int Height = 600;
 
-    public static int Run(string? filter, ShardSpec shard)
+    public static int Run(string? filter, ShardSpec shard, string? reportPath = null)
     {
         var entries = Manifest.Filter(Manifest.Load(ConformancePaths.Manifest(Path.Combine("Css21", "css21-manifest.txt"))), filter, shard);
         if (entries.Count == 0)
         {
             Console.WriteLine("css21: no manifest entries match.");
-            return 0;
+            return 2;
         }
 
         ConformanceServer.Start();
         var result = new SuiteResult();
+        var identity = ExecutionEvidence.CaptureIdentity();
+        var started = DateTime.UtcNow;
+        var evidence = new List<TestEvidence>();
         if (shard.Count > 1) Console.WriteLine($"  shard {shard}");
 
         foreach (var entry in entries)
@@ -40,11 +43,13 @@ internal static class RefTestRunner
             {
                 result.Failed++;
                 result.Problems.Add($"{entry.Path}: no reference (manifest 'test | ref' or a <link rel=match> in the test)");
+                evidence.Add(new("css21-curated", entry.Path, "fail", "Missing reference", [], Kind: "reftest"));
                 continue;
             }
 
             bool passed;
             string detail;
+            var artifacts = new List<EvidenceArtifact>();
             try
             {
                 using var testBitmap = Render(entry.Path);
@@ -55,7 +60,14 @@ internal static class RefTestRunner
                 detail = (mismatch ? "[mismatch] " : "") +
                     (diff.Detail ?? $"{diff.DiffPixels} differing pixels ({diff.DiffRatio.ToString("P3", System.Globalization.CultureInfo.InvariantCulture)})");
                 if (!passed)
+                {
                     PixelDiff.WriteFailureArtifacts(SafeName(entry.Path), refBitmap, testBitmap);
+                    foreach (var suffix in new[] { "expected", "actual", "diff" })
+                    {
+                        var file = Path.Combine(ConformancePaths.EnsureArtifacts(), $"{SafeName(entry.Path)}-{suffix}.png");
+                        if (File.Exists(file)) artifacts.Add(ExecutionEvidence.Artifact(file, suffix));
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -64,8 +76,11 @@ internal static class RefTestRunner
             }
 
             Record(result, entry, passed, detail);
+            evidence.Add(new("css21-curated", entry.Path, passed ? "pass" : "fail", detail,
+                [new($"{(mismatch ? "!=" : "==")} {reference}", passed ? 0 : 1, detail)], Kind: "reftest", Artifacts: artifacts));
         }
 
+        ExecutionEvidence.Write(reportPath ?? Path.Combine(ConformancePaths.EnsureArtifacts(), $"css21-{shard.Index}-of-{shard.Count}.json"), identity, started, evidence);
         return result.Report("css21");
     }
 

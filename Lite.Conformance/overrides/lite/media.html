@@ -27,7 +27,8 @@ test(function () {
   assert_true(a.controls, 'controls reflected');
   assert_true(a.loop, 'loop reflected');
   assert_false(a.autoplay, 'autoplay absent');
-  assert_equals(a.src, 'song.mp3', 'src reflected');
+  assert_equals(a.getAttribute('src'), 'song.mp3', 'content attribute preserved');
+  assert_equals(a.src, new URL('song.mp3', location.href).href, 'src reflects an absolute URL');
   a.muted = true;
   assert_true(a.muted, 'muted settable');
 }, 'media attributes reflect');

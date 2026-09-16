@@ -89,21 +89,30 @@ internal static class ProfileRunner
             if (coverage["html53TestInventoryComplete"]?.GetValue<bool>() == true || htmlApplicability["inventoryComplete"]?.GetValue<bool>() == true)
             {
                 // A hand-edited complete flag cannot turn omitted tests into passes.
-                foreach (var directory in HtmlApplicability.CandidateRoots)
+                if (!File.Exists(WptCatalog.ManifestPath))
+                    htmlBlockers.Add("html53-missing-upstream-manifest");
+                else
                 {
-                    var root = Path.Combine(ConformancePaths.Vendor, "wpt", directory);
-                    if (!Directory.Exists(root)) { htmlBlockers.Add($"html53-missing-test-root:{directory}"); continue; }
-                    var missing = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories).Where(WptRunner.IsCandidateTest)
-                        .Select(f => Path.GetRelativePath(Path.Combine(ConformancePaths.Vendor, "wpt"), f).Replace('\\', '/'))
-                        .Count(p => !reviewed.Contains(p));
-                    if (missing > 0) htmlBlockers.Add($"html53-unclassified-tests:{directory}:{missing}");
+                    try
+                    {
+                        var catalog = WptCatalog.Read(WptCatalog.ManifestPath).Where(WptCatalog.IsHtmlCandidate).ToArray();
+                        foreach (var directory in HtmlApplicability.CandidateRoots)
+                        {
+                            var candidates = catalog.Where(c => c.Source.StartsWith(directory + "/", StringComparison.Ordinal)).ToArray();
+                            if (candidates.Length == 0) htmlBlockers.Add($"html53-missing-test-root:{directory}");
+                            var missing = candidates.Count(c => !reviewed.Contains(c.Path) && !reviewed.Contains(c.Source));
+                            if (missing > 0) htmlBlockers.Add($"html53-unclassified-tests:{directory}:{missing}");
+                        }
+                    }
+                    catch (Exception ex) when (ex is IOException or InvalidDataException or System.Text.Json.JsonException)
+                    { htmlBlockers.Add($"html53-invalid-upstream-manifest:{ex.Message}"); }
                 }
             }
             foreach (var test in applicabilityTests.OfType<JsonObject>())
             {
                 var classification = Text(test, "classification");
                 if (classification == "unreviewed") htmlBlockers.Add($"html53-unreviewed-test:{Text(test, "path")}");
-                if (classification == "included" && !HasMappedEvidence(evidence, "wpt", Text(test, "path"), null,
+                if (HtmlApplicability.IsIncluded(test) && !HasMappedEvidence(evidence, "wpt", Text(test, "path"), null,
                         requireUpstream: !Text(test, "path").StartsWith("lite/", StringComparison.Ordinal)))
                     htmlBlockers.Add($"html53-missing-applicable-test:{Text(test, "path")}");
             }
@@ -117,7 +126,7 @@ internal static class ProfileRunner
         var releaseReady = inventoryComplete && blockers.Count == 0 && claim == "conforming";
         var report = new JsonObject
         {
-            ["reportFormatVersion"] = 2,
+            ["reportFormatVersion"] = 3,
             ["profileName"] = profile["name"]!.GetValue<string>(),
             ["claim"] = claim,
             ["profileSha256"] = Sha256(profilePath),
@@ -135,6 +144,8 @@ internal static class ProfileRunner
                 .Where(r => Text(r, "status") == "dependency-exception")
                 .Select(r => JsonValue.Create(Text(r, "id")))
                 .ToArray()),
+            ["profileExclusions"] = new JsonArray(requirements.Where(r => Text(r, "applicability") == "excluded")
+                .Select(r => (JsonNode)new JsonObject { ["id"] = Text(r, "id"), ["reason"] = Text(r, "exclusionReason") }).ToArray()),
             ["suiteLock"] = suiteLock.DeepClone(),
         };
 
@@ -215,7 +226,10 @@ internal static class ProfileRunner
     {
         var paths = suite == "wpt" ? WptRunner.Expand(path, requireUpstream).ToArray() : [path];
         // Worker-only or otherwise unexecutable mappings cannot pass vacuously.
-        return paths.Length > 0 && paths.All(p => ExecutionEvidence.HasPassingEvidence(evidence, suite, p, assertion, requireUpstream));
+        var reviews = suite == "wpt" ? HtmlApplicability.Read()["tests"]!.AsArray().OfType<JsonObject>().ToArray() : [];
+        return paths.Length > 0 && paths.All(p => ExecutionEvidence.HasPassingEvidence(evidence, suite, p, assertion, requireUpstream,
+            suite == "wpt" ? HtmlApplicability.FindReview(reviews, p, WptRunner.CatalogCase(p)?.Source ?? path) : null,
+            suite == "wpt" ? WptCatalog.Context(p) : null));
     }
 
     private static JsonObject? ReadObject(string path, string label, List<string> errors)

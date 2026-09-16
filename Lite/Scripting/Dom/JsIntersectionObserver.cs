@@ -54,9 +54,9 @@ public class JsIntersectionObserver
 
     public JsIntersectionObserver(JsValue callback, JsValue? options = null)
     {
-        _engine = JsEngine.Instance!.RawEngine;
+        _engine = callback.AsObject().Engine;
         _callback = callback;
-        IntersectionObserverRegistry.Register(this);
+        IntersectionObserverRegistry.Register(_engine, this);
     }
 
     public void observe(JsElement target) => Targets[target.Node] = null;
@@ -66,7 +66,7 @@ public class JsIntersectionObserver
 
     internal void Deliver()
     {
-        var (vw, vh) = JsEngine.Instance?.ViewportSize ?? (0, 0);
+        var (vw, vh) = JsEngine.For(_engine)?.ViewportSize ?? (0, 0);
         var root = new SKRect(0, 0, vw, vh);
 
         var entries = new List<JsIntersectionObserverEntry>();
@@ -90,15 +90,14 @@ public class JsIntersectionObserver
 /// <summary>Tracks all live IntersectionObservers and delivers intersection changes after layout.</summary>
 internal static class IntersectionObserverRegistry
 {
-    private static readonly List<JsIntersectionObserver> _observers = [];
-    public static void Reset() => _observers.Clear();
-    public static void Register(JsIntersectionObserver o) => _observers.Add(o);
-    public static bool HasObservers => _observers.Count > 0;
+    private static readonly ObserverRegistry<JsIntersectionObserver> Registrations = new();
+    public static void Register(Engine engine, JsIntersectionObserver observer) => Registrations.Register(engine, observer);
 
-    public static void DeliverAll()
+    public static void DeliverAll(Engine engine)
     {
-        if (_observers.Count == 0) return;
-        JsEngine.Instance?.EnsureLayout();
-        foreach (var o in _observers.ToArray()) o.Deliver();
+        var observers = Registrations.For(engine);
+        if (observers.Count == 0) return;
+        JsEngine.For(engine)?.EnsureLayout();
+        foreach (var o in observers.ToArray()) o.Deliver();
     }
 }

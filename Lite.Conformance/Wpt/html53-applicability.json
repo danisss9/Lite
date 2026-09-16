@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "target": "https://www.w3.org/TR/2018/WD-html53-20181018/",
   "inventoryComplete": false,
   "defaultClassification": "unreviewed",
@@ -443,6 +443,11 @@
       "path": "lite/html53/iframe-initial-document.html",
       "classification": "included",
       "reason": "Local assertion test for a requirement in the HTML 5.3 draft."
+    },
+    {
+      "path": "lite/html53/details-toggle.html",
+      "classification": "included",
+      "reason": "Reviewed against HTML 5.3 section 4.11.1 details notification task steps and the referenced simple event initialization; only runtime attribute mutations are asserted."
     }
   ]
 }

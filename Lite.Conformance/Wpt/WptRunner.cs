@@ -19,7 +19,7 @@ internal static class WptRunner
         HtmlApplicability.Validate(applicability, errors);
         if (errors.Count > 0) { foreach (var error in errors) Console.WriteLine(error); return 2; }
         var paths = applicability["tests"]!.AsArray().OfType<System.Text.Json.Nodes.JsonObject>()
-            .Where(t => t["classification"]!.GetValue<string>() == "included")
+            .Where(HtmlApplicability.IsIncluded)
             .Select(t => t["path"]!.GetValue<string>())
             .Where(p => filter is null || p.Contains(filter, StringComparison.Ordinal)).Order(StringComparer.Ordinal);
         var entries = shard.Apply(paths.SelectMany(Expand)).ToArray();
@@ -27,16 +27,21 @@ internal static class WptRunner
         var identity = ExecutionEvidence.CaptureIdentity();
         var started = DateTime.UtcNow;
         var outcomes = new List<TestEvidence>();
+        var accepted = 0;
         ConformanceServer.Start(cssRegressionMode: false);
         foreach (var path in entries)
         {
             var result = RunOne(path);
-            outcomes.Add(ToEvidence(path, result));
+            var evidence = ToEvidence(path, result);
+            outcomes.Add(evidence);
+            var review = HtmlApplicability.FindReview(applicability["tests"]!.AsArray().OfType<System.Text.Json.Nodes.JsonObject>(), path,
+                CatalogCase(path)?.Source ?? path.Split(['?', '#'])[0]);
+            if (evidence.HarnessStatus == 0 && review is not null && HtmlApplicability.HasPassingAssertions(evidence, review, null)) accepted++;
             Console.WriteLine($"  {result.Cat.ToString().ToUpperInvariant(),-7} {path} ({result.Detail})");
         }
         ExecutionEvidence.Write(reportPath ?? DefaultReport("html53", shard), identity, started, outcomes);
-        Console.WriteLine($"html53: {outcomes.Count(t => t.Outcome == "pass")}/{outcomes.Count} reviewed tests passed; this is not a profile-readiness claim.");
-        return outcomes.All(t => t.Outcome == "pass") ? 0 : 1;
+        Console.WriteLine($"html53: {accepted}/{outcomes.Count} reviewed tests passed; this is not a profile-readiness claim.");
+        return accepted == outcomes.Count ? 0 : 1;
     }
 
     private const int TestTimeoutMs = 10_000;
@@ -47,10 +52,11 @@ internal static class WptRunner
     /// <summary>How a single test run turned out, independent of whether the manifest
     /// expected it. <see cref="Cat.Pass"/> means every subtest passed and there was at
     /// least one subtest.</summary>
-    internal enum Cat { Pass, Fail, Crash, Timeout, Empty }
+    internal enum Cat { Pass, Fail, Crash, Timeout, Empty, Unsupported }
 
     internal readonly record struct RunResult(Cat Cat, string Detail, int Total, int Failures,
-        IReadOnlyList<SubtestEvidence>? Subtests = null, int? HarnessStatus = null)
+        IReadOnlyList<SubtestEvidence>? Subtests = null, int? HarnessStatus = null,
+        IReadOnlyList<EvidenceArtifact>? Artifacts = null)
     {
         public bool Passed => Cat == Cat.Pass;
     }
@@ -107,16 +113,17 @@ internal static class WptRunner
         var started = DateTime.UtcNow;
         var outcomes = new List<TestEvidence>();
 
-        var tests = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
-            .Where(IsCandidateTest)
-            .Select(f => Path.GetRelativePath(wptRoot, f).Replace('\\', '/'))
-            .SelectMany(Expand)
+        var discovered = File.Exists(WptCatalog.ManifestPath)
+            ? Catalog().Where(c => c.Source.StartsWith(relDir.TrimEnd('/') + "/", StringComparison.Ordinal)).Select(c => c.Path)
+            : Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories).Where(IsCandidateTest)
+                .Select(f => Path.GetRelativePath(wptRoot, f).Replace('\\', '/')).SelectMany(Expand);
+        var tests = discovered.Distinct(StringComparer.Ordinal)
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
         if (limit > 0) tests = tests.Take(limit).ToList();
         tests = selectedShard.Apply(tests).ToList();
 
-        int pass = 0, fail = 0, crash = 0, timeout = 0, empty = 0, skipped = 0;
+        int pass = 0, fail = 0, crash = 0, timeout = 0, empty = 0, skipped = 0, unsupported = 0;
 
         foreach (var file in tests)
         {
@@ -147,6 +154,7 @@ internal static class WptRunner
                 case Cat.Crash: crash++; Console.WriteLine($"  CRASH   {urlPath} — {r.Detail}"); break;
                 case Cat.Timeout: timeout++; Console.WriteLine($"  TIMEOUT {urlPath}"); break;
                 case Cat.Empty: empty++; Console.WriteLine($"  EMPTY   {urlPath} — {r.Detail}"); break;
+                case Cat.Unsupported: unsupported++; Console.WriteLine($"  UNSUPPORTED {urlPath} — {r.Detail}"); break;
             }
             Console.Out.Flush();
         }
@@ -155,10 +163,10 @@ internal static class WptRunner
         Console.WriteLine();
         Console.WriteLine($"=== survey {relDir}: {pass}/{total} fully passed " +
                           $"({(total == 0 ? 0 : 100.0 * pass / total):F1}%) — " +
-                          $"{fail} partial-fail, {crash} crash, {timeout} timeout, {empty} no-subtests, {skipped} skipped ===");
+                          $"{fail} partial-fail, {crash} crash, {timeout} timeout, {empty} no-subtests, {skipped} skipped, {unsupported} unsupported ===");
         Console.WriteLine("  (grep '  PASS    ' for the fully-passing tests to promote into wpt-manifest.txt)");
         ExecutionEvidence.Write(reportPath ?? DefaultReport("survey", selectedShard), identity, started, outcomes);
-        return total == 0 ? 2 : fail + crash + timeout + empty + skipped > 0 ? 1 : 0;
+        return total == 0 ? 2 : fail + crash + timeout + empty + skipped + unsupported > 0 ? 1 : 0;
     }
 
     private readonly record struct Skip(string Path, string Reason);
@@ -218,7 +226,10 @@ internal static class WptRunner
 
     private static RunResult RunOne(string testPath)
     {
-        var file = ResolveSource(testPath.Split(['?', '#'])[0], UsesUpstream(testPath));
+        var test = CatalogCase(testPath);
+        if (WptCatalog.Context(testPath) != "window" || test is { Kind: not ("testharness" or "reftest") })
+            return new(Cat.Unsupported, $"Execution support required: {test?.Kind ?? "testharness"}/{WptCatalog.Context(testPath)}", 0, 0);
+        var file = ResolveSource(test?.Source ?? testPath.Split(['?', '#'])[0], UsesUpstream(testPath));
         var longTimeout = file is not null && WptMetadata.Parse(File.ReadAllText(file)).LongTimeout;
         return RunIsolated(testPath, ConformanceServer.TestUrl(WptMetadata.UrlPath(testPath)), longTimeout ? 70_000 : 20_000);
     }
@@ -242,16 +253,29 @@ internal static class WptRunner
                 process.Kill(entireProcessTree: true);
                 process.WaitForExit();
                 Task.WaitAll(stdout, stderr);
-                return new(Cat.Timeout, $"Loading/execution exceeded {timeoutMs} ms", 0, 0);
+                return WithLogs(new(Cat.Timeout, $"Loading/execution exceeded {timeoutMs} ms", 0, 0), stdout.Result, stderr.Result);
             }
             Task.WaitAll(stdout, stderr);
             if (process.ExitCode != 0 || !File.Exists(output))
-                return new(Cat.Crash, $"Worker exited {process.ExitCode}: {stderr.Result}", 0, 0);
-            return JsonSerializer.Deserialize<RunResult>(File.ReadAllText(output), ExecutionEvidence.JsonOptions);
+                return WithLogs(new(Cat.Crash, $"Worker exited {process.ExitCode}: {stderr.Result}", 0, 0), stdout.Result, stderr.Result);
+            var result = JsonSerializer.Deserialize<RunResult>(File.ReadAllText(output), ExecutionEvidence.JsonOptions);
+            return result.Passed ? result : WithLogs(result, stdout.Result, stderr.Result);
         }
         catch (Exception ex) when (ex is IOException or JsonException or System.ComponentModel.Win32Exception)
         { return new(Cat.Crash, ex.Message, 0, 0); }
         finally { if (File.Exists(output)) File.Delete(output); }
+
+        RunResult WithLogs(RunResult result, string stdout, string stderr)
+        {
+            var artifacts = new List<EvidenceArtifact>(result.Artifacts ?? []);
+            foreach (var (suffix, text) in new[] { ("stdout", stdout), ("stderr", stderr) })
+            {
+                var file = output + "." + suffix + ".log";
+                File.WriteAllText(file, text);
+                artifacts.Add(ExecutionEvidence.Artifact(file, suffix + "-tail"));
+            }
+            return result with { Artifacts = artifacts };
+        }
     }
 
     private static async Task<string> Drain(StreamReader reader)
@@ -269,7 +293,11 @@ internal static class WptRunner
 
     internal static int Worker(string path, string url, string output)
     {
-        var result = RunInProcess(url);
+        ConformanceServer.SetWorkerBaseUrl(url);
+        var test = CatalogCase(path);
+        // The parent owns the server. Child workers only need its address for reference URLs.
+        var result = test is { Kind: "reftest" }
+            ? WptRefTestRunner.Run(test, CatalogCase) : RunInProcess(url);
         File.WriteAllText(output, JsonSerializer.Serialize(result, ExecutionEvidence.JsonOptions));
         return 0;
     }
@@ -364,7 +392,8 @@ internal static class WptRunner
     {
         if (!upstream) return ConformanceServer.ResolveFile(path);
         var root = Path.GetFullPath(Path.Combine(ConformancePaths.Vendor, "wpt")) + Path.DirectorySeparatorChar;
-        var file = Path.GetFullPath(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)));
+        var source = CatalogCase(path)?.Source ?? path;
+        var file = Path.GetFullPath(Path.Combine(root, source.Replace('/', Path.DirectorySeparatorChar)));
         return file.StartsWith(root, StringComparison.OrdinalIgnoreCase) && File.Exists(file) ? file : null;
     }
 
@@ -372,6 +401,11 @@ internal static class WptRunner
 
     internal static IEnumerable<string> Expand(string path, bool upstream)
     {
+        if (upstream && File.Exists(WptCatalog.ManifestPath))
+        {
+            var cases = Catalog().Where(c => c.Source == path || c.Path == path).ToArray();
+            if (cases.Length > 0) return cases.Select(c => c.Path).Distinct(StringComparer.Ordinal);
+        }
         if (path.Contains('?') || path.Contains('#')) return [path];
         var file = ResolveSource(path, upstream);
         if (file is null) return [path];
@@ -383,7 +417,20 @@ internal static class WptRunner
     private static TestEvidence ToEvidence(string path, RunResult result) => new("wpt", path,
         result.Cat.ToString().ToLowerInvariant(), result.Detail, result.Subtests ?? [], result.HarnessStatus,
         !path.StartsWith("lite/", StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LITE_WPT_BASE_URL"))
-            ? "upstream-wpt" : "local", ConformanceServer.TestUrl(WptMetadata.UrlPath(path)));
+            ? "upstream-wpt" : "local", ConformanceServer.TestUrl(WptMetadata.UrlPath(path)),
+        WptCatalog.Context(path), CatalogCase(path)?.Kind ?? "testharness", result.Artifacts);
+
+    private static (DateTime Modified, long Length, IReadOnlyList<WptCase> Tests)? _catalog;
+    private static IReadOnlyList<WptCase> Catalog()
+    {
+        var file = new FileInfo(WptCatalog.ManifestPath);
+        if (!file.Exists) return [];
+        if (_catalog is not { } cached || cached.Modified != file.LastWriteTimeUtc || cached.Length != file.Length)
+            _catalog = (file.LastWriteTimeUtc, file.Length, WptCatalog.Read(file.FullName));
+        return _catalog.Value.Tests;
+    }
+    internal static WptCase? CatalogCase(string path) => path.StartsWith("lite/", StringComparison.Ordinal) ? null :
+        Catalog().FirstOrDefault(c => c.Path == path);
 
     private static string DefaultReport(string kind, ShardSpec shard) => Path.Combine(ConformancePaths.EnsureArtifacts(),
         $"wpt-{kind}{(shard.Count > 1 ? $"-{shard.Index}-of-{shard.Count}" : "")}.json");

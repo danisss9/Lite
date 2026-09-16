@@ -22,6 +22,8 @@ internal static class ConformanceServer
     public static string BaseUrl => _baseUrl
         ?? throw new InvalidOperationException("The conformance server has not been started.");
 
+    internal static void SetWorkerBaseUrl(string url) => _baseUrl = new Uri(url).GetLeftPart(UriPartial.Authority);
+
     internal static string TestUrl(string path)
     {
         var upstream = Environment.GetEnvironmentVariable("LITE_WPT_BASE_URL");

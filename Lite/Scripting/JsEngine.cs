@@ -74,16 +74,16 @@ internal class JsEngine
                 // Per the HTML spec, a microtask checkpoint runs after each task — this is what
                 // lets Promise .then() continuations (e.g. from fetch) actually execute.
                 _engine.Advanced.ProcessTasks();
-                Dom.MutationObserverRegistry.DeliverAll();
+                Dom.MutationObserverRegistry.DeliverAll(_engine);
             }
             catch (Exception ex) { Console.WriteLine($"[JS task] {ex.Message}"); }
             ran = true;
         }
         // Deliver any queued observer notifications even when no macrotask ran this turn (e.g. a
         // synchronous DOM mutation followed by an explicit drain).
-        Dom.MutationObserverRegistry.DeliverAll();
-        Dom.ResizeObserverRegistry.DeliverAll();
-        Dom.IntersectionObserverRegistry.DeliverAll();
+        Dom.MutationObserverRegistry.DeliverAll(_engine);
+        Dom.ResizeObserverRegistry.DeliverAll(_engine);
+        Dom.IntersectionObserverRegistry.DeliverAll(_engine);
         return ran;
     }
 
@@ -97,7 +97,7 @@ internal class JsEngine
         try
         {
             _engine.Advanced.ProcessTasks();
-            Dom.MutationObserverRegistry.DeliverAll();
+            Dom.MutationObserverRegistry.DeliverAll(_engine);
         }
         catch (Exception ex) { Console.WriteLine($"[JS microtask] {ex.Message}"); }
     }
@@ -234,6 +234,7 @@ internal class JsEngine
 
         _root = root;
         _byRaw.AddOrUpdate(_engine, this);
+        DocumentState.Engine = this;
         CurrentUrl = baseUrl;
         History = new Dom.JsHistory(this, baseUrl);
         Location = new Dom.JsLocation(this);
@@ -285,13 +286,11 @@ internal class JsEngine
         // navigator
         _engine.SetValue("navigator", new JsNavigator());
 
-        // MutationObserver constructor; reset the registry for this fresh page.
-        Dom.MutationObserverRegistry.Reset();
+        // Observer registrations belong to the callback's realm. Loading a frame must
+        // not clear existing documents' observers or redirect their callbacks.
         _engine.SetValue("MutationObserver", typeof(Dom.JsMutationObserver));
 
-        // ResizeObserver / IntersectionObserver constructors; reset their registries too.
-        Dom.ResizeObserverRegistry.Reset();
-        Dom.IntersectionObserverRegistry.Reset();
+        // ResizeObserver / IntersectionObserver constructors.
         _engine.SetValue("ResizeObserver", typeof(Dom.JsResizeObserver));
         _engine.SetValue("IntersectionObserver", typeof(Dom.JsIntersectionObserver));
 

@@ -1,0 +1,12 @@
+<!doctype html>
+<html class="reftest-wait">
+<style>html, body { margin: 0; background: red; }</style>
+<script>
+document.documentElement.addEventListener('TestRendered', function () {
+  document.documentElement.style.backgroundColor = 'blue';
+  document.body.style.backgroundColor = 'blue';
+  document.documentElement.className = '';
+});
+</script>
+<body></body>
+</html>

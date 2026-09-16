@@ -60,7 +60,7 @@ public static class MediaTests
         Equal(true, (bool)Val(e, "controls")!);
         Equal(true, (bool)Val(e, "loop")!);
         Equal(false, (bool)Val(e, "autoplay")!);
-        Equal("song.mp3", (string?)Val(e, "src"));
+        Equal("http://test/song.mp3", (string?)Val(e, "src"));
         Equal(true, (bool)Val(e, "autoplay2")!);
         Equal(false, (bool)Val(e, "controls2")!);
     }

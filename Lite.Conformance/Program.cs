@@ -90,8 +90,10 @@ internal static class Program
 
         if ((requireReady || requireHtmlReady || evidencePaths.Count > 0) && !suite.Equals("profile", StringComparison.OrdinalIgnoreCase))
         { Console.WriteLine("Readiness and --evidence options require --suite profile."); return 2; }
-        if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html53"))
-        { Console.WriteLine("--report is supported by profile, wpt, and html53."); return 2; }
+        if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html53" or "html53-inventory" or "css21" or "test262"))
+        { Console.WriteLine("--report is supported by profile, wpt, html53, html53-inventory, css21, and test262."); return 2; }
+        if (survey is not null && suite.Equals("css21", StringComparison.OrdinalIgnoreCase) && reportPath is not null)
+        { Console.WriteLine("CSS surveys do not produce readiness evidence; use the curated CSS gate with --report."); return 2; }
 
         try
         {
@@ -100,14 +102,20 @@ internal static class Program
                 "wpt" when survey is not null => WptRunner.Survey(survey, surveyLimit, reportPath, shard),
                 "wpt" => WptRunner.Run(filter, shard, reportPath),
                 "html53" => WptRunner.RunHtml(filter, shard, reportPath),
+                "html53-inventory" => HtmlInventoryRunner.Run(reportPath),
                 "css21" when survey is not null => RefTestRunner.Survey(survey, surveyLimit),
-                "css21" => RefTestRunner.Run(filter, shard),
-                "test262" => Test262Runner.Run(filter, shard),
+                "css21" => RefTestRunner.Run(filter, shard, reportPath),
+                "test262" => Test262Runner.Run(filter, shard, reportPath),
                 "acid" => AcidRunner.Run(filter, updateBaselines, shard),
                 "profile" => ProfileRunner.Run(reportPath, requireReady, requireHtmlReady, evidencePaths),
                 "all" => RunAll(filter, shard),
                 _ => Unknown(suite),
             };
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or System.Text.Json.JsonException)
+        {
+            Console.Error.WriteLine($"Conformance input error: {ex.Message}");
+            return 2;
         }
         finally
         {
@@ -138,14 +146,14 @@ internal static class Program
             Lite conformance harness
 
             Usage:
-              dotnet run --project Lite.Conformance -- --suite <wpt|html53|css21|test262|acid|profile|all> [options]
+              dotnet run --project Lite.Conformance -- --suite <wpt|html53|html53-inventory|css21|test262|acid|profile|all> [options]
 
             Options:
               --filter <substring>   Only run tests whose path contains the substring
               --update-baselines     (acid) Approve the current render as the new baseline
               --geom <url> <sel>     Print the geometry of elements matching a selector
               --render <url> [name]  Render one page to artifacts/<name>.png
-              --report <path>        (profile/wpt/html53) Write the JSON report to this path
+              --report <path>        Write suite evidence, inventory or profile JSON (except acid/all)
               --shard <index/count>  Run one stable zero-based shard (for example 2/8)
               --require-ready        (profile) Fail unless every release-readiness check passes
               --require-html-ready   (profile) Require completion of the HTML 5.3 profile

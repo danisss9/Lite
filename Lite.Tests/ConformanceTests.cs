@@ -10,6 +10,104 @@ namespace Lite.Tests;
 
 public static class ConformanceTests
 {
+    [Test]
+    public static void WptReferences_UseAlternativePathsAndRejectCycles()
+    {
+        ConformanceServer.Start(cssRegressionMode: false);
+        try
+        {
+            const string red = "lite/harness/reference-red.html";
+            const string blue = "lite/harness/reference-blue.html";
+            var test = new WptCase(red, red, "reftest", "window", false, false,
+                [new("/" + blue, "=="), new("/" + red, "==")]);
+            var result = WptRefTestRunner.Run(test, _ => null);
+            True(result.Passed, result.Detail);
+            True(result.Artifacts is { Count: >= 3 });
+            True(!WptRefTestRunner.Run(test with { References = [new("/" + blue, "==")] }, _ => null).Passed);
+            True(WptRefTestRunner.Run(test with { References = [new("/" + blue, "!=")] }, _ => null).Passed);
+            True(!WptRefTestRunner.Run(test with { References = [new("/" + red, "==")] }, _ => test).Passed);
+            True(!WptRefTestRunner.Run(test with { Path = "lite/harness/missing.html", References = [new("/lite/harness/also-missing.html", "==")] }, _ => null).Passed,
+                "Two failed document loads must not compare as a passing blank page.");
+            True(WptRefTestRunner.Run(test with { Options = new JsonObject { ["viewport_size"] = "320x240" },
+                References = [new("/" + red, "==")] }, _ => null).Passed,
+                "Reference documents inherit the root test viewport.");
+            True(WptRefTestRunner.Run(test with { Path = "lite/harness/reference-wait.html", References = [new("/" + blue, "==")] }, _ => null).Passed,
+                "TestRendered must release reftest-wait before comparison.");
+        }
+        finally { ConformanceServer.Stop(); }
+    }
+
+    [Test]
+    public static void WptCatalog_IncludesVariantsWorkersReferencesAndManualTests()
+    {
+        var manifest = JsonNode.Parse("""
+            {"version":9,"url_base":"/","items":{
+              "testharness":{"html":{"sample.any.js":["hash",["html/sample.any.html?one",{}],
+                ["html/sample.any.worker.html?one",{"timeout":"long","testdriver":true}]]}},
+              "reftest":{"html":{"paint.html":["hash",[null,[["/html/reference.html","=="],["/html/not.html","!="]],{}]]}},
+              "manual":{"html":{"input-manual.html":["hash",[null,{}]]}},
+              "support":{"html":{"reference.html":["hash",[]]}}
+            }}
+            """)!.AsObject();
+        var catalog = WptCatalog.Parse(manifest);
+        Equal(4, catalog.Count);
+        var worker = catalog.Single(c => c.Context == "dedicatedworker");
+        Equal("html/sample.any.js", worker.Source);
+        True(worker.LongTimeout && worker.TestDriver);
+        Equal(2, catalog.Single(c => c.Kind == "reftest").References.Count);
+        True(catalog.Any(c => c.Kind == "manual"));
+        True(!WptCatalog.ValidPath("html/%2e%2e/test.html"));
+        True(!WptCatalog.ValidPath("C:/outside.html"));
+    }
+
+    [Test]
+    public static void MixedEvidence_RequiresEveryReviewedTargetAssertion()
+    {
+        var review = JsonNode.Parse("""
+            {"classification":"mixed","assertionInventoryComplete":true,"assertions":[
+              {"name":"required","classification":"included","reason":"HTML 5.3 obligation"},
+              {"name":"later","classification":"post-target","reason":"Introduced after target"}]}
+            """)!.AsObject();
+        var evidence = Pass() with { Outcome = "fail", Subtests = [new("required", 0, null), new("later", 1, "unsupported")] };
+        True(ExecutionEvidence.HasPassingEvidence([evidence], "wpt", evidence.Path, "required", true, review));
+        True(!ExecutionEvidence.HasPassingEvidence([evidence], "wpt", evidence.Path, "later", true, review));
+        True(!ExecutionEvidence.HasPassingEvidence([evidence with { HarnessStatus = 2 }], "wpt", evidence.Path, null, true, review));
+        True(!ExecutionEvidence.HasPassingEvidence([evidence with { Outcome = "timeout" }], "wpt", evidence.Path, null, true, review));
+        True(!ExecutionEvidence.HasPassingEvidence([evidence with { Subtests = [new("required", 0, null), new("later", 2, "timeout")] }], "wpt", evidence.Path, null, true, review));
+        True(!ExecutionEvidence.HasPassingEvidence([evidence with { Subtests = [new("required", 0, null)] }], "wpt", evidence.Path, null, true, review));
+        True(!ExecutionEvidence.HasPassingEvidence([evidence with { Subtests = [new("required", 1, null), new("later", 0, null)] }], "wpt", evidence.Path, null, true, review));
+        True(!ExecutionEvidence.HasPassingEvidence([evidence with { Subtests = [new("required", 0, null), new("unknown", 0, null)] }], "wpt", evidence.Path, null, true, review));
+        True(!ExecutionEvidence.HasPassingEvidence([evidence], "wpt", evidence.Path, null, true, review, "dedicatedworker"));
+    }
+
+    [Test]
+    public static void ManualEvidence_RequiresArtifactsAndRejectsTampering()
+    {
+        var identity = ExecutionEvidence.CaptureIdentity();
+        var root = ConformancePaths.EnsureArtifacts();
+        var id = Guid.NewGuid().ToString("N");
+        var attachment = Path.Combine(root, id + ".txt");
+        var path = Path.Combine(root, id + ".json");
+        try
+        {
+            File.WriteAllText(attachment, "Observed native keyboard navigation.");
+            var test = new TestEvidence("manual", "keyboard/tab", "pass", "Observed", [new("tab order", 0, null)],
+                Kind: "manual", Artifacts: [ExecutionEvidence.Artifact(attachment, "observation")],
+                Manual: new("tester", "keyboard/tab", "Windows x64 native host", DateTimeOffset.UtcNow.ToString("O")));
+            var report = new EvidenceReport(ExecutionEvidence.FormatVersion, identity, DateTimeOffset.UtcNow.AddMinutes(-1).ToString("O"),
+                DateTimeOffset.UtcNow.ToString("O"), true, [test]);
+            File.WriteAllText(path, JsonSerializer.Serialize(report, ExecutionEvidence.JsonOptions));
+            Equal(1, ExecutionEvidence.ReadCurrent([path], identity, []).Count);
+            File.WriteAllText(attachment, "changed");
+            Equal(0, ExecutionEvidence.ReadCurrent([path], identity, []).Count);
+            File.WriteAllText(path, JsonSerializer.Serialize(report with { Tests = [test with { Manual = null, Artifacts = [] }] }, ExecutionEvidence.JsonOptions));
+            Equal(0, ExecutionEvidence.ReadCurrent([path], identity, []).Count);
+            File.WriteAllText(path, JsonSerializer.Serialize(report with { FormatVersion = 2 }, ExecutionEvidence.JsonOptions));
+            Equal(0, ExecutionEvidence.ReadCurrent([path], identity, []).Count);
+        }
+        finally { File.Delete(path); File.Delete(attachment); }
+    }
+
     private static TestEvidence Pass(string name = "required") => new("wpt", "html/test.html", "pass", "ok", [new(name, 0, null)], 0, "upstream-wpt");
 
     [Test]
@@ -31,7 +129,7 @@ public static class ConformanceTests
         var path = Path.Combine(ConformancePaths.EnsureArtifacts(), $"evidence-test-{Guid.NewGuid():N}.json");
         try
         {
-            var report = new EvidenceReport(2, identity, DateTime.UtcNow.ToString("O"), DateTime.UtcNow.ToString("O"), true, [Pass()]);
+            var report = new EvidenceReport(ExecutionEvidence.FormatVersion, identity, DateTime.UtcNow.ToString("O"), DateTime.UtcNow.ToString("O"), true, [Pass()]);
             File.WriteAllText(path, JsonSerializer.Serialize(report, ExecutionEvidence.JsonOptions));
             var blockers = new List<string>();
             Equal(1, ExecutionEvidence.ReadCurrent([path], identity, blockers).Count);

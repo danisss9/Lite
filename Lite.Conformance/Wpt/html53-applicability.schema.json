@@ -13,7 +13,7 @@
       "type": "string"
     },
     "schemaVersion": {
-      "const": 1
+      "const": 2
     },
     "target": {
       "const": "https://www.w3.org/TR/2018/WD-html53-20181018/"
@@ -41,6 +41,7 @@
           "classification": {
             "enum": [
               "included",
+              "mixed",
               "unreviewed",
               "post-target",
               "regression-only",
@@ -50,8 +51,28 @@
           "reason": {
             "type": "string",
             "minLength": 1
+          },
+          "assertionInventoryComplete": { "const": true },
+          "assertions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["name", "classification", "reason"],
+              "properties": {
+                "name": { "type": "string", "minLength": 1 },
+                "classification": { "enum": ["included", "post-target", "regression-only", "profile-excluded"] },
+                "reason": { "type": "string", "minLength": 1 }
+              },
+              "additionalProperties": false
+            }
           }
         },
+        "allOf": [{
+          "if": { "properties": { "classification": { "const": "mixed" } } },
+          "then": { "required": ["assertions", "assertionInventoryComplete"] },
+          "else": { "not": { "anyOf": [{ "required": ["assertions"] }, { "required": ["assertionInventoryComplete"] }] } }
+        }],
         "additionalProperties": false
       }
     }

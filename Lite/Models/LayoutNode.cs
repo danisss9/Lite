@@ -86,6 +86,7 @@ public class LayoutNode
     /// <summary>For a child collapsed by a closed &lt;details&gt;: the display value before it was
     /// hidden (null = not hidden by details; "" = no explicit display to restore).</summary>
     public string? DetailsSavedDisplay { get; set; }
+    internal long DetailsToggleVersion { get; set; }
 
     /// <summary>For a &lt;template&gt; element: the inert <c>#document-fragment</c> holding its parsed
     /// content (exposed to JS as <c>template.content</c>). The content is NOT part of the rendered tree

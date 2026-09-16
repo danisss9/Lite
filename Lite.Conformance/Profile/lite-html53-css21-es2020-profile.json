@@ -184,6 +184,31 @@
       "notes": "Limited to the named assertion; the containing section remains untested until its complete normative inventory is covered."
     },
     {
+      "id": "html53.4.11.details-toggle",
+      "specification": "html53",
+      "clause": "4.11.1 details notification task steps",
+      "url": "https://www.w3.org/TR/2018/WD-html53-20181018/interactive-elements.html#the-details-element",
+      "title": "Runtime open attribute changes queue and coalesce details toggle notifications",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "wpt",
+          "path": "lite/html53/details-toggle.html",
+          "assertion": "Attribute presence changes coalesce into a trusted non-bubbling non-cancelable toggle event"
+        },
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/DomTests.cs#Details_ToggleCoalescingKeepsTheLatestTaskPosition"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Scripting/Dom/JsElement.cs",
+        "Lite/Models/LayoutNode.cs"
+      ],
+      "notes": "Only runtime attribute mutations and notification coalescing are covered. Parser-created open attributes, complete DOM task-source scheduling, summary activation, and rendering remain separate untested obligations."
+    },
+    {
       "id": "html53.4.7.iframe-initial-document",
       "specification": "html53",
       "clause": "4.7.6 iframe initial document",

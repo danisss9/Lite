@@ -42,7 +42,7 @@ internal static class PixelDiff
     }
 
     /// <summary>Writes expected/actual/diff PNGs into the artifacts folder for triage.</summary>
-    public static void WriteFailureArtifacts(string name, SKBitmap expected, SKBitmap actual)
+    public static void WriteFailureArtifacts(string name, SKBitmap expected, SKBitmap actual, byte tolerance = ChannelTolerance)
     {
         var dir = ConformancePaths.EnsureArtifacts();
         SavePng(expected, Path.Combine(dir, $"{name}-expected.png"));
@@ -56,10 +56,10 @@ internal static class PixelDiff
             var dp = new SKColor[ep.Length];
             for (int i = 0; i < ep.Length; i++)
             {
-                bool same = Math.Abs(ep[i].Red - ap[i].Red) <= ChannelTolerance &&
-                            Math.Abs(ep[i].Green - ap[i].Green) <= ChannelTolerance &&
-                            Math.Abs(ep[i].Blue - ap[i].Blue) <= ChannelTolerance &&
-                            Math.Abs(ep[i].Alpha - ap[i].Alpha) <= ChannelTolerance;
+                bool same = Math.Abs(ep[i].Red - ap[i].Red) <= tolerance &&
+                            Math.Abs(ep[i].Green - ap[i].Green) <= tolerance &&
+                            Math.Abs(ep[i].Blue - ap[i].Blue) <= tolerance &&
+                            Math.Abs(ep[i].Alpha - ap[i].Alpha) <= tolerance;
                 dp[i] = same ? new SKColor(255, 255, 255) : new SKColor(255, 0, 0);
             }
             diff.Pixels = dp;

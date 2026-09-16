@@ -9,6 +9,40 @@ namespace Lite.Tests;
 /// <summary>Item 1 — live DOM: innerHTML parse/serialize, StyleResolver, mutation methods.</summary>
 public static class DomTests
 {
+    [Test]
+    public static void Details_ToggleCoalescesAttributeAndPropertyChanges()
+    {
+        var (_, _, engine) = NewPage();
+        engine.RawEngine.Execute("""
+            var details = document.createElement('details'); document.body.appendChild(details);
+            globalThis.toggles = 0;
+            details.addEventListener('toggle', function() { toggles++; });
+            details.open = true; details.removeAttribute('open'); details.toggleAttribute('open');
+            """);
+        Equal(0, Convert.ToInt32(engine.RawEngine.GetValue("toggles").ToObject()));
+        engine.DrainTasks();
+        Equal(1, Convert.ToInt32(engine.RawEngine.GetValue("toggles").ToObject()));
+        engine.RawEngine.Execute("details.setAttribute('open', 'already-open');");
+        engine.DrainTasks();
+        Equal(1, Convert.ToInt32(engine.RawEngine.GetValue("toggles").ToObject()));
+    }
+
+    [Test]
+    public static void Details_ToggleCoalescingKeepsTheLatestTaskPosition()
+    {
+        var (_, _, engine) = NewPage();
+        engine.RawEngine.Execute("""
+            var details = document.createElement('details');
+            document.body.appendChild(details);
+            globalThis.order = [];
+            details.addEventListener('toggle', function() { order.push('toggle'); });
+            details.open = true;
+            """);
+        engine.EnqueueMacrotask(() => engine.RawEngine.Execute("order.push('between');"));
+        engine.RawEngine.Execute("details.open = false;");
+        engine.DrainTasks();
+        Equal("between,toggle", engine.RawEngine.Evaluate("order.join(',')").ToString());
+    }
     /// <summary>Builds a minimal HTML/BODY LayoutNode tree and a JsEngine over it.</summary>
     private static (LayoutNode root, LayoutNode body, JsEngine engine) NewPage()
     {
@@ -237,10 +271,12 @@ public static class DomTests
             var imgs = document.querySelectorAll('img');
             var chosen = imgs[0].currentSrc;
             var chosenSrc = imgs[0].src;
-            var fallback = imgs[1].currentSrc;");
-        Equal("large.png", (string?)engine.RawEngine.GetValue("chosen").ToObject());
-        Equal("large.png", (string?)engine.RawEngine.GetValue("chosenSrc").ToObject());
-        Equal("fb2.png", (string?)engine.RawEngine.GetValue("fallback").ToObject());
+            var fallback = imgs[1].currentSrc;
+            var original = imgs[0].getAttribute('src');");
+        Equal("http://test/large.png", (string?)engine.RawEngine.GetValue("chosen").ToObject());
+        Equal("http://test/fallback.png", (string?)engine.RawEngine.GetValue("chosenSrc").ToObject());
+        Equal("http://test/fb2.png", (string?)engine.RawEngine.GetValue("fallback").ToObject());
+        Equal("fallback.png", (string?)engine.RawEngine.GetValue("original").ToObject());
     }
 
     private static object? Val(JsEngine e, string name) => e.RawEngine.GetValue(name).ToObject();

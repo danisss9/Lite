@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HTML 5.3 details notification coalescing</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<body>
+<script>
+async_test(function (t) {
+  var details = document.createElement('details');
+  document.body.appendChild(details);
+  var count = 0;
+  details.addEventListener('toggle', t.step_func(function (event) {
+    count++;
+    assert_equals(event.target, details);
+    assert_false(event.bubbles);
+    assert_false(event.cancelable);
+    assert_true(event.isTrusted);
+  }));
+  details.open = true;
+  details.removeAttribute('open');
+  details.setAttribute('open', '');
+  assert_equals(count, 0, 'notification is queued');
+  t.step_timeout(function () {
+    assert_equals(count, 1, 'successive changes coalesce');
+    details.setAttribute('open', 'still present');
+    t.step_timeout(function () {
+      assert_equals(count, 1, 'changing an existing attribute value does not notify');
+      t.done();
+    }, 20);
+  }, 20);
+}, 'Attribute presence changes coalesce into a trusted non-bubbling non-cancelable toggle event');
+</script>

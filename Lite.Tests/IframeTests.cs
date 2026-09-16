@@ -12,6 +12,34 @@ namespace Lite.Tests;
 /// </summary>
 public static class IframeTests
 {
+    [Test]
+    public static void FragmentParsing_UsesOwningDocumentAfterAnotherPageLoads()
+    {
+        var first = Parser.ParseChildPage("<!doctype html><style>.chosen { color: red }</style><div id=target></div>",
+            true, "http://first.test/page", 400, 200);
+        var second = Parser.ParseChildPage("<!doctype html><style>.chosen { color: blue }</style><div id=target></div>",
+            true, "http://second.test/page", 400, 200);
+        foreach (var page in new[] { first, second })
+            page.Engine.RawEngine.Execute("document.getElementById('target').innerHTML='<p id=added class=chosen>text</p><iframe id=frame srcdoc=\"<p>child</p>\"></iframe>';");
+        Equal("rgba(255, 0, 0, 1)", first.Engine.RawEngine.Evaluate("getComputedStyle(document.getElementById('added')).color").ToString());
+        Equal("rgba(0, 0, 255, 1)", second.Engine.RawEngine.Evaluate("getComputedStyle(document.getElementById('added')).color").ToString());
+        Equal("http://first.test", FindById(first.Root, "frame")!.ChildPage!.Engine.Origin);
+        Equal("http://second.test", FindById(second.Root, "frame")!.ChildPage!.Engine.Origin);
+    }
+
+    [Test]
+    public static void FragmentScripts_DoNotModifyTheActiveScriptQueue()
+    {
+        var page = Parser.ParseChildPage("""
+            <!doctype html><div id=target></div>
+            <script>document.getElementById('target').innerHTML='<section><script>globalThis.unexpected=1;<\/script></section>'; globalThis.firstRan=true;</script>
+            <script>globalThis.secondRan=true;</script>
+            """, true, "http://parser.test/", 400, 200);
+        Equal("true", page.Engine.RawEngine.GetValue("firstRan").ToString());
+        Equal("true", page.Engine.RawEngine.GetValue("secondRan").ToString());
+        Equal("undefined", page.Engine.RawEngine.GetValue("unexpected").ToString());
+    }
+
     private static readonly AngleSharp.Css.Dom.ICssStyleDeclaration _style =
         Parser.ParseFragment("<div></div>")[0].Style;
 

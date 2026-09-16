@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "23 3 * * *"
 
 permissions:
   contents: read
@@ -27,9 +29,17 @@ jobs:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Fetch pinned tests
         shell: pwsh
         run: ./scripts/fetch-tests.ps1
+
+      - name: Generate pinned WPT manifest
+        shell: pwsh
+        run: ./scripts/build-wpt-manifest.ps1
 
       - name: Restore
         run: dotnet restore Lite.sln
@@ -46,18 +56,21 @@ jobs:
       - name: Build
         run: dotnet build Lite.sln --configuration Release --no-restore
 
+      - name: Export HTML inventory backlog
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html53-inventory
+
       - name: Unit tests
         run: dotnet run --project Lite.Tests/Lite.Tests.csproj --configuration Release --no-build --no-restore -- --report Lite.Conformance/artifacts/unit-results.json
 
 
       - name: CSS 2.1 curated gate
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite css21
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite css21 --report Lite.Conformance/artifacts/css21-results.json
 
       - name: WPT curated gate
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite wpt --report Lite.Conformance/artifacts/wpt-results.json
 
       - name: ES2020 sparse Test262 gate
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite test262
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite test262 --report Lite.Conformance/artifacts/test262-results.json
 
       - name: Acid1 regression
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite acid --filter acid1
@@ -67,7 +80,7 @@ jobs:
 
       - name: Generate HTML 5.3 compatibility evidence
         if: always()
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json --evidence Lite.Conformance/artifacts/unit-results.json --evidence Lite.Conformance/artifacts/wpt-results.json --evidence Lite.Conformance/artifacts/html53-results.json
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json --evidence Lite.Conformance/artifacts/unit-results.json --evidence Lite.Conformance/artifacts/wpt-results.json --evidence Lite.Conformance/artifacts/html53-results.json --evidence Lite.Conformance/artifacts/css21-results.json --evidence Lite.Conformance/artifacts/test262-results.json
 
       - name: Upload compatibility evidence
         if: always()

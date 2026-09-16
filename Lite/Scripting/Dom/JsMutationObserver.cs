@@ -31,7 +31,7 @@ public class JsMutationRecord
     }
 
     public string type { get; }
-    public JsElement target => new(_engine, _target);
+    public JsElement target => JsElement.For(_engine, _target);
     public JsElement[] addedNodes => _added.Select(n => JsElement.For(_engine, n)).ToArray();
     public JsElement[] removedNodes => _removed.Select(n => JsElement.For(_engine, n)).ToArray();
     public JsElement? previousSibling => _prev is null ? null : JsElement.For(_engine, _prev);
@@ -56,9 +56,9 @@ public class JsMutationObserver
 
     public JsMutationObserver(JsValue callback)
     {
-        _engine = JsEngine.Instance!.RawEngine;
+        _engine = callback.AsObject().Engine;
         _callback = callback;
-        MutationObserverRegistry.Register(this);
+        MutationObserverRegistry.Register(_engine, this);
     }
 
     public void observe(JsElement target, JsValue? options = null)
@@ -123,14 +123,8 @@ public class JsMutationObserver
 /// </summary>
 internal static class MutationObserverRegistry
 {
-    private static readonly List<JsMutationObserver> _observers = [];
-
-    /// <summary>Cleared when a new engine/page is created.</summary>
-    public static void Reset() => _observers.Clear();
-
-    public static void Register(JsMutationObserver observer) => _observers.Add(observer);
-
-    public static bool HasObservers => _observers.Count > 0;
+    private static readonly ObserverRegistry<JsMutationObserver> Registrations = new();
+    public static void Register(Engine engine, JsMutationObserver observer) => Registrations.Register(engine, observer);
 
     private static bool Observes(JsMutationObserver.Target t, LayoutNode node)
     {
@@ -144,8 +138,7 @@ internal static class MutationObserverRegistry
     public static void NotifyChildList(Engine engine, LayoutNode parent,
         List<LayoutNode>? added, List<LayoutNode>? removed, LayoutNode? prev, LayoutNode? next)
     {
-        if (_observers.Count == 0) return;
-        foreach (var obs in _observers)
+        foreach (var obs in Registrations.For(engine))
             foreach (var t in obs.Targets)
                 if (t.ChildList && Observes(t, parent))
                 {
@@ -156,8 +149,7 @@ internal static class MutationObserverRegistry
 
     public static void NotifyAttribute(Engine engine, LayoutNode node, string attributeName, string? oldValue)
     {
-        if (_observers.Count == 0) return;
-        foreach (var obs in _observers)
+        foreach (var obs in Registrations.For(engine))
             foreach (var t in obs.Targets)
                 if (t.Attributes && Observes(t, node))
                 {
@@ -169,8 +161,7 @@ internal static class MutationObserverRegistry
 
     public static void NotifyCharacterData(Engine engine, LayoutNode node, string? oldValue)
     {
-        if (_observers.Count == 0) return;
-        foreach (var obs in _observers)
+        foreach (var obs in Registrations.For(engine))
             foreach (var t in obs.Targets)
                 if (t.CharacterData && Observes(t, node))
                 {
@@ -181,10 +172,10 @@ internal static class MutationObserverRegistry
     }
 
     /// <summary>Delivers all queued records to their observers. Runs at the microtask checkpoint.</summary>
-    public static void DeliverAll()
+    public static void DeliverAll(Engine engine)
     {
         // Snapshot — a callback may mutate and queue more (delivered on the next checkpoint).
-        foreach (var obs in _observers.ToArray())
+        foreach (var obs in Registrations.For(engine).ToArray())
             obs.Deliver();
     }
 }

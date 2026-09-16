@@ -168,7 +168,7 @@ public class JsDocument
     {
         if (string.IsNullOrEmpty(markup)) return;
         var target = FindFirst(_root, n => n.TagName == "BODY") ?? _root;
-        foreach (var node in Parser.ParseFragment(markup, target.TagName))
+        foreach (var node in Parser.ParseFragment(markup, target.TagName, JsEngine.For(_engine)?.DocumentState))
             target.AddChild(node);
     }
 

@@ -8,6 +8,25 @@ namespace Lite.Tests;
 /// <summary>Phase 4 — MutationObserver (childList, attributes, characterData, subtree).</summary>
 public static class MutationObserverTests
 {
+    [Test]
+    public static void Observers_SurviveAnotherDocumentAndUseTheirOwnRealm()
+    {
+        var first = NewEngine();
+        first.Execute("globalThis.calls = 0; var observer = new MutationObserver(function(){ calls++; }); observer.observe(document.body, {childList:true});");
+        var second = NewEngine();
+        second.Execute("globalThis.calls = 0; var observer = new MutationObserver(function(){ calls++; }); observer.observe(document.body, {childList:true});");
+        first.RawEngine.Execute("document.body.appendChild(document.createElement('div'));");
+        second.FlushMicrotasks();
+        Equal(0, Convert.ToInt32(Global(first, "calls")));
+        first.FlushMicrotasks();
+        Equal(1, Convert.ToInt32(Global(first, "calls")));
+        Equal(0, Convert.ToInt32(Global(second, "calls")));
+        // Create another observer in the older realm after the global last-page pointer changed.
+        first.RawEngine.Execute("var later = new MutationObserver(function(){ calls += 10; }); later.observe(document.body, {childList:true}); document.body.appendChild(document.createElement('p'));");
+        first.FlushMicrotasks();
+        Equal(12, Convert.ToInt32(Global(first, "calls")));
+    }
+
     private static JsEngine NewEngine()
     {
         var sample = Parser.ParseFragment("<span></span>")[0];

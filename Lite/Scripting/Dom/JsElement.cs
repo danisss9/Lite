@@ -206,7 +206,7 @@ public class JsElement
         {
             Node.Children.Clear();
             Node.TextOverride = string.Empty;
-            foreach (var child in Parser.ParseFragment(value ?? string.Empty, Node.TagName))
+            foreach (var child in Parser.ParseFragment(value ?? string.Empty, Node.TagName, Node.OwningDocument))
                 Node.AddChild(child);
         }
     }
@@ -223,7 +223,8 @@ public class JsElement
     /// </summary>
     public void insertAdjacentHTML(string position, string html)
     {
-        var nodes = Parser.ParseFragment(html ?? string.Empty, Node.Parent?.TagName ?? Node.TagName);
+        var context = position?.ToLowerInvariant() is "afterbegin" or "beforeend" ? Node : Node.Parent ?? Node;
+        var nodes = Parser.ParseFragment(html ?? string.Empty, context.TagName, Node.OwningDocument);
         switch (position?.ToLowerInvariant())
         {
             case "beforebegin":
@@ -278,7 +279,7 @@ public class JsElement
     private void ReplaceSelfWithFragment(string html)
     {
         if (Node.Parent is null) return;
-        var nodes = Parser.ParseFragment(html, Node.Parent.TagName);
+        var nodes = Parser.ParseFragment(html, Node.Parent.TagName, Node.OwningDocument);
         InsertNodesBefore(nodes, Node);
         Node.Parent.Children.Remove(Node);
         Node.Parent = null;
@@ -426,10 +427,7 @@ public class JsElement
         get => Node.Attributes.ContainsKey("open");
         set
         {
-            var was = Node.Attributes.ContainsKey("open");
-            if (value) Node.Attributes["open"] = ""; else Node.Attributes.Remove("open");
-            // HTMLDetailsElement fires a non-bubbling 'toggle' event asynchronously on change.
-            if (was != value && Node.TagName == "DETAILS") FireSimpleEvent("toggle");
+            if (value) setAttribute("open", ""); else removeAttribute("open");
         }
     }
 
@@ -510,8 +508,13 @@ public class JsElement
     /// <summary>HTMLImageElement.src / HTMLSourceElement.src — reflects the <c>src</c> attribute.</summary>
     public string src
     {
-        get => Node.Attributes.GetValueOrDefault("src", string.Empty);
-        set => Node.Attributes["src"] = value;
+        get
+        {
+            if (!Node.Attributes.TryGetValue("src", out var value)) return string.Empty;
+            return Uri.TryCreate(Node.OwningDocument?.BaseUrl, UriKind.Absolute, out var basis) &&
+                Uri.TryCreate(basis, value, out var absolute) ? absolute.AbsoluteUri : value;
+        }
+        set => setAttribute("src", value);
     }
 
     /// <summary>HTMLImageElement.currentSrc — the URL actually chosen for display (after
@@ -700,7 +703,7 @@ public class JsElement
     public void removeAttribute(string name)
     {
         var old = Node.Attributes.TryGetValue(name, out var o) ? o : null;
-        Node.Attributes.Remove(name);
+        if (!Node.Attributes.Remove(name)) return;
         OnAttributeChanged(Node, name, old);
     }
 
@@ -709,8 +712,25 @@ public class JsElement
     internal static void OnAttributeChanged(LayoutNode node, string name, string? oldValue)
     {
         if (name is "class" or "id") StyleResolver.Apply(node);
-        if (JsEngine.Instance is { } eng)
+        if ((node.OwningDocument?.Engine ?? JsEngine.Instance) is { } eng)
+        {
             MutationObserverRegistry.NotifyAttribute(eng.RawEngine, node, name, oldValue);
+            if (node.TagName == "DETAILS" && name == "open" &&
+                (oldValue is not null) != node.Attributes.ContainsKey("open"))
+            {
+                var version = ++node.DetailsToggleVersion;
+                eng.EnqueueMacrotask(() =>
+                {
+                    // HTML 5.3 aborts an older notification if another is queued after it.
+                    if (version != node.DetailsToggleVersion) return;
+                    var evt = new JsEvent();
+                    evt.Init("toggle", false, false);
+                    evt.isTrusted = true;
+                    evt.target = For(eng.RawEngine, node);
+                    EventDispatcher.DispatchEvent(node, evt, eng);
+                });
+            }
+        }
     }
 
     /// <summary>Element.setAttributeNode(attr) — sets the named attribute from the Attr's value.</summary>
@@ -755,14 +775,11 @@ public class JsElement
         var shouldHave = force ?? !present;
         if (shouldHave && !present)
         {
-            Node.Attributes[name] = "";
-            MutationObserverRegistry.NotifyAttribute(_engine, Node, name, null);
+            setAttribute(name, "");
         }
         else if (!shouldHave && present)
         {
-            var old = Node.Attributes[name];
-            Node.Attributes.Remove(name);
-            MutationObserverRegistry.NotifyAttribute(_engine, Node, name, old);
+            removeAttribute(name);
         }
         return shouldHave;
     }

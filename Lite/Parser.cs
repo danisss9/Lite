@@ -80,39 +80,56 @@ internal static class Parser
     private static readonly HashSet<string> SkipTags =
         ["HEAD", "STYLE", "NOSCRIPT", "META", "LINK", "TITLE"];
 
-    private static string? _baseUrl;
+    internal sealed class ParseState
+    {
+        internal string? BaseUrl, DocumentBaseUrl;
+        internal IDocument? Document;
+        internal int ViewportWidth = 800, ViewportHeight = 600, InlineModuleCounter;
+        internal bool Verbose, IsFragment;
+        internal readonly List<string> PendingScripts = [], DeferredScripts = [], AsyncScripts = [];
+        internal readonly List<(string Specifier, string? Code)> PendingModules = [];
+        internal readonly Dictionary<string, List<int>> Counters = new();
+        internal readonly List<CssRule> CssRules = [];
+        internal readonly Dictionary<string, (string Value, int Count)> RawBackgrounds = new(StringComparer.Ordinal);
+        internal readonly List<(string Selector, ICssStyleDeclaration Style)> PseudoElementRules = [];
+    }
+
+    [ThreadStatic] private static ParseState? _current;
+    private static ParseState Current { get => _current ??= new(); set => _current = value; }
+    private static string? _baseUrl { get => Current.BaseUrl; set => Current.BaseUrl = value; }
     internal static string? BaseUrl => _baseUrl;
     /// <summary>Base URL for resolving relative references — equals the document URL unless
     /// a &lt;base href&gt; element overrides it.</summary>
-    private static string? _documentBaseUrl;
+    private static string? _documentBaseUrl { get => Current.DocumentBaseUrl; set => Current.DocumentBaseUrl = value; }
     // Classic scripts that run "in document position" during parse: inline scripts and external
     // (src) scripts without defer/async. Executed in document order, before deferred/async.
-    private static readonly List<string> _pendingScripts = [];
+    private static List<string> _pendingScripts => Current.PendingScripts;
     // External classic scripts marked `defer` — executed after parsing, in document order.
-    private static readonly List<string> _deferredScripts = [];
+    private static List<string> _deferredScripts => Current.DeferredScripts;
     // External classic scripts marked `async` — executed on the task queue, not in any order.
-    private static readonly List<string> _asyncScripts = [];
+    private static List<string> _asyncScripts => Current.AsyncScripts;
     // ES modules to import after the engine is created: (specifier, code) — code is null for src modules.
-    private static readonly List<(string Specifier, string? Code)> _pendingModules = [];
-    private static int _inlineModuleCounter;
+    private static List<(string Specifier, string? Code)> _pendingModules => Current.PendingModules;
+    private static int _inlineModuleCounter { get => Current.InlineModuleCounter; set => Current.InlineModuleCounter = value; }
     private static readonly HttpClient _httpClient = new();
 
     /// <summary>The live AngleSharp document from the last page load, kept alive so that
     /// innerHTML fragments can be parsed with the page's full stylesheet cascade.</summary>
-    internal static IDocument? Document { get; private set; }
+    internal static IDocument? Document { get => Current.Document; private set => Current.Document = value; }
 
     /// <summary>Suppresses per-element debug logging during fragment (innerHTML) parsing.</summary>
-    private static bool _verbose = false;
-    internal static int ViewportWidth { get; private set; } = 800;
-    internal static int ViewportHeight { get; private set; } = 600;
+    private static bool _verbose { get => Current.Verbose; set => Current.Verbose = value; }
+    internal static int ViewportWidth { get => Current.ViewportWidth; private set => Current.ViewportWidth = value; }
+    internal static int ViewportHeight { get => Current.ViewportHeight; private set => Current.ViewportHeight = value; }
 
     // CSS counter state maintained during document-order traversal.
     // A stack per counter name (CSS 2.1 §12.4): counter-reset pushes a new nested instance,
     // popped when its element's subtree is left; counters(name, sep) joins the whole stack.
-    private static readonly Dictionary<string, List<int>> _counters = new();
+    private static Dictionary<string, List<int>> _counters => Current.Counters;
 
     internal static LayoutNode TraverseHtml(string address, int viewportWidth = 800, int viewportHeight = 600)
     {
+        Current = new ParseState();
         _baseUrl = address;
         _documentBaseUrl = address;
         _pendingScripts.Clear();
@@ -247,7 +264,7 @@ internal static class Parser
 
         // Always create the JS engine so inline onclick/on* handlers work,
         // even when there are no external or inline script blocks.
-        var state = new DocumentState(document, address, _documentBaseUrl ?? address, CssRules.ToArray());
+        var state = new DocumentState(document, address, _documentBaseUrl ?? address, CssRules.ToArray()) { ParserContext = Current };
         var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight, state);
 
         // Now that the parent engine exists, wire each nested <iframe>'s child context
@@ -362,24 +379,9 @@ internal static class Parser
     /// <param name="content">A URL when <paramref name="isSrcdoc"/> is false, else inline HTML.</param>
     internal static Page ParseChildPage(string content, bool isSrcdoc, string baseUrl, int viewportWidth, int viewportHeight)
     {
-        var savedBaseUrl = _baseUrl;
-        var savedDocBaseUrl = _documentBaseUrl;
-        var savedDocument = Document;
-        var savedVw = ViewportWidth;
-        var savedVh = ViewportHeight;
+        var savedContext = Current;
         var savedInstance = JsEngine.Instance;
-        var savedRules = new List<CssRule>(CssRules);
-        // The child parse reuses the per-parse accumulators; snapshot them so the parent's
-        // in-progress traversal (it is mid-Traverse when it hits the iframe) is not disturbed.
-        var savedPending = new List<string>(_pendingScripts);
-        var savedDeferred = new List<string>(_deferredScripts);
-        var savedAsync = new List<string>(_asyncScripts);
-        var savedModules = new List<(string, string?)>(_pendingModules);
-        var savedModuleCounter = _inlineModuleCounter;
-        var savedCounters = _counters.ToDictionary(kv => kv.Key, kv => new List<int>(kv.Value));
-        // The parent is mid-Traverse when it reaches the iframe; without this its remaining
-        // elements would be styled with the CHILD document's pseudo-element rules.
-        var savedPseudoRules = new List<(string, ICssStyleDeclaration)>(_pseudoElementRules);
+        Current = new ParseState();
 
         try
         {
@@ -407,23 +409,8 @@ internal static class Parser
         }
         finally
         {
-            _baseUrl = savedBaseUrl;
-            _documentBaseUrl = savedDocBaseUrl;
-            Document = savedDocument;
-            ViewportWidth = savedVw;
-            ViewportHeight = savedVh;
+            Current = savedContext;
             JsEngine.Instance = savedInstance;
-            CssRules.Clear();
-            CssRules.AddRange(savedRules);
-            _pendingScripts.Clear(); _pendingScripts.AddRange(savedPending);
-            _deferredScripts.Clear(); _deferredScripts.AddRange(savedDeferred);
-            _asyncScripts.Clear(); _asyncScripts.AddRange(savedAsync);
-            _pendingModules.Clear(); _pendingModules.AddRange(savedModules);
-            _inlineModuleCounter = savedModuleCounter;
-            _counters.Clear();
-            foreach (var (k, v) in savedCounters) _counters[k] = v;
-            _pseudoElementRules.Clear();
-            _pseudoElementRules.AddRange(savedPseudoRules);
         }
     }
 
@@ -726,10 +713,13 @@ internal static class Parser
         {
             var src = element.GetAttribute("src");
             node.Alt = element.GetAttribute("alt") ?? string.Empty;
-            if (src != null) node.Attributes["src"] = src;   // source of truth for .src / .currentSrc
+            if (src != null) node.Attributes["src"] = src;
 
             if (!string.IsNullOrEmpty(src))
-                node.Image = ResourceLoader.FetchImage(src, _baseUrl);
+            {
+                node.Attributes["_currentSrc"] = ResolveAgainstBase(src);
+                node.Image = ResourceLoader.FetchImage(src, _documentBaseUrl ?? _baseUrl);
+            }
 
             // HTML presentational hints: width/height are lengths in px, or (HTML 4) percentages.
             // They are CSS declarations, not the image's intrinsic size — mixing the two derived
@@ -1924,6 +1914,7 @@ internal static class Parser
 
     private static void CollectScript(IElement scriptEl)
     {
+        if (Current.IsFragment) return;
         var type = scriptEl.GetAttribute("type");
         bool isModule = string.Equals(type, "module", StringComparison.OrdinalIgnoreCase);
         var src = scriptEl.GetAttribute("src");
@@ -2800,7 +2791,27 @@ internal static class Parser
     /// against the current page's stylesheets. Used by Element.innerHTML / insertAdjacentHTML.
     /// Per HTML semantics, &lt;script&gt; elements in the fragment are parsed but not executed.
     /// </summary>
-    internal static List<LayoutNode> ParseFragment(string html, string contextTag = "DIV")
+    internal static List<LayoutNode> ParseFragment(string html, string contextTag = "DIV", DocumentState? owner = null)
+    {
+        var previous = Current;
+        if (owner is not null)
+        {
+            Current = owner.ParserContext ?? new ParseState { Document = owner.Document,
+                BaseUrl = owner.Address, DocumentBaseUrl = owner.BaseUrl };
+            if (owner.ParserContext is null) Current.CssRules.AddRange(owner.StyleRules);
+        }
+        var wasFragment = Current.IsFragment;
+        Current.IsFragment = true;
+        try
+        {
+            var nodes = ParseFragmentCore(html, contextTag);
+            if (owner is not null) foreach (var node in nodes) owner.Bind(node);
+            return nodes;
+        }
+        finally { Current.IsFragment = wasFragment; Current = previous; }
+    }
+
+    private static List<LayoutNode> ParseFragmentCore(string html, string contextTag)
     {
         var result = new List<LayoutNode>();
         if (string.IsNullOrEmpty(html)) return result;
@@ -2925,10 +2936,9 @@ internal static class Parser
             var url = FirstSrcsetUrl(srcset);
             if (string.IsNullOrEmpty(url)) continue;
 
-            // This source wins — point the <img> at it.
-            imgNode.Attributes["src"] = url;
+            // Selection changes the current request, not the author's src attribute.
             imgNode.Attributes["_currentSrc"] = ResolveAgainstBase(url);
-            imgNode.Image = ResourceLoader.FetchImage(url, _baseUrl);
+            imgNode.Image = ResourceLoader.FetchImage(url, _documentBaseUrl ?? _baseUrl);
             return;
         }
 
@@ -2949,8 +2959,8 @@ internal static class Parser
     /// there is no usable base (e.g. fragments parsed before any page load).</summary>
     private static string ResolveAgainstBase(string url)
     {
-        if (string.IsNullOrEmpty(_baseUrl)) return url;
-        return Uri.TryCreate(new Uri(_baseUrl), url, out var abs) ? abs.AbsoluteUri : url;
+        return Uri.TryCreate(_documentBaseUrl ?? _baseUrl, UriKind.Absolute, out var basis) &&
+            Uri.TryCreate(basis, url, out var absolute) ? absolute.AbsoluteUri : url;
     }
 
     // ---- CSS rule storage for the LayoutNode-based cascade (StyleResolver) ----
@@ -2963,7 +2973,7 @@ internal static class Parser
         Dictionary<string, string> Properties,
         HashSet<string> ImportantProps);
 
-    internal static readonly List<CssRule> CssRules = [];
+    internal static List<CssRule> CssRules => Current.CssRules;
 
     /// <summary>
     /// Collects all CSS style rules from the document's stylesheets for the runtime cascade
@@ -2991,8 +3001,7 @@ internal static class Parser
     // agree; a selector declared twice keeps the last value, which is what the cascade would do
     // for equal specificity anyway.
 
-    private static readonly Dictionary<string, (string Value, int Count)> s_rawBackgrounds =
-        new(StringComparer.Ordinal);
+    private static Dictionary<string, (string Value, int Count)> s_rawBackgrounds => Current.RawBackgrounds;
 
     private static void CollectRawBackgrounds(AngleSharp.Dom.IDocument document)
     {
@@ -3225,7 +3234,7 @@ internal static class Parser
     /// Pseudo-element rules lifted out of the stylesheets before the cascade runs, kept so
     /// <see cref="TryExtractPseudoElementRule"/> can still see their original selectors.
     /// </summary>
-    private static readonly List<(string Selector, ICssStyleDeclaration Style)> _pseudoElementRules = [];
+    private static List<(string Selector, ICssStyleDeclaration Style)> _pseudoElementRules => Current.PseudoElementRules;
 
     /// <summary>
     /// Removes pseudo-element rules from the CSSOM so they cannot style the originating element.
