@@ -7,10 +7,12 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <AssemblyName>Lite.Conformance</AssemblyName>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
   <ItemGroup>

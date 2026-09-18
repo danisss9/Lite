@@ -1,0 +1,20 @@
+<!doctype html>
+<html class="test-wait">
+<body>
+<script>
+var frames = 0;
+var lastFrame = 0;
+requestAnimationFrame(function (time) {
+  frames++;
+  lastFrame = time;
+  requestAnimationFrame(function (time) { frames++; lastFrame = time; });
+});
+document.documentElement.addEventListener('TestRendered', function () {
+  if (frames !== 2) return;
+  requestAnimationFrame(function (time) {
+    if (time > lastFrame) document.documentElement.removeAttribute('class');
+  });
+});
+</script>
+</body>
+</html>

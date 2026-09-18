@@ -4,6 +4,14 @@
   "type": "object",
   "required": ["target", "specification", "excludedFeatures"],
   "properties": {
+    "$schema": { "type": "string" },
+    "includedFeatures": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "semanticReviewComplete": { "type": "boolean" },
+    "smokeRoots": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "testOverrides": { "type": "array", "items": { "type": "object", "required": ["path", "classification", "reason"], "properties": {
+      "path": { "type": "string" }, "classification": { "enum": ["included", "post-target", "out-of-scope"] },
+      "reason": { "type": "string", "minLength": 1 }, "replacements": { "type": "array", "items": { "type": "string" } }
+    }, "additionalProperties": false } },
     "target": { "type": "string" },
     "specification": { "type": "string", "format": "uri" },
     "excludedFeatures": {

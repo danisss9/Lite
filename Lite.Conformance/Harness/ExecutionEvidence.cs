@@ -13,17 +13,20 @@ internal sealed record EvidenceIdentity(string SourceRevision, string SourceSha2
 internal sealed record SubtestEvidence(string Name, int Status, string? Message);
 internal sealed record EvidenceArtifact(string Path, string Sha256, string Kind);
 internal sealed record ManualEvidence(string Operator, string Procedure, string Environment, string ObservedUtc);
+internal sealed record JavaScriptEvidence(string Mode, string InventorySha256, string Selection,
+    int ShardIndex, int ShardCount, string? Filter, string? ExpectedPhase, string? ObservedPhase,
+    string? ExpectedType, string? ObservedType, long DurationMs);
 internal sealed record TestEvidence(string Suite, string Path, string Outcome, string Detail,
     IReadOnlyList<SubtestEvidence> Subtests, int? HarnessStatus = null, string Environment = "local", string? Url = null,
     string Context = "window", string Kind = "testharness", IReadOnlyList<EvidenceArtifact>? Artifacts = null,
-    ManualEvidence? Manual = null);
+    ManualEvidence? Manual = null, JavaScriptEvidence? JavaScript = null);
 internal sealed record EvidenceReport(int FormatVersion, EvidenceIdentity Identity,
     string StartedUtc, string FinishedUtc, bool Completed, IReadOnlyList<TestEvidence> Tests);
 
 /// <summary>Executed outcomes are useful only for the source, binaries and inputs that produced them.</summary>
 internal static class ExecutionEvidence
 {
-    internal const int FormatVersion = 3;
+    internal const int FormatVersion = 4;
     internal const string ProfileFile = "Profile/lite-html53-css21-es2020-profile.json";
     internal static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -107,7 +110,8 @@ internal static class ExecutionEvidence
         {
             try
             {
-                var report = JsonSerializer.Deserialize<EvidenceReport>(File.ReadAllText(path), JsonOptions);
+                var json = File.ReadAllText(path);
+                var report = JsonSerializer.Deserialize<EvidenceReport>(json, JsonOptions);
                 if (report is null || report.FormatVersion != FormatVersion || !report.Completed || report.Identity != identity)
                 {
                     blockers.Add($"stale-or-incomplete-evidence:{path}");
@@ -115,6 +119,12 @@ internal static class ExecutionEvidence
                 }
                 if (report.Tests is null || report.Tests.Any(t => t is null || t.Subtests is null))
                     throw new InvalidDataException("Missing test outcomes or assertions.");
+                // Constructor defaults are useful to producers, but v3 input must explicitly
+                // record its execution context and kind instead of inheriting a window default.
+                using var document = JsonDocument.Parse(json);
+                foreach (var test in document.RootElement.GetProperty("tests").EnumerateArray())
+                    if (!test.TryGetProperty("context", out _) || !test.TryGetProperty("kind", out _))
+                        throw new InvalidDataException("Missing execution context or test kind.");
                 if (!DateTimeOffset.TryParse(report.StartedUtc, out var started) ||
                     !DateTimeOffset.TryParse(report.FinishedUtc, out var finished) || finished < started)
                     throw new InvalidDataException("Invalid execution timestamps.");
@@ -128,7 +138,7 @@ internal static class ExecutionEvidence
                         if (!File.Exists(file) || HashFile(file) != artifact.Sha256)
                             throw new InvalidDataException($"Missing or changed evidence artifact: {artifact.Path}");
                     }
-                    if (test.Suite == "manual" && (test.Manual is not { } manual ||
+                    if ((test.Suite == "manual" || test.Kind is "manual" or "visual") && (test.Manual is not { } manual ||
                         string.IsNullOrWhiteSpace(manual.Operator) || string.IsNullOrWhiteSpace(manual.Procedure) ||
                         string.IsNullOrWhiteSpace(manual.Environment) || !DateTimeOffset.TryParse(manual.ObservedUtc, out var observed) ||
                         observed < started || observed > finished ||
@@ -146,7 +156,7 @@ internal static class ExecutionEvidence
     }
 
     internal static bool HasPassingEvidence(IEnumerable<TestEvidence> tests, string suite, string path, string? assertion,
-        bool requireUpstream = false, JsonObject? review = null, string? context = null)
+        bool requireUpstream = false, JsonObject? review = null, string? context = null, string? kind = null)
     {
         var matches = tests.Where(t => t.Suite == suite && t.Path == path).ToArray();
         // Conflicting runs are blockers; ordering the input files cannot conceal a failure.
@@ -154,6 +164,7 @@ internal static class ExecutionEvidence
             (suite != "wpt" || t.HarnessStatus == 0) && t.Subtests.Count > 0 &&
             (!requireUpstream || t.Environment == "upstream-wpt") &&
             (context is null || t.Context == context) &&
+            (kind is null || t.Kind == kind) &&
             (review is null ? t.Outcome == "pass" && t.Subtests.All(s => s.Status == 0) &&
                 (string.IsNullOrEmpty(assertion) || t.Subtests.Any(s => s.Name == assertion)) :
                 HtmlApplicability.HasPassingAssertions(t, review, assertion)));

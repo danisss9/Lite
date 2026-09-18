@@ -4,7 +4,46 @@
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
 <body>
+<details id="parsed-open" open><summary>Initially open</summary></details>
+<details id="parsed-closed"><summary>Initially closed</summary></details>
 <script>
+async_test(function (t) {
+  var opened = document.getElementById('parsed-open');
+  var closed = document.getElementById('parsed-closed');
+  var count = 0;
+  opened.addEventListener('toggle', t.step_func(function (event) {
+    count++;
+    assert_equals(event.target, opened);
+    assert_true(event.isTrusted);
+    assert_false(event.bubbles);
+    assert_false(event.cancelable);
+  }));
+  closed.addEventListener('toggle', t.unreached_func('Closed parsed details must not notify'));
+  assert_equals(count, 0, 'parser notification is asynchronous');
+  t.step_timeout(function () {
+    assert_equals(count, 1);
+    t.done();
+  }, 20);
+}, 'Document parsing queues a toggle notification only for details with an open attribute');
+
+async_test(function (t) {
+  var host = document.createElement('div');
+  host.innerHTML = '<details open><summary>Detached</summary></details>';
+  var details = host.firstChild;
+  var count = 0;
+  details.addEventListener('toggle', t.step_func(function (event) {
+    count++;
+    assert_equals(event.target, details);
+    assert_true(event.isTrusted);
+  }));
+  details.open = false;
+  assert_equals(count, 0);
+  t.step_timeout(function () {
+    assert_equals(count, 1, 'parsed and runtime changes coalesce even when disconnected');
+    t.done();
+  }, 20);
+}, 'Fragment parsing queues a details toggle notification that coalesces with subsequent changes');
+
 async_test(function (t) {
   var details = document.createElement('details');
   document.body.appendChild(details);

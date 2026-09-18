@@ -447,7 +447,7 @@
     {
       "path": "lite/html53/details-toggle.html",
       "classification": "included",
-      "reason": "Reviewed against HTML 5.3 section 4.11.1 details notification task steps and the referenced simple event initialization; only runtime attribute mutations are asserted."
+      "reason": "Reviewed against HTML 5.3 section 4.11.1 details notification task steps and the referenced simple event initialization; asserts runtime mutations, initial document parsing, and disconnected fragment parsing."
     }
   ]
 }

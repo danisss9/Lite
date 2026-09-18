@@ -266,6 +266,7 @@ internal static class Parser
         // even when there are no external or inline script blocks.
         var state = new DocumentState(document, address, _documentBaseUrl ?? address, CssRules.ToArray()) { ParserContext = Current };
         var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight, state);
+        QueueParsedDetailsNotifications(root, jsEngine);
 
         // Now that the parent engine exists, wire each nested <iframe>'s child context
         // (parent/top/frameElement) and queue its load event. Done before the parent's scripts run
@@ -2805,10 +2806,22 @@ internal static class Parser
         try
         {
             var nodes = ParseFragmentCore(html, contextTag);
-            if (owner is not null) foreach (var node in nodes) owner.Bind(node);
+            if (owner is not null) foreach (var node in nodes)
+            {
+                owner.Bind(node);
+                if (owner.Engine is { } engine) QueueParsedDetailsNotifications(node, engine);
+            }
             return nodes;
         }
         finally { Current.IsFragment = wasFragment; Current = previous; }
+    }
+
+    private static void QueueParsedDetailsNotifications(LayoutNode node, JsEngine engine)
+    {
+        if (node.TagName == "DETAILS" && node.Attributes.ContainsKey("open"))
+            Scripting.Dom.JsElement.QueueDetailsToggle(node, engine);
+        // Template contents are inert; child frame documents own their task queues.
+        foreach (var child in node.Children) QueueParsedDetailsNotifications(child, engine);
     }
 
     private static List<LayoutNode> ParseFragmentCore(string html, string contextTag)

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Lite.Models;
 using Lite.Scripting;
 
@@ -8,6 +9,23 @@ namespace Lite.Conformance.Harness;
 /// then pumps the JS event loop — the same pattern Lite.Tests uses headlessly.</summary>
 internal static class HeadlessPage
 {
+    private sealed class FrameClock { internal double Timestamp; }
+    private static readonly ConditionalWeakTable<JsEngine, FrameClock> FrameClocks = new();
+
+    private static bool PumpFrame(JsEngine engine)
+    {
+        var worked = engine.DrainTree();
+        engine.FlushMicrotasksTree();
+        var clock = FrameClocks.GetValue(engine, _ => new());
+        clock.Timestamp += 16;
+        return engine.FlushRAFTree(clock.Timestamp) || worked;
+    }
+
+    internal static void PumpFrames(JsEngine engine, int count)
+    {
+        for (var i = 0; i < count; i++) PumpFrame(engine);
+    }
+
     public static (LayoutNode Root, JsEngine Engine) Load(string url, int width = 800, int height = 600)
     {
         var root = Parser.TraverseHtml(url, width, height);
@@ -20,14 +38,10 @@ internal static class HeadlessPage
     public static bool PumpUntil(JsEngine engine, Func<bool> done, int timeoutMs = 10_000)
     {
         var sw = Stopwatch.StartNew();
-        double rafClock = 0;
         while (sw.ElapsedMilliseconds < timeoutMs)
         {
             if (done()) return true;
-            var worked = engine.DrainTree();
-            engine.FlushMicrotasksTree();
-            rafClock += 16;
-            worked |= engine.FlushRAFTree(rafClock);
+            var worked = PumpFrame(engine);
             if (!worked) Thread.Sleep(5);
         }
         return done();
@@ -38,13 +52,9 @@ internal static class HeadlessPage
     public static void PumpUntilIdle(JsEngine engine, int timeoutMs = 5_000)
     {
         var sw = Stopwatch.StartNew();
-        double rafClock = 0;
         while (sw.ElapsedMilliseconds < timeoutMs)
         {
-            var worked = engine.DrainTree();
-            engine.FlushMicrotasksTree();
-            rafClock += 16;
-            worked |= engine.FlushRAFTree(rafClock);
+            var worked = PumpFrame(engine);
             if (!worked && !engine.HasPendingTreeTasks && !engine.HasPendingTreeRAF) return;
             if (!worked) Thread.Sleep(5);
         }

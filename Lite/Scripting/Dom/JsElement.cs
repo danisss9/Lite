@@ -717,20 +717,23 @@ public class JsElement
             MutationObserverRegistry.NotifyAttribute(eng.RawEngine, node, name, oldValue);
             if (node.TagName == "DETAILS" && name == "open" &&
                 (oldValue is not null) != node.Attributes.ContainsKey("open"))
-            {
-                var version = ++node.DetailsToggleVersion;
-                eng.EnqueueMacrotask(() =>
-                {
-                    // HTML 5.3 aborts an older notification if another is queued after it.
-                    if (version != node.DetailsToggleVersion) return;
-                    var evt = new JsEvent();
-                    evt.Init("toggle", false, false);
-                    evt.isTrusted = true;
-                    evt.target = For(eng.RawEngine, node);
-                    EventDispatcher.DispatchEvent(node, evt, eng);
-                });
-            }
+                QueueDetailsToggle(node, eng);
         }
+    }
+
+    internal static void QueueDetailsToggle(LayoutNode node, JsEngine engine)
+    {
+        var version = ++node.DetailsToggleVersion;
+        engine.EnqueueMacrotask(() =>
+        {
+            // HTML 5.3 aborts an older notification if another is queued after it.
+            if (version != node.DetailsToggleVersion) return;
+            var evt = new JsEvent();
+            evt.Init("toggle", false, false);
+            evt.isTrusted = true;
+            evt.target = For(engine.RawEngine, node);
+            EventDispatcher.DispatchEvent(node, evt, engine);
+        });
     }
 
     /// <summary>Element.setAttributeNode(attr) — sets the named attribute from the Attr's value.</summary>

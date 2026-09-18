@@ -10,6 +10,55 @@ namespace Lite.Tests;
 public static class DomTests
 {
     [Test]
+    public static void Details_ParsedDocumentsKeepSeparateNotificationQueues()
+    {
+        const string html = """
+            <!doctype html><details open></details><details open></details>
+            <template><details open></details></template>
+            <script>
+            var order = [];
+            var items = document.querySelectorAll('details');
+            items[0].addEventListener('toggle', function() { order.push('first'); });
+            items[1].addEventListener('toggle', function() { order.push('second'); });
+            items[0].open = false;
+            </script>
+            """;
+        var first = Parser.ParseChildPage(html, true, "http://first.test/", 800, 600).Engine!;
+        var second = Parser.ParseChildPage(html, true, "http://second.test/", 800, 600).Engine!;
+        Equal("", first.RawEngine.Evaluate("order.join(',')").ToString());
+        Equal("", second.RawEngine.Evaluate("order.join(',')").ToString());
+        first.DrainTasks();
+        Equal("second,first", first.RawEngine.Evaluate("order.join(',')").ToString());
+        Equal("", second.RawEngine.Evaluate("order.join(',')").ToString());
+        second.DrainTasks();
+        Equal("second,first", second.RawEngine.Evaluate("order.join(',')").ToString());
+    }
+
+    [Test]
+    public static void Details_ParsedFragmentQueuesOnOwningEngineAndCoalesces()
+    {
+        var (_, _, engine) = NewPage();
+        engine.RawEngine.Execute("""
+            var host = document.createElement('div');
+            host.innerHTML = '<details open><summary>S</summary></details><details></details>';
+            var parsed = host.firstChild;
+            var events = [];
+            parsed.addEventListener('toggle', function(e) {
+                events.push(e.target === parsed && e.isTrusted && !e.bubbles && !e.cancelable);
+            });
+            host.lastChild.addEventListener('toggle', function() { events.push('closed'); });
+            """);
+        // A second realm must not steal the disconnected fragment's queued event.
+        var (_, _, other) = NewPage();
+        other.DrainTasks();
+        Equal(0, Convert.ToInt32(engine.RawEngine.Evaluate("events.length").ToObject()));
+        engine.EnqueueMacrotask(() => engine.RawEngine.Execute("events.push('between');"));
+        engine.RawEngine.Execute("parsed.open = false;");
+        engine.DrainTasks();
+        Equal("between,true", engine.RawEngine.Evaluate("events.join(',')").ToString());
+    }
+
+    [Test]
     public static void Details_ToggleCoalescesAttributeAndPropertyChanges()
     {
         var (_, _, engine) = NewPage();

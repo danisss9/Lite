@@ -11,6 +11,7 @@ internal static class Program
 {
     public static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--test262-worker") return Test262Runner.Worker();
         if (args.Length == 4 && args[0] == "--wpt-worker")
             return WptRunner.Worker(args[1], args[2], args[3]);
         string? suite = null;
@@ -22,12 +23,17 @@ internal static class Program
         var shard = ShardSpec.All;
         bool requireReady = false;
         bool requireHtmlReady = false;
+        string test262Set = "full";
         var evidencePaths = new List<string>();
 
         for (int i = 0; i < args.Length; i++)
         {
             switch (args[i])
             {
+                case "--test262-set" when i + 1 < args.Length:
+                    test262Set = args[++i];
+                    if (test262Set is not ("full" or "smoke")) { Console.Error.WriteLine("--test262-set must be full or smoke"); return 2; }
+                    break;
                 case "--suite" when i + 1 < args.Length:
                     suite = args[++i];
                     break;
@@ -90,7 +96,7 @@ internal static class Program
 
         if ((requireReady || requireHtmlReady || evidencePaths.Count > 0) && !suite.Equals("profile", StringComparison.OrdinalIgnoreCase))
         { Console.WriteLine("Readiness and --evidence options require --suite profile."); return 2; }
-        if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html53" or "html53-inventory" or "css21" or "test262"))
+        if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html53" or "html53-inventory" or "css21" or "test262" or "es2020-inventory"))
         { Console.WriteLine("--report is supported by profile, wpt, html53, html53-inventory, css21, and test262."); return 2; }
         if (survey is not null && suite.Equals("css21", StringComparison.OrdinalIgnoreCase) && reportPath is not null)
         { Console.WriteLine("CSS surveys do not produce readiness evidence; use the curated CSS gate with --report."); return 2; }
@@ -105,7 +111,8 @@ internal static class Program
                 "html53-inventory" => HtmlInventoryRunner.Run(reportPath),
                 "css21" when survey is not null => RefTestRunner.Survey(survey, surveyLimit),
                 "css21" => RefTestRunner.Run(filter, shard, reportPath),
-                "test262" => Test262Runner.Run(filter, shard, reportPath),
+                "test262" => Test262Runner.Run(filter, shard, reportPath, test262Set),
+                "es2020-inventory" => Test262Catalog.Run(reportPath),
                 "acid" => AcidRunner.Run(filter, updateBaselines, shard),
                 "profile" => ProfileRunner.Run(reportPath, requireReady, requireHtmlReady, evidencePaths),
                 "all" => RunAll(filter, shard),

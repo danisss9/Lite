@@ -46,19 +46,12 @@
       "destination": "vendor/test262",
       "sparseCheckout": [
         "harness",
-        "test/built-ins/Promise/allSettled",
-        "test/built-ins/String/prototype/matchAll",
-        "test/built-ins/BigInt",
-        "test/language/expressions/optional-chaining",
-        "test/language/expressions/coalesce",
-        "test/language/expressions/dynamic-import",
-        "test/language/expressions/import.meta",
-        "test/language/module-code"
+        "test"
       ],
       "applicabilityManifest": "Test262/es2020-applicability.json",
       "dependencyExceptions": "Test262/skip-list.txt",
-      "scope": "sparse",
-      "checkedOutCandidateTests": 2051,
+      "scope": "full-snapshot",
+      "checkedOutCandidateTests": 53379,
       "upstreamCandidateTestsAtRevision": 53379
     },
     {

@@ -3,18 +3,479 @@
   "target": "ECMA-262 11th edition (ES2020)",
   "specification": "https://262.ecma-international.org/11.0/",
   "excludedFeatures": [
-    { "feature": "arbitrary-module-namespace-names", "introduced": "ES2022" },
-    { "feature": "class-fields-private", "introduced": "ES2022" },
-    { "feature": "class-fields-public", "introduced": "ES2022" },
-    { "feature": "class-static-fields-private", "introduced": "ES2022" },
-    { "feature": "import-attributes", "introduced": "ES2025" },
-    { "feature": "import-defer", "introduced": "proposal" },
-    { "feature": "import-text", "introduced": "proposal" },
-    { "feature": "json-modules", "introduced": "ES2025" },
-    { "feature": "promise-with-resolvers", "introduced": "ES2024" },
-    { "feature": "regexp-v-flag", "introduced": "ES2024" },
-    { "feature": "source-phase-imports", "introduced": "proposal" },
-    { "feature": "source-phase-imports-module-source", "introduced": "proposal" },
-    { "feature": "top-level-await", "introduced": "ES2022" }
+    {
+      "feature": "AggregateError",
+      "introduced": "ES2021"
+    },
+    {
+      "feature": "Array.fromAsync",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "Array.prototype.at",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "Atomics.pause",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "Atomics.waitAsync",
+      "introduced": "ES2024"
+    },
+    {
+      "feature": "Error.isError",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "FinalizationRegistry",
+      "introduced": "ES2021"
+    },
+    {
+      "feature": "Float16Array",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "Intl-enumeration",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.DateTimeFormat-datetimestyle",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.DateTimeFormat-dayPeriod",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.DateTimeFormat-extend-timezonename",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.DateTimeFormat-formatRange",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.DateTimeFormat-fractionalSecondDigits",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.DisplayNames",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.DisplayNames-v2",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.DurationFormat",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.Era-monthcode",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.ListFormat",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.Locale",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.Locale-info",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.NumberFormat-unified",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.NumberFormat-v3",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.RelativeTimeFormat",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Intl.Segmenter",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "Math.sumPrecise",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "Object.hasOwn",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "Promise.any",
+      "introduced": "ES2021"
+    },
+    {
+      "feature": "RegExp.escape",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "ShadowRealm",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "String.prototype.at",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "String.prototype.isWellFormed",
+      "introduced": "ES2024"
+    },
+    {
+      "feature": "String.prototype.replaceAll",
+      "introduced": "ES2021"
+    },
+    {
+      "feature": "String.prototype.toWellFormed",
+      "introduced": "ES2024"
+    },
+    {
+      "feature": "Temporal",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "TypedArray.prototype.at",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "WeakRef",
+      "introduced": "ES2021"
+    },
+    {
+      "feature": "align-detached-buffer-semantics-with-web-reality",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "arbitrary-module-namespace-names",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "array-find-from-last",
+      "introduced": "ES2023"
+    },
+    {
+      "feature": "array-grouping",
+      "introduced": "ES2024"
+    },
+    {
+      "feature": "arraybuffer-transfer",
+      "introduced": "ES2024"
+    },
+    {
+      "feature": "await-dictionary",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "canonical-tz",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "change-array-by-copy",
+      "introduced": "ES2023"
+    },
+    {
+      "feature": "class-fields-private",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "class-fields-private-in",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "class-fields-public",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "class-methods-private",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "class-static-block",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "class-static-fields-private",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "class-static-fields-public",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "class-static-methods-private",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "decorators",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "error-cause",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "error-stack-accessor",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "explicit-resource-management",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "export-defer",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "hashbang",
+      "introduced": "ES2023"
+    },
+    {
+      "feature": "immutable-arraybuffer",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "import-attributes",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "import-bytes",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "import-defer",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "import-text",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "intl-normative-optional",
+      "introduced": "ECMA-402"
+    },
+    {
+      "feature": "iterator-helpers",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "iterator-sequencing",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "joint-iteration",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "json-modules",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "json-parse-with-source",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "legacy-regexp",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "logical-assignment-operators",
+      "introduced": "ES2021"
+    },
+    {
+      "feature": "nonextensible-applies-to-private",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "numeric-separator-literal",
+      "introduced": "ES2021"
+    },
+    {
+      "feature": "promise-try",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "promise-with-resolvers",
+      "introduced": "ES2024"
+    },
+    {
+      "feature": "regexp-duplicate-named-groups",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "regexp-match-indices",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "regexp-modifiers",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "regexp-v-flag",
+      "introduced": "ES2024"
+    },
+    {
+      "feature": "resizable-arraybuffer",
+      "introduced": "ES2024"
+    },
+    {
+      "feature": "set-methods",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "source-phase-imports",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "source-phase-imports-module-source",
+      "introduced": "proposal"
+    },
+    {
+      "feature": "symbols-as-weakmap-keys",
+      "introduced": "ES2023"
+    },
+    {
+      "feature": "top-level-await",
+      "introduced": "ES2022"
+    },
+    {
+      "feature": "uint8array-base64",
+      "introduced": "post-ES2020"
+    },
+    {
+      "feature": "upsert",
+      "introduced": "post-ES2020"
+    }
+  ],
+  "includedFeatures": [
+    "Array.prototype.flat",
+    "Array.prototype.flatMap",
+    "Array.prototype.includes",
+    "Array.prototype.values",
+    "ArrayBuffer",
+    "Atomics",
+    "BigInt",
+    "DataView",
+    "DataView.prototype.getFloat32",
+    "DataView.prototype.getFloat64",
+    "DataView.prototype.getInt16",
+    "DataView.prototype.getInt32",
+    "DataView.prototype.getInt8",
+    "DataView.prototype.getUint16",
+    "DataView.prototype.getUint32",
+    "DataView.prototype.setUint8",
+    "Float32Array",
+    "Float64Array",
+    "Int16Array",
+    "Int32Array",
+    "Int8Array",
+    "IsHTMLDDA",
+    "Map",
+    "Object.fromEntries",
+    "Object.is",
+    "Promise",
+    "Promise.allSettled",
+    "Promise.prototype.finally",
+    "Proxy",
+    "Reflect",
+    "Reflect.construct",
+    "Reflect.set",
+    "Reflect.setPrototypeOf",
+    "Set",
+    "SharedArrayBuffer",
+    "String.fromCodePoint",
+    "String.prototype.endsWith",
+    "String.prototype.includes",
+    "String.prototype.matchAll",
+    "String.prototype.trimEnd",
+    "String.prototype.trimStart",
+    "Symbol",
+    "Symbol.asyncIterator",
+    "Symbol.hasInstance",
+    "Symbol.isConcatSpreadable",
+    "Symbol.iterator",
+    "Symbol.match",
+    "Symbol.matchAll",
+    "Symbol.prototype.description",
+    "Symbol.replace",
+    "Symbol.search",
+    "Symbol.species",
+    "Symbol.split",
+    "Symbol.toPrimitive",
+    "Symbol.toStringTag",
+    "Symbol.unscopables",
+    "TypedArray",
+    "Uint16Array",
+    "Uint32Array",
+    "Uint8Array",
+    "Uint8ClampedArray",
+    "WeakMap",
+    "WeakSet",
+    "__getter__",
+    "__proto__",
+    "__setter__",
+    "arrow-function",
+    "async-functions",
+    "async-iteration",
+    "caller",
+    "class",
+    "coalesce-expression",
+    "computed-property-names",
+    "const",
+    "cross-realm",
+    "default-parameters",
+    "destructuring-assignment",
+    "destructuring-binding",
+    "dynamic-import",
+    "exponentiation",
+    "export-star-as-namespace-from-module",
+    "for-in-order",
+    "for-of",
+    "generators",
+    "globalThis",
+    "host-gc-required",
+    "import.meta",
+    "json-superset",
+    "let",
+    "new.target",
+    "object-rest",
+    "object-spread",
+    "optional-catch-binding",
+    "optional-chaining",
+    "proxy-missing-checks",
+    "regexp-dotall",
+    "regexp-lookbehind",
+    "regexp-named-groups",
+    "regexp-unicode-property-escapes",
+    "rest-parameters",
+    "stable-array-sort",
+    "stable-typedarray-sort",
+    "string-trimming",
+    "super",
+    "tail-call-optimization",
+    "template",
+    "u180e",
+    "well-formed-json-stringify"
+  ],
+  "semanticReviewComplete": false,
+  "testOverrides": [],
+  "smokeRoots": [
+    "test/built-ins/Promise/allSettled/",
+    "test/built-ins/String/prototype/matchAll/",
+    "test/built-ins/BigInt/",
+    "test/language/expressions/optional-chaining/",
+    "test/language/expressions/coalesce/",
+    "test/language/expressions/dynamic-import/",
+    "test/language/expressions/import.meta/",
+    "test/language/module-code/"
   ]
 }

@@ -227,10 +227,10 @@ internal static class WptRunner
     private static RunResult RunOne(string testPath)
     {
         var test = CatalogCase(testPath);
-        if (WptCatalog.Context(testPath) != "window" || test is { Kind: not ("testharness" or "reftest") })
+        if (WptCatalog.Context(testPath) != "window" || test?.TestDriver == true || test is { Kind: not ("testharness" or "reftest" or "crashtest") })
             return new(Cat.Unsupported, $"Execution support required: {test?.Kind ?? "testharness"}/{WptCatalog.Context(testPath)}", 0, 0);
         var file = ResolveSource(test?.Source ?? testPath.Split(['?', '#'])[0], UsesUpstream(testPath));
-        var longTimeout = file is not null && WptMetadata.Parse(File.ReadAllText(file)).LongTimeout;
+        var longTimeout = test?.LongTimeout == true || (file is not null && WptMetadata.Parse(File.ReadAllText(file)).LongTimeout);
         return RunIsolated(testPath, ConformanceServer.TestUrl(WptMetadata.UrlPath(testPath)), longTimeout ? 70_000 : 20_000);
     }
 
@@ -296,8 +296,12 @@ internal static class WptRunner
         ConformanceServer.SetWorkerBaseUrl(url);
         var test = CatalogCase(path);
         // The parent owns the server. Child workers only need its address for reference URLs.
-        var result = test is { Kind: "reftest" }
-            ? WptRefTestRunner.Run(test, CatalogCase) : RunInProcess(url);
+        var result = test?.Kind switch
+        {
+            "reftest" => WptRefTestRunner.Run(test, CatalogCase),
+            "crashtest" => WptVisualPage.RunCrash(test),
+            _ => RunInProcess(url),
+        };
         File.WriteAllText(output, JsonSerializer.Serialize(result, ExecutionEvidence.JsonOptions));
         return 0;
     }

@@ -11,6 +11,22 @@ namespace Lite.Tests;
 public static class ConformanceTests
 {
     [Test]
+    public static void WptCrashtests_RequireLoadAndDeferredPaint()
+    {
+        ConformanceServer.Start(cssRegressionMode: false);
+        try
+        {
+            const string path = "lite/harness/crash-wait.html";
+            var test = new WptCase(path, path, "crashtest", "window", false, false, []);
+            var result = WptVisualPage.RunCrash(test);
+            True(result.Passed, result.Detail);
+            True(!WptVisualPage.RunCrash(test with { Path = "lite/harness/missing-crash-test.html" }).Passed);
+            True(WptVisualPage.RunCrash(test with { TestDriver = true }).Cat == WptRunner.Cat.Unsupported);
+        }
+        finally { ConformanceServer.Stop(); }
+    }
+
+    [Test]
     public static void WptReferences_UseAlternativePathsAndRejectCycles()
     {
         ConformanceServer.Start(cssRegressionMode: false);
@@ -46,16 +62,18 @@ public static class ConformanceTests
                 ["html/sample.any.worker.html?one",{"timeout":"long","testdriver":true}]]}},
               "reftest":{"html":{"paint.html":["hash",[null,[["/html/reference.html","=="],["/html/not.html","!="]],{}]]}},
               "manual":{"html":{"input-manual.html":["hash",[null,{}]]}},
+              "crashtest":{"html":{"layout-crash.html":["hash",[null,{}]]}},
               "support":{"html":{"reference.html":["hash",[]]}}
             }}
             """)!.AsObject();
         var catalog = WptCatalog.Parse(manifest);
-        Equal(4, catalog.Count);
+        Equal(5, catalog.Count);
         var worker = catalog.Single(c => c.Context == "dedicatedworker");
         Equal("html/sample.any.js", worker.Source);
         True(worker.LongTimeout && worker.TestDriver);
         Equal(2, catalog.Single(c => c.Kind == "reftest").References.Count);
         True(catalog.Any(c => c.Kind == "manual"));
+        True(catalog.Any(c => c.Kind == "crashtest"));
         True(!WptCatalog.ValidPath("html/%2e%2e/test.html"));
         True(!WptCatalog.ValidPath("C:/outside.html"));
     }
@@ -78,6 +96,7 @@ public static class ConformanceTests
         True(!ExecutionEvidence.HasPassingEvidence([evidence with { Subtests = [new("required", 1, null), new("later", 0, null)] }], "wpt", evidence.Path, null, true, review));
         True(!ExecutionEvidence.HasPassingEvidence([evidence with { Subtests = [new("required", 0, null), new("unknown", 0, null)] }], "wpt", evidence.Path, null, true, review));
         True(!ExecutionEvidence.HasPassingEvidence([evidence], "wpt", evidence.Path, null, true, review, "dedicatedworker"));
+        True(!ExecutionEvidence.HasPassingEvidence([evidence], "wpt", evidence.Path, null, true, review, "window", "reftest"));
     }
 
     [Test]
@@ -98,6 +117,13 @@ public static class ConformanceTests
                 DateTimeOffset.UtcNow.ToString("O"), true, [test]);
             File.WriteAllText(path, JsonSerializer.Serialize(report, ExecutionEvidence.JsonOptions));
             Equal(1, ExecutionEvidence.ReadCurrent([path], identity, []).Count);
+            var missingContext = JsonSerializer.SerializeToNode(report, ExecutionEvidence.JsonOptions)!;
+            missingContext["tests"]![0]!.AsObject().Remove("context");
+            File.WriteAllText(path, missingContext.ToJsonString());
+            Equal(0, ExecutionEvidence.ReadCurrent([path], identity, []).Count);
+            File.WriteAllText(path, JsonSerializer.Serialize(report with { Tests = [test with { Suite = "wpt", Manual = null }] }, ExecutionEvidence.JsonOptions));
+            Equal(0, ExecutionEvidence.ReadCurrent([path], identity, []).Count);
+            File.WriteAllText(path, JsonSerializer.Serialize(report, ExecutionEvidence.JsonOptions));
             File.WriteAllText(attachment, "changed");
             Equal(0, ExecutionEvidence.ReadCurrent([path], identity, []).Count);
             File.WriteAllText(path, JsonSerializer.Serialize(report with { Tests = [test with { Manual = null, Artifacts = [] }] }, ExecutionEvidence.JsonOptions));

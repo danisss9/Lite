@@ -227,9 +227,13 @@ internal static class ProfileRunner
         var paths = suite == "wpt" ? WptRunner.Expand(path, requireUpstream).ToArray() : [path];
         // Worker-only or otherwise unexecutable mappings cannot pass vacuously.
         var reviews = suite == "wpt" ? HtmlApplicability.Read()["tests"]!.AsArray().OfType<JsonObject>().ToArray() : [];
-        return paths.Length > 0 && paths.All(p => ExecutionEvidence.HasPassingEvidence(evidence, suite, p, assertion, requireUpstream,
-            suite == "wpt" ? HtmlApplicability.FindReview(reviews, p, WptRunner.CatalogCase(p)?.Source ?? path) : null,
-            suite == "wpt" ? WptCatalog.Context(p) : null));
+        return paths.Length > 0 && paths.All(p =>
+        {
+            var test = suite == "wpt" ? WptRunner.CatalogCase(p) : null;
+            return ExecutionEvidence.HasPassingEvidence(evidence, suite, p, assertion, requireUpstream,
+                suite == "wpt" ? HtmlApplicability.FindReview(reviews, p, test?.Source ?? path) : null,
+                suite == "wpt" ? WptCatalog.Context(p) : null, test?.Kind);
+        });
     }
 
     private static JsonObject? ReadObject(string path, string label, List<string> errors)
@@ -382,11 +386,12 @@ internal static class ProfileRunner
 
     private static bool EvidenceExists(string suite, string path)
     {
-        var filePath = path.Split('#', 2)[0].Replace('/', Path.DirectorySeparatorChar);
+        var filePath = path.Split(['?', '#'], 2)[0].Replace('/', Path.DirectorySeparatorChar);
         return suite switch
         {
             "unit" => File.Exists(Path.Combine(ConformancePaths.ProjectRoot, "..", filePath)),
-            "wpt" => File.Exists(Path.Combine(ConformancePaths.Vendor, "wpt", filePath)) ||
+            "wpt" => WptRunner.CatalogCase(path) is not null ||
+                     File.Exists(Path.Combine(ConformancePaths.Vendor, "wpt", filePath)) ||
                      File.Exists(Path.Combine(ConformancePaths.Overrides, filePath)),
             "test262" => File.Exists(Path.Combine(ConformancePaths.Vendor, "test262", filePath)),
             "acid" => File.Exists(Path.Combine(ConformancePaths.Vendor, filePath)),

@@ -1,5 +1,4 @@
 using Lite.Conformance.Harness;
-using Lite.Layout;
 using SkiaSharp;
 
 namespace Lite.Conformance.Wpt;
@@ -63,30 +62,7 @@ internal static class WptRefTestRunner
         SKBitmap Render(string path)
         {
             if (images.TryGetValue(path, out var bitmap)) return bitmap;
-            var width = 800;
-            var height = 600;
-            if (test.Options?["viewport_size"]?.GetValue<string>() is { } viewport)
-            {
-                var size = viewport.Split('x');
-                if (size.Length != 2 || !int.TryParse(size[0], out width) || !int.TryParse(size[1], out height) || width <= 0 || height <= 0)
-                    throw new InvalidDataException("Invalid reference viewport.");
-            }
-            var (root, engine) = HeadlessPage.Load(ConformanceServer.TestUrl(path), width, height);
-            var document = engine.DocumentState.Document;
-            if (document is null || (int)document.StatusCode is < 200 or >= 300)
-                throw new InvalidDataException($"Reference document failed to load: {path} ({document?.StatusCode}).");
-            if (!HeadlessPage.PumpUntil(engine, () => engine.DocumentReadyState == "complete"))
-                throw new TimeoutException("Reference document did not finish loading.");
-            // Complete the first paint before allowing a delayed test to make its changes.
-            using (Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height })) { }
-            if (root.Attributes.GetValueOrDefault("class", "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
-                .Contains("reftest-wait"))
-                engine.RawEngine.Execute("document.documentElement.dispatchEvent(new Event('TestRendered', {bubbles:true}));");
-            if (!HeadlessPage.PumpUntil(engine, () => !root.Attributes.GetValueOrDefault("class", "")
-                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Contains("reftest-wait")))
-                throw new TimeoutException("Reference document did not clear reftest-wait.");
-            engine.FlushMicrotasks();
-            bitmap = Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height });
+            bitmap = WptVisualPage.Render(path, test.Options?["viewport_size"]?.GetValue<string>());
             images.Add(path, bitmap);
             return bitmap;
         }
