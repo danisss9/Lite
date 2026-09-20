@@ -1,0 +1,61 @@
+{
+  "target": "Lite ES2020 browser integration",
+  "obligations": [
+    {
+      "id": "document-all",
+      "reviewed": false,
+      "requirement": "Live document.all collection with IsHTMLDDA conversion, equality, typeof and call behavior",
+      "remaining": "Missing collection; a supported stock-Jint host hook has not been verified.",
+      "tests": ["annex-b-document-all"]
+    },
+    {
+      "id": "module-fetch-options",
+      "reviewed": false,
+      "requirement": "Asynchronous module loading with browser MIME, CORS, credentials, redirect and cancellation semantics",
+      "remaining": "Model credentials/referrer fetch options and review redirect-taint and credentialed-CORS cases.",
+      "tests": ["module-cors", "module-redirect-base-and-meta", "module-rejection-types", "module-cancellation"]
+    },
+    {
+      "id": "module-resolution-and-identity",
+      "reviewed": false,
+      "requirement": "Importer-relative resolution, URL identity, live bindings, cycles, evaluation once, namespaces and failure caching",
+      "remaining": "Review URL edge cases, inline registry identity, failed-load caching and complete namespace integration.",
+      "tests": ["module-graphs-live-bindings-and-identity"]
+    },
+    {
+      "id": "script-source-ownership",
+      "reviewed": false,
+      "requirement": "Correct import.meta and dynamic import bases for inline/external modules and classic scripts",
+      "remaining": "Expand coverage for base elements, classic-script redirects, eval and callback-origin imports.",
+      "tests": ["classic-script-import-base", "module-readiness-and-inline-meta", "module-redirect-base-and-meta"]
+    },
+    {
+      "id": "document-and-iframe-realms",
+      "reviewed": false,
+      "requirement": "Globals, intrinsics, jobs, errors and module maps owned by the correct document/realm",
+      "remaining": "Expand iframe module/job and cross-realm error checks, including navigation during pending loads.",
+      "tests": ["document-realm-isolation", "module-cancellation", "globals-and-builtins"]
+    },
+    {
+      "id": "jobs-and-readiness",
+      "reviewed": false,
+      "requirement": "Microtask checkpoints after scripts/callbacks/tasks, deferred module completion and document readiness",
+      "remaining": "Review observer/callback ordering and readiness after loading, linking or evaluation failures.",
+      "tests": ["microtasks-and-rejection-events", "module-readiness-and-inline-meta"]
+    },
+    {
+      "id": "error-and-rejection-reporting",
+      "reviewed": false,
+      "requirement": "Preserve JavaScript error identity and provide browser error/unhandled-rejection notifications",
+      "remaining": "Complete event semantics, source locations, cancellation/default reporting and callback exceptions.",
+      "tests": ["script-error-identity", "microtasks-and-rejection-events", "module-rejection-types"]
+    },
+    {
+      "id": "host-language-configuration",
+      "reviewed": false,
+      "requirement": "Page and conformance engines share required language semantics with correct agent blocking configuration",
+      "remaining": "Review all shared semantic settings and the complete blocking/nonblocking agent contract.",
+      "tests": ["globals-and-builtins", "nonblocking-window-agent"]
+    }
+  ]
+}

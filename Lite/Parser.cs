@@ -279,6 +279,8 @@ internal static class Parser
         foreach (var script in _pendingScripts)
             jsEngine.Execute(script.Code!, script.Url);
 
+        jsEngine.MarkDocumentInteractive();
+
         // Snapshot document-owned work before asynchronous completions can overlap another parse.
         var deferred = _deferredScripts.ToArray();
         var asyncScripts = _asyncScripts.ToArray();

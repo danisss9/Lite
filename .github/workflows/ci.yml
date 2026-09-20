@@ -14,7 +14,7 @@ permissions:
 jobs:
   windows-gates:
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
 
     steps:
       - uses: actions/checkout@v4
@@ -69,8 +69,8 @@ jobs:
       - name: WPT curated gate
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite wpt --report Lite.Conformance/artifacts/wpt-results.json
 
-      - name: ES2020 sparse Test262 gate
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite test262 --report Lite.Conformance/artifacts/test262-results.json
+      - name: Full ES2020 language and host gate (eight Windows shards)
+        run: python scripts/run-es2020.py --evidence Lite.Conformance/artifacts/unit-results.json
 
       - name: Acid1 regression
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite acid --filter acid1
@@ -80,7 +80,7 @@ jobs:
 
       - name: Generate HTML 5.0 compatibility evidence
         if: always()
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json --evidence Lite.Conformance/artifacts/unit-results.json --evidence Lite.Conformance/artifacts/wpt-results.json --evidence Lite.Conformance/artifacts/html5-results.json --evidence Lite.Conformance/artifacts/css21-results.json --evidence Lite.Conformance/artifacts/test262-results.json
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json --require-es2020-ready --evidence Lite.Conformance/artifacts/unit-results.json --evidence Lite.Conformance/artifacts/wpt-results.json --evidence Lite.Conformance/artifacts/html5-results.json --evidence Lite.Conformance/artifacts/css21-results.json --evidence Lite.Conformance/artifacts/es2020/host.json --evidence Lite.Conformance/artifacts/es2020/test262-0.json --evidence Lite.Conformance/artifacts/es2020/test262-1.json --evidence Lite.Conformance/artifacts/es2020/test262-2.json --evidence Lite.Conformance/artifacts/es2020/test262-3.json --evidence Lite.Conformance/artifacts/es2020/test262-4.json --evidence Lite.Conformance/artifacts/es2020/test262-5.json --evidence Lite.Conformance/artifacts/es2020/test262-6.json --evidence Lite.Conformance/artifacts/es2020/test262-7.json
 
       - name: Upload compatibility evidence
         if: always()

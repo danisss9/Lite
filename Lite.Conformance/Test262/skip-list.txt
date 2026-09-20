@@ -2,5 +2,5 @@
 #
 # This file deliberately permits no substring or directory patterns. Post-ES2020 tests are
 # classified separately through their exact Test262 `features` metadata and
-# es2020-applicability.json. The Jint 4.16.1 migration currently has no known exception in the
-# checked-out ES2020 corpus.
+# es2020-applicability.json. No mandatory test is waived on Jint 4.16.3.
+# Known failures remain executable and block readiness; see docs/es2020-conformance.md.

@@ -14,14 +14,15 @@ internal static class Test262Execution
 {
     private static readonly Dictionary<string, string> Harness = new(StringComparer.Ordinal);
 
-    internal static Test262Outcome Run(string root, string path, string mode)
+    internal static Test262Outcome Run(string root, string path, string mode, string? sourceRoot = null)
     {
         var clock = Stopwatch.StartNew();
-        var file = Path.GetFullPath(Path.Combine(root, path));
+        var file = Path.GetFullPath(Path.Combine(sourceRoot ?? root, path));
         var source = File.ReadAllText(file);
         var meta = Test262Metadata.Parse(source);
         if (meta.Errors.Length > 0 || !meta.Modes.Contains(mode)) return new("harness-error", string.Join("; ", meta.Errors.Append("Invalid execution metadata/mode")));
-        var loader = new Test262ModuleLoader(Path.GetDirectoryName(file)!, Path.Combine(root, "test"));
+        var loader = new Test262ModuleLoader(Path.GetDirectoryName(file)!,
+            Path.Combine(sourceRoot ?? root, sourceRoot is null ? "test" : "supplemental"));
         using var engine = new Engine(options =>
         {
             JavaScriptRuntime.Configure(options, canBlock: !meta.Flags.Contains("CanBlockIsFalse"));
@@ -29,11 +30,12 @@ internal static class Test262Execution
             options.EnableModules(loader);
         });
         var completions = new List<string>();
-        var rejectionErrors = new Dictionary<JsValue, JsValue>();
+        var lateRejections = new Dictionary<JsValue, JsValue>();
         engine.Advanced.PromiseRejectionTracker += (_, args) =>
         {
-            if (args.Operation.ToString() == "Reject") rejectionErrors[args.Promise] = args.Value ?? JsValue.Undefined;
-            else rejectionErrors.Remove(args.Promise);
+            if (args.Operation.ToString() != "Reject") lateRejections.Remove(args.Promise);
+            else if (meta.Flags.Contains("async") && completions.Count > 0)
+                lateRejections[args.Promise] = args.Value ?? JsValue.Undefined;
         };
         engine.SetValue("print", new Action<JsValue>(value =>
         {
@@ -44,7 +46,7 @@ internal static class Test262Execution
         string phase = "harness";
         try
         {
-            if (mode != "raw")
+            if (!meta.Flags.Contains("raw"))
             {
                 foreach (var include in new[] { "assert.js", "sta.js" }.Concat(meta.Flags.Contains("async") ? ["doneprintHandle.js"] : []).Concat(meta.Includes))
                 {
@@ -71,7 +73,7 @@ internal static class Test262Execution
             else
             {
                 var prepared = Engine.PrepareScript(code, new Uri(file).AbsoluteUri, options: new ScriptPreparationOptions
-                { ParsingOptions = ScriptParsingOptions.Default with { Tolerant = false } });
+                { ParsingOptions = JavaScriptRuntime.ScriptParsing });
                 if (meta.NegativePhase == "parse") return Missing("parse");
                 phase = "runtime";
                 engine.Execute(prepared);
@@ -85,6 +87,8 @@ internal static class Test262Execution
                 if (completions.Count == 0) return new("timeout", "No asynchronous completion", "runtime", DurationMs: clock.ElapsedMilliseconds);
                 if (completions.Count != 1 || completions[0] != "Test262:AsyncTestComplete")
                     return new("fail", "Invalid asynchronous completion: " + string.Join("; ", completions), "runtime", DurationMs: clock.ElapsedMilliseconds);
+                if (lateRejections.Count > 0)
+                    return new("fail", "Unhandled rejection after asynchronous completion", "runtime", DurationMs: clock.ElapsedMilliseconds);
             }
             // Ordinary rejected promises (including intentionally rejected Test262Error values)
             // are legal. Async tests report assertion failures through $DONE instead.
@@ -110,6 +114,9 @@ internal static class Test262Execution
     {
         if (value is not Jint.Native.Object.ObjectInstance error) return null;
         var constructor = error.Get("constructor");
-        return constructor is Jint.Native.Function.Function function ? TypeConverter.ToString(function.Get("name")) : null;
+        var name = constructor is Jint.Native.Function.Function function ? TypeConverter.ToString(function.Get("name")) : null;
+        // Test262Error is the harness-defined ordinary constructor. Native negative
+        // expectations require a real error object, not an object spoofing its name.
+        return error is Jint.Native.Error.ErrorInstance || name == "Test262Error" ? name : null;
     }
 }

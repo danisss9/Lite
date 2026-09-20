@@ -467,7 +467,16 @@
     "well-formed-json-stringify"
   ],
   "semanticReviewComplete": false,
-  "testOverrides": [],
+  "testOverrides": [
+    {
+      "path": "test/built-ins/TypedArray/prototype/slice/speciesctor-return-same-buffer-with-offset.js",
+      "classification": "post-target",
+      "reason": "The pinned testTypedArray.js helper supplies immutable buffers and Float16Array when present; those cases are outside ES2020. ES2020 fixed-buffer byte-order copying is covered separately for every ES2020 typed array.",
+      "replacements": [
+        "supplemental/typedarray-slice-overlapping-buffer.js"
+      ]
+    }
+  ],
   "smokeRoots": [
     "test/built-ins/Promise/allSettled/",
     "test/built-ins/String/prototype/matchAll/",

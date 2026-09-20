@@ -21,6 +21,7 @@ internal class JsEngine
     public static JsEngine? For(Engine raw) => _byRaw.TryGetValue(raw, out var e) ? e : null;
 
     private readonly Engine _engine;
+    private readonly JsValue _syntaxErrorConstructor;
     private readonly HttpModuleLoader _moduleLoader;
     private readonly List<(Jint.Runtime.Modules.ModuleImportOperation Operation, Action Completed)> _imports = [];
     private readonly Dictionary<JsValue, JsValue> _unhandledRejections = [];
@@ -247,6 +248,7 @@ internal class JsEngine
             opts.UseHostFactory(_ => new BrowserScriptHost(_moduleLoader));
         });
         _moduleLoader.Bind(_engine);
+        _syntaxErrorConstructor = _engine.GetValue("SyntaxError");
         _engine.Advanced.PromiseRejectionTracker += (_, args) =>
         {
             if (args.Operation.ToString() == "Reject")
@@ -489,8 +491,10 @@ internal class JsEngine
     internal void Execute(string script, string sourceUrl)
     {
         if (string.IsNullOrWhiteSpace(script)) return;
-        try { _engine.Execute(script, sourceUrl); }
+        try { _engine.Execute(script, sourceUrl, JavaScriptRuntime.ScriptParsing); }
         catch (Jint.Runtime.JavaScriptException ex) { ReportScriptError(ex.Error); }
+        catch (Exception ex) when (ex is Acornima.SyntaxErrorException || ex.InnerException is Acornima.SyntaxErrorException)
+        { ReportScriptError(_engine.Construct(_syntaxErrorConstructor, [(JsValue)ex.Message])); }
         catch (Exception ex) { ReportScriptError(_engine.Intrinsics.Error.Construct(ex.Message)); }
         finally { FlushMicrotasks(); ScriptExecuted?.Invoke(this); }
     }
@@ -655,12 +659,18 @@ internal class JsEngine
     /// "interactive" once DOMContentLoaded fires, "complete" once the load event fires.</summary>
     internal string DocumentReadyState { get; private set; } = "loading";
 
+    internal void MarkDocumentInteractive()
+    {
+        if (DocumentReadyState != "loading") return;
+        DocumentReadyState = "interactive";
+        EventDispatcher.DispatchToNode(_root, "readystatechange", this);
+    }
+
     /// <summary>Fires <c>DOMContentLoaded</c> at the document (bubbling) and at window listeners,
     /// after parsing + deferred scripts and before the load event (HTML §"the end").</summary>
     internal void DispatchDomContentLoaded()
     {
-        DocumentReadyState = "interactive";
-        EventDispatcher.DispatchToNode(_root, "readystatechange", this);
+        MarkDocumentInteractive();
         EventDispatcher.DispatchToNode(_root, "DOMContentLoaded", this, bubbles: true);
         _jsWindow.DispatchEvent("DOMContentLoaded");
     }

@@ -53,7 +53,7 @@ internal static class Test262Runner
         return failures == 0 ? 0 : 1;
     }
 
-    internal static int Worker()
+    internal static int Worker(string? root = null)
     {
         var output = Console.Out;
         Console.SetOut(TextWriter.Null);
@@ -64,9 +64,11 @@ internal static class Test262Runner
             try
             {
                 var request = JsonSerializer.Deserialize<Request>(line, Wire) ?? throw new InvalidDataException("Missing request");
-                if (!request.Path.StartsWith("test/", StringComparison.Ordinal) || request.Path.Contains("..") || request.Path.Contains('\\') || request.Path.Contains(':'))
+                var supplemental = request.Path.StartsWith("supplemental/", StringComparison.Ordinal);
+                if (!(request.Path.StartsWith("test/", StringComparison.Ordinal) || supplemental && root is null) || request.Path.Contains("..") || request.Path.Contains('\\') || request.Path.Contains(':'))
                     throw new InvalidDataException("Invalid worker path");
-                result = Test262Execution.Run(Test262Catalog.Root, request.Path, request.Mode);
+                result = Test262Execution.Run(root ?? Test262Catalog.Root, request.Path, request.Mode,
+                    supplemental ? ConformancePaths.Manifest("Test262") : null);
             }
             catch (Exception error) { result = new("harness-error", error.ToString()); }
             output.WriteLine(JsonSerializer.Serialize(result, Wire));
@@ -75,7 +77,7 @@ internal static class Test262Runner
         return 0;
     }
 
-    internal sealed class WorkerClient : IDisposable
+    internal sealed class WorkerClient(string? root = null) : IDisposable
     {
         private Process? _process;
         private Task<string>? _stderr;
@@ -107,6 +109,7 @@ internal static class Test262Runner
                 RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
             start.ArgumentList.Add(typeof(Test262Runner).Assembly.Location);
             start.ArgumentList.Add("--test262-worker");
+            if (root is not null) start.ArgumentList.Add(root);
             _process = Process.Start(start) ?? throw new IOException("Cannot start Test262 worker");
             _stderr = _process.StandardError.ReadToEndAsync(); _count = 0;
         }

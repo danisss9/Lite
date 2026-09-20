@@ -3277,7 +3277,7 @@
       "tests": [],
       "implementationAreas": [
         "Lite/Scripting",
-        "Jint 4.16.1"
+        "Jint 4.16.3"
       ]
     },
     {
@@ -3290,7 +3290,7 @@
       "status": "untested",
       "tests": [],
       "implementationAreas": [
-        "Jint 4.16.1"
+        "Jint 4.16.3"
       ]
     },
     {
@@ -3312,7 +3312,7 @@
         }
       ],
       "implementationAreas": [
-        "Jint 4.16.1"
+        "Jint 4.16.3"
       ]
     },
     {
@@ -3334,7 +3334,7 @@
         }
       ],
       "implementationAreas": [
-        "Jint 4.16.1"
+        "Jint 4.16.3"
       ]
     },
     {
@@ -3356,7 +3356,7 @@
         }
       ],
       "implementationAreas": [
-        "Jint 4.16.1"
+        "Jint 4.16.3"
       ]
     },
     {
@@ -3378,7 +3378,7 @@
         }
       ],
       "implementationAreas": [
-        "Jint 4.16.1",
+        "Jint 4.16.3",
         "Lite.Conformance/Test262/Test262Runner.cs"
       ]
     },
@@ -3401,7 +3401,7 @@
         }
       ],
       "implementationAreas": [
-        "Jint 4.16.1"
+        "Jint 4.16.3"
       ]
     },
     {
@@ -3424,7 +3424,7 @@
       ],
       "implementationAreas": [
         "Lite.Conformance/Test262/Test262ModuleLoader.cs",
-        "Jint 4.16.1"
+        "Jint 4.16.3"
       ]
     }
   ]

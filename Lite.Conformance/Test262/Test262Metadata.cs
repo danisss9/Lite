@@ -3,14 +3,14 @@ using YamlDotNet.RepresentationModel;
 namespace Lite.Conformance.Test262;
 
 internal sealed record Test262Metadata(string[] Includes, string[] Flags, string[] Features,
-    string? Esid, string? NegativePhase, string? NegativeType, string[] Errors)
+    string? Esid, string? NegativePhase, string? NegativeType, string[] Errors, string? Es5id = null, string? Es6id = null)
 {
     private static readonly HashSet<string> KnownFlags = new(StringComparer.Ordinal)
     {
         "onlyStrict", "noStrict", "module", "raw", "async", "generated", "CanBlockIsFalse", "CanBlockIsTrue", "non-deterministic",
     };
 
-    internal string[] Modes => Flags.Contains("module") ? ["module"] : Flags.Contains("raw") ? ["raw"] :
+    public string[] Modes => Flags.Contains("module") ? ["module"] : Flags.Contains("raw") ? ["raw"] :
         Flags.Contains("onlyStrict") ? ["strict"] : Flags.Contains("noStrict") ? ["sloppy"] : ["sloppy", "strict"];
 
     internal static Test262Metadata Parse(string source)
@@ -47,7 +47,7 @@ internal sealed record Test262Metadata(string[] Includes, string[] Flags, string
                     errors.Add($"Invalid harness include: {include}");
             if (flags.Contains("onlyStrict") && flags.Contains("noStrict") ||
                 flags.Contains("CanBlockIsTrue") && flags.Contains("CanBlockIsFalse") ||
-                flags.Contains("raw") && flags.Any(f => f is "module" or "onlyStrict" or "async") ||
+                flags.Contains("raw") && flags.Contains("onlyStrict") ||
                 flags.Contains("module") && flags.Any(f => f is "onlyStrict" or "noStrict"))
                 errors.Add("Contradictory flags");
             string? phase = null, type = null;
@@ -60,7 +60,7 @@ internal sealed record Test262Metadata(string[] Includes, string[] Flags, string
                     errors.Add("Invalid negative error type");
                 if (phase == "resolution" && !flags.Contains("module")) errors.Add("Resolution negative requires module flag");
             }
-            return new(includes, flags, features, Scalar(map, "esid"), phase, type, errors.ToArray());
+            return new(includes, flags, features, Scalar(map, "esid"), phase, type, errors.ToArray(), Scalar(map, "es5id"), Scalar(map, "es6id"));
         }
         catch (Exception ex) when (ex is YamlDotNet.Core.YamlException or InvalidDataException or ArgumentException)
         { return new([], [], [], null, null, null, [$"Invalid frontmatter: {ex.Message}"]); }

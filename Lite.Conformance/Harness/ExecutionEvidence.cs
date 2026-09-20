@@ -70,7 +70,7 @@ internal static class ExecutionEvidence
     {
         var directory = Path.GetDirectoryName(typeof(Lite.BrowserWindow).Assembly.Location)!;
         var input = new StringBuilder(HashFile(Path.Combine(root, "Directory.Packages.props")));
-        foreach (var name in new[] { "AngleSharp.dll", "AngleSharp.Css.dll", "Jint.dll", "Acornima.dll", "SkiaSharp.dll" })
+        foreach (var name in new[] { "AngleSharp.dll", "AngleSharp.Css.dll", "Jint.dll", "Acornima.dll", "SkiaSharp.dll", "YamlDotNet.dll" })
             input.Append('\n').Append(name).Append(':').Append(HashFile(Path.Combine(directory, name)));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(input.ToString()))).ToLowerInvariant();
     }
@@ -100,8 +100,11 @@ internal static class ExecutionEvidence
         var fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         // Changing sources during a run must not produce reusable evidence.
+        bool completed;
+        try { completed = identity == CaptureIdentity(); }
+        catch (IOException) { completed = false; }
         var report = new EvidenceReport(FormatVersion, identity, started.ToUniversalTime().ToString("O"),
-            DateTime.UtcNow.ToString("O"), identity == CaptureIdentity(), tests);
+            DateTime.UtcNow.ToString("O"), completed, tests);
         File.WriteAllText(fullPath, JsonSerializer.Serialize(report, JsonOptions) + Environment.NewLine);
     }
 
@@ -133,6 +136,11 @@ internal static class ExecutionEvidence
                     throw new InvalidDataException("Invalid execution timestamps.");
                 foreach (var test in report.Tests)
                 {
+                    if (test.Suite == "test262" && test.Outcome is not ("excluded" or "unreviewed") &&
+                        (test.JavaScript is not { } js || js.Mode is not ("sloppy" or "strict" or "raw" or "module") ||
+                         js.Selection is not ("full" or "smoke") || js.InventorySha256 is not { Length: 64 } ||
+                         js.ShardCount < 1 || js.ShardIndex < 0 || js.ShardIndex >= js.ShardCount || js.DurationMs < 0))
+                        throw new InvalidDataException("JavaScript evidence needs execution mode, inventory, selection and shard identity.");
                     if (test.Suite is "css21-wpt" or "css21-official" &&
                         (test.Css is not { } css || css.Media is not ("screen" or "print") ||
                          css.DocumentMode is not ("html" or "xhtml") || css.ViewportWidth <= 0 || css.ViewportHeight <= 0 ||

@@ -34,7 +34,7 @@ internal sealed class Test262ModuleLoader(string basePath, string testRoot) : IM
         {
             if (_modules.TryGetValue(resolved.Key, out var existing)) return existing;
             var source = File.ReadAllText(resolved.Uri!.LocalPath);
-            var module = ModuleFactory.BuildSourceTextModule(engine, resolved, source, new ModuleParsingOptions());
+            var module = ModuleFactory.BuildSourceTextModule(engine, resolved, source, new ModuleParsingOptions { RetainFunctionSourceText = true });
             _modules.Add(resolved.Key, module);
             return module;
         }

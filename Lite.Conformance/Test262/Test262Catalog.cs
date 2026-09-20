@@ -39,9 +39,13 @@ internal static class Test262Catalog
         var missing = expected.Where(p => !File.Exists(Path.Combine(Root, p))).ToArray();
         if (missing.Length > 0) blockers.Add($"test262-checkout-incomplete:{missing.Length}");
         var tests = new List<Test262Case>();
-        foreach (var path in expected.Where(p => p.StartsWith("test/", StringComparison.Ordinal) && p.EndsWith(".js", StringComparison.Ordinal)).Order(StringComparer.Ordinal))
+        var supplementalRoot = ConformancePaths.Manifest("Test262/supplemental");
+        var sources = expected.Where(p => p.StartsWith("test/", StringComparison.Ordinal) && p.EndsWith(".js", StringComparison.Ordinal))
+            .Select(p => (Path: p, File: Path.Combine(Root, p)))
+            .Concat(Directory.Exists(supplementalRoot) ? Directory.GetFiles(supplementalRoot, "*.js", SearchOption.AllDirectories)
+                .Select(p => (Path: "supplemental/" + Path.GetRelativePath(supplementalRoot, p).Replace('\\', '/'), File: p)) : []);
+        foreach (var (path, file) in sources.OrderBy(p => p.Path, StringComparer.Ordinal))
         {
-            var file = Path.Combine(Root, path);
             if (!File.Exists(file)) continue;
             var bytes = File.ReadAllBytes(file);
             var hash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
@@ -98,7 +102,7 @@ internal static class Test262Catalog
         return SmokeRoots.Value.Any(p => path.StartsWith(p, StringComparison.Ordinal));
     }
 
-    internal static int Run(string? reportPath)
+    internal static int Run(string? reportPath, IEnumerable<string>? evidencePaths = null)
     {
         var inventory = Read();
         var sections = JsonNode.Parse(File.ReadAllText(ConformancePaths.Manifest(SectionsFile)))!["sections"]!.AsArray();
@@ -112,6 +116,9 @@ internal static class Test262Catalog
         var path = reportPath ?? Path.Combine(ConformancePaths.EnsureArtifacts(), "es2020-inventory.json");
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         File.WriteAllText(path, JsonSerializer.Serialize(report, ExecutionEvidence.JsonOptions));
+        var evidenceBlockers = new List<string>();
+        var evidence = ExecutionEvidence.ReadCurrent(evidencePaths ?? [], ExecutionEvidence.CaptureIdentity(), evidenceBlockers);
+        Es2020Readiness.WriteBacklog(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, "es2020-backlog.json"), inventory, evidence, evidenceBlockers);
         Console.WriteLine($"ES2020 inventory: {inventory.Tests.Count} files, {report.requiredExecutions} required executions; {inventory.Blockers.Count} review/checkout blockers. {path}");
         return inventory.CheckoutComplete ? 0 : 1;
     }

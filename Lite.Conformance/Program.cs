@@ -11,7 +11,7 @@ internal static class Program
 {
     public static int Main(string[] args)
     {
-        if (args.Length == 1 && args[0] == "--test262-worker") return Test262Runner.Worker();
+        if (args.Length is 1 or 2 && args[0] == "--test262-worker") return Test262Runner.Worker(args.Length == 2 ? args[1] : null);
         if (args.Length == 4 && args[0] == "--wpt-worker")
             return WptRunner.Worker(args[1], args[2], args[3]);
         string? suite = null;
@@ -24,6 +24,7 @@ internal static class Program
         bool requireReady = false;
         bool requireHtmlReady = false;
         bool requireCssReady = false;
+        bool requireEs2020Ready = false;
         string? cssMedia = null;
         string test262Set = "full";
         var evidencePaths = new List<string>();
@@ -68,6 +69,9 @@ internal static class Program
                 case "--require-ready":
                     requireReady = true;
                     break;
+                case "--require-es2020-ready":
+                    requireEs2020Ready = true;
+                    break;
                 case "--require-css-ready":
                     requireCssReady = true;
                     break;
@@ -103,11 +107,13 @@ internal static class Program
             return 2;
         }
 
-        if ((requireReady || requireHtmlReady || requireCssReady || evidencePaths.Count > 0) && !suite.Equals("profile", StringComparison.OrdinalIgnoreCase))
+        if ((requireReady || requireHtmlReady || requireCssReady || requireEs2020Ready) && !suite.Equals("profile", StringComparison.OrdinalIgnoreCase))
         { Console.WriteLine("Readiness and --evidence options require --suite profile."); return 2; }
+        if (evidencePaths.Count > 0 && suite.ToLowerInvariant() is not ("profile" or "es2020-inventory"))
+        { Console.Error.WriteLine("--evidence requires profile or es2020-inventory"); return 2; }
         if (cssMedia is not null && !suite.Equals("css21-full", StringComparison.OrdinalIgnoreCase))
         { Console.Error.WriteLine("--media requires --suite css21-full."); return 2; }
-        if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html5" or "html5-inventory" or "css21" or "css21-full" or "css21-inventory" or "test262" or "es2020-inventory"))
+        if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html5" or "html5-inventory" or "css21" or "css21-full" or "css21-inventory" or "test262" or "es2020-inventory" or "es2020-host"))
         { Console.WriteLine("--report is supported by profile, wpt, html5, html5-inventory, css21, and test262."); return 2; }
         if (survey is not null && suite.Equals("css21", StringComparison.OrdinalIgnoreCase) && reportPath is not null)
         { Console.WriteLine("CSS surveys do not produce readiness evidence; use the curated CSS gate with --report."); return 2; }
@@ -125,9 +131,10 @@ internal static class Program
                 "css21-inventory" => Css21Inventory.Run(reportPath),
                 "css21-full" => Css21FullRunner.Run(cssMedia ?? "screen", filter, shard, reportPath),
                 "test262" => Test262Runner.Run(filter, shard, reportPath, test262Set),
-                "es2020-inventory" => Test262Catalog.Run(reportPath),
+                "es2020-inventory" => Test262Catalog.Run(reportPath, evidencePaths),
+                "es2020-host" => Es2020HostRunner.Run(filter, shard, reportPath),
                 "acid" => AcidRunner.Run(filter, updateBaselines, shard),
-                "profile" => ProfileRunner.Run(reportPath, requireReady, requireHtmlReady, evidencePaths, requireCssReady),
+                "profile" => ProfileRunner.Run(reportPath, requireReady, requireHtmlReady, evidencePaths, requireCssReady, requireEs2020Ready),
                 "all" => RunAll(filter, shard),
                 _ => Unknown(suite),
             };
@@ -169,6 +176,10 @@ internal static class Program
               dotnet run --project Lite.Conformance -- --suite <wpt|html5|html5-inventory|css21|test262|acid|profile|all> [options]
 
             Options:
+              --test262-set full|smoke  Select the full corpus (default) or the explicit smoke set
+              --require-es2020-ready   (profile) Require complete ES2020 language and host evidence
+              --suite es2020-inventory Export test/section inventories and an exhaustive remaining-work report
+              --suite es2020-host      Run Lite browser JavaScript integration tests
               --filter <substring>   Only run tests whose path contains the substring
               --update-baselines     (acid) Approve the current render as the new baseline
               --geom <url> <sel>     Print the geometry of elements matching a selector

@@ -29,12 +29,13 @@ internal sealed class HttpModuleLoader(string baseUrl, string documentUrl, Actio
     {
         var specifier = moduleRequest.Specifier;
         Uri? resolved = null;
-        if (Uri.TryCreate(specifier, UriKind.Absolute, out var absolute)) resolved = absolute;
-        else if (specifier.StartsWith('/') || specifier.StartsWith("./", StringComparison.Ordinal) || specifier.StartsWith("../", StringComparison.Ordinal))
+        if (specifier.StartsWith('/') || specifier.StartsWith("./", StringComparison.Ordinal) || specifier.StartsWith("../", StringComparison.Ordinal))
         {
             var basis = ResponseUrl(referencingModuleLocation ?? baseUrl);
-            if (Uri.TryCreate(basis, UriKind.Absolute, out var uri)) Uri.TryCreate(uri, specifier, out resolved);
+            if (!Uri.TryCreate(basis, UriKind.Absolute, out var uri)) Uri.TryCreate(baseUrl, UriKind.Absolute, out uri);
+            if (uri is not null) Uri.TryCreate(uri, specifier, out resolved);
         }
+        else if (Uri.TryCreate(specifier, UriKind.Absolute, out var absolute)) resolved = absolute;
         if (resolved is null || resolved.Scheme is not ("http" or "https" or "data"))
             throw TypeError($"Cannot resolve browser module specifier '{specifier}'");
         return new(moduleRequest, resolved.AbsoluteUri, resolved, SpecifierType.RelativeOrAbsolute);

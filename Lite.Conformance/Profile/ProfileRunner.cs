@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Lite.Conformance.Harness;
 using Lite.Conformance.Wpt;
 using Lite.Conformance.Css21;
+using Lite.Conformance.Test262;
 
 namespace Lite.Conformance.Profile;
 
@@ -30,7 +31,7 @@ internal static class ProfileRunner
     };
 
     public static int Run(string? reportPath, bool requireReady, bool requireHtmlReady = false,
-        IEnumerable<string>? evidencePaths = null, bool requireCssReady = false)
+        IEnumerable<string>? evidencePaths = null, bool requireCssReady = false, bool requireEs2020Ready = false)
     {
         var profilePath = ConformancePaths.Manifest(ProfileFile);
         var lockPath = ConformancePaths.Manifest(SuiteLockFile);
@@ -128,6 +129,9 @@ internal static class ProfileRunner
         foreach (var requirement in requirements.Where(r => Text(r, "applicability") == "included"))
             AddEvidenceBlockers(requirement, evidence, evidenceBlockers);
         foreach (var blocker in evidenceBlockers.Distinct()) blockers.Add(blocker);
+        var es2020 = Es2020Readiness.Evaluate(evidence);
+        var es2020Ready = es2020.Ready && evidenceBlockers.Count == 0;
+        foreach (var blocker in es2020.Blockers) blockers.Add(blocker);
         var releaseReady = inventoryComplete && blockers.Count == 0 && claim == "conforming";
         var report = new JsonObject
         {
@@ -140,6 +144,10 @@ internal static class ProfileRunner
             ["coverage"] = coverage.DeepClone(),
             ["counts"] = counts,
             ["releaseReady"] = releaseReady,
+            ["es2020ProfileReady"] = es2020Ready,
+            ["es2020Blockers"] = JsonSerializer.SerializeToNode(es2020.Blockers.Concat(evidenceBlockers).Distinct()),
+            ["es2020Coverage"] = JsonSerializer.SerializeToNode(new { es2020.RequiredExecutions, es2020.PassedExecutions,
+                es2020.RequiredHostTests, es2020.PassedHostTests, es2020.Features }, ExecutionEvidence.JsonOptions),
             ["css21ScreenReady"] = cssScreen.Ready && evidenceBlockers.Count == 0,
             ["css21PrintReady"] = cssPrint.Ready && evidenceBlockers.Count == 0,
             ["css21ProfileReady"] = cssReady,
@@ -180,6 +188,8 @@ internal static class ProfileRunner
         Console.WriteLine($"        releaseReady={releaseReady.ToString().ToLowerInvariant()} " +
                           $"(normative inventory complete={inventoryComplete.ToString().ToLowerInvariant()})");
         Console.WriteLine($"        report: {destination}");
+        Console.WriteLine($"        es2020ProfileReady={es2020Ready.ToString().ToLowerInvariant()} ({es2020.Blockers.Count} blockers)");
+        if (requireEs2020Ready && !es2020Ready) return 1;
         Console.WriteLine($"        html5ProfileReady={htmlReady.ToString().ToLowerInvariant()} ({htmlBlockers.Count} blockers)");
         if (requireHtmlReady && !htmlReady)
         {
