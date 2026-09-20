@@ -5,7 +5,7 @@ namespace Lite.Conformance.Wpt;
 
 internal static class HtmlApplicability
 {
-    internal const string FileName = "Wpt/html53-applicability.json";
+    internal const string FileName = "Wpt/html5-applicability.json";
     internal static readonly string[] CandidateRoots = ["html", "dom", "custom-elements", "shadow-dom", "selection",
         "uievents", "url", "encoding", "mimesniff", "fetch", "cors", "cookies", "webstorage", "webmessaging", "FileAPI"];
     internal static readonly HashSet<string> Classifications = new(StringComparer.Ordinal)
@@ -16,9 +16,9 @@ internal static class HtmlApplicability
     internal static void Validate(JsonObject inventory, ICollection<string> errors)
     {
         if (inventory["schemaVersion"]?.GetValue<int>() != 2 ||
-            inventory["target"]?.GetValue<string>() != "https://www.w3.org/TR/2018/WD-html53-20181018/" ||
+            inventory["target"]?.GetValue<string>() != "https://www.w3.org/TR/2014/REC-html5-20141028/" ||
             inventory["defaultClassification"]?.GetValue<string>() != "unreviewed")
-            errors.Add("HTML applicability must identify the pinned HTML 5.3 draft and default to unreviewed.");
+            errors.Add("HTML applicability must identify the pinned HTML 5.0 Recommendation and default to unreviewed.");
         if (inventory["inventoryComplete"] is not JsonValue complete || !complete.TryGetValue<bool>(out _))
             errors.Add("HTML applicability inventoryComplete must be a boolean.");
         if (inventory["tests"] is not JsonArray tests) { errors.Add("HTML applicability tests must be an array."); return; }

@@ -23,6 +23,8 @@ internal static class Program
         var shard = ShardSpec.All;
         bool requireReady = false;
         bool requireHtmlReady = false;
+        bool requireCssReady = false;
+        string? cssMedia = null;
         string test262Set = "full";
         var evidencePaths = new List<string>();
 
@@ -66,6 +68,13 @@ internal static class Program
                 case "--require-ready":
                     requireReady = true;
                     break;
+                case "--require-css-ready":
+                    requireCssReady = true;
+                    break;
+                case "--media" when i + 1 < args.Length:
+                    cssMedia = args[++i];
+                    if (cssMedia is not ("screen" or "print")) { Console.Error.WriteLine("--media must be screen or print."); return 2; }
+                    break;
                 case "--require-html-ready":
                     requireHtmlReady = true;
                     break;
@@ -94,10 +103,12 @@ internal static class Program
             return 2;
         }
 
-        if ((requireReady || requireHtmlReady || evidencePaths.Count > 0) && !suite.Equals("profile", StringComparison.OrdinalIgnoreCase))
+        if ((requireReady || requireHtmlReady || requireCssReady || evidencePaths.Count > 0) && !suite.Equals("profile", StringComparison.OrdinalIgnoreCase))
         { Console.WriteLine("Readiness and --evidence options require --suite profile."); return 2; }
-        if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html53" or "html53-inventory" or "css21" or "test262" or "es2020-inventory"))
-        { Console.WriteLine("--report is supported by profile, wpt, html53, html53-inventory, css21, and test262."); return 2; }
+        if (cssMedia is not null && !suite.Equals("css21-full", StringComparison.OrdinalIgnoreCase))
+        { Console.Error.WriteLine("--media requires --suite css21-full."); return 2; }
+        if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html5" or "html5-inventory" or "css21" or "css21-full" or "css21-inventory" or "test262" or "es2020-inventory"))
+        { Console.WriteLine("--report is supported by profile, wpt, html5, html5-inventory, css21, and test262."); return 2; }
         if (survey is not null && suite.Equals("css21", StringComparison.OrdinalIgnoreCase) && reportPath is not null)
         { Console.WriteLine("CSS surveys do not produce readiness evidence; use the curated CSS gate with --report."); return 2; }
 
@@ -107,14 +118,16 @@ internal static class Program
             {
                 "wpt" when survey is not null => WptRunner.Survey(survey, surveyLimit, reportPath, shard),
                 "wpt" => WptRunner.Run(filter, shard, reportPath),
-                "html53" => WptRunner.RunHtml(filter, shard, reportPath),
-                "html53-inventory" => HtmlInventoryRunner.Run(reportPath),
+                "html5" => WptRunner.RunHtml(filter, shard, reportPath),
+                "html5-inventory" => HtmlInventoryRunner.Run(reportPath),
                 "css21" when survey is not null => RefTestRunner.Survey(survey, surveyLimit),
                 "css21" => RefTestRunner.Run(filter, shard, reportPath),
+                "css21-inventory" => Css21Inventory.Run(reportPath),
+                "css21-full" => Css21FullRunner.Run(cssMedia ?? "screen", filter, shard, reportPath),
                 "test262" => Test262Runner.Run(filter, shard, reportPath, test262Set),
                 "es2020-inventory" => Test262Catalog.Run(reportPath),
                 "acid" => AcidRunner.Run(filter, updateBaselines, shard),
-                "profile" => ProfileRunner.Run(reportPath, requireReady, requireHtmlReady, evidencePaths),
+                "profile" => ProfileRunner.Run(reportPath, requireReady, requireHtmlReady, evidencePaths, requireCssReady),
                 "all" => RunAll(filter, shard),
                 _ => Unknown(suite),
             };
@@ -153,7 +166,7 @@ internal static class Program
             Lite conformance harness
 
             Usage:
-              dotnet run --project Lite.Conformance -- --suite <wpt|html53|html53-inventory|css21|test262|acid|profile|all> [options]
+              dotnet run --project Lite.Conformance -- --suite <wpt|html5|html5-inventory|css21|test262|acid|profile|all> [options]
 
             Options:
               --filter <substring>   Only run tests whose path contains the substring
@@ -163,11 +176,14 @@ internal static class Program
               --report <path>        Write suite evidence, inventory or profile JSON (except acid/all)
               --shard <index/count>  Run one stable zero-based shard (for example 2/8)
               --require-ready        (profile) Fail unless every release-readiness check passes
-              --require-html-ready   (profile) Require completion of the HTML 5.3 profile
+              --require-css-ready    (profile) Require CSS 2.1 screen and print completion
+              --media <screen|print> (css21-full) Select medium; defaults to screen
+              --require-html-ready   (profile) Require completion of the HTML 5.0 profile
               --evidence <path>      (profile) Consume executed evidence; may be repeated
               --wpt-base-url <url>   Use an upstream wpt serve instance for vendored WPT tests
 
             Test files are vendored by scripts\fetch-tests.ps1 (pinned commits).
+            CSS inventory: --suite css21-inventory; complete candidate run: --suite css21-full.
             Exit code 0 = green (no unexpected failures, no unexpected passes).
             """);
     }

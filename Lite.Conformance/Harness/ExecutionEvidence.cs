@@ -16,18 +16,21 @@ internal sealed record ManualEvidence(string Operator, string Procedure, string 
 internal sealed record JavaScriptEvidence(string Mode, string InventorySha256, string Selection,
     int ShardIndex, int ShardCount, string? Filter, string? ExpectedPhase, string? ObservedPhase,
     string? ExpectedType, string? ObservedType, long DurationMs);
+internal sealed record CssEvidence(string Media, string DocumentMode, string InventorySha256,
+    int ViewportWidth, int ViewportHeight, int ShardIndex, int ShardCount, string? Filter,
+    int? PageCount = null, double? PageWidthPoints = null, double? PageHeightPoints = null);
 internal sealed record TestEvidence(string Suite, string Path, string Outcome, string Detail,
     IReadOnlyList<SubtestEvidence> Subtests, int? HarnessStatus = null, string Environment = "local", string? Url = null,
     string Context = "window", string Kind = "testharness", IReadOnlyList<EvidenceArtifact>? Artifacts = null,
-    ManualEvidence? Manual = null, JavaScriptEvidence? JavaScript = null);
+    ManualEvidence? Manual = null, JavaScriptEvidence? JavaScript = null, CssEvidence? Css = null);
 internal sealed record EvidenceReport(int FormatVersion, EvidenceIdentity Identity,
     string StartedUtc, string FinishedUtc, bool Completed, IReadOnlyList<TestEvidence> Tests);
 
 /// <summary>Executed outcomes are useful only for the source, binaries and inputs that produced them.</summary>
 internal static class ExecutionEvidence
 {
-    internal const int FormatVersion = 4;
-    internal const string ProfileFile = "Profile/lite-html53-css21-es2020-profile.json";
+    internal const int FormatVersion = 5;
+    internal const string ProfileFile = "Profile/lite-html5-css21-es2020-profile.json";
     internal static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -130,6 +133,12 @@ internal static class ExecutionEvidence
                     throw new InvalidDataException("Invalid execution timestamps.");
                 foreach (var test in report.Tests)
                 {
+                    if (test.Suite is "css21-wpt" or "css21-official" &&
+                        (test.Css is not { } css || css.Media is not ("screen" or "print") ||
+                         css.DocumentMode is not ("html" or "xhtml") || css.ViewportWidth <= 0 || css.ViewportHeight <= 0 ||
+                         css.ShardCount <= 0 || css.ShardIndex < 0 || css.ShardIndex >= css.ShardCount ||
+                         css.InventorySha256.Length != 64))
+                        throw new InvalidDataException("CSS evidence needs media, document mode, inventory identity, geometry and shard identity.");
                     if (string.IsNullOrWhiteSpace(test.Context) || string.IsNullOrWhiteSpace(test.Kind))
                         throw new InvalidDataException("Missing execution context or test kind.");
                     foreach (var artifact in test.Artifacts ?? [])

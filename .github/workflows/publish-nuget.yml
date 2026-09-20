@@ -61,7 +61,7 @@ jobs:
 
 
       - name: Export HTML inventory backlog
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html53-inventory
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html5-inventory
 
       - name: Unit tests
         run: dotnet run --project Lite.Tests/Lite.Tests.csproj --configuration Release --no-build --no-restore -- --report Lite.Conformance/artifacts/unit-results.json
@@ -80,12 +80,12 @@ jobs:
       - name: Acid1 regression
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite acid --filter acid1
 
-      - name: HTML 5.3 reviewed assertion tests
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html53 --report Lite.Conformance/artifacts/html53-results.json
+      - name: HTML 5.0 reviewed assertion tests
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html5 --report Lite.Conformance/artifacts/html5-results.json
 
-      - name: Generate HTML 5.3 compatibility evidence
+      - name: Generate HTML 5.0 compatibility evidence
         if: always()
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json --evidence Lite.Conformance/artifacts/unit-results.json --evidence Lite.Conformance/artifacts/wpt-results.json --evidence Lite.Conformance/artifacts/html53-results.json --evidence Lite.Conformance/artifacts/css21-results.json --evidence Lite.Conformance/artifacts/test262-results.json
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json --evidence Lite.Conformance/artifacts/unit-results.json --evidence Lite.Conformance/artifacts/wpt-results.json --evidence Lite.Conformance/artifacts/html5-results.json --evidence Lite.Conformance/artifacts/css21-results.json --evidence Lite.Conformance/artifacts/test262-results.json
 
       - name: Upload compatibility evidence
         if: always()

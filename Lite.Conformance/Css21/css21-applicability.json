@@ -1,0 +1,7 @@
+{
+  "$schema": "./css21-applicability.schema.json",
+  "schemaVersion": 1,
+  "target": "https://www.w3.org/TR/2011/REC-CSS2-20110607/",
+  "reviewComplete": false,
+  "tests": []
+}

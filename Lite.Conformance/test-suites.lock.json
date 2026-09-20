@@ -36,7 +36,7 @@
       ],
       "applicabilityManifest": "Wpt/wpt-manifest.txt",
       "scope": "sparse",
-      "htmlApplicabilityManifest": "Wpt/html53-applicability.json"
+      "htmlApplicabilityManifest": "Wpt/html5-applicability.json"
     },
     {
       "id": "test262",

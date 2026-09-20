@@ -136,14 +136,14 @@ The upstream conformance suites are downloaded separately and pinned by `Lite.Co
 dotnet run --project Lite.Conformance -c Release -- --suite profile
 dotnet run --project Lite.Conformance -c Release -- --suite css21
 dotnet run --project Lite.Conformance -c Release -- --suite wpt
-dotnet run --project Lite.Conformance -c Release -- --suite html53
+dotnet run --project Lite.Conformance -c Release -- --suite html5
 dotnet run --project Lite.Conformance -c Release -- --suite test262
 dotnet run --project Lite.Conformance -c Release -- --suite acid
 ```
 
-Lite targets the [HTML 5.3 Working Draft of 18 October 2018](https://www.w3.org/TR/2018/WD-html53-20181018/), alongside the separate CSS 2.1 and ES2020 workstreams. The [active profile](Lite.Conformance/Profile/lite-html53-css21-es2020-profile.json) publishes its exclusions and incomplete coverage. Historical HTML 5.2 contracts remain in `Lite.Conformance/Profile/history/`.
+Lite targets the [HTML 5.0 Recommendation of 28 October 2014](https://www.w3.org/TR/2014/REC-html5-20141028/), alongside the separate CSS 2.1 and ES2020 workstreams. The [active profile](Lite.Conformance/Profile/lite-html5-css21-es2020-profile.json) publishes its exclusions and incomplete coverage. Historical HTML 5.2 contracts remain in `Lite.Conformance/Profile/history/`.
 
-Curated green tests protect existing behavior; they do not establish complete standards conformance. `--suite html53` runs the small set of reviewed assertions. `html53ProfileReady` remains false until all applicable requirements and required dependencies have current passing evidence. See [HTML 5.3 implementation and evidence](docs/html53-conformance.md) for the remaining work, upstream WPT serving, and report commands.
+Curated green tests protect existing behavior; they do not establish complete standards conformance. `--suite html5` runs the small set of reviewed assertions. `html5ProfileReady` remains false until all applicable requirements and required dependencies have current passing evidence. See [HTML 5.0 implementation and evidence](docs/html5-conformance.md) for the remaining work, upstream WPT serving, and report commands.
 
 ## Contributing
 

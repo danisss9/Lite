@@ -172,3 +172,7 @@ html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroll
 html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-3.html
 html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-4.html
 html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-5.html
+
+# Existing extension behavior outside the HTML5 Recommendation.
+lite/html5/details-reflection.html
+lite/html5/details-toggle.html

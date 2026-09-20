@@ -17,6 +17,7 @@ internal static class Test262Catalog
     internal const string ApplicabilityFile = "Test262/es2020-applicability.json";
     internal const string SectionsFile = "Test262/es2020-sections.json";
     internal static string Root => Path.Combine(ConformancePaths.Vendor, "test262");
+    private static readonly Lazy<string[]> SmokeRoots = new(() => JsonNode.Parse(File.ReadAllText(ConformancePaths.Manifest(ApplicabilityFile)))!["smokeRoots"]!.AsArray().Select(p => p!.GetValue<string>()).ToArray());
 
     internal static Test262Inventory Read()
     {
@@ -94,8 +95,7 @@ internal static class Test262Catalog
 
     internal static bool IsSmoke(string path)
     {
-        var manifest = JsonNode.Parse(File.ReadAllText(ConformancePaths.Manifest(ApplicabilityFile)))!;
-        return manifest["smokeRoots"]!.AsArray().Any(p => path.StartsWith(p!.GetValue<string>(), StringComparison.Ordinal));
+        return SmokeRoots.Value.Any(p => path.StartsWith(p, StringComparison.Ordinal));
     }
 
     internal static int Run(string? reportPath)

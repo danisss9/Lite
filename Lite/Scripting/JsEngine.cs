@@ -21,6 +21,11 @@ internal class JsEngine
     public static JsEngine? For(Engine raw) => _byRaw.TryGetValue(raw, out var e) ? e : null;
 
     private readonly Engine _engine;
+    private readonly HttpModuleLoader _moduleLoader;
+    private readonly List<(Jint.Runtime.Modules.ModuleImportOperation Operation, Action Completed)> _imports = [];
+    private readonly Dictionary<JsValue, JsValue> _unhandledRejections = [];
+    private readonly HashSet<JsValue> _reportedRejections = [];
+    internal event Action<JsValue>? ScriptFailed;
     private readonly JsWindow _jsWindow;
     private readonly LayoutNode _root;
     private Viewport? _viewport;
@@ -55,7 +60,7 @@ internal class JsEngine
         TaskEnqueued?.Invoke();
     }
 
-    internal bool HasPendingTasks => !_macrotasks.IsEmpty;
+    internal bool HasPendingTasks => !_macrotasks.IsEmpty || _imports.Count > 0 || _moduleLoader.HasPendingLoads;
 
     /// <summary>
     /// Runs all currently-queued macrotasks on the calling (UI) thread. Each invocation
@@ -63,6 +68,7 @@ internal class JsEngine
     /// </summary>
     internal bool DrainTasks()
     {
+        FlushMicrotasks();
         bool ran = false;
         // Snapshot the count so tasks enqueued by these tasks run on the next turn, not this one.
         int budget = _macrotasks.Count;
@@ -73,8 +79,7 @@ internal class JsEngine
                 task();
                 // Per the HTML spec, a microtask checkpoint runs after each task — this is what
                 // lets Promise .then() continuations (e.g. from fetch) actually execute.
-                _engine.Advanced.ProcessTasks();
-                Dom.MutationObserverRegistry.DeliverAll(_engine);
+                FlushMicrotasks();
             }
             catch (Exception ex) { Console.WriteLine($"[JS task] {ex.Message}"); }
             ran = true;
@@ -97,6 +102,13 @@ internal class JsEngine
         try
         {
             _engine.Advanced.ProcessTasks();
+            foreach (var item in _imports.ToArray())
+            {
+                if (!item.Operation.IsCompleted) continue;
+                _imports.Remove(item);
+                if (item.Operation.IsFaulted) ReportScriptError(item.Operation.Error!);
+                item.Completed();
+            }
             Dom.MutationObserverRegistry.DeliverAll(_engine);
         }
         catch (Exception ex) { Console.WriteLine($"[JS microtask] {ex.Message}"); }
@@ -223,14 +235,32 @@ internal class JsEngine
         var baseUrl = documentState?.Address ?? Parser.BaseUrl ?? "about://lite/";
         DocumentState = documentState ?? new DocumentState(Parser.Document, baseUrl, baseUrl, Parser.CssRules.ToArray());
         DocumentState.Bind(root);
+        _moduleLoader = new HttpModuleLoader(DocumentBaseUrl, DocumentState.Address, EnqueueMacrotask);
         _engine = new Engine(opts =>
         {
+            JavaScriptRuntime.Configure(opts);
             // Wrap CLR exceptions from host code as JS errors — EXCEPT JavaScriptException, which
             // is already a JS throw (e.g. a DOMException a host DOM method raised): letting it
             // propagate preserves its error object (name/code) instead of flattening it to Error.
             opts.CatchClrExceptions(ex => ex is not Jint.Runtime.JavaScriptException);
-            opts.EnableModules(new HttpModuleLoader(DocumentBaseUrl));
+            opts.EnableModules(_moduleLoader);
+            opts.UseHostFactory(_ => new BrowserScriptHost(_moduleLoader));
         });
+        _moduleLoader.Bind(_engine);
+        _engine.Advanced.PromiseRejectionTracker += (_, args) =>
+        {
+            if (args.Operation.ToString() == "Reject")
+            {
+                _unhandledRejections[args.Promise] = args.Value ?? JsValue.Undefined;
+                EnqueueMacrotask(() =>
+                {
+                    if (_unhandledRejections.TryGetValue(args.Promise, out var reason) && _reportedRejections.Add(args.Promise))
+                        DispatchPromiseEvent("unhandledrejection", args.Promise, reason);
+                });
+            }
+            else if (_unhandledRejections.Remove(args.Promise, out var reason) && _reportedRejections.Remove(args.Promise))
+                EnqueueMacrotask(() => DispatchPromiseEvent("rejectionhandled", args.Promise, reason));
+        };
 
         _root = root;
         _byRaw.AddOrUpdate(_engine, this);
@@ -454,22 +484,73 @@ internal class JsEngine
 
     internal event Action<JsEngine>? ScriptExecuted;
 
-    public void Execute(string script)
+    public void Execute(string script) => Execute(script, DocumentBaseUrl);
+
+    internal void Execute(string script, string sourceUrl)
     {
         if (string.IsNullOrWhiteSpace(script)) return;
-        try { _engine.Execute(script); }
-        catch (Exception ex) { Console.WriteLine($"[JS Error] {ex.Message}"); }
-        finally { ScriptExecuted?.Invoke(this); }
+        try { _engine.Execute(script, sourceUrl); }
+        catch (Jint.Runtime.JavaScriptException ex) { ReportScriptError(ex.Error); }
+        catch (Exception ex) { ReportScriptError(_engine.Intrinsics.Error.Construct(ex.Message)); }
+        finally { FlushMicrotasks(); ScriptExecuted?.Invoke(this); }
     }
 
     /// <summary>Registers an inline module's source under a specifier so it can be imported.</summary>
-    internal void AddModule(string specifier, string code) => _engine.Modules.Add(specifier, code);
+    internal void AddModule(string specifier, string code, string? sourceUrl = null)
+    {
+        if (sourceUrl is not null) _moduleLoader.RegisterSourceUrl(specifier, sourceUrl);
+        _engine.Modules.Add(specifier, code);
+    }
 
     /// <summary>Imports (evaluates) a module by specifier. The loader fetches src modules.</summary>
     internal void ImportModule(string specifier)
     {
-        try { _engine.Modules.Import(specifier); }
-        catch (Exception ex) { Console.WriteLine($"[JS Module] {ex.Message}"); }
+        var operation = _engine.Modules.StartImport(specifier);
+        _imports.Add((operation, () => { }));
+        FlushMicrotasks();
+    }
+
+    internal void RunDeferredScripts(IReadOnlyList<Parser.ScriptRecord> scripts, Action completed)
+    {
+        var index = 0;
+        foreach (var script in scripts.Where(s => s.IsModule && s.Code is not null))
+            AddModule(script.Url, script.Code!, script.Inline ? DocumentBaseUrl : null);
+        Continue();
+        void Continue()
+        {
+            while (index < scripts.Count)
+            {
+                var script = scripts[index++];
+                if (!script.IsModule) { Execute(script.Code!, script.Url); continue; }
+                var operation = _engine.Modules.StartImport(script.Url);
+                _engine.Advanced.ProcessTasks();
+                if (!operation.IsCompleted) { _imports.Add((operation, Continue)); return; }
+                if (operation.IsFaulted) ReportScriptError(operation.Error!);
+            }
+            completed();
+        }
+    }
+
+    private void ReportScriptError(JsValue error)
+    {
+        ScriptFailed?.Invoke(error);
+        var evt = new JsObject(_engine);
+        evt.Set("type", "error"); evt.Set("error", error); evt.Set("message", error.ToString());
+        _jsWindow.DispatchEvent("error", evt);
+        Console.WriteLine($"[JS Error] {error}");
+    }
+
+    private void DispatchPromiseEvent(string type, JsValue promise, JsValue reason)
+    {
+        var evt = new JsObject(_engine);
+        evt.Set("type", type); evt.Set("promise", promise); evt.Set("reason", reason);
+        _jsWindow.DispatchEvent(type, evt);
+    }
+
+    internal void CancelModuleLoads()
+    {
+        _moduleLoader.Dispose();
+        foreach (var child in NestedEngines()) child.CancelModuleLoads();
     }
 
     /// <summary>

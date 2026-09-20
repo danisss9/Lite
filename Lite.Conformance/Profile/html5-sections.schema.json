@@ -17,7 +17,7 @@
       "const": 1
     },
     "target": {
-      "const": "https://www.w3.org/TR/2018/WD-html53-20181018/"
+      "const": "https://www.w3.org/TR/2014/REC-html5-20141028/"
     },
     "sourceSha256": {
       "type": "string",

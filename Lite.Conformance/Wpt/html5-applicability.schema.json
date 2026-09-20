@@ -16,7 +16,7 @@
       "const": 2
     },
     "target": {
-      "const": "https://www.w3.org/TR/2018/WD-html53-20181018/"
+      "const": "https://www.w3.org/TR/2014/REC-html5-20141028/"
     },
     "inventoryComplete": {
       "type": "boolean"

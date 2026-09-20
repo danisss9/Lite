@@ -1,0 +1,3431 @@
+{
+  "$schema": "./lite-html5-css21-es2020-profile.schema.json",
+  "schemaVersion": 2,
+  "name": "Lite HTML 5.0/CSS 2.1/ES2020 compatibility profile",
+  "claim": "development-non-conforming",
+  "platform": {
+    "operatingSystem": "Windows",
+    "architecture": "x64",
+    "cssMedia": "screen"
+  },
+  "targets": [
+    {
+      "id": "html5",
+      "title": "HTML 5.0, W3C Recommendation 28 October 2014",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/"
+    },
+    {
+      "id": "css21",
+      "title": "Cascading Style Sheets Level 2 Revision 1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/"
+    },
+    {
+      "id": "es2020",
+      "title": "ECMA-262, 11th edition, June 2020",
+      "url": "https://262.ecma-international.org/11.0/"
+    }
+  ],
+  "coverage": {
+    "normativeClauseInventoryComplete": false,
+    "unmappedApplicableClauseStatus": "untested",
+    "statusResolution": "most-specific-entry-wins; otherwise unmappedApplicableClauseStatus",
+    "html5ClauseInventoryComplete": false,
+    "html5TestInventoryComplete": false,
+    "html5RequiredDependencies": []
+  },
+  "requirements": [
+    {
+      "id": "html5.2",
+      "specification": "html5",
+      "clause": "2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/infrastructure.html#infrastructure",
+      "title": "Common infrastructure",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Network",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.2.1",
+      "specification": "html5",
+      "clause": "2.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/infrastructure.html#terminology",
+      "title": "Terminology",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Network",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.2.2",
+      "specification": "html5",
+      "clause": "2.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/infrastructure.html#conformance-requirements",
+      "title": "Conformance requirements",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Network",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.2.3",
+      "specification": "html5",
+      "clause": "2.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/infrastructure.html#case-sensitivity-and-string-comparison",
+      "title": "Case-sensitivity and string comparison",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Network",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.2.4",
+      "specification": "html5",
+      "clause": "2.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/infrastructure.html#common-microsyntaxes",
+      "title": "Common microsyntaxes",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Network",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.2.5",
+      "specification": "html5",
+      "clause": "2.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/infrastructure.html#urls",
+      "title": "URLs",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Network",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.2.6",
+      "specification": "html5",
+      "clause": "2.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/infrastructure.html#fetching-resources",
+      "title": "Fetching resources",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Network",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.2.7",
+      "specification": "html5",
+      "clause": "2.7",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/infrastructure.html#common-dom-interfaces",
+      "title": "Common DOM interfaces",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Network",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.2.8",
+      "specification": "html5",
+      "clause": "2.8",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/infrastructure.html#namespaces",
+      "title": "Namespaces",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Network",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.3",
+      "specification": "html5",
+      "clause": "3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/dom.html#dom",
+      "title": "Semantics, structure, and APIs of HTML documents",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom",
+        "Lite/Models/DocumentState.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.3.1",
+      "specification": "html5",
+      "clause": "3.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/dom.html#documents",
+      "title": "Documents",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom",
+        "Lite/Models/DocumentState.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.3.2",
+      "specification": "html5",
+      "clause": "3.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/dom.html#elements",
+      "title": "Elements",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom",
+        "Lite/Models/DocumentState.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4",
+      "specification": "html5",
+      "clause": "4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/semantics.html#semantics",
+      "title": "The elements of HTML",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.1",
+      "specification": "html5",
+      "clause": "4.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/semantics.html#the-root-element",
+      "title": "The root element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.1.1",
+      "specification": "html5",
+      "clause": "4.1.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/semantics.html#the-html-element",
+      "title": "The html element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.2",
+      "specification": "html5",
+      "clause": "4.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/document-metadata.html#document-metadata",
+      "title": "Document metadata",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.2.1",
+      "specification": "html5",
+      "clause": "4.2.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/document-metadata.html#the-head-element",
+      "title": "The head element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.2.2",
+      "specification": "html5",
+      "clause": "4.2.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/document-metadata.html#the-title-element",
+      "title": "The title element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.2.3",
+      "specification": "html5",
+      "clause": "4.2.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/document-metadata.html#the-base-element",
+      "title": "The base element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.2.4",
+      "specification": "html5",
+      "clause": "4.2.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/document-metadata.html#the-link-element",
+      "title": "The link element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.2.5",
+      "specification": "html5",
+      "clause": "4.2.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/document-metadata.html#the-meta-element",
+      "title": "The meta element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.2.6",
+      "specification": "html5",
+      "clause": "4.2.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/document-metadata.html#the-style-element",
+      "title": "The style element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.3",
+      "specification": "html5",
+      "clause": "4.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/sections.html#sections",
+      "title": "Sections",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.3.1",
+      "specification": "html5",
+      "clause": "4.3.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/sections.html#the-body-element",
+      "title": "The body element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.3.2",
+      "specification": "html5",
+      "clause": "4.3.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/sections.html#the-article-element",
+      "title": "The article element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.3.3",
+      "specification": "html5",
+      "clause": "4.3.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/sections.html#the-section-element",
+      "title": "The section element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.3.4",
+      "specification": "html5",
+      "clause": "4.3.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/sections.html#the-nav-element",
+      "title": "The nav element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.3.5",
+      "specification": "html5",
+      "clause": "4.3.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/sections.html#the-aside-element",
+      "title": "The aside element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.3.7",
+      "specification": "html5",
+      "clause": "4.3.7",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/sections.html#the-header-element",
+      "title": "The header element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.3.8",
+      "specification": "html5",
+      "clause": "4.3.8",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/sections.html#the-footer-element",
+      "title": "The footer element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.3.9",
+      "specification": "html5",
+      "clause": "4.3.9",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/sections.html#the-address-element",
+      "title": "The address element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4",
+      "specification": "html5",
+      "clause": "4.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#grouping-content",
+      "title": "Grouping content",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.1",
+      "specification": "html5",
+      "clause": "4.4.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-p-element",
+      "title": "The p element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.2",
+      "specification": "html5",
+      "clause": "4.4.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-hr-element",
+      "title": "The hr element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.3",
+      "specification": "html5",
+      "clause": "4.4.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-pre-element",
+      "title": "The pre element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.4",
+      "specification": "html5",
+      "clause": "4.4.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-blockquote-element",
+      "title": "The blockquote element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.5",
+      "specification": "html5",
+      "clause": "4.4.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-ol-element",
+      "title": "The ol element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.6",
+      "specification": "html5",
+      "clause": "4.4.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-ul-element",
+      "title": "The ul element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.7",
+      "specification": "html5",
+      "clause": "4.4.7",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-li-element",
+      "title": "The li element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.8",
+      "specification": "html5",
+      "clause": "4.4.8",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-dl-element",
+      "title": "The dl element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.9",
+      "specification": "html5",
+      "clause": "4.4.9",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-dt-element",
+      "title": "The dt element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.10",
+      "specification": "html5",
+      "clause": "4.4.10",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-dd-element",
+      "title": "The dd element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.11",
+      "specification": "html5",
+      "clause": "4.4.11",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-figure-element",
+      "title": "The figure element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.12",
+      "specification": "html5",
+      "clause": "4.4.12",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-figcaption-element",
+      "title": "The figcaption element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.13",
+      "specification": "html5",
+      "clause": "4.4.13",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-div-element",
+      "title": "The div element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.4.14",
+      "specification": "html5",
+      "clause": "4.4.14",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/grouping-content.html#the-main-element",
+      "title": "The main element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5",
+      "specification": "html5",
+      "clause": "4.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#text-level-semantics",
+      "title": "Text-level semantics",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.1",
+      "specification": "html5",
+      "clause": "4.5.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-a-element",
+      "title": "The a element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.2",
+      "specification": "html5",
+      "clause": "4.5.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-em-element",
+      "title": "The em element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.3",
+      "specification": "html5",
+      "clause": "4.5.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-strong-element",
+      "title": "The strong element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.4",
+      "specification": "html5",
+      "clause": "4.5.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-small-element",
+      "title": "The small element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.5",
+      "specification": "html5",
+      "clause": "4.5.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-s-element",
+      "title": "The s element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.6",
+      "specification": "html5",
+      "clause": "4.5.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-cite-element",
+      "title": "The cite element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.7",
+      "specification": "html5",
+      "clause": "4.5.7",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-q-element",
+      "title": "The q element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.8",
+      "specification": "html5",
+      "clause": "4.5.8",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-dfn-element",
+      "title": "The dfn element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.9",
+      "specification": "html5",
+      "clause": "4.5.9",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-abbr-element",
+      "title": "The abbr element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.10",
+      "specification": "html5",
+      "clause": "4.5.10",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-data-element",
+      "title": "The data element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.11",
+      "specification": "html5",
+      "clause": "4.5.11",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-time-element",
+      "title": "The time element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.12",
+      "specification": "html5",
+      "clause": "4.5.12",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-code-element",
+      "title": "The code element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.13",
+      "specification": "html5",
+      "clause": "4.5.13",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-var-element",
+      "title": "The var element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.14",
+      "specification": "html5",
+      "clause": "4.5.14",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-samp-element",
+      "title": "The samp element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.15",
+      "specification": "html5",
+      "clause": "4.5.15",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-kbd-element",
+      "title": "The kbd element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.17",
+      "specification": "html5",
+      "clause": "4.5.17",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-i-element",
+      "title": "The i element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.18",
+      "specification": "html5",
+      "clause": "4.5.18",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-b-element",
+      "title": "The b element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.19",
+      "specification": "html5",
+      "clause": "4.5.19",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-u-element",
+      "title": "The u element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.20",
+      "specification": "html5",
+      "clause": "4.5.20",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-mark-element",
+      "title": "The mark element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.21",
+      "specification": "html5",
+      "clause": "4.5.21",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-ruby-element",
+      "title": "The ruby element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.22",
+      "specification": "html5",
+      "clause": "4.5.22",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-rb-element",
+      "title": "The rb element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.23",
+      "specification": "html5",
+      "clause": "4.5.23",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-rt-element",
+      "title": "The rt element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.24",
+      "specification": "html5",
+      "clause": "4.5.24",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-rtc-element",
+      "title": "The rtc element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.25",
+      "specification": "html5",
+      "clause": "4.5.25",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-rp-element",
+      "title": "The rp element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.26",
+      "specification": "html5",
+      "clause": "4.5.26",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-bdi-element",
+      "title": "The bdi element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.27",
+      "specification": "html5",
+      "clause": "4.5.27",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-bdo-element",
+      "title": "The bdo element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.28",
+      "specification": "html5",
+      "clause": "4.5.28",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-span-element",
+      "title": "The span element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.29",
+      "specification": "html5",
+      "clause": "4.5.29",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-br-element",
+      "title": "The br element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.5.30",
+      "specification": "html5",
+      "clause": "4.5.30",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/text-level-semantics.html#the-wbr-element",
+      "title": "The wbr element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.6",
+      "specification": "html5",
+      "clause": "4.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/edits.html#edits",
+      "title": "Edits",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.6.1",
+      "specification": "html5",
+      "clause": "4.6.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/edits.html#the-ins-element",
+      "title": "The ins element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.6.2",
+      "specification": "html5",
+      "clause": "4.6.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/edits.html#the-del-element",
+      "title": "The del element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7",
+      "specification": "html5",
+      "clause": "4.7",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#embedded-content-0",
+      "title": "Embedded content",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.1",
+      "specification": "html5",
+      "clause": "4.7.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-img-element",
+      "title": "The img element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.2",
+      "specification": "html5",
+      "clause": "4.7.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-iframe-element",
+      "title": "The iframe element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.3",
+      "specification": "html5",
+      "clause": "4.7.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-embed-element",
+      "title": "The embed element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.4",
+      "specification": "html5",
+      "clause": "4.7.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-object-element",
+      "title": "The object element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.5",
+      "specification": "html5",
+      "clause": "4.7.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-param-element",
+      "title": "The param element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.6",
+      "specification": "html5",
+      "clause": "4.7.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-video-element",
+      "title": "The video element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.7",
+      "specification": "html5",
+      "clause": "4.7.7",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-audio-element",
+      "title": "The audio element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.8",
+      "specification": "html5",
+      "clause": "4.7.8",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-source-element",
+      "title": "The source element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.9",
+      "specification": "html5",
+      "clause": "4.7.9",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-track-element",
+      "title": "The track element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.11",
+      "specification": "html5",
+      "clause": "4.7.11",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-map-element",
+      "title": "The map element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.12",
+      "specification": "html5",
+      "clause": "4.7.12",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-area-element",
+      "title": "The area element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.8",
+      "specification": "html5",
+      "clause": "4.8",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/links.html#links",
+      "title": "Links",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.9",
+      "specification": "html5",
+      "clause": "4.9",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/tabular-data.html#tabular-data",
+      "title": "Tabular data",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.9.1",
+      "specification": "html5",
+      "clause": "4.9.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/tabular-data.html#the-table-element",
+      "title": "The table element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.9.2",
+      "specification": "html5",
+      "clause": "4.9.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/tabular-data.html#the-caption-element",
+      "title": "The caption element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.9.3",
+      "specification": "html5",
+      "clause": "4.9.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/tabular-data.html#the-colgroup-element",
+      "title": "The colgroup element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.9.4",
+      "specification": "html5",
+      "clause": "4.9.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/tabular-data.html#the-col-element",
+      "title": "The col element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.9.5",
+      "specification": "html5",
+      "clause": "4.9.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/tabular-data.html#the-tbody-element",
+      "title": "The tbody element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.9.6",
+      "specification": "html5",
+      "clause": "4.9.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/tabular-data.html#the-thead-element",
+      "title": "The thead element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.9.7",
+      "specification": "html5",
+      "clause": "4.9.7",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/tabular-data.html#the-tfoot-element",
+      "title": "The tfoot element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.9.8",
+      "specification": "html5",
+      "clause": "4.9.8",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/tabular-data.html#the-tr-element",
+      "title": "The tr element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.9.9",
+      "specification": "html5",
+      "clause": "4.9.9",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/tabular-data.html#the-td-element",
+      "title": "The td element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.9.10",
+      "specification": "html5",
+      "clause": "4.9.10",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/tabular-data.html#the-th-element",
+      "title": "The th element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10",
+      "specification": "html5",
+      "clause": "4.10",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#forms",
+      "title": "Forms",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.3",
+      "specification": "html5",
+      "clause": "4.10.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-form-element",
+      "title": "The form element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.4",
+      "specification": "html5",
+      "clause": "4.10.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-label-element",
+      "title": "The label element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.5",
+      "specification": "html5",
+      "clause": "4.10.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-input-element",
+      "title": "The input element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.6",
+      "specification": "html5",
+      "clause": "4.10.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-button-element",
+      "title": "The button element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.7",
+      "specification": "html5",
+      "clause": "4.10.7",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-select-element",
+      "title": "The select element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.8",
+      "specification": "html5",
+      "clause": "4.10.8",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-datalist-element",
+      "title": "The datalist element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.9",
+      "specification": "html5",
+      "clause": "4.10.9",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-optgroup-element",
+      "title": "The optgroup element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.10",
+      "specification": "html5",
+      "clause": "4.10.10",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-option-element",
+      "title": "The option element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.11",
+      "specification": "html5",
+      "clause": "4.10.11",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-textarea-element",
+      "title": "The textarea element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.12",
+      "specification": "html5",
+      "clause": "4.10.12",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-keygen-element",
+      "title": "The keygen element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.13",
+      "specification": "html5",
+      "clause": "4.10.13",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-output-element",
+      "title": "The output element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.14",
+      "specification": "html5",
+      "clause": "4.10.14",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-progress-element",
+      "title": "The progress element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.15",
+      "specification": "html5",
+      "clause": "4.10.15",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-meter-element",
+      "title": "The meter element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.16",
+      "specification": "html5",
+      "clause": "4.10.16",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-fieldset-element",
+      "title": "The fieldset element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.10.17",
+      "specification": "html5",
+      "clause": "4.10.17",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#the-legend-element",
+      "title": "The legend element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.11",
+      "specification": "html5",
+      "clause": "4.11",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/scripting-1.html#scripting-1",
+      "title": "Scripting",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.11.1",
+      "specification": "html5",
+      "clause": "4.11.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/scripting-1.html#the-script-element",
+      "title": "The script element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.11.2",
+      "specification": "html5",
+      "clause": "4.11.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/scripting-1.html#the-noscript-element",
+      "title": "The noscript element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.11.3",
+      "specification": "html5",
+      "clause": "4.11.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/scripting-1.html#the-template-element",
+      "title": "The template element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.11.4",
+      "specification": "html5",
+      "clause": "4.11.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/scripting-1.html#the-canvas-element",
+      "title": "The canvas element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.12",
+      "specification": "html5",
+      "clause": "4.12",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/common-idioms.html#common-idioms",
+      "title": "Common idioms without dedicated elements",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.13",
+      "specification": "html5",
+      "clause": "4.13",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/disabled-elements.html#disabled-elements",
+      "title": "Disabled elements",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.14",
+      "specification": "html5",
+      "clause": "4.14",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/disabled-elements.html#selectors",
+      "title": "Matching HTML elements using selectors",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom",
+        "Lite/Layout"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.5",
+      "specification": "html5",
+      "clause": "5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/browsers.html#browsers",
+      "title": "Loading Web pages",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/BrowserWindow.cs",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.5.1",
+      "specification": "html5",
+      "clause": "5.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/browsers.html#windows",
+      "title": "Browsing contexts",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/BrowserWindow.cs",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.5.2",
+      "specification": "html5",
+      "clause": "5.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/browsers.html#the-window-object",
+      "title": "The Window object",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/BrowserWindow.cs",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.5.3",
+      "specification": "html5",
+      "clause": "5.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/browsers.html#origin",
+      "title": "Origin",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/BrowserWindow.cs",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.5.4",
+      "specification": "html5",
+      "clause": "5.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/browsers.html#sandboxing",
+      "title": "Sandboxing",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/BrowserWindow.cs",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.5.5",
+      "specification": "html5",
+      "clause": "5.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/browsers.html#history",
+      "title": "Session history and navigation",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/BrowserWindow.cs",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.5.6",
+      "specification": "html5",
+      "clause": "5.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/browsers.html#browsing-the-web",
+      "title": "Browsing the Web",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/BrowserWindow.cs",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.5.7",
+      "specification": "html5",
+      "clause": "5.7",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/browsers.html#offline",
+      "title": "Offline Web applications",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/BrowserWindow.cs",
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.6",
+      "specification": "html5",
+      "clause": "6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/webappapis.html#webappapis",
+      "title": "Web application APIs",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.6.1",
+      "specification": "html5",
+      "clause": "6.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/webappapis.html#scripting",
+      "title": "Scripting",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.6.2",
+      "specification": "html5",
+      "clause": "6.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/webappapis.html#atob",
+      "title": "Base64 utility methods",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.6.3",
+      "specification": "html5",
+      "clause": "6.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/webappapis.html#dynamic-markup-insertion",
+      "title": "Dynamic markup insertion",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.6.4",
+      "specification": "html5",
+      "clause": "6.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/webappapis.html#timers",
+      "title": "Timers",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.6.5",
+      "specification": "html5",
+      "clause": "6.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/webappapis.html#user-prompts",
+      "title": "User prompts",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.6.6",
+      "specification": "html5",
+      "clause": "6.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/webappapis.html#system-state-and-capabilities",
+      "title": "System state and capabilities",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.7",
+      "specification": "html5",
+      "clause": "7",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/editing.html#editing",
+      "title": "User interaction",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Interaction",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.7.1",
+      "specification": "html5",
+      "clause": "7.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/editing.html#the-hidden-attribute",
+      "title": "The hidden attribute",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Interaction",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.7.2",
+      "specification": "html5",
+      "clause": "7.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/editing.html#inert-subtrees",
+      "title": "Inert subtrees",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Interaction",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.7.3",
+      "specification": "html5",
+      "clause": "7.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/editing.html#activation",
+      "title": "Activation",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Interaction",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.7.4",
+      "specification": "html5",
+      "clause": "7.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/editing.html#focus",
+      "title": "Focus",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Interaction",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.7.5",
+      "specification": "html5",
+      "clause": "7.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/editing.html#assigning-keyboard-shortcuts",
+      "title": "Assigning keyboard shortcuts",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Interaction",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.7.6",
+      "specification": "html5",
+      "clause": "7.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/editing.html#editing-0",
+      "title": "Editing",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Interaction",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.8",
+      "specification": "html5",
+      "clause": "8",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/syntax.html#syntax",
+      "title": "The HTML syntax",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.8.1",
+      "specification": "html5",
+      "clause": "8.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/syntax.html#writing",
+      "title": "Writing HTML documents",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.8.2",
+      "specification": "html5",
+      "clause": "8.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/syntax.html#parsing",
+      "title": "Parsing HTML documents",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.8.3",
+      "specification": "html5",
+      "clause": "8.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/syntax.html#serializing-html-fragments",
+      "title": "Serializing HTML fragments",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.8.4",
+      "specification": "html5",
+      "clause": "8.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/syntax.html#parsing-html-fragments",
+      "title": "Parsing HTML fragments",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.8.5",
+      "specification": "html5",
+      "clause": "8.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/syntax.html#named-character-references",
+      "title": "Named character references",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.9",
+      "specification": "html5",
+      "clause": "9",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/the-xhtml-syntax.html#the-xhtml-syntax",
+      "title": "The XHTML syntax",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.9.1",
+      "specification": "html5",
+      "clause": "9.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/the-xhtml-syntax.html#writing-xhtml-documents",
+      "title": "Writing XHTML documents",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.9.2",
+      "specification": "html5",
+      "clause": "9.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/the-xhtml-syntax.html#parsing-xhtml-documents",
+      "title": "Parsing XHTML documents",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.9.3",
+      "specification": "html5",
+      "clause": "9.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/the-xhtml-syntax.html#serializing-xhtml-fragments",
+      "title": "Serializing XHTML fragments",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.9.4",
+      "specification": "html5",
+      "clause": "9.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/the-xhtml-syntax.html#parsing-xhtml-fragments",
+      "title": "Parsing XHTML fragments",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10",
+      "specification": "html5",
+      "clause": "10",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#rendering",
+      "title": "Rendering",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.1",
+      "specification": "html5",
+      "clause": "10.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#introduction-6",
+      "title": "Introduction",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.2",
+      "specification": "html5",
+      "clause": "10.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#the-css-user-agent-style-sheet-and-presentational-hints",
+      "title": "The CSS user agent style sheet and presentational hints",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.3",
+      "specification": "html5",
+      "clause": "10.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#non-replaced-elements",
+      "title": "Non-replaced elements",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.3.12",
+      "specification": "html5",
+      "clause": "10.3.12",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#the-hr-element-0",
+      "title": "The hr element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.4",
+      "specification": "html5",
+      "clause": "10.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#replaced-elements",
+      "title": "Replaced elements",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.5",
+      "specification": "html5",
+      "clause": "10.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#bindings",
+      "title": "Bindings",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.5.2",
+      "specification": "html5",
+      "clause": "10.5.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#the-button-element-0",
+      "title": "The button element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.5.10",
+      "specification": "html5",
+      "clause": "10.5.10",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#the-marquee-element",
+      "title": "The marquee element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.5.11",
+      "specification": "html5",
+      "clause": "10.5.11",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#the-meter-element-0",
+      "title": "The meter element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.5.12",
+      "specification": "html5",
+      "clause": "10.5.12",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#the-progress-element-0",
+      "title": "The progress element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.5.13",
+      "specification": "html5",
+      "clause": "10.5.13",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#the-select-element-0",
+      "title": "The select element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.5.14",
+      "specification": "html5",
+      "clause": "10.5.14",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#the-textarea-element-0",
+      "title": "The textarea element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.5.15",
+      "specification": "html5",
+      "clause": "10.5.15",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#the-keygen-element-0",
+      "title": "The keygen element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.6",
+      "specification": "html5",
+      "clause": "10.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#frames-and-framesets",
+      "title": "Frames and framesets",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.7",
+      "specification": "html5",
+      "clause": "10.7",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#interactive-media",
+      "title": "Interactive media",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.8",
+      "specification": "html5",
+      "clause": "10.8",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#print-media",
+      "title": "Print media",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.10.9",
+      "specification": "html5",
+      "clause": "10.9",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/rendering.html#unstyled-xml-documents",
+      "title": "Unstyled XML documents",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.11",
+      "specification": "html5",
+      "clause": "11",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/obsolete.html#obsolete",
+      "title": "Obsolete features",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.11.1",
+      "specification": "html5",
+      "clause": "11.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/obsolete.html#obsolete-but-conforming-features",
+      "title": "Obsolete but conforming features",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.11.2",
+      "specification": "html5",
+      "clause": "11.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/obsolete.html#non-conforming-features",
+      "title": "Non-conforming features",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.11.3",
+      "specification": "html5",
+      "clause": "11.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/obsolete.html#requirements-for-implementations",
+      "title": "Requirements for implementations",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.11.3.1",
+      "specification": "html5",
+      "clause": "11.3.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/obsolete.html#the-applet-element",
+      "title": "The applet element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.11.3.2",
+      "specification": "html5",
+      "clause": "11.3.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/obsolete.html#the-marquee-element-0",
+      "title": "The marquee element",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.12",
+      "specification": "html5",
+      "clause": "12",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/iana.html#iana",
+      "title": "IANA considerations",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Network",
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.12.1",
+      "specification": "html5",
+      "clause": "12.1",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/iana.html#text/html",
+      "title": "text/html",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Network",
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.12.2",
+      "specification": "html5",
+      "clause": "12.2",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/iana.html#multipart/x-mixed-replace",
+      "title": "multipart/x-mixed-replace",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Network",
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.12.3",
+      "specification": "html5",
+      "clause": "12.3",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/iana.html#application/xhtml+xml",
+      "title": "application/xhtml+xml",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Network",
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.12.4",
+      "specification": "html5",
+      "clause": "12.4",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/iana.html#application/x-www-form-urlencoded",
+      "title": "application/x-www-form-urlencoded",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Network",
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.12.5",
+      "specification": "html5",
+      "clause": "12.5",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/iana.html#text/cache-manifest",
+      "title": "text/cache-manifest",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Network",
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.12.6",
+      "specification": "html5",
+      "clause": "12.6",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/iana.html#web+-scheme-prefix",
+      "title": "web+ scheme prefix",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Network",
+        "Lite/Parser.cs"
+      ],
+      "notes": "Conservative workstream placeholder. Review normative user-agent obligations and optional or authoring-only scope before claiming completion; a section is not an atomic requirement."
+    },
+    {
+      "id": "html5.4.7.2.iframe-initial-document",
+      "specification": "html5",
+      "clause": "4.7.2 initial iframe document",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-iframe-element",
+      "title": "iframe without src or srcdoc has an initial HTML document",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "wpt",
+          "path": "lite/html5/iframe-initial-document.html",
+          "assertion": "An iframe without src or srcdoc has a non-null initial HTML document"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom/JsElement.cs"
+      ],
+      "notes": "Reviewed against the 2014 iframe insertion and initial about:blank document requirements. Covers only non-null document identity and root presence."
+    },
+    {
+      "id": "html5.profile.browser-chrome",
+      "specification": "html5",
+      "clause": "Profile boundary: browser chrome",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/",
+      "title": "Browser chrome and end-user browser UI",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "Lite is an embeddable rendering engine; browser chrome is supplied by a host."
+    },
+    {
+      "id": "html5.profile.accessibility-platform",
+      "specification": "html5",
+      "clause": "Profile boundary: accessibility platform mappings",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/",
+      "title": "Operating-system accessibility API mappings",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "Platform accessibility mappings are outside this compatibility profile; DOM semantics remain included."
+    },
+    {
+      "id": "html5.profile.network-stack",
+      "specification": "html5",
+      "clause": "Profile boundary: general-purpose networking implementation",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/infrastructure.html",
+      "title": "General-purpose HTTP and TLS implementation",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Network"
+      ],
+      "exclusionReason": "Transport is injected by the host. HTML-visible origin, CORS, redirect, referrer, MIME, and resource metadata behavior remains included."
+    },
+    {
+      "id": "css21.4-7",
+      "specification": "css21",
+      "clause": "4-7",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html",
+      "title": "Syntax, selectors, cascade, and media",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Layout/StyleResolver.cs"
+      ]
+    },
+    {
+      "id": "css21.8-10",
+      "specification": "css21",
+      "clause": "8-10",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html",
+      "title": "Box model and visual formatting model",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout"
+      ]
+    },
+    {
+      "id": "css21.11-12",
+      "specification": "css21",
+      "clause": "11-12",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visufx.html",
+      "title": "Visual effects, generated content, lists, and counters",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Drawer.cs",
+        "Lite/Parser.cs"
+      ]
+    },
+    {
+      "id": "css21.14-18",
+      "specification": "css21",
+      "clause": "14-18",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/colors.html",
+      "title": "Colors, fonts, text, tables, and user interface",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ]
+    },
+    {
+      "id": "css21.appendix-e",
+      "specification": "css21",
+      "clause": "Appendix E",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/zindex.html",
+      "title": "Elaborate description of stacking contexts",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Drawer.cs"
+      ]
+    },
+    {
+      "id": "css21.8.percentage-padding",
+      "specification": "css21",
+      "clause": "8.4 percentage padding",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#padding-properties",
+      "title": "Percentage padding uses containing-block width",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "wpt",
+          "path": "css/CSS2/normal-flow/containing-block-percent-padding-top.html"
+        },
+        {
+          "suite": "wpt",
+          "path": "css/CSS2/normal-flow/containing-block-percent-padding-bottom.html"
+        },
+        {
+          "suite": "wpt",
+          "path": "css/CSS2/normal-flow/containing-block-percent-padding-left.html"
+        },
+        {
+          "suite": "wpt",
+          "path": "css/CSS2/normal-flow/containing-block-percent-padding-right.html"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Extensions/DrawCommandExtensions.cs",
+        "Lite/Layout/BoxEngine.cs"
+      ]
+    },
+    {
+      "id": "css21.9.7.blockification",
+      "specification": "css21",
+      "clause": "9.7 relationships between display, position, and float",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#dis-pos-flo",
+      "title": "Specified display is blockified for floats and absolute/fixed positioning",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/LayoutTests.cs#FloatedTableCell_IsBlockified"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Extensions/DrawCommandExtensions.cs"
+      ]
+    },
+    {
+      "id": "css21.9.5.floats",
+      "specification": "css21",
+      "clause": "9.5 floats",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#floats",
+      "title": "Float placement and clearance",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/LayoutTests.cs#FloatAfterInlineContent_SitsOnTheCurrentLineBox"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Layout/BoxEngine.cs"
+      ],
+      "notes": "Focused regression assertions pass, but the normative clause and official suite inventory have not been exhausted."
+    },
+    {
+      "id": "css21.appendix-e.fixed-paint",
+      "specification": "css21",
+      "clause": "Appendix E fixed-position paint participation",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/zindex.html",
+      "title": "Fixed-position descendants are painted outside viewport scrolling",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-curated",
+          "path": "css21/fixed-position-paint.html"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Drawer.cs"
+      ]
+    },
+    {
+      "id": "css21.acid2",
+      "specification": "css21",
+      "clause": "Cross-clause visual regression",
+      "url": "https://www.w3.org/Style/CSS/Test/CSS2.1/20110323/",
+      "title": "Acid2 visual regression",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "acid",
+          "path": "acid/acid2/test.html"
+        },
+        {
+          "suite": "acid",
+          "path": "acid/acid2/test.html#scrolled-50px"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "The approved Lite regression baseline currently differs; the baseline is not independent conformance evidence."
+    },
+    {
+      "id": "css21.13",
+      "specification": "css21",
+      "clause": "13",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html",
+      "title": "Paged media",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "The compatibility target is the screen medium; print and paged-media rendering are outside the profile."
+    },
+    {
+      "id": "css21.appendix-a",
+      "specification": "css21",
+      "clause": "Appendix A",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/aural.html",
+      "title": "Aural style sheets",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [],
+      "exclusionReason": "The compatibility target is visual screen rendering; aural rendering is outside the profile."
+    },
+    {
+      "id": "es2020.5-16",
+      "specification": "es2020",
+      "clause": "5-16",
+      "url": "https://262.ecma-international.org/11.0/#sec-ecmascript-language-source-code",
+      "title": "Language types, abstract operations, execution, syntax, and evaluation",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting",
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.17-26",
+      "specification": "es2020",
+      "clause": "17-26",
+      "url": "https://262.ecma-international.org/11.0/#sec-ecmascript-standard-built-in-objects",
+      "title": "Standard built-in objects",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.optional-chaining",
+      "specification": "es2020",
+      "clause": "12.3 optional chaining",
+      "url": "https://262.ecma-international.org/11.0/#sec-optional-chaining",
+      "title": "Optional chaining operator",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/optional-chaining/runtime-semantics-evaluation.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/optional-chaining/short-circuiting.js"
+        }
+      ],
+      "implementationAreas": [
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.nullish-coalescing",
+      "specification": "es2020",
+      "clause": "12.4 coalesce expression",
+      "url": "https://262.ecma-international.org/11.0/#sec-coalesce-expression",
+      "title": "Nullish coalescing operator",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/coalesce/abrupt-is-a-short-circuit.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/coalesce/cannot-chain-head-with-logical-and.js"
+        }
+      ],
+      "implementationAreas": [
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.bigint",
+      "specification": "es2020",
+      "clause": "20.2 BigInt objects",
+      "url": "https://262.ecma-international.org/11.0/#sec-bigint-objects",
+      "title": "BigInt",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/built-ins/BigInt/prototype/valueOf/return.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/BigInt/wrapper-object-ordinary-toprimitive.js"
+        }
+      ],
+      "implementationAreas": [
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.promise-allsettled",
+      "specification": "es2020",
+      "clause": "25.6.4.1 Promise.allSettled",
+      "url": "https://262.ecma-international.org/11.0/#sec-promise.allsettled",
+      "title": "Promise.allSettled",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Promise/allSettled/resolves-empty-array.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Promise/allSettled/resolved-sequence-mixed.js"
+        }
+      ],
+      "implementationAreas": [
+        "Jint 4.16.1",
+        "Lite.Conformance/Test262/Test262Runner.cs"
+      ]
+    },
+    {
+      "id": "es2020.string-matchall",
+      "specification": "es2020",
+      "clause": "21.1.3.14 String.prototype.matchAll",
+      "url": "https://262.ecma-international.org/11.0/#sec-string.prototype.matchall",
+      "title": "String.prototype.matchAll",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/built-ins/String/prototype/matchAll/toString-this-val.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/String/prototype/matchAll/regexp-prototype-matchAll-invocation.js"
+        }
+      ],
+      "implementationAreas": [
+        "Jint 4.16.1"
+      ]
+    },
+    {
+      "id": "es2020.dynamic-import-host",
+      "specification": "es2020",
+      "clause": "15.2.1.17 HostImportModuleDynamically",
+      "url": "https://262.ecma-international.org/11.0/#sec-hostimportmoduledynamically",
+      "title": "Dynamic import host hook",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/dynamic-import/custom-primitive.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/dynamic-import/usage-from-eval.js"
+        }
+      ],
+      "implementationAreas": [
+        "Lite.Conformance/Test262/Test262ModuleLoader.cs",
+        "Jint 4.16.1"
+      ]
+    }
+  ]
+}

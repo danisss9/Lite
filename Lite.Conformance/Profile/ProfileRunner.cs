@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Lite.Conformance.Harness;
 using Lite.Conformance.Wpt;
+using Lite.Conformance.Css21;
 
 namespace Lite.Conformance.Profile;
 
@@ -25,11 +26,11 @@ internal static class ProfileRunner
 
     private static readonly HashSet<string> SpecificationIds = new(StringComparer.Ordinal)
     {
-        "html53", "css21", "es2020",
+        "html5", "css21", "es2020",
     };
 
     public static int Run(string? reportPath, bool requireReady, bool requireHtmlReady = false,
-        IEnumerable<string>? evidencePaths = null)
+        IEnumerable<string>? evidencePaths = null, bool requireCssReady = false)
     {
         var profilePath = ConformancePaths.Manifest(ProfileFile);
         var lockPath = ConformancePaths.Manifest(SuiteLockFile);
@@ -82,15 +83,15 @@ internal static class ProfileRunner
         var htmlBlockers = EvaluateHtmlReadiness(profile, evidence);
         htmlBlockers.AddRange(sectionBlockers);
         if (htmlApplicability?["inventoryComplete"]?.GetValue<bool>() != true)
-            htmlBlockers.Add("html53-applicability-review-incomplete");
+            htmlBlockers.Add("html5-applicability-review-incomplete");
         if (htmlApplicability?["tests"] is JsonArray applicabilityTests)
         {
             var reviewed = applicabilityTests.OfType<JsonObject>().Select(t => Text(t, "path")).ToHashSet(StringComparer.Ordinal);
-            if (coverage["html53TestInventoryComplete"]?.GetValue<bool>() == true || htmlApplicability["inventoryComplete"]?.GetValue<bool>() == true)
+            if (coverage["html5TestInventoryComplete"]?.GetValue<bool>() == true || htmlApplicability["inventoryComplete"]?.GetValue<bool>() == true)
             {
                 // A hand-edited complete flag cannot turn omitted tests into passes.
                 if (!File.Exists(WptCatalog.ManifestPath))
-                    htmlBlockers.Add("html53-missing-upstream-manifest");
+                    htmlBlockers.Add("html5-missing-upstream-manifest");
                 else
                 {
                     try
@@ -99,26 +100,30 @@ internal static class ProfileRunner
                         foreach (var directory in HtmlApplicability.CandidateRoots)
                         {
                             var candidates = catalog.Where(c => c.Source.StartsWith(directory + "/", StringComparison.Ordinal)).ToArray();
-                            if (candidates.Length == 0) htmlBlockers.Add($"html53-missing-test-root:{directory}");
+                            if (candidates.Length == 0) htmlBlockers.Add($"html5-missing-test-root:{directory}");
                             var missing = candidates.Count(c => !reviewed.Contains(c.Path) && !reviewed.Contains(c.Source));
-                            if (missing > 0) htmlBlockers.Add($"html53-unclassified-tests:{directory}:{missing}");
+                            if (missing > 0) htmlBlockers.Add($"html5-unclassified-tests:{directory}:{missing}");
                         }
                     }
                     catch (Exception ex) when (ex is IOException or InvalidDataException or System.Text.Json.JsonException)
-                    { htmlBlockers.Add($"html53-invalid-upstream-manifest:{ex.Message}"); }
+                    { htmlBlockers.Add($"html5-invalid-upstream-manifest:{ex.Message}"); }
                 }
             }
             foreach (var test in applicabilityTests.OfType<JsonObject>())
             {
                 var classification = Text(test, "classification");
-                if (classification == "unreviewed") htmlBlockers.Add($"html53-unreviewed-test:{Text(test, "path")}");
+                if (classification == "unreviewed") htmlBlockers.Add($"html5-unreviewed-test:{Text(test, "path")}");
                 if (HtmlApplicability.IsIncluded(test) && !HasMappedEvidence(evidence, "wpt", Text(test, "path"), null,
                         requireUpstream: !Text(test, "path").StartsWith("lite/", StringComparison.Ordinal)))
-                    htmlBlockers.Add($"html53-missing-applicable-test:{Text(test, "path")}");
+                    htmlBlockers.Add($"html5-missing-applicable-test:{Text(test, "path")}");
             }
         }
         htmlBlockers.AddRange(evidenceBlockers);
         var htmlReady = htmlBlockers.Count == 0;
+        var cssScreen = Css21Inventory.Evaluate("screen", evidence);
+        var cssPrint = Css21Inventory.Evaluate("print", evidence);
+        var cssReady = cssScreen.Ready && cssPrint.Ready && evidenceBlockers.Count == 0;
+        foreach (var blocker in cssScreen.Blockers.Concat(cssPrint.Blockers).Distinct()) blockers.Add(blocker);
         // The combined claim must also have executed evidence for every included requirement.
         foreach (var requirement in requirements.Where(r => Text(r, "applicability") == "included"))
             AddEvidenceBlockers(requirement, evidence, evidenceBlockers);
@@ -135,8 +140,15 @@ internal static class ProfileRunner
             ["coverage"] = coverage.DeepClone(),
             ["counts"] = counts,
             ["releaseReady"] = releaseReady,
-            ["html53ProfileReady"] = htmlReady,
-            ["html53Blockers"] = new JsonArray(htmlBlockers.Distinct().Select(b => JsonValue.Create(b)).ToArray()),
+            ["css21ScreenReady"] = cssScreen.Ready && evidenceBlockers.Count == 0,
+            ["css21PrintReady"] = cssPrint.Ready && evidenceBlockers.Count == 0,
+            ["css21ProfileReady"] = cssReady,
+            ["css21ScreenBlockers"] = JsonSerializer.SerializeToNode(cssScreen.Blockers.Concat(evidenceBlockers).Distinct()),
+            ["css21PrintBlockers"] = JsonSerializer.SerializeToNode(cssPrint.Blockers.Concat(evidenceBlockers).Distinct()),
+            ["css21Coverage"] = JsonSerializer.SerializeToNode(new { screen = new { cssScreen.Requirements, cssScreen.Tests },
+                print = new { cssPrint.Requirements, cssPrint.Tests } }, ExecutionEvidence.JsonOptions),
+            ["html5ProfileReady"] = htmlReady,
+            ["html5Blockers"] = new JsonArray(htmlBlockers.Distinct().Select(b => JsonValue.Create(b)).ToArray()),
             ["evidenceIdentity"] = System.Text.Json.JsonSerializer.SerializeToNode(identity, ExecutionEvidence.JsonOptions),
             ["executedTestCount"] = evidence.Count,
             ["blockers"] = blockers,
@@ -168,10 +180,16 @@ internal static class ProfileRunner
         Console.WriteLine($"        releaseReady={releaseReady.ToString().ToLowerInvariant()} " +
                           $"(normative inventory complete={inventoryComplete.ToString().ToLowerInvariant()})");
         Console.WriteLine($"        report: {destination}");
-        Console.WriteLine($"        html53ProfileReady={htmlReady.ToString().ToLowerInvariant()} ({htmlBlockers.Count} blockers)");
+        Console.WriteLine($"        html5ProfileReady={htmlReady.ToString().ToLowerInvariant()} ({htmlBlockers.Count} blockers)");
         if (requireHtmlReady && !htmlReady)
         {
-            Console.WriteLine("  FAIL  HTML 5.3 compatibility profile is not ready.");
+            Console.WriteLine("  FAIL  HTML 5.0 compatibility profile is not ready.");
+            return 1;
+        }
+        Console.WriteLine($"        css21ScreenReady={cssScreen.Ready.ToString().ToLowerInvariant()}; css21PrintReady={cssPrint.Ready.ToString().ToLowerInvariant()}");
+        if (requireCssReady && !cssReady)
+        {
+            Console.WriteLine("  FAIL  CSS 2.1 screen and print profiles are not ready.");
             return 1;
         }
         if (requireReady && !releaseReady)
@@ -186,20 +204,20 @@ internal static class ProfileRunner
     {
         var blockers = new List<string>();
         var coverage = profile["coverage"]!.AsObject();
-        if (coverage["html53ClauseInventoryComplete"]?.GetValue<bool>() != true)
-            blockers.Add("html53-clause-inventory-incomplete");
-        if (coverage["html53TestInventoryComplete"]?.GetValue<bool>() != true)
-            blockers.Add("html53-test-inventory-incomplete");
-        var dependencies = coverage["html53RequiredDependencies"]?.AsArray()
+        if (coverage["html5ClauseInventoryComplete"]?.GetValue<bool>() != true)
+            blockers.Add("html5-clause-inventory-incomplete");
+        if (coverage["html5TestInventoryComplete"]?.GetValue<bool>() != true)
+            blockers.Add("html5-test-inventory-incomplete");
+        var dependencies = coverage["html5RequiredDependencies"]?.AsArray()
             .Select(n => n!.GetValue<string>()).ToHashSet(StringComparer.Ordinal) ?? [];
         var requirements = profile["requirements"]!.AsArray().OfType<JsonObject>().ToArray();
-        if (!requirements.Any(r => Text(r, "specification") == "html53" && Text(r, "applicability") == "included"))
-            blockers.Add("html53-no-included-requirements");
+        if (!requirements.Any(r => Text(r, "specification") == "html5" && Text(r, "applicability") == "included"))
+            blockers.Add("html5-no-included-requirements");
         foreach (var dependency in dependencies)
             if (!requirements.Any(r => Text(r, "id") == dependency && Text(r, "applicability") == "included"))
-                blockers.Add($"html53-missing-dependency:{dependency}");
+                blockers.Add($"html5-missing-dependency:{dependency}");
         foreach (var requirement in requirements.Where(r =>
-                     (Text(r, "specification") == "html53" && Text(r, "applicability") == "included") ||
+                     (Text(r, "specification") == "html5" && Text(r, "applicability") == "included") ||
                      dependencies.Contains(Text(r, "id"))))
         {
             if (Text(requirement, "status") != "implemented")
@@ -216,7 +234,7 @@ internal static class ProfileRunner
         if (tests.Length == 0) blockers.Add($"no-mapped-evidence:{Text(requirement, "id")}");
         foreach (var test in tests)
             if (!HasMappedEvidence(evidence, Text(test, "suite"), Text(test, "path"), Text(test, "assertion"),
-                    requireUpstream: Text(requirement, "specification") == "html53" && Text(test, "suite") == "wpt" &&
+                    requireUpstream: Text(requirement, "specification") == "html5" && Text(test, "suite") == "wpt" &&
                         !Text(test, "path").StartsWith("lite/", StringComparison.Ordinal)))
                 blockers.Add($"missing-or-failing-evidence:{Text(requirement, "id")}:{Text(test, "suite")}:{Text(test, "path")}");
     }
@@ -271,11 +289,11 @@ internal static class ProfileRunner
             errors.Add("profile.coverage must be an object.");
         else
         {
-            foreach (var property in new[] { "html53ClauseInventoryComplete", "html53TestInventoryComplete" })
+            foreach (var property in new[] { "html5ClauseInventoryComplete", "html5TestInventoryComplete" })
                 if (coverage[property] is not JsonValue value || !value.TryGetValue<bool>(out _))
                     errors.Add($"profile.coverage.{property} must be a boolean.");
-            if (coverage["html53RequiredDependencies"] is not JsonArray)
-                errors.Add("profile.coverage.html53RequiredDependencies must be an array.");
+            if (coverage["html5RequiredDependencies"] is not JsonArray)
+                errors.Add("profile.coverage.html5RequiredDependencies must be an array.");
             if (coverage["normativeClauseInventoryComplete"] is not JsonValue)
                 errors.Add("profile.coverage.normativeClauseInventoryComplete must be present.");
             if (Text(coverage, "unmappedApplicableClauseStatus") != "untested")
@@ -289,6 +307,9 @@ internal static class ProfileRunner
             var ids = targets.OfType<JsonObject>().Select(t => Text(t, "id")).ToHashSet(StringComparer.Ordinal);
             foreach (var id in SpecificationIds)
                 if (!ids.Contains(id)) errors.Add($"Missing specification target '{id}'.");
+            if (targets.OfType<JsonObject>().SingleOrDefault(t => Text(t, "id") == "html5") is not { } htmlTarget ||
+                Text(htmlTarget, "url") != HtmlSectionInventory.Target)
+                errors.Add("HTML target must be the pinned 28 October 2014 Recommendation.");
         }
 
         if (profile["requirements"] is not JsonArray requirements || requirements.Count == 0)

@@ -1,0 +1,13 @@
+{
+  "$schema": "./css21-requirements.schema.json",
+  "schemaVersion": 1,
+  "target": "https://www.w3.org/TR/2011/REC-CSS2-20110607/",
+  "reviewComplete": false,
+  "requirements": [
+    { "id": "css21.ua.stylesheets", "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance", "title": "Retrieve applicable associated stylesheets and recover from retrieval failures", "media": ["screen", "print"], "status": "untested", "tests": [] },
+    { "id": "css21.ua.alternate-sets", "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance", "title": "Allow the user to select alternate stylesheet sets", "media": ["screen", "print"], "status": "untested", "tests": [] },
+    { "id": "css21.ua.author-disabled", "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance", "title": "Allow the user to disable author stylesheets", "media": ["screen", "print"], "status": "untested", "tests": [] },
+    { "id": "css21.ua.user-stylesheet", "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance", "title": "Allow the user to specify a user stylesheet file", "media": ["screen", "print"], "status": "untested", "tests": [] },
+    { "id": "css21.13.pagination", "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html", "title": "Paged-media obligation decomposition remains to be reviewed", "media": ["print"], "status": "untested", "tests": [] }
+  ]
+}

@@ -83,7 +83,7 @@ public static class ConformanceTests
     {
         var review = JsonNode.Parse("""
             {"classification":"mixed","assertionInventoryComplete":true,"assertions":[
-              {"name":"required","classification":"included","reason":"HTML 5.3 obligation"},
+              {"name":"required","classification":"included","reason":"HTML 5.0 obligation"},
               {"name":"later","classification":"post-target","reason":"Introduced after target"}]}
             """)!.AsObject();
         var evidence = Pass() with { Outcome = "fail", Subtests = [new("required", 0, null), new("later", 1, "unsupported")] };
@@ -175,12 +175,43 @@ public static class ConformanceTests
         var errors = new List<string>();
         var blockers = HtmlSectionInventory.Evaluate(inventory, Profile(), errors);
         Equal(0, errors.Count);
-        True(blockers.Any(b => b.StartsWith("html53-unreviewed-sections:")));
+        True(blockers.Any(b => b.StartsWith("html5-unreviewed-sections:")));
         inventory["reviewComplete"] = true;
         True(HtmlSectionInventory.Evaluate(inventory, Profile(), errors).Count > 0);
         inventory["sections"]!.AsArray().RemoveAt(0);
         HtmlSectionInventory.Evaluate(inventory, Profile(), errors);
         True(errors.Any(e => e.Contains("index differs")));
+    }
+
+    [Test]
+    public static void Html5Contract_Uses2014ClausesAndDoesNotCountExtensions()
+    {
+        var profile = JsonNode.Parse(File.ReadAllText(ConformancePaths.Manifest(ExecutionEvidence.ProfileFile)))!.AsObject();
+        var inventory = JsonNode.Parse(File.ReadAllText(ConformancePaths.Manifest(HtmlSectionInventory.FileName)))!.AsObject();
+        Equal("https://www.w3.org/TR/2014/REC-html5-20141028/", HtmlSectionInventory.Target);
+        Equal(762, inventory["sections"]!.AsArray().Count);
+        var sections = inventory["sections"]!.AsArray().OfType<JsonObject>()
+            .ToDictionary(s => s["clause"]!.GetValue<string>());
+        var requirements = profile["requirements"]!.AsArray().OfType<JsonObject>()
+            .Where(r => r["specification"]!.GetValue<string>() == "html5" && r["applicability"]!.GetValue<string>() == "included").ToArray();
+        foreach (var requirement in requirements)
+        {
+            var clause = requirement["clause"]!.GetValue<string>().Split(' ')[0];
+            True(sections.ContainsKey(clause), $"Unmapped HTML5 clause: {clause}");
+            Equal(sections[clause]["url"]!.GetValue<string>(), requirement["url"]!.GetValue<string>());
+        }
+        True(requirements.Any(r => r["clause"]!.GetValue<string>() == "5.7")); // Application cache.
+        True(requirements.Any(r => r["clause"]!.GetValue<string>() == "4.10.12")); // keygen.
+        var reviews = HtmlApplicability.Read()["tests"]!.AsArray().OfType<JsonObject>().ToArray();
+        var details = reviews.Where(r => r["path"]!.GetValue<string>().StartsWith("lite/html5/details-", StringComparison.Ordinal)).ToArray();
+        Equal(2, details.Length);
+        True(details.All(r => !HtmlApplicability.IsIncluded(r)));
+        True(HtmlApplicability.IsIncluded(reviews.Single(r => r["path"]!.GetValue<string>() == "lite/html5/iframe-initial-document.html")));
+        var invalid = HtmlApplicability.Read();
+        invalid["target"] = "https://www.w3.org/TR/2018/WD-html53-20181018/";
+        var errors = new List<string>();
+        HtmlApplicability.Validate(invalid, errors);
+        True(errors.Count > 0);
     }
 
     [Test]
@@ -220,11 +251,11 @@ public static class ConformanceTests
     }
 
     private static JsonObject Profile() => JsonNode.Parse("""
-        {"coverage":{"html53ClauseInventoryComplete":true,"html53TestInventoryComplete":true,"html53RequiredDependencies":[]},
+        {"coverage":{"html5ClauseInventoryComplete":true,"html5TestInventoryComplete":true,"html5RequiredDependencies":[]},
          "requirements":[
-          {"id":"html53.test","specification":"html53","applicability":"included","status":"implemented",
+          {"id":"html5.test","specification":"html5","applicability":"included","status":"implemented",
            "tests":[{"suite":"wpt","path":"html/test.html","assertion":"required"}]},
-          {"id":"html53.chrome","specification":"html53","applicability":"excluded","status":"profile-excluded","tests":[]},
+          {"id":"html5.chrome","specification":"html5","applicability":"excluded","status":"profile-excluded","tests":[]},
           {"id":"css21.unrelated","specification":"css21","applicability":"included","status":"failing","tests":[]}]}
         """)!.AsObject();
 
@@ -234,10 +265,10 @@ public static class ConformanceTests
         Equal(0, ProfileRunner.EvaluateHtmlReadiness(Profile(), [Pass()]).Count);
         True(ProfileRunner.EvaluateHtmlReadiness(Profile(), []).Count > 0);
         var profile = Profile();
-        profile["coverage"]!["html53ClauseInventoryComplete"] = false;
-        True(ProfileRunner.EvaluateHtmlReadiness(profile, [Pass()]).Contains("html53-clause-inventory-incomplete"));
+        profile["coverage"]!["html5ClauseInventoryComplete"] = false;
+        True(ProfileRunner.EvaluateHtmlReadiness(profile, [Pass()]).Contains("html5-clause-inventory-incomplete"));
         profile = Profile();
-        profile["coverage"]!["html53RequiredDependencies"]!.AsArray().Add("css21.unrelated");
+        profile["coverage"]!["html5RequiredDependencies"]!.AsArray().Add("css21.unrelated");
         True(ProfileRunner.EvaluateHtmlReadiness(profile, [Pass()]).Any(b => b.Contains("css21.unrelated")));
     }
 
@@ -271,7 +302,7 @@ public static class ConformanceTests
     public static void ServerPaths_CannotEscapeTestRoots()
     {
         True(ConformanceServer.ResolveFile("../../Directory.Packages.props") is null);
-        True(ConformanceServer.ResolveFile("../Profile/lite-html53-css21-es2020-profile.json") is null);
+        True(ConformanceServer.ResolveFile("../Profile/lite-html5-css21-es2020-profile.json") is null);
     }
 
     [Test]

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/danisss9/Lite/schemas/lite-html53-css21-es2020-profile.schema.json",
+  "$id": "https://github.com/danisss9/Lite/schemas/lite-html5-css21-es2020-profile.schema.json",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -19,7 +19,7 @@
       "const": 2
     },
     "name": {
-      "const": "Lite HTML 5.3/CSS 2.1/ES2020 compatibility profile"
+      "const": "Lite HTML 5.0/CSS 2.1/ES2020 compatibility profile"
     },
     "claim": {
       "enum": [
@@ -61,7 +61,7 @@
         "properties": {
           "id": {
             "enum": [
-              "html53",
+              "html5",
               "css21",
               "es2020"
             ]
@@ -84,9 +84,9 @@
         "normativeClauseInventoryComplete",
         "unmappedApplicableClauseStatus",
         "statusResolution",
-        "html53ClauseInventoryComplete",
-        "html53TestInventoryComplete",
-        "html53RequiredDependencies"
+        "html5ClauseInventoryComplete",
+        "html5TestInventoryComplete",
+        "html5RequiredDependencies"
       ],
       "properties": {
         "normativeClauseInventoryComplete": {
@@ -98,13 +98,13 @@
         "statusResolution": {
           "const": "most-specific-entry-wins; otherwise unmappedApplicableClauseStatus"
         },
-        "html53ClauseInventoryComplete": {
+        "html5ClauseInventoryComplete": {
           "type": "boolean"
         },
-        "html53TestInventoryComplete": {
+        "html5TestInventoryComplete": {
           "type": "boolean"
         },
-        "html53RequiredDependencies": {
+        "html5RequiredDependencies": {
           "type": "array",
           "items": {
             "type": "string"
@@ -172,7 +172,7 @@
         },
         "specification": {
           "enum": [
-            "html53",
+            "html5",
             "css21",
             "es2020"
           ]

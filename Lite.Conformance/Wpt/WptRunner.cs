@@ -23,7 +23,7 @@ internal static class WptRunner
             .Select(t => t["path"]!.GetValue<string>())
             .Where(p => filter is null || p.Contains(filter, StringComparison.Ordinal)).Order(StringComparer.Ordinal);
         var entries = shard.Apply(paths.SelectMany(Expand)).ToArray();
-        if (entries.Length == 0) { Console.WriteLine("html53: no reviewed applicable tests match."); return 2; }
+        if (entries.Length == 0) { Console.WriteLine("html5: no reviewed applicable tests match."); return 2; }
         var identity = ExecutionEvidence.CaptureIdentity();
         var started = DateTime.UtcNow;
         var outcomes = new List<TestEvidence>();
@@ -39,8 +39,8 @@ internal static class WptRunner
             if (evidence.HarnessStatus == 0 && review is not null && HtmlApplicability.HasPassingAssertions(evidence, review, null)) accepted++;
             Console.WriteLine($"  {result.Cat.ToString().ToUpperInvariant(),-7} {path} ({result.Detail})");
         }
-        ExecutionEvidence.Write(reportPath ?? DefaultReport("html53", shard), identity, started, outcomes);
-        Console.WriteLine($"html53: {accepted}/{outcomes.Count} reviewed tests passed; this is not a profile-readiness claim.");
+        ExecutionEvidence.Write(reportPath ?? DefaultReport("html5", shard), identity, started, outcomes);
+        Console.WriteLine($"html5: {accepted}/{outcomes.Count} reviewed tests passed; this is not a profile-readiness claim.");
         return accepted == outcomes.Count ? 0 : 1;
     }
 
@@ -224,7 +224,7 @@ internal static class WptRunner
         return false;
     }
 
-    private static RunResult RunOne(string testPath)
+    internal static RunResult RunOne(string testPath)
     {
         var test = CatalogCase(testPath);
         if (WptCatalog.Context(testPath) != "window" || test?.TestDriver == true || test is { Kind: not ("testharness" or "reftest" or "crashtest") })

@@ -32,7 +32,7 @@ internal static class Test262Execution
         var rejectionErrors = new Dictionary<JsValue, JsValue>();
         engine.Advanced.PromiseRejectionTracker += (_, args) =>
         {
-            if (args.Operation.ToString() == "Reject") rejectionErrors[args.Promise] = args.Value;
+            if (args.Operation.ToString() == "Reject") rejectionErrors[args.Promise] = args.Value ?? JsValue.Undefined;
             else rejectionErrors.Remove(args.Promise);
         };
         engine.SetValue("print", new Action<JsValue>(value =>
@@ -57,7 +57,7 @@ internal static class Test262Execution
             var code = mode == "strict" ? "\"use strict\";\n" + source : source;
             if (mode == "module")
             {
-                var resolved = loader.Resolve(null, new ModuleRequest(new Uri(file).AbsoluteUri));
+                var resolved = loader.Resolve(null, new ModuleRequest(new Uri(file).AbsoluteUri, []));
                 var module = loader.LoadModule(engine, resolved);
                 if (meta.NegativePhase == "parse") return Missing("parse");
                 phase = "resolution";
@@ -66,12 +66,11 @@ internal static class Test262Execution
                 phase = "runtime";
                 var value = module.Evaluate();
                 engine.Advanced.ProcessTasks();
-                if (value is JsPromise { State: Jint.Native.Promise.PromiseState.Rejected } promise)
-                    throw new JavaScriptException(promise.Value);
+                value.UnwrapIfPromise();
             }
             else
             {
-                var prepared = Engine.PrepareScript(code, new Uri(file).AbsoluteUri, new ScriptPreparationOptions
+                var prepared = Engine.PrepareScript(code, new Uri(file).AbsoluteUri, options: new ScriptPreparationOptions
                 { ParsingOptions = ScriptParsingOptions.Default with { Tolerant = false } });
                 if (meta.NegativePhase == "parse") return Missing("parse");
                 phase = "runtime";
@@ -87,14 +86,16 @@ internal static class Test262Execution
                 if (completions.Count != 1 || completions[0] != "Test262:AsyncTestComplete")
                     return new("fail", "Invalid asynchronous completion: " + string.Join("; ", completions), "runtime", DurationMs: clock.ElapsedMilliseconds);
             }
-            foreach (var error in rejectionErrors.Values)
-                if (ErrorType(error) == "Test262Error") throw new JavaScriptException(error);
+            // Ordinary rejected promises (including intentionally rejected Test262Error values)
+            // are legal. Async tests report assertion failures through $DONE instead.
             if (meta.NegativePhase is not null) return Missing(meta.NegativePhase);
             return new("pass", "ok", DurationMs: clock.ElapsedMilliseconds);
         }
         catch (Exception error)
         {
-            var type = error is JavaScriptException js ? ErrorType(js.Error) : error is SyntaxErrorException ? "SyntaxError" : error.GetType().Name;
+            var type = error is JavaScriptException js ? ErrorType(js.Error) :
+                error is PromiseRejectedException rejected ? ErrorType(rejected.RejectedValue) :
+                error is SyntaxErrorException || error.InnerException is SyntaxErrorException ? "SyntaxError" : error.GetType().Name;
             var passed = MatchesNegative(meta, phase, type);
             return new(passed ? "pass" : phase == "harness" ? "harness-error" : "fail",
                 passed ? "Expected negative" : $"{phase}: {type}: {error.Message}", phase, type, clock.ElapsedMilliseconds);

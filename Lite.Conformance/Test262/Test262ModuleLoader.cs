@@ -30,10 +30,15 @@ internal sealed class Test262ModuleLoader(string basePath, string testRoot) : IM
 
     public Module LoadModule(Engine engine, ResolvedSpecifier resolved)
     {
-        if (_modules.TryGetValue(resolved.Key, out var existing)) return existing;
-        var source = File.ReadAllText(resolved.Uri!.LocalPath);
-        var module = ModuleFactory.BuildSourceTextModule(engine, resolved, source, new ModuleParsingOptions());
-        _modules.Add(resolved.Key, module);
-        return module;
+        try
+        {
+            if (_modules.TryGetValue(resolved.Key, out var existing)) return existing;
+            var source = File.ReadAllText(resolved.Uri!.LocalPath);
+            var module = ModuleFactory.BuildSourceTextModule(engine, resolved, source, new ModuleParsingOptions());
+            _modules.Add(resolved.Key, module);
+            return module;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
+        { throw new Jint.Runtime.JavaScriptException(engine.Intrinsics.TypeError.Construct(error.Message)); }
     }
 }

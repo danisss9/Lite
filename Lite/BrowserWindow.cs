@@ -972,6 +972,7 @@ public class BrowserWindow
         }
 
         // Commit the new document (mirrors the setup in Run()).
+        _rootNode?.DocumentState?.Engine?.CancelModuleLoads();
         _url = _pendingUrl!;
         FormState.FocusedInput = null;
         FormState.OpenDropdown = null;

@@ -29,7 +29,7 @@ internal static class HtmlInventoryRunner
             unreviewedSections = sections["sections"]!.AsArray().OfType<JsonObject>()
                 .Where(s => s["classification"]!.GetValue<string>() == "unreviewed").Select(s => s.DeepClone()).ToArray(),
             requirementsWithoutTests = profile["requirements"]!.AsArray().OfType<JsonObject>()
-                .Where(r => r["specification"]!.GetValue<string>() == "html53" &&
+                .Where(r => r["specification"]!.GetValue<string>() == "html5" &&
                     r["applicability"]!.GetValue<string>() == "included" && r["tests"]!.AsArray().Count == 0)
                 .Select(r => r["id"]!.GetValue<string>()).ToArray(),
             tests = catalog.Select(c => new
@@ -38,7 +38,7 @@ internal static class HtmlInventoryRunner
                 classification = HtmlApplicability.FindReview(reviews, c.Path, c.Source)?["classification"]?.GetValue<string>() ?? "unreviewed",
             }).ToArray(),
         };
-        var destination = reportPath ?? Path.Combine(ConformancePaths.EnsureArtifacts(), "html53-inventory.json");
+        var destination = reportPath ?? Path.Combine(ConformancePaths.EnsureArtifacts(), "html5-inventory.json");
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(destination))!);
         File.WriteAllText(destination, JsonSerializer.Serialize(report, ExecutionEvidence.JsonOptions) + Environment.NewLine);
         Console.WriteLine($"HTML inventory: {report.sectionCount} sections; {catalog.Length} upstream test cases; {destination}");
