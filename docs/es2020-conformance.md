@@ -22,7 +22,7 @@ list cannot yet be asserted to contain every possible ES2020 defect.
 
 | Area | Remaining work | Current evidence or limitation |
 |---|---|---|
-| Annex B block function declarations | Correct the treatment of a block function named `arguments` in a function that needs an arguments object. | Pinned Test262 reproducer: `test/annexB/language/function-code/block-decl-func-skip-arguments.js`, sloppy mode. A stock-engine defect must remain a blocker if it persists on the pin. |
+| Annex B block function declarations | Correct the treatment of a block function named `arguments` in a function that needs an arguments object. | Pinned Test262 reproducer: `test/annexB/language/function-code/block-decl-func-skip-arguments.js`, sloppy mode. A stock-engine defect must remain a blocker if it persists on the pin; it is published as `es2020.annexb.block-decl-func-arguments`. |
 | `document.all` | Implement the live HTML collection and its required `[[IsHTMLDDA]]` behavior: falsy conversion, special loose equality, `typeof`, and callable behavior. | Host test `annex-b-document-all` fails. Jint's conformance-only `IsHTMLDDA` class and type flags are internal; there is no verified supported public hook for a real Lite collection. A truthy JavaScript object is not a replacement. |
 | Complete normative obligations | Review syntax, static semantics, abstract operations, execution contexts, built-ins, module semantics, shared memory, and Annex B; split sections into individually mapped obligations where needed. | The 2,115-section index is complete as a section index, but every section starts unreviewed. Importing section headings is not normative verification. |
 | Complete edition applicability | Review staging tests, untagged later semantic changes, and every mixed-era exclusion. Supply a separately mapped ES2020 test before excluding incompatible mixed coverage. | The first full inventory found 1,226 unreviewed staging tests and 3,873 post-target tests referring to ES2020 sections. The exact current list is exported in `es2020-backlog.json`. |
@@ -36,7 +36,7 @@ list cannot yet be asserted to contain every possible ES2020 defect.
 | Document and iframe realms | Expand integration evidence for iframe imports, independent module maps/jobs, navigation cancellation, and realm-correct errors across document boundaries. | Separate-document globals/intrinsics/module maps and navigation cancellation have focused checks; existing iframe unit tests provide additional regressions. The complete host obligation review remains open. |
 | Error and rejection notifications | Complete browser event semantics and error location details, including cancellation/default reporting and callback exceptions. | Original thrown objects are preserved, parse failures report `SyntaxError`, and rejection/handled notifications preserve promise and reason identity. Error/rejection notifications currently use simple objects rather than complete browser event implementations. |
 | Jobs and readiness | Expand ordering coverage across scripts, deferred modules, callbacks, observers, tasks, and failure paths. | Modules complete before `DOMContentLoaded`; deferred execution observes `interactive`; promise/timer order is tested. This does not claim full HTML script-processing conformance. |
-| Final readiness evidence | Obtain a reviewed inventory plus current passing results for every required execution and host obligation, with no unknown classifications, missing shards, skipped mandatory tests, timeouts, crashes, or dependency exceptions. | Eight-shard execution and fail-closed aggregation are implemented. The gate intentionally fails while any mandatory work above remains. |
+| Final readiness evidence | Obtain a reviewed inventory plus current passing results for every required execution and host obligation, with no unknown classifications, missing shards, skipped mandatory tests, timeouts, crashes, or dependency exceptions. | Eight-shard execution and fail-closed aggregation are implemented. The readiness verdict stays false while any mandatory work above remains; it blocks publication, and everyday CI reports it rather than failing on it. |
 
 Intl/ECMA-402, public Web Workers, parser-blocking execution, `document.write`
 reentrancy, and complete dynamic-script processing remain separate workstreams.
@@ -57,9 +57,18 @@ python scripts/run-es2020.py
 
 The script runs eight deterministic Test262 shards and the host suite, keeps all
 failures, aggregates evidence, exports the remaining-work list, and invokes
-`--require-es2020-ready`. It exits nonzero while conformance is incomplete.
-Both compatibility CI and NuGet release validation invoke this gate. A failing
-shard does not prevent the other shards or report generation from finishing.
+`--require-es2020-ready`. A failing shard does not prevent the other shards or
+report generation from finishing.
+
+Its exit status covers execution only — the shards, the host suite and the
+inventory export. The readiness verdict is printed and recorded in
+`supervisor.json` (`readinessIsGating: false`), but does not fail the script,
+because readiness also depends on the unfinished normative and edition review
+below: no amount of green execution can clear it, so gating everyday builds on
+it would report every change as broken for reasons unrelated to that change.
+Compatibility CI therefore publishes the readiness verdict without enforcing it.
+NuGet release validation still enforces `--require-es2020-ready`, so a published
+release cannot claim an ES2020 profile whose review is incomplete.
 
 Outputs are under `Lite.Conformance/artifacts/es2020/`:
 
@@ -117,6 +126,20 @@ The complete review contract requires more than green Test262 counts. Unknown
 classifications and unmapped normative obligations remain blockers, and stock
 Jint defects must retain their exact reproducers until a supported stable release
 fixes them and complete revalidation succeeds.
+
+Two manifests separate a known defect from a new one, on the same contract as the
+curated WPT manifest:
+[`es2020-expected-failures.txt`](../Lite.Conformance/Test262/es2020-expected-failures.txt)
+for mandatory Test262 executions and
+[`es2020-host-expected-failures.txt`](../Lite.Conformance/Test262/es2020-host-expected-failures.txt)
+for host obligations. A listed test still executes, its real outcome is still
+written to the evidence, and it still keeps `es2020ProfileReady` false; listing it
+only stops a published, unresolved defect from reading as a fresh regression on
+every run. Every entry must be published in the compatibility profile as `failing`
+or `dependency-exception`, or the profile validator rejects it, and a listed test
+that starts passing is an unexpected pass that fails the suite. Neither file may be
+used to waive an unexplained failure: `Test262/skip-list.txt` remains the place for
+a dependency exception once there is an upstream issue to cite.
 
 The host review is separately recorded in
 [`es2020-host-obligations.json`](../Lite.Conformance/Test262/es2020-host-obligations.json).

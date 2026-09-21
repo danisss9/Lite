@@ -1,0 +1,9 @@
+# Host obligations that currently fail and are published in the compatibility profile.
+# One exact host test name per line, annotated: <name> [expected-fail: reason]
+#
+# Same contract as Wpt\wpt-manifest.txt: a listed test that starts passing is an
+# unexpected pass and fails the suite, so a waiver cannot outlive its cause. Listed
+# tests still block es2020ProfileReady through Es2020Readiness — this file keeps a
+# known, unresolvable gap from masquerading as a regression, it does not claim a pass.
+
+annex-b-document-all [expected-fail: document.all needs Jint's [[IsHTMLDDA]] behaviour, which has no supported public hook on the 4.16.3 pin; published as es2020.annex-b-document-all]

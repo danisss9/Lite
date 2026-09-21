@@ -373,7 +373,10 @@ internal static class WptRunner
             }
 
             if (harnessStatus != 0)
-                failures.Insert(0, $"harness status {harnessStatus}");
+            {
+                var harnessMessage = rootEl.TryGetProperty("message", out var hm) ? hm.GetString() : null;
+                failures.Insert(0, $"harness status {harnessStatus}{(string.IsNullOrEmpty(harnessMessage) ? "" : $" — {harnessMessage}")}");
+            }
 
             if (total == 0)
                 return new RunResult(Cat.Empty, "0 subtests reported", 0, 0);

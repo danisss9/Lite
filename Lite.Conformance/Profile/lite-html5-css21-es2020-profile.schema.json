@@ -146,6 +146,7 @@
             "css21-curated",
             "css21-official",
             "test262",
+            "es2020-host",
             "acid",
             "manual"
           ]

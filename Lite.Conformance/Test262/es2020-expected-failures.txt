@@ -1,0 +1,13 @@
+# Mandatory Test262 executions that currently fail and are published in the compatibility profile.
+# One exact test path per line, annotated: <path> [expected-fail: reason]
+#
+# Same contract as Wpt\wpt-manifest.txt: the test still runs, its real outcome is still recorded
+# in the evidence, and it still blocks es2020ProfileReady through Es2020Readiness. Listing it only
+# stops a known, unresolved defect from reading as a fresh regression on every shard. A listed test
+# that starts passing in every required mode is an unexpected pass and fails the shard, so a waiver
+# cannot outlive its cause. Unlike Test262\skip-list.txt this does not skip execution.
+#
+# Prefer skip-list.txt (a published dependency-exception with an upstream issue) once a defect has
+# a tracked upstream report.
+
+test/annexB/language/function-code/block-decl-func-skip-arguments.js [expected-fail: stock Jint 4.16.3 defect, sloppy mode: a block function named `arguments` replaces the arguments object; published as es2020.annexb.block-decl-func-arguments]

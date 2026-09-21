@@ -80,15 +80,8 @@ internal static class EventDispatcher
             if (!evt.ImmediatePropagationStopped && InvokeListeners(targetNode, eventType, evt, engine, capturePhase: false))
                 handled = true;
             // Inline handler
-            if (!evt.ImmediatePropagationStopped)
-            {
-                var attrKey = "on" + eventType;
-                if (targetNode.Attributes.TryGetValue(attrKey, out var inlineCode))
-                {
-                    engine.Execute(inlineCode);
-                    handled = true;
-                }
-            }
+            if (!evt.ImmediatePropagationStopped && InvokeHandlerAttribute(targetNode, eventType, evt, engine))
+                handled = true;
         }
 
         // Phase 3: BUBBLING
@@ -103,15 +96,8 @@ internal static class EventDispatcher
                 if (InvokeListeners(ancestor, eventType, evt, engine, capturePhase: false))
                     handled = true;
                 // Inline handler on ancestors during bubbling
-                if (!evt.ImmediatePropagationStopped)
-                {
-                    var attrKey = "on" + eventType;
-                    if (ancestor.Attributes.TryGetValue(attrKey, out var inlineCode))
-                    {
-                        engine.Execute(inlineCode);
-                        handled = true;
-                    }
-                }
+                if (!evt.ImmediatePropagationStopped && InvokeHandlerAttribute(ancestor, eventType, evt, engine))
+                    handled = true;
             }
         }
 
@@ -120,6 +106,17 @@ internal static class EventDispatcher
         // Run Promise continuations scheduled by the handlers (microtask checkpoint).
         engine.FlushMicrotasks();
         return handled;
+    }
+
+    /// <summary>Runs <paramref name="node"/>'s <c>on&lt;type&gt;</c> content attribute, if it has one.
+    /// The attribute value is a function body taking the event as its <c>event</c> parameter, with
+    /// <c>this</c> bound to the element (HTML §8.1.5.1).</summary>
+    private static bool InvokeHandlerAttribute(LayoutNode node, string eventType, JsEvent evt, JsEngine engine)
+    {
+        if (!node.Attributes.TryGetValue("on" + eventType, out var inlineCode)) return false;
+        engine.ExecuteEventHandler(inlineCode, JsValue.FromObject(engine.RawEngine, JsElement.For(engine.RawEngine, node)),
+            JsValue.FromObject(engine.RawEngine, evt));
+        return true;
     }
 
     private static bool InvokeListeners(LayoutNode node, string eventType, JsEvent evt, JsEngine engine, bool capturePhase)

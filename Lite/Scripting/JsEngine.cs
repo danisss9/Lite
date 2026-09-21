@@ -499,6 +499,38 @@ internal class JsEngine
         finally { FlushMicrotasks(); ScriptExecuted?.Invoke(this); }
     }
 
+    private readonly Dictionary<string, JsValue> _eventHandlerAttributes = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Runs an event handler content attribute (HTML §8.1.5.1): the attribute value is the body of
+    /// a function whose single formal parameter is named <c>event</c> and whose <c>this</c> is the
+    /// element the attribute sits on. Executing the value as a bare script instead — as Lite used to —
+    /// left <c>event</c> undeclared, so every <c>onclick="event.preventDefault()"</c> style handler
+    /// threw a ReferenceError that surfaced on window.onerror.
+    /// </summary>
+    internal void ExecuteEventHandler(string code, JsValue thisValue, JsValue eventArg)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return;
+        try
+        {
+            if (!_eventHandlerAttributes.TryGetValue(code, out var handler))
+            {
+                // The trailing newline keeps a body ending in a line comment from swallowing the brace.
+                handler = _engine.Evaluate("(function (event) {" + code + "\n})", JavaScriptRuntime.ScriptParsing);
+                // A page that writes a fresh handler string on every event would otherwise grow the
+                // cache without bound; documents reuse a handful of attribute values in practice.
+                if (_eventHandlerAttributes.Count >= 256) _eventHandlerAttributes.Clear();
+                _eventHandlerAttributes[code] = handler;
+            }
+            _engine.Invoke(handler, thisValue, [eventArg]);
+        }
+        catch (Jint.Runtime.JavaScriptException ex) { ReportScriptError(ex.Error); }
+        catch (Exception ex) when (ex is Acornima.SyntaxErrorException || ex.InnerException is Acornima.SyntaxErrorException)
+        { ReportScriptError(_engine.Construct(_syntaxErrorConstructor, [(JsValue)ex.Message])); }
+        catch (Exception ex) { ReportScriptError(_engine.Intrinsics.Error.Construct(ex.Message)); }
+        finally { FlushMicrotasks(); }
+    }
+
     /// <summary>Registers an inline module's source under a specifier so it can be imported.</summary>
     internal void AddModule(string specifier, string code, string? sourceUrl = null)
     {

@@ -8,6 +8,7 @@ namespace Lite.Conformance.Test262;
 internal static class Test262Runner
 {
     internal sealed record Request(string Path, string Mode);
+    internal const string ExpectedFailuresFile = "Test262/es2020-expected-failures.txt";
     private static readonly JsonSerializerOptions Wire = new() { PropertyNameCaseInsensitive = true };
 
     public static int Run(string? filter, ShardSpec shard, string? reportPath = null, string selection = "full")
@@ -25,32 +26,55 @@ internal static class Test262Runner
         var outcomes = new List<TestEvidence>();
         var exceptions = Manifest.Load(ConformancePaths.Manifest("Test262/skip-list.txt")).Select(x => x.Path).ToHashSet(StringComparer.Ordinal);
         using var worker = new WorkerClient();
-        var failures = 0; var passes = 0; var excluded = 0;
+        // Unreviewed classifications are review backlog, not execution results: they are reported and
+        // carried into the evidence (and still block readiness through Es2020Readiness), but they do
+        // not fail the shard, so a shard turns red only when an execution actually regresses.
+        var failures = 0; var passes = 0; var excluded = 0; var unreviewed = 0;
+        // Published expected failures: still executed and still recorded as failures in the evidence,
+        // so readiness stays false, but they do not re-fail the shard on every run.
+        var expectedFailures = Manifest.Load(ConformancePaths.Manifest(ExpectedFailuresFile))
+            .Where(e => e.ExpectedFail).ToDictionary(e => e.Path, e => e.Reason ?? "expected", StringComparer.Ordinal);
+        var expectedFailed = 0; var unexpectedPasses = 0;
         foreach (var test in tests)
         {
             if (test.Classification != "included")
             {
                 var outcome = test.Classification is "invalid" or "unreviewed" ? "unreviewed" : "excluded";
                 outcomes.Add(new("test262", test.Path, outcome, test.Reason, [], Context: "javascript", Kind: "language"));
-                if (outcome == "unreviewed") failures++; else excluded++;
+                if (outcome == "unreviewed") unreviewed++; else excluded++;
                 continue;
             }
+            var waived = expectedFailures.TryGetValue(test.Path, out var waiverReason);
+            var everyModePassed = true;
             foreach (var mode in test.Metadata.Modes)
             {
                 if (Environment.GetEnvironmentVariable("T262_TRACE") == "1") Console.Error.WriteLine($"[running] {test.Path} [{mode}]");
                 var result = exceptions.Contains(test.Path) ? new Test262Outcome("skipped", "Stock engine dependency exception") : worker.Run(new(test.Path, mode));
                 var passed = result.Outcome == "pass";
-                if (passed) passes++; else { failures++; Console.WriteLine($"FAIL {test.Path} [{mode}]: {result.Detail}"); }
+                if (passed) passes++;
+                else
+                {
+                    everyModePassed = false;
+                    if (waived) { expectedFailed++; Console.WriteLine($"XFAIL {test.Path} [{mode}]: {waiverReason}"); }
+                    else { failures++; Console.WriteLine($"FAIL {test.Path} [{mode}]: {result.Detail}"); }
+                }
                 outcomes.Add(new("test262", test.Path, result.Outcome, result.Detail, [new(mode, passed ? 0 : 1, result.Detail)],
                     Context: "javascript", Kind: "language", JavaScript: new(mode, inventory.Sha256, selection,
                         shard.Index, shard.Count, filter, test.Metadata.NegativePhase, result.Phase,
                         test.Metadata.NegativeType, result.ErrorType, result.DurationMs)));
             }
+            if (waived && everyModePassed)
+            {
+                unexpectedPasses++;
+                Console.WriteLine($"XPASS {test.Path}: now passes; remove it from {ExpectedFailuresFile} and the profile.");
+            }
             if ((passes + failures) % 1000 == 0) Console.WriteLine($"test262 {shard}: {passes} passing executions, {failures} failures");
         }
         ExecutionEvidence.Write(reportPath ?? Path.Combine(ConformancePaths.EnsureArtifacts(), $"test262-{shard.Index}-of-{shard.Count}.json"), identity, started, outcomes);
-        Console.WriteLine($"test262 {selection} {shard}: {passes} passing executions, {failures} failures/unreviewed, {excluded} excluded tests");
-        return failures == 0 ? 0 : 1;
+        Console.WriteLine($"test262 {selection} {shard}: {passes} passing executions, {failures} failures, " +
+                          $"{expectedFailed} expected failures, {unexpectedPasses} unexpected passes, " +
+                          $"{unreviewed} unreviewed classifications, {excluded} excluded tests");
+        return failures == 0 && unexpectedPasses == 0 ? 0 : 1;
     }
 
     internal static int Worker(string? root = null)

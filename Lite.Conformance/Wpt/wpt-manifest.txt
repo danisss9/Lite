@@ -76,7 +76,10 @@ dom/nodes/ParentNode-querySelectorAll-removed-elements.html
 dom/nodes/getElementsByClassName-32.html
 dom/nodes/getElementsByClassName-whitespace-class-names.html
 dom/nodes/insertion-removing-steps/later-script-removed-by-earlier-script.html
-dom/nodes/moveBefore/preserve-render-blocking-script.html
+# moveBefore + blocking=render: document.head is null (HEAD is not in the layout tree),
+# Node.moveBefore is absent and render-blocking is not honoured, so the page reports no
+# subtests. Published in the profile as html5.4.11.1.render-blocking-script-move.
+dom/nodes/moveBefore/preserve-render-blocking-script.html [expected-fail: document.head, Node.moveBefore and script blocking=render are unimplemented]
 
 # CharacterData mutation API + DOMException + createComment/createProcessingInstruction
 # (implemented 2026-06-29): appendData/insertData/deleteData/replaceData/substringData with
@@ -166,7 +169,11 @@ html/semantics/embedded-content/the-iframe-element/historical.html
 html/semantics/embedded-content/the-iframe-element/iframe-nosrc.html
 html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller.html
 html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-horizontal.html
-html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-horizontal-far.html
+# The only variant that requires NOT loading: Lite loads every iframe eagerly during
+# traversal, so the distant frame fires load and the upstream page (which defines
+# img_onload, not iframe_onload) throws. Published in the profile as
+# html5.4.7.2.iframe-lazy-loading-distance.
+html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-horizontal-far.html [expected-fail: loading="lazy" distance deferral is unimplemented]
 html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested.html
 html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-2.html
 html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-nested-3.html

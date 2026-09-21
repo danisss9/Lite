@@ -427,6 +427,7 @@ internal static class ProfileRunner
                      File.Exists(Path.Combine(ConformancePaths.Vendor, "wpt", filePath)) ||
                      File.Exists(Path.Combine(ConformancePaths.Overrides, filePath)),
             "test262" => File.Exists(Path.Combine(ConformancePaths.Vendor, "test262", filePath)),
+            "es2020-host" => Es2020HostRunner.TestNames.Contains(path, StringComparer.Ordinal),
             "acid" => File.Exists(Path.Combine(ConformancePaths.Vendor, filePath)),
             "css21-curated" => File.Exists(Path.Combine(ConformancePaths.Overrides, filePath)) ||
                                File.Exists(Path.Combine(ConformancePaths.Vendor, "wpt", filePath)),
@@ -510,6 +511,10 @@ internal static class ProfileRunner
             Path.Combine("Wpt", "wpt-manifest.txt"), published, errors);
         RequirePublishedExpectedFailures("css21-curated",
             Path.Combine("Css21", "css21-manifest.txt"), published, errors);
+        RequirePublishedExpectedFailures("es2020-host",
+            Es2020HostRunner.ExpectedFailuresFile.Replace('/', Path.DirectorySeparatorChar), published, errors);
+        RequirePublishedExpectedFailures("test262",
+            Test262Runner.ExpectedFailuresFile.Replace('/', Path.DirectorySeparatorChar), published, errors);
         RequirePublishedSkipEntries("test262",
             Path.Combine("Test262", "skip-list.txt"), publishedDependencies, errors);
         RequirePublishedSkipEntries("wpt",

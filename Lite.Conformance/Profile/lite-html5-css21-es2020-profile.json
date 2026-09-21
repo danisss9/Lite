@@ -3030,6 +3030,49 @@
       "notes": "Reviewed against the 2014 iframe insertion and initial about:blank document requirements. Covers only non-null document identity and root presence."
     },
     {
+      "id": "html5.4.11.1.render-blocking-script-move",
+      "specification": "html5",
+      "clause": "4.11.1 The script element",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/scripting-1.html#the-script-element",
+      "title": "A render-blocking script keeps blocking rendering after it is moved",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "wpt",
+          "path": "dom/nodes/moveBefore/preserve-render-blocking-script.html",
+          "assertion": "A moved script should keep its render-blocking state"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/Dom/JsDocument.cs",
+        "Lite/Scripting/Dom/JsElement.cs"
+      ],
+      "notes": "Curated regression for a post-2014 feature stack Lite does not implement: HEAD is kept out of the layout tree so document.head is null, Node.moveBefore is absent, and script blocking=render is not honoured. The page reports no subtests at all. Published as failing rather than dropped so the gap stays visible."
+    },
+    {
+      "id": "html5.4.7.2.iframe-lazy-loading-distance",
+      "specification": "html5",
+      "clause": "4.7.2 The iframe element",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/embedded-content-0.html#the-iframe-element",
+      "title": "A lazily-loaded iframe far from the viewport is not loaded",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "wpt",
+          "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-horizontal-far.html",
+          "assertion": "Test that lazy-loaded iframes do not load when far from viewport."
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Layout"
+      ],
+      "notes": "Curated regression for the post-2014 loading attribute. Lite loads every iframe eagerly as its element is traversed, before layout exists, so the distant frame loads and fires load; the upstream page then throws because it only defines img_onload. Distance-based deferral also needs flex-item sizing, which currently gives the 10000vw spacer a zero-width box. The single subtest passes; only the uncaught error fails the page."
+    },
+    {
       "id": "html5.profile.browser-chrome",
       "specification": "html5",
       "clause": "Profile boundary: browser chrome",
@@ -3432,6 +3475,47 @@
         "Lite.Conformance/Test262/Test262ModuleLoader.cs",
         "Jint 4.16.3"
       ]
+    },
+    {
+      "id": "es2020.annex-b-document-all",
+      "specification": "es2020",
+      "clause": "B.3.7 The [[IsHTMLDDA]] internal slot",
+      "url": "https://262.ecma-international.org/11.0/#sec-IsHTMLDDA-internal-slot",
+      "title": "document.all and the [[IsHTMLDDA]] internal slot",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "es2020-host",
+          "path": "annex-b-document-all",
+          "assertion": "document.all is a live collection with [[IsHTMLDDA]] falsy conversion, loose equality, typeof and callable behaviour"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Scripting/Dom/JsDocument.cs",
+        "Jint 4.16.3"
+      ],
+      "notes": "document.all is not implemented. Jint's conformance-only IsHTMLDDA class and type flags are internal on the 4.16.3 pin, with no verified supported public hook for a real Lite collection, and a truthy object is not a replacement. Published so the host suite records this as an expected failure rather than a regression; it still keeps es2020ProfileReady false."
+    },
+    {
+      "id": "es2020.annexb.block-decl-func-arguments",
+      "specification": "es2020",
+      "clause": "B.3.3 Block-level function declarations web legacy compatibility semantics",
+      "url": "https://262.ecma-international.org/11.0/#sec-block-level-function-declarations-web-legacy-compatibility-semantics",
+      "title": "A block-level function declaration named arguments does not replace the arguments object",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/annexB/language/function-code/block-decl-func-skip-arguments.js",
+          "assertion": "In sloppy mode a block function named arguments must not overwrite the mapped arguments object"
+        }
+      ],
+      "implementationAreas": [
+        "Jint 4.16.3"
+      ],
+      "notes": "Stock-engine defect reproduced on the pinned Jint 4.16.3: the block function shadows the arguments object. The test keeps executing and keeps es2020ProfileReady false; it is published so the shard reports it as a known failure rather than a regression. Move it to Test262/skip-list.txt as a dependency-exception once an upstream issue exists to cite."
     }
   ]
 }

@@ -92,6 +92,31 @@ public static class DomTests
         engine.DrainTasks();
         Equal("between,toggle", engine.RawEngine.Evaluate("order.join(',')").ToString());
     }
+
+    [Test]
+    public static void EventHandlerAttribute_ReceivesEventParameterAndElementThis()
+    {
+        // HTML 8.1.5.1: the attribute value is a function body whose formal parameter is named
+        // "event" and whose this is the element. Running it as a bare script left `event`
+        // undeclared, so the handler threw a ReferenceError onto window.onerror instead.
+        const string html = """
+            <!doctype html><body><div id="d"></div>
+            <script>
+            var log = [];
+            var errors = [];
+            window.addEventListener('error', function (e) { errors.push(String(e.message)); });
+            var d = document.getElementById('d');
+            d.setAttribute('onclick', 'event.preventDefault(); log.push(event.type, this.tagName, event.defaultPrevented);');
+            var evt = new Event('click', { cancelable: true });
+            var notCanceled = d.dispatchEvent(evt);
+            </script>
+            """;
+        var engine = Parser.ParseChildPage(html, true, "http://handler.test/", 800, 600).Engine!;
+        Equal("click,DIV,true", engine.RawEngine.Evaluate("log.join(',')").ToString());
+        Equal("", engine.RawEngine.Evaluate("errors.join(',')").ToString());
+        Equal("false", engine.RawEngine.Evaluate("String(notCanceled)").ToString());
+    }
+
     /// <summary>Builds a minimal HTML/BODY LayoutNode tree and a JsEngine over it.</summary>
     private static (LayoutNode root, LayoutNode body, JsEngine engine) NewPage()
     {

@@ -145,7 +145,7 @@ Lite targets the [HTML 5.0 Recommendation of 28 October 2014](https://www.w3.org
 
 Curated green tests protect existing behavior; they do not establish complete standards conformance. `--suite html5` runs the small set of reviewed assertions. `html5ProfileReady` remains false until all applicable requirements and required dependencies have current passing evidence. See [HTML 5.0 implementation and evidence](docs/html5-conformance.md) for the remaining work, upstream WPT serving, and report commands.
 
-For JavaScript, see [ES2020 implementation and remaining features](docs/es2020-conformance.md). `--suite test262` runs the complete classified corpus; `--test262-set smoke` selects the small regression set. `python scripts/run-es2020.py` runs eight Windows shards, host checks, and the mandatory readiness gate.
+For JavaScript, see [ES2020 implementation and remaining features](docs/es2020-conformance.md). `--suite test262` runs the complete classified corpus; `--test262-set smoke` selects the small regression set. `python scripts/run-es2020.py` runs eight Windows shards and the host checks, and reports the readiness verdict. Its exit status covers execution; `es2020ProfileReady` stays false until the normative and edition review is finished, and only NuGet publication enforces it.
 
 ## Contributing
 

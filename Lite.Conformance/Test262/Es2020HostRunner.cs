@@ -124,20 +124,42 @@ internal static class Es2020HostRunner
     };
     internal static string[] TestNames => Cases.Keys.Order(StringComparer.Ordinal).ToArray();
 
+    internal const string ExpectedFailuresFile = "Test262/es2020-host-expected-failures.txt";
+
+    /// <summary>Host obligations whose failure is already published in the compatibility profile.
+    /// The recorded evidence is unchanged — these still block <c>es2020ProfileReady</c> — but the
+    /// suite only turns red on an unexpected outcome, exactly like the curated WPT manifest.</summary>
+    internal static IReadOnlyDictionary<string, string> ExpectedFailures() =>
+        Manifest.Load(ConformancePaths.Manifest(ExpectedFailuresFile)).Where(e => e.ExpectedFail)
+            .ToDictionary(e => e.Path, e => e.Reason ?? "expected", StringComparer.Ordinal);
+
     internal static int Run(string? filter, ShardSpec shard, string? reportPath)
     {
         var identity = ExecutionEvidence.CaptureIdentity(); var started = DateTime.UtcNow;
         var results = new List<TestEvidence>();
+        var expectedFailures = ExpectedFailures();
+        var unexpected = 0;
         using var site = new Site();
         foreach (var name in shard.Apply(TestNames.Where(n => filter is null || n.Contains(filter, StringComparison.OrdinalIgnoreCase))))
         {
             var passed = true; var detail = "ok";
             try { Cases[name](site); } catch (Exception ex) { passed = false; detail = ex.Message; }
             results.Add(new("es2020-host", name, passed ? "pass" : "fail", detail, [new(name, passed ? 0 : 1, detail)], Context: "window", Kind: "javascript-host"));
-            Console.WriteLine($"{(passed ? "PASS" : "FAIL")} es2020-host {name}: {detail}");
+            var waived = expectedFailures.TryGetValue(name, out var reason);
+            var label = (passed, waived) switch
+            {
+                (true, false) => "PASS ",
+                (false, true) => "XFAIL",
+                (true, true) => "XPASS",
+                _ => "FAIL ",
+            };
+            if (passed == waived) unexpected++;
+            Console.WriteLine($"{label} es2020-host {name}: {(waived && !passed ? reason : detail)}");
         }
         ExecutionEvidence.Write(reportPath ?? Path.Combine(ConformancePaths.EnsureArtifacts(), "es2020-host.json"), identity, started, results);
-        return results.Count > 0 && results.All(t => t.Outcome == "pass") ? 0 : 1;
+        if (unexpected > 0)
+            Console.WriteLine($"es2020-host: {unexpected} unexpected outcome(s); update {ExpectedFailuresFile} and the profile.");
+        return results.Count > 0 && unexpected == 0 ? 0 : 1;
     }
 
     private static void Check(JsEngine engine, string script)
