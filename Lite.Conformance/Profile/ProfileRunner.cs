@@ -126,9 +126,11 @@ internal static class ProfileRunner
         var cssReady = cssScreen.Ready && cssPrint.Ready && evidenceBlockers.Count == 0;
         foreach (var blocker in cssScreen.Blockers.Concat(cssPrint.Blockers).Distinct()) blockers.Add(blocker);
         // The combined claim must also have executed evidence for every included requirement.
+        // Keep those cross-standard requirements out of the independent language/CSS gates.
+        var combinedEvidenceBlockers = new List<string>(evidenceBlockers);
         foreach (var requirement in requirements.Where(r => Text(r, "applicability") == "included"))
-            AddEvidenceBlockers(requirement, evidence, evidenceBlockers);
-        foreach (var blocker in evidenceBlockers.Distinct()) blockers.Add(blocker);
+            AddEvidenceBlockers(requirement, evidence, combinedEvidenceBlockers);
+        foreach (var blocker in combinedEvidenceBlockers.Distinct()) blockers.Add(blocker);
         var es2020 = Es2020Readiness.Evaluate(evidence);
         var es2020Ready = es2020.Ready && evidenceBlockers.Count == 0;
         foreach (var blocker in es2020.Blockers) blockers.Add(blocker);

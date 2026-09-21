@@ -91,6 +91,20 @@ public static class Es2020Tests
     }
 
     [Test]
+    public static void ProfileReadiness_KeepsOtherStandardsOutOfEs2020Blockers()
+    {
+        var report = Path.Combine(ConformancePaths.EnsureArtifacts(), "es2020-profile-isolation.json");
+        Equal(0, Lite.Conformance.Profile.ProfileRunner.Run(report, requireReady: false));
+        var json = JsonNode.Parse(File.ReadAllText(report))!;
+        var blockers = json["es2020Blockers"]!.AsArray().Select(x => x!.GetValue<string>()).ToArray();
+        True(blockers.Length > 0);
+        True(blockers.All(b => b.StartsWith("es2020-", StringComparison.Ordinal)),
+            "HTML/CSS requirements leaked into the independent ES2020 gate");
+        True(json["blockers"]!.AsArray().Any(b => b!.GetValue<string>().Contains("html5.")),
+            "Combined release readiness lost the HTML blockers");
+    }
+
+    [Test]
     public static void Readiness_RejectsMissingModesDuplicatesAndSmokeEvidence()
     {
         var metadata = Test262Metadata.Parse("/*---\nfeatures: [BigInt]\n---*/");
