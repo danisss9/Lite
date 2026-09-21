@@ -2,7 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## [0.0.15] - 2026-09-21 (current)
+
+This release moves the active compatibility contract to the fixed HTML 5.3 draft of 18 October 2018, hardens WPT execution and document isolation, fixes event handler content attributes, and separates execution results from the outstanding review backlog in the ES2020 gates. Readiness flags remain false: `es2020ProfileReady` is now reported rather than enforced in compatibility CI, and NuGet release validation still enforces it. This candidate does not claim full conformance.
 
 - Migrate the active compatibility contract to the fixed HTML 5.3 draft of 18 October 2018; retain historical HTML 5.2 contracts. Add a reproducible section index, test applicability review, HTML-specific blockers, and executed evidence reports. HTML readiness remains false.
 - Isolate WPT tests in child processes with load/execution deadlines and document-specific reporting. Preserve individual subtests, metadata dependencies, variants, `.window.js`/`.any.js` support, authentic WPT MIME types, and an upstream WPT server option.
@@ -15,7 +17,7 @@ All notable changes to this project will be documented in this file.
 - Separate execution results from review backlog in the Test262 shards: unreviewed classifications are reported and kept in the evidence but no longer fail a shard, which previously reported 1,226 staging tests awaiting edition review as failures.
 - Give the Test262 and ES2020 host suites the curated WPT manifest's expected-failure contract, through `Test262/es2020-expected-failures.txt` and `Test262/es2020-host-expected-failures.txt`. Both entries still execute, are still recorded as failures, and still keep `es2020ProfileReady` false; they are published in the profile as `es2020.annexb.block-decl-func-arguments` (a stock Jint 4.16.3 defect) and `es2020.annex-b-document-all` (`document.all` needs Jint's internal `[[IsHTMLDDA]]`). A listed test that starts passing fails the suite as an unexpected pass, so a waiver cannot outlive its cause.
 
-## [0.0.14] - 2026-09-04 (current)
+## [0.0.14] - 2026-09-04
 
 This entry consolidates the previously staged, unreleased 0.0.14 and 0.0.15 work with the compatibility-program foundation for the **Lite HTML 5.2/CSS 2.1/ES2020 compatibility profile**. Before the dependency-foundation upgrade, the two CSS 2.1 passes moved the upstream `css/CSS2` survey from **2554/6266 (40.8%)** to **4042/6266 (64.5%)**, a net gain of **1488 reftests**. This candidate makes the standards target and its evidence auditable; it does not claim full conformance while the published report remains incomplete or failing.
 
