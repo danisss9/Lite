@@ -27,21 +27,23 @@ internal static class TableEngine
     /// <c>display: table</c> (including an anonymous table box, or a <c>::after</c> with
     /// <c>display:table</c>) therefore gets 0 — defaulting it to 2px indents its content.
     /// </summary>
-    private static float GetBorderSpacing(LayoutNode table)
+    internal static (float Horizontal, float Vertical) GetBorderSpacing(LayoutNode table)
     {
         var uaDefault = table.TagName == "TABLE" ? 2f : 0f;
         var raw = table.TryResolveStyle("border-spacing", out var ov)
             ? ov : table.Style.GetPropertyValueSafe("border-spacing");
-        if (string.IsNullOrWhiteSpace(raw)) return uaDefault;
-        raw = raw.Trim().Split(' ')[0]; // Use first value (horizontal)
-        if (raw.EndsWith("px") && float.TryParse(raw[..^2],
-            System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out var px))
-            return px;
-        if (float.TryParse(raw, System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out var plain))
-            return plain;
-        return uaDefault;
+        if (string.IsNullOrWhiteSpace(raw)) return (uaDefault, uaDefault);
+        var tokens = raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        var fontSize = table.GetFontSize();
+        bool Length(string token, out float px)
+        {
+            px = 0;
+            return !token.Contains('%') && CssUnits.TryParse(token, fontSize, 0, 0, 0, out px) && float.IsFinite(px) && px >= 0;
+        }
+        // The whole declaration is invalid if either component is invalid.
+        if (tokens.Length is < 1 or > 2 || !Length(tokens[0], out var horizontal)) return (uaDefault, uaDefault);
+        if (tokens.Length == 1) return (horizontal, horizontal);
+        return Length(tokens[1], out var vertical) ? (horizontal, vertical) : (uaDefault, uaDefault);
     }
 
     public static float LayoutTable(
@@ -54,7 +56,7 @@ internal static class TableEngine
         if (rows.Count == 0) return 0f;
 
         var collapse = IsBorderCollapse(table);
-        var spacing = collapse ? 0f : GetBorderSpacing(table);
+        var (spacing, verticalSpacing) = collapse ? (0f, 0f) : GetBorderSpacing(table);
 
         // Build 2D grid placement with colspan/rowspan support
         var placements = BuildGrid(rows, out var colCount, out var rowCount);
@@ -77,7 +79,7 @@ internal static class TableEngine
                 captionTopH = LayoutCaptionBlock(caption, contentX, contentY, contentW, viewportW, viewportH);
         }
 
-        var cursorY = contentY + captionTopH + spacing;
+        var cursorY = contentY + captionTopH + verticalSpacing;
 
         // ── Pass 1: measure each cell's natural content height ──────────────
         foreach (var p in placements)
@@ -143,7 +145,7 @@ internal static class TableEngine
             if (p.RowSpan <= 1) continue;
             var spannedH = 0f;
             for (int r = p.Row; r < p.Row + p.RowSpan && r < rowCount; r++)
-                spannedH += rowHeights[r] + (r > p.Row ? spacing : 0f);
+                spannedH += rowHeights[r] + (r > p.Row ? verticalSpacing : 0f);
             if (p.MeasuredOuterH > spannedH)
             {
                 var lastRow = Math.Min(p.Row + p.RowSpan - 1, rowCount - 1);
@@ -157,7 +159,7 @@ internal static class TableEngine
         for (int r = 0; r < rowCount; r++)
         {
             rowYs[r] = ry;
-            ry += rowHeights[r] + spacing;
+            ry += rowHeights[r] + verticalSpacing;
         }
 
         // ── Pass 2: commit final positions to every cell ──────────────────
@@ -167,7 +169,7 @@ internal static class TableEngine
             var cellW = CellSpanWidth(colWidths, p.Col, p.ColSpan, spacing);
             var cellH = 0f;
             for (int r = p.Row; r < p.Row + p.RowSpan && r < rowCount; r++)
-                cellH += rowHeights[r] + (r > p.Row ? spacing : 0f);
+                cellH += rowHeights[r] + (r > p.Row ? verticalSpacing : 0f);
 
             var cx = CellX(contentX, colWidths, p.Col, spacing) + p.Marg.Left + p.Bord.Left + p.Pad.Left;
             var cy = rowYs[p.Row] + p.Marg.Top + p.Bord.Top + p.Pad.Top;
@@ -422,7 +424,7 @@ internal static class TableEngine
         var rows = CollectRows(table);
         if (rows.Count == 0) return Math.Max(0f, explicitTableW);
 
-        var spacing = IsBorderCollapse(table) ? 0f : GetBorderSpacing(table);
+        var spacing = IsBorderCollapse(table) ? 0f : GetBorderSpacing(table).Horizontal;
         var placements = BuildGrid(rows, out var colCount, out _);
         if (colCount == 0) return Math.Max(0f, explicitTableW);
 

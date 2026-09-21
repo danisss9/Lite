@@ -1,7 +1,7 @@
 namespace Lite.Layout;
 
 /// <summary>
-/// CSS property metadata for the subset Lite renders: each property's initial value and whether
+/// CSS 2.1 longhand metadata: each property's initial value and whether
 /// it inherits. Backs the cascade-wide keywords `initial` (→ initial value), `inherit` (→ parent
 /// value), and `unset` (→ inherit if the property inherits, else initial) for styles set via JS
 /// or applied by <see cref="StyleResolver"/>. (AngleSharp already resolves these for parsed CSS.)
@@ -27,6 +27,14 @@ internal static class PropertyTable
             ["white-space"] = ("normal", true),
             ["list-style-type"] = ("disc", true),
             ["list-style-position"] = ("outside", true),
+            ["list-style-image"] = ("none", true),
+            ["border-collapse"] = ("separate", true),
+            ["border-spacing"] = ("0", true),
+            ["caption-side"] = ("top", true),
+            ["empty-cells"] = ("show", true),
+            ["quotes"] = ("\"\\\"\" \"\\\"\" \"'\" \"'\"", true),
+            ["orphans"] = ("2", true),
+            ["widows"] = ("2", true),
             ["visibility"] = ("visible", true),
             ["cursor"] = ("auto", true),
             ["direction"] = ("ltr", true),
@@ -35,6 +43,31 @@ internal static class PropertyTable
             ["display"] = ("inline", false),
             ["background-color"] = ("transparent", false),
             ["background-image"] = ("none", false),
+            ["background-attachment"] = ("scroll", false),
+            ["background-position"] = ("0% 0%", false),
+            ["background-repeat"] = ("repeat", false),
+            ["clip"] = ("auto", false),
+            ["content"] = ("normal", false),
+            ["counter-increment"] = ("none", false),
+            ["counter-reset"] = ("none", false),
+            ["table-layout"] = ("auto", false),
+            ["text-decoration"] = ("none", false),
+            ["unicode-bidi"] = ("normal", false),
+            ["vertical-align"] = ("baseline", false),
+            ["outline-color"] = ("invert", false),
+            ["outline-style"] = ("none", false),
+            ["outline-width"] = ("medium", false),
+            ["page-break-before"] = ("auto", false),
+            ["page-break-after"] = ("auto", false),
+            ["page-break-inside"] = ("auto", false),
+            ["border-top-color"] = ("currentcolor", false),
+            ["border-right-color"] = ("currentcolor", false),
+            ["border-bottom-color"] = ("currentcolor", false),
+            ["border-left-color"] = ("currentcolor", false),
+            ["border-top-style"] = ("none", false),
+            ["border-right-style"] = ("none", false),
+            ["border-bottom-style"] = ("none", false),
+            ["border-left-style"] = ("none", false),
             ["opacity"] = ("1", false),
             ["position"] = ("static", false),
             ["float"] = ("none", false),
@@ -67,6 +100,8 @@ internal static class PropertyTable
 
     public static bool IsInherited(string property) =>
         Props.TryGetValue(property, out var p) && p.Inherited;
+
+    internal static IEnumerable<string> InheritedProperties => Props.Where(p => p.Value.Inherited).Select(p => p.Key);
 
     public static string? InitialValue(string property) =>
         Props.TryGetValue(property, out var p) ? p.Initial : null;

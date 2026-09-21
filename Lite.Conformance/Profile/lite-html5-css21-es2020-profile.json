@@ -6,7 +6,10 @@
   "platform": {
     "operatingSystem": "Windows",
     "architecture": "x64",
-    "cssMedia": "screen"
+    "cssMedia": [
+      "screen",
+      "print"
+    ]
   },
   "targets": [
     {
@@ -3248,11 +3251,14 @@
       "clause": "13",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html",
       "title": "Paged media",
-      "applicability": "excluded",
-      "status": "profile-excluded",
+      "applicability": "included",
+      "status": "untested",
       "tests": [],
-      "implementationAreas": [],
-      "exclusionReason": "The compatibility target is the screen medium; print and paged-media rendering are outside the profile."
+      "implementationAreas": [
+        "Lite/Layout",
+        "Lite/Drawer.cs"
+      ],
+      "notes": "Print and paged-media rendering through PDF export are included; native printer integration is deferred."
     },
     {
       "id": "css21.appendix-a",
@@ -3264,7 +3270,7 @@
       "status": "profile-excluded",
       "tests": [],
       "implementationAreas": [],
-      "exclusionReason": "The compatibility target is visual screen rendering; aural rendering is outside the profile."
+      "exclusionReason": "Appendix A is informative; speech rendering is not required by CSS 2.1."
     },
     {
       "id": "es2020.5-16",

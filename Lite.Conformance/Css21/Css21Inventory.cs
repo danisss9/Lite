@@ -130,9 +130,13 @@ internal static class Css21Inventory
     internal static bool HasEvidence(IReadOnlyList<TestEvidence> evidence, string suite, string path,
         string media, string inventoryHash, string? assertion = null)
     {
+        if (suite == "unit") return ExecutionEvidence.HasPassingEvidence(evidence, suite, path, assertion);
         var matches = evidence.Where(t => t.Suite == suite && t.Path == path && t.Css?.Media == media).ToArray();
+        var expectedMode = Path.GetExtension(path.Split(['?', '#'])[0]) is ".xht" or ".xhtml" or ".xml" ? "xhtml" : "html";
         return matches.Length > 0 && matches.All(t => t.Css is { } css && css.InventorySha256 == inventoryHash &&
-            css.DocumentMode is "html" or "xhtml" && css.ViewportWidth > 0 && css.ViewportHeight > 0 &&
+            css.DocumentMode == expectedMode && css.ViewportWidth > 0 && css.ViewportHeight > 0 &&
+            (media != "print" || css.PageCount > 0 && css.PageWidthPoints > 0 && css.PageHeightPoints > 0 &&
+                t.Artifacts?.Any(a => a.Kind == "pdf") == true) &&
             t.Outcome == "pass" && t.HarnessStatus is null or 0 && t.Subtests.Count > 0 && t.Subtests.All(s => s.Status == 0) &&
             (string.IsNullOrEmpty(assertion) || t.Subtests.Any(s => s.Name == assertion)) &&
             (suite != "css21-wpt" || t.Environment == "upstream-wpt"));
@@ -154,6 +158,10 @@ internal static class Css21Inventory
                 Text(row, "status") is not ("untested" or "implemented" or "failing") || row["tests"] is not JsonArray)
                 throw new InvalidDataException("Invalid or duplicate CSS obligation.");
             ValidateMedia(row, allowEmpty: false);
+            foreach (var test in row["tests"]!.AsArray())
+                if (test is not JsonObject mapping || Text(mapping, "suite") is not ("unit" or "css21-wpt" or "css21-official" or "manual") ||
+                    !WptCatalog.ValidPath(Text(mapping, "path")) || string.IsNullOrWhiteSpace(Text(mapping, "assertion")))
+                    throw new InvalidDataException("CSS obligation mappings need an executable path, suite and exact assertion.");
         }
         var paths = new HashSet<string>(StringComparer.Ordinal);
         foreach (var row in tests.OfType<JsonObject>())

@@ -75,21 +75,26 @@ public static class CssWideKeywordTests
     }
 
     [Test]
-    public static void StylesheetEncoding_FollowsBomThenAtCharsetThenHttp()
+    public static void StylesheetEncoding_FollowsTransportThenBomAndCharset()
     {
         // CSS 2.1 §4.4. Decoding every sheet as UTF-8 both mangles one in a legacy encoding and
         // leaves the U+FEFF of a BOM at the front of the text, which breaks its first selector.
         var utf8 = System.Text.Encoding.UTF8;
 
         var bom = utf8.GetPreamble().Concat(utf8.GetBytes("#a { color: green }")).ToArray();
-        Equal("#a { color: green }", Parser.DecodeCss(bom, "iso-8859-5", null, null, out var used1));
+        Equal("#a { color: green }", Parser.DecodeCss(bom, null, null, null, out var used1));
         Equal("utf-8", used1);
 
-        // @charset outranks the HTTP header, and a legacy code page decodes correctly.
+        // A legacy @charset applies when transport metadata is absent.
         var declared = "@charset \"shift-JIS\";\n.\u5e73\u548c { color: green }";
         var sjis = System.Text.Encoding.GetEncoding("shift_jis").GetBytes(declared);
-        True(Parser.DecodeCss(sjis, "utf-8", null, null, out _).Contains("\u5e73\u548c"),
-            "an @charset-declared encoding must win over the HTTP charset");
+        True(Parser.DecodeCss(sjis, null, null, null, out _).Contains("\u5e73\u548c"),
+            "an @charset-declared encoding must decode legacy text");
+        Equal(utf8.GetString(sjis), Parser.DecodeCss(sjis, "utf-8", null, null, out var transport));
+        Equal("utf-8", transport);
+        Equal(System.Text.Encoding.GetEncoding("iso-8859-5").GetString(bom),
+            Parser.DecodeCss(bom, "iso-8859-5", null, null, out _));
+        Equal("#a { color: green }", Parser.DecodeCss(bom, "utf-8", null, null, out _));
 
         // With neither, the linking element's charset attribute is consulted before the fallback.
         var plain = System.Text.Encoding.GetEncoding("shift_jis").GetBytes(".\u5e73\u548c { color: green }");

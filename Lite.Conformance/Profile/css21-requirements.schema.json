@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "target": {
+      "const": "https://www.w3.org/TR/2011/REC-CSS2-20110607/"
+    },
+    "reviewComplete": {
+      "type": "boolean"
+    },
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://www[.]w3[.]org/TR/2011/REC-CSS2-20110607/"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "media": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "screen",
+                "print"
+              ]
+            },
+            "uniqueItems": true,
+            "minItems": 1
+          },
+          "status": {
+            "enum": [
+              "untested",
+              "implemented",
+              "failing"
+            ]
+          },
+          "tests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "suite": {
+                  "enum": [
+                    "unit",
+                    "css21-wpt",
+                    "css21-official",
+                    "manual"
+                  ]
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "assertion": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "suite",
+                "path",
+                "assertion"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "title",
+          "media",
+          "status",
+          "tests"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "target",
+    "reviewComplete",
+    "requirements"
+  ],
+  "additionalProperties": false
+}

@@ -43,7 +43,16 @@
           "const": "x64"
         },
         "cssMedia": {
-          "const": "screen"
+          "type": "array",
+          "items": {
+            "enum": [
+              "screen",
+              "print"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true
         }
       },
       "additionalProperties": false

@@ -15,14 +15,7 @@ namespace Lite.Layout;
 /// </summary>
 internal static class StyleResolver
 {
-    // CSS 2.1 inherited properties (the common subset the engine renders).
-    private static readonly string[] InheritedProperties =
-    {
-        "color", "font-family", "font-size", "font-style", "font-weight", "font-variant",
-        "line-height", "letter-spacing", "word-spacing", "text-align", "text-indent",
-        "text-transform", "white-space", "list-style-type", "list-style-position",
-        "visibility", "cursor", "direction",
-    };
+    private static readonly string[] InheritedProperties = PropertyTable.InheritedProperties.ToArray();
 
     /// <summary>
     /// Resolves styles for every node in <paramref name="root"/>'s subtree that still

@@ -1235,7 +1235,26 @@ internal static class Parser
         string? referrerCharset, out string usedCharset)
     {
         usedCharset = "utf-8";
-        // 1. BOM — authoritative, and consumed rather than decoded into the text.
+        // The pinned CSS 2.1 §4.4 gives transport metadata priority over BOM/@charset.
+        // Strip a BOM only when it belongs to the selected encoding.
+        if (TryGetEncoding(httpCharset) is { } transportEncoding)
+        {
+            usedCharset = transportEncoding.WebName;
+            var preamble = transportEncoding.GetPreamble();
+            var offset = preamble.Length > 0 && bytes.AsSpan().StartsWith(preamble) ? preamble.Length : 0;
+            return transportEncoding.GetString(bytes, offset, bytes.Length - offset);
+        }
+        // 2. BOM and/or @charset, consulted only without a usable transport charset.
+        if (bytes.AsSpan().StartsWith(new byte[] { 0, 0, 0xFE, 0xFF }))
+        {
+            usedCharset = "utf-32BE";
+            return new UTF32Encoding(bigEndian: true, byteOrderMark: true).GetString(bytes, 4, bytes.Length - 4);
+        }
+        if (bytes.AsSpan().StartsWith(new byte[] { 0xFF, 0xFE, 0, 0 }))
+        {
+            usedCharset = "utf-32";
+            return Encoding.UTF32.GetString(bytes, 4, bytes.Length - 4);
+        }
         if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
             return Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
         if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
@@ -1262,9 +1281,8 @@ internal static class Parser
             }
         }
 
-        // 3. HTTP, 4. the linking element's charset attribute, 5. the referring sheet/document's
-        //    encoding, 6. UTF-8.
-        foreach (var candidate in new[] { httpCharset, linkCharset, referrerCharset })
+        // 3. Linking metadata, 4. referring sheet/document, 5. UTF-8.
+        foreach (var candidate in new[] { linkCharset, referrerCharset })
             if (TryGetEncoding(candidate) is { } enc)
             {
                 usedCharset = enc.WebName;
