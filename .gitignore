@@ -402,6 +402,9 @@ Lite.Conformance/vendor/
 Lite.Conformance/artifacts/
 /compatibility-report.json
 
+# Locally downloaded CI evidence and verification scratch scripts
+artifacts-ci/
+
 # JetBrains Rider
 *.sln.iml
 
