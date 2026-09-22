@@ -17,6 +17,8 @@ internal static class Test262Catalog
     internal const string ApplicabilityFile = "Test262/es2020-applicability.json";
     internal const string SectionsFile = "Test262/es2020-sections.json";
     internal static string Root => Path.Combine(ConformancePaths.Vendor, "test262");
+    // Upstream blob is pure LF; any CR byte means a checkout-time rewrite (git core.autocrlf).
+    internal const string LineEndingCanary = "test/built-ins/Function/prototype/toString/line-terminator-normalisation-LF.js";
     private static readonly Lazy<string[]> SmokeRoots = new(() => JsonNode.Parse(File.ReadAllText(ConformancePaths.Manifest(ApplicabilityFile)))!["smokeRoots"]!.AsArray().Select(p => p!.GetValue<string>()).ToArray());
 
     internal static Test262Inventory Read()
@@ -38,6 +40,15 @@ internal static class Test262Catalog
             .Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(x => x.TrimEnd('\r')).ToArray();
         var missing = expected.Where(p => !File.Exists(Path.Combine(Root, p))).ToArray();
         if (missing.Length > 0) blockers.Add($"test262-checkout-incomplete:{missing.Length}");
+        // Git's core.autocrlf=true (the Windows system default) rewrites LF sources to CRLF at
+        // checkout while git status and git diff still report the tree as clean, so the check
+        // below cannot rely on git. test262 asserts verbatim source text (Function.prototype
+        // toString line-terminator tests) and the inventory hashes test bytes, so a rewritten
+        // tree would yield wrong verdicts silently; scripts/fetch-tests.ps1 pins the setting.
+        var canary = Path.Combine(Root, LineEndingCanary);
+        var lineEndingsClean = !File.Exists(canary) || !File.ReadAllBytes(canary).Contains((byte)'\r');
+        if (!lineEndingsClean)
+            blockers.Add($"test262-checkout-line-endings:{LineEndingCanary} contains CR; re-run scripts/fetch-tests.ps1 (it pins core.autocrlf=false)");
         var tests = new List<Test262Case>();
         var supplementalRoot = ConformancePaths.Manifest("Test262/supplemental");
         var sources = expected.Where(p => p.StartsWith("test/", StringComparison.Ordinal) && p.EndsWith(".js", StringComparison.Ordinal))
@@ -94,7 +105,7 @@ internal static class Test262Catalog
             .Append(ExecutionEvidence.HashFile(ConformancePaths.Manifest(SectionsFile)));
         foreach (var test in tests) signature.Append('\n').Append(test.Path).Append(':').Append(test.SourceSha256);
         return new(revision, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(signature.ToString()))).ToLowerInvariant(),
-            missing.Length == 0 && revision == suite["revision"]!.GetValue<string>(), blockers, tests);
+            missing.Length == 0 && revision == suite["revision"]!.GetValue<string>() && lineEndingsClean, blockers, tests);
     }
 
     internal static bool IsSmoke(string path)

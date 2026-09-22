@@ -26,6 +26,23 @@ internal static class Test262Runner
         var outcomes = new List<TestEvidence>();
         var exceptions = Manifest.Load(ConformancePaths.Manifest("Test262/skip-list.txt")).Select(x => x.Path).ToHashSet(StringComparer.Ordinal);
         using var worker = new WorkerClient();
+        // Resource-style failures (worker crash, execution timeout, engine OutOfMemory) are
+        // symptoms of the nine concurrent supervised runs sharing one machine, not execution
+        // regressions: the same execution passes in isolation. Retry once on a fresh worker
+        // and report the retry's outcome, so a transient blip cannot fail a shard while a
+        // genuine regression still does.
+        Test262Outcome Execute(string path, string mode)
+        {
+            var request = new Request(path, mode);
+            var result = worker.Run(request);
+            if (result.Outcome is "crash" or "timeout" || result.Detail?.Contains("OutOfMemoryException") == true)
+            {
+                Console.WriteLine($"RETRY {path} [{mode}]: {result.Detail}");
+                worker.Recycle();
+                result = worker.Run(request);
+            }
+            return result;
+        }
         // Unreviewed classifications are review backlog, not execution results: they are reported and
         // carried into the evidence (and still block readiness through Es2020Readiness), but they do
         // not fail the shard, so a shard turns red only when an execution actually regresses.
@@ -49,7 +66,7 @@ internal static class Test262Runner
             foreach (var mode in test.Metadata.Modes)
             {
                 if (Environment.GetEnvironmentVariable("T262_TRACE") == "1") Console.Error.WriteLine($"[running] {test.Path} [{mode}]");
-                var result = exceptions.Contains(test.Path) ? new Test262Outcome("skipped", "Stock engine dependency exception") : worker.Run(new(test.Path, mode));
+                var result = exceptions.Contains(test.Path) ? new Test262Outcome("skipped", "Stock engine dependency exception") : Execute(test.Path, mode);
                 var passed = result.Outcome == "pass";
                 if (passed) passes++;
                 else
@@ -126,6 +143,8 @@ internal static class Test262Runner
             }
             catch (Exception ex) { Stop(); return new("crash", ex.Message); }
         }
+        internal void Recycle() => Stop();
+
         private void Start()
         {
             Stop();

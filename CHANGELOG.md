@@ -2,7 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.15] - 2026-09-21 (current)
+## [Unreleased] (current)
+
+- Keep the vendored WPT and Test262 checkouts byte-identical to upstream: `scripts/fetch-tests.ps1` now clones and checks out with `core.autocrlf=false`, pinned inside each vendor repo so it survives the CI vendor cache, and re-materializes a tree previously fetched with the Windows default `core.autocrlf=true`. That default rewrote every LF test source to CRLF on `windows-latest` while `git status` still reported a clean tree, so the full ES2020 gate failed only in CI: test262's `Function.prototype.toString` line-terminator tests assert verbatim source text, and `line-terminator-normalisation-LF.js` (sloppy and strict) came back CRLF in shard 1. The catalog now detects a rewritten tree through an LF canary and stops the shards with an actionable `test262-checkout-line-endings` blocker instead of environment-dependent failures. Retry resource-style execution failures (worker crash, deadline, engine `OutOfMemoryException`) once on a fresh worker and report the retry's outcome, so concurrent-run memory pressure cannot read as an execution regression; genuine assertion failures still fail the shard.
+
+## [0.0.15] - 2026-09-21
 
 This release moves the active compatibility contract to the fixed HTML 5.3 draft of 18 October 2018, hardens WPT execution and document isolation, fixes event handler content attributes, and separates execution results from the outstanding review backlog in the ES2020 gates. Readiness flags remain false: `es2020ProfileReady` is now reported rather than enforced in compatibility CI, and NuGet release validation still enforces it. This candidate does not claim full conformance.
 

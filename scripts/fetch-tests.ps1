@@ -45,7 +45,7 @@ function Fetch-SparseRepo($Url, $Dest, $Sha, $Dirs) {
             throw "Refusing unexpected clone temporary directory: $tmp"
         }
         if (Test-Path $tmp) { Remove-Item -Recurse -Force $tmp }
-        git clone --filter=blob:none --no-checkout $Url $tmp
+        git clone --filter=blob:none --no-checkout --config core.autocrlf=false $Url $tmp
         if ($LASTEXITCODE -ne 0) { throw "git clone failed for $Url" }
         New-Item -ItemType Directory -Force $Dest | Out-Null
         Move-Item (Join-Path $tmp '.git') (Join-Path $Dest '.git')
@@ -58,6 +58,34 @@ function Fetch-SparseRepo($Url, $Dest, $Sha, $Dirs) {
     $destFull = (Resolve-Path $Dest).Path.Replace('\', '/')
     if (-not $top -or $top.Replace('\', '/').TrimEnd('/') -ne $destFull.TrimEnd('/')) {
         throw "Refusing to run git in '$Dest': resolved top-level is '$top', not the vendor dir. Aborting to protect the parent repo."
+    }
+
+    # Pinned conformance sources must stay byte-identical to upstream. Windows Git's system
+    # default core.autocrlf=true rewrites every LF file to CRLF at checkout, and test262
+    # asserts verbatim source text (Function.prototype.toString line-terminator tests), so a
+    # rewritten tree fails shards only where that default is active. test262's .gitattributes
+    # does not forbid the rewrite (wpt's does), so pin the setting inside the vendor repo,
+    # where it also survives the CI vendor cache.
+    $effectiveAutocrlf = (git -C $Dest config --get core.autocrlf)
+    git -C $Dest config core.autocrlf false
+    if ($LASTEXITCODE -ne 0) { throw "cannot pin core.autocrlf=false in $Dest" }
+    if ($effectiveAutocrlf -eq 'true') {
+        # A tree fetched before this pin may already hold CRLF files, and checkout --force
+        # skips files whose stat cache is clean. Clear the working tree so the sparse
+        # checkout below re-materializes every file byte-exactly. Relocate .git out of the
+        # tree first: the wipe can never touch it, and `git -C $Dest` can never fall through
+        # to the enclosing project repository mid-operation.
+        Write-Host "Re-materializing $Dest (previously fetched with core.autocrlf=$effectiveAutocrlf)"
+        $destFull2 = [IO.Path]::GetFullPath($Dest)
+        $backup = Join-Path (Split-Path -Parent $destFull2) ([IO.Path]::GetFileName($destFull2) + '._git_backup')
+        if (Test-Path -LiteralPath $backup) { Remove-Item -Recurse -Force -LiteralPath $backup }
+        Move-Item -LiteralPath (Join-Path $destFull2 '.git') -Destination $backup
+        try {
+            Remove-Item -Recurse -Force -LiteralPath $destFull2
+            New-Item -ItemType Directory -Force $destFull2 | Out-Null
+        } finally {
+            Move-Item -LiteralPath $backup -Destination (Join-Path $destFull2 '.git')
+        }
     }
 
     git -C $Dest sparse-checkout set --cone @Dirs
