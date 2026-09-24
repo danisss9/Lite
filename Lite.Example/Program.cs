@@ -5,10 +5,14 @@ using Lite;
 // if the native libraries aren't available).
 Lite.Media.Vlc.VlcMedia.Register();
 
-var resourcesPath = Path.GetFullPath("resources");
-StaticFileServer.Start(resourcesPath);
+var address = args.Length > 0 ? args[0] : "http://localhost:4444";
+if (args.Length == 0)
+{
+    var resourcesPath = Path.GetFullPath("resources");
+    StaticFileServer.Start(resourcesPath);
+}
 
-var window = new BrowserWindow("http://localhost:4444");
+var window = new BrowserWindow(address);
 window.Run();
 
 /* var window = new BrowserWindow("http://acid3.acidtests.org/");

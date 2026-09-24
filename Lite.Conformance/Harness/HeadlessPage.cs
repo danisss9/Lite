@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Lite.Models;
+using Lite.Network;
 using Lite.Scripting;
 
 namespace Lite.Conformance.Harness;
@@ -27,8 +28,11 @@ internal static class HeadlessPage
     }
 
     public static (LayoutNode Root, JsEngine Engine) Load(string url, int width = 800, int height = 600)
+        => Load(new NavigationRequest(url), width, height);
+
+    internal static (LayoutNode Root, JsEngine Engine) Load(NavigationRequest request, int width = 800, int height = 600)
     {
-        var root = Parser.TraverseHtml(url, width, height);
+        var root = Parser.TraversePage(request, width, height).Root;
         var engine = JsEngine.Instance ?? throw new InvalidOperationException("Parser did not create a JsEngine");
         return (root, engine);
     }

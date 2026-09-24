@@ -650,8 +650,9 @@ public class JsElement
     public void submit()
     {
         if (Node.TagName != "FORM") return;
-        var sub = FormSubmitter.BuildSubmission(Node, JsEngine.For(_engine)?.DocumentBaseUrl);
-        JsEngine.For(_engine)?.RequestNavigation(sub.Url);
+        if (JsEngine.For(_engine) is { } engine &&
+            FormSubmitter.PrepareNavigation(Node, engine, fireSubmitEvent: false) is { } request)
+            engine.RequestNavigation(request);
     }
 
     /// <summary>HTMLFormElement.requestSubmit() — fires a cancelable submit event first, then
@@ -659,12 +660,9 @@ public class JsElement
     public void requestSubmit(JsElement? submitter = null)
     {
         if (Node.TagName != "FORM" || JsEngine.For(_engine) is not { } engine) return;
-        var evt = new JsEvent();
-        evt.Init("submit", true, true);
-        evt.target = For(_engine, Node);
-        EventDispatcher.DispatchEvent(Node, evt, engine);
-        if (evt.DefaultPrevented) return;
-        engine.RequestNavigation(FormSubmitter.BuildSubmission(Node, engine.DocumentBaseUrl).Url);
+        if (FormSubmitter.PrepareNavigation(Node, engine, fireSubmitEvent: true, submitter: submitter?.Node)
+            is { } request)
+            engine.RequestNavigation(request);
     }
 
     /// <summary>Resets the form's controls to their defaults (HTMLFormElement.reset).</summary>

@@ -3,6 +3,7 @@ using Jint;
 using Jint.Native;
 using Lite.Layout;
 using Lite.Models;
+using Lite.Network;
 using Lite.Scripting.Dom;
 
 namespace Lite.Scripting;
@@ -116,14 +117,16 @@ internal class JsEngine
     }
 
     /// <summary>Set by the host window to perform a page navigation (e.g. form submission).</summary>
-    internal Action<string>? OnNavigate { get; set; }
+    internal Action<NavigationRequest>? OnNavigate { get; set; }
 
     /// <summary>Requests a navigation, deferred onto the event loop so it runs after the
     /// current JS call stack unwinds (and on the UI thread).</summary>
-    internal void RequestNavigation(string url)
+    internal void RequestNavigation(string url) => RequestNavigation(new NavigationRequest(url));
+
+    internal void RequestNavigation(NavigationRequest request)
     {
         if (OnNavigate is { } nav)
-            EnqueueMacrotask(() => nav(url));
+            EnqueueMacrotask(() => nav(request));
     }
 
     /// <summary>Resolves a (possibly relative) URL against the current document URL.

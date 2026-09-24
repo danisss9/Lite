@@ -19,6 +19,7 @@ internal static class Parser
     private const string UserAgentStylesheet = """
         div, section, article, header, footer, main, nav, aside, form, ul, ol, li, fieldset, figure, figcaption, address, details, summary, dialog { display: block; }
         label { display: inline; }
+        center { display: block; text-align: center; }
         body { display: block; margin: 8px; }
         h1 { display: block; font-size: 2em; margin-top: 0.67em; margin-bottom: 0.67em; margin-left: 0px; margin-right: 0px; font-weight: bold; }
         h2 { display: block; font-size: 1.5em; margin-top: 0.83em; margin-bottom: 0.83em; margin-left: 0px; margin-right: 0px; font-weight: bold; }
@@ -127,10 +128,15 @@ internal static class Parser
     private static Dictionary<string, List<int>> _counters => Current.Counters;
 
     internal static LayoutNode TraverseHtml(string address, int viewportWidth = 800, int viewportHeight = 600)
+        => TraversePage(new NavigationRequest(address), viewportWidth, viewportHeight).Root;
+
+    /// <summary>Loads a top-level document. GET retains AngleSharp's resource loader; POST sends
+    /// the form body and opens the returned HTML at the final response URL.</summary>
+    internal static Page TraversePage(NavigationRequest request, int viewportWidth = 800, int viewportHeight = 600)
     {
         Current = new ParseState();
-        _baseUrl = address;
-        _documentBaseUrl = address;
+        _baseUrl = request.Url;
+        _documentBaseUrl = request.Url;
         _pendingScripts.Clear();
         _deferredScripts.Clear();
         _asyncScripts.Clear();
@@ -142,11 +148,40 @@ internal static class Parser
         var config = Configuration.Default
             .WithDefaultLoader(new LoaderOptions { IsResourceLoadingEnabled = true })
             .WithCss()
-            .WithRenderDevice();
+            .WithRenderDevice(new DefaultRenderDevice
+            {
+                DeviceWidth = viewportWidth,
+                DeviceHeight = viewportHeight,
+                ViewPortWidth = viewportWidth,
+                ViewPortHeight = viewportHeight
+            });
 
         var context = BrowsingContext.New(config);
-        var document = context.OpenAsync(address).Result;
-        return ParseOpenedDocument(document, address, viewportWidth, viewportHeight).Root;
+        IDocument document;
+        string address;
+        if (request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
+        {
+            using var message = new HttpRequestMessage(System.Net.Http.HttpMethod.Post, request.Url);
+            var body = new ByteArrayContent(Encoding.UTF8.GetBytes(request.Body ?? string.Empty));
+            body.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(
+                request.ContentType ?? "application/x-www-form-urlencoded");
+            message.Content = body;
+            using var response = _httpClient.SendAsync(message).Result;
+            response.EnsureSuccessStatusCode();
+            address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? request.Url;
+            // ReadAsStringAsync honors the HTTP charset (and UTF BOM) before AngleSharp parses it.
+            var html = response.Content.ReadAsStringAsync().Result;
+            document = context.OpenAsync(req => req.Address(address).Content(html)).Result;
+        }
+        else
+        {
+            document = context.OpenAsync(request.Url).Result;
+            address = Uri.TryCreate(document.Url, UriKind.Absolute, out var finalUrl)
+                ? finalUrl.AbsoluteUri : request.Url;
+        }
+        _baseUrl = address;
+        _documentBaseUrl = address;
+        return ParseOpenedDocument(document, address, viewportWidth, viewportHeight);
     }
 
     /// <summary>Core parse pipeline shared by the top-level load and child (iframe) loads. The
@@ -393,7 +428,13 @@ internal static class Parser
             var config = Configuration.Default
                 .WithDefaultLoader(new LoaderOptions { IsResourceLoadingEnabled = true })
                 .WithCss()
-                .WithRenderDevice();
+                .WithRenderDevice(new DefaultRenderDevice
+                {
+                    DeviceWidth = viewportWidth,
+                    DeviceHeight = viewportHeight,
+                    ViewPortWidth = viewportWidth,
+                    ViewPortHeight = viewportHeight
+                });
             var context = BrowsingContext.New(config);
             var document = isSrcdoc
                 ? context.OpenAsync(req => req.Address(baseUrl).Content(content)).Result
@@ -613,6 +654,14 @@ internal static class Parser
                 }
             }
 
+            return cascaded;
+        }
+        catch (NullReferenceException ex) when (ex.StackTrace?.Contains(
+            "AngleSharp.Css.Values.CssTupleValue", StringComparison.Ordinal) == true)
+        {
+            // AngleSharp.Css can dereference a missing member while computing a tuple-valued
+            // declaration on modern result destinations. Keep its cascade so the document can
+            // still load; Lite resolves the values it supports during layout.
             return cascaded;
         }
     }

@@ -4,6 +4,7 @@ using Lite.Conformance.Harness;
 using Lite.Conformance.Profile;
 using Lite.Conformance.Test262;
 using Lite.Conformance.Wpt;
+using Lite.Network;
 
 namespace Lite.Conformance;
 
@@ -48,8 +49,22 @@ internal static class Program
                     break;
                 case "--geom" when i + 2 < args.Length:
                     return RefTestRunner.ProbeGeometry(args[i + 1], args[i + 2]);
+                case "--geom-post" when i + 3 < args.Length:
+                    return RefTestRunner.ProbeGeometry(new NavigationRequest(args[i + 1], "POST", args[i + 2],
+                        "application/x-www-form-urlencoded"), args[i + 3]);
                 case "--render" when i + 1 < args.Length:
-                    return RefTestRunner.RenderToFile(args[i + 1], i + 2 < args.Length ? args[i + 2] : null);
+                    var renderName = i + 2 < args.Length ? args[i + 2] : null;
+                    var renderWidth = i + 3 < args.Length && int.TryParse(args[i + 3], out var rw) ? rw : RefTestRunner.Width;
+                    var renderHeight = i + 4 < args.Length && int.TryParse(args[i + 4], out var rh) ? rh : RefTestRunner.Height;
+                    if (renderWidth <= 0 || renderHeight <= 0) { Console.Error.WriteLine("Render dimensions must be positive."); return 2; }
+                    return RefTestRunner.RenderToFile(args[i + 1], renderName, renderWidth, renderHeight);
+                case "--render-post" when i + 2 < args.Length:
+                    var postName = i + 3 < args.Length ? args[i + 3] : "post-render";
+                    var postWidth = i + 4 < args.Length && int.TryParse(args[i + 4], out var pw) ? pw : RefTestRunner.Width;
+                    var postHeight = i + 5 < args.Length && int.TryParse(args[i + 5], out var ph) ? ph : RefTestRunner.Height;
+                    if (postWidth <= 0 || postHeight <= 0) { Console.Error.WriteLine("Render dimensions must be positive."); return 2; }
+                    return RefTestRunner.RenderToFile(new NavigationRequest(args[i + 1], "POST", args[i + 2],
+                        "application/x-www-form-urlencoded"), postName, postWidth, postHeight);
                 case "--survey-limit" when i + 1 < args.Length:
                     int.TryParse(args[++i], out surveyLimit);
                     break;
@@ -183,7 +198,9 @@ internal static class Program
               --filter <substring>   Only run tests whose path contains the substring
               --update-baselines     (acid) Approve the current render as the new baseline
               --geom <url> <sel>     Print the geometry of elements matching a selector
-              --render <url> [name]  Render one page to artifacts/<name>.png
+              --geom-post <url> <body> <sel>  Probe geometry in a form POST response
+              --render <url> [name] [width] [height]  Render a local or absolute URL to PNG
+              --render-post <url> <body> [name] [width] [height]  Render a form POST response
               --report <path>        Write suite evidence, inventory or profile JSON (except acid/all)
               --shard <index/count>  Run one stable zero-based shard (for example 2/8)
               --require-ready        (profile) Fail unless every release-readiness check passes

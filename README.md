@@ -80,6 +80,12 @@ dotnet run
 
 The gallery contains focused pages for typography, layout, colors and effects, lists and tables, forms, transforms and animations, SVG and Canvas, JavaScript and DOM APIs, iframes, and media.
 
+Pass a URL to open a remote page in the example window instead of starting the gallery server:
+
+```powershell
+dotnet run --project Lite.Example -- https://lite.duckduckgo.com/lite/
+```
+
 Real audio and video playback use LibVLC when its native Windows libraries are available. If initialization fails, the example falls back to Lite's simulated media timeline.
 
 ## How it works

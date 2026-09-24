@@ -1,6 +1,7 @@
 using Lite.Conformance.Harness;
 using Lite.Layout;
 using Lite.Models;
+using Lite.Network;
 using SkiaSharp;
 
 namespace Lite.Conformance.Css21;
@@ -212,17 +213,23 @@ internal static class RefTestRunner
     /// <summary>Renders one page to a PNG under artifacts/ — the diagnostic companion to
     /// <see cref="ProbeGeometry"/>. Reading the render is what actually identifies a paint bug;
     /// geometry numbers alone repeatedly point the wrong way.</summary>
-    public static int RenderToFile(string urlPath, string? outName = null)
+    public static int RenderToFile(string urlPath, string? outName = null, int width = Width, int height = Height)
     {
         ConformanceServer.Start();
-        using var bmp = Render(urlPath);
+        return RenderToFile(new NavigationRequest(ResolveRenderUrl(urlPath)), outName ?? SafeName(urlPath), width, height);
+    }
+
+    internal static int RenderToFile(NavigationRequest request, string outName, int width, int height)
+    {
+        ConformanceServer.Start();
+        using var bmp = Render(request, width, height);
         var dir = ConformancePaths.EnsureArtifacts();
-        var path = Path.Combine(dir, (outName ?? SafeName(urlPath)) + ".png");
+        var path = Path.Combine(dir, outName + ".png");
         using (var image = SKImage.FromBitmap(bmp))
         using (var data = image.Encode(SKEncodedImageFormat.Png, 100))
         using (var stream = File.OpenWrite(path))
             data.SaveTo(stream);
-        Console.WriteLine($"rendered {urlPath} -> {path}");
+        Console.WriteLine($"rendered {request.Method} {request.Url} -> {path}");
         return 0;
     }
 
@@ -231,8 +238,13 @@ internal static class RefTestRunner
     public static int ProbeGeometry(string urlPath, string selector)
     {
         ConformanceServer.Start();
-        var url = $"{ConformanceServer.BaseUrl}/{urlPath.TrimStart('/')}";
-        var (_, engine) = Harness.HeadlessPage.Load(url, 800, 600);
+        return ProbeGeometry(new NavigationRequest(ResolveRenderUrl(urlPath)), selector);
+    }
+
+    internal static int ProbeGeometry(NavigationRequest request, string selector, int width = 800, int height = 600)
+    {
+        ConformanceServer.Start();
+        var (_, engine) = Harness.HeadlessPage.Load(request, width, height);
         Harness.HeadlessPage.PumpUntilIdle(engine, 2000);
         engine.Execute($@"
             (function() {{
@@ -276,9 +288,12 @@ internal static class RefTestRunner
     /// link would) — this is how Acid2 is meant to be viewed: the smiley face is assembled
     /// ~2600px down the page and only comes into view after jumping to <c>#top</c>.</summary>
     internal static SKBitmap Render(string path, int width = Width, int height = Height, float scrollY = 0, string? anchor = null)
+        => Render(new NavigationRequest(ResolveRenderUrl(path)), width, height, scrollY, anchor);
+
+    internal static SKBitmap Render(NavigationRequest request, int width = Width, int height = Height,
+        float scrollY = 0, string? anchor = null)
     {
-        var url = $"{ConformanceServer.BaseUrl}/{path.TrimStart('/')}";
-        var (root, engine) = HeadlessPage.Load(url, width, height);
+        var (root, engine) = HeadlessPage.Load(request, width, height);
         HeadlessPage.PumpUntilIdle(engine, 2_000);
         var viewport = new Viewport { ViewportHeight = height };
         if (anchor is not null)
@@ -297,6 +312,11 @@ internal static class RefTestRunner
         return Drawer.DrawToBitmap(width, height, root, viewport);
     }
 
+    private static string ResolveRenderUrl(string path) =>
+        Uri.TryCreate(path, UriKind.Absolute, out var url) && url.Scheme is "http" or "https"
+            ? url.AbsoluteUri
+            : $"{ConformanceServer.BaseUrl}/{path.TrimStart('/')}";
+
     private static LayoutNode? FindById(LayoutNode node, string id)
     {
         if (node.Id == id) return node;
@@ -309,7 +329,8 @@ internal static class RefTestRunner
     }
 
     private static string SafeName(string path) =>
-        path.Replace('/', '_').Replace('\\', '_').Replace('.', '_');
+        new(path.Select(c => c is '/' or '\\' or '.' || Path.GetInvalidFileNameChars().Contains(c)
+            ? '_' : c).ToArray());
 
     private static void Record(SuiteResult result, ManifestEntry entry, bool passed, string detail)
     {

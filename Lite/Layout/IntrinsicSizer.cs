@@ -39,6 +39,12 @@ internal static class IntrinsicSizer
     /// </summary>
     public static (float Min, float Max) ContentMinMax(LayoutNode node, float viewportHeight)
     {
+        if (FormLayout.IntrinsicWidth(node) is { } controlWidth)
+        {
+            var width = node.IsAutoWidth() ? controlWidth : node.GetWidth(0);
+            return (width, width);
+        }
+
         // Replaced element (image / object with a decoded bitmap): intrinsic pixel width.
         if (node.TagName == "IMG" || (node.TagName == "OBJECT" && node.Image != null))
         {

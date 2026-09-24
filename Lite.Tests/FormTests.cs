@@ -68,7 +68,7 @@ public static class FormTests
         var form = nodes[0];
         var url = FormSubmitter.BuildActionUrl(form, "http://localhost:4444/index.html");
         Contains("/search?", url);
-        Contains("q=hello%20world", url);
+        Contains("q=hello+world", url);
         Contains("page=2", url);
         True(!url.Contains("Go"), "submit button value must not be serialized");
     }

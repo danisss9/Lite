@@ -158,18 +158,33 @@ internal static class Drawer
         if (pos == PositionType.Relative)
         {
             var fontSize = node.GetFontSize();
-            var t = node.GetOffsetTop(node.Box.ContentBox.Height, fontSize);
-            var l = node.GetOffsetLeft(node.Box.ContentBox.Width, fontSize);
-            var r = node.GetOffsetRight(node.Box.ContentBox.Width, fontSize);
-            var b = node.GetOffsetBottom(node.Box.ContentBox.Height, fontSize);
+            // Percentage offsets use the containing block, not the positioned box itself.
+            var containingWidth = node.Parent?.Box.ContentBox.Width ?? node.Box.ContentBox.Width;
+            var containingHeight = node.Parent?.Box.ContentBox.Height ?? node.Box.ContentBox.Height;
+            var t = node.GetOffsetTop(containingHeight, fontSize);
+            var l = node.GetOffsetLeft(containingWidth, fontSize);
+            var r = node.GetOffsetRight(containingWidth, fontSize);
+            var b = node.GetOffsetBottom(containingHeight, fontSize);
             var dx = !float.IsNaN(l) ? l : !float.IsNaN(r) ? -r : 0f;
             var dy = !float.IsNaN(t) ? t : !float.IsNaN(b) ? -b : 0f;
             if (dx != 0f || dy != 0f)
             {
+                var hitStart = _hitRegions.Count;
                 canvas.Save();
                 canvas.Translate(dx, dy);
                 PaintNodeInner(canvas, node, viewportWidth);
                 canvas.Restore();
+                // PaintNodeInner adds hit regions in layout coordinates. Move every region
+                // created by this subtree to its visible position, including nested links.
+                for (var i = hitStart; i < _hitRegions.Count; i++)
+                {
+                    var region = _hitRegions[i];
+                    var box = region.Bounds;
+                    _hitRegions[i] = region with
+                    {
+                        Bounds = new SKRect(box.Left + dx, box.Top + dy, box.Right + dx, box.Bottom + dy)
+                    };
+                }
                 return;
             }
         }
@@ -771,8 +786,14 @@ internal static class Drawer
             var box = node.Box;
             using var font = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+            // A one-line inline anchor has already been measured by layout. Allow a small
+            // floating-point margin so the painter does not wrap its final word into the next
+            // table row when both measurements sit on the same pixel boundary.
+            var lineHeight = node.GetLineHeight(node.GetFontSize());
+            var paintWidth = box.ContentBox.Height <= lineHeight + 0.5f
+                ? box.ContentBox.Width + 1f : box.ContentBox.Width;
             DrawWrappedText(canvas, node, node.DisplayText, box.ContentBox.Left, box.ContentBox.Top,
-                            box.ContentBox.Width, font, paint);
+                            paintWidth, font, paint);
             return;
         }
 
@@ -953,6 +974,12 @@ internal static class Drawer
 
         switch (inputType)
         {
+            case "submit":
+            case "reset":
+            case "button":
+            case "image":
+                PaintButton(canvas, node);
+                return;
             case "checkbox":
                 PaintCheckbox(canvas, node, rect);
                 return;
@@ -974,6 +1001,7 @@ internal static class Drawer
         using var bgPaint = new SKPaint { Color = SKColors.White };
         canvas.DrawRect(rect, bgPaint);
 
+        var authorBorder = node.GetBorderWidth().Top > 0f;
         using var borderPaint = new SKPaint
         {
             Color = isFocused ? new SKColor(0, 120, 215) : new SKColor(150, 150, 150),
@@ -981,7 +1009,8 @@ internal static class Drawer
             StrokeWidth = isFocused ? 2f : 1f,
             IsAntialias = true,
         };
-        canvas.DrawRect(rect, borderPaint);
+        if (authorBorder && !isFocused) DrawBorders(canvas, node.Box, node);
+        else canvas.DrawRect(authorBorder ? node.Box.BorderBox : rect, borderPaint);
 
         node.Attributes.TryGetValue("value", out var defaultVal);
         var text = FormState.GetTextValue(node.NodeKey, defaultVal);
@@ -992,14 +1021,14 @@ internal static class Drawer
         if (string.IsNullOrEmpty(text) && node.Attributes.TryGetValue("placeholder", out var ph))
         {
             using var phPaint = new SKPaint { Color = new SKColor(170, 170, 170), IsAntialias = true };
-            using var phFont = new SKFont { Size = 12 };
-            canvas.DrawText(ph, rect.Left + 4, rect.Top + 14, SKTextAlign.Left, phFont, phPaint);
+            using var phFont = TextMeasure.CreateFont(node);
+            canvas.DrawText(ph, rect.Left + 4, rect.MidY + phFont.Size * 0.35f, SKTextAlign.Left, phFont, phPaint);
         }
         else if (!string.IsNullOrEmpty(displayText))
         {
             using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
-            using var textFont = new SKFont { Size = 12 };
-            canvas.DrawText(displayText, rect.Left + 4, rect.Top + 14, SKTextAlign.Left, textFont, textPaint);
+            using var textFont = TextMeasure.CreateFont(node);
+            canvas.DrawText(displayText, rect.Left + 4, rect.MidY + textFont.Size * 0.35f, SKTextAlign.Left, textFont, textPaint);
         }
 
         // Number input: draw up/down arrows with separate hit regions
@@ -1038,7 +1067,7 @@ internal static class Drawer
 
         if (isFocused)
         {
-            using var caretFont = new SKFont { Size = 12 };
+            using var caretFont = TextMeasure.CreateFont(node);
             var caretX = rect.Left + 4 + caretFont.MeasureText(displayText ?? "");
             using var caretPaint = new SKPaint { Color = SKColors.Black, StrokeWidth = 1 };
             canvas.DrawLine(caretX, rect.Top + 3, caretX, rect.Bottom - 3, caretPaint);
@@ -1383,7 +1412,11 @@ internal static class Drawer
         DrawBoxShadows(canvas, box, node);
 
         var bgColor = node.GetBackgroundColor();
-        if (bgColor == SKColors.Transparent) bgColor = new SKColor(225, 225, 225);
+        var hasAuthorBackground = node.TryResolveStyle("background-color", out var authoredBackground)
+            ? !string.IsNullOrWhiteSpace(authoredBackground)
+            : !string.IsNullOrWhiteSpace(node.Style.GetPropertyValueSafe("background-color"));
+        if (bgColor == SKColors.Transparent && !hasAuthorBackground)
+            bgColor = new SKColor(225, 225, 225);
         using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
         var (brx, bry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
         if (brx > 0 || bry > 0) canvas.DrawRoundRect(box.PaddingBox, brx, bry, bgPaint);
@@ -1391,10 +1424,10 @@ internal static class Drawer
 
         DrawBorders(canvas, node.Box, node);
 
-        using var btnFont = new SKFont { Size = 13 };
+        using var btnFont = TextMeasure.CreateFont(node);
         var textColor = node.GetColor();
         using var textPaint = new SKPaint { Color = textColor, IsAntialias = true };
-        canvas.DrawText(btnLabel, rect.Left + FormLayout.ButtonPaddingX, rect.Top + FormLayout.ButtonPaddingY + 13,
+        canvas.DrawText(btnLabel, rect.Left + FormLayout.ButtonPaddingX, rect.MidY + btnFont.Size * 0.35f,
                         SKTextAlign.Left, btnFont, textPaint);
 
         _hitRegions.Add(new HitRegion(rect, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.Button));

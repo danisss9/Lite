@@ -1,3 +1,5 @@
+using Lite.Models;
+
 namespace Lite.Layout;
 
 internal static class FormLayout
@@ -19,4 +21,39 @@ internal static class FormLayout
     public const float ProgressHeight  = 16f;
     public const float MeterWidth      = 80f;
     public const float MeterHeight     = 16f;
+
+    /// <summary>Intrinsic content width for a native form control with auto CSS width.
+    /// Table and shrink-to-fit sizing need the same value that inline layout paints.</summary>
+    internal static float? IntrinsicWidth(LayoutNode node)
+    {
+        if (node.TagName == "INPUT")
+        {
+            var type = node.Attributes.GetValueOrDefault("type", "text").ToLowerInvariant();
+            if (type == "hidden") return 0f;
+            if (type == "checkbox") return CheckboxSize;
+            if (type == "radio") return RadioSize;
+            if (type == "range") return RangeWidth;
+            if (type is "submit" or "reset" or "button" or "image")
+            {
+                var label = node.Attributes.GetValueOrDefault("value", type == "submit" ? "Submit" : "Reset");
+                return ButtonWidth(node, label);
+            }
+            return TextInputWidth;
+        }
+        if (node.TagName == "BUTTON") return ButtonWidth(node, node.DisplayText);
+        return node.TagName switch
+        {
+            "SELECT" => SelectWidth,
+            "TEXTAREA" => TextareaWidth,
+            "PROGRESS" => ProgressWidth,
+            "METER" => MeterWidth,
+            _ => null
+        };
+    }
+
+    private static float ButtonWidth(LayoutNode node, string? label)
+    {
+        using var font = TextMeasure.CreateFont(node);
+        return font.MeasureText(string.IsNullOrEmpty(label) ? "Button" : label) + ButtonPaddingX * 2;
+    }
 }

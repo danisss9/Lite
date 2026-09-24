@@ -6,6 +6,7 @@ using Lite.Layout;
 using Lite.Models;
 using Lite.Models.Delegates;
 using Lite.Models.Structs;
+using Lite.Network;
 using Lite.Scripting;
 using Lite.Utils;
 using SkiaSharp;
@@ -74,7 +75,7 @@ public class BrowserWindow
     // Background navigation handoff: written by the load task, read on the UI thread.
     // _loadReady is volatile so the non-volatile fields written before it are visible once set.
     private volatile bool _loadReady;
-    private LayoutNode? _loadedRoot;
+    private Page? _loadedPage;
     private Exception? _loadError;
     private string? _pendingUrl;
     private const long MinLoadingMs = 450; // keep the loading indicator visible at least this long
@@ -96,7 +97,9 @@ public class BrowserWindow
     public void Run()
     {
         AnimationEngine.Reset();
-        _rootNode = Parser.TraverseHtml(_url, _initialWidth, _initialHeight);
+        var initialPage = Parser.TraversePage(new NavigationRequest(_url), _initialWidth, _initialHeight);
+        _rootNode = initialPage.Root;
+        _url = initialPage.Root.DocumentState?.Address ?? _url;
         AnimationEngine.StartAnimations(_rootNode);
 
         // Bind viewport to JS engine for window.scrollTo/scrollBy
@@ -169,7 +172,7 @@ public class BrowserWindow
         {
             jsEngine.TaskEnqueued += () => User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
             // Form submission (and other JS-driven navigation) routes through here.
-            jsEngine.OnNavigate = url => Navigate(url, hWnd);
+            jsEngine.OnNavigate = request => Navigate(request, hWnd);
             // document.title updates the window caption.
             jsEngine.OnTitleChange = t => SetWindowTitle(hWnd, t.Length == 0 ? _title : t);
             // Reflect the parsed document's <title> in the caption.
@@ -697,7 +700,7 @@ public class BrowserWindow
                             DispatchClickWithCoords(region.NodeKey, x, y, contentY);
                             var btn = FindNodeByKey(_rootNode, region.NodeKey);
                             if (btn != null && IsSubmitControl(btn) && FindAncestorForm(btn) is { } submitForm)
-                                SubmitForm(submitForm, hWnd);
+                                SubmitForm(submitForm, hWnd, btn);
                             handled = true;
                             break;
                         }
@@ -876,14 +879,17 @@ public class BrowserWindow
     /// (same document, differing only by #hash) scroll to the target and fire hashchange
     /// without a reload.
     /// </summary>
-    private void Navigate(string href, IntPtr hWnd)
-    {
-        if (string.IsNullOrWhiteSpace(href)) return;
+    private void Navigate(string href, IntPtr hWnd) => Navigate(new NavigationRequest(href), hWnd);
 
-        if (!Uri.TryCreate(new Uri(_url), href, out var target)) return;
+    private void Navigate(NavigationRequest request, IntPtr hWnd)
+    {
+        if (string.IsNullOrWhiteSpace(request.Url)) return;
+
+        if (!Uri.TryCreate(new Uri(_url), request.Url, out var target)) return;
 
         // Same-document fragment navigation: scroll + hashchange, no reload.
-        if (DiffersOnlyByFragment(_url, target.AbsoluteUri))
+        if (request.Method.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
+            DiffersOnlyByFragment(_url, target.AbsoluteUri))
         {
             if (JsEngine.Instance is { } navEngine)
             {
@@ -916,11 +922,13 @@ public class BrowserWindow
         // Internal link: load the new document on a background thread so the UI thread stays
         // free to animate a browser-style loading indicator while it fetches/parses/renders.
         var url = target.ToString();
+        request = request with { Url = url };
+        var navigationRequest = request;
         var w = _width;
         var h = _height;
 
         _pendingUrl = url;
-        _loadedRoot = null;
+        _loadedPage = null;
         _loadError = null;
         _loadReady = false;
 
@@ -935,7 +943,7 @@ public class BrowserWindow
 
         Task.Run(() =>
         {
-            try { _loadedRoot = Parser.TraverseHtml(url, w, h); }
+            try { _loadedPage = Parser.TraversePage(navigationRequest, w, h); }
             catch (Exception ex) { _loadError = ex; }
             finally { _loadReady = true; } // volatile write — publishes the fields above
         });
@@ -951,12 +959,13 @@ public class BrowserWindow
     {
         // The last loading frame doubles as the "from" image for the reveal fade.
         var fromImage = CaptureFrame();
-        var newRoot = _loadedRoot;
+        var newPage = _loadedPage;
+        var newRoot = newPage?.Root;
         var error = _loadError;
 
         _loading?.Dispose();
         _loading = null;
-        _loadedRoot = null;
+        _loadedPage = null;
         _loadError = null;
         _loadReady = false;
 
@@ -973,7 +982,7 @@ public class BrowserWindow
 
         // Commit the new document (mirrors the setup in Run()).
         _rootNode?.DocumentState?.Engine?.CancelModuleLoads();
-        _url = _pendingUrl!;
+        _url = newRoot.DocumentState?.Address ?? _pendingUrl!;
         FormState.FocusedInput = null;
         FormState.OpenDropdown = null;
         _viewport.ScrollTo(0);
@@ -988,10 +997,10 @@ public class BrowserWindow
             engine.SetViewport(_viewport);
             engine.UpdateViewportSize(_width, _height);
             engine.TaskEnqueued += () => User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
-            engine.OnNavigate = u => Navigate(u, hWnd);
+            engine.OnNavigate = request => Navigate(request, hWnd);
             engine.OnTitleChange = t => SetWindowTitle(hWnd, t.Length == 0 ? _title : t);
             engine.NotifyNavigated(_url);
-            SetWindowTitle(hWnd, Parser.Document?.Title is { Length: > 0 } t2 ? t2 : _title);
+            SetWindowTitle(hWnd, newPage?.Document?.Title is { Length: > 0 } t2 ? t2 : _title);
         }
 
         // Re-apply autofocus for the freshly loaded page.
@@ -1073,18 +1082,13 @@ public class BrowserWindow
     }
 
     /// <summary>Dispatches a submit event for the form; if not prevented, navigates to the action URL.</summary>
-    private void SubmitForm(LayoutNode form, IntPtr hWnd)
+    private void SubmitForm(LayoutNode form, IntPtr hWnd, LayoutNode? submitter = null)
     {
         var engine = JsEngine.Instance;
         if (engine == null || _rootNode == null) return;
-
-        var evt = new Scripting.Dom.JsEvent();
-        evt.Init("submit", true, true);
-        evt.target = Scripting.Dom.JsElement.For(engine.RawEngine, form);
-        EventDispatcher.DispatchEvent(form, evt, engine);
-
-        if (!evt.defaultPrevented)
-            Navigate(Interaction.FormSubmitter.BuildSubmission(form, Parser.BaseUrl).Url, hWnd);
+        if (Interaction.FormSubmitter.PrepareNavigation(form, engine, fireSubmitEvent: true, submitter: submitter)
+            is { } request)
+            Navigate(request, hWnd);
     }
 
     /// <summary>Shows the native Open dialog for an &lt;input type=file&gt;, records the chosen files

@@ -1,11 +1,17 @@
 using System.Text;
 using Lite.Models;
+using Lite.Network;
+using Lite.Scripting;
+using Lite.Scripting.Dom;
 
 namespace Lite.Interaction;
 
 /// <summary>A fully-resolved form submission: where to send it, the HTTP method, and the encoded
 /// request body (null for GET, which carries its data in the URL query).</summary>
-internal readonly record struct FormSubmission(string Url, string Method, string? Body, string? ContentType);
+internal readonly record struct FormSubmission(string Url, string Method, string? Body, string? ContentType)
+{
+    internal NavigationRequest ToNavigationRequest() => new(Url, Method, Body, ContentType);
+}
 
 /// <summary>
 /// Serializes a &lt;form&gt;'s successful controls (HTML5 §form submission) and builds the
@@ -14,15 +20,32 @@ internal readonly record struct FormSubmission(string Url, string Method, string
 /// </summary>
 internal static class FormSubmitter
 {
+    /// <summary>Runs the form submission event, if requested, and returns the navigation that
+    /// both native interaction and DOM form methods must send.</summary>
+    internal static NavigationRequest? PrepareNavigation(LayoutNode form, JsEngine engine,
+        bool fireSubmitEvent, LayoutNode? submitter = null)
+    {
+        if (fireSubmitEvent)
+        {
+            var evt = new JsEvent();
+            evt.Init("submit", true, true);
+            evt.target = JsElement.For(engine.RawEngine, form);
+            EventDispatcher.DispatchEvent(form, evt, engine);
+            if (evt.defaultPrevented) return null;
+        }
+        return BuildSubmission(form, form.DocumentState?.BaseUrl ?? engine.DocumentBaseUrl, submitter)
+            .ToNavigationRequest();
+    }
+
     /// <summary>Resolves a form submission end-to-end: URL, method, and (for POST) an encoded body.</summary>
-    internal static FormSubmission BuildSubmission(LayoutNode form, string? baseUrl)
+    internal static FormSubmission BuildSubmission(LayoutNode form, string? baseUrl, LayoutNode? submitter = null)
     {
         var method = form.Attributes.GetValueOrDefault("method", "get").ToLowerInvariant();
         var resolved = Resolve(form.Attributes.GetValueOrDefault("action", ""), baseUrl);
 
         if (method != "post")
         {
-            var query = BuildQuery(form);
+            var query = BuildQuery(form, submitter);
             var url = query.Length > 0 ? resolved + (resolved.Contains('?') ? "&" : "?") + query : resolved;
             return new FormSubmission(url, "GET", null, null);
         }
@@ -35,7 +58,7 @@ internal static class FormSubmitter
                 "multipart/form-data; boundary=" + boundary);
         }
 
-        return new FormSubmission(resolved, "POST", BuildQuery(form), "application/x-www-form-urlencoded");
+        return new FormSubmission(resolved, "POST", BuildQuery(form, submitter), "application/x-www-form-urlencoded");
     }
 
     /// <summary>Encodes a form's successful controls as a multipart/form-data body (RFC 7578),
@@ -49,7 +72,7 @@ internal static class FormSubmitter
             if (ctrl.Attributes.ContainsKey("disabled")) continue;
             if (!ctrl.Attributes.TryGetValue("name", out var name) || string.IsNullOrEmpty(name)) continue;
 
-            var type = ctrl.Attributes.GetValueOrDefault("type", "text").ToLowerInvariant();
+            var type = ctrl.Attributes.GetValueOrDefault("type", ctrl.TagName == "BUTTON" ? "submit" : "text").ToLowerInvariant();
 
             if (ctrl.TagName == "INPUT" && type is "checkbox" or "radio")
             {
@@ -96,25 +119,31 @@ internal static class FormSubmitter
           .Append(value).Append("\r\n");
 
     /// <summary>Builds an application/x-www-form-urlencoded string from a form's controls.</summary>
-    internal static string BuildQuery(LayoutNode form)
+    internal static string BuildQuery(LayoutNode form, LayoutNode? submitter = null)
     {
         var pairs = new List<string>();
         foreach (var ctrl in Descendants(form))
         {
-            if (ctrl.TagName is not ("INPUT" or "SELECT" or "TEXTAREA")) continue;
+            if (ctrl.TagName is not ("INPUT" or "SELECT" or "TEXTAREA" or "BUTTON")) continue;
             if (ctrl.Attributes.ContainsKey("disabled")) continue;
             if (!ctrl.Attributes.TryGetValue("name", out var name) || string.IsNullOrEmpty(name)) continue;
 
-            var type = ctrl.Attributes.GetValueOrDefault("type", "text").ToLowerInvariant();
+            var type = ctrl.Attributes.GetValueOrDefault("type", ctrl.TagName == "BUTTON" ? "submit" : "text").ToLowerInvariant();
 
             if (ctrl.TagName == "INPUT" && type is "checkbox" or "radio")
             {
                 if (!FormState.IsChecked(ctrl.NodeKey, ctrl.Attributes.ContainsKey("checked"))) continue;
                 pairs.Add(Encode(name) + "=" + Encode(ctrl.Attributes.GetValueOrDefault("value", "on")));
             }
-            else if (type is "submit" or "reset" or "button" or "image" or "file")
+            else if (ctrl.TagName == "BUTTON" || type is "submit" or "reset" or "button" or "image")
             {
-                continue; // not successful controls here (submit handled by the activating button)
+                if (ReferenceEquals(ctrl, submitter) && type == "submit")
+                    pairs.Add(Encode(name) + "=" + Encode(ctrl.Attributes.GetValueOrDefault("value", "")));
+                continue;
+            }
+            else if (type == "file")
+            {
+                continue;
             }
             else
             {
@@ -170,7 +199,8 @@ internal static class FormSubmitter
         }
     }
 
-    private static string Encode(string s) => Uri.EscapeDataString(s ?? "");
+    // HTML form encoding represents spaces as '+', unlike a generic URI component.
+    private static string Encode(string s) => Uri.EscapeDataString(s ?? "").Replace("%20", "+", StringComparison.Ordinal);
 
     private static string Resolve(string action, string? baseUrl)
     {

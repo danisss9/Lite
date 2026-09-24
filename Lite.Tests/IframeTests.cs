@@ -104,8 +104,8 @@ public static class IframeTests
         var second = Parser.ParseChildPage("<!doctype html><base href='/second/'><style>.selected { color: blue }</style><form id=f action=send></form><p id=p>two</p>",
             true, "http://two.test/page", 400, 200);
         string? firstUrl = null, secondUrl = null;
-        first.Engine.OnNavigate = url => firstUrl = url;
-        second.Engine.OnNavigate = url => secondUrl = url;
+        first.Engine.OnNavigate = request => firstUrl = request.Url;
+        second.Engine.OnNavigate = request => secondUrl = request.Url;
         foreach (var page in new[] { first, second })
         {
             page.Engine.RawEngine.Execute("document.getElementById('p').className='selected'; document.getElementById('f').submit();");

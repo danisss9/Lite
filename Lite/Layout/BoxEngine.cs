@@ -894,8 +894,11 @@ internal static class BoxEngine
             // declared inside it escape into that context rather than being contained here.
             var ownsFloatContext = establishesBfc || bfcFloats is null;
             var floatCtx = ownsFloatContext ? new List<ActiveFloat>() : bfcFloats!;
+            // The root's initial containing block has the viewport height even when the root's
+            // own height is auto. Its percentage-height children (notably body) need that size.
+            var childContainingH = node.TagName == "HTML" && !hasExplicitH ? viewportHeight : knownContentH;
             contentH = LayoutChildrenImpl(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight,
-                knownContentH, border.Top + padding.Top, establishesBfc, floatCtx, ownsFloatContext, out trailingMargin);
+                childContainingH, border.Top + padding.Top, establishesBfc, floatCtx, ownsFloatContext, out trailingMargin);
         }
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
@@ -2006,7 +2009,7 @@ internal static class BoxEngine
                 var margin = node.GetMargin(0, viewportHeight, fontSize);
                 var padding = node.GetPadding(0, viewportHeight, fontSize);
                 var border = node.GetBorderWidth();
-                var explicitW = node.GetWidth(0);
+                var explicitW = node.IsAutoWidth() ? 0f : node.GetWidth(maxWidth);
                 var explicitH = node.GetHeight(viewportHeight);
 
                 // Intrinsic width: max-content of flex items (or explicit width)
@@ -2037,7 +2040,7 @@ internal static class BoxEngine
                 var margin = node.GetMargin(0, viewportHeight, fontSize);
                 var padding = node.GetPadding(0, viewportHeight, fontSize);
                 var border = node.GetBorderWidth();
-                var explicitW = node.GetWidth(0);
+                var explicitW = node.IsAutoWidth() ? 0f : node.GetWidth(maxWidth);
                 var explicitH = node.GetHeight(viewportHeight);
 
                 node.Attributes.TryGetValue("type", out var iType);
@@ -2053,6 +2056,11 @@ internal static class BoxEngine
                 else if (isRadio) { defaultW = FormLayout.RadioSize; defaultH = FormLayout.RadioSize; }
                 else if (isRange) { defaultW = FormLayout.RangeWidth; defaultH = FormLayout.RangeHeight; }
                 else if (node.TagName == "BUTTON") { defaultW = 0f; defaultH = FormLayout.TextInputHeight; }
+                else if (node.TagName == "INPUT" && inputType is "submit" or "reset" or "button")
+                {
+                    defaultW = FormLayout.IntrinsicWidth(node) ?? FormLayout.TextInputWidth;
+                    defaultH = FormLayout.TextInputHeight;
+                }
                 else if (node.TagName == "TEXTAREA") { defaultW = FormLayout.TextareaWidth; defaultH = FormLayout.TextareaHeight; }
                 else if (node.TagName == "SELECT") { defaultW = FormLayout.SelectWidth; defaultH = FormLayout.SelectHeight; }
                 else if (node.TagName == "PROGRESS") { defaultW = FormLayout.ProgressWidth; defaultH = FormLayout.ProgressHeight; }
@@ -2060,6 +2068,8 @@ internal static class BoxEngine
                 else { defaultW = FormLayout.TextInputWidth; defaultH = FormLayout.TextInputHeight; isFormControl = false; }
 
                 var w = explicitW > 0 ? explicitW : defaultW;
+                w = Math.Max(node.GetMinWidth(maxWidth, fontSize),
+                    Math.Min(w, node.GetMaxWidth(maxWidth, fontSize)));
                 var h = explicitH > 0 ? explicitH : defaultH;
 
                 if (node.TagName == "BUTTON" && w <= 0)

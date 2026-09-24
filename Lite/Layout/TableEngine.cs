@@ -548,6 +548,11 @@ internal static class TableEngine
     /// and min = the widest single word.</summary>
     private static (float Min, float Max) MeasureIntrinsic(LayoutNode node, float viewportH)
     {
+        if (FormLayout.IntrinsicWidth(node) is { } controlWidth)
+        {
+            var width = node.IsAutoWidth() ? controlWidth : node.GetWidth(0);
+            return (width, width);
+        }
         float min = 0f, max = 0f;
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
