@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Lite\Lite.csproj" />
     <ProjectReference Include="..\Lite.Conformance\Lite.Conformance.csproj" />
+    <Content Include="Fixtures/Google/2026-09-25/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

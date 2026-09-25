@@ -237,9 +237,11 @@ internal class JsEngine
     private JsEngine(LayoutNode root, int viewportWidth, int viewportHeight, DocumentState? documentState)
     {
         var baseUrl = documentState?.Address ?? Parser.BaseUrl ?? "about://lite/";
-        DocumentState = documentState ?? new DocumentState(Parser.Document, baseUrl, baseUrl, Parser.CssRules.ToArray());
+        DocumentState = documentState ?? new DocumentState(Parser.Document, baseUrl, baseUrl, Parser.CssRules.ToArray())
+            { Session = new BrowserSession() };
         DocumentState.Bind(root);
-        _moduleLoader = new HttpModuleLoader(DocumentBaseUrl, DocumentState.Address, EnqueueMacrotask);
+        _moduleLoader = new HttpModuleLoader(DocumentBaseUrl, DocumentState.Address, EnqueueMacrotask,
+            DocumentState.Session);
         _engine = new Engine(opts =>
         {
             JavaScriptRuntime.Configure(opts);
@@ -311,7 +313,7 @@ internal class JsEngine
             (el, pseudo) => _jsWindow.getComputedStyle(el, pseudo)));
 
         // XMLHttpRequest constructor
-        _engine.SetValue("XMLHttpRequest", typeof(JsXmlHttpRequest));
+        _engine.SetValue("__createXMLHttpRequest", new Func<JsXmlHttpRequest>(() => new JsXmlHttpRequest(this)));
 
         // URL / URLSearchParams constructors
         _engine.SetValue("URL", typeof(JsUrl));
@@ -319,7 +321,20 @@ internal class JsEngine
         _engine.SetValue("FormData", typeof(JsFormData));
 
         // navigator
-        _engine.SetValue("navigator", new JsNavigator());
+        _engine.SetValue("navigator", new JsNavigator(DocumentState.Session));
+
+        var startedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
+        _engine.SetValue("performance", new
+        {
+            timeOrigin = (double)startedAt,
+            now = new Func<double>(() => elapsed.Elapsed.TotalMilliseconds),
+            timing = new { navigationStart = startedAt, fetchStart = startedAt,
+                responseStart = startedAt, domLoading = startedAt },
+            getEntriesByType = new Func<string, object[]>(_ => []),
+            mark = new Action<string>(_ => { }),
+            measure = new Action<string>(_ => { }),
+        });
 
         // Observer registrations belong to the callback's realm. Loading a frame must
         // not clear existing documents' observers or redirect their callbacks.
@@ -391,6 +406,7 @@ internal class JsEngine
 
     private const string HostShim = """
         (function () {
+          globalThis.XMLHttpRequest = function XMLHttpRequest() { return __createXMLHttpRequest(); };
           if (typeof globalThis.queueMicrotask !== 'function') {
             globalThis.queueMicrotask = function (cb) { Promise.resolve().then(cb); };
           }
@@ -572,6 +588,7 @@ internal class JsEngine
 
     private void ReportScriptError(JsValue error)
     {
+        DocumentState.Session?.Diagnostics.Enqueue($"javascript {CurrentUrl}: {error}");
         ScriptFailed?.Invoke(error);
         var evt = new JsObject(_engine);
         evt.Set("type", "error"); evt.Set("error", error); evt.Set("message", error.ToString());

@@ -15,9 +15,14 @@ public static class TestRunner
 
     public static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--google-live") return GoogleSearchTests.LiveSmoke();
+        if (args.Length == 2 && args[0] == "--google-references")
+            return GoogleSearchTests.CaptureReferences(args[1]);
         string? reportPath = null;
+        string? filter = null;
         if (args.Length == 2 && args[0] == "--report") reportPath = args[1];
-        else if (args.Length != 0) { Console.WriteLine("Usage: Lite.Tests [--report path]"); return 2; }
+        else if (args.Length == 2 && args[0] == "--filter") filter = args[1];
+        else if (args.Length != 0) { Console.WriteLine("Usage: Lite.Tests [--report path|--filter name|--google-live|--google-references path]"); return 2; }
         var identity = reportPath is null ? null : ExecutionEvidence.CaptureIdentity();
         var started = DateTime.UtcNow;
         var outcomes = new List<TestEvidence>();
@@ -31,6 +36,7 @@ public static class TestRunner
             .GetTypes()
             .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static))
             .Where(m => m.GetCustomAttribute<TestAttribute>() is not null)
+            .Where(m => filter is null || $"{m.DeclaringType!.Name}.{m.Name}".Contains(filter, StringComparison.OrdinalIgnoreCase))
             .OrderBy(m => m.DeclaringType!.Name).ThenBy(m => m.Name);
 
         foreach (var method in testMethods)

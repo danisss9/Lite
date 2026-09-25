@@ -202,23 +202,13 @@ public class JsDocument
     }
     public string compatMode => _document?.CompatMode ?? "CSS1Compat";
 
-    // ---- cookies (single in-memory jar for the current document) ----
-    private static readonly Dictionary<string, string> _cookies = new(StringComparer.Ordinal);
-
+    // ---- cookies (the owning browser window's HTTP jar) ----
     public string cookie
     {
-        get => string.Join("; ", _cookies.Select(kv => $"{kv.Key}={kv.Value}"));
-        set
-        {
-            if (string.IsNullOrWhiteSpace(value)) return;
-            // Only the first "name=value" segment is the cookie; attributes (path, expires…) are ignored.
-            var pair = value.Split(';')[0];
-            var eq = pair.IndexOf('=');
-            if (eq < 0) return;
-            var name = pair[..eq].Trim();
-            var val = pair[(eq + 1)..].Trim();
-            if (name.Length > 0) _cookies[name] = val;
-        }
+        get => JsEngine.For(_engine) is { } owner
+            ? owner.DocumentState.Session?.GetDocumentCookie(owner.CurrentUrl) ?? string.Empty : string.Empty;
+        set { if (JsEngine.For(_engine) is { } owner)
+            owner.DocumentState.Session?.SetDocumentCookie(owner.CurrentUrl, value); }
     }
 
     // ---- DOM Traversal Level 2 (Phase 9) ----

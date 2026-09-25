@@ -7,9 +7,10 @@ using Jint.Runtime.Modules;
 namespace Lite.Scripting;
 
 /// <summary>Document-owned browser module fetching; all Jint access stays on the owning thread.</summary>
-internal sealed class HttpModuleLoader(string baseUrl, string documentUrl, Action<Action> post) : IModuleLoader, IAsyncModuleLoader, IDisposable
+internal sealed class HttpModuleLoader(string baseUrl, string documentUrl, Action<Action> post,
+    Lite.Network.BrowserSession? session = null) : IModuleLoader, IAsyncModuleLoader, IDisposable
 {
-    private static readonly HttpClient Client = new(new HttpClientHandler { AllowAutoRedirect = false });
+    private readonly Lite.Network.BrowserSession _session = session ?? new();
     private static readonly HashSet<string> JavaScriptMimeTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "text/javascript", "application/javascript", "application/ecmascript", "text/ecmascript", "application/x-javascript",
@@ -86,7 +87,8 @@ internal sealed class HttpModuleLoader(string baseUrl, string documentUrl, Actio
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
             var crossOrigin = origin != uri.GetLeftPart(UriPartial.Authority);
             if (crossOrigin) request.Headers.TryAddWithoutValidation("Origin", origin);
-            using var response = await Client.SendAsync(request, cancellation).ConfigureAwait(false);
+            using var response = await (crossOrigin ? _session.NoCookieModuleClient : _session.ModuleClient)
+                .SendAsync(request, cancellation).ConfigureAwait(false);
             if (crossOrigin && (!response.Headers.TryGetValues("Access-Control-Allow-Origin", out var origins) ||
                 !origins.Any(value => value == "*" || value == origin))) throw new IOException("Module response failed CORS");
             if (response.StatusCode is HttpStatusCode.MovedPermanently or HttpStatusCode.Found or HttpStatusCode.SeeOther or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect)

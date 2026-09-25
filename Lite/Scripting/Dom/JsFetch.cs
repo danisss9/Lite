@@ -11,8 +11,6 @@ namespace Lite.Scripting.Dom;
 /// </summary>
 internal static class JsFetch
 {
-    private static readonly HttpClient _client = new();
-
     /// <summary>Result object handed to the JS callback. Field names are read from JS.</summary>
     public sealed class FetchResult
     {
@@ -27,6 +25,7 @@ internal static class JsFetch
     internal static void Native(JsEngine engine, string url, JsValue options, JsValue callback)
     {
         var method = "GET";
+        var credentials = "same-origin";
         string? requestBody = null;
         if (options.IsObject())
         {
@@ -35,12 +34,15 @@ internal static class JsFetch
             if (m.IsString()) method = m.AsString().ToUpperInvariant();
             var b = obj.Get("body");
             if (b.IsString()) requestBody = b.AsString();
+            var c = obj.Get("credentials");
+            if (c.IsString()) credentials = c.AsString();
         }
 
         var baseUrl = engine.DocumentBaseUrl;
         System.Threading.Tasks.Task.Run(() =>
         {
-            var result = Execute(url, method, requestBody, baseUrl);
+            var result = Execute(url, method, requestBody, baseUrl, engine.DocumentState.Session,
+                engine.DocumentState.Address, credentials);
             // Hop back to the UI thread before touching Jint.
             engine.EnqueueMacrotask(() =>
             {
@@ -50,7 +52,8 @@ internal static class JsFetch
         });
     }
 
-    private static FetchResult Execute(string url, string method, string? body, string? baseUrl)
+    private static FetchResult Execute(string url, string method, string? body, string? baseUrl,
+        Lite.Network.BrowserSession? session, string documentUrl, string credentials)
     {
         try
         {
@@ -58,11 +61,24 @@ internal static class JsFetch
                 return FromDataUri(url);
 
             var resolved = ResolveUrl(url, baseUrl);
+            var target = new Uri(resolved);
+            var source = new Uri(documentUrl);
+            var crossOrigin = target.GetLeftPart(UriPartial.Authority) != source.GetLeftPart(UriPartial.Authority);
             using var request = new HttpRequestMessage(new HttpMethod(method), resolved);
+            if (crossOrigin) request.Headers.TryAddWithoutValidation("Origin", source.GetLeftPart(UriPartial.Authority));
             if (body is not null)
                 request.Content = new StringContent(body);
 
-            using var response = _client.Send(request);
+            session ??= new Lite.Network.BrowserSession();
+            var sendCookies = credentials == "include" || credentials != "omit" && !crossOrigin;
+            using var response = (sendCookies ? session.Client : session.NoCookieClient).Send(request);
+            if (crossOrigin)
+            {
+                var origin = source.GetLeftPart(UriPartial.Authority);
+                var allowed = response.Headers.TryGetValues("Access-Control-Allow-Origin", out var origins)
+                    && origins.Any(value => value == origin || value == "*" && !sendCookies);
+                if (!allowed) return new FetchResult { error = "Cross-origin response failed CORS" };
+            }
             var text = response.Content.ReadAsStringAsync().Result;
             return new FetchResult
             {

@@ -20,6 +20,7 @@ internal static class Parser
         div, section, article, header, footer, main, nav, aside, form, ul, ol, li, fieldset, figure, figcaption, address, details, summary, dialog { display: block; }
         label { display: inline; }
         center { display: block; text-align: center; }
+        center table { margin-left: auto; margin-right: auto; }
         body { display: block; margin: 8px; }
         h1 { display: block; font-size: 2em; margin-top: 0.67em; margin-bottom: 0.67em; margin-left: 0px; margin-right: 0px; font-weight: bold; }
         h2 { display: block; font-size: 1.5em; margin-top: 0.83em; margin-bottom: 0.83em; margin-left: 0px; margin-right: 0px; font-weight: bold; }
@@ -85,6 +86,7 @@ internal static class Parser
 
     internal sealed class ParseState
     {
+        internal BrowserSession? Session;
         internal string? BaseUrl, DocumentBaseUrl;
         internal IDocument? Document;
         internal int ViewportWidth = 800, ViewportHeight = 600, InlineModuleCounter;
@@ -111,7 +113,7 @@ internal static class Parser
     // External classic scripts marked `async` — executed on the task queue, not in any order.
     private static List<ScriptRecord> _asyncScripts => Current.AsyncScripts;
     private static int _inlineModuleCounter { get => Current.InlineModuleCounter; set => Current.InlineModuleCounter = value; }
-    private static readonly HttpClient _httpClient = new();
+    private static BrowserSession Session => Current.Session ??= new BrowserSession();
 
     /// <summary>The live AngleSharp document from the last page load, kept alive so that
     /// innerHTML fragments can be parsed with the page's full stylesheet cascade.</summary>
@@ -130,11 +132,11 @@ internal static class Parser
     internal static LayoutNode TraverseHtml(string address, int viewportWidth = 800, int viewportHeight = 600)
         => TraversePage(new NavigationRequest(address), viewportWidth, viewportHeight).Root;
 
-    /// <summary>Loads a top-level document. GET retains AngleSharp's resource loader; POST sends
-    /// the form body and opens the returned HTML at the final response URL.</summary>
-    internal static Page TraversePage(NavigationRequest request, int viewportWidth = 800, int viewportHeight = 600)
+    /// <summary>Loads a document through the window's HTTP session, preserving cookies on redirects.</summary>
+    internal static Page TraversePage(NavigationRequest request, int viewportWidth = 800, int viewportHeight = 600,
+        BrowserSession? session = null)
     {
-        Current = new ParseState();
+        Current = new ParseState { Session = session ?? new BrowserSession() };
         _baseUrl = request.Url;
         _documentBaseUrl = request.Url;
         _pendingScripts.Clear();
@@ -146,7 +148,6 @@ internal static class Parser
         ViewportHeight = viewportHeight;
 
         var config = Configuration.Default
-            .WithDefaultLoader(new LoaderOptions { IsResourceLoadingEnabled = true })
             .WithCss()
             .WithRenderDevice(new DefaultRenderDevice
             {
@@ -157,28 +158,19 @@ internal static class Parser
             });
 
         var context = BrowsingContext.New(config);
-        IDocument document;
-        string address;
-        if (request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
+        using var message = new HttpRequestMessage(new System.Net.Http.HttpMethod(request.Method), request.Url);
+        if (request.Body is not null)
         {
-            using var message = new HttpRequestMessage(System.Net.Http.HttpMethod.Post, request.Url);
-            var body = new ByteArrayContent(Encoding.UTF8.GetBytes(request.Body ?? string.Empty));
+            var body = new ByteArrayContent(Encoding.UTF8.GetBytes(request.Body));
             body.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(
                 request.ContentType ?? "application/x-www-form-urlencoded");
             message.Content = body;
-            using var response = _httpClient.SendAsync(message).Result;
-            response.EnsureSuccessStatusCode();
-            address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? request.Url;
-            // ReadAsStringAsync honors the HTTP charset (and UTF BOM) before AngleSharp parses it.
-            var html = response.Content.ReadAsStringAsync().Result;
-            document = context.OpenAsync(req => req.Address(address).Content(html)).Result;
         }
-        else
-        {
-            document = context.OpenAsync(request.Url).Result;
-            address = Uri.TryCreate(document.Url, UriKind.Absolute, out var finalUrl)
-                ? finalUrl.AbsoluteUri : request.Url;
-        }
+        using var response = Session.Client.Send(message);
+        response.EnsureSuccessStatusCode();
+        var address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? request.Url;
+        var html = response.Content.ReadAsStringAsync().Result;
+        var document = context.OpenAsync(req => req.Address(address).Content(html)).Result;
         _baseUrl = address;
         _documentBaseUrl = address;
         return ParseOpenedDocument(document, address, viewportWidth, viewportHeight);
@@ -241,7 +233,11 @@ internal static class Parser
                 styleEl.TextContent = css;
                 head.AppendChild(styleEl);
             }
-            catch (Exception ex) { Console.WriteLine($"[CSS load error] {href}: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                Session.Diagnostics.Enqueue($"css {href}: {ex.Message}");
+                Console.WriteLine($"[CSS load error] {href}: {ex.Message}");
+            }
         }
 
         // Decode HTML entities in author <style> text. Per HTML5, <style> is a raw-text element
@@ -297,7 +293,8 @@ internal static class Parser
 
         // Always create the JS engine so inline onclick/on* handlers work,
         // even when there are no external or inline script blocks.
-        var state = new DocumentState(document, address, _documentBaseUrl ?? address, CssRules.ToArray()) { ParserContext = Current };
+        var state = new DocumentState(document, address, _documentBaseUrl ?? address, CssRules.ToArray())
+            { ParserContext = Current, Session = Session };
         var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight, state);
         QueueParsedDetailsNotifications(root, jsEngine);
 
@@ -411,7 +408,7 @@ internal static class Parser
     {
         var savedContext = Current;
         var savedInstance = JsEngine.Instance;
-        Current = new ParseState();
+        Current = new ParseState { Session = savedContext.Session };
 
         try
         {
@@ -426,7 +423,6 @@ internal static class Parser
             ViewportHeight = viewportHeight;
 
             var config = Configuration.Default
-                .WithDefaultLoader(new LoaderOptions { IsResourceLoadingEnabled = true })
                 .WithCss()
                 .WithRenderDevice(new DefaultRenderDevice
                 {
@@ -436,11 +432,18 @@ internal static class Parser
                     ViewPortHeight = viewportHeight
                 });
             var context = BrowsingContext.New(config);
-            var document = isSrcdoc
-                ? context.OpenAsync(req => req.Address(baseUrl).Content(content)).Result
-                : context.OpenAsync(content).Result;
-
-            return ParseOpenedDocument(document, isSrcdoc ? baseUrl : content, viewportWidth, viewportHeight);
+            var address = baseUrl;
+            string html;
+            if (isSrcdoc) html = content;
+            else
+            {
+                using var response = Session.Client.GetAsync(content).Result;
+                response.EnsureSuccessStatusCode();
+                address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? content;
+                html = response.Content.ReadAsStringAsync().Result;
+            }
+            var document = context.OpenAsync(req => req.Address(address).Content(html)).Result;
+            return ParseOpenedDocument(document, address, viewportWidth, viewportHeight);
         }
         finally
         {
@@ -568,7 +571,7 @@ internal static class Parser
 
                 try
                 {
-                    var fontBytes = ResourceLoader.FetchBytes(resolved, _baseUrl);
+                    var fontBytes = ResourceLoader.FetchBytes(resolved, _baseUrl, Session);
                     if (fontBytes != null && fontBytes.Length > 0)
                         FontRegistry.Register(family, bold, italic, fontBytes);
                 }
@@ -761,7 +764,7 @@ internal static class Parser
             if (!string.IsNullOrEmpty(src))
             {
                 node.Attributes["_currentSrc"] = ResolveAgainstBase(src);
-                node.Image = ResourceLoader.FetchImage(src, _documentBaseUrl ?? _baseUrl);
+                node.Image = ResourceLoader.FetchImage(src, _documentBaseUrl ?? _baseUrl, Session);
             }
 
             // HTML presentational hints: width/height are lengths in px, or (HTML 4) percentages.
@@ -787,7 +790,7 @@ internal static class Parser
                                type.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
             if (!string.IsNullOrEmpty(data) && couldBeImage)
             {
-                var img = ResourceLoader.FetchImage(data, _baseUrl);
+                var img = ResourceLoader.FetchImage(data, _baseUrl, Session);
                 if (img is not null)
                 {
                     node.Image = img;
@@ -1053,7 +1056,7 @@ internal static class Parser
                 node.StyleOverrides["width"] = string.IsNullOrEmpty(w) ? "300px" : (w.EndsWith("px") ? w : w + "px");
                 node.StyleOverrides["height"] = string.IsNullOrEmpty(h) ? "150px" : (h.EndsWith("px") ? h : h + "px");
                 var poster = element.GetAttribute("poster");
-                if (!string.IsNullOrEmpty(poster)) node.Image = ResourceLoader.FetchImage(poster, _baseUrl);
+                if (!string.IsNullOrEmpty(poster)) node.Image = ResourceLoader.FetchImage(poster, _baseUrl, Session);
             }
             else // AUDIO renders a controls strip only when `controls` is present; otherwise no box.
             {
@@ -1270,7 +1273,7 @@ internal static class Parser
     private static string FetchCssText(string url, string? linkCharset, string? referrerCharset,
         out string usedCharset)
     {
-        using var response = _httpClient.GetAsync(url).Result;
+        using var response = Session.Client.GetAsync(url).Result;
         response.EnsureSuccessStatusCode();
         var bytes = response.Content.ReadAsByteArrayAsync().Result;
         return DecodeCss(bytes, response.Content.Headers.ContentType?.CharSet,
@@ -2007,11 +2010,15 @@ internal static class Parser
                 }
                 try
                 {
-                    var code = _httpClient.GetStringAsync(scriptUrl).Result;
+                    var code = Session.Client.GetStringAsync(scriptUrl).Result;
                     if (!string.IsNullOrWhiteSpace(code))
                         BucketClassic(code, scriptUrl, isAsync, isDefer);
                 }
-                catch (Exception ex) { Console.WriteLine($"[Script load error] {scriptUrl}: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Session.Diagnostics.Enqueue($"script {scriptUrl}: {ex.Message}");
+                    Console.WriteLine($"[Script load error] {scriptUrl}: {ex.Message}");
+                }
             }
         }
         else if (!string.IsNullOrWhiteSpace(scriptEl.TextContent))
@@ -2859,7 +2866,7 @@ internal static class Parser
         if (owner is not null)
         {
             Current = owner.ParserContext ?? new ParseState { Document = owner.Document,
-                BaseUrl = owner.Address, DocumentBaseUrl = owner.BaseUrl };
+                BaseUrl = owner.Address, DocumentBaseUrl = owner.BaseUrl, Session = owner.Session };
             if (owner.ParserContext is null) Current.CssRules.AddRange(owner.StyleRules);
         }
         var wasFragment = Current.IsFragment;
@@ -3012,7 +3019,7 @@ internal static class Parser
 
             // Selection changes the current request, not the author's src attribute.
             imgNode.Attributes["_currentSrc"] = ResolveAgainstBase(url);
-            imgNode.Image = ResourceLoader.FetchImage(url, _documentBaseUrl ?? _baseUrl);
+            imgNode.Image = ResourceLoader.FetchImage(url, _documentBaseUrl ?? _baseUrl, Session);
             return;
         }
 

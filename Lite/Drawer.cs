@@ -76,11 +76,37 @@ internal static class Drawer
 
         // Paint position:fixed nodes after restoring scroll so they stay on screen
         PaintFixedNodes(canvas, root, width);
+        AddWrappedAnchorRegions(root);
 
         viewport.ContentHeight = root.Box.MarginBox.Bottom;
         DrawScrollbar(canvas, viewport, width, height);
 
         return bitmap;
+    }
+
+    /// <summary>Block children of an inline anchor can be hoisted into anonymous layout boxes.
+    /// The anchor then has no box of its own, so use the rendered descendants as its hit area.</summary>
+    private static void AddWrappedAnchorRegions(LayoutNode root)
+    {
+        var pending = new Stack<LayoutNode>();
+        pending.Push(root);
+        while (pending.TryPop(out var node))
+        {
+            if (node.Href is not null && node.Box.BorderBox.IsEmpty && node.GetDisplay() != DisplayType.None)
+            {
+                var descendants = new Stack<LayoutNode>();
+                foreach (var child in node.Children) descendants.Push(child);
+                while (descendants.TryPop(out var child))
+                {
+                    if (child.GetDisplay() == DisplayType.None) continue;
+                    if (!child.Box.BorderBox.IsEmpty)
+                        _hitRegions.Add(new HitRegion(child.Box.BorderBox, node.GetCursor(), node.Href,
+                            NodeKey: node.NodeKey));
+                    foreach (var grandchild in child.Children) descendants.Push(grandchild);
+                }
+            }
+            foreach (var child in node.Children) pending.Push(child);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1430,7 +1456,7 @@ internal static class Drawer
         canvas.DrawText(btnLabel, rect.Left + FormLayout.ButtonPaddingX, rect.MidY + btnFont.Size * 0.35f,
                         SKTextAlign.Left, btnFont, textPaint);
 
-        _hitRegions.Add(new HitRegion(rect, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.Button));
+        _hitRegions.Add(new HitRegion(box.BorderBox, CursorType.Pointer, NodeKey: node.NodeKey, InputAction: InputAction.Button));
     }
 
     // -------------------------------------------------------------------------
@@ -1477,15 +1503,8 @@ internal static class Drawer
 
         // list-style-image: when set and loadable, the image replaces the bullet/number marker.
         var listImageUrl = node.GetListStyleImage();
-        SKBitmap? listImage = null;
-        if (listImageUrl is not null)
-        {
-            if (!_bgImageCache.TryGetValue(listImageUrl, out listImage))
-            {
-                listImage = ResourceLoader.FetchImage(listImageUrl, Parser.BaseUrl);
-                _bgImageCache[listImageUrl] = listImage;
-            }
-        }
+        SKBitmap? listImage = listImageUrl is null ? null : ResourceLoader.FetchImage(listImageUrl,
+            node.DocumentState?.BaseUrl, node.DocumentState?.Session);
 
         if (listImage is not null)
         {
@@ -2037,18 +2056,11 @@ internal static class Drawer
 
     // ---- Background image ----
 
-    private static readonly Dictionary<string, SKBitmap?> _bgImageCache = new();
-
     private static void DrawBackgroundImage(SKCanvas canvas, LayoutNode node, BoxDimensions box)
     {
         var imageUrl = node.GetBackgroundImage();
         if (imageUrl == null) return;
-
-        if (!_bgImageCache.TryGetValue(imageUrl, out var bitmap))
-        {
-            bitmap = ResourceLoader.FetchImage(imageUrl, Parser.BaseUrl);
-            _bgImageCache[imageUrl] = bitmap;
-        }
+        var bitmap = ResourceLoader.FetchImage(imageUrl, node.DocumentState?.BaseUrl, node.DocumentState?.Session);
         if (bitmap == null) return;
 
         var repeat = node.GetBackgroundRepeat();

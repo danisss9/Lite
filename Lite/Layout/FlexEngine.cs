@@ -720,7 +720,13 @@ internal static class FlexEngine
                 else
                 {
                     // Measure intrinsic content size
-                    ContentMain = MeasureIntrinsicMain(node, isRow, containerW, viewportWidth, viewportHeight);
+                    // A column item's height depends on its used width. Respect its
+                    // cross-axis width constraints before measuring wrapped content.
+                    var measureWidth = isRow ? containerW : Math.Max(0,
+                        Math.Min(containerW, MaxCross));
+                    if (!isRow && node.GetWidth(containerW) is var specifiedWidth && specifiedWidth > 0)
+                        measureWidth = Math.Min(measureWidth, specifiedWidth);
+                    ContentMain = MeasureIntrinsicMain(node, isRow, measureWidth, viewportWidth, viewportHeight);
                 }
             }
 
@@ -875,14 +881,7 @@ internal static class FlexEngine
         private static float MeasureChildWidth(LayoutNode c, float containerW,
             float viewportWidth, float viewportHeight)
         {
-            var w = c.GetWidth(containerW);
-            if (w > 0) return w;
-            if (!string.IsNullOrEmpty(c.DisplayText))
-            {
-                using var f = TextMeasure.CreateFont(c);
-                return f.MeasureText(c.DisplayText);
-            }
-            return 0f;
+            return IntrinsicSizer.OuterMinMax(c, viewportHeight).Max;
         }
 
         private static float MeasureChildHeight(LayoutNode c, float containerW,
@@ -890,11 +889,11 @@ internal static class FlexEngine
         {
             var h = c.GetHeight(viewportHeight);
             if (h > 0) return h;
-            if (!string.IsNullOrEmpty(c.DisplayText))
-            {
-                using var f = TextMeasure.CreateFont(c);
-                return f.Size * 1.4f;
-            }
+            if (GetFormIntrinsicSize(c).h is var formHeight && formHeight > 0f) return formHeight;
+            // Wrapped text can occupy many lines. A single font-height estimate
+            // lets following column flex items overlap the painted paragraphs.
+            if (c.Children.Count > 0 || !string.IsNullOrEmpty(c.DisplayText))
+                return BoxEngine.MeasureBlockHeight(c, containerW, viewportWidth, viewportHeight);
             return 0f;
         }
 

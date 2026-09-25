@@ -54,6 +54,24 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void FlexColumn_MaxWidthTextKeepsFollowingControlBelowContent()
+    {
+        var text = new LayoutNode(null, "#text",
+            string.Concat(Enumerable.Repeat("A paragraph of consent information wraps inside the narrow card. ", 8)),
+            _styleCache.Style);
+        var paragraph = Block(new(), text);
+        var content = Block(new() { ["max-width"] = "200px" }, paragraph);
+        var control = Block(new() { ["height"] = "32px" });
+        var column = Block(new() { ["display"] = "flex", ["flex-direction"] = "column" },
+            content, control);
+
+        LayoutTree(column);
+
+        True(control.Box.BorderBox.Top >= paragraph.Box.BorderBox.Bottom - 1f,
+            $"control overlaps wrapped content: content={paragraph.Box.BorderBox}, control={control.Box.BorderBox}");
+    }
+
+    [Test]
     public static void UnsetDimensions_RemainAutoWithCurrentCssBackend()
     {
         var node = Parser.ParseFragment("<div>text</div>")[0];

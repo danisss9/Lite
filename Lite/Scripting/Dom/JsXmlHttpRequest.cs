@@ -12,7 +12,9 @@ namespace Lite.Scripting.Dom;
 /// </summary>
 public class JsXmlHttpRequest
 {
-    private static readonly HttpClient _client = new();
+    private readonly JsEngine _owner;
+
+    internal JsXmlHttpRequest(JsEngine owner) => _owner = owner;
 
     // Ready states
     public int UNSENT { get; } = 0;
@@ -26,6 +28,7 @@ public class JsXmlHttpRequest
     public string statusText { get; private set; } = "";
     public string responseText { get; private set; } = "";
     public string responseType { get; set; } = "";
+    public bool withCredentials { get; set; }
     public object? response => responseText;
 
     public JsValue? onreadystatechange { get; set; }
@@ -66,7 +69,7 @@ public class JsXmlHttpRequest
             Task.Run(() =>
             {
                 var result = DoHttp(body);
-                JsEngine.Instance?.EnqueueMacrotask(() => Deliver(result));
+                _owner.EnqueueMacrotask(() => Deliver(result));
             });
         }
         else
@@ -90,13 +93,22 @@ public class JsXmlHttpRequest
                 return new HttpResult(false, 0, "", "", [], "malformed data URI");
             }
 
-            var request = new HttpRequestMessage(new HttpMethod(_method), _url);
+            var resolved = _owner.ResolveAgainstCurrent(_url)!;
+            var target = new Uri(resolved);
+            var source = new Uri(_owner.DocumentState.Address);
+            var crossOrigin = target.GetLeftPart(UriPartial.Authority) != source.GetLeftPart(UriPartial.Authority);
+            using var request = new HttpRequestMessage(new HttpMethod(_method), resolved);
+            if (crossOrigin) request.Headers.TryAddWithoutValidation("Origin", source.GetLeftPart(UriPartial.Authority));
             foreach (var h in _requestHeaders)
                 request.Headers.TryAddWithoutValidation(h.Key, h.Value);
             if (body != null)
                 request.Content = new StringContent(body);
 
-            var response = _client.Send(request);
+            var session = _owner.DocumentState.Session ?? new BrowserSession();
+            using var response = (crossOrigin && !withCredentials ? session.NoCookieClient : session.Client).Send(request);
+            if (crossOrigin && (!response.Headers.TryGetValues("Access-Control-Allow-Origin", out var origins) ||
+                !origins.Any(value => value == source.GetLeftPart(UriPartial.Authority) || value == "*" && !withCredentials)))
+                return new HttpResult(false, 0, "", "", [], "Cross-origin response failed CORS");
             var headers = new Dictionary<string, string>();
             foreach (var h in response.Headers)
                 headers[h.Key.ToLowerInvariant()] = string.Join(", ", h.Value);
@@ -153,7 +165,7 @@ public class JsXmlHttpRequest
 
     private void FireEvent(JsValue? handler, string type)
     {
-        var engine = JsEngine.Instance?.RawEngine;
+        var engine = _owner.RawEngine;
         if (engine is null) return;
         try
         {

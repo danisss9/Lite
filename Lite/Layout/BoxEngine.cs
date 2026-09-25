@@ -132,7 +132,7 @@ internal static class BoxEngine
     /// than breaking any ancestor inline (this is what keeps Acid2's floated
     /// <c>span&gt;em&gt;strong</c> smile intact).</summary>
     private static bool IsBreakableInline(LayoutNode n)
-        => IsSplittableInline(n) && IsInFlow(n) && InlineContainsInFlowBlock(n);
+        => n.TagName != "A" && IsSplittableInline(n) && IsInFlow(n) && InlineContainsInFlowBlock(n);
 
     /// <summary>True when <paramref name="n"/> is an in-flow block-level box (the trigger for a
     /// block-in-inline break). Floats and absolutely/fixed-positioned boxes are out of flow and do
@@ -801,6 +801,10 @@ internal static class BoxEngine
 
         var fontSize = node.GetFontSize();
         var margin = node.GetMargin(availableWidth, viewportHeight, fontSize);
+        // Auto horizontal margins are solved after the used width is known. Treating them as
+        // lengths here can shrink an auto-width block to its font size before max-width applies.
+        if (node.IsAutoMarginLeft()) margin.Left = 0f;
+        if (node.IsAutoMarginRight()) margin.Right = 0f;
         var padding = node.GetPadding(availableWidth, viewportHeight, fontSize);
         var border = node.GetBorderWidth();
 
@@ -843,6 +847,10 @@ internal static class BoxEngine
                 ? Math.Max(0f, minW - border.Left - border.Right - padding.Left - padding.Right) : minW;
             if (clampedW < minContent) clampedW = minContent;
         }
+        // An auto-width table is shrink-wrapped. Resolve that width before auto margins so
+        // a centered table can divide the remaining space between its two margins.
+        if (!hasExplicitW && node.GetDisplay() == DisplayType.Table)
+            clampedW = TableEngine.MeasureTableWidth(node, clampedW, viewportWidth, viewportHeight);
         // A clamped box has a known width, so auto margins centre it like an explicit one does.
         var widthIsKnown = hasUsedW || clampedW != contentW;
         contentW = clampedW;
@@ -863,11 +871,6 @@ internal static class BoxEngine
 
         var contentX = x + margin.Left + border.Left + padding.Left;
         var contentY = y + margin.Top + border.Top + padding.Top;
-
-        // A block-level table with auto width shrink-wraps to its content (CSS 2.1 §17.5.2), unlike
-        // a normal block which fills its container. An explicit width already flowed into contentW.
-        if (!hasExplicitW && node.GetDisplay() == DisplayType.Table)
-            contentW = TableEngine.MeasureTableWidth(node, contentW, viewportWidth, viewportHeight);
 
         // Resolve this node's explicit height using parentContentHeight for % and viewportHeight for vh/vw.
         // height:auto is content-based — GetHeight returns the containing-block height for auto (the
@@ -991,6 +994,11 @@ internal static class BoxEngine
                    + padding.Bottom + border.Bottom + effectiveBottomMargin;
         return (totalH, effectiveBottomMargin);
     }
+
+    /// <summary>Measure a nested flex item's content at its available width before final placement.</summary>
+    internal static float MeasureBlockHeight(LayoutNode node, float availableWidth,
+        float viewportWidth, float viewportHeight)
+        => LayoutBlock(node, 0f, 0f, availableWidth, viewportWidth, viewportHeight).Height;
 
     /// <summary>
     /// Lays out children of a block container.
@@ -2012,11 +2020,24 @@ internal static class BoxEngine
                 var explicitW = node.IsAutoWidth() ? 0f : node.GetWidth(maxWidth);
                 var explicitH = node.GetHeight(viewportHeight);
 
-                // Intrinsic width: max-content of flex items (or explicit width)
+                // Form controls are replaced elements even when an author styles them
+                // as inline-flex. They have no flex children, so measuring only their
+                // children collapses their label to zero width.
+                var intrinsicW = FormLayout.IntrinsicWidth(node);
                 var w = explicitW > 0
                     ? explicitW
-                    : FlexEngine.MeasureMaxContentMain(node, 0, 0, viewportWidth, viewportHeight);
-                w = Math.Max(w, 0);
+                    : intrinsicW ?? FlexEngine.MeasureMaxContentMain(node, 0, 0, viewportWidth, viewportHeight);
+                var horizontalEdges = padding.Left + padding.Right + border.Left + border.Right;
+                var isBorderBox = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
+                if (isBorderBox && explicitW > 0) w = Math.Max(0, w - horizontalEdges);
+                var minW = node.GetMinWidth(maxWidth, fontSize);
+                var maxW = node.GetMaxWidth(maxWidth, fontSize);
+                if (isBorderBox)
+                {
+                    minW = Math.Max(0, minW - horizontalEdges);
+                    if (!float.IsPositiveInfinity(maxW)) maxW = Math.Max(0, maxW - horizontalEdges);
+                }
+                w = Math.Max(minW, Math.Min(maxW, w));
 
                 // Intrinsic height: lay out children to compute
                 var contentX2 = margin.Left + border.Left + padding.Left;
@@ -2065,9 +2086,15 @@ internal static class BoxEngine
                 else if (node.TagName == "SELECT") { defaultW = FormLayout.SelectWidth; defaultH = FormLayout.SelectHeight; }
                 else if (node.TagName == "PROGRESS") { defaultW = FormLayout.ProgressWidth; defaultH = FormLayout.ProgressHeight; }
                 else if (node.TagName == "METER") { defaultW = FormLayout.MeterWidth; defaultH = FormLayout.MeterHeight; }
-                else { defaultW = FormLayout.TextInputWidth; defaultH = FormLayout.TextInputHeight; isFormControl = false; }
+                else
+                {
+                    defaultW = IntrinsicSizer.ShrinkToFit(node, Math.Max(maxWidth, 0f), viewportHeight);
+                    defaultH = FormLayout.TextInputHeight;
+                    isFormControl = false;
+                }
 
-                var w = explicitW > 0 ? explicitW : defaultW;
+                var w = explicitW > 0 ? explicitW : node.TagName == "INPUT"
+                    ? FormLayout.IntrinsicWidth(node) ?? defaultW : defaultW;
                 w = Math.Max(node.GetMinWidth(maxWidth, fontSize),
                     Math.Min(w, node.GetMaxWidth(maxWidth, fontSize)));
                 var h = explicitH > 0 ? explicitH : defaultH;
@@ -2261,6 +2288,10 @@ internal static class BoxEngine
                         Padding = p,
                         Border = b,
                     };
+                    if (node.Children.Count > 0)
+                        LayoutChildrenImpl(node.Children, contentX, contentY, item.ContentW,
+                            viewportWidth, viewportHeight, item.ContentH, 0f, true,
+                            new List<ActiveFloat>(), true, out _);
                     break;
                 }
             case InlineItemKind.InlineFlex:

@@ -1,0 +1,32 @@
+<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><title>Consent controls</title>
+<style>
+body { margin: 18px 25px; font-family: Arial, sans-serif; }
+.container { max-width: 716px; margin: auto; }
+.box { display: flex; flex-direction: column; align-items: center; border: 1px solid #ccc;
+       box-sizing: border-box; max-width: 700px; padding: 64px 16px; }
+.content { max-width: 500px; font-size: 14px; line-height: 20px; }
+.choices { width: 100%; margin-top: 12px; text-align: center; }
+.choices form { display: inline; }
+.baseButtonGm3 { display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 20px; font-size: 14px; height: 40px; margin: 4px; padding: 0 24px;
+  box-sizing: border-box; border: none; }
+.searchButton { min-width: 182px; }
+.filledButtonGm3 { background: #0b57d0; color: white; }
+</style></head><body><div class="container"><div class="box">
+<div id="content" class="content"><p>Antes de continuar para a Google</p>
+<p>Usamos cookies e dados para fornecer e manter os serviços Google.</p>
+<p>Se optar por Rejeitar tudo, não vamos usar cookies para fins adicionais.</p>
+<p>O conteúdo não personalizado depende da atividade na sessão de pesquisa, da localização geral e do conteúdo apresentado. Estas informações ajudam a manter os serviços e a proteger contra spam e abusos.</p>
+<p>As estatísticas de utilização ajudam a compreender como os serviços são usados e a melhorar a qualidade dos resultados apresentados. Estas escolhas aplicam-se ao navegador nesta sessão.</p>
+<p>O conteúdo não personalizado depende da atividade na sessão de pesquisa, da localização geral e do conteúdo apresentado. Estas informações ajudam a manter os serviços e a proteger contra spam e abusos.</p>
+<p>As estatísticas de utilização ajudam a compreender como os serviços são usados e a melhorar a qualidade dos resultados apresentados. Estas escolhas aplicam-se ao navegador nesta sessão.</p>
+<p>O conteúdo não personalizado depende da atividade na sessão de pesquisa, da localização geral e do conteúdo apresentado. Estas informações ajudam a manter os serviços e a proteger contra spam e abusos.</p>
+<p>As estatísticas de utilização ajudam a compreender como os serviços são usados e a melhorar a qualidade dos resultados apresentados. Estas escolhas aplicam-se ao navegador nesta sessão.</p></div>
+<div class="choices">
+<form id="reject" action="/save" method="post" style="display:inline">
+<input type="hidden" name="continue" value="/result"><input type="hidden" name="choice" value="reject">
+<input type="submit" value="Rejeitar tudo" class="baseButtonGm3 filledButtonGm3 button searchButton"></form>
+<form id="accept" action="/save" method="post" style="display:inline">
+<input type="hidden" name="continue" value="/result"><input type="hidden" name="choice" value="accept">
+<input type="submit" value="Aceitar tudo" class="baseButtonGm3 filledButtonGm3 button searchButton"></form>
+</div></div></div></body></html>

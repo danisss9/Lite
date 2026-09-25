@@ -4,55 +4,59 @@ namespace Lite.Network;
 
 internal static class ResourceLoader
 {
-    private static readonly HttpClient _client = new();
-    private static readonly Dictionary<string, SKBitmap?> _cache = [];
+    private static readonly BrowserSession FallbackSession = new();
 
-    internal static SKBitmap? FetchImage(string src, string? baseUrl)
+    internal static SKBitmap? FetchImage(string src, string? baseUrl, BrowserSession? session = null)
     {
+        session ??= FallbackSession;
+        var cache = session.Images;
         // data: URI support
         if (src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
         {
-            if (_cache.TryGetValue(src, out var cachedData)) return cachedData;
+            lock (cache) if (cache.TryGetValue(src, out var cachedData)) return cachedData;
             var bitmap = DecodeDataUri(src);
-            _cache[src] = bitmap;
+            lock (cache) cache[src] = bitmap;
             return bitmap;
         }
 
         var resolved = ResolveUrl(src, baseUrl);
         if (resolved == null) return null;
 
-        if (_cache.TryGetValue(resolved, out var cached)) return cached;
+        lock (cache) if (cache.TryGetValue(resolved, out var cached)) return cached;
 
         try
         {
-            var bytes = _client.GetByteArrayAsync(resolved).Result;
+            var bytes = session.Client.GetByteArrayAsync(resolved).Result;
             var bitmap = DecodeImageBytes(bytes);
-            _cache[resolved] = bitmap;
+            lock (cache) cache[resolved] = bitmap;
             return bitmap;
         }
-        catch
+        catch (Exception error)
         {
-            _cache[resolved] = null;
+            session.Diagnostics.Enqueue($"image {resolved}: {error.Message}");
+            lock (cache) cache[resolved] = null;
             return null;
         }
     }
 
     /// <summary>Fetches a URL and returns the response body as a string.</summary>
-    internal static string? FetchText(string url, string? baseUrl)
+    internal static string? FetchText(string url, string? baseUrl, BrowserSession? session = null)
     {
+        session ??= FallbackSession;
         var resolved = ResolveUrl(url, baseUrl);
         if (resolved == null) return null;
-        try { return _client.GetStringAsync(resolved).Result; }
-        catch { return null; }
+        try { return session.Client.GetStringAsync(resolved).Result; }
+        catch (Exception error) { session.Diagnostics.Enqueue($"text {resolved}: {error.Message}"); return null; }
     }
 
     /// <summary>Fetches a URL and returns the response body as bytes.</summary>
-    internal static byte[]? FetchBytes(string url, string? baseUrl)
+    internal static byte[]? FetchBytes(string url, string? baseUrl, BrowserSession? session = null)
     {
+        session ??= FallbackSession;
         var resolved = ResolveUrl(url, baseUrl);
         if (resolved == null) return null;
-        try { return _client.GetByteArrayAsync(resolved).Result; }
-        catch { return null; }
+        try { return session.Client.GetByteArrayAsync(resolved).Result; }
+        catch (Exception error) { session.Diagnostics.Enqueue($"bytes {resolved}: {error.Message}"); return null; }
     }
 
     private static SKBitmap? DecodeDataUri(string dataUri)

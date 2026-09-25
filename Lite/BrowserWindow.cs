@@ -43,6 +43,7 @@ public class BrowserWindow
     private readonly string _title;
     private readonly int _initialWidth;
     private readonly int _initialHeight;
+    private readonly BrowserSession _session = new();
 
     private int _width;
     private int _height;
@@ -97,7 +98,7 @@ public class BrowserWindow
     public void Run()
     {
         AnimationEngine.Reset();
-        var initialPage = Parser.TraversePage(new NavigationRequest(_url), _initialWidth, _initialHeight);
+        var initialPage = Parser.TraversePage(new NavigationRequest(_url), _initialWidth, _initialHeight, _session);
         _rootNode = initialPage.Root;
         _url = initialPage.Root.DocumentState?.Address ?? _url;
         AnimationEngine.StartAnimations(_rootNode);
@@ -188,6 +189,7 @@ public class BrowserWindow
             User32.TranslateMessage(ref msg);
             User32.DispatchMessage(ref msg);
         }
+        _session.Dispose();
     }
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
@@ -943,7 +945,7 @@ public class BrowserWindow
 
         Task.Run(() =>
         {
-            try { _loadedPage = Parser.TraversePage(navigationRequest, w, h); }
+            try { _loadedPage = Parser.TraversePage(navigationRequest, w, h, _session); }
             catch (Exception ex) { _loadError = ex; }
             finally { _loadReady = true; } // volatile write — publishes the fields above
         });

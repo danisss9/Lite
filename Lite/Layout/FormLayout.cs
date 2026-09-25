@@ -38,6 +38,11 @@ internal static class FormLayout
                 var label = node.Attributes.GetValueOrDefault("value", type == "submit" ? "Submit" : "Reset");
                 return ButtonWidth(node, label);
             }
+            if (int.TryParse(node.Attributes.GetValueOrDefault("size"), out var columns) && columns > 0)
+            {
+                using var font = TextMeasure.CreateFont(node);
+                return Math.Clamp(columns, 1, 1000) * font.MeasureText("0") + 4f;
+            }
             return TextInputWidth;
         }
         if (node.TagName == "BUTTON") return ButtonWidth(node, node.DisplayText);
