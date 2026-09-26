@@ -1,5 +1,6 @@
 using System.Net;
 using System.Diagnostics;
+using System.Text;
 using Lite;
 using Lite.Interaction;
 using Lite.Models;
@@ -90,7 +91,9 @@ public static class GoogleSearchTests
                     lock (Choices) Choices.Add(choice);
                     ctx.Response.Cookies.Append("CONSENT", choice, new CookieOptions
                     {
-                        HttpOnly = true, Path = "/", SameSite = SameSiteMode.Lax,
+                        HttpOnly = true,
+                        Path = "/",
+                        SameSite = SameSiteMode.Lax,
                     });
                     ctx.Response.StatusCode = StatusCodes.Status303SeeOther;
                     ctx.Response.Headers.Location = form["continue"].ToString();
@@ -154,33 +157,61 @@ public static class GoogleSearchTests
         Directory.CreateDirectory(outputDirectory);
         using var server = new ReplayServer();
         foreach (var (width, height) in new[] { (1280, 800), (800, 600) })
-        foreach (var (name, route) in new[]
-        {
+            foreach (var (name, route) in new[]
+            {
             ("home", "/"), ("consent", "/reference/consent"),
             ("consent-controls", "/reference/consent-controls"), ("results", "/reference/results"),
         })
-        {
-            var label = $"{name}-{width}x{height}";
-            var referencePath = Path.GetFullPath(Path.Combine(outputDirectory, label + "-edge.png"));
-            var litePath = Path.GetFullPath(Path.Combine(outputDirectory, label + "-lite.png"));
-            var profile = Path.Combine(Path.GetTempPath(), "lite-google-reference-" + Guid.NewGuid().ToString("N"));
-            var start = new ProcessStartInfo(edge) { UseShellExecute = false, CreateNoWindow = true };
-            foreach (var arg in new[] { "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
+            {
+                var label = $"{name}-{width}x{height}";
+                var referencePath = Path.GetFullPath(Path.Combine(outputDirectory, label + "-edge.png"));
+                var litePath = Path.GetFullPath(Path.Combine(outputDirectory, label + "-lite.png"));
+                var profile = Path.Combine(Path.GetTempPath(), "lite-google-reference-" + Guid.NewGuid().ToString("N"));
+                var start = new ProcessStartInfo(edge) { UseShellExecute = false, CreateNoWindow = true };
+                foreach (var arg in new[] { "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
                 "--user-data-dir=" + profile, $"--window-size={width},{height}", "--screenshot=" + referencePath,
                 server.BaseUrl + route }) start.ArgumentList.Add(arg);
-            using var process = Process.Start(start) ?? throw new Exception("Could not launch Edge");
-            if (!process.WaitForExit(20_000) || !File.Exists(referencePath))
-            { Console.WriteLine($"reference capture failed: {label}"); return 1; }
-            using var session = new BrowserSession();
-            var page = Parser.TraversePage(new NavigationRequest(server.BaseUrl + route), width, height, session);
-            using var bitmap = Drawer.DrawToBitmap(width, height, page.Root,
-                new Lite.Layout.Viewport { ViewportHeight = height });
-            using var image = SKImage.FromBitmap(bitmap);
-            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-            File.WriteAllBytes(litePath, data.ToArray());
-            Console.WriteLine($"captured {label}");
-        }
+                using var process = Process.Start(start) ?? throw new Exception("Could not launch Edge");
+                if (!process.WaitForExit(20_000) || !File.Exists(referencePath))
+                { Console.WriteLine($"reference capture failed: {label}"); return 1; }
+                using var session = new BrowserSession();
+                var page = Parser.TraversePage(new NavigationRequest(server.BaseUrl + route), width, height, session);
+                using var bitmap = Drawer.DrawToBitmap(width, height, page.Root,
+                    new Lite.Layout.Viewport { ViewportHeight = height });
+                using var image = SKImage.FromBitmap(bitmap);
+                using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                File.WriteAllBytes(litePath, data.ToArray());
+                Console.WriteLine($"captured {label}");
+            }
         return 0;
+    }
+
+    /// <summary>
+    /// Loads a request and then pumps the page's event loop like a host message loop would,
+    /// following script-requested navigations: Google's anti-abuse challenge computes a token in
+    /// script, stores it in the SG_SS cookie, and reloads via location.replace — headless loads
+    /// must run those microtasks/timers and follow the reload to reach real results.
+    /// </summary>
+    private static Page LoadFollowingScripts(NavigationRequest request, BrowserSession session, int width, int height,
+        int maxHops = 5, int pumpMilliseconds = 2500)
+    {
+        var page = Parser.TraversePage(request, width, height, session);
+        for (var hop = 0; hop < maxHops; hop++)
+        {
+            NavigationRequest? pending = null;
+            page.Engine.OnNavigate = r => pending = r;
+            var deadline = Stopwatch.GetTimestamp() + pumpMilliseconds * Stopwatch.Frequency / 1000;
+            while (Stopwatch.GetTimestamp() < deadline)
+            {
+                page.Engine.DrainTree();
+                if (pending is not null) break;
+                Thread.Sleep(20);
+            }
+            if (pending is not { } next) return page;
+            Console.WriteLine($"script navigation -> {next.Url}");
+            page = Parser.TraversePage(next, width, height, session);
+        }
+        return page;
     }
 
     /// <summary>Explicit live check; the deterministic suite never depends on Google's availability.</summary>
@@ -216,12 +247,16 @@ public static class GoogleSearchTests
                 var consentForm = reject.Parent ?? throw new Exception("Consent form missing");
                 var save = FormSubmitter.PrepareNavigation(consentForm, next.Engine, true, reject)
                     ?? throw new Exception("Consent form did not submit");
-                next = Parser.TraversePage(save, width, height, session);
+                next = LoadFollowingScripts(save, session, width, height);
                 Console.WriteLine($"results: {Describe(next)}");
             }
             Save(next, "results.png");
             var heading = FindWhere(next.Root, n => n.TagName == "H3");
             Console.WriteLine($"results DOM: forms={next.Document?.QuerySelectorAll("form").Length}, links={next.Document?.QuerySelectorAll("a").Length}, scripts={next.Document?.QuerySelectorAll("script").Length}");
+            // Keep the served markup alongside the image: when Google changes the served variant
+            // (challenge, /sorry rate-limit interstitial) the DOM explains what happened.
+            File.WriteAllText(Path.Combine(output, "results.html"),
+                next.Document?.DocumentElement?.OuterHtml ?? "", Encoding.UTF8);
             var (_, regions) = Drawer.Draw(width, height, next.Root,
                 new Lite.Layout.Viewport { ViewportHeight = height });
             Console.WriteLine($"result heading: {(heading is null ? "missing" : heading.DisplayText)}; clickable links: {regions.Count(r => r.Href is not null)}");
@@ -261,65 +296,65 @@ public static class GoogleSearchTests
     {
         using var server = new ReplayServer();
         foreach (var (width, height) in new[] { (1280, 800), (800, 600) })
-        foreach (var choice in new[] { "reject", "accept" })
-        {
-            using var session = new BrowserSession();
-            var home = Parser.TraversePage(new NavigationRequest(server.BaseUrl + "/"), width, height, session);
-            var logo = Find(home.Root, "logo");
-            var query = Find(home.Root, "q");
-            var button = Find(home.Root, "search-button");
-            Equal("loaded", FindTag(home.Root, "BODY").Attributes.GetValueOrDefault("data-home-script"));
-            True(logo.Image is not null, "logo asset should load through the browser session");
-            var (_, homeRegions) = Drawer.Draw(width, height, home.Root, new Lite.Layout.Viewport { ViewportHeight = height });
-            True(query.Box.BorderBox.Width > 500,
-                $"search field is too narrow: input={query.Box.BorderBox.Width}, form={Find(home.Root, "search").Box.BorderBox.Width}, viewport={width}");
-            True(query.Box.BorderBox.Right <= width && query.Box.BorderBox.Left >= 0, "search field is clipped");
-            True(logo.Box.BorderBox.Right <= width && logo.Box.BorderBox.Left >= 0, "logo is clipped");
-            True(homeRegions.Any(region => region.NodeKey == button.NodeKey), "search button is not clickable");
+            foreach (var choice in new[] { "reject", "accept" })
+            {
+                using var session = new BrowserSession();
+                var home = Parser.TraversePage(new NavigationRequest(server.BaseUrl + "/"), width, height, session);
+                var logo = Find(home.Root, "logo");
+                var query = Find(home.Root, "q");
+                var button = Find(home.Root, "search-button");
+                Equal("loaded", FindTag(home.Root, "BODY").Attributes.GetValueOrDefault("data-home-script"));
+                True(logo.Image is not null, "logo asset should load through the browser session");
+                var (_, homeRegions) = Drawer.Draw(width, height, home.Root, new Lite.Layout.Viewport { ViewportHeight = height });
+                True(query.Box.BorderBox.Width > 500,
+                    $"search field is too narrow: input={query.Box.BorderBox.Width}, form={Find(home.Root, "search").Box.BorderBox.Width}, viewport={width}");
+                True(query.Box.BorderBox.Right <= width && query.Box.BorderBox.Left >= 0, "search field is clipped");
+                True(logo.Box.BorderBox.Right <= width && logo.Box.BorderBox.Left >= 0, "logo is clipped");
+                True(homeRegions.Any(region => region.NodeKey == button.NodeKey), "search button is not clickable");
 
-            FormState.TextInputValues[query.NodeKey] = "lite browser engine";
-            var search = FormSubmitter.PrepareNavigation(Find(home.Root, "search"), home.Engine,
-                fireSubmitEvent: true, submitter: choice == "accept" ? button : null)!.Value;
-            Contains("q=lite+browser+engine", search.Url);
-            if (choice == "accept") Contains("btnK=Pesquisa+Google", search.Url);
-            var consent = Parser.TraversePage(search, width, height, session);
-            Contains("/consent?", consent.Root.DocumentState?.Address);
-            var selectedForm = Find(consent.Root, choice);
-            var rejectButton = Find(consent.Root, "reject").Children.First(child => child.TagName == "INPUT" &&
-                child.Attributes.GetValueOrDefault("type") == "submit");
-            var acceptButton = Find(consent.Root, "accept").Children.First(child => child.TagName == "INPUT" &&
-                child.Attributes.GetValueOrDefault("type") == "submit");
-            var submit = selectedForm.Children.First(child => child.TagName == "INPUT" &&
-                child.Attributes.GetValueOrDefault("type") == "submit");
-            Drawer.Draw(width, height, consent.Root, new Lite.Layout.Viewport { ViewportHeight = height });
-            True(acceptButton.Box.BorderBox.Left > rejectButton.Box.BorderBox.Right,
-                $"consent buttons overlap: reject={rejectButton.Box.BorderBox}, accept={acceptButton.Box.BorderBox}, rejectForm={Find(consent.Root, "reject").Box.BorderBox}, acceptForm={Find(consent.Root, "accept").Box.BorderBox}");
-            True(submit.Box.BorderBox.Right <= width && submit.Box.BorderBox.Bottom <= height,
-                "consent choice is clipped");
-            var save = FormSubmitter.PrepareNavigation(selectedForm, consent.Engine, true, submit)!.Value;
-            Equal("POST", save.Method);
-            Contains("choice=" + choice, save.Body);
-            var results = Parser.TraversePage(save, width, height, session);
-            Contains("/search?", results.Root.DocumentState?.Address);
-            Equal("Google Search", results.Document?.Title);
-            Equal("loaded", FindTag(results.Root, "BODY").Attributes.GetValueOrDefault("data-results-script"));
-            True(string.IsNullOrEmpty(session.GetDocumentCookie(server.BaseUrl + "/search")),
-                "HTTP-only consent cookie must not be visible to script");
-            var result = Find(results.Root, "first-result");
-            var (_, regions) = Drawer.Draw(width, height, results.Root,
-                new Lite.Layout.Viewport { ViewportHeight = height });
-            True(regions.Any(region => region.NodeKey == result.NodeKey && region.Href != null),
-                $"result link is not clickable: href={result.Href}, matching={regions.Count(region => region.NodeKey == result.NodeKey)}, links={regions.Count(region => region.Href != null)}, regions={regions.Count}, attached={FindOrNull(results.Root, "first-result") is not null}, box={result.Box.BorderBox}, heading={FindTag(result, "H3").Box.BorderBox}");
-            True(FindTag(result, "H3").Box.BorderBox.Right <= width, "result link is clipped");
-            var destination = Parser.TraversePage(new NavigationRequest(server.BaseUrl + result.Href),
-                width, height, session);
-            Equal("Destination", destination.Document?.Title);
+                FormState.TextInputValues[query.NodeKey] = "lite browser engine";
+                var search = FormSubmitter.PrepareNavigation(Find(home.Root, "search"), home.Engine,
+                    fireSubmitEvent: true, submitter: choice == "accept" ? button : null)!.Value;
+                Contains("q=lite+browser+engine", search.Url);
+                if (choice == "accept") Contains("btnK=Pesquisa+Google", search.Url);
+                var consent = Parser.TraversePage(search, width, height, session);
+                Contains("/consent?", consent.Root.DocumentState?.Address);
+                var selectedForm = Find(consent.Root, choice);
+                var rejectButton = Find(consent.Root, "reject").Children.First(child => child.TagName == "INPUT" &&
+                    child.Attributes.GetValueOrDefault("type") == "submit");
+                var acceptButton = Find(consent.Root, "accept").Children.First(child => child.TagName == "INPUT" &&
+                    child.Attributes.GetValueOrDefault("type") == "submit");
+                var submit = selectedForm.Children.First(child => child.TagName == "INPUT" &&
+                    child.Attributes.GetValueOrDefault("type") == "submit");
+                Drawer.Draw(width, height, consent.Root, new Lite.Layout.Viewport { ViewportHeight = height });
+                True(acceptButton.Box.BorderBox.Left > rejectButton.Box.BorderBox.Right,
+                    $"consent buttons overlap: reject={rejectButton.Box.BorderBox}, accept={acceptButton.Box.BorderBox}, rejectForm={Find(consent.Root, "reject").Box.BorderBox}, acceptForm={Find(consent.Root, "accept").Box.BorderBox}");
+                True(submit.Box.BorderBox.Right <= width && submit.Box.BorderBox.Bottom <= height,
+                    "consent choice is clipped");
+                var save = FormSubmitter.PrepareNavigation(selectedForm, consent.Engine, true, submit)!.Value;
+                Equal("POST", save.Method);
+                Contains("choice=" + choice, save.Body);
+                var results = Parser.TraversePage(save, width, height, session);
+                Contains("/search?", results.Root.DocumentState?.Address);
+                Equal("Google Search", results.Document?.Title);
+                Equal("loaded", FindTag(results.Root, "BODY").Attributes.GetValueOrDefault("data-results-script"));
+                True(string.IsNullOrEmpty(session.GetDocumentCookie(server.BaseUrl + "/search")),
+                    "HTTP-only consent cookie must not be visible to script");
+                var result = Find(results.Root, "first-result");
+                var (_, regions) = Drawer.Draw(width, height, results.Root,
+                    new Lite.Layout.Viewport { ViewportHeight = height });
+                True(regions.Any(region => region.NodeKey == result.NodeKey && region.Href != null),
+                    $"result link is not clickable: href={result.Href}, matching={regions.Count(region => region.NodeKey == result.NodeKey)}, links={regions.Count(region => region.Href != null)}, regions={regions.Count}, attached={FindOrNull(results.Root, "first-result") is not null}, box={result.Box.BorderBox}, heading={FindTag(result, "H3").Box.BorderBox}");
+                True(FindTag(result, "H3").Box.BorderBox.Right <= width, "result link is clipped");
+                var destination = Parser.TraversePage(new NavigationRequest(server.BaseUrl + result.Href),
+                    width, height, session);
+                Equal("Destination", destination.Document?.Title);
 
-            using var isolated = new BrowserSession();
-            var another = Parser.TraversePage(search, width, height, isolated);
-            Contains("/consent?", another.Root.DocumentState?.Address);
-            True(session.Diagnostics.IsEmpty, string.Join("; ", session.Diagnostics));
-        }
+                using var isolated = new BrowserSession();
+                var another = Parser.TraversePage(search, width, height, isolated);
+                Contains("/consent?", another.Root.DocumentState?.Address);
+                True(session.Diagnostics.IsEmpty, string.Join("; ", session.Diagnostics));
+            }
         Equal(4, server.Choices.Count);
     }
 

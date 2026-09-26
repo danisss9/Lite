@@ -7,14 +7,14 @@ namespace Lite.Scripting.Dom;
 /// <summary>Full document proxy exposed to JavaScript.</summary>
 public class JsDocument
 {
-    private readonly Engine     _engine;
+    private readonly Engine _engine;
     private readonly LayoutNode _root;
     private readonly AngleSharp.Dom.IDocument? _document;
 
     public JsDocument(Engine engine, LayoutNode root)
     {
         _engine = engine;
-        _root   = root;
+        _root = root;
         _document = JsEngine.For(engine)?.SourceDocument;
     }
 
@@ -27,14 +27,21 @@ public class JsDocument
     public string readyState => JsEngine.For(_engine)?.DocumentReadyState ?? "complete";
     public JsElement? documentElement => _root.Children.Count > 0 ? JsElement.For(_engine, _root) : null;
 
-    /// <summary>Returns the window object (document.defaultView).</summary>
-    public object? defaultView => JsEngine.For(_engine)?.RawEngine.GetValue("window").ToObject();
+    /// <summary>Returns the window object (document.defaultView). Returned as a live JsValue:
+    /// a CLR round-trip (ToObject) would hand the result converter a graph that cycles through
+    /// globalThis and throw "Cyclic reference detected" (Jint ResultConverter).</summary>
+    public JsValue? defaultView => _engine.GetValue("window");
 
     public JsElement? body =>
         FindFirst(_root, n => n.TagName == "BODY") is { } b ? JsElement.For(_engine, b) : null;
 
     public JsElement? head =>
         FindFirst(_root, n => n.TagName == "HEAD") is { } h ? JsElement.For(_engine, h) : null;
+
+    /// <summary>The currently executing script element, or null outside script execution
+    /// (timers, microtasks, module code) — HTML §4.11.1.</summary>
+    public JsElement? currentScript =>
+        JsEngine.For(_engine)?.CurrentScriptNode is { } node ? JsElement.For(_engine, node) : null;
 
     // ---- selectors ----
     public JsElement? getElementById(string id)
@@ -75,7 +82,7 @@ public class JsDocument
     public JsElement createElement(string tagName)
     {
         var style = _root.Style;
-        var node  = new LayoutNode(null, tagName.ToUpperInvariant(), string.Empty, style)
+        var node = new LayoutNode(null, tagName.ToUpperInvariant(), string.Empty, style)
         {
             NeedsStyleResolution = true, // cascade applied when inserted into the live tree
         };
@@ -207,8 +214,11 @@ public class JsDocument
     {
         get => JsEngine.For(_engine) is { } owner
             ? owner.DocumentState.Session?.GetDocumentCookie(owner.CurrentUrl) ?? string.Empty : string.Empty;
-        set { if (JsEngine.For(_engine) is { } owner)
-            owner.DocumentState.Session?.SetDocumentCookie(owner.CurrentUrl, value); }
+        set
+        {
+            if (JsEngine.For(_engine) is { } owner)
+                owner.DocumentState.Session?.SetDocumentCookie(owner.CurrentUrl, value);
+        }
     }
 
     // ---- DOM Traversal Level 2 (Phase 9) ----

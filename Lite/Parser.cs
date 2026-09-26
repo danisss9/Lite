@@ -78,9 +78,11 @@ internal static class Parser
     // Tags that should not appear in the layout tree.
     // NOTE: TEMPLATE is intentionally NOT here — a <template> element IS in the DOM (so JS can reach
     // it), but it renders nothing (display:none) and its parsed content lives in an inert fragment
-    // exposed as template.content (see the TEMPLATE clause in Traverse).
+    // exposed as template.content (see the TEMPLATE clause in Traverse). HEAD and SCRIPT follow the
+    // same rule: they are real DOM nodes (document.head, document.currentScript, script-element
+    // bootstraps like getElementsByTagName('script')[0].parentNode.insertBefore) that never render.
     private static readonly HashSet<string> SkipTags =
-        ["HEAD", "STYLE", "NOSCRIPT", "META", "LINK", "TITLE"];
+        ["STYLE", "NOSCRIPT", "META", "LINK", "TITLE"];
 
     internal sealed record ScriptRecord(string? Code, string Url, bool IsModule = false, bool Inline = false);
 
@@ -167,9 +169,17 @@ internal static class Parser
             message.Content = body;
         }
         using var response = Session.Client.Send(message);
-        response.EnsureSuccessStatusCode();
         var address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? request.Url;
         var html = response.Content.ReadAsStringAsync().Result;
+        if (!response.IsSuccessStatusCode)
+        {
+            // A browser renders the server's error body (search engines rate-limit with HTML
+            // interstitials) instead of failing the load; surface the status as a diagnostic.
+            Session.Diagnostics.Enqueue($"http {(int)response.StatusCode} {address}");
+            Console.WriteLine($"[HTTP {(int)response.StatusCode}] {address}");
+            if (html.Length == 0)
+                response.EnsureSuccessStatusCode();
+        }
         var document = context.OpenAsync(req => req.Address(address).Content(html)).Result;
         _baseUrl = address;
         _documentBaseUrl = address;
@@ -294,8 +304,9 @@ internal static class Parser
         // Always create the JS engine so inline onclick/on* handlers work,
         // even when there are no external or inline script blocks.
         var state = new DocumentState(document, address, _documentBaseUrl ?? address, CssRules.ToArray())
-            { ParserContext = Current, Session = Session };
+        { ParserContext = Current, Session = Session };
         var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight, state);
+        QueueParsedDetailsNotifications(root, jsEngine);
         QueueParsedDetailsNotifications(root, jsEngine);
 
         // Now that the parent engine exists, wire each nested <iframe>'s child context
@@ -729,15 +740,17 @@ internal static class Parser
         var ws = elementStyle.GetPropertyValueSafe("white-space")?.Trim().ToLowerInvariant();
         var directTextRaw = hasMixedChildren
             ? ""
-            : NormalizeTextWhitespace(
-                string.Concat(element.ChildNodes.OfType<IText>().Select(t => t.Data)), ws);
+            : tag == "SCRIPT"
+                ? string.Concat(element.ChildNodes.OfType<IText>().Select(t => t.Data)) // raw-text element: never collapse
+                : NormalizeTextWhitespace(
+                    string.Concat(element.ChildNodes.OfType<IText>().Select(t => t.Data)), ws);
         // Trimming implements §16.6.1's "remove the spaces at the start and end of a line", so it
         // only applies where 'white-space' collapses at all: under pre / pre-wrap every space is
         // significant, and a cell holding one space is a space wide, not zero.
         var preservesSpaces = ws is "pre" or "pre-wrap";
         var directText = hasMixedChildren
             ? ""   // text nodes become ordered #TEXT children below
-            : preservesSpaces ? directTextRaw : directTextRaw.Trim();
+            : preservesSpaces || tag == "SCRIPT" ? directTextRaw : directTextRaw.Trim();
 
         var href = tag == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, tag, directText, elementStyle, href);
@@ -915,6 +928,11 @@ internal static class Parser
             node.StyleOverrides["display"] = "none";
         }
 
+        // Real DOM nodes that never render: scripts must be reachable (loader bootstraps walk
+        // document.getElementsByTagName('script') and read .parentNode) but produce no box.
+        if (tag is "HEAD" or "SCRIPT")
+            node.StyleOverrides["display"] = "none";
+
         // <details>/<dialog> open state (drives layout collapse + the .open DOM property)
         if (tag is "DETAILS" or "DIALOG" && element.HasAttribute("open"))
             node.Attributes["open"] = "";
@@ -1090,7 +1108,10 @@ internal static class Parser
             {
                 if (childNode is IText textNode)
                 {
-                    var text = CollapseWhitespace(textNode.Data);
+                    // <script> is a raw-text element: its content is never collapsed — scripts
+                    // read it back verbatim (document.currentScript.text) and whitespace can be
+                    // syntactically significant (template strings, ASI hazards).
+                    var text = tag == "SCRIPT" ? textNode.Data : CollapseWhitespace(textNode.Data);
                     // Include any non-empty text — whitespace-only nodes (" ") between
                     // inline siblings need to produce a space; purely empty strings are skipped.
                     // Whitespace-only nodes between block siblings are filtered out later in
@@ -1109,6 +1130,7 @@ internal static class Parser
                     if (childTag == "SCRIPT")
                     {
                         CollectScript(childEl);
+                        node.AddChild(Traverse(childEl, indent + 1, fontPx));
                         continue;
                     }
                     if (SkipTags.Contains(childTag)) { CollectScriptsRecursive(childEl); continue; }
@@ -1121,7 +1143,12 @@ internal static class Parser
             foreach (var child in element.Children)
             {
                 var childTag = child.TagName.ToUpperInvariant();
-                if (childTag == "SCRIPT") { CollectScript(child); continue; }
+                if (childTag == "SCRIPT")
+                {
+                    CollectScript(child);
+                    node.AddChild(Traverse(child, indent + 1, fontPx));
+                    continue;
+                }
                 if (SkipTags.Contains(childTag)) { CollectScriptsRecursive(child); continue; }
                 node.AddChild(Traverse(child, indent + 1, fontPx));
             }
@@ -2865,8 +2892,13 @@ internal static class Parser
         var previous = Current;
         if (owner is not null)
         {
-            Current = owner.ParserContext ?? new ParseState { Document = owner.Document,
-                BaseUrl = owner.Address, DocumentBaseUrl = owner.BaseUrl, Session = owner.Session };
+            Current = owner.ParserContext ?? new ParseState
+            {
+                Document = owner.Document,
+                BaseUrl = owner.Address,
+                DocumentBaseUrl = owner.BaseUrl,
+                Session = owner.Session
+            };
             if (owner.ParserContext is null) Current.CssRules.AddRange(owner.StyleRules);
         }
         var wasFragment = Current.IsFragment;

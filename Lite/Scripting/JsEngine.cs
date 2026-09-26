@@ -125,8 +125,10 @@ internal class JsEngine
 
     internal void RequestNavigation(NavigationRequest request)
     {
-        if (OnNavigate is { } nav)
-            EnqueueMacrotask(() => nav(request));
+        // Resolve the handler at run time, not enqueue time: a headless traverse can wire
+        // OnNavigate after the parse (scripts already ran) and still receive navigations its
+        // scripts requested, matching a host whose message loop starts slightly later.
+        EnqueueMacrotask(() => OnNavigate?.Invoke(request));
     }
 
     /// <summary>Resolves a (possibly relative) URL against the current document URL.
@@ -238,7 +240,7 @@ internal class JsEngine
     {
         var baseUrl = documentState?.Address ?? Parser.BaseUrl ?? "about://lite/";
         DocumentState = documentState ?? new DocumentState(Parser.Document, baseUrl, baseUrl, Parser.CssRules.ToArray())
-            { Session = new BrowserSession() };
+        { Session = new BrowserSession() };
         DocumentState.Bind(root);
         _moduleLoader = new HttpModuleLoader(DocumentBaseUrl, DocumentState.Address, EnqueueMacrotask,
             DocumentState.Session);
@@ -296,6 +298,9 @@ internal class JsEngine
         _engine.SetValue("__scrollY", new Func<double>(() => _jsWindow.scrollY));
         _engine.SetValue("scrollTo", new Action<int, int>((x, y) => _jsWindow.scrollTo(x, y)));
         _engine.SetValue("scrollBy", new Action<int, int>((x, y) => _jsWindow.scrollBy(x, y)));
+        // window.postMessage is also reachable as a bare global (window === globalThis).
+        _engine.SetValue("postMessage", new Action<JsValue, JsValue, JsValue>(
+            (message, targetOrigin, transfer) => _jsWindow.postMessage(message, targetOrigin, transfer)));
 
         // Timers — delay/id come in as JsValue so a missing/undefined arg (e.g. setTimeout(fn))
         // coerces to 0 instead of throwing a CLR conversion error.
@@ -321,7 +326,11 @@ internal class JsEngine
         _engine.SetValue("FormData", typeof(JsFormData));
 
         // navigator
-        _engine.SetValue("navigator", new JsNavigator(DocumentState.Session));
+        _engine.SetValue("navigator", new JsNavigator(DocumentState.Session, () => CurrentUrl));
+
+        // Base64 utilities (HTML5 §6.2)
+        _engine.SetValue("atob", new Func<string, string>(Dom.JsBase64.Decode));
+        _engine.SetValue("btoa", new Func<string, string>(Dom.JsBase64.Encode));
 
         var startedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var elapsed = System.Diagnostics.Stopwatch.StartNew();
@@ -329,8 +338,13 @@ internal class JsEngine
         {
             timeOrigin = (double)startedAt,
             now = new Func<double>(() => elapsed.Elapsed.TotalMilliseconds),
-            timing = new { navigationStart = startedAt, fetchStart = startedAt,
-                responseStart = startedAt, domLoading = startedAt },
+            timing = new
+            {
+                navigationStart = startedAt,
+                fetchStart = startedAt,
+                responseStart = startedAt,
+                domLoading = startedAt
+            },
             getEntriesByType = new Func<string, object[]>(_ => []),
             mark = new Action<string>(_ => { }),
             measure = new Action<string>(_ => { }),
@@ -400,6 +414,12 @@ internal class JsEngine
         _engine.SetValue("__nativeFetch", new Action<string, JsValue, JsValue>(
             (url, opts, cb) => JsFetch.Native(this, url, opts, cb)));
 
+        // ---- Encoding API backing functions (TextEncoder/TextDecoder shim below) ----
+        _engine.SetValue("__textEncodeUtf8", new Func<string, double[]>(
+            s => System.Text.Encoding.UTF8.GetBytes(s).Select(b => (double)b).ToArray()));
+        _engine.SetValue("__textDecodeUtf8", new Func<double[], string>(
+            bytes => System.Text.Encoding.UTF8.GetString(bytes.Select(Convert.ToByte).ToArray())));
+
         // ---- JS-side shims: fetch() Promise wrapper + queueMicrotask polyfill ----
         _engine.Execute(HostShim);
     }
@@ -451,6 +471,78 @@ internal class JsEngine
           globalThis.__lite_domException = function (name, message) {
             return new globalThis.DOMException(message, name);
           };
+          // Channel Messaging API: new MessageChannel() → {port1, port2}. postMessage delivers a
+          // 'message' event on the peer port asynchronously (a microtask; the spec allows a task).
+          if (typeof globalThis.MessageChannel !== 'function') {
+            globalThis.MessageChannel = function MessageChannel() {
+              function makePort(peerOwners) {
+                var listeners = [];
+                var closed = false;
+                function fire(event) {
+                  var hs = [port.onmessage].concat(listeners);
+                  for (var i = 0; i < hs.length; i++)
+                    if (typeof hs[i] === 'function')
+                      hs[i].call(port, event);
+                }
+                var port = {
+                  onmessage: null,
+                  postMessage: function (message) {
+                    if (closed) return;
+                    var data = message;
+                    Promise.resolve().then(function () {
+                      if (closed) return;
+                      fire({ data: data, type: 'message', target: port, currentTarget: port });
+                    });
+                  },
+                  start: function () { },
+                  close: function () { closed = true; },
+                  addEventListener: function (type, handler) { if (type === 'message') listeners.push(handler); },
+                  removeEventListener: function (type, handler) {
+                    if (type !== 'message') return;
+                    var i = listeners.indexOf(handler); if (i >= 0) listeners.splice(i, 1);
+                  },
+                  dispatchEvent: function (event) { fire(event); return true; }
+                };
+                return port;
+              }
+              var p1 = makePort();
+              var p2 = makePort();
+              // Wire cross-delivery: posting on one port fires on the other.
+              var orig1 = p1.postMessage.bind(p1), orig2 = p2.postMessage.bind(p2);
+              p1.postMessage = function (m) { orig2(m); };
+              p2.postMessage = function (m) { orig1(m); };
+              this.port1 = p1;
+              this.port2 = p2;
+            };
+          }
+          // Encoding API: TextEncoder/TextDecoder (UTF-8, the only required encoding).
+          // encode() returns a real Uint8Array; decode() accepts anything array-like.
+          if (typeof globalThis.TextEncoder !== 'function') {
+            globalThis.TextEncoder = function TextEncoder() { this.encoding = 'utf-8'; };
+            TextEncoder.prototype.encoding = 'utf-8';
+            TextEncoder.prototype.encode = function (input) {
+              return new Uint8Array(__textEncodeUtf8(input === undefined ? '' : String(input)));
+            };
+            TextEncoder.prototype.encodeInto = function (source, destination) {
+              var bytes = this.encode(source);
+              var n = Math.min(bytes.length, destination.length);
+              for (var i = 0; i < n; i++) destination[i] = bytes[i];
+              return { read: source === undefined ? 0 : String(source).length, written: n };
+            };
+          }
+          if (typeof globalThis.TextDecoder !== 'function') {
+            globalThis.TextDecoder = function TextDecoder(label) {
+              this.encoding = (label === undefined || String(label).replace(/[^a-zA-Z0-9]/g, '')
+                .toLowerCase() === 'utf8') ? 'utf-8' : 'utf-8';
+            };
+            TextDecoder.prototype.decode = function (buffer, options) {
+              if (buffer == null) return '';
+              var b = buffer.buffer ? new Uint8Array(buffer.buffer, buffer.byteOffset || 0, buffer.byteLength) : buffer;
+              var n = b.length, parts = new Array(n);
+              for (var i = 0; i < n; i++) parts[i] = b[i];
+              return __textDecodeUtf8(parts);
+            };
+          }
           // Constructible CharacterData globals (new Comment(data) / new Text(data)) — delegate
           // to the document factories so the result is a normal wrapped node. Class syntax makes
           // a call without `new` throw TypeError, as the spec requires.
@@ -507,15 +599,53 @@ internal class JsEngine
 
     public void Execute(string script) => Execute(script, DocumentBaseUrl);
 
+    /// <summary>The script element currently being executed (HTML §4.11.1): exposed as
+    /// <c>document.currentScript</c>. Cleared for timers, microtasks, and module code.</summary>
+    internal LayoutNode? CurrentScriptNode { get; private set; }
+
+    private LayoutNode? FindScriptNode(string script, string sourceUrl)
+    {
+        var stack = new Stack<LayoutNode>();
+        stack.Push(_root);
+        while (stack.Count > 0)
+        {
+            var n = stack.Pop();
+            if (n.TagName == "SCRIPT")
+            {
+                if (n.Attributes.GetValueOrDefault("src") is { Length: > 0 } src)
+                {
+                    if (ResolveAgainstCurrent(src) == sourceUrl) return n;
+                }
+                else if (ScriptTextOf(n) == script) return n;
+            }
+            foreach (var c in n.Children) stack.Push(c);
+        }
+        return null;
+    }
+
+    /// <summary>A script element's source text: its own raw text (script is a raw-text element;
+    /// the parser stores inline code unnormalized) or, after dynamic edits, its #text children.</summary>
+    private static string ScriptTextOf(Lite.Models.LayoutNode n) =>
+        n.Children.Count == 0 ? n.Text
+            : string.Concat(n.Children.Where(c => c.TagName == "#text").Select(c => c.Text));
+
     internal void Execute(string script, string sourceUrl)
     {
         if (string.IsNullOrWhiteSpace(script)) return;
+        var previousScript = CurrentScriptNode;
+        CurrentScriptNode = FindScriptNode(script, sourceUrl);
         try { _engine.Execute(script, sourceUrl, JavaScriptRuntime.ScriptParsing); }
         catch (Jint.Runtime.JavaScriptException ex) { ReportScriptError(ex.Error); }
         catch (Exception ex) when (ex is Acornima.SyntaxErrorException || ex.InnerException is Acornima.SyntaxErrorException)
         { ReportScriptError(_engine.Construct(_syntaxErrorConstructor, [(JsValue)ex.Message])); }
         catch (Exception ex) { ReportScriptError(_engine.Intrinsics.Error.Construct(ex.Message)); }
-        finally { FlushMicrotasks(); ScriptExecuted?.Invoke(this); }
+        finally
+        {
+            // Restore (and clear for microtasks) before the checkpoint, matching the spec where
+            // promise continuations queued by the script no longer see a current script.
+            CurrentScriptNode = previousScript;
+            FlushMicrotasks(); ScriptExecuted?.Invoke(this);
+        }
     }
 
     private readonly Dictionary<string, JsValue> _eventHandlerAttributes = new(StringComparer.Ordinal);

@@ -129,10 +129,17 @@ public class JsElement
 
     private static readonly Dictionary<string, int> DomCodes = new()
     {
-        ["IndexSizeError"] = 1, ["HierarchyRequestError"] = 3, ["WrongDocumentError"] = 4,
-        ["InvalidCharacterError"] = 5, ["NoModificationAllowedError"] = 7, ["NotFoundError"] = 8,
-        ["NotSupportedError"] = 9, ["InvalidStateError"] = 11, ["SyntaxError"] = 12,
-        ["NamespaceError"] = 14, ["InvalidNodeTypeError"] = 24,
+        ["IndexSizeError"] = 1,
+        ["HierarchyRequestError"] = 3,
+        ["WrongDocumentError"] = 4,
+        ["InvalidCharacterError"] = 5,
+        ["NoModificationAllowedError"] = 7,
+        ["NotFoundError"] = 8,
+        ["NotSupportedError"] = 9,
+        ["InvalidStateError"] = 11,
+        ["SyntaxError"] = 12,
+        ["NamespaceError"] = 14,
+        ["InvalidNodeTypeError"] = 24,
     };
 
     /// <summary>Raises a JS-catchable DOMException (e.name / e.code / e.message, and
@@ -197,6 +204,15 @@ public class JsElement
         return string.Concat(node.Children
             .Where(c => c.TagName is not ("#comment" or "#pi"))
             .Select(GetTextContentRecursive));
+    }
+
+    /// <summary>HTMLScriptElement.text (and the legacy alias other elements rarely use): the
+    /// element's text content. Loader scripts built with createElement('script') set .text
+    /// before insertion; the insertion hook reads it back through the same storage.</summary>
+    public string text
+    {
+        get => textContent;
+        set => textContent = value;
     }
 
     public string innerHTML
@@ -903,6 +919,47 @@ public class JsElement
         return false;
     }
 
+    /// <summary>Inserting a &lt;script&gt; into the document executes it (HTML §4.11.1 “prepare the
+    /// script element”). Execution is deferred onto the engine's event loop — fetching/running it
+    /// synchronously here would re-enter Jint, which is not reentrant. External sources are
+    /// fetched through the page session (cookies, UA) like parser-collected scripts.</summary>
+    private void ExecuteInsertedScript()
+    {
+        if (Node.TagName != "SCRIPT") return;
+        var js = JsEngine.For(_engine);
+        if (js is null) return;
+        var type = Node.Attributes.GetValueOrDefault("type");
+        if (type?.Equals("module", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var specifier = js.ResolveAgainstCurrent(Node.Attributes.GetValueOrDefault("src"));
+            if (specifier is not null) js.EnqueueMacrotask(() => js.ImportModule(specifier));
+            return;
+        }
+        if (Node.Attributes.GetValueOrDefault("src") is { Length: > 0 } src)
+        {
+            var url = js.ResolveAgainstCurrent(src);
+            if (url is null) return;
+            var session = js.DocumentState.Session;
+            if (session is null) return;
+            _ = System.Threading.Tasks.Task.Run(async () =>
+            {
+                string code;
+                try { code = await session.Client.GetStringAsync(url).ConfigureAwait(false); }
+                catch (Exception ex)
+                {
+                    session.Diagnostics.Enqueue($"script {url}: {ex.Message}");
+                    return;
+                }
+                js.EnqueueMacrotask(() => js.Execute(code, url));
+            });
+        }
+        else if (!string.IsNullOrWhiteSpace(GetTextContentRecursive(Node)))
+        {
+            var code = GetTextContentRecursive(Node);
+            js.EnqueueMacrotask(() => js.Execute(code, js.DocumentBaseUrl));
+        }
+    }
+
     public JsElement appendChild(JsElement child)
     {
         // CharacterData (Text/Comment/PI) and other leaf node types cannot contain children.
@@ -916,6 +973,7 @@ public class JsElement
         StyleResolver.ApplyTree(child.Node);
         var prev = Node.Children.Count >= 2 ? Node.Children[^2] : null;
         MutationObserverRegistry.NotifyChildList(_engine, Node, [child.Node], null, prev, null);
+        child.ExecuteInsertedScript();
         return child;
     }
 
@@ -951,6 +1009,7 @@ public class JsElement
         }
         StyleResolver.ApplyTree(newNode.Node);
         MutationObserverRegistry.NotifyChildList(_engine, Node, [newNode.Node], null, null, refNode?.Node);
+        newNode.ExecuteInsertedScript();
         return newNode;
     }
 
@@ -982,6 +1041,7 @@ public class JsElement
             node.Parent?.Children.Remove(node);
             Node.AddChild(node);
             StyleResolver.ApplyTree(node);
+            JsElement.For(_engine, node).ExecuteInsertedScript();
         }
     }
 
@@ -995,6 +1055,7 @@ public class JsElement
             nodes[i].Parent = Node;
             Node.Children.Insert(0, nodes[i]);
             StyleResolver.ApplyTree(nodes[i]);
+            JsElement.For(_engine, nodes[i]).ExecuteInsertedScript();
         }
     }
 

@@ -68,6 +68,17 @@ internal class JsWindow
     /// <summary>Fires a window event by name with a pre-built event object (e.g. a JsEvent).</summary>
     internal void DispatchEvent(string type, JsValue evt) => DispatchInternal(type, evt);
 
+    /// <summary>HTML postMessage on a window: a same-window post schedules a <c>message</c> event
+    /// task on this window (browsers deliver it asynchronously — scripts use it for scheduling).
+    /// Cross-context posts go through the iframe WindowProxies, which carry both origins.</summary>
+    public void postMessage(Jint.Native.JsValue message, Jint.Native.JsValue? targetOrigin = null,
+        Jint.Native.JsValue? transfer = null)
+    {
+        var data = message.ToObject();   // structured clone via the CLR graph
+        var origin = _engine.Origin;
+        _engine.EnqueueMacrotask(() => _engine.DeliverMessage(data, origin, new JsWindowProxy(_engine, _engine)));
+    }
+
     private void DispatchInternal(string type, JsValue evt)
     {
         foreach (var (t, fn) in _listeners.ToList())
