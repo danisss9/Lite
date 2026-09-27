@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.16] - 2026-09-26
+
+This release proves the engine against two real search services — DuckDuckGo Lite and signed-out Google Search — exercised end to end from form submission through rendered, clickable results, and adds the scripting and loading features those pages required.
+
+- Add a DuckDuckGo Lite suite (`DuckDuckGoLiteTests`) that replays the site's GET/POST search shape against a local fixture server: URL-encoded form bodies, region and time filter resubmission, pager pagination, 303 redirects, and an `iso-8859-1` response decoded to the correct title. Submit-event cancellation is covered for `preventDefault`, `requestSubmit`, and scripted `form.submit()`, and the homepage asserts desktop control widths and relative hit regions.
+- Add a Google Search suite (`GoogleSearchTests`) that deterministically replays the signed-out Search and consent journey captured on 2026-09-25: home form submit, the consent interstitial's accept/reject forms, HTTP-only consent cookies kept invisible to script, and result links that remain clickable at desktop and 800×600 viewports. Reference renders are captured against headless Edge, and an explicit live smoke test (`--google-live`) never runs in the deterministic suite.
+- Execute scripts inserted after parse: a `<script>` created with `createElement('script')` and inserted into the document runs through the engine's event loop, with external sources fetched through the page session (cookies, user agent) and module support. `HTMLScriptElement.text` is settable before insertion, and `document.currentScript` reports the currently executing script element per HTML §4.11.1.
+- Render server error bodies instead of failing the load — search engines rate-limit with HTML interstitials — and surface the status as a session diagnostic. Keep `HEAD` and `SCRIPT` as real DOM nodes so script-element bootstraps like `getElementsByTagName('script')[0].parentNode.insertBefore` work, and never collapse `<script>` text content.
+- Add `navigator.sendBeacon` (fire-and-forget POST carrying session cookies), the byte-oriented `atob`/`btoa` globals with catchable `InvalidCharacterError`, `document.defaultView`, a `document.cookie` setter that writes session cookies, and numeric `code` values on DOM exceptions.
+
 ## [0.0.15] - 2026-09-21
 
 This release moves the active compatibility contract to the fixed HTML 5.3 draft of 18 October 2018, hardens WPT execution and document isolation, fixes event handler content attributes, and separates execution results from the outstanding review backlog in the ES2020 gates. Readiness flags remain false: `es2020ProfileReady` is reported rather than enforced in compatibility CI and NuGet release validation, which publish it as evidence alongside the package. This candidate does not claim full conformance.

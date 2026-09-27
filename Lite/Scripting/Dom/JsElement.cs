@@ -38,6 +38,7 @@ public class JsElement
     }
     public string tagName => Node.TagName.ToUpperInvariant();
     public string localName => Node.TagName.ToLowerInvariant();
+    public bool isConnected => GetRootNode() == JsEngine.For(_engine)?.DocumentFacade.documentElement?.Node;
 
     // ---- DOM Core Level 2 ----
     /// <summary>True for the CharacterData node kinds: Text, Comment, ProcessingInstruction.</summary>

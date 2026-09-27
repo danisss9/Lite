@@ -449,7 +449,7 @@ internal static class Parser
             else
             {
                 using var response = Session.Client.GetAsync(content).Result;
-                response.EnsureSuccessStatusCode();
+                // HTTP error responses still complete iframe navigation and fire load.
                 address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? content;
                 html = response.Content.ReadAsStringAsync().Result;
             }
