@@ -77,6 +77,7 @@ public static class CssWideKeywordTests
     [Test]
     public static void StylesheetEncoding_FollowsTransportThenBomAndCharset()
     {
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
         // CSS 2.1 §4.4. Decoding every sheet as UTF-8 both mangles one in a legacy encoding and
         // leaves the U+FEFF of a BOM at the front of the text, which breaks its first selector.
         var utf8 = System.Text.Encoding.UTF8;
@@ -87,7 +88,7 @@ public static class CssWideKeywordTests
 
         // A legacy @charset applies when transport metadata is absent.
         var declared = "@charset \"shift-JIS\";\n.\u5e73\u548c { color: green }";
-        var sjis = System.Text.Encoding.GetEncoding("shift_jis").GetBytes(declared);
+        var sjis = System.Text.Encoding.GetEncoding("shift-jis").GetBytes(declared);
         True(Parser.DecodeCss(sjis, null, null, null, out _).Contains("\u5e73\u548c"),
             "an @charset-declared encoding must decode legacy text");
         Equal(utf8.GetString(sjis), Parser.DecodeCss(sjis, "utf-8", null, null, out var transport));
@@ -95,9 +96,26 @@ public static class CssWideKeywordTests
         Equal(System.Text.Encoding.GetEncoding("iso-8859-5").GetString(bom),
             Parser.DecodeCss(bom, "iso-8859-5", null, null, out _));
         Equal("#a { color: green }", Parser.DecodeCss(bom, "utf-8", null, null, out _));
+        // A debugger stops on first-chance ArgumentException if the resolver probes
+        // UTF_8 before trying UTF-8, even though decoding eventually succeeds.
+        var unsupportedUtf8Probes = 0;
+        EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs> onFirstChance = (_, e) =>
+        {
+            if (e.Exception is ArgumentException argument &&
+                argument.Message.Contains("UTF_8", StringComparison.OrdinalIgnoreCase))
+                unsupportedUtf8Probes++;
+        };
+        AppDomain.CurrentDomain.FirstChanceException += onFirstChance;
+        try
+        {
+            Equal("#a { color: green }", Parser.DecodeCss(bom, "UTF-8", null, null, out _));
+            Equal("#a { color: green }", Parser.DecodeCss(bom, "utf-8", null, null, out _));
+        }
+        finally { AppDomain.CurrentDomain.FirstChanceException -= onFirstChance; }
+        Equal(0, unsupportedUtf8Probes);
 
         // With neither, the linking element's charset attribute is consulted before the fallback.
-        var plain = System.Text.Encoding.GetEncoding("shift_jis").GetBytes(".\u5e73\u548c { color: green }");
+        var plain = System.Text.Encoding.GetEncoding("shift-jis").GetBytes(".\u5e73\u548c { color: green }");
         True(Parser.DecodeCss(plain, null, "shift-JIS", null, out _).Contains("\u5e73\u548c"),
             "the link element's charset attribute must be honoured");
         True(Parser.DecodeCss(plain, null, null, "shift-JIS", out _).Contains("\u5e73\u548c"),

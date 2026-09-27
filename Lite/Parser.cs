@@ -1390,11 +1390,14 @@ internal static class Parser
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             _codePagesRegistered = true;
         }
-        // CSS 2.1 names it "shift-JIS"; the registry knows it as "shift_jis".
-        var cleaned = name.Trim().Trim('"').Replace('-', '_');
-        try { return Encoding.GetEncoding(cleaned); }
+        // Preserve the supplied label first: .NET recognizes UTF-8 and utf-8, while
+        // replacing their hyphen with an underscore causes a first-chance exception on
+        // every UTF-8 stylesheet. Some legacy labels need an underscore fallback.
+        var label = name.Trim().Trim('"');
+        try { return Encoding.GetEncoding(label); }
         catch (ArgumentException) { }
-        try { return Encoding.GetEncoding(name.Trim().Trim('"')); }
+        if (!label.Contains('-')) return null;
+        try { return Encoding.GetEncoding(label.Replace('-', '_')); }
         catch (ArgumentException) { return null; }
     }
 
@@ -2209,6 +2212,7 @@ internal static class Parser
                 continue;
 
             var selectorText = styleRule.SelectorText;
+            if (string.IsNullOrWhiteSpace(selectorText)) continue;
             try { if (!element.Matches(selectorText)) continue; }
             catch { continue; } // malformed selector
 
