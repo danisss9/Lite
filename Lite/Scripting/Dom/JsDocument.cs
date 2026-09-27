@@ -35,6 +35,10 @@ public class JsDocument
     public JsElement? body =>
         FindFirst(_root, n => n.TagName == "BODY") is { } b ? JsElement.For(_engine, b) : null;
 
+    public JsElement? activeElement =>
+        JsEngine.For(_engine)?.DocumentState.ActiveElement is { } active
+            ? JsElement.For(_engine, active) : body;
+
     public JsElement? head =>
         FindFirst(_root, n => n.TagName == "HEAD") is { } h ? JsElement.For(_engine, h) : null;
 

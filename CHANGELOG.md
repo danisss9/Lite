@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+- Add native browser features needed by reCAPTCHA: load dynamically inserted iframes with the page session, route clicks into their child documents, expose named frames and stable message sources, transfer `MessagePort` objects between iframes and workers, and support element focus and explicit XHR content types. Add focused iframe and Web API regression tests.
+
 ## [0.0.16] - 2026-09-26
 
 This release proves the engine against two real search services — DuckDuckGo Lite and signed-out Google Search — exercised end to end from form submission through rendered, clickable results, and adds the scripting and loading features those pages required.

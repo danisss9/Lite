@@ -968,7 +968,12 @@ internal static class Drawer
         var savedDropdown = _pendingDropdown;
 
         SKBitmap childBmp;
-        try { childBmp = DrawToBitmap(cw, ch, page.Root, page.Viewport); }
+        List<HitRegion> childRegions;
+        try
+        {
+            childBmp = DrawToBitmap(cw, ch, page.Root, page.Viewport);
+            childRegions = _hitRegions.ToList();
+        }
         finally
         {
             _hitRegions = savedHit;
@@ -986,6 +991,21 @@ internal static class Drawer
             canvas.ClipRect(content);
             canvas.DrawBitmap(childBmp, content.Left, content.Top);
             canvas.Restore();
+        }
+        foreach (var region in childRegions)
+        {
+            var left = Math.Max(content.Left, content.Left + region.Bounds.Left);
+            var top = Math.Max(content.Top, content.Top + region.Bounds.Top - page.Viewport.ScrollY);
+            var right = Math.Min(content.Right, content.Left + region.Bounds.Right);
+            var bottom = Math.Min(content.Bottom, content.Top + region.Bounds.Bottom - page.Viewport.ScrollY);
+            if (right <= left || bottom <= top) continue;
+            _hitRegions.Add(region with
+            {
+                Bounds = new SKRect(left, top, right, bottom),
+                OwnerPage = region.OwnerPage ?? page,
+                OwnerOffsetX = content.Left + region.OwnerOffsetX,
+                OwnerOffsetY = content.Top - page.Viewport.ScrollY + region.OwnerOffsetY,
+            });
         }
     }
 

@@ -516,7 +516,7 @@ public class JsElement
     // ---- iframe nested browsing context (Phase C) ----
     /// <summary>HTMLIFrameElement.contentWindow — a WindowProxy into the child Page (same-origin).</summary>
     public object? contentWindow =>
-        Node.ChildPage is { } p && JsEngine.For(_engine) is { } eng ? new JsWindowProxy(eng, p.Engine) : null;
+        Node.ChildPage is { } p && JsEngine.For(_engine) is { } eng ? eng.GetWindowProxy(p.Engine) : null;
 
     /// <summary>HTMLIFrameElement.contentDocument — the child Page's document (same-origin).</summary>
     public JsDocument? contentDocument =>
@@ -733,6 +733,8 @@ public class JsElement
             if (node.TagName == "DETAILS" && name == "open" &&
                 (oldValue is not null) != node.Attributes.ContainsKey("open"))
                 QueueDetailsToggle(node, eng);
+            if (node.TagName == "IFRAME" && name is "src" or "srcdoc")
+                For(eng.RawEngine, node).LoadInsertedIframe();
         }
     }
 
@@ -961,6 +963,86 @@ public class JsElement
         }
     }
 
+    public int tabIndex
+    {
+        get => int.TryParse(Node.Attributes.GetValueOrDefault("tabindex"), out var value) ? value : -1;
+        set => setAttribute("tabindex", value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    public void focus()
+    {
+        if (!isConnected || JsEngine.For(_engine) is not { } engine) return;
+        var state = engine.DocumentState;
+        if (ReferenceEquals(state.ActiveElement, Node)) return;
+        if (state.ActiveElement is { } previous)
+        {
+            EventDispatcher.DispatchToNode(previous, "blur", engine);
+            EventDispatcher.DispatchToNode(previous, "focusout", engine, bubbles: true);
+        }
+        state.ActiveElement = Node;
+        if (Node.TagName is "INPUT" or "TEXTAREA" or "SELECT")
+            FormState.FocusedInput = Node.NodeKey;
+        EventDispatcher.DispatchToNode(Node, "focus", engine);
+        EventDispatcher.DispatchToNode(Node, "focusin", engine, bubbles: true);
+    }
+
+    public void blur()
+    {
+        if (JsEngine.For(_engine) is not { } engine ||
+            !ReferenceEquals(engine.DocumentState.ActiveElement, Node)) return;
+        engine.DocumentState.ActiveElement = null;
+        if (FormState.FocusedInput == Node.NodeKey) FormState.FocusedInput = null;
+        EventDispatcher.DispatchToNode(Node, "blur", engine);
+        EventDispatcher.DispatchToNode(Node, "focusout", engine, bubbles: true);
+    }
+
+    /// <summary>Navigate an iframe inserted by script after the current JS call returns.</summary>
+    private void LoadInsertedIframe()
+    {
+        if (Node.TagName != "IFRAME" || JsEngine.For(_engine) is not { } parent) return;
+        var node = Node;
+        var navigationVersion = ++node.FrameNavigationVersion;
+        parent.EnqueueMacrotask(() =>
+        {
+            if (navigationVersion != node.FrameNavigationVersion || !For(_engine, node).isConnected) return;
+            var srcdoc = node.Attributes.GetValueOrDefault("srcdoc");
+            var src = node.Attributes.GetValueOrDefault("src");
+            var baseUrl = parent.DocumentBaseUrl;
+            var width = int.TryParse(node.Attributes.GetValueOrDefault("width"), out var w) && w > 0 ? w : 300;
+            var height = int.TryParse(node.Attributes.GetValueOrDefault("height"), out var h) && h > 0 ? h : 150;
+            node.StyleOverrides.TryAdd("display", "block");
+            node.StyleOverrides.TryAdd("width", width + "px");
+            node.StyleOverrides.TryAdd("height", height + "px");
+            try
+            {
+                Page child;
+                if (srcdoc is not null)
+                    child = Parser.ParseChildPage(srcdoc, true, baseUrl, width, height,
+                        parent.DocumentState.Session, parent, node);
+                else if (!string.IsNullOrWhiteSpace(src) &&
+                    parent.ResolveAgainstCurrent(src) is { } childUrl &&
+                    Uri.TryCreate(childUrl, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
+                    child = Parser.ParseChildPage(childUrl, false, childUrl, width, height,
+                        parent.DocumentState.Session, parent, node);
+                else
+                {
+                    child = Parser.ParseChildPage("<!doctype html><html><body></body></html>", true,
+                        baseUrl, width, height, parent.DocumentState.Session, parent, node);
+                    child.IsInitialAboutBlank = true;
+                    child.Engine.SetCurrentUrl("about:blank");
+                }
+                node.ChildPage = child;
+                if (!child.IsInitialAboutBlank)
+                    EventDispatcher.DispatchToNode(node, "load", parent);
+            }
+            catch (Exception ex)
+            {
+                parent.DocumentState.Session?.Diagnostics.Enqueue($"iframe {src}: {ex.Message}");
+                Console.WriteLine($"[iframe load] {ex.Message}");
+            }
+        });
+    }
+
     public JsElement appendChild(JsElement child)
     {
         // CharacterData (Text/Comment/PI) and other leaf node types cannot contain children.
@@ -975,6 +1057,7 @@ public class JsElement
         var prev = Node.Children.Count >= 2 ? Node.Children[^2] : null;
         MutationObserverRegistry.NotifyChildList(_engine, Node, [child.Node], null, prev, null);
         child.ExecuteInsertedScript();
+        child.LoadInsertedIframe();
         return child;
     }
 
@@ -1011,6 +1094,7 @@ public class JsElement
         StyleResolver.ApplyTree(newNode.Node);
         MutationObserverRegistry.NotifyChildList(_engine, Node, [newNode.Node], null, null, refNode?.Node);
         newNode.ExecuteInsertedScript();
+        newNode.LoadInsertedIframe();
         return newNode;
     }
 
@@ -1029,6 +1113,8 @@ public class JsElement
         newNode.Node.Parent = Node;
         oldNode.Node.Parent = null;
         StyleResolver.ApplyTree(newNode.Node);
+        newNode.ExecuteInsertedScript();
+        newNode.LoadInsertedIframe();
         return oldNode;
     }
 
@@ -1042,7 +1128,9 @@ public class JsElement
             node.Parent?.Children.Remove(node);
             Node.AddChild(node);
             StyleResolver.ApplyTree(node);
-            JsElement.For(_engine, node).ExecuteInsertedScript();
+            var inserted = JsElement.For(_engine, node);
+            inserted.ExecuteInsertedScript();
+            inserted.LoadInsertedIframe();
         }
     }
 
@@ -1056,7 +1144,9 @@ public class JsElement
             nodes[i].Parent = Node;
             Node.Children.Insert(0, nodes[i]);
             StyleResolver.ApplyTree(nodes[i]);
-            JsElement.For(_engine, nodes[i]).ExecuteInsertedScript();
+            var inserted = JsElement.For(_engine, nodes[i]);
+            inserted.ExecuteInsertedScript();
+            inserted.LoadInsertedIframe();
         }
     }
 

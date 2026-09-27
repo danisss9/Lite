@@ -76,7 +76,9 @@ internal class JsWindow
     {
         var data = message.ToObject();   // structured clone via the CLR graph
         var origin = _engine.Origin;
-        _engine.EnqueueMacrotask(() => _engine.DeliverMessage(data, origin, new JsWindowProxy(_engine, _engine)));
+        var ports = JsMessagePort.TransferPorts(transfer, _engine.MessagePortContext);
+        _engine.EnqueueMacrotask(() => _engine.DeliverMessage(data, origin,
+            _engine.GetWindowProxy(_engine), ports));
     }
 
     private void DispatchInternal(string type, JsValue evt)
@@ -85,6 +87,12 @@ internal class JsWindow
         {
             if (t != type) continue;
             try { _engine.RawEngine.Invoke(fn, evt); }
+            catch (Exception ex) { Console.WriteLine($"[JS window {type}] {ex.Message}"); }
+        }
+        var property = _engine.RawEngine.GetValue("on" + type);
+        if (!property.IsUndefined() && !property.IsNull() && property.IsCallable())
+        {
+            try { _engine.RawEngine.Invoke(property, evt); }
             catch (Exception ex) { Console.WriteLine($"[JS window {type}] {ex.Message}"); }
         }
     }

@@ -28,13 +28,18 @@ internal sealed class JsWindowProxy
     {
         var data = message.ToObject();   // structured clone across engines via the CLR graph
         var origin = _source.Origin;
-        var replySource = new JsWindowProxy(_target, _source);
-        _target.EnqueueMacrotask(() => _target.DeliverMessage(data, origin, replySource));
+        var replySource = _target.GetWindowProxy(_source);
+        var ports = JsMessagePort.TransferPorts(transfer, _target.MessagePortContext);
+        _target.EnqueueMacrotask(() => _target.DeliverMessage(data, origin, replySource, ports));
     }
 
     public JsWindowProxy self => this;
     public JsWindowProxy window => this;
-    public int length => 0;
+    public Dictionary<string, object> frames => _target.GetFrameProxies(_source);
+    public int length => _target.NestedEngines().Count();
+    public JsDocument? document => _source.Origin == _target.Origin ? _target.DocumentFacade : null;
+    public JsLocation? location => _source.Origin == _target.Origin ? _target.Location : null;
+    public string name => _target.RawEngine.GetValue("name").ToString();
     public bool closed => false;
     public void focus() { }
     public void blur() { }

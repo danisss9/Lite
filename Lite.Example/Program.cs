@@ -27,5 +27,8 @@ window.Run(); */
 /* var window = new BrowserWindow("https://browserbench.org/");
 window.Run(); */
 
+/* var window = new BrowserWindow("https://lite.duckduckgo.com/lite/");
+window.Run(); */
+
 /* var window = new BrowserWindow("https://google.com/");
 window.Run(); */

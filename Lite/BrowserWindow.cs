@@ -387,6 +387,7 @@ public class BrowserWindow
                 {
                     var x = (short)(lParam.ToInt32() & 0xFFFF);
                     var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+                    if (HandleFramePointer("mousedown", x, y, hWnd)) break;
 
                     if (_viewport.HitThumb(x, y, _width))
                     {
@@ -546,6 +547,9 @@ public class BrowserWindow
 
             case WM_LBUTTONUP:
                 {
+                    var frameX = (short)(lParam.ToInt32() & 0xFFFF);
+                    var frameY = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+                    if (HandleFramePointer("mouseup", frameX, frameY, hWnd)) break;
                     // Release range drag
                     _draggingRange = null;
 
@@ -1183,6 +1187,37 @@ public class BrowserWindow
         DispatchPointerOrMouse(eventType, node, x, y, contentY, engine, isPointer: false);
     }
 
+    private bool HandleFramePointer(string eventType, int x, int y, IntPtr hWnd)
+    {
+        if (_rootNode is null) return false;
+        var contentY = y + _viewport.ScrollY;
+        var region = _hitRegions.LastOrDefault(r => r.OwnerPage is not null && r.Bounds.Contains(x, contentY));
+        if (region?.OwnerPage is not { } page) return false;
+        var node = FindNodeByKey(page.Root, region.NodeKey);
+        if (node is null) return false;
+        var localX = (int)(x - region.OwnerOffsetX);
+        var localY = (int)(contentY - region.OwnerOffsetY);
+        var pageY = localY + page.Viewport.ScrollY;
+        DispatchMouseEvent(eventType, node, localX, localY, pageY, page.Engine);
+        if (eventType == "mouseup")
+        {
+            var click = new Scripting.Dom.JsEvent();
+            click.Init("click", true, true);
+            click.clientX = localX;
+            click.clientY = localY;
+            click.pageX = localX;
+            click.pageY = (int)pageY;
+            click.button = 0;
+            click.isTrusted = true;
+            click.target = Scripting.Dom.JsElement.For(page.Engine.RawEngine, node);
+            EventDispatcher.DispatchEvent(node, click, page.Engine);
+            User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
+        }
+        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+        return true;
+    }
+
     /// <summary>Dispatches a cancelable "wheel" event to the node under the cursor. Returns true if
     /// a listener called preventDefault() (so the host should not scroll).</summary>
     private bool DispatchWheelEvent(LayoutNode? node, int x, int y, float contentY, float deltaY)
@@ -1217,6 +1252,7 @@ public class BrowserWindow
         evt.pageX = x;
         evt.pageY = (int)contentY;
         evt.button = 0;
+        evt.isTrusted = true;
         if (isPointer) { evt.pointerId = 1; evt.pointerType = "mouse"; evt.isPrimary = true; }
         evt.target = Scripting.Dom.JsElement.For(engine.RawEngine, node);
         EventDispatcher.DispatchEvent(node, evt, engine);

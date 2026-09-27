@@ -13,6 +13,147 @@ namespace Lite.Tests;
 public static class IframeTests
 {
     [Test]
+    public static void ScriptInsertedIframe_LoadsItsChildDocument()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><div id=host></div>", true,
+            "http://parent.test/page", 400, 200);
+        page.Engine.RawEngine.Execute("""
+            var frame = document.createElement('iframe');
+            frame.id = 'dynamic';
+            frame.setAttribute('width', '304');
+            frame.setAttribute('height', '78');
+            frame.setAttribute('srcdoc', '<!doctype html><p id=inside>loaded</p>');
+            frame.addEventListener('load', function () { window.frameLoaded = true; });
+            document.getElementById('host').appendChild(frame);
+            """);
+        page.Engine.DrainTree();
+        var child = FindById(page.Root, "dynamic")?.ChildPage;
+        True(child is not null, "inserted iframe has no child document");
+        True(FindById(child!.Root, "inside") is not null, "inserted iframe did not load srcdoc");
+        Drawer.DrawToBitmap(400, 200, page.Root, new Viewport { ViewportHeight = 200 }).Dispose();
+        var frameNode = FindById(page.Root, "dynamic")!;
+        True(Math.Abs(frameNode.Box.BorderBox.Width - 304) < 1 &&
+            Math.Abs(frameNode.Box.BorderBox.Height - 78) < 1,
+            $"inserted iframe did not use width and height attributes: {frameNode.Box.BorderBox}");
+        Equal("true", page.Engine.RawEngine.GetValue("frameLoaded").ToString());
+        page.Engine.RawEngine.Execute("frame.setAttribute('srcdoc', '<p id=reloaded>again</p>');");
+        page.Engine.DrainTree();
+        True(FindById(FindById(page.Root, "dynamic")!.ChildPage!.Root, "reloaded") is not null,
+            "changing srcdoc did not navigate the iframe");
+    }
+
+    [Test]
+    public static void ScriptInsertedIframe_HasParentDuringItsFirstScript()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><div id=host></div>", true,
+            "http://parent.test/page", 400, 200);
+        page.Engine.RawEngine.Execute("""
+            addEventListener('message', e => { globalThis.childGreeting = e.data; });
+            var frame = document.createElement('iframe');
+            frame.setAttribute('srcdoc', '<script>parent.postMessage("ready", "*");</script>');
+            document.getElementById('host').appendChild(frame);
+            """);
+        page.Engine.DrainTree();
+        page.Engine.DrainTree();
+        Equal("ready", page.Engine.RawEngine.GetValue("childGreeting").ToString());
+    }
+
+    [Test]
+    public static void ScriptInsertedIframe_ExposesWindowNameAndNamedParentFrame()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><div id=host></div>", true,
+            "http://parent.test/page", 400, 200);
+        page.Engine.RawEngine.Execute("""
+            addEventListener('message', e => { globalThis.frameInfo = e.data; });
+            var frame = document.createElement('iframe');
+            frame.name = 'challenge';
+            frame.setAttribute('srcdoc', '<script>parent.postMessage(name + ":" + !!parent.frames[name] + ":" + !!parent.frames[name].document, "*")</script>');
+            document.getElementById('host').appendChild(frame);
+            """);
+        page.Engine.DrainTree();
+        page.Engine.DrainTree();
+        Equal("challenge:true:true", page.Engine.RawEngine.GetValue("frameInfo").ToString());
+    }
+
+    [Test]
+    public static void Iframe_PostMessagePreservesArrayPayload()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><iframe id=f srcdoc=\"<script>addEventListener('message',e=>{globalThis.arrayLength=e.data.length;globalThis.portCount=e.ports.length})</script>\"></iframe>", true,
+            "http://parent.test/", 400, 200);
+        page.Engine.RawEngine.Execute("document.getElementById('f').contentWindow.postMessage([1, 2, 3], '*');");
+        page.Engine.DrainTree();
+        Equal("3", FindById(page.Root, "f")!.ChildPage!.Engine.RawEngine.GetValue("arrayLength").ToString());
+        Equal("0", FindById(page.Root, "f")!.ChildPage!.Engine.RawEngine.GetValue("portCount").ToString());
+    }
+
+    [Test]
+    public static void Iframe_MessageSourceMatchesContentWindow()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><div id=host></div>", true,
+            "http://parent.test/", 400, 200);
+        page.Engine.RawEngine.Execute("""
+            window.addEventListener('message', e => {
+                globalThis.sourceMatches = e.source === document.getElementById('f').contentWindow;
+            });
+            var frame = document.createElement('iframe');
+            frame.id = 'f';
+            frame.setAttribute('srcdoc', '<script>parent.postMessage("from-child","*")</script>');
+            document.getElementById('host').appendChild(frame);
+            """);
+        page.Engine.DrainTree();
+        page.Engine.DrainTree();
+        Equal("true", page.Engine.RawEngine.GetValue("sourceMatches").ToString());
+    }
+
+    [Test]
+    public static void Iframe_MessageChannelTransfersPortAndReturnsReply()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><div id=host></div>", true,
+            "http://parent.test/", 400, 200);
+        page.Engine.RawEngine.Execute("""
+            var frame = document.createElement('iframe');
+            frame.id = 'f';
+            frame.setAttribute('srcdoc', '<script>addEventListener("message", e => { if (e.data === "connect") { var port = e.ports[0]; port.onmessage = reply => port.postMessage("ack:" + reply.data); parent.postMessage("connected", "*"); } });</script>');
+            document.getElementById('host').appendChild(frame);
+            """);
+        page.Engine.DrainTree();
+        page.Engine.RawEngine.Execute("""
+            var channel = new MessageChannel();
+            channel.port1.onmessage = e => { globalThis.portReply = e.data; };
+            addEventListener('message', e => { if (e.data === 'connected') channel.port1.postMessage('ping'); });
+            frame.contentWindow.postMessage('connect', '*', [channel.port2]);
+            """);
+        for (var i = 0; i < 5; i++) page.Engine.DrainTree();
+        Equal("ack:ping", page.Engine.RawEngine.GetValue("portReply").ToString());
+    }
+
+    [Test]
+    public static void Window_OnMessagePropertyReceivesPostedMessages()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><p>messages</p>", true,
+            "http://parent.test/", 400, 200);
+        page.Engine.RawEngine.Execute("onmessage = e => { globalThis.messageText = e.data; }; postMessage('received', '*');");
+        page.Engine.DrainTree();
+        Equal("received", page.Engine.RawEngine.GetValue("messageText").ToString());
+    }
+
+    [Test]
+    public static void Iframe_ChildHitRegionsReachTheParentWindow()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><iframe id=f width=304 height=78 srcdoc=\"<button id=check>Verify</button>\"></iframe>",
+            true, "http://parent.test/", 400, 200);
+        var frame = FindById(page.Root, "f")!;
+        var button = FindById(frame.ChildPage!.Root, "check")!;
+        var (_, regions) = Drawer.Draw(400, 200, page.Root, new Viewport { ViewportHeight = 200 });
+        var hit = regions.FirstOrDefault(r => r.NodeKey == button.NodeKey);
+        True(hit is not null && hit.OwnerPage == frame.ChildPage,
+            "child button has no parent-window hit region");
+        True(hit!.Bounds.Contains(frame.Box.ContentBox.Left + button.Box.BorderBox.MidX,
+            frame.Box.ContentBox.Top + button.Box.BorderBox.MidY),
+            "child hit region is not translated into parent coordinates");
+    }
+
+    [Test]
     public static void FragmentParsing_UsesOwningDocumentAfterAnotherPageLoads()
     {
         var first = Parser.ParseChildPage("<!doctype html><style>.chosen { color: red }</style><div id=target></div>",

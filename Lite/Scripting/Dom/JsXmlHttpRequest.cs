@@ -41,7 +41,7 @@ public class JsXmlHttpRequest
     private string _method = "GET";
     private string _url = "";
     private bool _async = true;
-    private readonly Dictionary<string, string> _requestHeaders = [];
+    private readonly Dictionary<string, string> _requestHeaders = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _responseHeaders = [];
 
     public void addEventListener(string type, JsValue fn, JsValue? options = null)
@@ -99,10 +99,21 @@ public class JsXmlHttpRequest
             var crossOrigin = target.GetLeftPart(UriPartial.Authority) != source.GetLeftPart(UriPartial.Authority);
             using var request = new HttpRequestMessage(new HttpMethod(_method), resolved);
             if (crossOrigin) request.Headers.TryAddWithoutValidation("Origin", source.GetLeftPart(UriPartial.Authority));
-            foreach (var h in _requestHeaders)
-                request.Headers.TryAddWithoutValidation(h.Key, h.Value);
             if (body != null)
-                request.Content = new StringContent(body);
+            {
+                request.Content = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(body));
+                request.Content.Headers.TryAddWithoutValidation("Content-Type", "text/plain;charset=UTF-8");
+            }
+            foreach (var h in _requestHeaders)
+            {
+                if (request.Content is not null && h.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    request.Content.Headers.Remove("Content-Type");
+                    request.Content.Headers.TryAddWithoutValidation(h.Key, h.Value);
+                }
+                else if (!request.Headers.TryAddWithoutValidation(h.Key, h.Value))
+                    request.Content?.Headers.TryAddWithoutValidation(h.Key, h.Value);
+            }
 
             var session = _owner.DocumentState.Session ?? new BrowserSession();
             using var response = (crossOrigin && !withCredentials ? session.NoCookieClient : session.Client).Send(request);

@@ -9,6 +9,7 @@ internal sealed class DocumentState(IDocument? document, string address, string 
 {
     internal IDocument? Document { get; } = document;
     internal Scripting.JsEngine? Engine { get; set; }
+    internal LayoutNode? ActiveElement { get; set; }
     internal Parser.ParseState? ParserContext { get; init; }
     internal BrowserSession? Session { get; init; }
     internal string Address { get; } = address;

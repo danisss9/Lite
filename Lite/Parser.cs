@@ -190,7 +190,8 @@ internal static class Parser
     /// caller must have already set the parse statics (base URL, viewport, cleared script lists)
     /// and opened <paramref name="document"/>. Inlines stylesheets, traverses to a LayoutNode tree,
     /// creates the JS engine, runs scripts, and returns the resulting <see cref="Page"/>.</summary>
-    private static Page ParseOpenedDocument(IDocument document, string address, int viewportWidth, int viewportHeight)
+    private static Page ParseOpenedDocument(IDocument document, string address, int viewportWidth, int viewportHeight,
+        JsEngine? parentEngine = null, LayoutNode? frameNode = null)
     {
         Document = document;
 
@@ -306,6 +307,21 @@ internal static class Parser
         var state = new DocumentState(document, address, _documentBaseUrl ?? address, CssRules.ToArray())
         { ParserContext = Current, Session = Session };
         var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight, state);
+        var page = new Page
+        {
+            Root = root,
+            Engine = jsEngine,
+            Document = document,
+            BaseUrl = _documentBaseUrl,
+            ViewportWidth = viewportWidth,
+            ViewportHeight = viewportHeight,
+        };
+        if (parentEngine is not null && frameNode is not null)
+        {
+            frameNode.ChildPage = page;
+            jsEngine.SetParentContext(parentEngine,
+                Scripting.Dom.JsElement.For(parentEngine.RawEngine, frameNode));
+        }
         QueueParsedDetailsNotifications(root, jsEngine);
         QueueParsedDetailsNotifications(root, jsEngine);
 
@@ -348,15 +364,7 @@ internal static class Parser
             FinishLoad();
         });
 
-        return new Page
-        {
-            Root = root,
-            Engine = jsEngine,
-            Document = document,
-            BaseUrl = _documentBaseUrl,
-            ViewportWidth = viewportWidth,
-            ViewportHeight = viewportHeight,
-        };
+        return page;
     }
 
     /// <summary>Optimistically reports whether a media MIME type can be played. The simulated
@@ -415,11 +423,12 @@ internal static class Parser
     /// the child Page keeps its own engine (reachable via <see cref="JsEngine.For"/>).
     /// </summary>
     /// <param name="content">A URL when <paramref name="isSrcdoc"/> is false, else inline HTML.</param>
-    internal static Page ParseChildPage(string content, bool isSrcdoc, string baseUrl, int viewportWidth, int viewportHeight)
+    internal static Page ParseChildPage(string content, bool isSrcdoc, string baseUrl, int viewportWidth, int viewportHeight,
+        BrowserSession? session = null, JsEngine? parentEngine = null, LayoutNode? frameNode = null)
     {
         var savedContext = Current;
         var savedInstance = JsEngine.Instance;
-        Current = new ParseState { Session = savedContext.Session };
+        Current = new ParseState { Session = session ?? savedContext.Session };
 
         try
         {
@@ -454,7 +463,7 @@ internal static class Parser
                 html = response.Content.ReadAsStringAsync().Result;
             }
             var document = context.OpenAsync(req => req.Address(address).Content(html)).Result;
-            return ParseOpenedDocument(document, address, viewportWidth, viewportHeight);
+            return ParseOpenedDocument(document, address, viewportWidth, viewportHeight, parentEngine, frameNode);
         }
         finally
         {

@@ -29,6 +29,9 @@ internal class JsEngine
     private readonly HashSet<JsValue> _reportedRejections = [];
     internal event Action<JsValue>? ScriptFailed;
     private readonly JsWindow _jsWindow;
+    private readonly Dictionary<JsEngine, Dom.JsWindowProxy> _windowProxies = new();
+    private Dom.JsMessagePortContext? _messagePortContext;
+    internal Dom.JsMessagePortContext MessagePortContext => _messagePortContext ??= new(this);
     private readonly LayoutNode _root;
     private Viewport? _viewport;
 
@@ -289,6 +292,9 @@ internal class JsEngine
         _engine.SetValue("document", jsDocument);
         _engine.SetValue("location", Location);
         _engine.SetValue("history", History);
+        _engine.SetValue("name", "");
+        _engine.SetValue("__getFrames", new Func<Dictionary<string, object>>(() => GetFrameProxies(this)));
+        _engine.Execute("Object.defineProperty(globalThis, 'frames', { configurable: true, get: __getFrames });");
         _engine.SetValue("alert", new Action<object?>(msg => _jsWindow.alert(msg)));
 
         // Window dimensions/scroll exposed as globals so they survive window===globalThis.
@@ -301,6 +307,7 @@ internal class JsEngine
         // window.postMessage is also reachable as a bare global (window === globalThis).
         _engine.SetValue("postMessage", new Action<JsValue, JsValue, JsValue>(
             (message, targetOrigin, transfer) => _jsWindow.postMessage(message, targetOrigin, transfer)));
+        _engine.SetValue("__createMessageChannel", new Func<JsMessageChannel>(() => new JsMessageChannel(MessagePortContext)));
 
         // Timers — delay/id come in as JsValue so a missing/undefined arg (e.g. setTimeout(fn))
         // coerces to 0 instead of throwing a CLR conversion error.
@@ -413,6 +420,7 @@ internal class JsEngine
         // ---- fetch backing function ----
         _engine.SetValue("__nativeFetch", new Action<string, JsValue, JsValue>(
             (url, opts, cb) => JsFetch.Native(this, url, opts, cb)));
+        _engine.SetValue("__createWorker", new Func<string, JsWorker>(url => new JsWorker(this, url)));
 
         // ---- Encoding API backing functions (TextEncoder/TextDecoder shim below) ----
         _engine.SetValue("__textEncodeUtf8", new Func<string, double[]>(
@@ -422,11 +430,15 @@ internal class JsEngine
 
         // ---- JS-side shims: fetch() Promise wrapper + queueMicrotask polyfill ----
         _engine.Execute(HostShim);
+        _engine.Execute("globalThis.MessageChannel = function MessageChannel() { return __createMessageChannel(); };");
     }
 
     private const string HostShim = """
         (function () {
           globalThis.XMLHttpRequest = function XMLHttpRequest() { return __createXMLHttpRequest(); };
+          globalThis.Worker = class Worker {
+            constructor(url) { return __createWorker(String(url)); }
+          };
           if (typeof globalThis.queueMicrotask !== 'function') {
             globalThis.queueMicrotask = function (cb) { Promise.resolve().then(cb); };
           }
@@ -774,10 +786,43 @@ internal class JsEngine
     /// <summary>Delivers a postMessage to this window: dispatches a <c>message</c> event carrying
     /// <paramref name="data"/> (already structured-cloned into the CLR graph), the sender's
     /// <paramref name="origin"/>, and a WindowProxy back to the sender as <c>source</c>.</summary>
-    internal void DeliverMessage(object? data, string origin, Dom.JsWindowProxy source)
+    internal void DeliverMessage(object? data, string origin, Dom.JsWindowProxy source,
+        Dom.JsMessagePort[]? ports = null)
     {
-        var evt = JsValue.FromObject(_engine, new { type = "message", data, origin, source });
+        var evt = JsValue.FromObject(_engine, new
+        {
+            type = "message", data, origin, source,
+            ports = ports ?? [],
+        });
         _jsWindow.DispatchEvent("message", evt);
+    }
+
+    internal Dom.JsWindowProxy GetWindowProxy(JsEngine target)
+    {
+        if (!_windowProxies.TryGetValue(target, out var proxy))
+            _windowProxies[target] = proxy = new Dom.JsWindowProxy(this, target);
+        return proxy;
+    }
+
+    internal Dictionary<string, object> GetFrameProxies(JsEngine source)
+    {
+        var frames = new Dictionary<string, object>(StringComparer.Ordinal);
+        var index = 0;
+        void AddFrames(LayoutNode node)
+        {
+            if (node.TagName == "IFRAME" && node.ChildPage is { } page)
+            {
+                var proxy = source.GetWindowProxy(page.Engine);
+                frames[(index++).ToString(System.Globalization.CultureInfo.InvariantCulture)] = proxy;
+                if (node.Attributes.GetValueOrDefault("name") is { Length: > 0 } name)
+                    frames[name] = proxy;
+                return;
+            }
+            foreach (var child in node.Children) AddFrames(child);
+        }
+        AddFrames(_root);
+        frames["length"] = index;
+        return frames;
     }
 
     /// <summary>Wires this (child) engine into a parent browsing context: sets <c>parent</c>,
@@ -785,10 +830,13 @@ internal class JsEngine
     /// once both engines exist (the child is parsed before its parent's engine is created).</summary>
     internal void SetParentContext(JsEngine parent, object frameElement)
     {
-        var parentProxy = new Dom.JsWindowProxy(this, parent);
+        TaskEnqueued += () => parent.TaskEnqueued?.Invoke();
+        var parentProxy = GetWindowProxy(parent);
         _engine.SetValue("parent", parentProxy);
         _engine.SetValue("top", parentProxy);   // single level: top == parent (nested frames approximate)
         _engine.SetValue("frameElement", frameElement);
+        if (frameElement is Dom.JsElement element)
+            _engine.SetValue("name", element.name);
     }
 
     // ---- nested browsing contexts (iframes) ----

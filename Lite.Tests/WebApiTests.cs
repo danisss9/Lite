@@ -16,6 +16,96 @@ namespace Lite.Tests;
 /// navigator.sendBeacon, and script-initiated navigation in headless (pumped) loads.</summary>
 public static class WebApiTests
 {
+    [Test]
+    public static void Worker_ExchangesMessagesInSeparateRealm()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><title>worker</title>", true,
+            "http://worker.test/", 400, 200);
+        var source = Uri.EscapeDataString("self.onmessage = e => setTimeout(() => postMessage(e.data * 2), 1);");
+        page.Engine.Execute($"globalThis.worker = new Worker('data:text/javascript,{source}');" +
+            "worker.onmessage = e => { globalThis.reply = e.data; }; worker.postMessage(21);");
+        var deadline = Stopwatch.GetTimestamp() + 5_000 * Stopwatch.Frequency / 1000;
+        while (Stopwatch.GetTimestamp() < deadline && page.Engine.RawEngine.GetValue("reply").ToString() == "undefined")
+        {
+            page.Engine.DrainTree();
+            Thread.Sleep(10);
+        }
+        Equal("42", page.Engine.RawEngine.GetValue("reply").ToString());
+        page.Engine.RawEngine.Execute("worker.terminate()");
+    }
+
+    [Test]
+    public static void Worker_TransfersMessagePortToPage()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><title>worker port</title>", true,
+            "http://worker.test/", 400, 200);
+        var source = Uri.EscapeDataString("""
+            const channel = new MessageChannel();
+            channel.port1.onmessage = e => channel.port1.postMessage('worker:' + e.data);
+            postMessage('ready', [channel.port2]);
+            """);
+        page.Engine.Execute($"globalThis.worker = new Worker('data:text/javascript,{source}');" +
+            "worker.onmessage = e => { e.ports[0].onmessage = p => { globalThis.portReply = p.data; }; e.ports[0].postMessage('ping'); };");
+        var deadline = Stopwatch.GetTimestamp() + 5_000 * Stopwatch.Frequency / 1000;
+        while (Stopwatch.GetTimestamp() < deadline && page.Engine.RawEngine.GetValue("portReply").ToString() == "undefined")
+        {
+            page.Engine.DrainTree();
+            Thread.Sleep(10);
+        }
+        Equal("worker:ping", page.Engine.RawEngine.GetValue("portReply").ToString());
+        page.Engine.RawEngine.Execute("worker.terminate()");
+    }
+
+    [Test]
+    public static void Xhr_PostUsesSpecifiedContentType()
+    {
+        using var server = new MiniServer();
+        using var session = new BrowserSession();
+        var page = Parser.TraversePage(new NavigationRequest(server.BaseUrl + "/dynamic"),
+            400, 200, session);
+        page.Engine.Execute("""
+            var request = new XMLHttpRequest();
+            request.open('POST', '/xhr');
+            request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
+            request.send('x=42');
+            """);
+        var deadline = Stopwatch.GetTimestamp() + 5000 * Stopwatch.Frequency / 1000;
+        while (Stopwatch.GetTimestamp() < deadline)
+        {
+            page.Engine.DrainTree();
+            lock (server.Beacons) if (server.Beacons.Count > 0) break;
+            Thread.Sleep(10);
+        }
+        lock (server.Beacons)
+        {
+            Equal(1, server.Beacons.Count);
+            Equal("x=42", server.Beacons[0].Body);
+            Equal("application/x-www-form-urlencoded;charset=UTF-8", server.Beacons[0].ContentType);
+        }
+    }
+
+    [Test]
+    public static void Focus_TracksActiveElementAndDispatchesEvents()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><div id=check tabindex=0></div><input id=q>", true,
+            "http://focus.test/", 400, 200);
+        page.Engine.Execute("""
+            globalThis.events = [];
+            const check = document.getElementById('check');
+            check.addEventListener('focus', () => events.push('focus'));
+            check.addEventListener('blur', () => events.push('blur'));
+            check.focus();
+            globalThis.wasActive = document.activeElement === check;
+            globalThis.index = check.tabIndex;
+            check.blur();
+            globalThis.isBody = document.activeElement === document.body;
+            """);
+        Equal("true", page.Engine.RawEngine.GetValue("wasActive").ToString());
+        Equal("0", page.Engine.RawEngine.GetValue("index").ToString());
+        Equal("true", page.Engine.RawEngine.GetValue("isBody").ToString());
+        Equal("focus,blur", page.Engine.RawEngine.Evaluate("events.join(',')").ToString());
+    }
+
     private static JsEngine NewEngine()
     {
         var sample = Parser.ParseFragment("<span></span>")[0];
@@ -148,6 +238,7 @@ public static class WebApiTests
                         await ctx.Response.WriteAsync("<!doctype html><title>Arrived</title><h3 id='arrived'>next page</h3>");
                         return;
                     case "/beacon":
+                    case "/xhr":
                         var body = await new StreamReader(ctx.Request.Body).ReadToEndAsync();
                         lock (Beacons) Beacons.Add((body, ctx.Request.ContentType));
                         ctx.Response.StatusCode = 204;
