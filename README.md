@@ -8,6 +8,10 @@ HTML and CSS are parsed with AngleSharp, layout is calculated by Lite's own layo
 
 ![The Lite.Example gallery rendered in a native Lite window](docs/images/lite-example.png)
 
+<img width="975" height="728" alt="image" src="https://github.com/user-attachments/assets/23aa9646-d119-4647-9e05-36ad7f16f8fb" />
+
+<img width="970" height="730" alt="image" src="https://github.com/user-attachments/assets/79f4f03b-2ae8-4483-96d8-ba1608c6fd91" />
+
 ## Highlights
 
 - Native Windows host and message loop with mouse, keyboard, scrolling, navigation, and page transitions
