@@ -4,23 +4,22 @@
 Build Release and fetch the pinned suites before invoking this script. A failing
 shard does not prevent the other shards, host checks, or backlog from completing.
 
-Exit status covers execution only: the shards, the host suite, and the inventory
-export. The readiness check (``profile --require-es2020-ready``) still runs, and
-its verdict is printed and recorded in ``supervisor.json``, but it does not fail
-the script. Readiness additionally requires the unfinished normative and edition
-review tracked in docs/es2020-conformance.md, which no amount of green execution
-can supply, so gating on it would keep every build red for reasons unrelated to
-the change under test.
+The default exit status covers execution: shards, host tests, inventory, and
+unchanged runtime files. ``--require-ready`` also gates on the reviewed ES2020
+profile. Every invocation gets its own report directory unless --output is
+selected explicitly.
 """
 
 import argparse
 import concurrent.futures
+import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
 import time
+from datetime import datetime, timezone
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -29,15 +28,28 @@ ROOT = Path(__file__).resolve().parent.parent
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--configuration", default="Release")
-    parser.add_argument("--output", type=Path, default=ROOT / "Lite.Conformance/artifacts/es2020")
+    parser.add_argument("--output", type=Path, help="Report directory; defaults to a unique run directory")
+    parser.add_argument("--dll", type=Path, help="Explicit conformance DLL and adjacent frozen runtime files")
+    parser.add_argument("--require-ready", action="store_true", help="Fail unless ES2020 readiness passes")
     parser.add_argument("--evidence", action="append", default=[])
     parser.add_argument("--timeout", type=int, default=6600, help="Hard timeout per shard, in seconds")
     args = parser.parse_args()
-    dll = ROOT / "Lite.Conformance/bin" / args.configuration / "net8.0/Lite.Conformance.dll"
+    dll = args.dll.resolve() if args.dll else ROOT / "Lite.Conformance/bin" / args.configuration / "net8.0/Lite.Conformance.dll"
     if not dll.is_file() or args.timeout <= 0:
-        parser.error("Build Lite.sln first and supply a positive timeout")
-    output = args.output.resolve()
+        parser.error("Build Lite.sln first, select an existing --dll and supply a positive timeout")
+    output = (args.output or ROOT / "Lite.Conformance/artifacts/es2020" /
+        (datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}")).resolve()
     output.mkdir(parents=True, exist_ok=True)
+
+    def runtime_hashes():
+        candidates = [dll, dll.with_suffix(".deps.json"), dll.parent / "Lite.dll",
+            dll.parent / "Lite.QuickJs.dll", dll.parent / "runtimes/win-x64/native/litequickjs.dll",
+            dll.parent / "runtimes/win-x64/native/litequickjs.dll.build.json"]
+        if any(not path.is_file() for path in candidates):
+            parser.error("The selected conformance DLL lacks a complete adjacent QuickJS runtime")
+        return {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in candidates}
+
+    runtime_before = runtime_hashes()
 
     def run(name, arguments):
         with (output / (name + ".log")).open("w", encoding="utf-8") as log:
@@ -91,13 +103,19 @@ def main():
     # Informational: recorded and printed, deliberately kept out of the exit status.
     readiness = run("profile", ["--suite", "profile", "--require-es2020-ready", "--report",
         str(output / "profile.json"), *evidence_args])
-    print(f"readiness: exit {readiness} (reported, not gating)", flush=True)
+    runtime_unchanged = runtime_hashes() == runtime_before
+    if not runtime_unchanged:
+        print("ES2020: runtime files changed during execution; evidence is invalid", flush=True)
+    print(f"readiness: exit {readiness} ({'gating' if args.require_ready else 'reported'})", flush=True)
     (output / "supervisor.json").write_text(json.dumps({"startedUnix": started,
         "finishedUnix": time.time(), "exitCodes": {**outcomes, "readiness": readiness},
-        "gatingRuns": sorted(outcomes), "readinessIsGating": False}, indent=2) + "\n",
+        "gatingRuns": sorted(outcomes) + (["readiness"] if args.require_ready else []),
+        "readinessIsGating": args.require_ready, "runtimeUnchanged": runtime_unchanged,
+        "runtimeFilesSha256": runtime_before}, indent=2) + "\n",
         encoding="utf-8")
     print(f"ES2020 reports and remaining-work list: {output}", flush=True)
-    return 0 if all(code == 0 for code in outcomes.values()) else 1
+    return 0 if runtime_unchanged and all(code == 0 for code in outcomes.values()) and \
+        (not args.require_ready or readiness == 0) else 1
 
 
 if __name__ == "__main__":

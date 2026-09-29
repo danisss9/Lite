@@ -3,6 +3,7 @@ using Lite.Interaction;
 using Lite.Layout;
 using Lite.Models;
 using Lite.Rendering;
+using AngleSharp.Dom;
 
 namespace Lite.Scripting.Dom;
 
@@ -11,7 +12,13 @@ public class JsElement
 {
     private readonly Engine _engine;
     internal readonly LayoutNode Node;
+    private INode? DomNode => JsEngine.For(_engine)?.DocumentFacade?.HasAuthoritativeDom == true
+        ? Node.DomNode : null;
+    private DocumentState? State => JsEngine.For(_engine)?.DocumentState;
+    private JsElement Wrap(INode node) => For(_engine, State!.ForDomNode(node));
     private JsStyle? _style;
+    private JsHtmlCollection? _childrenCollection;
+    private JsNodeList? _childNodeList;
 
     public JsElement(Engine engine, LayoutNode node)
     {
@@ -31,18 +38,27 @@ public class JsElement
     // ---- identity ----
     public string id
     {
-        get => Node.Id ?? string.Empty;
-        set => Node.Attributes["id"] = value;
+        get => (DomNode as IElement)?.Id ?? Node.Id ?? string.Empty;
+        set => setAttribute("id", value);
     }
-    public string tagName => Node.TagName.ToUpperInvariant();
-    public string localName => Node.TagName.ToLowerInvariant();
-    public bool isConnected => GetRootNode() == JsEngine.For(_engine)?.DocumentFacade.documentElement?.Node;
+    public string tagName => (DomNode as IElement)?.TagName ?? Node.TagName.ToUpperInvariant();
+    public string localName => (DomNode as IElement)?.LocalName ?? Node.TagName.ToLowerInvariant();
+    public string? namespaceURI => (DomNode as IElement)?.NamespaceUri;
+    public bool isConnected => DomNode is { } dom
+        ? ReferenceEquals(GetDomRoot(dom), State?.Document)
+        : GetRootNode() == JsEngine.For(_engine)?.DocumentFacade.documentElement?.Node;
+
+    private static INode GetDomRoot(INode node)
+    {
+        while (node.Parent is { } parent) node = parent;
+        return node;
+    }
 
     // ---- DOM Core Level 2 ----
     /// <summary>True for the CharacterData node kinds: Text, Comment, ProcessingInstruction.</summary>
     private bool IsCharacterData => Node.TagName is "#text" or "#comment" or "#pi";
 
-    public int nodeType => Node.TagName switch
+    public int nodeType => DomNode is { } dom ? (int)dom.NodeType : Node.TagName switch
     {
         "#text" => 3,            // TEXT_NODE
         "#pi" => 7,              // PROCESSING_INSTRUCTION_NODE
@@ -51,34 +67,44 @@ public class JsElement
         "#document-fragment" => 11, // DOCUMENT_FRAGMENT_NODE
         _ => 1,                  // ELEMENT_NODE
     };
-    public string nodeName => Node.TagName switch
+    public string nodeName => DomNode?.NodeName ?? (Node.TagName switch
     {
         "#text" => "#text",
         "#comment" => "#comment",
         "#pi" => Node.Attributes.GetValueOrDefault("_pi_target", ""),
         _ => Node.TagName.ToUpperInvariant(),
-    };
+    });
 
     /// <summary>ProcessingInstruction.target.</summary>
-    public string? target => Node.TagName == "#pi" ? Node.Attributes.GetValueOrDefault("_pi_target", "") : null;
+    public string? target => DomNode is IProcessingInstruction pi ? pi.Target :
+        Node.TagName == "#pi" ? Node.Attributes.GetValueOrDefault("_pi_target", "") : null;
 
     public JsValue nodeValue
     {
-        get => IsCharacterData ? (JsValue)(Node.DisplayText ?? "") : JsValue.Null;
+        get => IsCharacterData ? (JsValue)(DomNode?.TextContent ?? Node.DisplayText ?? "") : JsValue.Null;
         // nodeValue is [LegacyNullToEmptyString]: null → "".
-        set { if (IsCharacterData) Node.TextOverride = CoerceLegacyNull(value); }
+        set { if (IsCharacterData) SetCharacterData(CoerceLegacyNull(value)); }
     }
 
     /// <summary>CharacterData.data — the text of a Text/Comment/PI node.</summary>
     public JsValue data
     {
-        get => IsCharacterData ? (JsValue)(Node.DisplayText ?? "") : JsValue.Undefined;
+        get => IsCharacterData ? (JsValue)(DomNode?.TextContent ?? Node.DisplayText ?? "") : JsValue.Undefined;
         // data is [LegacyNullToEmptyString]: null → "".
-        set { if (IsCharacterData) Node.TextOverride = CoerceLegacyNull(value); }
+        set { if (IsCharacterData) SetCharacterData(CoerceLegacyNull(value)); }
     }
 
     /// <summary>CharacterData.length — code-unit length of the data (else child count for elements).</summary>
-    public int length => IsCharacterData ? (Node.DisplayText?.Length ?? 0) : Node.Children.Count;
+    public int length => IsCharacterData ? (DomNode?.TextContent?.Length ?? Node.DisplayText?.Length ?? 0) :
+        DomNode?.ChildNodes.Length ?? Node.Children.Count;
+
+    private void SetCharacterData(string data)
+    {
+        var old = DomNode?.TextContent ?? Node.DisplayText;
+        if (DomNode is not null) DomNode.TextContent = data;
+        Node.TextOverride = data;
+        MutationObserverRegistry.NotifyCharacterData(_engine, Node, old);
+    }
 
     // ---- CharacterData mutation API (§ DOM CharacterData) ----
     // offset/count are WebIDL unsigned long (ToUint32): JS strings, doubles, and negatives all
@@ -87,7 +113,7 @@ public class JsElement
     // substringData(0, 1, 2)) bind — the host binding may not otherwise match a call with surplus args.
     public string substringData(JsValue offset, JsValue count, params JsValue[] _)
     {
-        var s = Node.DisplayText ?? "";
+        var s = DomNode?.TextContent ?? Node.DisplayText ?? "";
         long o = ToU32(offset);
         if (o > s.Length) ThrowDom("IndexSizeError", "offset is greater than length");
         long c = Math.Min(ToU32(count), s.Length - o);
@@ -95,7 +121,7 @@ public class JsElement
     }
 
     public void appendData(JsValue data, params JsValue[] _) =>
-        Node.TextOverride = (Node.DisplayText ?? "") + CoerceString(data);
+        SetCharacterData((DomNode?.TextContent ?? Node.DisplayText ?? "") + CoerceString(data));
 
     public void insertData(JsValue offset, JsValue data, params JsValue[] _) => replaceData(offset, JsNumber.Create(0), data);
 
@@ -103,11 +129,11 @@ public class JsElement
 
     public void replaceData(JsValue offset, JsValue count, JsValue data, params JsValue[] _)
     {
-        var s = Node.DisplayText ?? "";
+        var s = DomNode?.TextContent ?? Node.DisplayText ?? "";
         long o = ToU32(offset);
         if (o > s.Length) ThrowDom("IndexSizeError", "offset is greater than length");
         long c = Math.Min(ToU32(count), s.Length - o);
-        Node.TextOverride = string.Concat(s.AsSpan(0, (int)o), CoerceString(data), s.AsSpan((int)(o + c)));
+        SetCharacterData(string.Concat(s.AsSpan(0, (int)o), CoerceString(data), s.AsSpan((int)(o + c))));
     }
 
     /// <summary>WebIDL DOMString coercion (null → "null", undefined → "undefined", else ToString).</summary>
@@ -162,8 +188,7 @@ public class JsElement
     public int DOCUMENT_FRAGMENT_NODE => 11;
 
     // ---- ownerDocument ----
-    public JsDocument? ownerDocument =>
-        JsEngine.For(_engine) is { } eng ? new JsDocument(eng.RawEngine, GetRootNode()) : null;
+    public JsDocument? ownerDocument => JsEngine.For(_engine)?.DocumentFacade;
 
     private LayoutNode GetRootNode()
     {
@@ -175,9 +200,10 @@ public class JsElement
     // ---- content ----
     public string textContent
     {
-        get => GetTextContentRecursive(Node);
+        get => DomNode?.TextContent ?? GetTextContentRecursive(Node);
         set
         {
+            if (DomNode is not null) DomNode.TextContent = value;
             Node.Children.Clear();
             Node.TextOverride = value;
         }
@@ -205,19 +231,22 @@ public class JsElement
 
     public string innerHTML
     {
-        get => HtmlSerializer.SerializeChildren(Node);
+        get => DomNode is IElement element ? element.InnerHtml : HtmlSerializer.SerializeChildren(Node);
         set
         {
+            if (DomNode is IElement element) element.InnerHtml = value ?? string.Empty;
             Node.Children.Clear();
             Node.TextOverride = string.Empty;
-            foreach (var child in Parser.ParseFragment(value ?? string.Empty, Node.TagName, Node.OwningDocument))
+            foreach (var child in DomNode is IElement source && State is { } owner
+                ? Parser.ProjectChildren(source, owner)
+                : Parser.ParseFragment(value ?? string.Empty, Node.TagName, Node.OwningDocument))
                 Node.AddChild(child);
         }
     }
 
     public string outerHTML
     {
-        get => HtmlSerializer.SerializeOuter(Node);
+        get => DomNode is IElement element ? element.OuterHtml : HtmlSerializer.SerializeOuter(Node);
         set => ReplaceSelfWithFragment(value ?? string.Empty);
     }
 
@@ -494,7 +523,7 @@ public class JsElement
     }
 
     /// <summary>HTMLSelectElement.options / HTMLDataListElement.options — the contained &lt;option&gt;s.</summary>
-    public JsElement[] options => getElementsByTagName("option");
+    public JsElement[] options => getElementsByTagName("option").Snapshot().ToArray();
 
     /// <summary>HTMLTemplateElement.content — the inert DocumentFragment holding the template's
     /// parsed content (null on non-template elements).</summary>
@@ -693,11 +722,13 @@ public class JsElement
 
     // ---- attributes ----
     public string? getAttribute(string name) =>
+        DomNode is IElement element ? element.GetAttribute(name) :
         Node.Attributes.TryGetValue(name, out var v) ? v : null;
 
     public void setAttribute(string name, string val)
     {
         var old = Node.Attributes.TryGetValue(name, out var o) ? o : null;
+        if (DomNode is IElement element) element.SetAttribute(name, val);
         Node.Attributes[name] = val;
         OnAttributeChanged(Node, name, old);
     }
@@ -705,6 +736,7 @@ public class JsElement
     public void removeAttribute(string name)
     {
         var old = Node.Attributes.TryGetValue(name, out var o) ? o : null;
+        if (DomNode is IElement element) element.RemoveAttribute(name);
         if (!Node.Attributes.Remove(name)) return;
         OnAttributeChanged(Node, name, old);
     }
@@ -713,6 +745,11 @@ public class JsElement
     /// (class/id) and queue a MutationRecord. Used by setAttribute/removeAttribute and Attr.value.</summary>
     internal static void OnAttributeChanged(LayoutNode node, string name, string? oldValue)
     {
+        if (node.DomNode is IElement element && !name.StartsWith('_'))
+        {
+            if (node.Attributes.TryGetValue(name, out var value)) element.SetAttribute(name, value);
+            else element.RemoveAttribute(name);
+        }
         if (name is "class" or "id") StyleResolver.Apply(node);
         if ((node.OwningDocument?.Engine ?? JsEngine.Instance) is { } eng)
         {
@@ -758,17 +795,20 @@ public class JsElement
         return attr;
     }
 
-    public bool hasAttribute(string name) => Node.Attributes.ContainsKey(name);
+    public bool hasAttribute(string name) => DomNode is IElement element
+        ? element.HasAttribute(name) : Node.Attributes.ContainsKey(name);
 
     /// <summary>NamedNodeMap of this element's attributes (Element.attributes).</summary>
     public JsNamedNodeMap attributes => new(Node);
 
     /// <summary>True if the element has any attributes (excludes engine-internal keys).</summary>
-    public bool hasAttributes() => Node.Attributes.Keys.Any(k => !k.StartsWith('_'));
+    public bool hasAttributes() => DomNode is IElement element ? element.Attributes.Length > 0 :
+        Node.Attributes.Keys.Any(k => !k.StartsWith('_'));
 
     /// <summary>The element's attribute names (Element.getAttributeNames()).</summary>
-    public string[] getAttributeNames() =>
-        Node.Attributes.Keys.Where(k => !k.StartsWith('_')).ToArray();
+    public string[] getAttributeNames() => DomNode is IElement element
+        ? element.Attributes.Select(a => a.Name).ToArray()
+        : Node.Attributes.Keys.Where(k => !k.StartsWith('_')).ToArray();
 
     /// <summary>Returns the Attr node for the given name, or null.</summary>
     public JsAttr? getAttributeNode(string name) =>
@@ -808,27 +848,33 @@ public class JsElement
         }
     }
 
-    public JsElement[] children =>
-        Node.Children.Where(c => c.TagName != "#text").Select(c => JsElement.For(_engine, c)).ToArray();
+    public JsHtmlCollection children => _childrenCollection ??= new JsHtmlCollection(() =>
+        DomNode is { } dom ? dom.ChildNodes.OfType<IElement>().Select(Wrap).ToArray() :
+        Node.Children.Where(c => c.TagName != "#text").Select(c => For(_engine, c)).ToArray());
 
-    public JsElement[] childNodes
+    public JsNodeList childNodes => _childNodeList ??= new JsNodeList(() =>
     {
-        get
-        {
-            EnsureTextChildMaterialized();
-            return Node.Children.Select(c => JsElement.For(_engine, c)).ToArray();
-        }
-    }
+        if (DomNode is { } dom) return dom.ChildNodes.Select(Wrap).ToArray();
+        EnsureTextChildMaterialized();
+        return Node.Children.Select(c => For(_engine, c)).ToArray();
+    });
 
-    public JsElement? parentElement =>
-        Node.Parent is { } p ? JsElement.For(_engine, p) : null;
+    public JsElement? parentElement => DomNode is { } dom ?
+        dom.Parent is IElement parent ? Wrap(parent) : null :
+        Node.Parent is { } p ? For(_engine, p) : null;
 
-    public JsElement? parentNode => parentElement;
+    public object? parentNode => DomNode is { } dom ? dom.Parent switch
+    {
+        IDocument => ownerDocument,
+        { } parent => Wrap(parent),
+        _ => null
+    } : parentElement;
 
     public JsElement? firstChild
     {
         get
         {
+            if (DomNode is { } dom) return dom.FirstChild is { } child ? Wrap(child) : null;
             EnsureTextChildMaterialized();
             return Node.Children.Count > 0 ? JsElement.For(_engine, Node.Children[0]) : null;
         }
@@ -838,21 +884,25 @@ public class JsElement
     {
         get
         {
+            if (DomNode is { } dom) return dom.LastChild is { } child ? Wrap(child) : null;
             EnsureTextChildMaterialized();
             return Node.Children.Count > 0 ? JsElement.For(_engine, Node.Children[^1]) : null;
         }
     }
 
-    public JsElement? firstElementChild =>
-        Node.Children.FirstOrDefault(c => c.TagName != "#text") is { } n ? JsElement.For(_engine, n) : null;
+    public JsElement? firstElementChild => DomNode is { } dom
+        ? dom.ChildNodes.OfType<IElement>().FirstOrDefault() is { } first ? Wrap(first) : null
+        : Node.Children.FirstOrDefault(c => c.TagName != "#text") is { } n ? For(_engine, n) : null;
 
-    public JsElement? lastElementChild =>
-        Node.Children.LastOrDefault(c => c.TagName != "#text") is { } n ? JsElement.For(_engine, n) : null;
+    public JsElement? lastElementChild => DomNode is { } dom
+        ? dom.ChildNodes.OfType<IElement>().LastOrDefault() is { } last ? Wrap(last) : null
+        : Node.Children.LastOrDefault(c => c.TagName != "#text") is { } n ? For(_engine, n) : null;
 
     public JsElement? nextSibling
     {
         get
         {
+            if (DomNode is { } dom) return dom.NextSibling is { } next ? Wrap(next) : null;
             if (Node.Parent is null) return null;
             var siblings = Node.Parent.Children;
             var idx = siblings.IndexOf(Node);
@@ -864,6 +914,7 @@ public class JsElement
     {
         get
         {
+            if (DomNode is { } dom) return dom.PreviousSibling is { } previous ? Wrap(previous) : null;
             if (Node.Parent is null) return null;
             var siblings = Node.Parent.Children;
             var idx = siblings.IndexOf(Node);
@@ -875,6 +926,12 @@ public class JsElement
     {
         get
         {
+            if (DomNode is { } dom)
+            {
+                for (var next = dom.NextSibling; next is not null; next = next.NextSibling)
+                    if (next is IElement) return Wrap(next);
+                return null;
+            }
             if (Node.Parent is null) return null;
             var siblings = Node.Parent.Children;
             var idx = siblings.IndexOf(Node);
@@ -888,6 +945,12 @@ public class JsElement
     {
         get
         {
+            if (DomNode is { } dom)
+            {
+                for (var previous = dom.PreviousSibling; previous is not null; previous = previous.PreviousSibling)
+                    if (previous is IElement) return Wrap(previous);
+                return null;
+            }
             if (Node.Parent is null) return null;
             var siblings = Node.Parent.Children;
             var idx = siblings.IndexOf(Node);
@@ -897,7 +960,8 @@ public class JsElement
         }
     }
 
-    public int childElementCount => Node.Children.Count(c => c.TagName != "#text");
+    public int childElementCount => DomNode is { } dom
+        ? dom.ChildNodes.OfType<IElement>().Count() : Node.Children.Count(c => c.TagName != "#text");
 
     // ---- tree mutation ----
 
@@ -1037,7 +1101,9 @@ public class JsElement
             ThrowDom("HierarchyRequestError", $"A {nodeName} node cannot have children.");
         if (IsAncestor(child.Node, Node))
             throw new InvalidOperationException("The new child element contains the parent.");
-        // Remove from old parent if attached
+        if (DomNode is { } parentDom && child.DomNode is { } childDom)
+            parentDom.AppendChild(childDom);
+        // Remove from old rendering parent if attached.
         child.Node.Parent?.Children.Remove(child.Node);
         Node.AddChild(child.Node);
         StyleResolver.ApplyTree(child.Node);
@@ -1051,6 +1117,12 @@ public class JsElement
     public JsElement removeChild(JsElement? child)
     {
         if (child is null) throw new InvalidOperationException("The node to be removed is not a child of this node.");
+        if (DomNode is { } parentDom && child.DomNode is { } childDom)
+        {
+            if (!ReferenceEquals(childDom.Parent, parentDom))
+                ThrowDom("NotFoundError", "The node to be removed is not a child of this node.");
+            parentDom.RemoveChild(childDom);
+        }
         var idx = Node.Children.IndexOf(child.Node);
         var prev = idx > 0 ? Node.Children[idx - 1] : null;
         var next = idx >= 0 && idx + 1 < Node.Children.Count ? Node.Children[idx + 1] : null;
@@ -1066,6 +1138,12 @@ public class JsElement
             ThrowDom("HierarchyRequestError", $"A {nodeName} node cannot have children.");
         if (IsAncestor(newNode.Node, Node))
             throw new InvalidOperationException("The new child element contains the parent.");
+        if (DomNode is { } parentDom && newNode.DomNode is { } childDom)
+        {
+            if (refNode?.DomNode is { } reference && !ReferenceEquals(reference.Parent, parentDom))
+                ThrowDom("NotFoundError", "Reference node not found");
+            parentDom.InsertBefore(childDom, refNode?.DomNode);
+        }
         newNode.Node.Parent?.Children.Remove(newNode.Node);
         if (refNode is null)
         {
@@ -1074,7 +1152,8 @@ public class JsElement
         else
         {
             var idx = Node.Children.IndexOf(refNode.Node);
-            if (idx < 0) throw new InvalidOperationException("Reference node not found");
+            if (idx < 0 && DomNode is null) throw new InvalidOperationException("Reference node not found");
+            if (idx < 0) idx = Node.Children.Count;
             newNode.Node.Parent = Node;
             Node.Children.Insert(idx, newNode.Node);
         }
@@ -1091,12 +1170,19 @@ public class JsElement
             ThrowDom("HierarchyRequestError", $"A {nodeName} node cannot have children.");
         if (IsAncestor(newNode.Node, Node))
             throw new InvalidOperationException("The new child element contains the parent.");
+        if (DomNode is { } parentDom && newNode.DomNode is { } newDom && oldNode.DomNode is { } oldDom)
+        {
+            if (!ReferenceEquals(oldDom.Parent, parentDom))
+                ThrowDom("NotFoundError", "Old node not found");
+            parentDom.ReplaceChild(newDom, oldDom);
+        }
         // Remove newNode from its old parent first (may shift indices)
         newNode.Node.Parent?.Children.Remove(newNode.Node);
         // Re-find idx after potential removal
         var idx = Node.Children.IndexOf(oldNode.Node);
-        if (idx < 0) throw new InvalidOperationException("Old node not found");
-        Node.Children[idx] = newNode.Node;
+        if (idx < 0 && DomNode is null) throw new InvalidOperationException("Old node not found");
+        if (idx < 0) Node.AddChild(newNode.Node);
+        else Node.Children[idx] = newNode.Node;
         newNode.Node.Parent = Node;
         oldNode.Node.Parent = null;
         StyleResolver.ApplyTree(newNode.Node);
@@ -1222,6 +1308,7 @@ public class JsElement
     /// <summary>Removes this element from its parent.</summary>
     public void remove()
     {
+        DomNode?.Parent?.RemoveChild(DomNode);
         Node.Parent?.Children.Remove(Node);
         Node.Parent = null;
     }
@@ -1343,27 +1430,39 @@ public class JsElement
     }
 
     // ---- querySelector on element ----
-    public JsElement? querySelector(string selector) =>
-        SelectorEngine.QuerySelector(Node, selector, _engine);
+    public JsElement? querySelector(string selector) => DomNode is IElement element
+        ? element.QuerySelector(selector) is { } found ? Wrap(found) : null
+        : SelectorEngine.QuerySelector(Node, selector, _engine);
 
-    public JsElement[] querySelectorAll(string selector) =>
-        SelectorEngine.QuerySelectorAll(Node, selector, _engine);
-
-    public JsElement[] getElementsByTagName(string tagName)
+    public JsNodeList querySelectorAll(string selector)
     {
-        var tag = tagName.ToUpperInvariant();
-        return FindAll(Node, n => tag == "*" || n.TagName == tag)
-            .Select(n => JsElement.For(_engine, n)).ToArray();
+        var snapshot = DomNode is IElement element
+            ? element.QuerySelectorAll(selector).Select(Wrap).ToArray()
+            : SelectorEngine.QuerySelectorAll(Node, selector, _engine);
+        return new JsNodeList(() => snapshot);
     }
 
-    public JsElement[] getElementsByClassName(string classNames)
+    public JsHtmlCollection getElementsByTagName(string tagName)
     {
-        var classes = classNames.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return FindAll(Node, n =>
+        var tag = tagName.ToUpperInvariant();
+        return new JsHtmlCollection(() => DomNode is IElement element
+            ? element.QuerySelectorAll("*").Where(e => tag == "*" || e.TagName.ToUpperInvariant() == tag)
+                .Select(Wrap).ToArray()
+            : FindAll(Node, n => tag == "*" || n.TagName == tag)
+                .Select(n => For(_engine, n)).ToArray());
+    }
+
+    public JsHtmlCollection getElementsByClassName(string classNames)
+    {
+        var classes = classNames.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return new JsHtmlCollection(() => DomNode is IElement element
+            ? element.QuerySelectorAll("*").Where(e => classes.All(c => e.ClassList.Contains(c)))
+                .Select(Wrap).ToArray()
+            : FindAll(Node, n =>
         {
             var nodeClasses = n.Attributes.GetValueOrDefault("class", "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
             return classes.All(c => nodeClasses.Contains(c));
-        }).Select(n => JsElement.For(_engine, n)).ToArray();
+        }).Select(n => For(_engine, n)).ToArray());
     }
 
     // ---- canvas ----

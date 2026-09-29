@@ -13,6 +13,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <QuickJsNativeOutput Condition="'$(QuickJsNativeOutput)' == ''">$(MSBuildProjectDirectory)\runtimes\win-x64\native\litequickjs.dll</QuickJsNativeOutput>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,14 +22,14 @@
     <InternalsVisibleTo Include="Lite.Conformance" />
     <None Include="README.md" Pack="true" PackagePath="\" />
     <None Include="native\LICENSE.quickjs.txt" Pack="true" PackagePath="licenses\LICENSE.quickjs.txt" />
-    <Content Include="runtimes\win-x64\native\litequickjs.dll" CopyToOutputDirectory="PreserveNewest"
+    <Content Include="$(QuickJsNativeOutput)" Link="runtimes\win-x64\native\litequickjs.dll" CopyToOutputDirectory="PreserveNewest"
              Pack="true" PackagePath="runtimes\win-x64\native\" />
+    <Content Include="$(QuickJsNativeOutput).build.json" Link="runtimes\win-x64\native\litequickjs.dll.build.json"
+             CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes\win-x64\native\" />
   </ItemGroup>
 
-  <Target Name="BuildQuickJsNative" BeforeTargets="CoreCompile"
-          Inputs="$(MSBuildProjectDirectory)\native\litequickjs.c;$(MSBuildProjectDirectory)\build-quickjs.ps1"
-          Outputs="$(MSBuildProjectDirectory)\runtimes\win-x64\native\litequickjs.dll">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build-quickjs.ps1&quot;" />
+  <Target Name="BuildQuickJsNative" BeforeTargets="CoreCompile">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build-quickjs.ps1&quot; -OutputPath &quot;$(QuickJsNativeOutput)&quot;" />
   </Target>
 
   <ItemGroup>

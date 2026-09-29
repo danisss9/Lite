@@ -3483,7 +3483,7 @@
       "url": "https://262.ecma-international.org/11.0/#sec-IsHTMLDDA-internal-slot",
       "title": "document.all and the [[IsHTMLDDA]] internal slot",
       "applicability": "included",
-      "status": "failing",
+      "status": "untested",
       "tests": [
         {
           "suite": "es2020-host",
@@ -3495,7 +3495,7 @@
         "Lite/Scripting/Dom/JsDocument.cs",
         "Lite.QuickJs 2026-06-04"
       ],
-      "notes": "document.all is not implemented. QuickJS supports IsHTMLDDA on host objects, but Lite still needs a live HTMLAllCollection binding with the required behavior. Published so the host suite records this as an expected failure rather than a regression; it still keeps es2020ProfileReady false."
+      "notes": "QuickJS now exposes a stable, live callable document.all object and the focused host test passes. The full legacy platform object property semantics and normative review remain open, so this requirement does not yet establish readiness."
     },
     {
       "id": "es2020.annexb.block-decl-func-arguments",

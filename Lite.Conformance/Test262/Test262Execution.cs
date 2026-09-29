@@ -19,6 +19,7 @@ internal static class Test262Execution
             return new("harness-error", string.Join("; ", meta.Errors.Append("Invalid execution metadata/mode")));
 
         using var runtime = new QuickJsRuntime();
+        runtime.SetCanBlock(meta.Flags.Contains("CanBlockIsTrue"));
         using var realm = runtime.CreateRealm();
         var loader = new Test262ModuleLoader(Path.GetDirectoryName(file)!,
             Path.Combine(sourceRoot ?? root, sourceRoot is null ? "test" : "supplemental"));

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Globalization;
 using System.Reflection;
 using Lite.QuickJs;
+using Lite.Scripting.Dom;
 
 namespace Lite.Scripting.Runtime;
 
@@ -131,8 +132,30 @@ public sealed class Engine : IDisposable
         using var target = _realm.HostObjects.Wrap(value, binding => BindMembers(hostType, binding));
         using var index = _realm.HostFunction("item", 1, (_, args) =>
             ConvertToNative(indexer.GetValue(value, [(int)args[0].AsNumber()])));
-        using var makeProxy = _realm.Eval("(target, item) => new Proxy(target, { get(t,p,r) { if (typeof p === 'string' && /^(0|[1-9][0-9]*)$/.test(p)) return item(+p); return Reflect.get(t,p,r); } })");
-        var proxy = makeProxy.Call(arguments: [target, index]);
+        using var named = _realm.HostFunction("namedItem", 1, (_, args) =>
+            ConvertToNative((value as IJsNamedCollection)?.Named(args[0].AsString())));
+        using var makeProxy = _realm.Eval("""
+            (target, item, named, hasNames) => new Proxy(target, {
+              get(t,p,r) {
+                if (typeof p === 'string' && /^(0|[1-9][0-9]*)$/.test(p)) return item(+p) ?? undefined;
+                if (p === Symbol.iterator) return function* () { for (let i = 0; i < t.length; i++) yield item(i); };
+                if (typeof p === 'string' && hasNames && !Reflect.has(t,p)) return named(p) ?? undefined;
+                return Reflect.get(t,p,r);
+              },
+              ownKeys(t) {
+                const keys = Reflect.ownKeys(t);
+                for (let i = 0; i < t.length; i++) keys.unshift(String(i));
+                return keys;
+              },
+              getOwnPropertyDescriptor(t,p) {
+                if (typeof p === 'string' && /^(0|[1-9][0-9]*)$/.test(p) && +p < t.length)
+                  return { value: item(+p), writable: false, enumerable: true, configurable: true };
+                return Reflect.getOwnPropertyDescriptor(t,p);
+              }
+            })
+            """);
+        using var hasNames = _realm.Bool(value is IJsNamedCollection);
+        var proxy = makeProxy.Call(arguments: [target, index, named, hasNames]);
         _indexProxies.Add(value, proxy);
         return proxy.Clone();
     }

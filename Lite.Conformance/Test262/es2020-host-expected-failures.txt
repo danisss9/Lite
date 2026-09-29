@@ -6,4 +6,3 @@
 # tests still block es2020ProfileReady through Es2020Readiness — this file keeps a
 # known, unresolvable gap from masquerading as a regression, it does not claim a pass.
 
-annex-b-document-all [expected-fail: Lite has not bound a live document.all collection to QuickJS's IsHTMLDDA support; published as es2020.annex-b-document-all]

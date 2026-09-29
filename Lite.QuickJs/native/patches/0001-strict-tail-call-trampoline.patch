@@ -1,0 +1,141 @@
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -17768,10 +17768,45 @@
+ #pragma GCC diagnostic ignored "-Wunused-label"
+ #endif
+ 
++/* A strict tail call transfers ownership of its operands out of the current
++   bytecode frame. The caller's C frame must unwind before the next function
++   enters the interpreter. */
++typedef struct JSTailCall {
++    JSContext *ctx;
++    JSValue func;
++    JSValue this_val;
++    JSValue *argv;
++    int argc;
++    BOOL active;
++} JSTailCall;
++
++static int js_prepare_tail_call(JSContext *ctx, JSTailCall *tail,
++                                JSValueConst func, JSValueConst this_val,
++                                int argc, JSValue *argv)
++{
++    JSValue *args = NULL;
++    int i;
++    if (argc > 0) {
++        args = js_malloc(ctx, sizeof(*args) * argc);
++        if (!args)
++            return -1;
++        for (i = 0; i < argc; i++)
++            args[i] = JS_DupValue(ctx, argv[i]);
++    }
++    tail->ctx = ctx;
++    tail->func = JS_DupValue(ctx, func);
++    tail->this_val = JS_DupValue(ctx, this_val);
++    tail->argv = args;
++    tail->argc = argc;
++    tail->active = TRUE;
++    return 0;
++}
++
+ /* argv[] is modified if (flags & JS_CALL_FLAG_COPY_ARGV) = 0. */
+-static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
++static JSValue JS_CallInternalOne(JSContext *caller_ctx, JSValueConst func_obj,
+                                JSValueConst this_obj, JSValueConst new_target,
+-                               int argc, JSValue *argv, int flags)
++                               int argc, JSValue *argv, int flags,
++                               JSTailCall *tail)
+ {
+     JSRuntime *rt = caller_ctx->rt;
+     JSContext *ctx;
+@@ -18214,6 +18249,14 @@
+             has_call_argc:
+                 call_argv = sp - call_argc;
+                 sf->cur_pc = pc;
++                if (opcode == OP_tail_call && b->func_kind == JS_FUNC_NORMAL &&
++                    (b->js_mode & JS_MODE_STRICT)) {
++                    if (js_prepare_tail_call(ctx, tail, call_argv[-1], JS_UNDEFINED,
++                                             call_argc, call_argv) < 0)
++                        goto exception;
++                    ret_val = JS_UNDEFINED;
++                    goto done;
++                }
+                 ret_val = JS_CallInternal(ctx, call_argv[-1], JS_UNDEFINED,
+                                           JS_UNDEFINED, call_argc, call_argv, 0);
+                 if (unlikely(JS_IsException(ret_val)))
+@@ -18250,6 +18293,14 @@
+                 pc += 2;
+                 call_argv = sp - call_argc;
+                 sf->cur_pc = pc;
++                if (opcode == OP_tail_call_method && b->func_kind == JS_FUNC_NORMAL &&
++                    (b->js_mode & JS_MODE_STRICT)) {
++                    if (js_prepare_tail_call(ctx, tail, call_argv[-1], call_argv[-2],
++                                             call_argc, call_argv) < 0)
++                        goto exception;
++                    ret_val = JS_UNDEFINED;
++                    goto done;
++                }
+                 ret_val = JS_CallInternal(ctx, call_argv[-1], call_argv[-2],
+                                           JS_UNDEFINED, call_argc, call_argv, 0);
+                 if (unlikely(JS_IsException(ret_val)))
+@@ -20591,6 +20642,38 @@
+     }
+     rt->current_stack_frame = sf->prev_frame;
+     return ret_val;
++}
++
++static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
++                               JSValueConst this_obj, JSValueConst new_target,
++                               int argc, JSValue *argv, int flags)
++{
++    JSTailCall tail = { 0 };
++    JSContext *owned_ctx = caller_ctx;
++    JSValue owned_func = JS_UNDEFINED, owned_this = JS_UNDEFINED;
++    JSValue *owned_argv = NULL;
++    int owned_argc = 0, i;
++    JSValue result;
++
++    for (;;) {
++        tail.active = FALSE;
++        result = JS_CallInternalOne(caller_ctx, func_obj, this_obj, new_target,
++                                    argc, argv, flags, &tail);
++        for (i = 0; i < owned_argc; i++)
++            JS_FreeValue(owned_ctx, owned_argv[i]);
++        js_free(owned_ctx, owned_argv);
++        JS_FreeValue(owned_ctx, owned_func);
++        JS_FreeValue(owned_ctx, owned_this);
++        if (!tail.active)
++            return result;
++        owned_ctx = caller_ctx = tail.ctx;
++        owned_func = func_obj = tail.func;
++        owned_this = this_obj = tail.this_val;
++        owned_argv = argv = tail.argv;
++        owned_argc = argc = tail.argc;
++        new_target = JS_UNDEFINED;
++        flags = 0;
++    }
+ }
+ 
+ #ifdef OPCODE_ASM_LABEL
+@@ -34834,6 +34917,21 @@
+                     pos_next = skip_dead_code(s, bc_buf, bc_len, cc.pos, &line_num);
+                     break;
+                 }
++                if (code_match(&cc, pos_next, OP_label, -1) &&
++                    code_match(&cc, cc.pos, OP_return, -1)) {
++                    add_pc2line_info(s, bc_out.size, line_num);
++                    put_short_code(&bc_out, op + 1, argc);
++                    break;
++                }
++                /* A conditional expression can leave a branch through a jump
++                   to the shared return. That call is in tail position too. */
++                if (code_match(&cc, pos_next, OP_goto, -1) &&
++                    code_match(&cc, get_label_pos(s, cc.label), OP_return, -1)) {
++                    add_pc2line_info(s, bc_out.size, line_num);
++                    put_short_code(&bc_out, op + 1, argc);
++                    pos_next = skip_dead_code(s, bc_buf, bc_len, pos_next, &line_num);
++                    break;
++                }
+                 add_pc2line_info(s, bc_out.size, line_num);
+                 put_short_code(&bc_out, op, argc);
+                 break;

@@ -5,7 +5,7 @@
       "id": "document-all",
       "reviewed": false,
       "requirement": "Live document.all collection with IsHTMLDDA conversion, equality, typeof and call behavior",
-      "remaining": "Bind a live document.all collection and mark its QuickJS host object with IsHTMLDDA semantics.",
+      "remaining": "Review full HTMLAllCollection legacy property semantics and map additional normative tests; the focused live and IsHTMLDDA host case passes.",
       "tests": ["annex-b-document-all"]
     },
     {

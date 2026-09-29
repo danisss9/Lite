@@ -82,7 +82,7 @@ jobs:
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite wpt --report Lite.Conformance/artifacts/wpt-results.json
 
       - name: Full ES2020 language and host release gate (eight Windows shards)
-        run: python scripts/run-es2020.py --evidence Lite.Conformance/artifacts/unit-results.json
+        run: python scripts/run-es2020.py --output Lite.Conformance/artifacts/es2020 --evidence Lite.Conformance/artifacts/unit-results.json
 
       # Acid2 is tracked as a known failing profile entry. Keep the release gate aligned with
       # regular CI by enforcing the approved Acid1 regression without presenting Acid2 as green.

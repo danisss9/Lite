@@ -170,6 +170,12 @@ internal sealed class QuickJsRuntime : IDisposable
         Native.lite_gc(Handle);
     }
 
+    internal void SetCanBlock(bool canBlock)
+    {
+        CheckThread();
+        Native.lite_runtime_set_can_block(Handle, canBlock ? 1 : 0);
+    }
+
     internal void Remove(QuickJsRealm realm)
     {
         _moduleProviders.Remove(realm.Handle);
@@ -500,6 +506,7 @@ internal static class Native
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint lite_runtime_new();
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_runtime_free(nint runtime);
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_runtime_set_can_block(nint runtime, int canBlock);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint lite_context_new(nint runtime);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_context_free(nint context);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint lite_value_dup(nint value);

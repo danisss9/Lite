@@ -763,6 +763,7 @@ internal static class Parser
 
         var href = tag == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, tag, directText, elementStyle, href);
+        node.DomNode = element;
         if (deferredLineHeight is not null)
             node.StyleOverrides[PropertyNames.LineHeight] = deferredLineHeight;
 
@@ -1127,7 +1128,7 @@ internal static class Parser
                     // LayoutChildren (runs consisting solely of whitespace nodes are skipped).
                     if (text.Length > 0)
                     {
-                        var textChild = new LayoutNode(null, "#text", text, parentStyle);
+                        var textChild = new LayoutNode(null, "#text", text, parentStyle) { DomNode = textNode };
                         textChild.ResetNonInheritedStyles();
                         textChild.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "inline";
                         node.AddChild(textChild);
@@ -2929,6 +2930,55 @@ internal static class Parser
         finally { Current.IsFragment = wasFragment; Current = previous; }
     }
 
+    /// <summary>Projects existing DOM children into rendering objects after an HTML mutation.
+    /// This never reparses markup: wrappers retain the original AngleSharp node identities.</summary>
+    internal static List<LayoutNode> ProjectChildren(IElement context, DocumentState owner)
+    {
+        var previous = Current;
+        Current = owner.ParserContext ?? new ParseState
+        {
+            Document = owner.Document,
+            BaseUrl = owner.Address,
+            DocumentBaseUrl = owner.BaseUrl,
+            Session = owner.Session
+        };
+        if (owner.ParserContext is null) Current.CssRules.AddRange(owner.StyleRules);
+        var savedCounters = _counters.ToDictionary(kv => kv.Key, kv => new List<int>(kv.Value));
+        var savedVerbose = _verbose;
+        _verbose = false;
+        var result = new List<LayoutNode>();
+        try
+        {
+            var children = context is AngleSharp.Html.Dom.IHtmlTemplateElement template
+                ? template.Content.ChildNodes : context.ChildNodes;
+            foreach (var child in children)
+            {
+                if (child is IText text)
+                {
+                    var rendered = CollapseWhitespace(text.Data);
+                    if (rendered.Length == 0) continue;
+                    var projection = new LayoutNode(null, "#text", rendered, ComputeCurrentStyle(context))
+                    {
+                        DomNode = text
+                    };
+                    projection.StyleOverrides["display"] = "inline";
+                    result.Add(projection);
+                }
+                else if (child is IElement element && !SkipTags.Contains(element.TagName.ToUpperInvariant()))
+                    result.Add(Traverse(element, 0));
+            }
+            foreach (var node in result) owner.Bind(node);
+            return result;
+        }
+        finally
+        {
+            _verbose = savedVerbose;
+            _counters.Clear();
+            foreach (var kv in savedCounters) _counters[kv.Key] = kv.Value;
+            Current = previous;
+        }
+    }
+
     private static void QueueParsedDetailsNotifications(LayoutNode node, JsEngine engine)
     {
         if (node.TagName == "DETAILS" && node.Attributes.ContainsKey("open"))
@@ -2972,7 +3022,7 @@ internal static class Parser
                 {
                     var text = CollapseWhitespace(textNode.Data);
                     if (text.Length == 0) continue;
-                    var tn = new LayoutNode(null, "#text", text, ComputeCurrentStyle(container));
+                    var tn = new LayoutNode(null, "#text", text, ComputeCurrentStyle(container)) { DomNode = textNode };
                     tn.StyleOverrides["display"] = "inline";
                     result.Add(tn);
                 }
@@ -3007,6 +3057,7 @@ internal static class Parser
         var fragStyle = ComputeCurrentStyle(templateEl);
         var frag = new LayoutNode(null, "#document-fragment", string.Empty, fragStyle);
         if (templateEl is not AngleSharp.Html.Dom.IHtmlTemplateElement tmpl) return frag;
+        frag.DomNode = tmpl.Content;
 
         var savedCounters = _counters.ToDictionary(kv => kv.Key, kv => new List<int>(kv.Value));
         try
@@ -3017,7 +3068,7 @@ internal static class Parser
                 {
                     var text = CollapseWhitespace(textNode.Data);
                     if (text.Length == 0) continue;
-                    var tn = new LayoutNode(null, "#text", text, fragStyle);
+                    var tn = new LayoutNode(null, "#text", text, fragStyle) { DomNode = textNode };
                     tn.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "inline";
                     frag.AddChild(tn);
                 }

@@ -10,7 +10,7 @@ namespace Lite.Conformance.Harness;
 
 internal sealed record EvidenceIdentity(string SourceRevision, string SourceSha256,
     string ProfileSha256, string SuiteLockSha256, string DependenciesSha256, string EngineSha256,
-    string HarnessSha256, string SuiteInputsSha256, string Platform);
+    string HarnessSha256, string SuiteInputsSha256, string NativeBuildSha256, string Platform);
 internal sealed record SubtestEvidence(string Name, int Status, string? Message);
 internal sealed record EvidenceArtifact(string Path, string Sha256, string Kind);
 internal sealed record ManualEvidence(string Operator, string Procedure, string Environment, string ObservedUtc);
@@ -30,7 +30,7 @@ internal sealed record EvidenceReport(int FormatVersion, EvidenceIdentity Identi
 /// <summary>Executed outcomes are useful only for the source, binaries and inputs that produced them.</summary>
 internal static class ExecutionEvidence
 {
-    internal const int FormatVersion = 5;
+    internal const int FormatVersion = 6;
     internal const string ProfileFile = "Profile/lite-html5-css21-es2020-profile.json";
     internal static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -58,11 +58,26 @@ internal static class ExecutionEvidence
             HashFile(typeof(Lite.BrowserWindow).Assembly.Location),
             HashFile(typeof(ExecutionEvidence).Assembly.Location),
             SuiteInputsHash(),
+            NativeBuildHash(),
             $"{System.Runtime.InteropServices.RuntimeInformation.OSDescription};{System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}");
     }
 
     internal static string HashFile(string path) =>
         Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
+
+    private static string NativeBuildHash()
+    {
+        var directory = Path.GetDirectoryName(typeof(Lite.BrowserWindow).Assembly.Location)!;
+        var native = Path.Combine(directory, "runtimes", "win-x64", "native", "litequickjs.dll");
+        var stamp = native + ".build.json";
+        using var document = JsonDocument.Parse(File.ReadAllText(stamp));
+        var build = document.RootElement;
+        if (build.GetProperty("version").GetString() != "2026-06-04" ||
+            build.GetProperty("nativeDllSha256").GetString()?.Equals(HashFile(native), StringComparison.OrdinalIgnoreCase) != true ||
+            build.GetProperty("inputSha256").GetString() is not { Length: 64 })
+            throw new InvalidDataException("QuickJS native build record does not match the loaded DLL");
+        return HashFile(stamp);
+    }
 
     internal static bool IsPristineSuite(string directory) =>
         string.IsNullOrWhiteSpace(Git(directory, "status", "--porcelain", "--untracked-files=normal"));

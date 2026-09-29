@@ -122,7 +122,7 @@ Scope follows the pinned editions: later HTML additions such as `details`/`summa
 
 ### Browser host integration
 
-- [ ] **Confirmed gap:** Implement live `document.all` with Annex B `[[IsHTMLDDA]]` falsy, loose-equality, `typeof`, and callable behavior in the QuickJS binding.
+- [ ] **Review:** The live, callable `document.all` binding passes its focused Annex B host test; review complete legacy property semantics and map normative coverage before marking it implemented.
 - [ ] **Review:** Carry credentials, referrer, CORS, redirect-taint, MIME, cancellation, and other fetch options through root and descendant module loads.
 - [ ] **Review:** Complete module URL canonicalization, importer-relative resolution, inline-module identity, failed-load caching, and source ownership after redirects or callback/eval imports.
 - [ ] **Review:** Complete document/iframe realm isolation for globals, intrinsics, module maps/jobs, navigation cancellation, and cross-realm errors.

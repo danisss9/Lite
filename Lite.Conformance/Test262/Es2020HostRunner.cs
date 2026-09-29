@@ -119,6 +119,25 @@ internal static class Es2020HostRunner
             if (document.all === undefined) throw Error('document.all is not implemented');
             if (typeof document.all !== 'undefined' || Boolean(document.all) || document.all != null)
                 throw Error('document.all lacks the IsHTMLDDA semantics');
+            const all = document.all;
+            if (all !== document.all || !('length' in all) || typeof all.length !== 'number')
+                throw Error('document.all identity or length');
+            const before = all.length;
+            const first = document.createElement('div'); first.id = 'all-target';
+            document.body.appendChild(first);
+            if (all.length !== before + 1 || all.item(before) !== first ||
+                all[before] !== first || all.namedItem('all-target') !== first ||
+                all['all-target'] !== first || all('all-target') !== first ||
+                all() !== null || all.item() !== null)
+                throw Error('document.all indexed, named or callable access');
+            const second = document.createElement('div'); second.id = 'all-target';
+            document.body.appendChild(second);
+            const matches = all.namedItem('all-target');
+            if (matches.length !== 2 || matches.item(0) !== first || matches[1] !== second)
+                throw Error('document.all multiple live named matches');
+            document.body.removeChild(second);
+            if (matches.length !== 1 || all.namedItem('all-target') !== first)
+                throw Error('document.all collection did not stay live');
             """),
     };
     internal static string[] TestNames => Cases.Keys.Order(StringComparer.Ordinal).ToArray();

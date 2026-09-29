@@ -1,5 +1,6 @@
 using Lite.Scripting.Runtime;
 using Lite.Models;
+using AngleSharp.Dom;
 
 namespace Lite.Scripting.Dom;
 
@@ -9,12 +10,18 @@ public class JsDocument
     private readonly Engine _engine;
     private readonly LayoutNode _root;
     private readonly AngleSharp.Dom.IDocument? _document;
+    internal bool HasAuthoritativeDom => _document is not null;
+    private DocumentState? State => JsEngine.For(_engine)?.DocumentState;
+    private JsElement Wrap(INode node) => JsElement.For(_engine, State!.ForDomNode(node));
+    private readonly JsHtmlAllCollection _all;
 
     public JsDocument(Engine engine, LayoutNode root)
     {
         _engine = engine;
         _root = root;
-        _document = JsEngine.For(engine)?.SourceDocument;
+        var source = JsEngine.For(engine)?.SourceDocument;
+        _document = ReferenceEquals(root.DomNode, source?.DocumentElement) ? source : null;
+        _all = new JsHtmlAllCollection(engine, root);
     }
 
     // ---- identity ----
@@ -24,21 +31,30 @@ public class JsDocument
     /// <summary>"loading" → "interactive" (DOMContentLoaded) → "complete" (load). The state lives
     /// on the page's JsEngine so every JsDocument facade over this document agrees.</summary>
     public string readyState => JsEngine.For(_engine)?.DocumentReadyState ?? "complete";
-    public JsElement? documentElement => _root.Children.Count > 0 ? JsElement.For(_engine, _root) : null;
+    public JsElement? documentElement => _document?.DocumentElement is { } element
+        ? Wrap(element) : _root.Children.Count > 0 ? JsElement.For(_engine, _root) : null;
+    public JsElement? doctype => _document?.Doctype is { } type ? Wrap(type) : null;
+    public JsNodeList childNodes => new(() => _document is null
+        ? Array.Empty<JsElement>() : _document.ChildNodes.Select(Wrap).ToArray());
+    public JsElement? firstChild => _document?.FirstChild is { } child ? Wrap(child) : null;
+    public JsElement? lastChild => _document?.LastChild is { } child ? Wrap(child) : null;
+
+    /// <summary>A stable, live legacy collection with QuickJS [[IsHTMLDDA]] behavior.</summary>
+    public JsValue all => _all.Value;
 
     /// <summary>Returns the window object (document.defaultView). Returned as a live JsValue:
     /// a CLR round-trip (ToObject) would hand the result converter a graph that cycles through
     /// globalThis and throw "Cyclic reference detected".</summary>
     public JsValue? defaultView => _engine.GetValue("window");
 
-    public JsElement? body =>
+    public JsElement? body => _document?.Body is { } body ? Wrap(body) :
         FindFirst(_root, n => n.TagName == "BODY") is { } b ? JsElement.For(_engine, b) : null;
 
     public JsElement? activeElement =>
         JsEngine.For(_engine)?.DocumentState.ActiveElement is { } active
             ? JsElement.For(_engine, active) : body;
 
-    public JsElement? head =>
+    public JsElement? head => _document?.Head is { } head ? Wrap(head) :
         FindFirst(_root, n => n.TagName == "HEAD") is { } h ? JsElement.For(_engine, h) : null;
 
     /// <summary>The currently executing script element, or null outside script execution
@@ -49,41 +65,69 @@ public class JsDocument
     // ---- selectors ----
     public JsElement? getElementById(string id)
     {
+        if (_document is not null)
+            return _document.GetElementById(id) is { } element ? Wrap(element) : null;
         var node = FindById(_root, id);
         return node is null ? null : JsElement.For(_engine, node);
     }
 
-    public JsElement? querySelector(string selector) =>
-        SelectorEngine.QuerySelector(_root, selector, _engine);
+    public JsElement? querySelector(string selector) => _document is not null
+        ? _document.QuerySelector(selector) is { } element ? Wrap(element) : null
+        : SelectorEngine.QuerySelector(_root, selector, _engine);
 
-    public JsElement[] querySelectorAll(string selector) =>
-        SelectorEngine.QuerySelectorAll(_root, selector, _engine);
-
-    public JsElement[] getElementsByTagName(string tagName)
+    public JsNodeList querySelectorAll(string selector)
     {
-        var tag = tagName.ToUpperInvariant();
-        return FindAll(_root, n => tag == "*" || n.TagName == tag)
-            .Select(n => JsElement.For(_engine, n)).ToArray();
+        var snapshot = _document is not null
+            ? _document.QuerySelectorAll(selector).Select(Wrap).ToArray()
+            : SelectorEngine.QuerySelectorAll(_root, selector, _engine);
+        return new JsNodeList(() => snapshot);
     }
 
-    public JsElement[] getElementsByClassName(string classNames)
+    public JsHtmlCollection getElementsByTagName(string tagName)
     {
-        var classes = classNames.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return FindAll(_root, n =>
+        var tag = tagName.ToUpperInvariant();
+        return new JsHtmlCollection(() => _document is not null
+            ? _document.QuerySelectorAll("*").Where(e => tag == "*" || e.TagName.ToUpperInvariant() == tag)
+                .Select(Wrap).ToArray()
+            : FindAll(_root, n => tag == "*" || n.TagName == tag)
+                .Select(n => JsElement.For(_engine, n)).ToArray());
+    }
+
+    public JsHtmlCollection getElementsByClassName(string classNames)
+    {
+        var classes = classNames.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return new JsHtmlCollection(() => _document is not null
+            ? _document.QuerySelectorAll("*").Where(e => classes.All(c => e.ClassList.Contains(c)))
+                .Select(Wrap).ToArray()
+            : FindAll(_root, n =>
         {
             var nodeClasses = n.Attributes.GetValueOrDefault("class", "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
             return classes.All(c => nodeClasses.Contains(c));
-        }).Select(n => JsElement.For(_engine, n)).ToArray();
+        }).Select(n => JsElement.For(_engine, n)).ToArray());
     }
 
     /// <summary>Returns all elements with the given name attribute (Document.getElementsByName()).</summary>
-    public JsElement[] getElementsByName(string name) =>
-        FindAll(_root, n => n.Attributes.GetValueOrDefault("name") == name)
-            .Select(n => JsElement.For(_engine, n)).ToArray();
+    public JsNodeList getElementsByName(string name) => new(() => _document is not null
+        ? _document.QuerySelectorAll("*").Where(e => e.GetAttribute("name") == name)
+            .Select(Wrap).ToArray()
+        : FindAll(_root, n => n.Attributes.GetValueOrDefault("name") == name)
+            .Select(n => JsElement.For(_engine, n)).ToArray());
+
+    public JsHtmlCollection images => getElementsByTagName("img");
+    public JsHtmlCollection forms => getElementsByTagName("form");
+    public JsHtmlCollection scripts => getElementsByTagName("script");
+    public JsHtmlCollection links => new(() => _document is null ? Array.Empty<JsElement>() :
+        _document.QuerySelectorAll("a,area").Where(e => e.HasAttribute("href")).Select(Wrap).ToArray());
 
     // ---- creation ----
     public JsElement createElement(string tagName)
     {
+        if (_document is not null)
+        {
+            var projection = State!.ForDomNode(_document.CreateElement(tagName));
+            projection.NeedsStyleResolution = true;
+            return JsElement.For(_engine, projection);
+        }
         var style = _root.Style;
         var node = new LayoutNode(null, tagName.ToUpperInvariant(), string.Empty, style)
         {
@@ -94,6 +138,12 @@ public class JsDocument
 
     public JsElement createElementNS(string ns, string tagName)
     {
+        if (_document is not null)
+        {
+            var projection = State!.ForDomNode(_document.CreateElement(ns, tagName));
+            projection.NeedsStyleResolution = true;
+            return JsElement.For(_engine, projection);
+        }
         var style = _root.Style;
         var node = new LayoutNode(null, tagName.ToUpperInvariant(), string.Empty, style)
         {
@@ -105,6 +155,7 @@ public class JsDocument
 
     public JsElement createTextNode(string text)
     {
+        if (_document is not null) return Wrap(_document.CreateTextNode(text));
         var style = _root.Style;
         var node = new LayoutNode(null, "#text", text, style);
         return JsElement.For(_engine, node);
@@ -112,6 +163,7 @@ public class JsDocument
 
     public JsElement createDocumentFragment()
     {
+        if (_document is not null) return Wrap(_document.CreateDocumentFragment());
         var style = _root.Style;
         var node = new LayoutNode(null, "#document-fragment", string.Empty, style);
         return JsElement.For(_engine, node);
@@ -120,6 +172,7 @@ public class JsDocument
     /// <summary>document.createComment(data) — a Comment (CharacterData) node. Never rendered.</summary>
     public JsElement createComment(string data)
     {
+        if (_document is not null) return Wrap(_document.CreateComment(data ?? string.Empty));
         var node = new LayoutNode(null, "#comment", data ?? string.Empty, _root.Style);
         node.StyleOverrides["display"] = "none"; // comments produce no box
         return JsElement.For(_engine, node);
@@ -128,6 +181,7 @@ public class JsDocument
     /// <summary>document.createProcessingInstruction(target, data) — a PI (CharacterData) node.</summary>
     public JsElement createProcessingInstruction(string target, string data)
     {
+        if (_document is not null) return Wrap(_document.CreateProcessingInstruction(target, data));
         var node = new LayoutNode(null, "#pi", data ?? string.Empty, _root.Style);
         node.StyleOverrides["display"] = "none";
         node.Attributes["_pi_target"] = target ?? string.Empty;

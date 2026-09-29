@@ -16,6 +16,9 @@ public record EventListenerEntry(string EventType, JsValue? Handler, Action? Leg
 public class LayoutNode
 {
     public Guid NodeKey { get; } = Guid.NewGuid();
+    // The DOM node that owns this rendering object. Anonymous boxes and generated content
+    // deliberately leave this null and must never be returned by DOM queries.
+    internal AngleSharp.Dom.INode? DomNode { get; set; }
     internal DocumentState? DocumentState { get; set; }
     internal DocumentState? OwningDocument => Parent?.OwningDocument ?? DocumentState;
     /// <summary>The element's id. Backed by <see cref="Attributes"/> so parser-built and
@@ -40,7 +43,7 @@ public class LayoutNode
     public int IntrinsicWidth { get; set; }
     public int IntrinsicHeight { get; set; }
     public string? Alt { get; set; }
-    public Dictionary<string, string> Attributes { get; } = [];
+    public DomAttributeDictionary Attributes { get; }
     public Dictionary<string, string> StyleOverrides { get; } = [];
     /// <summary>Keys in <see cref="StyleOverrides"/> that were written by the stylesheet
     /// cascade (StyleResolver) rather than inline styles. Cleared and re-stamped on each
@@ -272,6 +275,7 @@ public class LayoutNode
 
     public LayoutNode(string? id, string tagName, string text, ICssStyleDeclaration style, string? href = null)
     {
+        Attributes = new DomAttributeDictionary(this);
         if (!string.IsNullOrEmpty(id)) Attributes["id"] = id;
         TagName = tagName;
         Text = text;
