@@ -9,5 +9,3 @@
 #
 # Prefer skip-list.txt (a published dependency-exception with an upstream issue) once a defect has
 # a tracked upstream report.
-
-test/annexB/language/function-code/block-decl-func-skip-arguments.js [expected-fail: stock Jint 4.16.3 defect, sloppy mode: a block function named `arguments` replaces the arguments object; published as es2020.annexb.block-decl-func-arguments]

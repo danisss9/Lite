@@ -27,13 +27,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Lite.QuickJs\Lite.QuickJs.csproj" />
     <PackageReference Include="AngleSharp" />
     <PackageReference Include="AngleSharp.Css" />
-    <PackageReference Include="Jint" />
     <PackageReference Include="SkiaSharp" />
-    <!-- Legacy single- and multi-byte charsets (Shift_JIS, windows-125x, koi8-r, iso-8859-x).
-         .NET Core dropped them from the shared framework; a stylesheet or document that
-         declares one is otherwise decoded as UTF-8 and comes out as mojibake. -->
     <PackageReference Include="System.Text.Encoding.CodePages" />
   </ItemGroup>
 

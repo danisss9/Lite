@@ -1,6 +1,5 @@
+using Lite.Scripting.Runtime;
 using System.Text;
-using Jint;
-using Jint.Native;
 
 namespace Lite.Scripting.Dom;
 
@@ -105,7 +104,7 @@ public class JsUrlSearchParams
         return sb.ToString();
     }
 
-    /// <summary>JS-visible alias (URLSearchParams has no toString-only contract in Jint interop).</summary>
+    /// <summary>JS-visible alias (URLSearchParams has no toString-only contract in host interop).</summary>
     public string toString() => ToString();
 
     private static string Decode(string s) => Uri.UnescapeDataString(s.Replace('+', ' '));

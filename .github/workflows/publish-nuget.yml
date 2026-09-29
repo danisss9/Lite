@@ -25,12 +25,21 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc
+
       - name: Validate tag matches project version
         shell: pwsh
         run: |
           $projectVersion = dotnet msbuild Lite/Lite.csproj -getProperty:Version
           if ($projectVersion.Trim() -ne '${{ steps.version.outputs.VERSION }}') {
             throw "Tag version ${{ steps.version.outputs.VERSION }} does not match Lite.csproj version $projectVersion."
+          }
+          $quickJsVersion = dotnet msbuild Lite.QuickJs/Lite.QuickJs.csproj -getProperty:Version
+          if ($quickJsVersion.Trim() -ne '${{ steps.version.outputs.VERSION }}') {
+            throw "Tag version ${{ steps.version.outputs.VERSION }} does not match Lite.QuickJs.csproj version $quickJsVersion."
           }
 
       - uses: actions/setup-python@v5
@@ -85,11 +94,10 @@ jobs:
 
       # Publishes the contract and every readiness verdict (release, ES2020, HTML 5.0, CSS 2.1)
       # as release evidence without enforcing them, exactly like regular CI. The ES2020 normative
-      # review is still open, and on the Jint 4.16.3 pin the two published expected failures
-      # (document.all, annexB block-decl-func-arguments) keep es2020ProfileReady false by contract,
+      # review is still open, and QuickJS still has a published document.all host failure
+      # plus unresolved language conformance failures that keep es2020ProfileReady false,
       # so enforcing --require-es2020-ready here would block every tag until the compatibility
-      # program completes. Re-add the flag once the review is closed and those gaps are published
-      # dependency exceptions.
+      # program completes. Re-add the flag once the review and implementation gaps close.
       - name: Generate HTML 5.0 compatibility evidence
         if: always()
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json --evidence Lite.Conformance/artifacts/unit-results.json --evidence Lite.Conformance/artifacts/wpt-results.json --evidence Lite.Conformance/artifacts/html5-results.json --evidence Lite.Conformance/artifacts/css21-results.json --evidence Lite.Conformance/artifacts/es2020/host.json --evidence Lite.Conformance/artifacts/es2020/test262-0.json --evidence Lite.Conformance/artifacts/es2020/test262-1.json --evidence Lite.Conformance/artifacts/es2020/test262-2.json --evidence Lite.Conformance/artifacts/es2020/test262-3.json --evidence Lite.Conformance/artifacts/es2020/test262-4.json --evidence Lite.Conformance/artifacts/es2020/test262-5.json --evidence Lite.Conformance/artifacts/es2020/test262-6.json --evidence Lite.Conformance/artifacts/es2020/test262-7.json
@@ -104,10 +112,16 @@ jobs:
             Lite.Conformance/artifacts
           if-no-files-found: warn
 
-      - name: Pack
+      - name: Pack QuickJS bridge
+        run: dotnet pack Lite.QuickJs/Lite.QuickJs.csproj --configuration Release --no-build /p:Version=${{ steps.version.outputs.VERSION }} --output nupkg
+
+      - name: Pack Lite
         run: dotnet pack Lite/Lite.csproj --configuration Release --no-build /p:Version=${{ steps.version.outputs.VERSION }} --output nupkg
 
-      - name: Push to NuGet
+      - name: Push QuickJS bridge to NuGet
+        run: dotnet nuget push nupkg/danisss9.Lite.QuickJs.${{ steps.version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Push Lite to NuGet
         run: dotnet nuget push nupkg/danisss9.Lite.${{ steps.version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Create GitHub Release

@@ -121,9 +121,36 @@ internal static class Css21Inventory
             var paths = candidates.Select(c => c.Path).ToHashSet(StringComparer.Ordinal);
             foreach (var path in reviews.Keys.Where(p => !paths.Contains(p))) blockers.Add($"css21-orphan-test-review:{path}");
         }
-        // A directory or a hand-edited 'vendored' flag alone cannot prove the historical suite is complete.
-        // The official catalog importer must be implemented before this blocker can be removed.
-        blockers.Add("css21-official-catalog-unavailable");
+        // The official catalog is verified against the vendored tree and the lock's pinned
+        // tree hash; its variants and counts must reconcile with the published suite.
+        OfficialCatalog.Verify(blockers);
+        // Official-suite cases follow the same accounting as WPT candidates: every case is
+        // classified, applicable cases map to reviewed obligations, and evidence exists.
+        try
+        {
+            var (officialCases, _) = OfficialCatalog.Read();
+            var officialUnclassified = 0;
+            var officialApplicable = 0;
+            foreach (var officialCase in officialCases)
+            {
+                if (!reviews.TryGetValue(officialCase.Path, out var review) || Text(review, "classification") == "unreviewed")
+                { officialUnclassified++; continue; }
+                if (Text(review, "classification") != "applicable" || !Strings(review, "media").Contains(media)) continue;
+                officialApplicable++;
+                foreach (var id in Strings(review, "requirementIds"))
+                    if (!requirementsById.TryGetValue(id, out var requirement) || !Strings(requirement, "media").Contains(media))
+                        blockers.Add($"css21-invalid-test-obligation:{officialCase.Path}:{id}:{media}");
+                if (!HasEvidence(evidence, "css21-official", officialCase.Path, media, hash))
+                    blockers.Add($"css21-missing-case:{media}:{officialCase.Path}");
+            }
+            if (officialUnclassified > 0) blockers.Add($"css21-unclassified-official-cases:{officialUnclassified}");
+            count += officialApplicable;
+            var officialPaths = officialCases.Select(c => c.Path).ToHashSet(StringComparer.Ordinal);
+            foreach (var path in reviews.Keys.Where(p => p.StartsWith(OfficialCatalog.UrlPrefix, StringComparison.Ordinal) &&
+                     !officialPaths.Contains(p)))
+                blockers.Add($"css21-orphan-test-review:{path}");
+        }
+        catch (InvalidDataException) { /* Verify already recorded the official-catalog blocker. */ }
         return new(blockers.Count == 0, blockers.Distinct().ToArray(), applicableRequirements.Length, count);
     }
 
@@ -191,17 +218,44 @@ internal static class Css21Inventory
 
     internal static int Run(string? reportPath)
     {
+        // Rebuild the official catalog first so the readiness evaluation below reads the
+        // current lock and tree, not whatever the previous run left on disk.
+        var official = OfficialCatalog.Ensure();
         var screen = Evaluate("screen", []);
         var print = Evaluate("print", []);
         var candidates = File.Exists(WptCatalog.ManifestPath) ? Candidates() : [];
         var reviews = Read(ApplicabilityFile)["tests"]!.AsArray().OfType<JsonObject>().ToDictionary(t => Text(t, "path"));
         var destination = reportPath ?? Path.Combine(ConformancePaths.EnsureArtifacts(), "css21-inventory.json");
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(destination))!);
-        var report = new { formatVersion = 1, target = Target, inventorySha256 = InventoryHash(), screen, print,
-            cases = candidates.Select(c => new { c.Source, c.Path, c.Kind, c.Context, c.References,
-                classification = reviews.TryGetValue(c.Path, out var review) ? Text(review, "classification") : "unreviewed" }) };
+        var report = new
+        {
+            formatVersion = 1,
+            target = Target,
+            inventorySha256 = InventoryHash(),
+            screen,
+            print,
+            officialCatalog = official is { } suite ? new
+            {
+                suite.Counts.TotalTests,
+                suite.Counts.RequiredBehaviorTests,
+                suite.Counts.Reftests,
+                suite.Counts.SelfTests,
+                suite.Counts.UnavailableTests,
+                suite.Counts.UnavailableVariants
+            } : null,
+            cases = candidates.Select(c => new
+            {
+                c.Source,
+                c.Path,
+                c.Kind,
+                c.Context,
+                c.References,
+                classification = reviews.TryGetValue(c.Path, out var review) ? Text(review, "classification") : "unreviewed"
+            })
+        };
         File.WriteAllText(destination, JsonSerializer.Serialize(report, ExecutionEvidence.JsonOptions) + Environment.NewLine);
-        Console.WriteLine($"CSS inventory: {candidates.Length} WPT cases; screen blockers={screen.Blockers.Count}; print blockers={print.Blockers.Count}; {destination}");
+        Console.WriteLine($"CSS inventory: {candidates.Length} WPT cases; official={official?.Cases.Length.ToString() ?? "not vendored"}; " +
+            $"screen blockers={screen.Blockers.Count}; print blockers={print.Blockers.Count}; {destination}");
         return 0;
     }
 

@@ -15,6 +15,7 @@ public static class TestRunner
 
     public static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--recaptcha-live") return RecaptchaTests.LiveSmoke();
         if (args.Length == 1 && args[0] == "--google-live") return GoogleSearchTests.LiveSmoke();
         if (args.Length == 2 && args[0] == "--google-references")
             return GoogleSearchTests.CaptureReferences(args[1]);
@@ -22,15 +23,10 @@ public static class TestRunner
         string? filter = null;
         if (args.Length == 2 && args[0] == "--report") reportPath = args[1];
         else if (args.Length == 2 && args[0] == "--filter") filter = args[1];
-        else if (args.Length != 0) { Console.WriteLine("Usage: Lite.Tests [--report path|--filter name|--google-live|--google-references path]"); return 2; }
+        else if (args.Length != 0) { Console.WriteLine("Usage: Lite.Tests [--report path|--filter name|--google-live|--google-references path|--recaptcha-live]"); return 2; }
         var identity = reportPath is null ? null : ExecutionEvidence.CaptureIdentity();
         var started = DateTime.UtcNow;
         var outcomes = new List<TestEvidence>();
-        if (Environment.GetEnvironmentVariable("LITE_PROBE") == "1")
-        {
-            Probe.Dump();
-            return 0;
-        }
 
         var testMethods = Assembly.GetExecutingAssembly()
             .GetTypes()

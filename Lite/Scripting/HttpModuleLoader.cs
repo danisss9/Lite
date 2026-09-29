@@ -1,110 +1,110 @@
-using System.Collections.Concurrent;
-using System.Net;
-using Jint;
-using Jint.Runtime;
-using Jint.Runtime.Modules;
+using Lite.QuickJs;
+using Lite.Scripting.Runtime;
 
 namespace Lite.Scripting;
 
-/// <summary>Document-owned browser module fetching; all Jint access stays on the owning thread.</summary>
-internal sealed class HttpModuleLoader(string baseUrl, string documentUrl, Action<Action> post,
-    Lite.Network.BrowserSession? session = null) : IModuleLoader, IAsyncModuleLoader, IDisposable
+/// <summary>Document-owned QuickJS module graph, backed by the browser session.</summary>
+internal sealed class HttpModuleLoader : IDisposable
 {
-    private readonly Lite.Network.BrowserSession _session = session ?? new();
-    private static readonly HashSet<string> JavaScriptMimeTypes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "text/javascript", "application/javascript", "application/ecmascript", "text/ecmascript", "application/x-javascript",
-        "application/x-ecmascript", "text/javascript1.0", "text/javascript1.1", "text/javascript1.2", "text/javascript1.3",
-        "text/javascript1.4", "text/javascript1.5", "text/jscript", "text/livescript", "text/x-ecmascript", "text/x-javascript",
-    };
-    private readonly ConcurrentDictionary<string, string> _responseUrls = new(StringComparer.Ordinal);
+    private readonly QuickJsModuleGraph _graph;
+    private readonly string _documentUrl;
+    private readonly Action<Action> _post;
     private readonly CancellationTokenSource _lifetime = new();
     private Engine? _engine;
     private int _pending;
-    internal bool HasPendingLoads => Volatile.Read(ref _pending) > 0;
-    internal void Bind(Engine engine) => _engine = engine;
-    internal string ResponseUrl(string url) => _responseUrls.GetValueOrDefault(url, url);
-    internal void RegisterSourceUrl(string key, string url) => _responseUrls[key] = url;
+    private bool _disposed;
 
-    public ResolvedSpecifier Resolve(string? referencingModuleLocation, ModuleRequest moduleRequest)
+    internal HttpModuleLoader(string baseUrl, string documentUrl, Action<Action> post,
+        Lite.Network.BrowserSession? session = null)
     {
-        var specifier = moduleRequest.Specifier;
-        Uri? resolved = null;
-        if (specifier.StartsWith('/') || specifier.StartsWith("./", StringComparison.Ordinal) || specifier.StartsWith("../", StringComparison.Ordinal))
-        {
-            var basis = ResponseUrl(referencingModuleLocation ?? baseUrl);
-            if (!Uri.TryCreate(basis, UriKind.Absolute, out var uri)) Uri.TryCreate(baseUrl, UriKind.Absolute, out uri);
-            if (uri is not null) Uri.TryCreate(uri, specifier, out resolved);
-        }
-        else if (Uri.TryCreate(specifier, UriKind.Absolute, out var absolute)) resolved = absolute;
-        if (resolved is null || resolved.Scheme is not ("http" or "https" or "data"))
-            throw TypeError($"Cannot resolve browser module specifier '{specifier}'");
-        return new(moduleRequest, resolved.AbsoluteUri, resolved, SpecifierType.RelativeOrAbsolute);
+        _post = post;
+        _documentUrl = documentUrl;
+        _graph = new QuickJsModuleGraph(new BrowserModuleFetcher(session ?? new(), documentUrl).FetchSource,
+            documentUrl);
     }
 
-    public Module LoadModule(Engine engine, ResolvedSpecifier resolved) =>
-        throw TypeError("Network modules require asynchronous loading");
-
-    public void LoadModuleAsync(Engine engine, ResolvedSpecifier resolved, ModuleLoadCompletion completion)
+    internal bool HasPendingLoads => Volatile.Read(ref _pending) != 0;
+    internal void Bind(Engine engine)
     {
+        _engine = engine;
+        engine.SourceTransformer = (source, filename, module) =>
+            QuickJsDynamicImportRewriter.Rewrite(source,
+                Uri.TryCreate(filename, UriKind.Absolute, out _) ? filename : _documentUrl,
+                module);
+        using var hostImport = engine.Realm.HostFunction("__liteImport", 1, (owner, args) =>
+        {
+            var specifier = args.Length > 0 ? args[0].AsString() : "undefined";
+            var referrer = args.Length > 0 ? args[^1].AsString() : "";
+            return _graph.ImportAsync(owner, referrer, specifier, _post, _lifetime.Token);
+        });
+        using var global = engine.Realm.Global();
+        global.Set("__liteImport", hostImport);
+        engine.Runtime.SetModuleProvider(engine.Realm, _graph.Normalize, url =>
+        {
+            if (_graph.Source(url) is null)
+                _graph.PrefetchAsync(url, _lifetime.Token).GetAwaiter().GetResult();
+            var code = _graph.Source(url);
+            return code is null ? null : QuickJsDynamicImportRewriter.Rewrite(code, url, module: true);
+        });
+    }
+
+    internal void Add(string url, string code) => _graph.RegisterInline(url, code);
+    internal void RegisterSourceUrl(string key, string url) => _graph.RegisterResponseUrl(key, url);
+    internal string ResponseUrl(string url) => _graph.ResponseUrl(url);
+
+    internal ModuleImportOperation StartImport(string url)
+    {
+        if (_engine is null) throw new InvalidOperationException("Module loader is not bound");
+        var operation = new ModuleImportOperation();
+        if (_graph.Source(url) is { } ready)
+        {
+            try { _engine.Realm.Execute(QuickJsDynamicImportRewriter.Rewrite(ready,
+                _graph.ResponseUrl(url), module: true), _graph.ResponseUrl(url), module: true); operation.Complete(); }
+            catch (Exception error) { operation.Fail(error); }
+            return operation;
+        }
         Interlocked.Increment(ref _pending);
-        _ = Fetch();
-        async Task Fetch()
+        _ = Prefetch();
+        return operation;
+
+        async Task Prefetch()
         {
-            try
+            string? resolved = null;
+            Exception? error = null;
+            try { resolved = await _graph.PrefetchAsync(url, _lifetime.Token).ConfigureAwait(false); }
+            catch (Exception failure) { error = failure; }
+            _post(() =>
             {
-                var (code, responseUrl) = await FetchSource(resolved.Uri!, _lifetime.Token).ConfigureAwait(false);
-                post(() =>
+                try
                 {
-                    try
-                    {
-                        if (_lifetime.IsCancellationRequested) completion.SetError(TypeError("Module load cancelled"));
-                        else { _responseUrls[resolved.Key] = responseUrl; completion.SetSource(code); }
-                    }
-                    finally { Interlocked.Decrement(ref _pending); }
-                });
-            }
-            catch (Exception error)
-            {
-                post(() => { try { completion.SetError(TypeError(error.Message)); } finally { Interlocked.Decrement(ref _pending); } });
-            }
+                    if (error is not null) throw error;
+                    if (_lifetime.IsCancellationRequested) throw new OperationCanceledException();
+                    var source = _graph.Source(resolved!) ?? throw new IOException("Module source is missing");
+                    _engine!.Realm.Execute(QuickJsDynamicImportRewriter.Rewrite(source,
+                        resolved!, module: true), resolved!, module: true);
+                    operation.Complete();
+                }
+                catch (Exception failure) { operation.Fail(failure); }
+                finally { Interlocked.Decrement(ref _pending); }
+            });
         }
     }
 
-    private async Task<(string Code, string Url)> FetchSource(Uri uri, CancellationToken cancellation)
+    public void Dispose()
     {
-        if (uri.Scheme == "data")
-        {
-            if (!Lite.Network.DataUri.TryDecodeBytes(uri.AbsoluteUri, out var bytes, out var mime) || !JavaScriptMimeTypes.Contains(mime.Split(';')[0]))
-                throw new IOException("Module data URL does not have a JavaScript MIME type");
-            return (System.Text.Encoding.UTF8.GetString(bytes), uri.AbsoluteUri);
-        }
-        var origin = Uri.TryCreate(documentUrl, UriKind.Absolute, out var document) && document.Scheme is "http" or "https"
-            ? document.GetLeftPart(UriPartial.Authority) : "null";
-        for (var redirects = 0; redirects <= 20; redirects++)
-        {
-            if (uri.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(uri.UserInfo)) throw new IOException("Unsupported module URL");
-            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-            var crossOrigin = origin != uri.GetLeftPart(UriPartial.Authority);
-            if (crossOrigin) request.Headers.TryAddWithoutValidation("Origin", origin);
-            using var response = await (crossOrigin ? _session.NoCookieModuleClient : _session.ModuleClient)
-                .SendAsync(request, cancellation).ConfigureAwait(false);
-            if (crossOrigin && (!response.Headers.TryGetValues("Access-Control-Allow-Origin", out var origins) ||
-                !origins.Any(value => value == "*" || value == origin))) throw new IOException("Module response failed CORS");
-            if (response.StatusCode is HttpStatusCode.MovedPermanently or HttpStatusCode.Found or HttpStatusCode.SeeOther or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect)
-            {
-                if (response.Headers.Location is null) throw new IOException("Module redirect is missing Location");
-                uri = new Uri(uri, response.Headers.Location); continue;
-            }
-            response.EnsureSuccessStatusCode();
-            if (!JavaScriptMimeTypes.Contains(response.Content.Headers.ContentType?.MediaType ?? "")) throw new IOException("Module response does not have a JavaScript MIME type");
-            return (System.Text.Encoding.UTF8.GetString(await response.Content.ReadAsByteArrayAsync(cancellation).ConfigureAwait(false)), uri.AbsoluteUri);
-        }
-        throw new IOException("Too many module redirects");
+        if (_disposed) return;
+        _disposed = true;
+        _lifetime.Cancel();
+        _graph.Dispose();
+        _lifetime.Dispose();
     }
+}
 
-    private JavaScriptException TypeError(string message) => _engine is null
-        ? new JavaScriptException((Jint.Native.JsValue)message)
-        : new JavaScriptException(_engine.Intrinsics.TypeError.Construct(message));
-    public void Dispose() => _lifetime.Cancel();
+internal sealed class ModuleImportOperation
+{
+    internal bool IsCompleted { get; private set; }
+    internal bool IsFaulted => Error is not null;
+    internal Exception? Error { get; private set; }
+    internal void Complete() => IsCompleted = true;
+    internal void Fail(Exception error) { Error = error; IsCompleted = true; }
 }

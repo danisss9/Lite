@@ -1,6 +1,6 @@
-# Exact stock-Jint dependency exceptions only: <test path> [expected-fail: reason and upstream issue URL]
+# Exact JavaScript-engine dependency exceptions only: <test path> [expected-fail: reason and upstream issue URL]
 #
 # This file deliberately permits no substring or directory patterns. Post-ES2020 tests are
 # classified separately through their exact Test262 `features` metadata and
-# es2020-applicability.json. No mandatory test is waived on Jint 4.16.3.
+# es2020-applicability.json. No mandatory test is waived on the current QuickJS build.
 # Known failures remain executable and block readiness; see docs/es2020-conformance.md.

@@ -1,6 +1,4 @@
-using Jint;
-using Jint.Native;
-using Jint.Runtime;
+using Lite.Scripting.Runtime;
 using Lite.Interaction;
 using Lite.Layout;
 using Lite.Models;
@@ -86,7 +84,7 @@ public class JsElement
     // offset/count are WebIDL unsigned long (ToUint32): JS strings, doubles, and negatives all
     // coerce — e.g. -1 → 4294967295, -0x100000000+2 → 2 — so the bounds checks match the spec.
     // The trailing params array lets WebIDL "extra arguments are ignored" calls (e.g.
-    // substringData(0, 1, 2)) bind — Jint won't otherwise match a call with surplus args.
+    // substringData(0, 1, 2)) bind — the host binding may not otherwise match a call with surplus args.
     public string substringData(JsValue offset, JsValue count, params JsValue[] _)
     {
         var s = Node.DisplayText ?? "";
@@ -113,15 +111,15 @@ public class JsElement
     }
 
     /// <summary>WebIDL DOMString coercion (null → "null", undefined → "undefined", else ToString).</summary>
-    private static string CoerceString(JsValue v) => Jint.Runtime.TypeConverter.ToString(v);
+    private static string CoerceString(JsValue v) => TypeConverter.ToString(v);
 
     /// <summary>WebIDL [LegacyNullToEmptyString] DOMString coercion: null → "".</summary>
-    private static string CoerceLegacyNull(JsValue v) => v.IsNull() ? "" : Jint.Runtime.TypeConverter.ToString(v);
+    private static string CoerceLegacyNull(JsValue v) => v.IsNull() ? "" : TypeConverter.ToString(v);
 
     /// <summary>WebIDL unsigned-long (ToUint32) coercion: truncate, modulo 2^32, into [0, 2^32).</summary>
     private static long ToU32(JsValue v)
     {
-        var n = Jint.Runtime.TypeConverter.ToNumber(v);
+        var n = TypeConverter.ToNumber(v);
         if (double.IsNaN(n) || double.IsInfinity(n)) return 0;
         var m = Math.Truncate(n) % 4294967296.0;
         if (m < 0) m += 4294967296.0;
@@ -146,22 +144,11 @@ public class JsElement
     /// <summary>Raises a JS-catchable DOMException (e.name / e.code / e.message, and
     /// e.constructor === DOMException so assert_throws_dom's same-global check passes). Builds the
     /// object directly via the shim's DOMException.prototype — re-entering the engine (Invoke/
-    /// Evaluate/Construct) from inside a host method hangs Jint — and throws it via
+    /// Evaluate/Construct) from inside a host method cannot safely re-enter the engine — and throws it via
     /// JavaScriptException, which propagates intact now that CatchClrExceptions skips it.</summary>
     private void ThrowDom(string name, string message)
     {
-        var err = new JsObject(_engine);
-        Prop(err, "name", name);
-        Prop(err, "message", message);
-        Prop(err, "code", JsNumber.Create(DomCodes.GetValueOrDefault(name)));
-        // assert_throws_dom verifies e.constructor === DOMException (its "same global" check).
-        // Expose it as an own property — setting the [[Prototype]] needs an internal Jint API.
-        var ctor = _engine.GetValue("DOMException");
-        if (ctor.IsObject()) Prop(err, "constructor", ctor);
-        throw new Jint.Runtime.JavaScriptException(err);
-
-        static void Prop(JsObject o, string key, JsValue value) =>
-            o.FastSetProperty(key, new Jint.Runtime.Descriptors.PropertyDescriptor(value, writable: true, enumerable: false, configurable: true));
+        throw JsErrors.Dom(name, message);
     }
 
     // ---- Node type constants (exposed on every element, like browsers do) ----
@@ -924,7 +911,7 @@ public class JsElement
 
     /// <summary>Inserting a &lt;script&gt; into the document executes it (HTML §4.11.1 “prepare the
     /// script element”). Execution is deferred onto the engine's event loop — fetching/running it
-    /// synchronously here would re-enter Jint, which is not reentrant. External sources are
+    /// synchronously here would re-enter the engine during a host callback. External sources are
     /// fetched through the page session (cookies, UA) like parser-collected scripts.</summary>
     private void ExecuteInsertedScript()
     {

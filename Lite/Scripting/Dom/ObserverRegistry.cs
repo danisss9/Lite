@@ -1,9 +1,9 @@
+using Lite.Scripting.Runtime;
 using System.Runtime.CompilerServices;
-using Jint;
 
 namespace Lite.Scripting.Dom;
 
-/// <summary>Registrations follow their Jint realm's lifetime instead of the last loaded page.</summary>
+/// <summary>Registrations follow their QuickJS realm's lifetime instead of the last loaded page.</summary>
 internal sealed class ObserverRegistry<T> where T : class
 {
     private readonly ConditionalWeakTable<Engine, List<T>> _realms = new();

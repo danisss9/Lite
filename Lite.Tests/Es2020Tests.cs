@@ -36,16 +36,20 @@ public static class Es2020Tests
     public static void NegativeTests_RequireExactPhaseAndErrorType()
     {
         using var fixture = new Fixture();
-        Equal("pass", fixture.Run("flags: [raw]\nnegative: { phase: parse, type: SyntaxError }", "const = ;", "raw").Outcome);
+        var parseError = fixture.Run("flags: [raw]\nnegative: { phase: parse, type: SyntaxError }", "const = ;", "raw");
+        True(parseError.Outcome == "pass", $"{parseError.Outcome}: {parseError.Detail}");
         Equal("fail", fixture.Run("flags: [raw]\nnegative: { phase: parse, type: SyntaxError }", "throw new SyntaxError();", "raw").Outcome);
         Equal("fail", fixture.Run("flags: [raw]\nnegative: { phase: runtime, type: TypeError }", "throw new Error('TypeError');", "raw").Outcome);
         Equal("fail", fixture.Run("flags: [raw]\nnegative: { phase: runtime, type: TypeError }", "throw {constructor: TypeError};", "raw").Outcome);
-        Equal("pass", fixture.Run("flags: [raw]\nnegative: { phase: parse, type: SyntaxError }", "return 1;", "raw").Outcome);
-        Equal("pass", fixture.Run("flags: [module]\nnegative: { phase: runtime, type: TypeError }", "throw new TypeError();", "module").Outcome);
+        RequirePass(fixture.Run("flags: [raw]\nnegative: { phase: parse, type: SyntaxError }", "return 1;", "raw"));
+        RequirePass(fixture.Run("flags: [module]\nnegative: { phase: runtime, type: TypeError }", "throw new TypeError();", "module"));
         File.WriteAllText(Path.Combine(fixture.Root, "test", "empty_FIXTURE.js"), "export const existing = 1;");
-        Equal("pass", fixture.Run("flags: [module]\nnegative: { phase: resolution, type: SyntaxError }", "import { missing } from './empty_FIXTURE.js';", "module").Outcome);
+        RequirePass(fixture.Run("flags: [module]\nnegative: { phase: resolution, type: SyntaxError }", "import { missing } from './empty_FIXTURE.js';", "module"));
         Equal("fail", fixture.Run("flags: [module]\nnegative: { phase: resolution, type: SyntaxError }", "throw new SyntaxError();", "module").Outcome);
     }
+
+    private static void RequirePass(Test262Outcome outcome) =>
+        True(outcome.Outcome == "pass", $"{outcome.Outcome}: {outcome.Detail}");
 
     [Test]
     public static void AsyncTests_RejectDuplicateAndLateCompletionFailures()

@@ -1,5 +1,4 @@
-using Jint;
-using Jint.Native;
+using Lite.Scripting.Runtime;
 using Lite.Models;
 
 namespace Lite.Scripting.Dom;
@@ -71,8 +70,8 @@ internal class JsWindow
     /// <summary>HTML postMessage on a window: a same-window post schedules a <c>message</c> event
     /// task on this window (browsers deliver it asynchronously — scripts use it for scheduling).
     /// Cross-context posts go through the iframe WindowProxies, which carry both origins.</summary>
-    public void postMessage(Jint.Native.JsValue message, Jint.Native.JsValue? targetOrigin = null,
-        Jint.Native.JsValue? transfer = null)
+    public void postMessage(JsValue message, JsValue? targetOrigin = null,
+        JsValue? transfer = null)
     {
         var data = message.ToObject();   // structured clone via the CLR graph
         var origin = _engine.Origin;
@@ -105,7 +104,7 @@ internal class JsWindow
         if (delay < 0) delay = 0;
         var timer = new System.Threading.Timer(_ =>
         {
-            // Marshal the callback onto the UI thread's event loop — Jint is not thread-safe.
+            // Marshal the callback onto the UI thread's event loop — QuickJS is bound to its owning thread.
             _engine.EnqueueMacrotask(() => _engine.RawEngine.Invoke(fn));
             lock (_timers) { _timers.Remove(id); }
         }, null, delay, Timeout.Infinite);
@@ -135,6 +134,16 @@ internal class JsWindow
     }
 
     public void clearInterval(int id) => clearTimeout(id);
+
+    internal void StopTimers()
+    {
+        lock (_timers)
+        {
+            foreach (var timer in _timers.Values) timer.Dispose();
+            _timers.Clear();
+        }
+        _rafCallbacks.Clear();
+    }
 
     // ---- getComputedStyle (Phase 7) ----
     public JsComputedStyle getComputedStyle(JsElement element, string? pseudoElement = null)

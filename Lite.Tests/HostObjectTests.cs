@@ -93,7 +93,7 @@ public static class HostObjectTests
     [Test]
     public static void OptionalChaining_And_NullishCoalescing_Work()
     {
-        // ES2020 syntax that requires Jint 4.
+        // ES2020 syntax exercised by the JavaScript engine.
         var e = NewEngine();
         e.Execute(@"
             var o = { a: { b: 5 } };

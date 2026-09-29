@@ -1,5 +1,4 @@
-using Jint;
-using Jint.Native;
+using Lite.Scripting.Runtime;
 
 namespace Lite.Scripting.Dom;
 
@@ -69,7 +68,7 @@ internal sealed class JsWorker
         if (_terminated) return;
         try
         {
-            var realm = new Engine(options => JavaScriptRuntime.Configure(options));
+            var realm = new Engine();
             _realm = realm;
             var portContext = _messagePortContext = new JsMessagePortContext(realm,
                 _owner.EnqueueMacrotask);
@@ -119,7 +118,7 @@ internal sealed class JsWorker
             {
                 var absolute = Uri.TryCreate(new Uri(url), source, out var resolved) ? resolved.AbsoluteUri : source;
                 var imported = LoadSource(absolute).GetAwaiter().GetResult();
-                realm.Execute(imported, absolute, JavaScriptRuntime.ScriptParsing);
+                realm.Execute(imported, absolute);
             }));
             realm.Execute("""
                 globalThis.self = globalThis;
@@ -193,7 +192,7 @@ internal sealed class JsWorker
                 """);
             realm.SetValue("__addWorkerMessageListener", new Action<JsValue>(_listeners.Add));
             realm.Execute("globalThis.MessageChannel = function MessageChannel() { return __createMessageChannel(); };");
-            realm.Execute(script, url, JavaScriptRuntime.ScriptParsing);
+            realm.Execute(script, url);
             while (_pending.Count > 0)
             {
                 var (data, ports) = _pending.Dequeue();
@@ -252,6 +251,7 @@ internal sealed class JsWorker
         foreach (var timer in _timers.Values) timer.Dispose();
         _timers.Clear();
         _pending.Clear();
+        _realm?.Dispose();
         _realm = null;
     }
 

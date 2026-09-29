@@ -1,6 +1,5 @@
 using System.Text.Json.Nodes;
 using System.Text.Json;
-using Jint;
 using Lite.Conformance.Harness;
 using Lite.Conformance.Profile;
 using Lite.Conformance.Wpt;

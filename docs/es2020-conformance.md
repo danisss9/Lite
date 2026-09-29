@@ -5,13 +5,11 @@ including earlier language features and browser Annex B. Full support is **not
 established**. The profile must keep `es2020ProfileReady` false until every
 mandatory execution and host obligation has reviewed, current passing evidence.
 
-The engine remains stock Jint. The original pin was 4.16.1; the current pin is
-4.16.3. Local reproducers failed on 4.16.1 for trailing NUL numeric conversion,
-repeated generator delegation, and large array-species lengths, and passed on
-4.16.3. These checks are now permanent supplemental tests. The official
-[4.16.2 release notes](https://github.com/sebastienros/jint/releases/tag/v4.16.2)
-describe the corresponding backported fixes; 4.16.3 also incorporates subsequent
-maintenance fixes. No engine fork or replacement is used.
+Lite now uses the bundled QuickJS 2026-06-04 runtime through `Lite.QuickJs`.
+Jint is no longer a runtime or package dependency. The earlier Jint results in
+the changelog are historical; all ES2020 evidence must be regenerated with
+QuickJS. A focused Test262 smoke run passed 1,890 executions and failed 13,
+so full language conformance is not established.
 
 ## Remaining features and obligations
 
@@ -22,21 +20,20 @@ list cannot yet be asserted to contain every possible ES2020 defect.
 
 | Area                                 | Remaining work                                                                                                                                                                                                                                                                                                                         | Current evidence or limitation                                                                                                                                                                                                                                           |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Annex B block function declarations  | Correct the treatment of a block function named `arguments` in a function that needs an arguments object.                                                                                                                                                                                                                              | Pinned Test262 reproducer: `test/annexB/language/function-code/block-decl-func-skip-arguments.js`, sloppy mode. A stock-engine defect must remain a blocker if it persists on the pin; it is published as `es2020.annexb.block-decl-func-arguments`.                     |
-| `document.all`                       | Implement the live HTML collection and its required `[[IsHTMLDDA]]` behavior: falsy conversion, special loose equality, `typeof`, and callable behavior.                                                                                                                                                                               | Host test `annex-b-document-all` fails. Jint's conformance-only `IsHTMLDDA` class and type flags are internal; there is no verified supported public hook for a real Lite collection. A truthy JavaScript object is not a replacement.                                   |
+| Proper tail calls                    | Implement proper tail calls and validate all required tail positions and execution-context effects. | QuickJS fails deep tail-call Test262 smoke cases with stack overflow; the previous Jint-focused evidence does not apply. |
+| `document.all`                       | Implement the live HTML collection and its required `[[IsHTMLDDA]]` behavior: falsy conversion, special loose equality, `typeof`, and callable behavior. | Host test `annex-b-document-all` remains an expected failure. A truthy JavaScript object is not a replacement. |
 | Complete normative obligations       | Review syntax, static semantics, abstract operations, execution contexts, built-ins, module semantics, shared memory, and Annex B; split sections into individually mapped obligations where needed.                                                                                                                                   | The 2,115-section index is complete as a section index, but every section starts unreviewed. Importing section headings is not normative verification.                                                                                                                   |
 | Complete edition applicability       | Review staging tests, untagged later semantic changes, and every mixed-era exclusion. Supply a separately mapped ES2020 test before excluding incompatible mixed coverage.                                                                                                                                                             | The first full inventory found 1,226 unreviewed staging tests and 3,873 post-target tests referring to ES2020 sections. The exact current list is exported in `es2020-backlog.json`.                                                                                     |
 | Modern shared harness helpers        | Review implicit later features introduced by helper files, even where test metadata only names ES2020 features.                                                                                                                                                                                                                        | The pinned typed-array helper also generates Float16, resizable, growable, and immutable buffers. One overlapping-slice test now has separately mapped fixed-buffer coverage for every ES2020 typed-array constructor. The rest still needs review.                      |
 | Full language-family coverage        | Finish obligation-to-test review for lexical grammar, Unicode, declarations and scope, functions/classes, destructuring, iteration, generators, async functions/iteration, objects/proxies/reflect, symbols, RegExp, strings, numbers/BigInt, collections, dates, JSON, promises, buffers/typed arrays, Atomics, modules, and Annex B. | Full candidate execution exists. Passing candidates alone do not establish that each normative obligation is tested. The generated report lists feature-level evidence and all remaining section IDs.                                                                    |
-| Proper tail calls                    | Review all tail-position forms and execution-context effects, beyond the focused deep mutual recursion test and upstream tests.                                                                                                                                                                                                        | Proper tail calls are supported by the stock engine; they must not be listed as wholly unimplemented. Supplemental test: `supplemental/proper-tail-calls.js`.                                                                                                            |
-| Shared-memory concurrency            | Review agent-cluster behavior, blocking/nonblocking configurations, scheduling, memory ordering, and coverage of required litmus tests.                                                                                                                                                                                                | Upstream agents execute in supervised workers; the window host rejects blocking waits. Complete normative shared-memory coverage is still unreviewed.                                                                                                                    |
-| Harness execution contract           | Continue review of metadata, raw/module combinations, realm host APIs, negative phase boundaries, asynchronous completion, timeout recovery, and crash diagnostics.                                                                                                                                                                    | Regressions cover malformed metadata, exact error phase/type, raw preservation, nested realms, detachment, duplicate/late completion, timeout recovery, and incomplete evidence. The internal adapter remains isolated and must be revalidated after every Jint upgrade. |
+| Shared-memory concurrency            | Implement and review agent-cluster behavior, scheduling, memory ordering, and blocking/nonblocking `Atomics.wait` configurations. | The QuickJS Test262 adapter currently rejects `$262.agent.start`; complete shared-memory coverage is unavailable. |
+| Harness execution contract           | Review metadata, raw/module combinations, realm host APIs, negative phase boundaries, asynchronous completion, timeout recovery, and crash diagnostics on the QuickJS adapter. | Focused harness regressions pass. The adapter and failure classifications need broader revalidation after this engine switch. |
 | Module fetch options                 | Carry script credentials settings and applicable referrer/fetch settings through root and descendant module fetches; review CORS redirect-taint behavior.                                                                                                                                                                              | Basic same-origin loading, redirects, MIME rejection, and cross-origin allow/deny cases are tested. The loader does not yet model a complete browser fetch-options record or credentialed CORS.                                                                          |
 | Module identity and source ownership | Review URL canonicalization edge cases, inline-module registry identity, failed-load caching, source URLs after classic-script redirects, and imports originating from callbacks/eval.                                                                                                                                                 | Nested module graphs, live bindings, cycles, repeated imports, response-URL bases, inline metadata, and external classic imports have focused checks. Inline modules currently use synthetic registered specifiers.                                                      |
 | Document and iframe realms           | Expand integration evidence for iframe imports, independent module maps/jobs, navigation cancellation, and realm-correct errors across document boundaries.                                                                                                                                                                            | Separate-document globals/intrinsics/module maps and navigation cancellation have focused checks; existing iframe unit tests provide additional regressions. The complete host obligation review remains open.                                                           |
 | Error and rejection notifications    | Complete browser event semantics and error location details, including cancellation/default reporting and callback exceptions.                                                                                                                                                                                                         | Original thrown objects are preserved, parse failures report `SyntaxError`, and rejection/handled notifications preserve promise and reason identity. Error/rejection notifications currently use simple objects rather than complete browser event implementations.     |
 | Jobs and readiness                   | Expand ordering coverage across scripts, deferred modules, callbacks, observers, tasks, and failure paths.                                                                                                                                                                                                                             | Modules complete before `DOMContentLoaded`; deferred execution observes `interactive`; promise/timer order is tested. This does not claim full HTML script-processing conformance.                                                                                       |
-| Final readiness evidence             | Obtain a reviewed inventory plus current passing results for every required execution and host obligation, with no unknown classifications, missing shards, skipped mandatory tests, timeouts, crashes, or dependency exceptions.                                                                                                      | Eight-shard execution and fail-closed aggregation are implemented. The readiness verdict stays false while any mandatory work above remains; it blocks publication, and everyday CI reports it rather than failing on it.                                                |
+| Final readiness evidence             | Obtain a reviewed inventory plus current passing results for every required execution and host obligation, with no unknown classifications, missing shards, skipped mandatory tests, timeouts, crashes, or dependency exceptions.                                                                                                      | Eight-shard execution and fail-closed aggregation are implemented. The readiness verdict stays false while any mandatory work above remains; CI and release validation report it.                                                |
 
 Intl/ECMA-402, public Web Workers, parser-blocking execution, `document.write`
 reentrancy, and complete dynamic-script processing remain separate workstreams.
@@ -68,12 +65,9 @@ below: no amount of green execution can clear it, so gating everyday builds on
 it would report every change as broken for reasons unrelated to that change.
 Compatibility CI therefore publishes the readiness verdict without enforcing it.
 NuGet release validation publishes the same verdict as release evidence without
-enforcing it: on the Jint 4.16.3 pin the published expected failures
-(`es2020.annex-b-document-all`, `es2020.annexb.block-decl-func-arguments`) keep
-readiness false by contract even after a complete review, so enforcement would
-block every tag regardless of engineering progress. Re-add
-`--require-es2020-ready` to the release profile step once the review is closed
-and these gaps are represented as published dependency exceptions.
+enforcing it. The `document.all` host expected failure, current Test262 failures,
+and unfinished review keep readiness false. Reconsider the release gate after
+those gaps and the review are resolved.
 
 Outputs are under `Lite.Conformance/artifacts/es2020/`:
 
@@ -94,7 +88,7 @@ Focused commands:
 dotnet run --project Lite.Conformance -c Release --no-build -- --suite test262 --test262-set smoke
 # One mandatory language shard.
 dotnet run --project Lite.Conformance -c Release --no-build -- --suite test262 --shard 0/8
-# Supplemental obligations and exact stock-engine reproducers.
+# Supplemental obligations and historical engine reproducers.
 dotnet run --project Lite.Conformance -c Release --no-build -- --suite test262 --filter supplemental/
 dotnet run --project Lite.Conformance -c Release --no-build -- --suite test262 --filter block-decl-func-skip-arguments.js
 dotnet run --project Lite.Conformance -c Release --no-build -- --suite es2020-host --filter annex-b-document-all
@@ -128,9 +122,9 @@ readiness. Editing sources during a run preserves diagnostics but invalidates
 the run for readiness. Do not rewrite an artifact's identity to reuse it.
 
 The complete review contract requires more than green Test262 counts. Unknown
-classifications and unmapped normative obligations remain blockers, and stock
-Jint defects must retain their exact reproducers until a supported stable release
-fixes them and complete revalidation succeeds.
+classifications and unmapped normative obligations remain blockers. Previous
+Jint-specific outcomes do not establish QuickJS behavior; retain useful
+reproducers and regenerate execution evidence after the migration.
 
 Two manifests separate a known defect from a new one, on the same contract as the
 curated WPT manifest:

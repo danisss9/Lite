@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
-using Jint;
-using Jint.Native;
+using Lite.QuickJs;
+using Lite.Scripting.Runtime;
 using Lite.Layout;
 using Lite.Models;
 using Lite.Network;
@@ -8,23 +8,24 @@ using Lite.Scripting.Dom;
 
 namespace Lite.Scripting;
 
-internal class JsEngine
+internal class JsEngine : IDisposable
 {
     public static JsEngine? Instance { get; internal set; }
 
-    // Maps a raw Jint Engine to its owning JsEngine. DOM proxies (JsElement, JsDocument, …) hold
+    // Maps a raw QuickJS-backed Engine to its owning JsEngine. DOM proxies hold
     // the raw Engine they were created with, so they can reach their page's JsEngine via For(...)
     // instead of the global Instance singleton — essential once multiple pages (iframes) coexist,
     // each with its own engine. Keys are weak so a disposed page's mapping is collected.
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Engine, JsEngine> _byRaw = new();
 
-    /// <summary>The JsEngine that owns a given raw Jint engine, or null if unknown.</summary>
+    /// <summary>The JsEngine that owns a given raw JavaScript engine, or null if unknown.</summary>
     public static JsEngine? For(Engine raw) => _byRaw.TryGetValue(raw, out var e) ? e : null;
 
     private readonly Engine _engine;
-    private readonly JsValue _syntaxErrorConstructor;
     private readonly HttpModuleLoader _moduleLoader;
-    private readonly List<(Jint.Runtime.Modules.ModuleImportOperation Operation, Action Completed)> _imports = [];
+    private readonly List<JsWorker> _workers = [];
+    private bool _disposed;
+    private readonly List<(ModuleImportOperation Operation, Action Completed)> _imports = [];
     private readonly Dictionary<JsValue, JsValue> _unhandledRejections = [];
     private readonly HashSet<JsValue> _reportedRejections = [];
     internal event Action<JsValue>? ScriptFailed;
@@ -51,7 +52,7 @@ internal class JsEngine
 
     // ---- event loop ----
     // Macrotasks queued by timers/fetch/etc. They are drained on the UI thread so that
-    // Jint (which is not thread-safe) is only ever touched from one thread.
+    // QuickJS is only ever touched from its owning thread.
     private readonly ConcurrentQueue<Action> _macrotasks = new();
 
     /// <summary>Raised (possibly from a background thread) when a task is enqueued, so the
@@ -61,6 +62,7 @@ internal class JsEngine
     /// <summary>Queues a callback to run on the next event-loop turn (UI thread).</summary>
     internal void EnqueueMacrotask(Action task)
     {
+        if (_disposed) return;
         _macrotasks.Enqueue(task);
         TaskEnqueued?.Invoke();
     }
@@ -69,7 +71,7 @@ internal class JsEngine
 
     /// <summary>
     /// Runs all currently-queued macrotasks on the calling (UI) thread. Each invocation
-    /// drains the Jint microtask (Promise) queue automatically. Returns true if any ran.
+    /// drains the QuickJS microtask (Promise) queue automatically. Returns true if any ran.
     /// </summary>
     internal bool DrainTasks()
     {
@@ -86,7 +88,15 @@ internal class JsEngine
                 // lets Promise .then() continuations (e.g. from fetch) actually execute.
                 FlushMicrotasks();
             }
-            catch (Exception ex) { Console.WriteLine($"[JS task] {ex.Message}"); }
+            catch (Exception ex)
+            {
+                var error = ex is QuickJsException js && js.ErrorValue is { } value
+                    ? new JsValue(_engine, value.Clone()) : (JsValue)ex.Message;
+                ReportScriptError(error);
+                DocumentState.Session?.Diagnostics.Enqueue($"javascript task {CurrentUrl}: {ex.Message}");
+                Console.WriteLine($"[JS task] {ex.Message}");
+                if (ex is QuickJsException quickJsError) quickJsError.Dispose();
+            }
             ran = true;
         }
         // Deliver any queued observer notifications even when no macrotask ran this turn (e.g. a
@@ -106,12 +116,12 @@ internal class JsEngine
     {
         try
         {
-            _engine.Advanced.ProcessTasks();
+            _engine.ProcessTasks();
             foreach (var item in _imports.ToArray())
             {
                 if (!item.Operation.IsCompleted) continue;
                 _imports.Remove(item);
-                if (item.Operation.IsFaulted) ReportScriptError(item.Operation.Error!);
+                if (item.Operation.IsFaulted) ReportScriptError((JsValue)item.Operation.Error!.Message);
                 item.Completed();
             }
             Dom.MutationObserverRegistry.DeliverAll(_engine);
@@ -247,31 +257,21 @@ internal class JsEngine
         DocumentState.Bind(root);
         _moduleLoader = new HttpModuleLoader(DocumentBaseUrl, DocumentState.Address, EnqueueMacrotask,
             DocumentState.Session);
-        _engine = new Engine(opts =>
-        {
-            JavaScriptRuntime.Configure(opts);
-            // Wrap CLR exceptions from host code as JS errors — EXCEPT JavaScriptException, which
-            // is already a JS throw (e.g. a DOMException a host DOM method raised): letting it
-            // propagate preserves its error object (name/code) instead of flattening it to Error.
-            opts.CatchClrExceptions(ex => ex is not Jint.Runtime.JavaScriptException);
-            opts.EnableModules(_moduleLoader);
-            opts.UseHostFactory(_ => new BrowserScriptHost(_moduleLoader));
-        });
+        _engine = new Engine();
         _moduleLoader.Bind(_engine);
-        _syntaxErrorConstructor = _engine.GetValue("SyntaxError");
-        _engine.Advanced.PromiseRejectionTracker += (_, args) =>
+        _engine.PromiseRejection += (promise, reason, handled) =>
         {
-            if (args.Operation.ToString() == "Reject")
+            if (!handled)
             {
-                _unhandledRejections[args.Promise] = args.Value ?? JsValue.Undefined;
+                _unhandledRejections[promise] = reason;
                 EnqueueMacrotask(() =>
                 {
-                    if (_unhandledRejections.TryGetValue(args.Promise, out var reason) && _reportedRejections.Add(args.Promise))
-                        DispatchPromiseEvent("unhandledrejection", args.Promise, reason);
+                    if (_unhandledRejections.TryGetValue(promise, out var pending) && _reportedRejections.Add(promise))
+                        DispatchPromiseEvent("unhandledrejection", promise, pending);
                 });
             }
-            else if (_unhandledRejections.Remove(args.Promise, out var reason) && _reportedRejections.Remove(args.Promise))
-                EnqueueMacrotask(() => DispatchPromiseEvent("rejectionhandled", args.Promise, reason));
+            else if (_unhandledRejections.Remove(promise, out var previous) && _reportedRejections.Remove(promise))
+                EnqueueMacrotask(() => DispatchPromiseEvent("rejectionhandled", promise, previous));
         };
 
         _root = root;
@@ -420,7 +420,12 @@ internal class JsEngine
         // ---- fetch backing function ----
         _engine.SetValue("__nativeFetch", new Action<string, JsValue, JsValue>(
             (url, opts, cb) => JsFetch.Native(this, url, opts, cb)));
-        _engine.SetValue("__createWorker", new Func<string, JsWorker>(url => new JsWorker(this, url)));
+        _engine.SetValue("__createWorker", new Func<string, JsWorker>(url =>
+        {
+            var worker = new JsWorker(this, url);
+            _workers.Add(worker);
+            return worker;
+        }));
 
         // ---- Encoding API backing functions (TextEncoder/TextDecoder shim below) ----
         _engine.SetValue("__textEncodeUtf8", new Func<string, double[]>(
@@ -646,11 +651,11 @@ internal class JsEngine
         if (string.IsNullOrWhiteSpace(script)) return;
         var previousScript = CurrentScriptNode;
         CurrentScriptNode = FindScriptNode(script, sourceUrl);
-        try { _engine.Execute(script, sourceUrl, JavaScriptRuntime.ScriptParsing); }
-        catch (Jint.Runtime.JavaScriptException ex) { ReportScriptError(ex.Error); }
-        catch (Exception ex) when (ex is Acornima.SyntaxErrorException || ex.InnerException is Acornima.SyntaxErrorException)
-        { ReportScriptError(_engine.Construct(_syntaxErrorConstructor, [(JsValue)ex.Message])); }
-        catch (Exception ex) { ReportScriptError(_engine.Intrinsics.Error.Construct(ex.Message)); }
+        try { _engine.Execute(script, sourceUrl); }
+        catch (JavaScriptException ex) { ReportScriptError(ex.Error); }
+        catch (QuickJsException ex) { ReportScriptError(ex.ErrorValue is { } value ?
+            new JsValue(_engine, value.Clone()) : (JsValue)ex.Message); ex.Dispose(); }
+        catch (Exception ex) { ReportScriptError((JsValue)ex.Message); }
         finally
         {
             // Restore (and clear for microtasks) before the checkpoint, matching the spec where
@@ -677,32 +682,32 @@ internal class JsEngine
             if (!_eventHandlerAttributes.TryGetValue(code, out var handler))
             {
                 // The trailing newline keeps a body ending in a line comment from swallowing the brace.
-                handler = _engine.Evaluate("(function (event) {" + code + "\n})", JavaScriptRuntime.ScriptParsing);
+                handler = _engine.Evaluate("(function (event) {" + code + "\n})");
                 // A page that writes a fresh handler string on every event would otherwise grow the
                 // cache without bound; documents reuse a handful of attribute values in practice.
                 if (_eventHandlerAttributes.Count >= 256) _eventHandlerAttributes.Clear();
                 _eventHandlerAttributes[code] = handler;
             }
-            _engine.Invoke(handler, thisValue, [eventArg]);
+            _engine.Call(handler, thisValue, eventArg);
         }
-        catch (Jint.Runtime.JavaScriptException ex) { ReportScriptError(ex.Error); }
-        catch (Exception ex) when (ex is Acornima.SyntaxErrorException || ex.InnerException is Acornima.SyntaxErrorException)
-        { ReportScriptError(_engine.Construct(_syntaxErrorConstructor, [(JsValue)ex.Message])); }
-        catch (Exception ex) { ReportScriptError(_engine.Intrinsics.Error.Construct(ex.Message)); }
+        catch (JavaScriptException ex) { ReportScriptError(ex.Error); }
+        catch (QuickJsException ex) { ReportScriptError(ex.ErrorValue is { } value ?
+            new JsValue(_engine, value.Clone()) : (JsValue)ex.Message); ex.Dispose(); }
+        catch (Exception ex) { ReportScriptError((JsValue)ex.Message); }
         finally { FlushMicrotasks(); }
     }
 
     /// <summary>Registers an inline module's source under a specifier so it can be imported.</summary>
     internal void AddModule(string specifier, string code, string? sourceUrl = null)
     {
+        _moduleLoader.Add(specifier, code);
         if (sourceUrl is not null) _moduleLoader.RegisterSourceUrl(specifier, sourceUrl);
-        _engine.Modules.Add(specifier, code);
     }
 
     /// <summary>Imports (evaluates) a module by specifier. The loader fetches src modules.</summary>
     internal void ImportModule(string specifier)
     {
-        var operation = _engine.Modules.StartImport(specifier);
+        var operation = _moduleLoader.StartImport(specifier);
         _imports.Add((operation, () => { }));
         FlushMicrotasks();
     }
@@ -719,10 +724,10 @@ internal class JsEngine
             {
                 var script = scripts[index++];
                 if (!script.IsModule) { Execute(script.Code!, script.Url); continue; }
-                var operation = _engine.Modules.StartImport(script.Url);
-                _engine.Advanced.ProcessTasks();
+                var operation = _moduleLoader.StartImport(script.Url);
+                _engine.ProcessTasks();
                 if (!operation.IsCompleted) { _imports.Add((operation, Continue)); return; }
-                if (operation.IsFaulted) ReportScriptError(operation.Error!);
+                if (operation.IsFaulted) ReportScriptError((JsValue)operation.Error!.Message);
             }
             completed();
         }
@@ -734,7 +739,7 @@ internal class JsEngine
         ScriptFailed?.Invoke(error);
         var evt = new JsObject(_engine);
         evt.Set("type", "error"); evt.Set("error", error); evt.Set("message", error.ToString());
-        _jsWindow.DispatchEvent("error", evt);
+        _jsWindow.DispatchEvent("error", JsValue.FromObject(_engine, evt));
         Console.WriteLine($"[JS Error] {error}");
     }
 
@@ -742,13 +747,31 @@ internal class JsEngine
     {
         var evt = new JsObject(_engine);
         evt.Set("type", type); evt.Set("promise", promise); evt.Set("reason", reason);
-        _jsWindow.DispatchEvent(type, evt);
+        _jsWindow.DispatchEvent(type, JsValue.FromObject(_engine, evt));
     }
 
     internal void CancelModuleLoads()
     {
         _moduleLoader.Dispose();
         foreach (var child in NestedEngines()) child.CancelModuleLoads();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        foreach (var child in NestedEngines().ToArray()) child.Dispose();
+        foreach (var worker in _workers) worker.terminate();
+        _workers.Clear();
+        _jsWindow.StopTimers();
+        _moduleLoader.Dispose();
+        while (_macrotasks.TryDequeue(out _)) { }
+        _imports.Clear();
+        _unhandledRejections.Clear();
+        _reportedRejections.Clear();
+        _byRaw.Remove(_engine);
+        if (ReferenceEquals(Instance, this)) Instance = null;
+        _engine.Dispose();
     }
 
     /// <summary>

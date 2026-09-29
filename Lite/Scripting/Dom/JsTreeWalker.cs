@@ -1,4 +1,4 @@
-using Jint;
+using Lite.Scripting.Runtime;
 using Lite.Models;
 
 namespace Lite.Scripting.Dom;

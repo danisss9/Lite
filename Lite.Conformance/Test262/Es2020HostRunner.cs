@@ -1,6 +1,5 @@
 using System.Text.Json;
-using Jint;
-using Jint.Native;
+using Lite.Scripting.Runtime;
 using Lite.Conformance.Harness;
 using Lite.Scripting;
 using Microsoft.AspNetCore.Builder;
@@ -112,9 +111,9 @@ internal static class Es2020HostRunner
             var engine = site.Empty(); JsValue? observed = null;
             engine.ScriptFailed += error => observed = error;
             engine.Execute("globalThis.thrown = {code:42}; throw thrown;");
-            Require(ReferenceEquals(observed, engine.RawEngine.GetValue("thrown")), "Script error identity lost");
+            Require(observed?.Equals(engine.RawEngine.GetValue("thrown")) == true, "Script error identity lost");
             engine.Execute("return 1;");
-            Require(observed is Jint.Native.Error.ErrorInstance && observed.AsObject().Get("name").ToString() == "SyntaxError", "Script parse error type lost");
+            Require(observed?.IsError() == true && observed.Get("name").ToString() == "SyntaxError", "Script parse error type lost");
         },
         ["annex-b-document-all"] = site => Check(site.Empty(), """
             if (document.all === undefined) throw Error('document.all is not implemented');

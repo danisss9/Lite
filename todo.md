@@ -116,13 +116,13 @@ Scope follows the pinned editions: later HTML additions such as `details`/`summa
 - [ ] **Review:** Complete grammar, Unicode, declarations/scope, functions/classes, destructuring, iteration, generators, async functions/iteration, objects, proxies, reflect, symbols, and abstract operations.
 - [ ] **Review:** Complete numbers/BigInt, strings/RegExp, dates/JSON, collections, buffers/typed arrays/DataView, Atomics/shared memory, promises, and all standard built-ins.
 - [ ] **Review:** Complete script/module parsing, linking, evaluation, namespaces/live bindings, cycles, dynamic import, `import.meta`, and abrupt completion semantics.
-- [ ] **Review:** Complete Annex B web compatibility behavior and all proper-tail-call positions/execution-context effects. Proper tail calls already have a passing focused test; this is a coverage review.
-- [ ] **Confirmed gap:** Correct the stock-Jint Annex B block-function case where a declaration named `arguments` shadows the function's arguments object (`block-decl-func-skip-arguments.js`). Retain the exact reproducer until a supported stock-Jint release passes it.
+- [ ] **Review:** Complete Annex B web compatibility behavior and review all proper-tail-call positions and execution-context effects.
+- [ ] **Confirmed gap:** Implement proper tail calls in QuickJS or provide a compatible engine-level solution; deep tail-call Test262 smoke cases currently overflow the stack.
 - [ ] **Review:** Complete shared-memory agent scheduling, memory-ordering tests, blocking/nonblocking `Atomics.wait` behavior, and browser agent configuration.
 
 ### Browser host integration
 
-- [ ] **Confirmed gap:** Implement live `document.all` with Annex B `[[IsHTMLDDA]]` falsy, loose-equality, `typeof`, and callable behavior; find a supported stock-Jint integration path.
+- [ ] **Confirmed gap:** Implement live `document.all` with Annex B `[[IsHTMLDDA]]` falsy, loose-equality, `typeof`, and callable behavior in the QuickJS binding.
 - [ ] **Review:** Carry credentials, referrer, CORS, redirect-taint, MIME, cancellation, and other fetch options through root and descendant module loads.
 - [ ] **Review:** Complete module URL canonicalization, importer-relative resolution, inline-module identity, failed-load caching, and source ownership after redirects or callback/eval imports.
 - [ ] **Review:** Complete document/iframe realm isolation for globals, intrinsics, module maps/jobs, navigation cancellation, and cross-realm errors.

@@ -1,3 +1,4 @@
+using Lite.Scripting.Runtime;
 using System.Globalization;
 using Lite.Models;
 using Lite.Rendering;
@@ -201,11 +202,11 @@ public class JsTextMetrics
 /// <summary>Wraps the canvas element for JS access to getContext().</summary>
 public class JsCanvas
 {
-    private readonly Jint.Engine _engine;
+    private readonly Engine _engine;
     private readonly LayoutNode _node;
     private JsCanvasContext2D? _ctx;
 
-    public JsCanvas(Jint.Engine engine, LayoutNode node)
+    public JsCanvas(Engine engine, LayoutNode node)
     {
         _engine = engine;
         _node = node;

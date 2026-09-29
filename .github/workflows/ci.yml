@@ -23,6 +23,11 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc
+
       - name: Cache pinned conformance inputs
         uses: actions/cache@v4
         with:

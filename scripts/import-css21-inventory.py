@@ -106,10 +106,53 @@ def merge_reviews(filename, records, key, fields):
     return previous
 
 
+def official_proposals():
+    """Derive tooling-assisted applicability proposals from the official-suite catalog.
+
+    Proposals stage in Css21/css21-official-proposals.json for the bulk human review; they
+    never enter css21-applicability.json directly and are not conformance claims."""
+    catalog_path = ROOT / "Lite.Conformance/artifacts/css21-official-catalog.json"
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    cases = []
+    for case in catalog["cases"]:
+        flags = case.get("flags", [])
+        if "may" in flags:
+            classification, basis = "optional", "flagged may: specification-permitted choice"
+        elif "interact" in flags or "animated" in flags:
+            classification, basis = "applicable", "requires interaction/animation: manual evidence"
+        elif case["kind"] == "reftest":
+            classification, basis = "applicable", "machine-checkable reference pair"
+        else:
+            classification, basis = "applicable", "self-describing rendering test"
+        evidence = "manual" if ("interact" in flags or "animated" in flags) else \
+            ("reftest" if case["kind"] == "reftest" else "selftest-scan")
+        cases.append(dict(path=case["path"], kind=case["kind"], variant=case["variant"],
+            proposedClassification=classification, evidence=evidence, basis=basis,
+            flags=flags, helps=case.get("helps", []), assert_=case.get("assert", "")))
+    cases.sort(key=lambda c: c["path"])
+    result = dict(schemaVersion=1, target="https://www.w3.org/Style/CSS/Test/CSS2.1/20110323/",
+        generatedFrom="artifacts/css21-official-catalog.json",
+        note="Tooling-assisted proposals for the bulk applicability review; every record requires human review before entering css21-applicability.json.",
+        counts=dict(total=len(cases), reftests=sum(1 for c in cases if c["evidence"] == "reftest"),
+            optional=sum(1 for c in cases if c["proposedClassification"] == "optional"),
+            manual=sum(1 for c in cases if c["evidence"] == "manual")),
+        cases=[{k: v for k, v in case.items() if k != "assert_"} | {"assert": case["assert_"]} for case in cases])
+    destination = ROOT / "Lite.Conformance/Css21/css21-official-proposals.json"
+    destination.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"css21-official-proposals.json: {len(cases)} cases; "
+          f"{result['counts']['reftests']} reftests, {result['counts']['optional']} optional, "
+          f"{result['counts']['manual']} manual")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, help="Use an offline copy of the pinned css2.zip")
+    parser.add_argument("--official-proposals", action="store_true",
+        help="Only regenerate official-suite applicability proposals from the built catalog")
     args = parser.parse_args()
+    if args.official_proposals:
+        official_proposals()
+        return
     cached = ROOT / "Lite.Conformance/vendor/css21-spec-20110607/css2.zip"
     source = args.archive or cached
     if source.exists():

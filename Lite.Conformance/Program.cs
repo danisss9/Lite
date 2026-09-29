@@ -15,6 +15,15 @@ internal static class Program
         if (args.Length is 1 or 2 && args[0] == "--test262-worker") return Test262Runner.Worker(args.Length == 2 ? args[1] : null);
         if (args.Length == 4 && args[0] == "--wpt-worker")
             return WptRunner.Worker(args[1], args[2], args[3]);
+        if (args.Length == 2 && args[0] == "--css21-tree-dump")
+        {
+            // Diagnostic: writes the canonical official-suite tree stream that the pinned
+            // treeSha256 hashes, so scripts\fetch-tests.ps1 can be diffed against it byte
+            // for byte when the two hash computations disagree.
+            File.WriteAllBytes(args[1], OfficialCatalog.CanonicalTree());
+            Console.WriteLine(OfficialCatalog.ComputeTreeSha256());
+            return 0;
+        }
         string? suite = null;
         string? filter = null;
         string? survey = null;
@@ -27,6 +36,7 @@ internal static class Program
         bool requireCssReady = false;
         bool requireEs2020Ready = false;
         string? cssMedia = null;
+        string? cssCatalog = null;
         string test262Set = "full";
         var evidencePaths = new List<string>();
 
@@ -94,6 +104,10 @@ internal static class Program
                     cssMedia = args[++i];
                     if (cssMedia is not ("screen" or "print")) { Console.Error.WriteLine("--media must be screen or print."); return 2; }
                     break;
+                case "--catalog" when i + 1 < args.Length:
+                    cssCatalog = args[++i];
+                    if (cssCatalog is not ("all" or "wpt" or "official")) { Console.Error.WriteLine("--catalog must be all, wpt, or official."); return 2; }
+                    break;
                 case "--require-html-ready":
                     requireHtmlReady = true;
                     break;
@@ -128,6 +142,8 @@ internal static class Program
         { Console.Error.WriteLine("--evidence requires profile or es2020-inventory"); return 2; }
         if (cssMedia is not null && !suite.Equals("css21-full", StringComparison.OrdinalIgnoreCase))
         { Console.Error.WriteLine("--media requires --suite css21-full."); return 2; }
+        if (cssCatalog is not null && !suite.Equals("css21-full", StringComparison.OrdinalIgnoreCase))
+        { Console.Error.WriteLine("--catalog requires --suite css21-full."); return 2; }
         if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html5" or "html5-inventory" or "css21" or "css21-full" or "css21-inventory" or "test262" or "es2020-inventory" or "es2020-host"))
         { Console.WriteLine("--report is supported by profile, wpt, html5, html5-inventory, css21, and test262."); return 2; }
         if (survey is not null && suite.Equals("css21", StringComparison.OrdinalIgnoreCase) && reportPath is not null)
@@ -144,7 +160,7 @@ internal static class Program
                 "css21" when survey is not null => RefTestRunner.Survey(survey, surveyLimit),
                 "css21" => RefTestRunner.Run(filter, shard, reportPath),
                 "css21-inventory" => Css21Inventory.Run(reportPath),
-                "css21-full" => Css21FullRunner.Run(cssMedia ?? "screen", filter, shard, reportPath),
+                "css21-full" => Css21FullRunner.Run(cssMedia ?? "screen", filter, shard, reportPath, cssCatalog),
                 "test262" => Test262Runner.Run(filter, shard, reportPath, test262Set),
                 "es2020-inventory" => Test262Catalog.Run(reportPath, evidencePaths),
                 "es2020-host" => Es2020HostRunner.Run(filter, shard, reportPath),
@@ -206,6 +222,7 @@ internal static class Program
               --require-ready        (profile) Fail unless every release-readiness check passes
               --require-css-ready    (profile) Require CSS 2.1 screen and print completion
               --media <screen|print> (css21-full) Select medium; defaults to screen
+              --catalog <all|wpt|official> (css21-full) Select candidate catalogs; defaults to all
               --require-html-ready   (profile) Require completion of the HTML 5.0 profile
               --evidence <path>      (profile) Consume executed evidence; may be repeated
               --wpt-base-url <url>   Use an upstream wpt serve instance for vendored WPT tests

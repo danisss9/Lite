@@ -1,5 +1,4 @@
-using Jint;
-using Jint.Native;
+using Lite.Scripting.Runtime;
 using Lite.Models;
 
 namespace Lite.Scripting.Dom;
@@ -29,7 +28,7 @@ public class JsDocument
 
     /// <summary>Returns the window object (document.defaultView). Returned as a live JsValue:
     /// a CLR round-trip (ToObject) would hand the result converter a graph that cycles through
-    /// globalThis and throw "Cyclic reference detected" (Jint ResultConverter).</summary>
+    /// globalThis and throw "Cyclic reference detected".</summary>
     public JsValue? defaultView => _engine.GetValue("window");
 
     public JsElement? body =>

@@ -1,5 +1,4 @@
-using Jint;
-using Jint.Native;
+using Lite.Scripting.Runtime;
 using Lite.Models;
 
 namespace Lite.Scripting.Dom;
@@ -57,7 +56,7 @@ public class JsResizeObserver
 
     public JsResizeObserver(JsValue callback)
     {
-        _engine = callback.AsObject().Engine;
+        _engine = callback.AsObject().Engine ?? throw new ArgumentException("Callback has no JavaScript realm", nameof(callback));
         _callback = callback;
         ResizeObserverRegistry.Register(_engine, this);
     }

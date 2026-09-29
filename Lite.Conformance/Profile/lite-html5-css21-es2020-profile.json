@@ -3326,7 +3326,7 @@
       "tests": [],
       "implementationAreas": [
         "Lite/Scripting",
-        "Jint 4.16.3"
+        "Lite.QuickJs 2026-06-04"
       ]
     },
     {
@@ -3339,7 +3339,7 @@
       "status": "untested",
       "tests": [],
       "implementationAreas": [
-        "Jint 4.16.3"
+        "Lite.QuickJs 2026-06-04"
       ]
     },
     {
@@ -3361,7 +3361,7 @@
         }
       ],
       "implementationAreas": [
-        "Jint 4.16.3"
+        "Lite.QuickJs 2026-06-04"
       ]
     },
     {
@@ -3383,7 +3383,7 @@
         }
       ],
       "implementationAreas": [
-        "Jint 4.16.3"
+        "Lite.QuickJs 2026-06-04"
       ]
     },
     {
@@ -3405,7 +3405,7 @@
         }
       ],
       "implementationAreas": [
-        "Jint 4.16.3"
+        "Lite.QuickJs 2026-06-04"
       ]
     },
     {
@@ -3427,7 +3427,7 @@
         }
       ],
       "implementationAreas": [
-        "Jint 4.16.3",
+        "Lite.QuickJs 2026-06-04",
         "Lite.Conformance/Test262/Test262Runner.cs"
       ]
     },
@@ -3450,7 +3450,7 @@
         }
       ],
       "implementationAreas": [
-        "Jint 4.16.3"
+        "Lite.QuickJs 2026-06-04"
       ]
     },
     {
@@ -3473,7 +3473,7 @@
       ],
       "implementationAreas": [
         "Lite.Conformance/Test262/Test262ModuleLoader.cs",
-        "Jint 4.16.3"
+        "Lite.QuickJs 2026-06-04"
       ]
     },
     {
@@ -3493,9 +3493,9 @@
       ],
       "implementationAreas": [
         "Lite/Scripting/Dom/JsDocument.cs",
-        "Jint 4.16.3"
+        "Lite.QuickJs 2026-06-04"
       ],
-      "notes": "document.all is not implemented. Jint's conformance-only IsHTMLDDA class and type flags are internal on the 4.16.3 pin, with no verified supported public hook for a real Lite collection, and a truthy object is not a replacement. Published so the host suite records this as an expected failure rather than a regression; it still keeps es2020ProfileReady false."
+      "notes": "document.all is not implemented. QuickJS supports IsHTMLDDA on host objects, but Lite still needs a live HTMLAllCollection binding with the required behavior. Published so the host suite records this as an expected failure rather than a regression; it still keeps es2020ProfileReady false."
     },
     {
       "id": "es2020.annexb.block-decl-func-arguments",
@@ -3504,7 +3504,7 @@
       "url": "https://262.ecma-international.org/11.0/#sec-block-level-function-declarations-web-legacy-compatibility-semantics",
       "title": "A block-level function declaration named arguments does not replace the arguments object",
       "applicability": "included",
-      "status": "failing",
+      "status": "implemented",
       "tests": [
         {
           "suite": "test262",
@@ -3513,9 +3513,9 @@
         }
       ],
       "implementationAreas": [
-        "Jint 4.16.3"
+        "Lite.QuickJs 2026-06-04"
       ],
-      "notes": "Stock-engine defect reproduced on the pinned Jint 4.16.3: the block function shadows the arguments object. The test keeps executing and keeps es2020ProfileReady false; it is published so the shard reports it as a known failure rather than a regression. Move it to Test262/skip-list.txt as a dependency-exception once an upstream issue exists to cite."
+      "notes": "The exact sloppy-mode Test262 reproducer passes on QuickJS. Complete ES2020 readiness still requires the full language and host review and current passing execution evidence."
     }
   ]
 }

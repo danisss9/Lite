@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Lite.Conformance.Css21;
 using Lite.Conformance.Wpt;
 
 namespace Lite.Conformance.Harness;
@@ -70,8 +71,10 @@ internal static class ExecutionEvidence
     {
         var directory = Path.GetDirectoryName(typeof(Lite.BrowserWindow).Assembly.Location)!;
         var input = new StringBuilder(HashFile(Path.Combine(root, "Directory.Packages.props")));
-        foreach (var name in new[] { "AngleSharp.dll", "AngleSharp.Css.dll", "Jint.dll", "Acornima.dll", "SkiaSharp.dll", "YamlDotNet.dll" })
-            input.Append('\n').Append(name).Append(':').Append(HashFile(Path.Combine(directory, name)));
+        foreach (var name in new[] { "AngleSharp.dll", "AngleSharp.Css.dll", "Lite.QuickJs.dll", "litequickjs.dll", "Acornima.dll", "SkiaSharp.dll", "YamlDotNet.dll" })
+            input.Append('\n').Append(name).Append(':').Append(HashFile(name == "litequickjs.dll"
+                ? Path.Combine(directory, "runtimes", "win-x64", "native", name)
+                : Path.Combine(directory, name)));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(input.ToString()))).ToLowerInvariant();
     }
 
@@ -91,6 +94,10 @@ internal static class ExecutionEvidence
         }
         if (File.Exists(WptCatalog.ManifestPath))
             hash.AppendData(Encoding.UTF8.GetBytes("wpt-manifest\0" + HashFile(WptCatalog.ManifestPath)));
+        // The official-suite catalog pins the vendored tree through its provenance fields;
+        // hashing it ties CSS evidence to the exact vendored snapshot.
+        if (File.Exists(OfficialCatalog.CatalogPath))
+            hash.AppendData(Encoding.UTF8.GetBytes("css21-official-catalog\0" + HashFile(OfficialCatalog.CatalogPath)));
         return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
     }
 
@@ -203,8 +210,11 @@ internal static class ExecutionEvidence
     {
         var start = new ProcessStartInfo("git")
         {
-            WorkingDirectory = root, UseShellExecute = false, CreateNoWindow = true,
-            RedirectStandardOutput = true, RedirectStandardError = true,
+            WorkingDirectory = root,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
         };
         foreach (var arg in args) start.ArgumentList.Add(arg);
         using var process = Process.Start(start) ?? throw new IOException("Cannot run git for evidence identity.");

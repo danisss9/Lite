@@ -189,6 +189,7 @@ public class BrowserWindow
             User32.TranslateMessage(ref msg);
             User32.DispatchMessage(ref msg);
         }
+        _rootNode?.DocumentState?.Engine?.Dispose();
         _session.Dispose();
     }
 
@@ -987,7 +988,7 @@ public class BrowserWindow
         }
 
         // Commit the new document (mirrors the setup in Run()).
-        _rootNode?.DocumentState?.Engine?.CancelModuleLoads();
+        _rootNode?.DocumentState?.Engine?.Dispose();
         _url = newRoot.DocumentState?.Address ?? _pendingUrl!;
         FormState.FocusedInput = null;
         FormState.OpenDropdown = null;

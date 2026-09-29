@@ -1,12 +1,11 @@
-using Jint;
-using Jint.Native;
+using Lite.Scripting.Runtime;
 
 namespace Lite.Scripting.Dom;
 
 /// <summary>
 /// Backing implementation for the JavaScript fetch() shim. The HTTP request runs on a
 /// background thread; the result is marshaled back onto the engine's event loop and the
-/// supplied JS callback is invoked there (so Jint is only touched from the UI thread).
+/// supplied JS callback is invoked there (so QuickJS is only touched from the UI thread).
 /// Supports http(s) and data: URLs.
 /// </summary>
 internal static class JsFetch
@@ -43,7 +42,7 @@ internal static class JsFetch
         {
             var result = Execute(url, method, requestBody, baseUrl, engine.DocumentState.Session,
                 engine.DocumentState.Address, credentials);
-            // Hop back to the UI thread before touching Jint.
+            // Hop back to the UI thread before touching QuickJS.
             engine.EnqueueMacrotask(() =>
             {
                 try { engine.RawEngine.Invoke(callback, JsValue.FromObject(engine.RawEngine, result)); }

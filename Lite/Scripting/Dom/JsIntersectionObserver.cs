@@ -1,5 +1,4 @@
-using Jint;
-using Jint.Native;
+using Lite.Scripting.Runtime;
 using Lite.Models;
 using SkiaSharp;
 
@@ -54,7 +53,7 @@ public class JsIntersectionObserver
 
     public JsIntersectionObserver(JsValue callback, JsValue? options = null)
     {
-        _engine = callback.AsObject().Engine;
+        _engine = callback.AsObject().Engine ?? throw new ArgumentException("Callback has no JavaScript realm", nameof(callback));
         _callback = callback;
         IntersectionObserverRegistry.Register(_engine, this);
     }

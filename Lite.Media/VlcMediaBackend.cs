@@ -11,7 +11,7 @@ namespace Lite.Media.Vlc;
 /// <see cref="CurrentFrame"/>, which the renderer composites into the element's box.
 ///
 /// All LibVLC callbacks fire on VLC's own threads, so state changes and DOM events are marshalled
-/// onto the page's JS task queue through the <c>schedule</c> delegate (Jint is single-threaded).
+/// onto the page's JS task queue through the <c>schedule</c> delegate (QuickJS runs on its owning thread).
 /// Everything is defensively wrapped: if LibVLC isn't available or a call fails, the backend
 /// degrades to a no-op rather than taking down the host.
 /// </summary>

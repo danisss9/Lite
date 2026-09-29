@@ -44,10 +44,7 @@
       "repository": "https://github.com/tc39/test262.git",
       "revision": "de8e621cdba4f40cff3cf244e6cfb8cb48746b4a",
       "destination": "vendor/test262",
-      "sparseCheckout": [
-        "harness",
-        "test"
-      ],
+      "sparseCheckout": ["harness", "test"],
       "applicabilityManifest": "Test262/es2020-applicability.json",
       "dependencyExceptions": "Test262/skip-list.txt",
       "scope": "full-snapshot",
@@ -60,15 +57,17 @@
       "repository": "https://www.w3.org/Style/CSS/Test/CSS2.1/20110323/",
       "revision": "2011-03-23",
       "destination": "vendor/css21-official-20110323",
-      "variants": [
-        "html4-screen",
-        "xhtml1-screen",
-        "other-formats-screen"
-      ],
+      "variants": ["html4-screen", "xhtml1-screen", "other-formats-screen"],
       "requiredBehaviorTests": 9191,
       "totalTests": 9418,
       "scope": "full-snapshot",
-      "vendored": false
+      "variantAvailability": {
+        "html4-screen": "vendored",
+        "other-formats-screen": "vendored",
+        "xhtml1-screen": "unavailable"
+      },
+      "treeSha256": "24efc17476ddc97c7c5625e0cdc24732666a2fbdd0cf96a946a2f33683676f92",
+      "vendored": true
     }
   ]
 }

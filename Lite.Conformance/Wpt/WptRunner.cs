@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Diagnostics;
+using Lite.Conformance.Css21;
 using Lite.Conformance.Harness;
 using Lite.Scripting;
 
@@ -139,7 +140,7 @@ internal static class WptRunner
                 continue;
             }
             // Trace each test before running it: a test that triggers an uncatchable CLR
-            // StackOverflow (deep JS recursion — a Jint limitation, like the test262 tco-* skips)
+            // StackOverflow (deep JS recursion — an engine limitation, like the test262 tco-* skips)
             // terminates the whole process. The result line is streamed (not buffered), so a
             // crash never loses the passing tests gathered so far; the last [run] line on stderr
             // names the culprit to add to survey-skip.txt.
@@ -173,7 +174,7 @@ internal static class WptRunner
 
     /// <summary>Loads Wpt\survey-skip.txt: exact paths the survey must not run,
     /// each with a reason. These are tests that crash the whole process (uncatchable CLR
-    /// StackOverflow from deep JS recursion — a Jint limitation), so they can't simply fail.</summary>
+    /// StackOverflow from deep JS recursion — an engine limitation), so they can't simply fail.</summary>
     private static List<Skip> LoadSurveySkips()
     {
         var file = ConformancePaths.Manifest(Path.Combine("Wpt", "survey-skip.txt"));
@@ -227,7 +228,7 @@ internal static class WptRunner
     internal static RunResult RunOne(string testPath)
     {
         var test = CatalogCase(testPath);
-        if (WptCatalog.Context(testPath) != "window" || test?.TestDriver == true || test is { Kind: not ("testharness" or "reftest" or "crashtest") })
+        if (WptCatalog.Context(testPath) != "window" || test?.TestDriver == true || test is { Kind: not ("testharness" or "reftest" or "crashtest" or "selftest") })
             return new(Cat.Unsupported, $"Execution support required: {test?.Kind ?? "testharness"}/{WptCatalog.Context(testPath)}", 0, 0);
         var file = ResolveSource(test?.Source ?? testPath.Split(['?', '#'])[0], UsesUpstream(testPath));
         var longTimeout = test?.LongTimeout == true || (file is not null && WptMetadata.Parse(File.ReadAllText(file)).LongTimeout);
@@ -239,8 +240,10 @@ internal static class WptRunner
         var output = Path.Combine(ConformancePaths.EnsureArtifacts(), $"worker-{Guid.NewGuid():N}.json");
         var start = new ProcessStartInfo("dotnet")
         {
-            UseShellExecute = false, CreateNoWindow = true,
-            RedirectStandardOutput = true, RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
         };
         foreach (var arg in new[] { typeof(WptRunner).Assembly.Location, "--wpt-worker", path, url, output }) start.ArgumentList.Add(arg);
         try
@@ -300,6 +303,7 @@ internal static class WptRunner
         {
             "reftest" => WptRefTestRunner.Run(test, CatalogCase),
             "crashtest" => WptVisualPage.RunCrash(test),
+            "selftest" => WptVisualPage.RunSelfTest(test),
             _ => RunInProcess(url),
         };
         File.WriteAllText(output, JsonSerializer.Serialize(result, ExecutionEvidence.JsonOptions));
@@ -316,7 +320,7 @@ internal static class WptRunner
             engine.RawEngine.SetValue("__lite_report", new Action<string>(json => reports.TryAdd(engine, json)));
             void Attach(JsEngine owner)
             {
-                if (owner.RawEngine.Evaluate("typeof add_completion_callback === 'function'") == Jint.Native.JsBoolean.True)
+                if (owner.RawEngine.Evaluate("typeof add_completion_callback === 'function'").AsBoolean())
                 {
                     owner.ScriptExecuted -= Attach;
                     owner.RawEngine.Execute(reporter);
@@ -437,7 +441,11 @@ internal static class WptRunner
         return _catalog.Value.Tests;
     }
     internal static WptCase? CatalogCase(string path) => path.StartsWith("lite/", StringComparison.Ordinal) ? null :
-        Catalog().FirstOrDefault(c => c.Path == path);
+        Catalog().FirstOrDefault(c => c.Path == path) ?? OfficialCatalogCase(path);
+
+    private static WptCase? OfficialCatalogCase(string path) =>
+        path.StartsWith(OfficialCatalog.UrlPrefix, StringComparison.Ordinal) &&
+        OfficialCatalog.Case(path) is { } official ? OfficialCatalog.ToWptCase(official) : null;
 
     private static string DefaultReport(string kind, ShardSpec shard) => Path.Combine(ConformancePaths.EnsureArtifacts(),
         $"wpt-{kind}{(shard.Count > 1 ? $"-{shard.Index}-of-{shard.Count}" : "")}.json");

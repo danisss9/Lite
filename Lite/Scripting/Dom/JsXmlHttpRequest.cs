@@ -1,5 +1,4 @@
-using Jint;
-using Jint.Native;
+using Lite.Scripting.Runtime;
 using Lite.Network;
 
 namespace Lite.Scripting.Dom;
@@ -7,7 +6,7 @@ namespace Lite.Scripting.Dom;
 /// <summary>
 /// XMLHttpRequest. Async requests run the HTTP call on a background thread but marshal every
 /// readyState transition and event callback back onto the engine's event loop via
-/// <see cref="JsEngine.EnqueueMacrotask"/>, so Jint (which is not thread-safe) is only ever
+/// <see cref="JsEngine.EnqueueMacrotask"/>, so QuickJS (which is bound to its owning thread) is only ever
 /// touched from the UI/drain thread. Synchronous requests (async=false) run inline.
 /// </summary>
 public class JsXmlHttpRequest
@@ -81,7 +80,7 @@ public class JsXmlHttpRequest
     private sealed record HttpResult(bool Ok, int Status, string StatusText, string Body,
         Dictionary<string, string> Headers, string? Error);
 
-    /// <summary>Performs the HTTP request off the engine thread. No Jint interaction here.</summary>
+    /// <summary>Performs the HTTP request off the engine thread. No QuickJS interaction here.</summary>
     private HttpResult DoHttp(string? body)
     {
         try

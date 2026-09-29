@@ -1,14 +1,11 @@
-using Jint;
-using Jint.Native;
-using Jint.Runtime;
-using Jint.Runtime.Descriptors;
+using Lite.Scripting.Runtime;
 
 namespace Lite.Scripting.Dom;
 
 /// <summary>
 /// Builds JS-catchable error objects (DOMException + native Error subtypes like TypeError) from
 /// host code <em>without re-entering the engine</em> — calling Invoke/Evaluate/Construct from inside
-/// a host method hangs Jint. The object shape mirrors what testharness.js inspects:
+/// a host method cannot safely re-enter the engine. The object shape mirrors what testharness.js inspects:
 /// own <c>name</c> / <c>message</c> / <c>constructor</c> (+ <c>code</c> for DOMException), which is
 /// all <c>assert_throws_dom</c> / <c>assert_throws_js</c> compare (they use <c>constructor ===</c>
 /// and <c>name</c>, never <c>instanceof</c>). These propagate intact because
@@ -36,7 +33,7 @@ internal static class JsErrors
         Set(err, "code", JsNumber.Create(DomCodes.GetValueOrDefault(name)));
         var ctor = eng.GetValue("DOMException");
         if (ctor.IsObject()) Set(err, "constructor", ctor);
-        return new JavaScriptException(err);
+        return new JavaScriptException(JsValue.FromObject(eng, err));
     }
 
     /// <summary>Builds (does not throw) a native error, e.g. <c>Native("TypeError", msg)</c>.</summary>
@@ -49,9 +46,8 @@ internal static class JsErrors
         Set(err, "message", message);
         var ctor = eng.GetValue(ctorName);
         if (ctor.IsObject()) Set(err, "constructor", ctor);
-        return new JavaScriptException(err);
+        return new JavaScriptException(JsValue.FromObject(eng, err));
     }
 
-    private static void Set(JsObject o, string key, JsValue value) =>
-        o.FastSetProperty(key, new PropertyDescriptor(value, writable: true, enumerable: false, configurable: true));
+    private static void Set(JsObject o, string key, JsValue value) => o.Set(key, value);
 }

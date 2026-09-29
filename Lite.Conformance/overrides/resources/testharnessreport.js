@@ -1,6 +1,6 @@
 /* Lite conformance harness hook. Shadows WPT's stock testharnessreport.js: when the
  * harness completes, serialize all results and hand them to the host via __lite_report,
- * which WptRunner registers on the Jint engine before page scripts run. */
+ * which WptRunner registers on the QuickJS engine before page scripts run. */
 add_completion_callback(function (tests, harness_status) {
   var results = [];
   for (var i = 0; i < tests.length; i++) {

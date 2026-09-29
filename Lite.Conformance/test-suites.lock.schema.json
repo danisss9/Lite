@@ -2,10 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/danisss9/Lite/schemas/test-suites.lock.schema.json",
   "type": "object",
-  "required": [
-    "schemaVersion",
-    "suites"
-  ],
+  "required": ["schemaVersion", "suites"],
   "properties": {
     "$schema": {
       "type": "string"
@@ -18,23 +15,14 @@
       "minItems": 3,
       "items": {
         "type": "object",
-        "required": [
-          "id",
-          "source",
-          "repository",
-          "revision",
-          "destination"
-        ],
+        "required": ["id", "source", "repository", "revision", "destination"],
         "properties": {
           "id": {
             "type": "string",
             "minLength": 1
           },
           "source": {
-            "enum": [
-              "git",
-              "snapshot"
-            ]
+            "enum": ["git", "snapshot"]
           },
           "repository": {
             "type": "string",
@@ -63,10 +51,7 @@
             "type": "string"
           },
           "scope": {
-            "enum": [
-              "sparse",
-              "full-snapshot"
-            ]
+            "enum": ["sparse", "full-snapshot"]
           },
           "checkedOutCandidateTests": {
             "type": "integer",
@@ -94,6 +79,18 @@
           },
           "vendored": {
             "type": "boolean"
+          },
+          "treeSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Whole-tree SHA-256 of the vendored snapshot, printed by scripts/fetch-tests.ps1 after a digest-verified fetch. Required before readiness trusts the tree."
+          },
+          "variantAvailability": {
+            "type": "object",
+            "description": "Per-variant recovery status for snapshot suites whose canonical host is offline.",
+            "additionalProperties": {
+              "enum": ["vendored", "unavailable"]
+            }
           },
           "htmlApplicabilityManifest": {
             "type": "string"

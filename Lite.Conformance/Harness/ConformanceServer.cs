@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Lite.Conformance.Css21;
 using Lite.Conformance.Wpt;
 
 namespace Lite.Conformance.Harness;
@@ -27,7 +28,8 @@ internal static class ConformanceServer
     internal static string TestUrl(string path)
     {
         var upstream = Environment.GetEnvironmentVariable("LITE_WPT_BASE_URL");
-        var local = path.StartsWith("lite/", StringComparison.Ordinal) || path.StartsWith("css21/", StringComparison.Ordinal);
+        var local = path.StartsWith("lite/", StringComparison.Ordinal) || path.StartsWith("css21/", StringComparison.Ordinal) ||
+            path.StartsWith(OfficialCatalog.UrlPrefix, StringComparison.Ordinal);
         return $"{(local || string.IsNullOrWhiteSpace(upstream) ? BaseUrl : upstream.TrimEnd('/'))}/{path.TrimStart('/')}";
     }
 
@@ -114,6 +116,22 @@ internal static class ConformanceServer
             });
         }
 
+        // The official CSS 2.1 suite lives under vendor\css21-official-20110323\ but is
+        // addressed by its suite prefix (css21-official/...), which also keeps the URL
+        // independent of the pinned snapshot date.
+        var officialRoot = Path.Combine(ConformancePaths.Vendor, "css21-official-20110323");
+        if (Directory.Exists(officialRoot))
+        {
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(officialRoot),
+                RequestPath = "/" + OfficialCatalog.UrlPrefix.TrimEnd('/'),
+                ContentTypeProvider = contentTypes,
+                ServeUnknownFileTypes = true,
+                DefaultContentType = "text/plain",
+            });
+        }
+
         app.Start();
         _baseUrl = app.Urls.Single();
         _app = app;
@@ -128,6 +146,15 @@ internal static class ConformanceServer
             var candidate = Path.GetFullPath(Path.Combine(root, rel));
             if (!candidate.StartsWith(Path.GetFullPath(root) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) continue;
             if (File.Exists(candidate)) return candidate;
+        }
+        // css21-official/... addresses vendor\css21-official-20110323\...
+        var officialRoot = Path.Combine(ConformancePaths.Vendor, "css21-official-20110323");
+        if (urlPath.StartsWith("/" + OfficialCatalog.UrlPrefix, StringComparison.Ordinal))
+        {
+            var candidate = Path.GetFullPath(Path.Combine(officialRoot,
+                urlPath[("/" + OfficialCatalog.UrlPrefix).Length..].Replace('/', Path.DirectorySeparatorChar)));
+            if (candidate.StartsWith(Path.GetFullPath(officialRoot) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+                File.Exists(candidate)) return candidate;
         }
         return null;
     }

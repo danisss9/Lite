@@ -5,7 +5,7 @@
       "id": "document-all",
       "reviewed": false,
       "requirement": "Live document.all collection with IsHTMLDDA conversion, equality, typeof and call behavior",
-      "remaining": "Missing collection; a supported stock-Jint host hook has not been verified.",
+      "remaining": "Bind a live document.all collection and mark its QuickJS host object with IsHTMLDDA semantics.",
       "tests": ["annex-b-document-all"]
     },
     {

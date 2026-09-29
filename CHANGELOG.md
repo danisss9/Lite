@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- Replace Jint with bundled QuickJS as Lite's JavaScript runtime and NuGet dependency. Move DOM bindings, modules, dynamic import, and Test262 execution to the new bridge. The unit and browser host suites pass; broader ES2020 conformance remains open, including proper tail calls and `document.all`.
 - Add native browser features needed by reCAPTCHA: load dynamically inserted iframes with the page session, route clicks into their child documents, expose named frames and stable message sources, transfer `MessagePort` objects between iframes and workers, and support element focus and explicit XHR content types. Add focused iframe and Web API regression tests.
 
 ## [0.0.16] - 2026-09-26

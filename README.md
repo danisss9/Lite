@@ -2,7 +2,7 @@
 
 Lite is an experimental HTML, CSS, and JavaScript rendering engine for Windows, written in C#. It turns a URL into a native Win32 window without embedding WebView2 or another browser engine.
 
-HTML and CSS are parsed with AngleSharp, layout is calculated by Lite's own layout engine, pixels are drawn with SkiaSharp, and JavaScript runs in Jint. The project is intended for developers exploring browser internals, building constrained HTML-driven interfaces, or experimenting with a small managed rendering stack.
+HTML and CSS are parsed with AngleSharp, layout is calculated by Lite's own layout engine, pixels are drawn with SkiaSharp, and JavaScript runs in QuickJS through Lite's native bridge. The project is intended for developers exploring browser internals, building constrained HTML-driven interfaces, or experimenting with a small managed rendering stack.
 
 > Lite implements a practical subset of the web platform. It is not a replacement for a production browser, and arbitrary websites should not be expected to render exactly as they do in Chromium, Firefox, or Safari.
 
@@ -26,7 +26,7 @@ HTML and CSS are parsed with AngleSharp, layout is calculated by Lite's own layo
 ## Requirements
 
 - Windows
-- .NET 8 SDK to build the repository
+- .NET 8 SDK and MinGW-w64 GCC to build the repository's QuickJS native library
 - An HTTP or HTTPS URL to render
 
 Lite currently uses Win32 directly, so it is not cross-platform. Local pages should be served over HTTP; the example project includes a small static-file server for that purpose.
@@ -101,7 +101,7 @@ Real audio and video playback use LibVLC when its native Windows libraries are a
 | `StyleResolver` | Resolves the cascade and reapplies styles after DOM mutations |
 | `BoxEngine` | Calculates block, inline, flex, table, float, and positioned layouts |
 | `Drawer` | Converts the layout tree into a SkiaSharp bitmap and hit regions |
-| `JsEngine` | Hosts Jint and exposes the DOM, events, timers, networking, storage, and module APIs |
+| `JsEngine` | Hosts QuickJS and exposes the DOM, events, timers, networking, storage, and module APIs |
 | `SvgRenderer` / `CanvasRenderer` | Paint inline SVG and Canvas 2D content |
 | `Lite.Media` | Optionally connects HTML media elements to LibVLC |
 

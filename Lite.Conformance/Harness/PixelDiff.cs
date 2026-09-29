@@ -41,6 +41,33 @@ internal static class PixelDiff
         return new PixelDiffResult(match, diff, expectedPixels.Length, null);
     }
 
+    /// <summary>Reftest comparison with a per-channel tolerance and an absolute differing-pixel
+    /// budget, as WPT fuzzy metadata specifies it (maxDifference and totalPixels).</summary>
+    public static PixelDiffResult Compare(SKBitmap expected, SKBitmap actual, byte tolerance, int pixelBudget)
+    {
+        if (expected.Width != actual.Width || expected.Height != actual.Height)
+            return new PixelDiffResult(false, 0, 0,
+                $"size mismatch: expected {expected.Width}x{expected.Height}, actual {actual.Width}x{actual.Height}");
+
+        var expectedPixels = expected.Pixels;
+        var actualPixels = actual.Pixels;
+        int diff = 0;
+        for (int i = 0; i < expectedPixels.Length; i++)
+        {
+            var e = expectedPixels[i];
+            var a = actualPixels[i];
+            if (Math.Abs(e.Red - a.Red) > tolerance ||
+                Math.Abs(e.Green - a.Green) > tolerance ||
+                Math.Abs(e.Blue - a.Blue) > tolerance ||
+                Math.Abs(e.Alpha - a.Alpha) > tolerance)
+                diff++;
+        }
+
+        bool match = diff <= pixelBudget;
+        return new PixelDiffResult(match, diff, expectedPixels.Length,
+            match ? null : $"{diff} pixels differ beyond the allowed {pixelBudget}");
+    }
+
     /// <summary>Writes expected/actual/diff PNGs into the artifacts folder for triage.</summary>
     public static void WriteFailureArtifacts(string name, SKBitmap expected, SKBitmap actual, byte tolerance = ChannelTolerance)
     {
