@@ -2,10 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.0.17] - 2026-09-30
 
-- Replace Jint with bundled QuickJS as Lite's JavaScript runtime and NuGet dependency. Move DOM bindings, modules, dynamic import, and Test262 execution to the new bridge. The unit and browser host suites pass; broader ES2020 conformance remains open, including proper tail calls and `document.all`.
+This release replaces the JavaScript engine: Jint is removed and Lite now runs a bundled, pinned native QuickJS through a Windows x64 bridge, with DOM bindings, modules, dynamic import, and Test262 execution moved onto it. It adds the iframe and messaging features reCAPTCHA requires, vendors the official CSS 2.1 suite behind a verified catalog, and fixes stylesheet charset resolution.
+
+- Replace Jint with bundled QuickJS as Lite's JavaScript runtime and NuGet dependency. The new `Lite.QuickJs` project pins the QuickJS 2026-06-04 source archive by SHA-256, applies numbered patches through `build-quickjs.ps1`, and embeds the resulting `litequickjs.dll` in the package under `runtimes/win-x64/native` with a build-fingerprint record beside it. Move DOM bindings, modules, dynamic import, and Test262 execution to the new bridge. The unit and browser host suites pass; broader ES2020 conformance remains open, including full proper tail calls.
+- Bind a live, callable `document.all` HTMLAllCollection with Annex B `[[IsHTMLDDA]]` behavior — falsy conversion, loose equality, `typeof`, and callability — on QuickJS host-object support. The focused `annex-b-document-all` host case now passes and leaves the expected-failure list; the complete legacy property semantics and normative obligation review remain open.
+- Release the current bytecode frame before entering direct strict tail calls through the new `0001-strict-tail-call-trampoline.patch` engine build patch, covering the direct and mutual calls QuickJS already emits as tail-call opcodes. Conditional expression tail positions, bound/proxy forwarding, and full Test262 tail-call evidence still need implementation.
 - Add native browser features needed by reCAPTCHA: load dynamically inserted iframes with the page session, route clicks into their child documents, expose named frames and stable message sources, transfer `MessagePort` objects between iframes and workers, and support element focus and explicit XHR content types. Add focused iframe and Web API regression tests.
+- Vendor the official 23 March 2011 CSS 2.1 suite behind `OfficialCatalog`: test/reference structure is derived from the suite's own `reftest.list`, per-test metadata (flags, assertions, spec anchors) from each test's head, and the vendored tree is pinned with a whole-tree SHA-256 that the suite lock must publish. Execution uses the tree-verified catalog; readiness additionally requires the lock's pinned tree hash.
+- Fix stylesheet charset resolution to try the raw label before the underscore fallback, so UTF-8 stylesheets decode through the label .NET recognizes instead of raising first-chance exceptions on every request, while legacy labels like `shift-JIS` still fall back to `shift_jis`. Skip style rules whose selector text is empty, and register the code pages provider in the tests that assert this.
 
 ## [0.0.16] - 2026-09-26
 
