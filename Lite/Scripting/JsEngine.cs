@@ -653,8 +653,11 @@ internal class JsEngine : IDisposable
         CurrentScriptNode = FindScriptNode(script, sourceUrl);
         try { _engine.Execute(script, sourceUrl); }
         catch (JavaScriptException ex) { ReportScriptError(ex.Error); }
-        catch (QuickJsException ex) { ReportScriptError(ex.ErrorValue is { } value ?
-            new JsValue(_engine, value.Clone()) : (JsValue)ex.Message); ex.Dispose(); }
+        catch (QuickJsException ex)
+        {
+            ReportScriptError(ex.ErrorValue is { } value ?
+            new JsValue(_engine, value.Clone()) : (JsValue)ex.Message); ex.Dispose();
+        }
         catch (Exception ex) { ReportScriptError((JsValue)ex.Message); }
         finally
         {
@@ -691,8 +694,11 @@ internal class JsEngine : IDisposable
             _engine.Call(handler, thisValue, eventArg);
         }
         catch (JavaScriptException ex) { ReportScriptError(ex.Error); }
-        catch (QuickJsException ex) { ReportScriptError(ex.ErrorValue is { } value ?
-            new JsValue(_engine, value.Clone()) : (JsValue)ex.Message); ex.Dispose(); }
+        catch (QuickJsException ex)
+        {
+            ReportScriptError(ex.ErrorValue is { } value ?
+            new JsValue(_engine, value.Clone()) : (JsValue)ex.Message); ex.Dispose();
+        }
         catch (Exception ex) { ReportScriptError((JsValue)ex.Message); }
         finally { FlushMicrotasks(); }
     }
@@ -814,7 +820,10 @@ internal class JsEngine : IDisposable
     {
         var evt = JsValue.FromObject(_engine, new
         {
-            type = "message", data, origin, source,
+            type = "message",
+            data,
+            origin,
+            source,
             ports = ports ?? [],
         });
         _jsWindow.DispatchEvent("message", evt);

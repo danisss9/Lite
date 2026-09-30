@@ -10,6 +10,9 @@ public class JsDocument
     private readonly Engine _engine;
     private readonly LayoutNode _root;
     private readonly AngleSharp.Dom.IDocument? _document;
+    // Title store for facades over a synthetic root (no authoritative DOM): the root is not
+    // bound to the source document's element, so there is no <title> element to reflect.
+    private string? _title;
     internal bool HasAuthoritativeDom => _document is not null;
     private DocumentState? State => JsEngine.For(_engine)?.DocumentState;
     private JsElement Wrap(INode node) => JsElement.For(_engine, State!.ForDomNode(node));
@@ -243,10 +246,11 @@ public class JsDocument
     // ---- document metadata ----
     public string title
     {
-        get => _document?.Title ?? string.Empty;
+        get => _document?.Title ?? _title ?? string.Empty;
         set
         {
             var title = value ?? string.Empty;
+            _title = title;
             if (_document is { } doc) doc.Title = title;
             JsEngine.For(_engine)?.OnTitleChange?.Invoke(title);
         }

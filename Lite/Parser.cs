@@ -763,7 +763,11 @@ internal static class Parser
 
         var href = tag == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, tag, directText, elementStyle, href);
-        node.DomNode = element;
+        // NOTE: node.DomNode is deliberately bound at the END of Traverse, not here. Attribute
+        // capture below mirrors DOM values into the rendering cache; binding early would route
+        // those writes back through element.SetAttribute — mutating the very NamedNodeMap the
+        // capture loops enumerate ("Collection was modified") and materialising rendering-only
+        // normalisations (option value fallbacks, canvas default sizes) as authored DOM attributes.
         if (deferredLineHeight is not null)
             node.StyleOverrides[PropertyNames.LineHeight] = deferredLineHeight;
 
@@ -1185,6 +1189,9 @@ internal static class Parser
         // and the split needs the final child list.
         CreateFirstLetterChild(node);
 
+        // Capture complete: only now is the rendering object bound to its DOM node, so any
+        // later LayoutNode attribute write propagates to the authoritative AngleSharp element.
+        node.DomNode = element;
         return node;
     }
 
@@ -2943,6 +2950,13 @@ internal static class Parser
             Session = owner.Session
         };
         if (owner.ParserContext is null) Current.CssRules.AddRange(owner.StyleRules);
+        // Projecting DOM children is a fragment operation: scripts found in the subtree must be
+        // parsed but never queued for execution (ParseFragment sets the same flag). Without it,
+        // CollectScript would append to _pendingScripts while ParseOpenedDocument is still
+        // enumerating that queue — "Collection was modified" — and would run markup-authored
+        // script text that innerHTML must not execute.
+        var wasFragment = Current.IsFragment;
+        Current.IsFragment = true;
         var savedCounters = _counters.ToDictionary(kv => kv.Key, kv => new List<int>(kv.Value));
         var savedVerbose = _verbose;
         _verbose = false;
@@ -2972,6 +2986,7 @@ internal static class Parser
         }
         finally
         {
+            Current.IsFragment = wasFragment;
             _verbose = savedVerbose;
             _counters.Clear();
             foreach (var kv in savedCounters) _counters[kv.Key] = kv.Value;

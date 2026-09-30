@@ -55,12 +55,15 @@ internal sealed class DocumentState(IDocument? document, string address, string 
             var projection = new LayoutNode(null, tag, key.TextContent ?? string.Empty,
                 _renderRoot?.Style ?? throw new InvalidOperationException("Document rendering root is not bound."))
             {
-                DomNode = key,
                 DocumentState = this
             };
+            // Copy the attributes BEFORE binding the DOM node: DomAttributeDictionary mirrors
+            // writes back to the element, and enumerating element.Attributes while its own
+            // SetAttribute runs would throw "Collection was modified".
             if (key is IElement elementNode)
                 foreach (var attribute in elementNode.Attributes)
                     projection.Attributes[attribute.Name] = attribute.Value;
+            projection.DomNode = key;
             // Keep disconnected trees disconnected. A non-rendered ancestor is represented
             // lazily but is never inserted into the rendering children list.
             if (key.Parent is { } parent && parent is not IDocument)

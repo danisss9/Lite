@@ -43,8 +43,11 @@ public static class ConformanceTests
             True(!WptRefTestRunner.Run(test with { References = [new("/" + red, "==")] }, _ => test).Passed);
             True(!WptRefTestRunner.Run(test with { Path = "lite/harness/missing.html", References = [new("/lite/harness/also-missing.html", "==")] }, _ => null).Passed,
                 "Two failed document loads must not compare as a passing blank page.");
-            True(WptRefTestRunner.Run(test with { Options = new JsonObject { ["viewport_size"] = "320x240" },
-                References = [new("/" + red, "==")] }, _ => null).Passed,
+            True(WptRefTestRunner.Run(test with
+            {
+                Options = new JsonObject { ["viewport_size"] = "320x240" },
+                References = [new("/" + red, "==")]
+            }, _ => null).Passed,
                 "Reference documents inherit the root test viewport.");
             True(WptRefTestRunner.Run(test with { Path = "lite/harness/reference-wait.html", References = [new("/" + blue, "==")] }, _ => null).Passed,
                 "TestRendered must release reftest-wait before comparison.");

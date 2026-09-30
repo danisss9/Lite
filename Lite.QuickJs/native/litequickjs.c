@@ -70,7 +70,20 @@ LITE_API void lite_runtime_free(JSRuntime *runtime) {
     free(state);
 }
 
-LITE_API JSContext *lite_context_new(JSRuntime *runtime) { return JS_NewContext(runtime); }
+LITE_API JSContext *lite_context_new(JSRuntime *runtime) {
+    JSContext *context = JS_NewContext(runtime);
+    if (!context) return NULL;
+    LiteRuntimeState *state = JS_GetRuntimeOpaque(runtime);
+    /* Host objects must behave like ordinary JS objects: chain the host class
+     * prototype to Object.prototype so inherited methods (hasOwnProperty,
+     * toString, valueOf, ...) work on DOM wrappers, as other engines provide.
+     * Without this the prototype is NULL and, e.g., WPT's testharness.js
+     * crashes calling NodeList.hasOwnProperty(index) in its results renderer. */
+    JSValue probe = JS_NewObject(context);
+    JS_SetClassProto(context, state->host_class_id, JS_GetPrototype(context, probe));
+    JS_FreeValue(context, probe);
+    return context;
+}
 LITE_API void lite_context_free(JSContext *context) { if (context) JS_FreeContext(context); }
 LITE_API void lite_runtime_set_memory_limit(JSRuntime *runtime, size_t bytes) { JS_SetMemoryLimit(runtime, bytes); }
 LITE_API void lite_runtime_set_stack_limit(JSRuntime *runtime, size_t bytes) { JS_SetMaxStackSize(runtime, bytes); }
