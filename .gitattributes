@@ -1,0 +1,6 @@
+# Patches are applied with `git apply`, which matches context lines
+# byte-for-byte against the LF sources extracted from the QuickJS tarball.
+# A CRLF checkout (core.autocrlf=true, the default on Windows and on
+# GitHub Actions runners) makes every context line mismatch and the patch
+# fails to apply. Keep patch files byte-for-byte identical everywhere.
+*.patch -text

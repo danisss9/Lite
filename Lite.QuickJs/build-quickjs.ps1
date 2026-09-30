@@ -17,6 +17,20 @@ $cache = Join-Path $PSScriptRoot 'obj/quickjs'
 $archive = Join-Path $cache "quickjs-$version.tar.xz"
 $bridge = Join-Path $PSScriptRoot 'native/litequickjs.c'
 $patches = @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'native/patches') -Filter '*.patch' -File | Sort-Object Name)
+# git apply matches context lines byte-for-byte and the QuickJS sources use LF
+# endings. A checkout with core.autocrlf=true (the default on Windows and on
+# GitHub Actions runners) materializes the patches with CRLF endings, which
+# makes every context line mismatch. Normalize to LF copies up front so both
+# hashing and application see identical bytes regardless of the local git EOL
+# configuration.
+$normalizedPatchDirectory = Join-Path $cache 'patches-lf'
+New-Item -ItemType Directory -Force -Path $normalizedPatchDirectory | Out-Null
+$patches = @($patches | ForEach-Object {
+    $normalizedPath = Join-Path $normalizedPatchDirectory $_.Name
+    $contents = [IO.File]::ReadAllText($_.FullName)
+    [IO.File]::WriteAllText($normalizedPath, ($contents -replace "`r`n", "`n"), (New-Object System.Text.UTF8Encoding($false)))
+    Get-Item -LiteralPath $normalizedPath
+})
 $gccCommand = Get-Command gcc.exe -ErrorAction SilentlyContinue
 $gcc = if ($gccCommand) { $gccCommand.Source } else { $null }
 if (-not $gcc) {
