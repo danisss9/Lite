@@ -7,7 +7,9 @@
 # -IncludeCss21Official vendors the official 23 March 2011 CSS 2.1 suite snapshot from the
 # Internet Archive (the canonical host test.csswg.org is offline). Every file's SHA-1 is
 # verified against the CDX capture digest; the resulting tree SHA-256 must be pinned in the
-# lock entry before the vendored copy is trusted.
+# lock entry before the vendored copy is trusted. CI passes the switch on every run because
+# the profile gates require the directory; a vendored tree that already matches the pinned
+# hash short-circuits the import without touching the network.
 
 param(
     [switch]$IncludeCss21Official
@@ -363,11 +365,48 @@ $Css21Worker = {
     "bucket $Bucket failures $failures"
 }
 
+function Get-VendoredTreeSha256($DestRoot) {
+    $entries = @(Get-ChildItem -LiteralPath $DestRoot -Recurse -File | Where-Object {
+            $_.Name -ne 'fetch-failures.log' -and $_.Extension -ne '.download' } | ForEach-Object {
+        $rel = $_.FullName.Substring($DestRoot.Length).TrimStart('\', '/').Replace('\', '/').ToLowerInvariant()
+        [pscustomobject]@{ Rel = $rel; Full = $_.FullName; Length = $_.Length }
+    })
+    # Ordinal sort over the lowered forward-slash relative path, matching OfficialCatalog's
+    # canonical order: PowerShell's default culture sort orders hyphens differently and
+    # produced a different tree hash for the same bytes.
+    $keys = @($entries | ForEach-Object { "$($_.Rel)|$($_.Full)" })
+    [System.Array]::Sort($keys, [System.StringComparer]::Ordinal)
+    $tree = New-Object System.Text.StringBuilder
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    foreach ($key in $keys) {
+        $bar = $key.IndexOf('|')
+        $relative = $key.Substring(0, $bar)
+        $full = $key.Substring($bar + 1)
+        [void]$tree.Append($relative).Append([char]0)
+        [void]$tree.Append(([System.BitConverter]::ToString($sha256.ComputeHash([System.IO.File]::ReadAllBytes($full))) -replace '-', '').ToLowerInvariant()).Append([char]10)
+    }
+    $hash = ([System.BitConverter]::ToString($sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($tree.ToString()))) -replace '-', '').ToLowerInvariant()
+    $sha256.Dispose()
+    [pscustomobject]@{ TreeSha256 = $hash; FileCount = $entries.Count; Bytes = ($entries | Measure-Object -Property Length -Sum).Sum }
+}
+
 function Import-Css21OfficialSnapshot {
     $pin = $SuiteLock.suites | Where-Object { $_.id -eq 'css21-official-20110323' } | Select-Object -First 1
     if (-not $pin) { throw 'The suite lock has no css21-official-20110323 entry.' }
     $destRoot = Resolve-VendorDestination $pin.destination
     if (-not (Test-Path -LiteralPath $destRoot)) { New-Item -ItemType Directory -Force -Path $destRoot | Out-Null }
+
+    # A vendored tree that still matches the pinned hash needs no network at all: skip the
+    # Wayback CDX index and the crawl instead of re-verifying thousands of captures on
+    # every CI run. Anything else falls through to a resumable refetch.
+    if ($pin.PSObject.Properties['treeSha256']) {
+        $existing = Get-VendoredTreeSha256 $destRoot
+        if ($existing.TreeSha256 -eq $pin.treeSha256) {
+            Write-Host "Official CSS 2.1 snapshot already matches the pinned treeSha256; nothing to fetch."
+            return
+        }
+        Write-Host "Vendored official suite tree hash $($existing.TreeSha256) differs from the pinned $($pin.treeSha256); refetching."
+    }
 
     # Variant availability: xhtml1-screen (and the noncanonical printer build) were captured
     # only sparsely by the Internet Archive and cannot be vendored from it. The lock records
@@ -410,30 +449,11 @@ function Import-Css21OfficialSnapshot {
         $failures | Select-Object -First 10 | ForEach-Object { Write-Warning "  $_" }
     }
 
-    $entries = @(Get-ChildItem -LiteralPath $destRoot -Recurse -File | Where-Object {
-            $_.Name -ne 'fetch-failures.log' -and $_.Extension -ne '.download' } | ForEach-Object {
-        $rel = $_.FullName.Substring($destRoot.Length).TrimStart('\', '/').Replace('\', '/').ToLowerInvariant()
-        [pscustomobject]@{ Rel = $rel; Full = $_.FullName; Length = $_.Length }
-    })
-    # Ordinal sort over the lowered forward-slash relative path, matching OfficialCatalog's
-    # canonical order: PowerShell's default culture sort orders hyphens differently and
-    # produced a different tree hash for the same bytes.
-    $keys = @($entries | ForEach-Object { "$($_.Rel)|$($_.Full)" })
-    [System.Array]::Sort($keys, [System.StringComparer]::Ordinal)
-    $tree = New-Object System.Text.StringBuilder
-    $sha256 = [System.Security.Cryptography.SHA256]::Create()
-    foreach ($key in $keys) {
-        $bar = $key.IndexOf('|')
-        $relative = $key.Substring(0, $bar)
-        $full = $key.Substring($bar + 1)
-        [void]$tree.Append($relative).Append([char]0)
-        [void]$tree.Append(([System.BitConverter]::ToString($sha256.ComputeHash([System.IO.File]::ReadAllBytes($full))) -replace '-', '').ToLowerInvariant()).Append([char]10)
-    }
-    $treeSha256 = ([System.BitConverter]::ToString($sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($tree.ToString()))) -replace '-', '').ToLowerInvariant()
-    $sha256.Dispose()
-    $bytes = ($entries | Measure-Object -Property Length -Sum).Sum
+    $verified = Get-VendoredTreeSha256 $destRoot
+    $treeSha256 = $verified.TreeSha256
+    $bytes = $verified.Bytes
     Write-Host ''
-    Write-Host "Official CSS 2.1 snapshot: $($entries.Count) files, $bytes bytes"
+    Write-Host "Official CSS 2.1 snapshot: $($verified.FileCount) files, $bytes bytes"
     Write-Host "  treeSha256 = $treeSha256"
     if ($pin.PSObject.Properties['treeSha256']) {
         if ($pin.treeSha256 -ne $treeSha256) {

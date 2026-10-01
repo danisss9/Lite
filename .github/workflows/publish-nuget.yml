@@ -11,7 +11,8 @@ permissions:
 jobs:
   publish:
     runs-on: windows-latest
-    timeout-minutes: 150
+    # Same reason as ci.yml: a cold vendor cache needs the one-time Internet Archive crawl.
+    timeout-minutes: 300
 
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +49,7 @@ jobs:
 
       - name: Fetch pinned tests
         shell: pwsh
-        run: ./scripts/fetch-tests.ps1
+        run: ./scripts/fetch-tests.ps1 -IncludeCss21Official
 
       - name: Generate pinned WPT manifest
         shell: pwsh

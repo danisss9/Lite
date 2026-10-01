@@ -14,7 +14,9 @@ permissions:
 jobs:
   windows-gates:
     runs-on: windows-latest
-    timeout-minutes: 150
+    # A cold vendor cache triggers the one-time rate-limited Internet Archive crawl for the
+    # official CSS 2.1 snapshot; give it headroom over the usual ~15-minute happy path.
+    timeout-minutes: 300
 
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +42,10 @@ jobs:
 
       - name: Fetch pinned tests
         shell: pwsh
-        run: ./scripts/fetch-tests.ps1
+        # The profile gates validate the official CSS 2.1 snapshot as a vendored suite, so
+        # CI must fetch it even though the canonical host is offline and the copy comes
+        # from the Internet Archive. A cache hit short-circuits to a local hash check.
+        run: ./scripts/fetch-tests.ps1 -IncludeCss21Official
 
       - name: Generate pinned WPT manifest
         shell: pwsh

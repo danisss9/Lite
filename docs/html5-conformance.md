@@ -80,7 +80,7 @@ Browser chrome, OS accessibility platform mappings and HTTP/TLS internals retain
 
 ```powershell
 python scripts/import-html5-sections.py
-./scripts/fetch-tests.ps1
+./scripts/fetch-tests.ps1 -IncludeCss21Official
 ./scripts/build-wpt-manifest.ps1
 dotnet build Lite.sln -c Release
 dotnet run --project Lite.Conformance -c Release --no-build -- --suite html5-inventory

@@ -141,7 +141,9 @@ dotnet run --project Lite.Tests/Lite.Tests.csproj -c Release
 The upstream conformance suites are downloaded separately and pinned by `Lite.Conformance/test-suites.lock.json`:
 
 ```powershell
-./scripts/fetch-tests.ps1
+# -IncludeCss21Official vendors the official CSS 2.1 snapshot from the Internet Archive;
+# the profile gate requires it. A tree that already matches the pinned hash skips the fetch.
+./scripts/fetch-tests.ps1 -IncludeCss21Official
 
 dotnet run --project Lite.Conformance -c Release -- --suite profile
 dotnet run --project Lite.Conformance -c Release -- --suite css21

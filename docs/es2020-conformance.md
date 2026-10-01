@@ -45,7 +45,7 @@ required ES2020 behavior.
 Use Windows x64, .NET 8, and Python. From the repository root:
 
 ```powershell
-./scripts/fetch-tests.ps1
+./scripts/fetch-tests.ps1 -IncludeCss21Official
 ./scripts/build-wpt-manifest.ps1
 dotnet build Lite.sln -c Release
 dotnet run --project Lite.Tests -c Release --no-build
