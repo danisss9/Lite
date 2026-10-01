@@ -7,7 +7,7 @@ namespace Lite.QuickJs;
 /// <summary>Owns a native QuickJS runtime. All calls must occur on its owning thread.</summary>
 internal sealed class QuickJsRuntime : IDisposable
 {
-    private readonly int _threadId = Environment.CurrentManagedThreadId;
+    private int _threadId = Environment.CurrentManagedThreadId;
     private readonly Dictionary<nint, QuickJsRealm> _realms = new();
     private readonly Dictionary<int, Func<QuickJsRealm, QuickJsValue[], QuickJsValue>> _callbacks = new();
     private readonly Native.HostCallback _nativeCallback;
@@ -187,6 +187,22 @@ internal sealed class QuickJsRuntime : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (Environment.CurrentManagedThreadId != _threadId)
             throw new InvalidOperationException("QuickJS runtime accessed from another thread");
+    }
+
+    /// <summary>
+    /// Re-binds the runtime to the calling thread so it can be handed off (e.g. a page parsed on
+    /// a background thread committed to the UI thread). Only valid at quiescent points where the
+    /// previous owner has finished using the runtime — QuickJS has no internal synchronization,
+    /// so concurrent access from two threads remains forbidden. A no-op when the calling thread
+    /// already owns the runtime. Also re-bases QuickJS's stack-overflow watermark, which is
+    /// captured from the thread that created the runtime and is invalid on any other thread.
+    /// </summary>
+    internal void TransferToCurrentThread()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (Environment.CurrentManagedThreadId == _threadId) return;
+        _threadId = Environment.CurrentManagedThreadId;
+        Native.lite_runtime_update_stack_top(Handle);
     }
 
     public void Dispose()
@@ -507,6 +523,7 @@ internal static class Native
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint lite_runtime_new();
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_runtime_free(nint runtime);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_runtime_set_can_block(nint runtime, int canBlock);
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_runtime_update_stack_top(nint runtime);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint lite_context_new(nint runtime);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_context_free(nint context);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint lite_value_dup(nint value);

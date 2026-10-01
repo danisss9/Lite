@@ -1,8 +1,8 @@
 ﻿{
     "version":  "2026-06-04",
     "archiveSha256":  "b376e839b322978313d929fd20663b11ba58b75df5a46c126dd19ea2fa70ad2a",
-    "inputSha256":  "6f7e9e7e3c8b54b2d08114600df168349045d087d684ddfe90a0e623163ed149",
-    "nativeDllSha256":  "9DDA2A09B20C3761FCE0542BA1A0CEC7F6B9FBC9B3ED7C9B99A1991209F1763D",
+    "inputSha256":  "cd5b1db8638f4b8d6701f2920fae06b7aa42044eae36a01dfef89984073f0d8a",
+    "nativeDllSha256":  "B28899CD366585D398F895A47DC40B12139C7447B72DF4319425925B79B56331",
     "compilerVersion":  "16.2.0",
     "compilerTarget":  "x86_64-w64-mingw32",
     "patches":  [

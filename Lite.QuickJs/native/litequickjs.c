@@ -87,6 +87,7 @@ LITE_API JSContext *lite_context_new(JSRuntime *runtime) {
 LITE_API void lite_context_free(JSContext *context) { if (context) JS_FreeContext(context); }
 LITE_API void lite_runtime_set_memory_limit(JSRuntime *runtime, size_t bytes) { JS_SetMemoryLimit(runtime, bytes); }
 LITE_API void lite_runtime_set_stack_limit(JSRuntime *runtime, size_t bytes) { JS_SetMaxStackSize(runtime, bytes); }
+LITE_API void lite_runtime_update_stack_top(JSRuntime *runtime) { if (runtime) JS_UpdateStackTop(runtime); }
 LITE_API void lite_runtime_set_can_block(JSRuntime *runtime, int can_block) { JS_SetCanBlock(runtime, can_block != 0); }
 
 LITE_API LiteValue *lite_value_dup(LiteValue *value) {

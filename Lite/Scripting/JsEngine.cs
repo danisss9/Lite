@@ -888,6 +888,17 @@ internal class JsEngine : IDisposable
         }
     }
 
+    /// <summary>
+    /// Re-binds this engine and its nested iframe engines to the calling thread. Used when a page
+    /// parsed on a background thread is committed to the UI thread, which then owns the event
+    /// loop; call only once the loading thread has finished using the engine.
+    /// </summary>
+    internal void TransferTreeToCurrentThread()
+    {
+        _engine.TransferToCurrentThread();
+        foreach (var child in NestedEngines()) child.TransferTreeToCurrentThread();
+    }
+
     /// <summary>Drains this engine's task queue and those of all nested iframe engines (recursively).</summary>
     internal bool DrainTree()
     {

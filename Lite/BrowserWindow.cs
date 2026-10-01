@@ -987,7 +987,10 @@ public class BrowserWindow
             return;
         }
 
-        // Commit the new document (mirrors the setup in Run()).
+        // Commit the new document (mirrors the setup in Run()). The outgoing engine may have
+        // been created on a previous navigation's background thread — adopt it onto this thread
+        // so its native runtime can be freed here.
+        _rootNode?.DocumentState?.Engine?.TransferTreeToCurrentThread();
         _rootNode?.DocumentState?.Engine?.Dispose();
         _url = newRoot.DocumentState?.Address ?? _pendingUrl!;
         FormState.FocusedInput = null;
@@ -1001,6 +1004,9 @@ public class BrowserWindow
         // Rebind the freshly created JS engine (Parser.TraverseHtml replaced JsEngine.Instance).
         if (JsEngine.Instance is { } engine)
         {
+            // Adopt the engine the background load created: from here on the UI thread drives
+            // its event loop.
+            engine.TransferTreeToCurrentThread();
             engine.SetViewport(_viewport);
             engine.UpdateViewportSize(_width, _height);
             engine.TaskEnqueued += () => User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);

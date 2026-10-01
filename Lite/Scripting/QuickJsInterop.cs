@@ -42,6 +42,9 @@ public sealed class Engine : IDisposable
 
     public void ProcessTasks() => _runtime.PumpJobs();
 
+    /// <summary>Re-binds the engine to the calling thread; see QuickJsRuntime.TransferToCurrentThread.</summary>
+    internal void TransferToCurrentThread() => _runtime.TransferToCurrentThread();
+
     public JsValue GetValue(string name)
     {
         using var global = _realm.Global();

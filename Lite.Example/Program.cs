@@ -5,7 +5,7 @@ using Lite;
 // if the native libraries aren't available).
 Lite.Media.Vlc.VlcMedia.Register();
 
-var address = args.Length > 0 ? args[0] : "http://localhost:4444";
+var address = args.Length > 0 ? args[0] : "https://google.com/";
 if (args.Length == 0)
 {
     var resourcesPath = Path.GetFullPath("resources");
