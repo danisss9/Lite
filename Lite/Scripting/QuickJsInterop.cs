@@ -176,13 +176,17 @@ public sealed class Engine : IDisposable
         using var factory = _realm.HostFunction("create " + type.Name, 0, (_, args) =>
         {
             var candidates = type.GetConstructors();
-            foreach (var constructor in candidates.OrderBy(c => c.GetParameters().Length))
+            var constructor = candidates.OrderBy(c => c.GetParameters().Length)
+                .FirstOrDefault(c => CanBind(c.GetParameters(), args.Length));
+            if (constructor is null)
             {
-                if (!CanBind(constructor.GetParameters(), args.Length)) continue;
-                try { return ConvertToNative(constructor.Invoke(ConvertParameters(constructor.GetParameters(), args))); }
-                catch (TargetInvocationException error) { throw error.InnerException ?? error; }
+                // WebIDL constructors ignore trailing arguments beyond their declared ones.
+                constructor = candidates.Where(c => c.GetParameters().Length <= args.Length)
+                    .OrderByDescending(c => c.GetParameters().Length).FirstOrDefault()
+                    ?? throw new MissingMethodException($"No constructor for {type.Name} with {args.Length} arguments");
             }
-            throw new MissingMethodException($"No constructor for {type.Name} with {args.Length} arguments");
+            try { return ConvertToNative(constructor.Invoke(ConvertParameters(constructor.GetParameters(), args))); }
+            catch (TargetInvocationException error) { throw error.InnerException ?? error; }
         });
         using var makeConstructor = _realm.Eval("(factory => function(...args){ return factory(...args); })");
         // Ordinary JavaScript functions can be called and used with new; returning the host
@@ -212,10 +216,26 @@ public sealed class Engine : IDisposable
             var methods = group.ToArray();
             binding.Method(group.Key, methods.Min(m => m.GetParameters().Length), (target, _, args) =>
             {
-                var method = methods.FirstOrDefault(m => CanBind(m.GetParameters(), args.Length))
-                    ?? throw new MissingMethodException($"No overload of {group.Key} accepts {args.Length} arguments");
-                try { return ConvertToNative(method.Invoke(target, ConvertParameters(method.GetParameters(), args))); }
-                catch (TargetInvocationException error) { throw error.InnerException ?? error; }
+                // WebIDL host behavior: arguments beyond an operation's declared parameters are
+                // ignored (reCAPTCHA calls appendChild(node, reference)), and a match that
+                // cannot convert an argument falls through to the next overload. Too few
+                // arguments still raises — a browser throws TypeError there.
+                var candidates = methods.Where(m => CanBind(m.GetParameters(), args.Length)).ToList();
+                if (candidates.Count == 0)
+                    candidates = methods.Where(m => m.GetParameters().Length <= args.Length)
+                        .OrderByDescending(m => m.GetParameters().Length).ToList();
+                string? bindingFailure = null;
+                foreach (var candidate in candidates)
+                {
+                    var parameters = candidate.GetParameters();
+                    object?[] arguments;
+                    try { arguments = ConvertParameters(parameters, args); }
+                    catch (InvalidCastException error) { bindingFailure = error.Message; continue; }
+                    try { return ConvertToNative(candidate.Invoke(target, arguments)); }
+                    catch (TargetInvocationException error) { throw error.InnerException ?? error; }
+                }
+                throw new MissingMethodException(
+                    bindingFailure ?? $"No overload of {group.Key} accepts {args.Length} arguments");
             });
         }
     }

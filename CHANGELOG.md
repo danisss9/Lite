@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+- Bind reflection host methods the way WebIDL operations behave: arguments beyond an operation's declared parameters are ignored instead of raising `MissingMethodException` — Google's reCAPTCHA client calls `appendChild(node, reference)` with two arguments — and a matched overload that cannot convert an argument (a string passed where a node is required) falls through to the next overload, as browsers do. Calls with too few arguments still raise. Add DOM regression tests for both paths.
+
 ## [0.0.17] - 2026-09-30
 
 This release replaces the JavaScript engine: Jint is removed and Lite now runs a bundled, pinned native QuickJS through a Windows x64 bridge, with DOM bindings, modules, dynamic import, and Test262 execution moved onto it. It adds the iframe and messaging features reCAPTCHA requires, vendors the official CSS 2.1 suite behind a verified catalog, and fixes stylesheet charset resolution.

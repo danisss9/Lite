@@ -130,6 +130,34 @@ public static class DomTests
     }
 
     [Test]
+    public static void MethodCall_ExtraArgumentsRunClosestOverload()
+    {
+        // Google's reCAPTCHA client calls appendChild(node, reference); browsers ignore
+        // trailing arguments beyond a WebIDL operation's declared ones, so the call must run.
+        var (_, body, engine) = NewPage();
+        engine.Execute("""
+            var parent = document.createElement('div');
+            var child = document.createElement('span');
+            parent.appendChild(child, 'ignored');
+            document.body.appendChild(parent, 'ignored');
+            var marked = document.createElement('div');
+            marked.className = 'keep';
+            globalThis.results = [parent.children.length, marked.classList.contains('keep', 'ignored'), !marked.classList.contains('gone', 'ignored')];
+            """);
+        Equal("1,true,true", engine.RawEngine.Evaluate("results.join(',')").ToString());
+        var div = body.Children.First(c => c.TagName == "DIV");
+        Equal("SPAN", div.Children.Single().TagName);
+    }
+
+    [Test]
+    public static void MethodCall_TooFewArgumentsStillThrows()
+    {
+        var (_, _, engine) = NewPage();
+        engine.Execute("var el = document.createElement('div'); try { el.appendChild(); } catch (e) { globalThis.thrown = e.message; }");
+        Contains("appendChild accepts 0 arguments", engine.RawEngine.Evaluate("thrown").ToString());
+    }
+
+    [Test]
     public static void ParseFragment_BuildsElementTree()
     {
         var nodes = Parser.ParseFragment("<div class=\"a\"><p>hello</p><p>world</p></div>");
