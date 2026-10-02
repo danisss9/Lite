@@ -4,12 +4,13 @@
 # Commits and sparse paths come from Lite.Conformance\test-suites.lock.json. To bump a suite,
 # update that file; the resolved revisions printed below must match it exactly.
 #
-# -IncludeCss21Official vendors the official 23 March 2011 CSS 2.1 suite snapshot from the
-# Internet Archive (the canonical host test.csswg.org is offline). Every file's SHA-1 is
-# verified against the CDX capture digest; the resulting tree SHA-256 must be pinned in the
-# lock entry before the vendored copy is trusted. CI passes the switch on every run because
-# the profile gates require the directory; a vendored tree that already matches the pinned
-# hash short-circuits the import without touching the network.
+# -IncludeCss21Official also checks the official 23 March 2011 CSS 2.1 suite snapshot.
+# That snapshot is committed to the repo (byte-exact via .gitattributes), so a tree that
+# matches the pinned hash short-circuits to a local verification without touching the
+# network. The Internet Archive crawl below only runs when the tree is missing or its hash
+# no longer matches the pin - the canonical host test.csswg.org is offline, so the snapshot
+# is re-crawled from web.archive.org captures, with every file's SHA-1 verified against the
+# CDX capture digest and the resulting tree SHA-256 checked against the lock entry.
 
 param(
     [switch]$IncludeCss21Official

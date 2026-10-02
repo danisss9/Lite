@@ -4,3 +4,9 @@
 # GitHub Actions runners) makes every context line mismatch and the patch
 # fails to apply. Keep patch files byte-for-byte identical everywhere.
 *.patch -text
+
+# The official CSS 2.1 snapshot is hash-pinned in test-suites.lock.json and verified by
+# scripts/fetch-tests.ps1 on every CI run. Any end-of-line rewrite on commit or checkout
+# (core.autocrlf=true is the Git default on Windows) would change the bytes and break the
+# pin, so keep the vendored tree byte-exact everywhere.
+Lite.Conformance/vendor/css21-official-20110323/** -text

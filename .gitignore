@@ -399,8 +399,11 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
-# Lite.Conformance: fetched test suites and failure artifacts (baselines ARE checked in)
-Lite.Conformance/vendor/
+# Lite.Conformance: fetched test suites and failure artifacts (baselines ARE checked in).
+# The official CSS 2.1 snapshot is hash-pinned in test-suites.lock.json and committed to the
+# repo, so only the network-fetched suites (WPT, test262, acid) stay out of version control.
+Lite.Conformance/vendor/*
+!Lite.Conformance/vendor/css21-official-20110323/
 Lite.Conformance/artifacts/
 /compatibility-report.json
 

@@ -14,9 +14,10 @@ permissions:
 jobs:
   windows-gates:
     runs-on: windows-latest
-    # A cold vendor cache triggers the one-time rate-limited Internet Archive crawl for the
-    # official CSS 2.1 snapshot; give it headroom over the usual ~15-minute happy path.
-    timeout-minutes: 300
+    # The official CSS 2.1 snapshot is committed to the repo, so the fetch step only clones
+    # WPT/test262 (or restores them from cache) and verifies hash pins; give the full gate
+    # chain generous headroom over the usual ~40-minute happy path.
+    timeout-minutes: 180
 
     steps:
       - uses: actions/checkout@v4
@@ -30,8 +31,9 @@ jobs:
           msystem: MINGW64
           install: mingw-w64-x86_64-gcc
 
-      - name: Cache pinned conformance inputs
-        uses: actions/cache@v4
+      - name: Restore pinned conformance inputs
+        id: vendor-cache
+        uses: actions/cache/restore@v4
         with:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
@@ -42,10 +44,20 @@ jobs:
 
       - name: Fetch pinned tests
         shell: pwsh
-        # The profile gates validate the official CSS 2.1 snapshot as a vendored suite, so
-        # CI must fetch it even though the canonical host is offline and the copy comes
-        # from the Internet Archive. A cache hit short-circuits to a local hash check.
+        # The official CSS 2.1 snapshot is committed to the repo, so this verifies its pinned
+        # tree hash without touching the network; only WPT/test262/acid are fetched. The save
+        # step below persists the vendor tree even when this step fails, so a broken run can
+        # never force the next one to re-clone ~245 MB from scratch.
         run: ./scripts/fetch-tests.ps1 -IncludeCss21Official
+
+      - name: Save pinned conformance inputs
+        # actions/cache@v4 only saves on overall job success; restoring and saving explicitly
+        # keeps a partially fetched (resumable) tree across failed runs.
+        if: always() && steps.vendor-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: Lite.Conformance/vendor
+          key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
 
       - name: Generate pinned WPT manifest
         shell: pwsh
