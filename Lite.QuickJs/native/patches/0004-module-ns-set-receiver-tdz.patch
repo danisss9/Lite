@@ -1,0 +1,24 @@
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -9859,6 +9859,21 @@ int JS_SetPropertyInternal(JSContext *ctx, JSValueConst obj,
+         return JS_ThrowTypeErrorOrFalse(ctx, flags, "not an object");
+     }
+ 
++    /* OrdinarySetWithOwnDescriptor reads Receiver.[[GetOwnProperty]] before
++       any extensibility or creation check. For a module namespace receiver
++       that read throws a ReferenceError while the binding is uninitialized
++       (e.g. super.foo = v when the constructor returned the namespace), and
++       an existing namespace binding is always read-only otherwise. */
++    if (p != JS_VALUE_GET_OBJ(obj) && p->class_id == JS_CLASS_MODULE_NS) {
++        ret = JS_GetOwnPropertyInternal(ctx, &desc, p, prop);
++        if (ret < 0)
++            return ret;
++        if (ret) {
++            JS_FreeValue(ctx, desc.value);
++            goto read_only_prop;
++        }
++    }
++
+     if (unlikely(!p->extensible)) {
+         JS_FreeValue(ctx, val);
+         return JS_ThrowTypeErrorOrFalse(ctx, flags, "object is not extensible");

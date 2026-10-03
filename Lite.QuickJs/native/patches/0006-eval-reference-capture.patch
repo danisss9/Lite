@@ -1,0 +1,26 @@
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -25953,14 +25953,16 @@ static __exception int get_lvalue(JSParseState *s, int *popcode, int *pscope,
+             goto invalid_lvalue;
+         if (has_with_scope(fd, scope)) {
+             depth = 2;  /* will generate OP_get_ref_value */
+-        } else if (!keep && (fd->js_mode & JS_MODE_STRICT)) {
+-            /* Strict simple assignment must capture the reference before the
+-               right-hand side is evaluated: PutValue then throws a
+-               ReferenceError for an unresolvable reference even if evaluating
+-               the RHS creates the global property (ES2020 6.2.3.4). */
+-            depth = 2;
+         } else {
+-            depth = 0;
++            /* Capture the reference for every simple identifier target:
++               PutValue must use the reference created before the right-hand
++               side is evaluated (ES2020 6.2.3.4 PutValue). This throws a
++               ReferenceError for strict unresolvable references even if the
++               RHS creates the global property, and keeps the target stable
++               across bindings introduced by a direct eval while the RHS
++               runs. resolve_scope_var collapses the capture back to plain
++               variable accesses whenever no dynamic effect is possible. */
++            depth = 2;
+         }
+         break;
+     case OP_get_field:

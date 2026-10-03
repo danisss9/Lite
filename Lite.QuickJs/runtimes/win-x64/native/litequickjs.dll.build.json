@@ -1,11 +1,16 @@
 ﻿{
     "version":  "2026-06-04",
     "archiveSha256":  "b376e839b322978313d929fd20663b11ba58b75df5a46c126dd19ea2fa70ad2a",
-    "inputSha256":  "99c4f28343e809642b666ca0d113738f0bdf72baa0b9d035e1f94a8c308f3ee3",
-    "nativeDllSha256":  "B7AD8F7CEE4D857596B873E3179C3D86D382A200C2AEF01A8AE4A7AA2BE6A5E9",
+    "inputSha256":  "26ac6241dc271dcb805f03566fad87c86b5ca1822383cacd3d55591c2fe6ba0c",
+    "nativeDllSha256":  "FECEE49EAA49E83579282C8546A9042D1F182C475AB023E7A9739665607EC476",
     "compilerVersion":  "16.2.0",
     "compilerTarget":  "x86_64-w64-mingw32",
     "patches":  [
-                    "0001-strict-tail-call-trampoline.patch"
+                    "0001-strict-tail-call-trampoline.patch",
+                    "0002-strict-assignment-reference-order.patch",
+                    "0003-module-ns-tdz-define-reference-error.patch",
+                    "0004-module-ns-set-receiver-tdz.patch",
+                    "0005-annexb-call-assignment-targets.patch",
+                    "0006-eval-reference-capture.patch"
                 ]
 }

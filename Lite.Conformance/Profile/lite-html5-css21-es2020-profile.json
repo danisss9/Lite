@@ -3524,7 +3524,7 @@
       "url": "https://262.ecma-international.org/11.0/#sec-assignment-operators-static-semantics-assignmenttargettype",
       "title": "A function call as an assignment target parses in sloppy mode and throws a ReferenceError at runtime",
       "applicability": "included",
-      "status": "failing",
+      "status": "implemented",
       "tests": [
         {
           "suite": "test262",
@@ -3565,7 +3565,7 @@
       "implementationAreas": [
         "Lite.QuickJs 2026-06-04"
       ],
-      "notes": "QuickJS rejects every call-expression assignment target as a parse-time 'invalid assignment left-hand side' even in sloppy mode, so the required runtime ReferenceError is never observed."
+      "notes": "Fixed by the 0005-annexb-call-assignment-targets QuickJS patch: in sloppy mode a CallExpression assignment/update/for-in/of target evaluates and then throws a ReferenceError before GetValue, PutValue or the right-hand side, tracked through a parser CallExpression flag so logical assignment operators, parenthesized calls, tagged templates and NewExpressions keep their early SyntaxError. All 7 annexB assignmenttargettype tests pass."
     },
     {
       "id": "es2020.eval-introduced-var-bindings",
@@ -3574,7 +3574,7 @@
       "url": "https://262.ecma-international.org/11.0/#sec-putvalue",
       "title": "PutValue uses the reference created before the right-hand side, and var bindings introduced by a direct eval are visible afterwards",
       "applicability": "included",
-      "status": "failing",
+      "status": "implemented",
       "tests": [
         {
           "suite": "test262",
@@ -3645,7 +3645,7 @@
       "implementationAreas": [
         "Lite.QuickJs 2026-06-04"
       ],
-      "notes": "QuickJS does not make var bindings introduced by a direct eval visible to references compiled before the eval, so the recorded assignment target still resolves to the outer binding."
+      "notes": "Fixed by the 0006-eval-reference-capture QuickJS patch: every simple identifier assignment target captures its reference before the right-hand side is evaluated (resolve_scope_var collapses the capture back to plain accesses when no dynamic effect is possible), so PutValue uses the initially created reference even when a direct eval introduces a more local binding while the RHS runs. All 13 S11.13 tests pass."
     },
     {
       "id": "es2020.proper-tail-calls",
@@ -3734,7 +3734,7 @@
       "url": "https://262.ecma-international.org/11.0/#sec-module-environment-records-getbindingvalue-n-s",
       "title": "super property access to a TDZ module binding throws a ReferenceError",
       "applicability": "included",
-      "status": "failing",
+      "status": "implemented",
       "tests": [
         {
           "suite": "test262",
@@ -3745,7 +3745,7 @@
       "implementationAreas": [
         "Lite.QuickJs 2026-06-04"
       ],
-      "notes": "QuickJS reports a TypeError instead of a ReferenceError when super property access reaches a TDZ module binding."
+      "notes": "Fixed by the 0003 (define on namespace reads the binding through GetOwnProperty) and 0004 (set with a namespace receiver reads the binding before the extensibility check) QuickJS patches: super.foo = v with a module namespace receiver now throws the ReferenceError of GetBindingValue while the binding is uninitialized."
     },
     {
       "id": "es2020.strict-unresolvable-assignment",
@@ -3754,7 +3754,7 @@
       "url": "https://262.ecma-international.org/11.0/#sec-putvalue",
       "title": "Strict-mode assignment to an unresolvable reference throws a ReferenceError",
       "applicability": "included",
-      "status": "failing",
+      "status": "implemented",
       "tests": [
         {
           "suite": "test262",
@@ -3765,7 +3765,7 @@
       "implementationAreas": [
         "Lite.QuickJs 2026-06-04"
       ],
-      "notes": "QuickJS resolves the assignment target after evaluating the right-hand side, so this strict-mode assignment creates the global property instead of throwing."
+      "notes": "Fixed by the 0002-strict-assignment-reference-order QuickJS patch: strict simple assignment captures the reference before the right-hand side is evaluated, so PutValue throws a ReferenceError for an unresolvable reference even when the RHS creates the property. Full Test262 passes (64,885 executions, zero unexpected failures)."
     }
   ]
 }

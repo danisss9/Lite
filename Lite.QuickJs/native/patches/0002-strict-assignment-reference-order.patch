@@ -1,0 +1,28 @@
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -25922,6 +25922,12 @@ static __exception int get_lvalue(JSParseState *s, int *popcode, int *pscope,
+             goto invalid_lvalue;
+         if (has_with_scope(fd, scope)) {
+             depth = 2;  /* will generate OP_get_ref_value */
++        } else if (!keep && (fd->js_mode & JS_MODE_STRICT)) {
++            /* Strict simple assignment must capture the reference before the
++               right-hand side is evaluated: PutValue then throws a
++               ReferenceError for an unresolvable reference even if evaluating
++               the RHS creates the global property (ES2020 6.2.3.4). */
++            depth = 2;
+         } else {
+             depth = 0;
+         }
+@@ -33216,7 +33222,11 @@ static int resolve_scope_var(JSContext *ctx, JSFunctionDef *s,
+         /* global variable access */
+         switch (op) {
+         case OP_scope_make_ref:
+-            if (label_done == -1 && can_opt_put_global_ref_value(bc_buf, ls->pos)) {
++            /* In strict mode the captured reference must reach PutValue:
++               collapsing it into a put_var would re-check existence after the
++               RHS and silently create the property instead of throwing. */
++            if (label_done == -1 && !(s->js_mode & JS_MODE_STRICT) &&
++                can_opt_put_global_ref_value(bc_buf, ls->pos)) {
+                 pos_next = optimize_scope_make_ref(ctx, s, bc, bc_buf, ls,
+                                                    pos_next,
+                                                    OP_get_var, idx);

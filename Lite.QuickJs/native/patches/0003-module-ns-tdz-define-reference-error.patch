@@ -1,0 +1,19 @@
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -10497,6 +10497,16 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
+                             /* JS_PROP_WRITABLE is always true for variable
+                                references, but they are write protected in module name
+                                spaces. */
++                            /* [[DefineOwnProperty]] validates against the
++                               current value read through [[GetOwnProperty]],
++                               whose binding read throws a ReferenceError while
++                               the binding is uninitialized (e.g. super.foo = v
++                               reaching a module namespace receiver before its
++                               export binding is initialized). */
++                            if (unlikely(JS_IsUninitialized(*pr->u.var_ref->pvalue))) {
++                                JS_ThrowReferenceErrorUninitialized(ctx, prop);
++                                return -1;
++                            }
+                             if (!js_same_value(ctx, val, *pr->u.var_ref->pvalue))
+                                 goto not_configurable;
+                         } else {

@@ -1,0 +1,127 @@
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -18437,6 +18437,7 @@ static JSValue JS_CallInternalOne(JSContext *caller_ctx, JSValueConst func_obj,
+ #define JS_THROW_VAR_UNINITIALIZED  2
+ #define JS_THROW_ERROR_DELETE_SUPER   3
+ #define JS_THROW_ERROR_ITERATOR_THROW 4
++#define JS_THROW_ERROR_INVALID_ASSIGN_TARGET 5
+             {
+                 JSAtom atom;
+                 int type;
+@@ -18457,6 +18458,9 @@ static JSValue JS_CallInternalOne(JSContext *caller_ctx, JSValueConst func_obj,
+                 else
+                 if (type == JS_THROW_ERROR_ITERATOR_THROW)
+                     JS_ThrowTypeError(ctx, "iterator does not have a throw method");
++                else
++                if (type == JS_THROW_ERROR_INVALID_ASSIGN_TARGET)
++                    JS_ThrowReferenceError(ctx, "invalid assignment target");
+                 else
+                     JS_ThrowInternalError(ctx, "invalid throw var type %d", type);
+             }
+@@ -22135,6 +22139,8 @@ typedef struct JSParseState {
+     /* current function code */
+     JSFunctionDef *cur_func;
+     BOOL is_module; /* parsing a module */
++    BOOL last_is_call_expr; /* the parsed expression is a CallExpression
++                               (Annex B.3.1 assignment target tracking) */
+     BOOL allow_html_comments;
+     BOOL ext_json; /* JSON parsing: true if accepting JSON superset */
+     GetLineColCache get_line_col_cache;
+@@ -25973,6 +25979,27 @@ static __exception int get_lvalue(JSParseState *s, int *popcode, int *pscope,
+         depth = 3;
+         break;
+     default:
++        if (tok != '[' && tok != '{' &&
++            !(fd->js_mode & JS_MODE_STRICT) &&
++            (tok == '=' || (tok >= TOK_MUL_ASSIGN && tok <= TOK_POW_ASSIGN) ||
++             tok == TOK_INC || tok == TOK_DEC || tok == TOK_FOR) &&
++            s->last_is_call_expr) {
++            /* Annex B.3.1 Runtime Errors for Function Call Assignment
++               Targets: in sloppy mode the call expression is evaluated and
++               the invalid reference surfaces as a ReferenceError before any
++               GetValue, PutValue or right-hand side evaluation. The call is
++               deliberately kept in the bytecode. */
++            emit_op(s, OP_throw_error);
++            emit_atom(s, JS_ATOM_NULL);
++            emit_u8(s, JS_THROW_ERROR_INVALID_ASSIGN_TARGET);
++            *popcode = OP_nop;
++            *pscope = 0;
++            *pname = JS_ATOM_NULL;
++            *plabel = -1;
++            if (pdepth)
++                *pdepth = 0;
++            return 0;
++        }
+     invalid_lvalue:
+         if (tok == TOK_FOR) {
+             return js_parse_error(s, "invalid for in/of left hand-side");
+@@ -26184,6 +26211,9 @@ static void put_lvalue(JSParseState *s, int opcode, int scope,
+     case OP_get_super_value:
+         emit_op(s, OP_put_super_value);
+         break;
++    case OP_nop:
++        /* invalid assignment target (Annex B.3.1): nothing to store */
++        break;
+     default:
+         abort();
+     }
+@@ -26834,6 +26864,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
+     const uint8_t *op_token_ptr;
+     
+     call_type = FUNC_CALL_NORMAL;
++    s->last_is_call_expr = FALSE;
+     switch(s->token.val) {
+     case TOK_NUMBER:
+         {
+@@ -26912,6 +26943,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
+     case '(':
+         if (js_parse_expr_paren(s))
+             return -1;
++        /* a ParenthesizedExpression is not a CallExpression */
++        s->last_is_call_expr = FALSE;
+         break;
+     case TOK_FUNCTION:
+         if (js_parse_function_decl(s, JS_PARSE_FUNC_EXPR,
+@@ -27013,6 +27046,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
+         } else {
+             if (js_parse_postfix_expr(s, 0))
+                 return -1;
++            /* a NewExpression is not a CallExpression */
++            s->last_is_call_expr = FALSE;
+             accept_lparen = TRUE;
+             if (s->token.val != '(') {
+                 /* new operator on an object */
+@@ -27119,6 +27154,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
+             if (optional_chaining_label >= 0) {
+                 return js_parse_error(s, "template literal cannot appear in an optional chain");
+             }
++            /* a tagged template is a TaggedTemplate, not a CallExpression */
++            s->last_is_call_expr = FALSE;
+             call_type = FUNC_CALL_TEMPLATE;
+             op_token_ptr = s->token.ptr; /* XXX: check if right position */
+             goto parse_func_call2;
+@@ -27130,6 +27167,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
+             op_token_ptr = s->token.ptr;
+             if (next_token(s))
+                 return -1;
++            s->last_is_call_expr = (call_type == FUNC_CALL_NORMAL &&
++                                    !has_optional_chain);
+ 
+             if (call_type == FUNC_CALL_NORMAL) {
+             parse_func_call2:
+@@ -27414,6 +27453,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
+             op_token_ptr = s->token.ptr;
+             if (next_token(s))
+                 return -1;
++            s->last_is_call_expr = FALSE;
+         parse_property:
+             emit_source_pos(s, op_token_ptr);
+             if (s->token.val == TOK_PRIVATE_NAME) {
+@@ -27455,6 +27495,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
+             op_token_ptr = s->token.ptr;
+         parse_array_access:
+             prev_op = get_prev_opcode(fd);
++            s->last_is_call_expr = FALSE;
+             if (has_optional_chain) {
+                 optional_chain_test(s, &optional_chaining_label, 1);
+             }
