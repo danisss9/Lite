@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <Version>0.0.17</Version>
     <AssemblyName>Lite.Tests</AssemblyName>
   </PropertyGroup>
 

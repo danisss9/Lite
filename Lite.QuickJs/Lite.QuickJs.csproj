@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version>0.0.17</Version>
     <PackageId>danisss9.Lite.QuickJs</PackageId>
     <Authors>danisss9</Authors>
     <Description>QuickJS native bridge and managed runtime for Lite on Windows x64.</Description>
