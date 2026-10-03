@@ -145,6 +145,10 @@ public sealed class Engine : IDisposable
                 if (typeof p === 'string' && hasNames && !Reflect.has(t,p)) return named(p) ?? undefined;
                 return Reflect.get(t,p,r);
               },
+              has(t, p) {
+                if (typeof p === 'string' && /^(0|[1-9][0-9]*)$/.test(p)) return +p < t.length;
+                return Reflect.has(t, p);
+              },
               ownKeys(t) {
                 const keys = Reflect.ownKeys(t);
                 for (let i = 0; i < t.length; i++) keys.unshift(String(i));
@@ -183,7 +187,8 @@ public sealed class Engine : IDisposable
                 // WebIDL constructors ignore trailing arguments beyond their declared ones.
                 constructor = candidates.Where(c => c.GetParameters().Length <= args.Length)
                     .OrderByDescending(c => c.GetParameters().Length).FirstOrDefault()
-                    ?? throw new MissingMethodException($"No constructor for {type.Name} with {args.Length} arguments");
+                    ?? throw JsErrors.Native(this, "TypeError",
+                        $"No constructor for {type.Name} with {args.Length} arguments");
             }
             try { return ConvertToNative(constructor.Invoke(ConvertParameters(constructor.GetParameters(), args))); }
             catch (TargetInvocationException error) { throw error.InnerException ?? error; }
@@ -234,7 +239,9 @@ public sealed class Engine : IDisposable
                     try { return ConvertToNative(candidate.Invoke(target, arguments)); }
                     catch (TargetInvocationException error) { throw error.InnerException ?? error; }
                 }
-                throw new MissingMethodException(
+                // WebIDL raises a TypeError (not an engine-internal error) when no overload can
+                // take the supplied arguments, so page code can catch it by constructor.
+                throw JsErrors.Native(this, "TypeError",
                     bindingFailure ?? $"No overload of {group.Key} accepts {args.Length} arguments");
             });
         }

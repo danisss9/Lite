@@ -976,7 +976,9 @@ public class JsElement
     /// <summary>Inserting a &lt;script&gt; into the document executes it (HTML §4.11.1 “prepare the
     /// script element”). Execution is deferred onto the engine's event loop — fetching/running it
     /// synchronously here would re-enter the engine during a host callback. External sources are
-    /// fetched through the page session (cookies, UA) like parser-collected scripts.</summary>
+    /// fetched through the page session (cookies, UA) like parser-collected scripts. Each queued
+    /// execution re-checks connectivity: a later-inserted script removed by an earlier-inserted
+    /// script must not run (dom/nodes/insertion-removing-steps).</summary>
     private void ExecuteInsertedScript()
     {
         if (Node.TagName != "SCRIPT") return;
@@ -986,7 +988,12 @@ public class JsElement
         if (type?.Equals("module", StringComparison.OrdinalIgnoreCase) == true)
         {
             var specifier = js.ResolveAgainstCurrent(Node.Attributes.GetValueOrDefault("src"));
-            if (specifier is not null) js.EnqueueMacrotask(() => js.ImportModule(specifier));
+            if (specifier is not null)
+                js.EnqueueMacrotask(() =>
+                {
+                    if (!For(_engine, Node).isConnected) return;
+                    js.ImportModule(specifier);
+                });
             return;
         }
         if (Node.Attributes.GetValueOrDefault("src") is { Length: > 0 } src)
@@ -1004,13 +1011,31 @@ public class JsElement
                     session.Diagnostics.Enqueue($"script {url}: {ex.Message}");
                     return;
                 }
-                js.EnqueueMacrotask(() => js.Execute(code, url));
+                js.EnqueueMacrotask(() =>
+                {
+                    if (!For(_engine, Node).isConnected) return;
+                    js.Execute(code, url);
+                });
             });
         }
         else if (!string.IsNullOrWhiteSpace(GetTextContentRecursive(Node)))
         {
             var code = GetTextContentRecursive(Node);
-            js.EnqueueMacrotask(() => js.Execute(code, js.DocumentBaseUrl));
+            // HTML "prepare a script": a script-inserted inline classic script that is already in
+            // a document runs synchronously once the insertion operation completes. Deferring it
+            // would let later synchronous code reassign globals the script reads
+            // (dom/nodes/insertion-removing-steps). Scripts inserted into detached trees stay on
+            // the event loop and re-check connectivity, so attaching the tree later still runs them.
+            if (For(_engine, Node).isConnected)
+            {
+                js.Execute(code, js.DocumentBaseUrl);
+                return;
+            }
+            js.EnqueueMacrotask(() =>
+            {
+                if (!For(_engine, Node).isConnected) return;
+                js.Execute(code, js.DocumentBaseUrl);
+            });
         }
     }
 
@@ -1196,147 +1221,228 @@ public class JsElement
     /// <summary>Appends nodes/strings as the last children of this element.</summary>
     public void append(params JsValue[] items)
     {
-        foreach (var node in ToNodes(items))
-        {
-            node.Parent?.Children.Remove(node);
-            Node.AddChild(node);
-            StyleResolver.ApplyTree(node);
-            var inserted = JsElement.For(_engine, node);
-            inserted.ExecuteInsertedScript();
-            inserted.LoadInsertedIframe();
-        }
-    }
-
-    /// <summary>Inserts nodes/strings as the first children of this element.</summary>
-    public void prepend(params JsValue[] items)
-    {
-        var nodes = ToNodes(items);
-        for (int i = nodes.Count - 1; i >= 0; i--)
-        {
-            nodes[i].Parent?.Children.Remove(nodes[i]);
-            nodes[i].Parent = Node;
-            Node.Children.Insert(0, nodes[i]);
-            StyleResolver.ApplyTree(nodes[i]);
-            var inserted = JsElement.For(_engine, nodes[i]);
-            inserted.ExecuteInsertedScript();
-            inserted.LoadInsertedIframe();
-        }
-    }
-
-    /// <summary>Inserts nodes/strings into this element's parent, just before it. Anchored at the
-    /// first preceding sibling not among the inserted nodes (DOM §4.2.8 "viable previous sibling"),
-    /// so this node itself may be one of the arguments.</summary>
-    public void before(params JsValue[] items)
-    {
-        var parent = Node.Parent;
-        if (parent is null) return;
-        var nodes = ToNodes(items);
-        LayoutNode? viablePrev = null;
-        for (int i = parent.Children.IndexOf(Node) - 1; i >= 0; i--)
-            if (!nodes.Contains(parent.Children[i])) { viablePrev = parent.Children[i]; break; }
-        DetachAll(nodes);
-        var idx = viablePrev is null ? 0 : parent.Children.IndexOf(viablePrev) + 1;
-        InsertNodesAt(parent, idx, nodes);
-    }
-
-    /// <summary>Inserts nodes/strings into this element's parent, just after it. Anchored at the
-    /// first following sibling not among the inserted nodes (DOM §4.2.8 "viable next sibling").</summary>
-    public void after(params JsValue[] items)
-    {
-        var parent = Node.Parent;
-        if (parent is null) return;
-        var nodes = ToNodes(items);
-        var viableNext = ViableNextSibling(parent, nodes);
-        DetachAll(nodes);
-        var idx = viableNext is null ? parent.Children.Count : parent.Children.IndexOf(viableNext);
-        InsertNodesAt(parent, idx, nodes);
-    }
-
-    /// <summary>Replaces this element with the given nodes/strings. This node itself may be among
-    /// the arguments; the insertion point then falls back to the viable next sibling (DOM §4.2.8).</summary>
-    public void replaceWith(params JsValue[] items)
-    {
-        var parent = Node.Parent;
-        if (parent is null) return;
-        var nodes = ToNodes(items);
-        var viableNext = ViableNextSibling(parent, nodes);
-        DetachAll(nodes);
-        int idx;
-        if (Node.Parent == parent)
-        {
-            idx = parent.Children.IndexOf(Node);
-            parent.Children.RemoveAt(idx);
-            Node.Parent = null;
-        }
-        else
-        {
-            // This node was one of the arguments and has already been detached above.
-            idx = viableNext is null ? parent.Children.Count : parent.Children.IndexOf(viableNext);
-        }
-        InsertNodesAt(parent, idx, nodes);
-    }
-
-    /// <summary>Removes the nodes from their parents, clearing <c>Parent</c> so a node that was
-    /// among the arguments no longer reads as attached (replaceWith relies on that).</summary>
-    private static void DetachAll(List<LayoutNode> nodes)
-    {
-        foreach (var n in nodes)
-        {
-            n.Parent?.Children.Remove(n);
-            n.Parent = null;
-        }
-    }
-
-    /// <summary>First sibling after this node that is not among <paramref name="nodes"/>.</summary>
-    private LayoutNode? ViableNextSibling(LayoutNode parent, List<LayoutNode> nodes)
-    {
-        for (int i = parent.Children.IndexOf(Node) + 1; i < parent.Children.Count; i++)
-            if (!nodes.Contains(parent.Children[i])) return parent.Children[i];
-        return null;
-    }
-
-    private static void InsertNodesAt(LayoutNode parent, int idx, List<LayoutNode> nodes)
-    {
-        foreach (var n in nodes)
-        {
-            n.Parent = parent;
-            parent.Children.Insert(idx++, n);
-            StyleResolver.ApplyTree(n);
-        }
-    }
-
-    /// <summary>Removes this element from its parent.</summary>
-    public void remove()
-    {
-        DomNode?.Parent?.RemoveChild(DomNode);
-        Node.Parent?.Children.Remove(Node);
-        Node.Parent = null;
-    }
-
-    /// <summary>Coerces append/before/after arguments (Node or DOMString) into LayoutNodes.</summary>
-    private List<LayoutNode> ToNodes(JsValue[] items)
-    {
-        var result = new List<LayoutNode>();
-        foreach (var item in items)
-        {
-            if (item.ToObject() is JsElement el)
+            var inserted = new List<LayoutNode>();
+            foreach (var (layout, dom) in ToInsertionNodes(items))
             {
-                // A node passed twice ends up at its last argument position (appending an
-                // already-appended node to the conversion fragment moves it).
-                result.Remove(el.Node);
-                result.Add(el.Node);
+                DetachInsertionNode(layout, dom);
+                Node.AddChild(layout);
+                MirrorAppend(dom);
+                StyleResolver.ApplyTree(layout);
+                inserted.Add(layout);
+            }
+            RunInsertedHooks(inserted);
+        }
+
+        /// <summary>Inserts nodes/strings as the first children of this element.</summary>
+        public void prepend(params JsValue[] items)
+        {
+            var inserted = new List<LayoutNode>();
+            foreach (var (layout, dom) in ToInsertionNodes(items))
+            {
+                DetachInsertionNode(layout, dom);
+                layout.Parent = Node;
+                Node.Children.Insert(0, layout);
+                MirrorInsertAt(DomNode, dom, Node, 0);
+                StyleResolver.ApplyTree(layout);
+                inserted.Add(layout);
+            }
+            RunInsertedHooks(inserted);
+        }
+
+        /// <summary>Inserts nodes/strings into this element's parent, just before it. Anchored at the
+        /// first preceding sibling not among the inserted nodes (DOM §4.2.8 "viable previous sibling"),
+        /// so this node itself may be one of the arguments.</summary>
+        public void before(params JsValue[] items) => InsertRelative(ToInsertionNodes(items), before: true);
+
+        /// <summary>Inserts nodes/strings into this element's parent, just after it. Anchored at the
+        /// first following sibling not among the inserted nodes (DOM §4.2.8 "viable next sibling").</summary>
+        public void after(params JsValue[] items) => InsertRelative(ToInsertionNodes(items), before: false);
+
+        /// <summary>Replaces this element with the given nodes/strings. This node itself may be among
+        /// the arguments; the insertion point then falls back to the viable next sibling (DOM §4.2.8).</summary>
+        public void replaceWith(params JsValue[] items)
+        {
+            var parent = Node.Parent;
+            if (parent is null) return;
+            var nodes = ToInsertionNodes(items);
+            var parentDom = parent.DomNode;
+            var viableNext = ViableSibling(parent, nodes, before: false);
+            foreach (var (layout, dom) in nodes) DetachInsertionNode(layout, dom);
+            int idx;
+            if (Node.Parent == parent)
+            {
+                idx = parent.Children.IndexOf(Node);
+                parent.Children.RemoveAt(idx);
+                Node.Parent = null;
+                if (DomNode is { } selfDom) parentDom?.RemoveChild(selfDom);
             }
             else
             {
-                // WebIDL (Node or DOMString): every non-Node argument stringifies, including
-                // null → "null" and undefined → "undefined".
-                var textNode = new LayoutNode(null, "#text", TypeConverter.ToString(item), Node.Style);
-                textNode.StyleOverrides["display"] = "inline";
-                result.Add(textNode);
+                // This node was one of the arguments and has already been detached above.
+                idx = viableNext is null ? parent.Children.Count : parent.Children.IndexOf(viableNext);
+            }
+            var inserted = new List<LayoutNode>();
+            foreach (var (layout, dom) in nodes)
+            {
+                InsertLayoutNode(parent, idx, layout, parentDom, dom);
+                inserted.Add(layout);
+                idx++;
+            }
+            RunInsertedHooks(inserted);
+        }
+
+        private void InsertRelative(List<(LayoutNode Layout, INode? Dom)> nodes, bool before)
+        {
+            var parent = Node.Parent;
+            if (parent is null) return;
+            var parentDom = parent.DomNode;
+            var viable = ViableSibling(parent, nodes, before);
+            foreach (var (layout, dom) in nodes) DetachInsertionNode(layout, dom);
+            // One insertion point for the whole list: every node lands before the same reference
+            // (this node, or the viable sibling for after()), so argument order is preserved.
+            var idx = before
+                ? viable is null ? 0 : parent.Children.IndexOf(viable) + 1
+                : viable is null ? parent.Children.Count : parent.Children.IndexOf(viable);
+            var inserted = new List<LayoutNode>();
+            foreach (var (layout, dom) in nodes)
+            {
+                InsertLayoutNode(parent, idx, layout, parentDom, dom);
+                inserted.Add(layout);
+                idx++;
+            }
+            RunInsertedHooks(inserted);
+        }
+
+        /// <summary>First sibling on the given side of this node that is not among the inserted
+        /// nodes (DOM §4.2.8 "viable previous/next sibling").</summary>
+        private LayoutNode? ViableSibling(LayoutNode parent,
+            List<(LayoutNode Layout, INode? Dom)> nodes, bool before)
+        {
+            var self = parent.Children.IndexOf(Node);
+            if (before)
+            {
+                for (var i = self - 1; i >= 0; i--)
+                    if (!nodes.Any(n => n.Layout == parent.Children[i])) return parent.Children[i];
+            }
+            else
+            {
+                for (var i = self + 1; i < parent.Children.Count; i++)
+                    if (!nodes.Any(n => n.Layout == parent.Children[i])) return parent.Children[i];
+            }
+            return null;
+        }
+
+        private static void DetachInsertionNode(LayoutNode layout, INode? dom)
+        {
+            layout.Parent?.Children.Remove(layout);
+            layout.Parent = null;
+            if (dom?.Parent is { } domParent) domParent.RemoveChild(dom);
+    }
+
+        /// <summary>Inserts a node into the layout tree at <paramref name="idx"/> and mirrors the
+        /// same position into the authoritative DOM: before the first sibling at or after
+        /// <paramref name="idx"/> that has a DOM node, or appended when none does.</summary>
+        private void InsertLayoutNode(LayoutNode parent, int idx, LayoutNode layout,
+            INode? parentDom, INode? dom)
+        {
+            INode? reference = null;
+            for (var i = idx; i < parent.Children.Count; i++)
+                if (parent.Children[i].DomNode is { } next) { reference = next; break; }
+            layout.Parent = parent;
+            parent.Children.Insert(idx, layout);
+            if (dom is not null && parentDom is not null)
+            {
+                if (reference is not null) parentDom.InsertBefore(dom, reference);
+                else parentDom.AppendChild(dom);
+            }
+            StyleResolver.ApplyTree(layout);
+        }
+
+        private void MirrorAppend(INode? dom)
+        {
+            if (dom is not null && DomNode is { } parentDom) parentDom.AppendChild(dom);
+        }
+
+        /// <summary>Runs the inserted-content hooks (script execution, iframe load) after the whole
+        /// insertion operation has completed, so a script executed this way already sees its later
+        /// siblings in the document (HTML "prepare a script" ordering).</summary>
+        private void RunInsertedHooks(List<LayoutNode> nodes)
+        {
+            foreach (var layout in nodes)
+            {
+                var inserted = JsElement.For(_engine, layout);
+                inserted.ExecuteInsertedScript();
+                inserted.LoadInsertedIframe();
             }
         }
-        return result;
-    }
+
+        /// <summary>Inserts <paramref name="dom"/> before the first sibling at or after layout-tree
+        /// index <paramref name="idx"/> that has a DOM node (or appends it when none does).</summary>
+        private static void MirrorInsertAt(INode? parentDom, INode? dom, LayoutNode parent, int idx)
+        {
+            if (dom is null || parentDom is null) return;
+            INode? reference = null;
+            for (var i = idx; i < parent.Children.Count; i++)
+                if (parent.Children[i].DomNode is { } next) { reference = next; break; }
+            if (reference is not null) parentDom.InsertBefore(dom, reference);
+            else parentDom.AppendChild(dom);
+        }
+
+        /// <summary>Removes this element from its parent.</summary>
+        public void remove()
+        {
+            DomNode?.Parent?.RemoveChild(DomNode);
+            Node.Parent?.Children.Remove(Node);
+            Node.Parent = null;
+        }
+
+        /// <summary>Coerces append/prepend/before/after/replaceWith arguments (Node or DOMString) into
+        /// insertable nodes, carrying each node's authoritative DOM counterpart so both trees can be
+        /// mutated together. WebIDL: every non-Node argument stringifies (null → "null", undefined →
+        /// "undefined"); a DocumentFragment argument contributes its children; a node passed twice
+        /// ends up at its last argument position.</summary>
+        private List<(LayoutNode Layout, INode? Dom)> ToInsertionNodes(JsValue[] items)
+        {
+            var result = new List<(LayoutNode, INode?)>();
+            var state = State;
+            foreach (var item in items)
+            {
+                if (item.ToObject() is JsElement element)
+                {
+                    if (element.Node.TagName == "#document-fragment")
+                    {
+                        foreach (var child in element.Node.Children.ToList())
+                        {
+                            result.Remove((child, child.DomNode));
+                            result.Add((child, child.DomNode));
+                        }
+                    }
+                    else
+                    {
+                        result.Remove((element.Node, element.Node.DomNode));
+                        result.Add((element.Node, element.Node.DomNode));
+                    }
+                }
+                else
+                {
+                    // WebIDL (Node or DOMString): every non-Node argument stringifies, including
+                    // null → "null" and undefined → "undefined".
+                    var text = TypeConverter.ToString(item);
+                    LayoutNode textNode;
+                    if (state?.Document is { } document)
+                    {
+                        textNode = state.ForDomNode(document.CreateTextNode(text));
+                    }
+                    else
+                    {
+                        textNode = new LayoutNode(null, "#text", text, Node.Style);
+                    }
+                    textNode.StyleOverrides["display"] = "inline";
+                    result.Add((textNode, textNode.DomNode));
+                }
+            }
+            return result;
+        }
 
     public JsElement cloneNode(bool deep = false)
     {
@@ -1454,13 +1560,14 @@ public class JsElement
 
     public JsHtmlCollection getElementsByClassName(string classNames)
     {
-        var classes = classNames.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        var classes = DomWhitespace.Split(classNames);
         return new JsHtmlCollection(() => DomNode is IElement element
-            ? element.QuerySelectorAll("*").Where(e => classes.All(c => e.ClassList.Contains(c)))
+            ? element.QuerySelectorAll("*").Where(e => classes.All(c =>
+                DomWhitespace.Split(e.GetAttribute("class") ?? "").Contains(c)))
                 .Select(Wrap).ToArray()
             : FindAll(Node, n =>
         {
-            var nodeClasses = n.Attributes.GetValueOrDefault("class", "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var nodeClasses = DomWhitespace.Split(n.Attributes.GetValueOrDefault("class", ""));
             return classes.All(c => nodeClasses.Contains(c));
         }).Select(n => For(_engine, n)).ToArray());
     }
@@ -1527,7 +1634,7 @@ public class JsClassList
     private readonly LayoutNode _node;
     public JsClassList(LayoutNode node) => _node = node;
 
-    private string[] GetClasses() => _node.Attributes.GetValueOrDefault("class", "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    private string[] GetClasses() => DomWhitespace.Split(_node.Attributes.GetValueOrDefault("class", ""));
     private void SetClasses(IEnumerable<string> classes)
     {
         _node.Attributes["class"] = string.Join(" ", classes);

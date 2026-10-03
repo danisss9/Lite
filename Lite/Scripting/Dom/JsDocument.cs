@@ -98,13 +98,14 @@ public class JsDocument
 
     public JsHtmlCollection getElementsByClassName(string classNames)
     {
-        var classes = classNames.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        var classes = DomWhitespace.Split(classNames);
         return new JsHtmlCollection(() => _document is not null
-            ? _document.QuerySelectorAll("*").Where(e => classes.All(c => e.ClassList.Contains(c)))
+            ? _document.QuerySelectorAll("*").Where(e => classes.All(c =>
+                DomWhitespace.Split(e.GetAttribute("class") ?? "").Contains(c)))
                 .Select(Wrap).ToArray()
             : FindAll(_root, n =>
         {
-            var nodeClasses = n.Attributes.GetValueOrDefault("class", "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var nodeClasses = DomWhitespace.Split(n.Attributes.GetValueOrDefault("class", ""));
             return classes.All(c => nodeClasses.Contains(c));
         }).Select(n => JsElement.For(_engine, n)).ToArray());
     }
@@ -236,7 +237,12 @@ public class JsDocument
         if (string.IsNullOrEmpty(markup)) return;
         var target = FindFirst(_root, n => n.TagName == "BODY") ?? _root;
         foreach (var node in Parser.ParseFragment(markup, target.TagName, JsEngine.For(_engine)?.DocumentState))
+        {
+            // The fragment's nodes carry detached DOM counterparts; moving them under the live
+            // body keeps getElementById/querySelector working on written content.
+            if (node.DomNode is { } dom && _document?.Body is { } body) body.AppendChild(dom);
             target.AddChild(node);
+        }
     }
 
     public void writeln(string markup) => write((markup ?? "") + "\n");

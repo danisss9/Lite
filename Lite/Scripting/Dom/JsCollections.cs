@@ -26,6 +26,18 @@ internal interface IJsNamedCollection
     object? Named(string name);
 }
 
+/// <summary>ASCII whitespace per the DOM/HTML spec (U+0009, U+000A, U+000C, U+000D, U+0020) —
+/// the only characters that separate tokens in class attributes and getElementsByClassName
+/// arguments. .NET's char.IsWhiteSpace set is wider (U+000B, U+00A0, U+2000-200A, …) and would
+/// split class names the spec keeps whole.</summary>
+internal static class DomWhitespace
+{
+    internal static readonly char[] Separator = [' ', '\t', '\n', '\f', '\r'];
+
+    internal static string[] Split(string value) =>
+        value.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
+}
+
 /// <summary>HTMLCollection with live length, indexed access and named lookup.</summary>
 public class JsHtmlCollection(Func<IReadOnlyList<JsElement>> items) : JsNodeList(items), IJsNamedCollection
 {

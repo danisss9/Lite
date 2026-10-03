@@ -167,7 +167,10 @@ LITE_API void lite_set_html_dda(LiteValue *value) {
 LITE_API char *lite_to_string(LiteValue *value, size_t *result_length) {
     if (!value) return NULL;
     size_t length = 0;
-    const char *text = JS_ToCStringLen(value->context, &length, value->value);
+    /* cesu8=TRUE keeps lone surrogate code points (encoded as 3-byte sequences) instead of
+     * letting JS_ToCStringLen2 combine pairs into 4-byte UTF-8 while stranding unmatched
+     * surrogates; the managed side decodes CESU-8 so every UTF-16 code unit round-trips. */
+    const char *text = JS_ToCStringLen2(value->context, &length, value->value, 1);
     if (!text) return NULL;
     char *copy = malloc(length + 1);
     if (copy) { memcpy(copy, text, length); copy[length] = 0; *result_length = length; }

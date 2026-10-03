@@ -36,17 +36,24 @@ internal static class JsErrors
         return new JavaScriptException(JsValue.FromObject(eng, err));
     }
 
-    /// <summary>Builds (does not throw) a native error, e.g. <c>Native("TypeError", msg)</c>.</summary>
+    /// <summary>Builds (does not throw) a native error, e.g. <c>Native("TypeError", msg)</c>.
+    /// The engine-parameterized form is for host-binding layers that hold the raw engine
+    /// directly (nested iframe engines may not own the process-wide singleton).</summary>
+    internal static JavaScriptException Native(Engine engine, string ctorName, string message)
+    {
+        var err = new JsObject(engine);
+        Set(err, "name", ctorName);
+        Set(err, "message", message);
+        var ctor = engine.GetValue(ctorName);
+        if (ctor.IsObject()) Set(err, "constructor", ctor);
+        return new JavaScriptException(JsValue.FromObject(engine, err));
+    }
+
     internal static JavaScriptException Native(string ctorName, string message)
     {
         var eng = JsEngine.Instance?.RawEngine;
         if (eng is null) return new JavaScriptException((JsValue)message);
-        var err = new JsObject(eng);
-        Set(err, "name", ctorName);
-        Set(err, "message", message);
-        var ctor = eng.GetValue(ctorName);
-        if (ctor.IsObject()) Set(err, "constructor", ctor);
-        return new JavaScriptException(JsValue.FromObject(eng, err));
+        return Native(eng, ctorName, message);
     }
 
     private static void Set(JsObject o, string key, JsValue value) => o.Set(key, value);

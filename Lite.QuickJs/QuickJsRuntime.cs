@@ -222,6 +222,78 @@ internal sealed class QuickJsRuntime : IDisposable
     }
 }
 
+/// <summary>CESU-8 conversion for strings crossing the QuickJS boundary. QuickJS stores strings
+/// as UTF-16 code units; standard UTF-8 marshaling replaces lone surrogates with U+FFFD on both
+/// sides (CharacterData-surrogates WPT). CESU-8 encodes every UTF-16 code unit — surrogates
+/// included — as 1-3 bytes, which <c>JS_NewStringLen</c> stores verbatim, and
+/// <c>JS_ToCStringLen2(cesu8=TRUE)</c> produces on the way back.</summary>
+internal static class Cesu8
+{
+    internal static byte[] GetBytes(string value)
+    {
+        var ascii = true;
+        foreach (var ch in value) if (ch >= 0x80) { ascii = false; break; }
+        if (ascii) return Encoding.UTF8.GetBytes(value);
+        var bytes = new byte[value.Length * 3];
+        var count = 0;
+        foreach (var ch in value)
+        {
+            if (ch < 0x80) bytes[count++] = (byte)ch;
+            else if (ch < 0x800)
+            {
+                bytes[count++] = (byte)(0xC0 | (ch >> 6));
+                bytes[count++] = (byte)(0x80 | (ch & 0x3F));
+            }
+            else
+            {
+                bytes[count++] = (byte)(0xE0 | (ch >> 12));
+                bytes[count++] = (byte)(0x80 | ((ch >> 6) & 0x3F));
+                bytes[count++] = (byte)(0x80 | (ch & 0x3F));
+            }
+        }
+        return bytes[..count];
+    }
+
+    internal static string GetString(byte[] bytes)
+    {
+        foreach (var b in bytes) if (b >= 0x80) return Decode(bytes);
+        return Encoding.UTF8.GetString(bytes);
+    }
+
+    private static string Decode(byte[] bytes)
+    {
+        var chars = new char[bytes.Length];
+        var count = 0;
+        for (var i = 0; i < bytes.Length; )
+        {
+            var b = bytes[i];
+            if (b < 0x80) { chars[count++] = (char)b; i += 1; }
+            else if ((b & 0xE0) == 0xC0 && i + 1 < bytes.Length)
+            {
+                chars[count++] = (char)(((b & 0x1F) << 6) | (bytes[i + 1] & 0x3F));
+                i += 2;
+            }
+            else if ((b & 0xF0) == 0xE0 && i + 2 < bytes.Length)
+            {
+                chars[count++] = (char)(((b & 0x0F) << 12) | ((bytes[i + 1] & 0x3F) << 6) | (bytes[i + 2] & 0x3F));
+                i += 3;
+            }
+            else if ((b & 0xF8) == 0xF0 && i + 3 < bytes.Length)
+            {
+                // Standard 4-byte UTF-8 (not produced by cesu8=TRUE, but harmless to accept).
+                var cp = ((b & 0x07) << 18) | ((bytes[i + 1] & 0x3F) << 12) |
+                         ((bytes[i + 2] & 0x3F) << 6) | (bytes[i + 3] & 0x3F);
+                cp -= 0x10000;
+                chars[count++] = (char)(0xD800 + (cp >> 10));
+                chars[count++] = (char)(0xDC00 + (cp & 0x3FF));
+                i += 4;
+            }
+            else { chars[count++] = '\uFFFD'; i += 1; }
+        }
+        return new string(chars, 0, count);
+    }
+}
+
 /// <summary>A separate global object and value lifetime within a QuickJS runtime.</summary>
 internal sealed class QuickJsRealm : IDisposable
 {
@@ -319,7 +391,7 @@ internal sealed class QuickJsRealm : IDisposable
     internal QuickJsValue Number(double value) => Wrap(Native.lite_new_number(Handle, value));
     internal QuickJsValue String(string value)
     {
-        var bytes = Encoding.UTF8.GetBytes(value);
+        var bytes = Cesu8.GetBytes(value);
         return Wrap(Native.lite_new_string(Handle, bytes, (nuint)bytes.Length));
     }
     internal QuickJsValue Object() => Wrap(Native.lite_new_object(Handle));
@@ -401,7 +473,7 @@ internal sealed class QuickJsValue : IDisposable
         {
             var bytes = new byte[checked((int)length)];
             if (bytes.Length > 0) Marshal.Copy(text, bytes, 0, bytes.Length);
-            return Encoding.UTF8.GetString(bytes);
+            return Cesu8.GetString(bytes);
         }
         finally { Native.lite_string_free(text); }
     }
