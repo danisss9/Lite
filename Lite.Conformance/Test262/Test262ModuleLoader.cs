@@ -9,11 +9,16 @@ internal sealed class Test262ModuleLoader(string basePath, string testRoot)
     private readonly string _testRoot = Path.GetFullPath(testRoot).TrimEnd(Path.DirectorySeparatorChar)
         + Path.DirectorySeparatorChar;
 
+    /// <summary>Set once the root module's imports are resolved; the root itself is compiled
+    /// from source text, so any syntax error raised after this point comes from the graph.</summary>
+    internal bool GraphLoadStarted { get; private set; }
+
     internal void Bind(QuickJsRuntime runtime, QuickJsRealm realm) =>
         runtime.SetModuleProvider(realm, Normalize, Source);
 
     internal string Normalize(string? referrer, string specifier)
     {
+        GraphLoadStarted = true;
         var directory = _basePath;
         if (referrer is not null && Uri.TryCreate(referrer, UriKind.Absolute, out var parent) && parent.IsFile)
             directory = Path.GetDirectoryName(parent.LocalPath)!;

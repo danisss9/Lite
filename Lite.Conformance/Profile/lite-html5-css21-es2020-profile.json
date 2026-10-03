@@ -3516,6 +3516,256 @@
         "Lite.QuickJs 2026-06-04"
       ],
       "notes": "The exact sloppy-mode Test262 reproducer passes on QuickJS. Complete ES2020 readiness still requires the full language and host review and current passing execution evidence."
+    },
+    {
+      "id": "es2020.call-assignment-targets",
+      "specification": "es2020",
+      "clause": "12.15.1, 12.15.3 Assignment operators early errors and AssignmentTargetType",
+      "url": "https://262.ecma-international.org/11.0/#sec-assignment-operators-static-semantics-assignmenttargettype",
+      "title": "A function call as an assignment target parses in sloppy mode and throws a ReferenceError at runtime",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/annexB/language/expressions/assignmenttargettype/callexpression.js",
+          "assertion": "Sloppy-mode call-expression assignment targets parse, run the call, and throw a runtime ReferenceError"
+        },
+        {
+          "suite": "test262",
+          "path": "test/annexB/language/expressions/assignmenttargettype/callexpression-in-compound-assignment.js",
+          "assertion": "Sloppy-mode call-expression assignment targets parse, run the call, and throw a runtime ReferenceError"
+        },
+        {
+          "suite": "test262",
+          "path": "test/annexB/language/expressions/assignmenttargettype/callexpression-in-postfix-update.js",
+          "assertion": "Sloppy-mode call-expression assignment targets parse, run the call, and throw a runtime ReferenceError"
+        },
+        {
+          "suite": "test262",
+          "path": "test/annexB/language/expressions/assignmenttargettype/callexpression-in-prefix-update.js",
+          "assertion": "Sloppy-mode call-expression assignment targets parse, run the call, and throw a runtime ReferenceError"
+        },
+        {
+          "suite": "test262",
+          "path": "test/annexB/language/expressions/assignmenttargettype/callexpression-as-for-in-lhs.js",
+          "assertion": "Sloppy-mode call-expression assignment targets parse, run the call, and throw a runtime ReferenceError"
+        },
+        {
+          "suite": "test262",
+          "path": "test/annexB/language/expressions/assignmenttargettype/callexpression-as-for-of-lhs.js",
+          "assertion": "Sloppy-mode call-expression assignment targets parse, run the call, and throw a runtime ReferenceError"
+        },
+        {
+          "suite": "test262",
+          "path": "test/annexB/language/expressions/assignmenttargettype/cover-callexpression-and-asyncarrowhead.js",
+          "assertion": "Sloppy-mode call-expression assignment targets parse, run the call, and throw a runtime ReferenceError"
+        }
+      ],
+      "implementationAreas": [
+        "Lite.QuickJs 2026-06-04"
+      ],
+      "notes": "QuickJS rejects every call-expression assignment target as a parse-time 'invalid assignment left-hand side' even in sloppy mode, so the required runtime ReferenceError is never observed."
+    },
+    {
+      "id": "es2020.eval-introduced-var-bindings",
+      "specification": "es2020",
+      "clause": "6.2.4.9 PutValue, 12.15.4 Assignment operators evaluation",
+      "url": "https://262.ecma-international.org/11.0/#sec-putvalue",
+      "title": "PutValue uses the reference created before the right-hand side, and var bindings introduced by a direct eval are visible afterwards",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/assignment/S11.13.1_A6_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/assignment/S11.13.1_A6_T2.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/compound-assignment/S11.13.2_A6.1_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/compound-assignment/S11.13.2_A6.2_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/compound-assignment/S11.13.2_A6.3_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/compound-assignment/S11.13.2_A6.4_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/compound-assignment/S11.13.2_A6.5_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/compound-assignment/S11.13.2_A6.6_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/compound-assignment/S11.13.2_A6.7_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/compound-assignment/S11.13.2_A6.8_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/compound-assignment/S11.13.2_A6.9_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/compound-assignment/S11.13.2_A6.10_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/compound-assignment/S11.13.2_A6.11_T1.js",
+          "assertion": "Assignment inside a function whose direct eval declares a local var writes the outer binding and subsequent reads observe the new local binding"
+        }
+      ],
+      "implementationAreas": [
+        "Lite.QuickJs 2026-06-04"
+      ],
+      "notes": "QuickJS does not make var bindings introduced by a direct eval visible to references compiled before the eval, so the recorded assignment target still resolves to the outer binding."
+    },
+    {
+      "id": "es2020.proper-tail-calls",
+      "specification": "es2020",
+      "clause": "14.9 Tail Position Calls",
+      "url": "https://262.ecma-international.org/11.0/#sec-tail-position-calls",
+      "title": "Calls in tail position reuse the caller's execution context without stack growth",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/call/tco-non-eval-function.js",
+          "assertion": "Tail-recursive calls from sloppy functions and from conditional and catch tail positions complete without stack overflow"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/call/tco-non-eval-function-dynamic.js",
+          "assertion": "Tail-recursive calls from sloppy functions and from conditional and catch tail positions complete without stack overflow"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/call/tco-non-eval-global.js",
+          "assertion": "Tail-recursive calls from sloppy functions and from conditional and catch tail positions complete without stack overflow"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/call/tco-non-eval-with.js",
+          "assertion": "Tail-recursive calls from sloppy functions and from conditional and catch tail positions complete without stack overflow"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/conditional/tco-cond.js",
+          "assertion": "Tail-recursive calls from sloppy functions and from conditional and catch tail positions complete without stack overflow"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/statements/try/tco-catch.js",
+          "assertion": "Tail-recursive calls from sloppy functions and from conditional and catch tail positions complete without stack overflow"
+        }
+      ],
+      "implementationAreas": [
+        "Lite.QuickJs 2026-06-04"
+      ],
+      "notes": "The bundled patch trampoline only covers strict direct tail calls (Lite.QuickJs/native/patches/README.md); sloppy-mode, conditional, and catch tail positions still overflow as InternalError."
+    },
+    {
+      "id": "es2020.module-ambiguous-reexports",
+      "specification": "es2020",
+      "clause": "15.2.1.17.3 ResolveExport",
+      "url": "https://262.ecma-international.org/11.0/#sec-resolveexport",
+      "title": "Re-exported imports and export * as ns bindings that resolve to one source binding are unambiguous",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/module-code/ambiguous-export-bindings/import-and-export-propagates-binding.js",
+          "assertion": "Module linking succeeds when star exports reach the same binding through explicit re-exports or namespace re-exports of one module"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from.js",
+          "assertion": "Module linking succeeds when star exports reach the same binding through explicit re-exports or namespace re-exports of one module"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-import-star-as-and-export.js",
+          "assertion": "Module linking succeeds when star exports reach the same binding through explicit re-exports or namespace re-exports of one module"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/module-code/ambiguous-export-bindings/namespace-unambiguous-if-export-star-as-from-and-import-star-as-and-export.js",
+          "assertion": "Module linking succeeds when star exports reach the same binding through explicit re-exports or namespace re-exports of one module"
+        }
+      ],
+      "implementationAreas": [
+        "Lite.QuickJs 2026-06-04"
+      ],
+      "notes": "QuickJS resolves re-exported imports and export * as ns through the re-exporting module itself, so spec-unambiguous bindings are reported as ambiguous during linking."
+    },
+    {
+      "id": "es2020.module-super-tdz-binding",
+      "specification": "es2020",
+      "clause": "8.1.1.5.1 Module Environment Records GetBindingValue",
+      "url": "https://262.ecma-international.org/11.0/#sec-module-environment-records-getbindingvalue-n-s",
+      "title": "super property access to a TDZ module binding throws a ReferenceError",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/module-code/namespace/internals/super-access-to-tdz-binding.js",
+          "assertion": "Accessing an uninitialized let binding through super in a module throws a ReferenceError, not a TypeError"
+        }
+      ],
+      "implementationAreas": [
+        "Lite.QuickJs 2026-06-04"
+      ],
+      "notes": "QuickJS reports a TypeError instead of a ReferenceError when super property access reaches a TDZ module binding."
+    },
+    {
+      "id": "es2020.strict-unresolvable-assignment",
+      "specification": "es2020",
+      "clause": "6.2.4.9 PutValue",
+      "url": "https://262.ecma-international.org/11.0/#sec-putvalue",
+      "title": "Strict-mode assignment to an unresolvable reference throws a ReferenceError",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/identifier-resolution/assign-to-global-undefined.js",
+          "assertion": "In strict mode, assigning to an identifier that is unresolvable when the reference is created throws a ReferenceError even if the right-hand side creates the property"
+        }
+      ],
+      "implementationAreas": [
+        "Lite.QuickJs 2026-06-04"
+      ],
+      "notes": "QuickJS resolves the assignment target after evaluating the right-hand side, so this strict-mode assignment creates the global property instead of throwing."
     }
   ]
 }

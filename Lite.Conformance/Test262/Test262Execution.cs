@@ -109,6 +109,14 @@ internal static class Test262Execution
         }
         catch (QuickJsException error)
         {
+            // QuickJS compiles a module's dependency graph as part of compiling the root, so
+            // load and parse failures of requested modules surface here. The root is compiled
+            // from source text before any import is normalized, meaning a syntax error after
+            // the loader was engaged belongs to the graph; Test262 classifies these as
+            // resolution-phase errors, not parse errors of the test source.
+            if (mode == "module" && phase == "parse" && loader.GraphLoadStarted &&
+                error.ErrorName == "SyntaxError")
+                phase = "resolution";
             // QuickJS reports export binding errors when evaluation begins, before any
             // module body executes. Test262 classifies these link failures as resolution.
             if (mode == "module" && phase == "runtime" && error.ErrorName == "SyntaxError" &&

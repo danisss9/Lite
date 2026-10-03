@@ -48,7 +48,7 @@ internal sealed class QuickJsTest262Host(QuickJsRuntime runtime)
         agent.Set("start", start);
         api.Set("agent", agent);
 
-        using var htmlDda = realm.Object();
+        using var htmlDda = realm.HostFunction("IsHTMLDDA", 0, (owner, _) => owner.Null());
         htmlDda.SetIsHtmlDda();
         api.Set("IsHTMLDDA", htmlDda);
         global.Set("$262", api);

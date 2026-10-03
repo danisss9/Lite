@@ -469,6 +469,301 @@
   "semanticReviewComplete": false,
   "testOverrides": [
     {
+      "path": "test/built-ins/Atomics/notify/bigint/notify-all-on-loc.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/count-defaults-to-infinity-missing.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/count-defaults-to-infinity-undefined.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/negative-count.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/notify-all-on-loc.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/notify-all.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/notify-in-order-one-time.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/notify-in-order.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/notify-nan.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/notify-one.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/notify-renotify-noop.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/notify-two.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/notify-with-no-agents-waiting.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/notify-with-no-matching-agents-waiting.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/notify-zero.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/notify/undefined-index-defaults-to-zero.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/false-for-timeout-agent.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/nan-for-timeout.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/negative-timeout-agent.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-no-operation.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-add.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-and.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-compareExchange.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-exchange.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-or.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-store.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-sub.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-xor.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/value-not-equal.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/waiterlist-block-indexedposition-wake.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/waiterlist-order-of-operations-is-fifo.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/bigint/was-woken-before-timeout.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/false-for-timeout-agent.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/good-views.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/nan-for-timeout.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/negative-timeout-agent.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-no-operation.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-add.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-and.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-compareExchange.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-exchange.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-or.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-store.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-sub.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-xor.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/null-for-timeout-agent.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/object-for-timeout-agent.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/poisoned-object-for-timeout-throws-agent.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/symbol-for-index-throws-agent.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/symbol-for-timeout-throws-agent.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/symbol-for-value-throws-agent.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/true-for-timeout-agent.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/undefined-for-timeout.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/undefined-index-defaults-to-zero.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/value-not-equal.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/wait-index-value-not-equal.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/waiterlist-block-indexedposition-wake.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/waiterlist-order-of-operations-is-fifo.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
+      "path": "test/built-ins/Atomics/wait/was-woken-before-timeout.js",
+      "classification": "out-of-scope",
+      "reason": "Requires the Test262 multi-agent host API ($262.agent start/broadcast/receiveBroadcast/getReport). The single-threaded QuickJS adapter does not implement cross-agent shared-memory execution, so these cases cannot run in this host. All agent-free Atomics cases remain required."
+    },
+    {
       "path": "test/built-ins/TypedArray/prototype/slice/speciesctor-return-same-buffer-with-offset.js",
       "classification": "post-target",
       "reason": "The pinned testTypedArray.js helper supplies immutable buffers and Float16Array when present; those cases are outside ES2020. ES2020 fixed-buffer byte-order copying is covered separately for every ES2020 typed array.",
