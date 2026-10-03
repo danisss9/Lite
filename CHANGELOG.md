@@ -2,11 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-- Bind reflection host methods the way WebIDL operations behave: arguments beyond an operation's declared parameters are ignored instead of raising `MissingMethodException` — Google's reCAPTCHA client calls `appendChild(node, reference)` with two arguments — and a matched overload that cannot convert an argument (a string passed where a node is required) falls through to the next overload, as browsers do. Calls with too few arguments still raise. Add DOM regression tests for both paths.
-
-## [0.0.17] - 2026-09-30
+## [0.0.17] - 2026-10-03
 
 This release replaces the JavaScript engine: Jint is removed and Lite now runs a bundled, pinned native QuickJS through a Windows x64 bridge, with DOM bindings, modules, dynamic import, and Test262 execution moved onto it. It adds the iframe and messaging features reCAPTCHA requires, vendors the official CSS 2.1 suite behind a verified catalog, and fixes stylesheet charset resolution.
 
@@ -16,6 +12,8 @@ This release replaces the JavaScript engine: Jint is removed and Lite now runs a
 - Add native browser features needed by reCAPTCHA: load dynamically inserted iframes with the page session, route clicks into their child documents, expose named frames and stable message sources, transfer `MessagePort` objects between iframes and workers, and support element focus and explicit XHR content types. Add focused iframe and Web API regression tests.
 - Vendor the official 23 March 2011 CSS 2.1 suite behind `OfficialCatalog`: test/reference structure is derived from the suite's own `reftest.list`, per-test metadata (flags, assertions, spec anchors) from each test's head, and the vendored tree is pinned with a whole-tree SHA-256 that the suite lock must publish. Execution uses the tree-verified catalog; readiness additionally requires the lock's pinned tree hash.
 - Fix stylesheet charset resolution to try the raw label before the underscore fallback, so UTF-8 stylesheets decode through the label .NET recognizes instead of raising first-chance exceptions on every request, while legacy labels like `shift-JIS` still fall back to `shift_jis`. Skip style rules whose selector text is empty, and register the code pages provider in the tests that assert this.
+- Pin QuickJS's native stack budget to 768 KB per runtime instead of the engine's 1 MB default. The stack-overflow watermark is anchored on the thread that creates (or adopts) the runtime, so with the default the guard could fire below the host thread's real stack end and let deep JS recursion die as an uncatchable `AccessViolationException`/`StackOverflowException` — a crash that only appeared on some hosts, depending on binary layout, and that the WPT survey already had to skip whole tests over. The pinned budget keeps every recursion depth that passes on 1.5 MB-reserve hosts while staying safe on 1 MB threads, and turns the overrun into a catchable `InternalError: stack overflow`. Add bridge regression tests for catchable deep recursion and for heavy engine creation with large scripts.
+- Bind reflection host methods the way WebIDL operations behave: arguments beyond an operation's declared parameters are ignored instead of raising `MissingMethodException` — Google's reCAPTCHA client calls `appendChild(node, reference)` with two arguments — and a matched overload that cannot convert an argument (a string passed where a node is required) falls through to the next overload, as browsers do. Calls with too few arguments still raise. Add DOM regression tests for both paths.
 
 ## [0.0.16] - 2026-09-26
 

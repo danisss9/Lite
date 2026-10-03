@@ -25,10 +25,23 @@ internal sealed class QuickJsRuntime : IDisposable
 
     internal nint Handle { get; private set; }
 
+    /// <summary>
+    /// Native stack bytes QuickJS may use below its stack-overflow watermark. The watermark is
+    /// captured from the thread that creates (or later adopts) the runtime, so the budget must
+    /// also fit the frames between that anchor and the thread's real stack end. QuickJS's 1 MB
+    /// default leaves no margin on 1 MB threads: deep JS recursion then overruns the native
+    /// stack and dies as an uncatchable AccessViolationException/StackOverflowException instead
+    /// of a JS error — a failure that only shows on some hosts, depending on binary layout.
+    /// 768 KB keeps every recursion that passes on a 1.5 MB-reserve host while staying inside a
+    /// 1 MB thread even when the runtime is created ~200 KB deep in managed code.
+    /// </summary>
+    internal const nuint StackBudgetBytes = 768 * 1024;
+
     internal QuickJsRuntime()
     {
         Handle = Native.lite_runtime_new();
         if (Handle == 0) throw new OutOfMemoryException("QuickJS runtime allocation failed");
+        Native.lite_runtime_set_stack_limit(Handle, StackBudgetBytes);
         _nativeCallback = InvokeHost;
         _normalizeCallback = Normalize;
         _moduleSourceCallback = ModuleSource;
@@ -595,6 +608,7 @@ internal static class Native
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint lite_runtime_new();
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_runtime_free(nint runtime);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_runtime_set_can_block(nint runtime, int canBlock);
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_runtime_set_stack_limit(nint runtime, nuint bytes);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_runtime_update_stack_top(nint runtime);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint lite_context_new(nint runtime);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_context_free(nint context);

@@ -28,6 +28,52 @@ public static class QuickJsBridgeTests
         Equal(42, (int)engine.Evaluate("add(20, 22)").AsNumber());
     }
 
+    /// <summary>
+    /// Deep JS recursion must surface as a catchable JavaScript error, never as a native stack
+    /// overrun. QuickJS bounds recursion with a stack watermark anchored on the owning thread;
+    /// the runtime pins a conservative budget (QuickJsRuntime.StackBudgetBytes) so the watermark
+    /// always fires inside the host thread's real stack. Without it, a host whose thread stack
+    /// is close to the budget dies with an uncatchable AccessViolationException instead.
+    /// </summary>
+    [Test]
+    public static void DeepRecursionThrowsCatchableStackOverflow()
+    {
+        using var engine = new Engine();
+        try
+        {
+            engine.Evaluate("function f(){ return f(); }\nf();");
+            True(false, "unbounded recursion must throw");
+        }
+        catch (QuickJsException error)
+        {
+            Contains("stack overflow", error.Message);
+            error.Dispose();
+        }
+    }
+
+    /// <summary>Reproduction shape of the flaky native crash: many engines created and torn
+    /// down in one process, each evaluating a large single script. Every failure must remain a
+    /// catchable QuickJsException — a native crash here terminates the whole process.</summary>
+    [Test]
+    public static void HeavyEngineCreationWithLargeScriptsStaysClean()
+    {
+        var script = new System.Text.StringBuilder(5_000 * 12);
+        for (var i = 1; i <= 5_000; i++) script.Append("var x").Append(i).Append("=1;\n");
+        var source = script.ToString();
+        for (var i = 0; i < 8; i++)
+        {
+            using var engine = new Engine();
+            try
+            {
+                engine.Evaluate(source);
+            }
+            catch (QuickJsException error)
+            {
+                error.Dispose(); // catchable engine errors are acceptable; native crashes are not
+            }
+        }
+    }
+
     [Test]
     public static void MissingNamedModuleExportFailsLinking()
     {
