@@ -2,7 +2,7 @@
 
 Lite targets the [W3C HTML5 Recommendation, 28 October 2014](https://www.w3.org/TR/2014/REC-html5-20141028/), also called HTML 5.0. This replaces HTML 5.3. The [active contract](../Lite.Conformance/Profile/lite-html5-css21-es2020-profile.json), CLI, schemas, applicability manifest, evidence identity and CI now use `html5`. CSS 2.1 and ES2020 remain separate targets.
 
-**Lite is not HTML5 conformant.** `html5ProfileReady` must remain false. Existing functionality and passing regressions do not establish complete feature conformance. Broad contract entries are workstreams awaiting atomic requirement and test review.
+**Lite is not HTML5 conformant.** `html5ProfileReady` must remain false. Existing functionality and passing regressions do not establish complete feature conformance. Broad contract entries are workstreams awaiting atomic requirement and test review. The milestone-by-milestone implementation plan for closing this gap lives in [html5-conformance-plan.md](html5-conformance-plan.md), including the applicability review protocol and the coordination rules with the parallel CSS 2.1 and ES2020 workstreams.
 
 ## Complete inventory
 

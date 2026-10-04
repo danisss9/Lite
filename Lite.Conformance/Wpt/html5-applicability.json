@@ -6,33 +6,33 @@
   "tests": [
     {
       "path": "lite/smoke.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: harness sanity fixture. In-position script execution and createElement/getElementById round trip (3.1 Documents and the DOM dependency), timer task scheduling (6.4 Timers), promise microtasks (ECMAScript dependency)."
     },
     {
       "path": "lite/script-timing.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: in-position classic scripts execute in document order before defer/async, defer runs after parsing, async on a later task (4.11.1 The script element, 6.1.4 Event loops); document.write inserts content reachable by getElementById (6.3 Dynamic markup insertion)."
     },
     {
       "path": "lite/iframe.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: nested browsing context with same-origin contentDocument, distinct contentWindow WindowProxy, frameElement resolution and the iframe load event (4.7.2 The iframe element); parent/child postMessage round trip per the Web Messaging dependency."
     },
     {
       "path": "lite/media.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: canPlayType values, content attribute reflection including the absolute src IDL attribute, source selection skipping unsupported types, initial HAVE_NOTHING paused state, and 2014 callback-style play() lifecycle event order (4.7.10 Media elements)."
     },
     {
       "path": "lite/navigation.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: pushState/replaceState entry and state semantics, popstate and hashchange events (5.5.1 The session history of browsing contexts), Location pathname/search/hash decomposition (5.5.3 The Location interface), document.title setter round trip (4.2.2 The title element)."
     },
     {
       "path": "lite/domcontentloaded.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: DOMContentLoaded fires on document and window after deferred scripts with the spec event shape, and readyState moves loading -> interactive -> complete (8.2.6 The end; 3.1 Documents current document readiness; 4.11.1 The script element)."
     },
     {
       "path": "css/CSS2/normal-flow/containing-block-percent-margin-top.html",
@@ -448,6 +448,491 @@
       "path": "lite/html5/details-toggle.html",
       "classification": "regression-only",
       "reason": "Details, summary and dialog are outside the pinned 2014 HTML5 Recommendation; keep this existing extension regression outside HTML5 readiness."
+    },
+    {
+      "path": "dom/collections/HTMLCollection-as-prototype.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): HTMLCollection prototype behavior (Web IDL legacy platform object): reading .length through the HTMLCollection prototype must throw; Lite allows it. 1/2 subtests pass. Queued for the DOM authority package; becomes included when passing."
+    },
+    {
+      "path": "dom/collections/HTMLCollection-delete.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): Strict delete on supported property names must throw TypeError and loose delete must return false; Lite differs. 2/4 subtests pass. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/collections/HTMLCollection-empty-name.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): getElementsByTagNameNS with an empty qualified-name must yield an empty collection and the empty-string named-property handling must follow Web IDL; Lite raises errors. 5/7 subtests pass. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/collections/HTMLCollection-iterator.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): Iterable-declaration subtests over HTMLCollection fail; the file mixes 2014-era and post-2014 iterable additions, so a per-assertion inventory is deferred until the target assertions pass. 4/6 subtests pass. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/collections/HTMLCollection-live-mutations.window.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): Live HTMLCollection mutation semantics: ownPropertyNames enumeration after insertions/removals differs; Lite collections are snapshots. 4/5 subtests pass. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/collections/HTMLCollection-own-props.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): Web IDL legacy platform object own-property setting and enumeration over named/indexed properties differs in Lite. 5/8 subtests pass. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/collections/HTMLCollection-supported-property-indices.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): Integer-like property names around 2^32 and the index getter edge cases differ; Lite fails 4/7 subtests. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/collections/HTMLCollection-supported-property-names.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): getOwnPropertyNames must enumerate supported property names of the live collection; Lite (snapshot collections) omits them. 2/6 subtests pass. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/collections/domstringmap-supported-property-names.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): getOwnPropertyNames and enumeration of dataset (DOMStringMap, 2.7.3) supported property names; Lite fails all 5 subtests. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/collections/namednodemap-supported-property-names.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): getOwnPropertyNames of NamedNodeMap attribute names; Lite fails all 3 subtests. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/lists/DOMTokenList-stringifier.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): DOMTokenList stringifier must return the serialized content attribute value (3.2.5.7 The class attribute); String(classList) differs in Lite. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/lists/DOMTokenList-coverage-for-attributes.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): 99/175 subtests pass; failures concentrate on DOMTokenList interface identity (no exposed interface objects or prototype chain) and reflected-attribute edge cases (3.2.5.7 The class attribute). Mixed-era file; full per-assertion inventory deferred until interface identity lands. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/lists/DOMTokenList-Iterable.html",
+      "classification": "post-target",
+      "reason": "Iterable/forEach/values declarations on DOMTokenList post-date the 28 October 2014 snapshot (post-2014 DOM iteration additions); not a 2014 obligation."
+    },
+    {
+      "path": "dom/lists/DOMTokenList-iteration.html",
+      "classification": "post-target",
+      "reason": "Iterable protocol support (keys/values/entries/for-of) on DOMTokenList post-date the 28 October 2014 snapshot; not a 2014 obligation."
+    },
+    {
+      "path": "dom/lists/DOMTokenList-value.html",
+      "classification": "post-target",
+      "reason": "The DOMTokenList .value IDL attribute was introduced after the 2014 snapshot (the 2014 interface defines only the stringifier); not a 2014 obligation."
+    },
+    {
+      "path": "dom/traversal/NodeFilter-constants.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): NodeFilter interface constants (SHOW_*/FILTER_*) must exist on the NodeFilter interface object; Lite does not expose Web IDL interface objects (DOM dependency). 1/2 subtests pass. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/NodeIterator.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): NodeIterator traversal (DOM dependency): the page produced no subtests, so a pass cannot be established. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/NodeIterator-removal.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): NodeIterator removal semantics (DOM dependency): the page produced no subtests, so a pass cannot be established. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-acceptNode-filter-cross-realm-null-browsing-context.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): Cross-realm NodeFilter (detached iframe) must still be invoked; Lite fails (harness error). Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-acceptNode-filter-cross-realm.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): NodeFilter as a cross-realm plain object without acceptNode must follow Web IDL callback semantics; Lite fails all 5 subtests. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-acceptNode-filter.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): Raw-function and object NodeFilter handling; subtests error because script-visible interface objects such as Element are not exposed. 0/12 subtests pass. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-basic.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): document.createTreeWalker basic traversal and interface identity; 0/6 subtests pass (interface objects not exposed). Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-currentNode.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): currentNode invariants (parent/previousSibling must not move currentNode outside the root); 1/4 subtests pass. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-nextNode-detached-currentNode.window.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): nextNode() from a detached currentNode without descendants must return null; Lite fails 3/3 subtests. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-previousNodeLastChildReject.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): previousNode must respect the filter; subtest errors on missing Element interface object. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-previousSiblingLastChildSkip.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): previousSibling must respect the filter; subtest errors on missing Element interface object. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-realm.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): TreeWalker nodes from a different realm; harness reports an error. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-traversal-reject.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): FILTER_REJECT semantics across nextNode/firstChild/lastChild; subtests error on missing Element interface object. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-traversal-skip-most.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): FILTER_SKIP versus skipping-most semantics for siblings; subtests error on missing Element interface object. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-traversal-skip.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): FILTER_SKIP semantics across traversal directions; subtests error on missing Element interface object. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/traversal/TreeWalker-walking-outside-a-tree.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed 2026-10-03 (failing): Walking after removing the currentNode from the tree must follow the 2014-era traversal algorithm; Lite differs. Queued for the DOM authority package."
+    },
+    {
+      "path": "dom/abort/AbortSignal.any.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/AbortSignal.any.worker.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/abort-signal-any-crash.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/abort-signal-any.any.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/abort-signal-any.any.worker.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/abort-signal-timeout.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/crashtests/any-on-abort.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/crashtests/timeout-close.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/event.any.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/event.any.worker.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/reason-constructor.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/timeout.any.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/abort/timeout.any.worker.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were introduced after the 28 October 2014 snapshot (Fetch-era DOM additions); not an HTML 5.0 obligation."
+    },
+    {
+      "path": "dom/observable/tentative/crashtests/observable-gc.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/crashtests/observable-gc.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/crashtests/observable-takeUntil-toArray.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/crashtests/observable-takeUntil-toArray.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/idlharness.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-catch.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-catch.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-constructor.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-constructor.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-constructor.window.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-drop.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-drop.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-event-target.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-event-target.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-event-target.window.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-every.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-every.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-filter.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-filter.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-finally.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-finally.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-find.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-find.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-first.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-first.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-flatMap.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-flatMap.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-forEach.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-forEach.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-forEach.window.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-from.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-from.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-inspect.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-inspect.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-last.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-last.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-map.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-map.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-map.window.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-reduce.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-reduce.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-some.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-some.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-switchMap.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-switchMap.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-take.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-take.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-takeUntil.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-takeUntil.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-takeUntil.window.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-toArray.any.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/observable/tentative/observable-toArray.any.worker.html",
+      "classification": "post-target",
+      "reason": "Tentative WPT coverage for the Observables proposal; unratified work absent from HTML 5.0 and its 2014-era dependencies."
+    },
+    {
+      "path": "dom/collections/childnodes-messagechannel-crash.html",
+      "classification": "regression-only",
+      "reason": "Upstream crash regression for posting a live childNodes list through a MessageChannel port; no normative HTML 5.0 assertion (regression evidence only)."
     }
   ]
 }

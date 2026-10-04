@@ -16,6 +16,9 @@
 # Mono auto generated files
 mono_crash.*
 
+# zcode
+.zcode
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/

@@ -1,0 +1,69 @@
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -30196,8 +30196,11 @@ static JSResolveResultEnum js_resolve_export1(JSContext *ctx,
+             JSModuleDef *m1;
+             m1 = m->req_module_entries[me->u.req_module_idx].module;
+             if (me->local_name == JS_ATOM__star_) {
+-                /* export ns from */
+-                *pmodule = m;
++                /* export ns from: ResolveExport step 6.a.iii returns the
++                   imported module itself with the 'namespace' binding so
++                   that two re-exports of the same namespace resolve to the
++                   same ResolvedBinding record */
++                *pmodule = m1;
+                 *pme = me;
+                 return JS_RESOLVE_RES_FOUND;
+             } else {
+@@ -30431,7 +30434,7 @@ static JSValue js_module_ns_autoinit(JSContext *ctx, JSObject *p, JSAtom atom,
+         return JS_EXCEPTION;
+     }
+     if (res_me->local_name == JS_ATOM__star_) {
+-        return JS_GetModuleNamespace(ctx, res_m->req_module_entries[res_me->u.req_module_idx].module);
++        return JS_GetModuleNamespace(ctx, res_m);
+     } else {
+         if (res_me->u.local.var_ref) {
+             var_ref = res_me->u.local.var_ref;
+@@ -30786,10 +30789,9 @@ static int js_inner_module_linking(JSContext *ctx, JSModuleDef *m,
+                 }
+                 if (res_me->local_name == JS_ATOM__star_) {
+                     JSValue val;
+-                    JSModuleDef *m2;
+-                    /* name space import from */
+-                    m2 = res_m->req_module_entries[res_me->u.req_module_idx].module;
+-                    val = JS_GetModuleNamespace(ctx, m2);
++                    /* name space import from: the resolution already
++                       carries the module owning the namespace binding */
++                    val = JS_GetModuleNamespace(ctx, res_m);
+                     if (JS_IsException(val))
+                         goto fail;
+                     var_ref = js_create_var_ref(ctx, TRUE);
+@@ -31802,8 +31804,27 @@ static __exception int js_parse_export(JSParseState *s)
+             } else {
+                 export_name = JS_DupAtom(ctx, local_name);
+             }
+-            me = add_export_entry(s, m, local_name, export_name,
+-                                  JS_EXPORT_TYPE_LOCAL);
++            {
++                /* Per ParseModule step 10 (16.2.1.7.1), an exported name
++                   bound by an import declaration re-exports the imported
++                   binding instead of exporting a local binding. */
++                int req_idx = -1;
++                for(i = 0; i < m->import_entries_count; i++) {
++                    JSImportEntry *ie = &m->import_entries[i];
++                    if (ie->var_idx < s->cur_func->closure_var_count &&
++                        s->cur_func->closure_var[ie->var_idx].var_name == local_name) {
++                        req_idx = ie->req_module_idx;
++                        JS_FreeAtom(ctx, local_name);
++                        local_name = JS_DupAtom(ctx, ie->import_name);
++                        break;
++                    }
++                }
++                me = add_export_entry(s, m, local_name, export_name,
++                                      req_idx >= 0 ? JS_EXPORT_TYPE_INDIRECT
++                                                   : JS_EXPORT_TYPE_LOCAL);
++                if (me && req_idx >= 0)
++                    me->u.req_module_idx = req_idx;
++            }
+             JS_FreeAtom(ctx, local_name);
+             JS_FreeAtom(ctx, export_name);
+             if (!me)
