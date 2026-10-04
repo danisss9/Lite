@@ -50,6 +50,11 @@ internal class JsEngine : IDisposable
     /// <summary>Set by the host to update the window title bar when document.title changes.</summary>
     internal Action<string>? OnTitleChange { get; set; }
 
+    /// <summary>Diagnostic boundary log filled by page-injected probes (e.g. the reCAPTCHA live
+    /// smoke). Thread-safe because module loads and timers can record from other threads.</summary>
+    public List<string> BoundaryLog { get; } = [];
+    public void RecordBoundary(string line) { lock (BoundaryLog) BoundaryLog.Add(line); }
+
     // ---- event loop ----
     // Macrotasks queued by timers/fetch/etc. They are drained on the UI thread so that
     // QuickJS is only ever touched from its owning thread.
