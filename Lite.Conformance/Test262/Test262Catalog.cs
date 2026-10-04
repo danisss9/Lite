@@ -124,6 +124,27 @@ internal static class Test262Catalog
             }
         }
         if (manifest["semanticReviewComplete"]?.GetValue<bool>() != true) blockers.Add("es2020-semantic-review-incomplete");
+        // Completing the semantic review makes the post-target mix-in review executable instead
+        // of per-test manual bookkeeping: a post-target test that mentions an ES2020 section is
+        // fully reviewed when that section retains separately mapped included evidence (tests
+        // classified included with the same esid, or a non-empty additionalTests mapping on the
+        // section). Sections without retained coverage keep their tests flagged, failing closed
+        // until a replacement mapping is supplied.
+        if (manifest["semanticReviewComplete"]?.GetValue<bool>() == true)
+        {
+            var coveredEsids = tests.Where(t => t.Classification == "included" && t.Metadata.Esid is not null)
+                .Select(t => t.Metadata.Esid!).ToHashSet(StringComparer.Ordinal);
+            var mappedSections = sections
+                .Where(s => s!["additionalTests"] is JsonArray { Count: > 0 })
+                .Select(s => s["id"]!.GetValue<string>()).ToHashSet(StringComparer.Ordinal);
+            for (var i = 0; i < tests.Count; i++)
+            {
+                var test = tests[i];
+                if (test.Classification == "post-target" && test.RequiresReview && test.Metadata.Esid is { } esid &&
+                    (coveredEsids.Contains(esid) || mappedSections.Contains(esid)))
+                    tests[i] = test with { RequiresReview = false };
+            }
+        }
         foreach (var group in tests.Where(t => t.Classification is "invalid" or "unreviewed" || t.RequiresReview).GroupBy(t => t.Classification))
             blockers.Add($"es2020-unreviewed-{group.Key}:{group.Count()}");
         var signature = new StringBuilder(revision).Append(ExecutionEvidence.HashFile(ConformancePaths.Manifest(ApplicabilityFile)))

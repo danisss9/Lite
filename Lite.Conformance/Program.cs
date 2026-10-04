@@ -46,7 +46,7 @@ internal static class Program
             {
                 case "--test262-set" when i + 1 < args.Length:
                     test262Set = args[++i];
-                    if (test262Set is not ("full" or "smoke")) { Console.Error.WriteLine("--test262-set must be full or smoke"); return 2; }
+                    if (test262Set is not ("full" or "smoke" or "staging")) { Console.Error.WriteLine("--test262-set must be full, smoke or staging"); return 2; }
                     break;
                 case "--suite" when i + 1 < args.Length:
                     suite = args[++i];
@@ -207,7 +207,8 @@ internal static class Program
               dotnet run --project Lite.Conformance -- --suite <wpt|html5|html5-inventory|css21|test262|acid|profile|all> [options]
 
             Options:
-              --test262-set full|smoke  Select the full corpus (default) or the explicit smoke set
+              --test262-set full|smoke|staging  Select the full corpus (default), the explicit smoke set,
+                                     or a review diagnostic that executes unreviewed staging tests
               --require-es2020-ready   (profile) Require complete ES2020 language and host evidence
               --suite es2020-inventory Export test/section inventories and an exhaustive remaining-work report
               --suite es2020-host      Run Lite browser JavaScript integration tests

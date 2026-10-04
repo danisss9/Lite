@@ -13,11 +13,16 @@ internal static class Test262Runner
 
     public static int Run(string? filter, ShardSpec shard, string? reportPath = null, string selection = "full")
     {
-        if (selection is not ("full" or "smoke")) throw new InvalidDataException("--test262-set must be full or smoke");
+        if (selection is not ("full" or "smoke" or "staging")) throw new InvalidDataException("--test262-set must be full, smoke or staging");
         var inventory = Test262Catalog.Read();
         if (!inventory.CheckoutComplete) { Console.Error.WriteLine(string.Join("\n", inventory.Blockers)); return 2; }
         var candidates = inventory.Tests.Where(t => t.Classification != "fixture");
         if (selection == "smoke") candidates = candidates.Where(t => Test262Catalog.IsSmoke(t.Path));
+        // The staging selection is a review diagnostic: it executes unreviewed-classified tests
+        // for real (they are normally recorded without execution) so their pass/fail outcomes
+        // can drive the edition applicability review. It never feeds required evidence - the
+        // readiness checks demand selection "full" - and a failure here does not fail the shard.
+        else if (selection == "staging") candidates = candidates.Where(t => t.Classification == "unreviewed");
         if (filter is not null) candidates = candidates.Where(t => t.Path.Contains(filter, StringComparison.OrdinalIgnoreCase));
         var tests = shard.Apply(candidates).ToArray();
         if (tests.Length == 0) { Console.Error.WriteLine("No matching Test262 tests"); return 2; }
@@ -54,7 +59,7 @@ internal static class Test262Runner
         var expectedFailed = 0; var unexpectedPasses = 0;
         foreach (var test in tests)
         {
-            if (test.Classification != "included")
+            if (test.Classification != "included" && selection != "staging")
             {
                 var outcome = test.Classification is "invalid" or "unreviewed" ? "unreviewed" : "excluded";
                 outcomes.Add(new("test262", test.Path, outcome, test.Reason, [], Context: "javascript", Kind: "language"));
