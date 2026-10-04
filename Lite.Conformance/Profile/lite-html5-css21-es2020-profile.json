@@ -3654,7 +3654,7 @@
       "url": "https://262.ecma-international.org/11.0/#sec-tail-position-calls",
       "title": "Calls in tail position reuse the caller's execution context without stack growth",
       "applicability": "included",
-      "status": "failing",
+      "status": "implemented",
       "tests": [
         {
           "suite": "test262",
@@ -3690,7 +3690,7 @@
       "implementationAreas": [
         "Lite.QuickJs 2026-06-04"
       ],
-      "notes": "The bundled patch trampoline only covers strict direct tail calls (Lite.QuickJs/native/patches/README.md); sloppy-mode, conditional, and catch tail positions still overflow as InternalError."
+      "notes": "Implemented across the 0001 and 0008 QuickJS patches: the frame-releasing trampoline now covers strict direct and mutual calls, conditional-expression and catch tail positions (shared-return jumps resolved through phase 2 label addresses, nip_catch before return), and sloppy callers via the unconditional tail-call conversion; the new tail_eval opcode extends the same treatment to eval-named callees that shadow %eval%. All 6 remaining tail-position Test262 executions pass."
     },
     {
       "id": "es2020.module-ambiguous-reexports",
@@ -3699,7 +3699,7 @@
       "url": "https://262.ecma-international.org/11.0/#sec-resolveexport",
       "title": "Re-exported imports and export * as ns bindings that resolve to one source binding are unambiguous",
       "applicability": "included",
-      "status": "failing",
+      "status": "implemented",
       "tests": [
         {
           "suite": "test262",
@@ -3725,7 +3725,7 @@
       "implementationAreas": [
         "Lite.QuickJs 2026-06-04"
       ],
-      "notes": "QuickJS resolves re-exported imports and export * as ns through the re-exporting module itself, so spec-unambiguous bindings are reported as ambiguous during linking."
+      "notes": "Fixed by the 0007-module-ambiguous-reexports QuickJS patch: exported names bound by an import declaration are recorded as indirect re-exports of the imported binding (ParseModule step 10), and export * as ns resolves to the module owning the namespace binding (ResolveExport step 6.a.iii), so spec-unambiguous re-exported bindings are no longer reported as ambiguous during linking. All 4 ambiguous-export-bindings tests pass; the duplicate-declaration negative tests keep their SyntaxError."
     },
     {
       "id": "es2020.module-super-tdz-binding",

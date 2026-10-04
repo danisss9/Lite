@@ -1,0 +1,160 @@
+--- a/quickjs-opcode.h
++++ b/quickjs-opcode.h
+@@ -117,6 +117,7 @@ DEF(   return_async, 1, 1, 0, none)
+ DEF(          throw, 1, 1, 0, none)
+ DEF(    throw_error, 6, 0, 0, atom_u8)
+ DEF(           eval, 5, 1, 1, npop_u16) /* func args... -> ret_val */
++DEF(      tail_eval, 5, 1, 1, npop_u16) /* same as eval, tail position */
+ DEF(     apply_eval, 3, 2, 1, u16) /* func array -> ret_eval */
+ DEF(         regexp, 1, 2, 1, none) /* create a RegExp object from the pattern and a
+                                        bytecode string */
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -18467,6 +18467,7 @@ static JSValue JS_CallInternalOne(JSContext *caller_ctx, JSValueConst func_obj,
+             goto exception;
+ 
+         CASE(OP_eval):
++        CASE(OP_tail_eval):
+             {
+                 JSValueConst obj;
+                 int scope_idx;
+@@ -18475,6 +18476,16 @@ static JSValue JS_CallInternalOne(JSContext *caller_ctx, JSValueConst func_obj,
+                 pc += 4;
+                 call_argv = sp - call_argc;
+                 sf->cur_pc = pc;
++                if (opcode == OP_tail_eval && !js_same_value(ctx, call_argv[-1], ctx->eval_obj) &&
++                    b->func_kind == JS_FUNC_NORMAL && (b->js_mode & JS_MODE_STRICT)) {
++                    /* the callee shadows %eval%, so the call is a normal
++                       call in tail position: unwind before entering it */
++                    if (js_prepare_tail_call(ctx, tail, call_argv[-1], JS_UNDEFINED,
++                                             call_argc, call_argv) < 0)
++                        goto exception;
++                    ret_val = JS_UNDEFINED;
++                    goto done;
++                }
+                 if (js_same_value(ctx, call_argv[-1], ctx->eval_obj)) {
+                     if (call_argc >= 1)
+                         obj = call_argv[0];
+@@ -18488,6 +18499,10 @@ static JSValue JS_CallInternalOne(JSContext *caller_ctx, JSValueConst func_obj,
+                 }
+                 if (unlikely(JS_IsException(ret_val)))
+                     goto exception;
++                if (opcode == OP_tail_eval) {
++                    /* tail position: the result is the function result */
++                    goto done;
++                }
+                 for(i = -1; i < call_argc; i++)
+                     JS_FreeValue(ctx, call_argv[i]);
+                 sp -= call_argc + 1;
+@@ -34224,6 +34239,31 @@ static int skip_dead_code(JSFunctionDef *s, const uint8_t *bc_buf, int bc_len,
+     return pos;
+ }
+ 
++/* Same walk as get_label_pos but resolved through the phase 2
++   addresses, which are the ones valid in resolve_labels. */
++static int get_label_pos2(JSFunctionDef *s, int label)
++{
++    int i, pos;
++    for (i = 0; i < 20; i++) {
++        pos = s->label_slots[label].pos2;
++        for (;;) {
++            switch (s->byte_code.buf[pos]) {
++            case OP_line_num:
++            case OP_label:
++                pos += 5;
++                continue;
++            case OP_goto:
++                label = get_u32(s->byte_code.buf + pos + 1);
++                break;
++            default:
++                return pos;
++            }
++            break;
++        }
++    }
++    return pos;
++}
++
+ static int get_label_pos(JSFunctionDef *s, int label)
+ {
+     int i, pos;
+@@ -34427,6 +34467,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
+             /* fall thru */
+         case OP_tail_call:
+         case OP_tail_call_method:
++        case OP_tail_eval:
+         case OP_return:
+         case OP_return_undef:
+         case OP_throw:
+@@ -35025,18 +35066,62 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
+                 /* A conditional expression can leave a branch through a jump
+                    to the shared return. That call is in tail position too. */
+                 if (code_match(&cc, pos_next, OP_goto, -1) &&
+-                    code_match(&cc, get_label_pos(s, cc.label), OP_return, -1)) {
++                    code_match(&cc, get_label_pos2(s, cc.label), OP_return, -1)) {
+                     add_pc2line_info(s, bc_out.size, line_num);
+                     put_short_code(&bc_out, op + 1, argc);
+                     pos_next = skip_dead_code(s, bc_buf, bc_len, pos_next, &line_num);
+                     break;
+                 }
++                /* A return inside a catch block drops the caught exception
++                   value before returning; the call is still in tail
++                   position and the frame teardown releases the value. */
++                if (code_match(&cc, pos_next, OP_nip_catch, -1) &&
++                    code_match(&cc, cc.pos, OP_return, -1)) {
++                    add_pc2line_info(s, bc_out.size, line_num);
++                    put_short_code(&bc_out, op + 1, argc);
++                    pos_next = skip_dead_code(s, bc_buf, bc_len, cc.pos, &line_num);
++                    break;
++                }
+                 add_pc2line_info(s, bc_out.size, line_num);
+                 put_short_code(&bc_out, op, argc);
+                 break;
+             }
+             goto no_change;
+ 
++        case OP_eval:
++            {
++                int argc, scope;
++                BOOL convert = FALSE;
++                argc = get_u16(bc_buf + pos + 1);
++                scope = get_u16(bc_buf + pos + 3);
++                if (code_match(&cc, pos_next, OP_return, -1)) {
++                    convert = TRUE;
++                    pos_next = skip_dead_code(s, bc_buf, bc_len, cc.pos, &line_num);
++                } else if (code_match(&cc, pos_next, OP_label, -1) &&
++                           code_match(&cc, cc.pos, OP_return, -1)) {
++                    /* keep the label and the return: other instructions
++                       can still branch to them */
++                    convert = TRUE;
++                } else if (code_match(&cc, pos_next, OP_goto, -1) &&
++                           code_match(&cc, get_label_pos2(s, cc.label), OP_return, -1)) {
++                    convert = TRUE;
++                    pos_next = skip_dead_code(s, bc_buf, bc_len, pos_next, &line_num);
++                } else if (code_match(&cc, pos_next, OP_nip_catch, -1) &&
++                           code_match(&cc, cc.pos, OP_return, -1)) {
++                    convert = TRUE;
++                    pos_next = skip_dead_code(s, bc_buf, bc_len, cc.pos, &line_num);
++                }
++                if (convert) {
++                    if (cc.line_num >= 0) line_num = cc.line_num;
++                    add_pc2line_info(s, bc_out.size, line_num);
++                    dbuf_putc(&bc_out, OP_tail_eval);
++                    dbuf_put_u16(&bc_out, argc);
++                    dbuf_put_u16(&bc_out, scope);
++                    break;
++                }
++            }
++            goto no_change;
++
+         case OP_return:
+         case OP_return_undef:
+         case OP_return_async:
+@@ -35907,6 +35992,7 @@ static __exception int compute_stack_size(JSContext *ctx,
+         switch(op) {
+         case OP_tail_call:
+         case OP_tail_call_method:
++        case OP_tail_eval:
+         case OP_return:
+         case OP_return_undef:
+         case OP_return_async:
