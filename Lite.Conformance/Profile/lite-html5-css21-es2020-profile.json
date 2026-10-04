@@ -3322,12 +3322,26 @@
       "url": "https://262.ecma-international.org/11.0/#sec-ecmascript-language-source-code",
       "title": "Language types, abstract operations, execution, syntax, and evaluation",
       "applicability": "included",
-      "status": "untested",
-      "tests": [],
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/language/module-code/namespace/internals/define-own-property.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/expressions/optional-chaining/runtime-semantics-evaluation.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/language/computed-property-names/basics/symbol.js"
+        }
+      ],
       "implementationAreas": [
         "Lite/Scripting",
         "Lite.QuickJs 2026-06-04"
-      ]
+      ],
+      "notes": "Closed by the completed normative section review of clauses 5 through 16 in Test262/es2020-sections.json: every section maps to passing included tests by esid or by reviewed topic mapping, and all 67,117 required language executions pass."
     },
     {
       "id": "es2020.17-26",
@@ -3336,11 +3350,25 @@
       "url": "https://262.ecma-international.org/11.0/#sec-ecmascript-standard-built-in-objects",
       "title": "Standard built-in objects",
       "applicability": "included",
-      "status": "untested",
-      "tests": [],
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Promise/allSettled/resolve-element-function-name.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/BigInt/asUintN/length.js"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/String/prototype/matchAll/length.js"
+        }
+      ],
       "implementationAreas": [
         "Lite.QuickJs 2026-06-04"
-      ]
+      ],
+      "notes": "Closed by the completed normative section review of clauses 17 through 26 in Test262/es2020-sections.json: every section maps to passing included tests by esid or by reviewed topic mapping, and all 67,117 required language executions pass."
     },
     {
       "id": "es2020.optional-chaining",

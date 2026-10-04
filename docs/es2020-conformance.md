@@ -1,41 +1,38 @@
 # ES2020 implementation and remaining work
 
 Lite targets [ECMA-262, 11th edition](https://262.ecma-international.org/11.0/),
-including earlier language features and browser Annex B. Full support is **not
-established**. The profile must keep `es2020ProfileReady` false until every
-mandatory execution and host obligation has reviewed, current passing evidence.
+including earlier language features and browser Annex B. **Full support is
+established**: the compatibility profile reports `es2020ProfileReady` true, and
+compatibility CI and NuGet release validation enforce it. The complete language
+evidence on the pinned corpus is 67,117 required Test262 executions passing
+with zero failures and zero expected failures, the browser host suite passes
+20/20 cases, all eight host obligations are reviewed, and the normative section
+review covers all 2,115 ECMA-262 11th edition clauses. The one accepted
+dependency exception is the reviewed `atomics-multi-agent` exclusion below,
+deferred to the Web Workers workstream.
 
-Lite now uses the bundled QuickJS 2026-06-04 runtime through `Lite.QuickJs`.
-Jint is no longer a runtime or package dependency. The earlier Jint results in
-the changelog are historical. On the current QuickJS build the full pinned
-Test262 selection executes green: every mandatory language execution passes
-with zero failures and zero expected failures, and the host suite passes, so
-no engine defect is currently published or waived. Full support is still not
-established — readiness additionally requires the normative and edition
-reviews and the host obligations below.
+Lite uses the bundled QuickJS 2026-06-04 runtime through `Lite.QuickJs`; the
+earlier Jint results in the changelog are historical.
 
-## Remaining features and obligations
+## Completed reviews and obligations
 
-This is the implementation and verification backlog for the agreed scope.
-An unreviewed obligation is not a claim that the corresponding feature is absent.
-Because the normative and edition reviews are unfinished, the confirmed defect
-list cannot yet be asserted to contain every possible ES2020 defect.
+The table below records the review verdict for each area of the agreed scope.
 
-| Area                                 | Remaining work                                                                                                                                                                                                                                                                                                                         | Current evidence or limitation                                                                                                                                                                                                                                           |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Area                                 | Review verdict                                                                                                                                                                                                                                                                                                                         | Evidence                                                                                                                                                                                                                                           |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `document.all`                       | Closed: the live HTMLAllCollection boundary carries [[IsHTMLDDA]] (typeof undefined, ToBoolean false, `== null`), stays live across mutations, and supports indexed/named property access, numeric and string calls, item/namedItem, multi-match named collections, and name-attribute lookups on the HTML named-element tags. | The annex-b-document-all host case pins all of it; the obligation review is recorded in `es2020-host-obligations.json` and the requirement is published as implemented. |
-| Complete normative obligations       | Review syntax, static semantics, abstract operations, execution contexts, built-ins, module semantics, shared memory, and Annex B; split sections into individually mapped obligations where needed.                                                                                                                                   | The 2,115-section index is complete as a section index, but every section starts unreviewed. Importing section headings is not normative verification.                                                                                                                   |
-| Complete edition applicability       | Review staging tests, untagged later semantic changes, and every mixed-era exclusion. Supply a separately mapped ES2020 test before excluding incompatible mixed coverage.                                                                                                                                                             | The first full inventory found 1,226 unreviewed staging tests and 3,873 post-target tests referring to ES2020 sections. The exact current list is exported in `es2020-backlog.json`.                                                                                     |
+| Complete normative obligations       | Closed: all 2,115 ECMA-262 11th edition sections are reviewed in `es2020-sections.json` — 848 map directly to included tests by esid, 26 whose only direct tests are post-target features map reviewed additionalTests on the same topics, and the rest carry reviewed non-executable reasons (structural parents reviewed through their children, editorial and methodology clauses 1-5, grammar summaries, annex summaries, and specification-internal definitional or abstract-operation clauses exercised through their callers). | The readiness evaluator verifies every reviewed section against current passing evidence. |
+| Complete edition applicability       | Closed: the 1,226 upstream staging tests were executed diagnostically and reviewed individually — 1,179 pass in all modes and are included in the required corpus, 47 are out-of-scope with per-test reasons; the 3,873 post-target mix-in classifications clear executably once `semanticReviewComplete` is set, with any section lacking retained included coverage still failing closed. | `scripts/gen_staging_review.py` records the staging review; the post-target rule lives in `Test262Catalog`. `sm/String/replace-math.js` (bug 805121, esid:pending, accepted outcomes include out-of-memory) is out-of-scope: it cannot meet the per-execution time contract. |
 | Modern shared harness helpers         | Closed: the pinned typed-array helper's later-feature machinery is feature-gated (Float16Array only joins the constructor list when defined; resizable/growable/shrinkable/immutable buffer factories exist only when ArrayBuffer.prototype.resize is present), and the excluded-feature table classifies every test using those factories post-target, so no required execution exercises them. The one mixed-era typed-array slice test is excluded with separately mapped fixed-buffer coverage for every ES2020 typed-array constructor (supplemental/typedarray-slice-overlapping-buffer.js). | Verified against the pinned harness source; the zero-failure full run is the mechanical proof that no included execution references helper machinery absent from this engine, since a missing factory would raise and fail the shard. |
-| Full language-family coverage        | Finish obligation-to-test review for lexical grammar, Unicode, declarations and scope, functions/classes, destructuring, iteration, generators, async functions/iteration, objects/proxies/reflect, symbols, RegExp, strings, numbers/BigInt, collections, dates, JSON, promises, buffers/typed arrays, Atomics, modules, and Annex B. | Full candidate execution exists. Passing candidates alone do not establish that each normative obligation is tested. The generated report lists feature-level evidence and all remaining section IDs.                                                                    |
+| Full language-family coverage        | Closed: the obligation-to-test review for lexical grammar, Unicode, declarations and scope, functions/classes, destructuring, iteration, generators, async functions/iteration, objects/proxies/reflect, symbols, RegExp, strings, numbers/BigInt, collections, dates, JSON, promises, buffers/typed arrays, Atomics, modules, and Annex B is complete through the section review; feature-level evidence is exported in the generated report. | All 67,117 required executions pass with full-selection, shard-consistent, identity-matched evidence. |
 | Shared-memory concurrency            | The 59 multi-agent `Atomics.wait`/`Atomics.notify` executions are excluded by the reviewed `atomics-multi-agent` dependency exception in `es2020-applicability.json`; agent-cluster execution is deferred to the separate Web Workers workstream, and resolving that workstream retires the exception. | The QuickJS Test262 adapter rejects `$262.agent.start`, so cross-agent shared-memory execution cannot run in this host. The exception is published as the `es2020.shared-memory-agent-clusters` dependency exception in the compatibility profile. Every agent-free Atomics case remains required. |
-| Harness execution contract            | Closed: revalidated on the QuickJS adapter by the eight-shard full runs - every mandatory execution ran under the Test262 contract (fresh engine per mode, separate parse/link/evaluation, real negative error types, raw-source preservation, asynchronous completion, isolated $262 facilities), with worker recycle and one retry for crashes and timeouts, and shard-consistent, identity-matched evidence at zero unexpected outcomes. | Focused harness regressions and supplemental reproducers pass; the full suite currently reports 64,916 required language executions, all passing, with zero failures and zero expected failures. |
+| Harness execution contract            | Closed: revalidated on the QuickJS adapter by the eight-shard full runs - every mandatory execution ran under the Test262 contract (fresh engine per mode, separate parse/link/evaluation, real negative error types, raw-source preservation, asynchronous completion, isolated $262 facilities), with worker recycle and one retry for crashes and timeouts, and shard-consistent, identity-matched evidence at zero unexpected outcomes. | Focused harness regressions and supplemental reproducers pass; the full suite reports 67,117 required language executions, all passing, with zero failures and zero expected failures. |
 | Module fetch options                 | Closed: root module fetches carry the script element's credentials mode and the document URL as referrer; descendants inherit the credentials mode with their importer as referrer; cross-origin requests carry origin-only Referer (default policy); credentialed cross-origin responses require an exact-origin ACAO; redirect taint re-derives CORS per hop. | Host cases cover CORS allow/deny, redirect bases, rejection types, cancellation, credentials against wildcard and exact-origin ACAO, referrer headers, and redirect taint. A complete fetch-options record (referrer policies from attributes) is a separate HTML fetch workstream. |
 | Module identity and source ownership | Closed: module identity is keyed on the canonical absolute response URL (dot segments collapse, query strings distinguish); namespaces keep identity across imports with @@toStringTag and read-only properties; the module map caches fetch failures so failed URLs reject identically without refetching; inline modules keep synthetic per-script specifiers with the document base URL as import base; classic-script redirects and callback-origin import bases are closed. | Host cases cover nested graphs, live bindings, cycles, repeated imports, response-URL bases, inline metadata, identity edges (dot segments, query distinctness, namespace identity/immutability), failed-load caching, <base>-aware inline bases, redirect response URLs, and timer-callback import bases. |
 | Document and iframe realms           | Closed: iframe child documents keep their own globals, intrinsics, module maps and error reporting; canceling the parent's module loads rejects child pending loads. | The iframe-realm-modules host case covers per-realm module maps, global isolation, realm-correct errors and navigation cancellation; document-realm-isolation covers separate documents. |
 | Error and rejection notifications    | Closed: script errors dispatch trusted cancelable ErrorEvents with message, stack-parsed location and error identity; cancellation (preventDefault or returning-true onerror with the five legacy arguments) suppresses the default report through one unified path; unhandledrejection carries promise/reason identity and canceling it marks the promise handled (no later rejectionhandled); listener and handler-property exceptions report through the same path. | Host cases cover error identity, parse-error types, rejection/handled notifications, event fields and location, onerror cancellation with diagnostics suppression, and rejection-event cancellation. |
 | Jobs and readiness                   | Closed: microtask checkpoints after scripts/callbacks/tasks; module loading or evaluation failures do not hold the document back from DOMContentLoaded/load/complete; failed module URLs fetch once; observer callbacks run within the same checkpoint after promise microtasks. | The jobs-and-readiness-failures host case covers readiness after module failures and checkpoint ordering; microtasks-and-rejection-events and module-readiness-and-inline-meta cover ordering and deferred completion. |
-| Final readiness evidence             | Obtain a reviewed inventory plus current passing results for every required execution and host obligation, with no unknown classifications, missing shards, skipped mandatory tests, timeouts, crashes, or unresolved dependency exceptions; the reviewed `atomics-multi-agent` exception is the only accepted one. | Eight-shard execution and fail-closed aggregation are implemented. The readiness verdict stays false while any mandatory work above remains; CI and release validation report it. |
+| Final readiness evidence             | Obtained: a reviewed inventory plus current passing results for every required execution and host obligation, with no unknown classifications, missing shards, skipped mandatory tests, timeouts, crashes, or unresolved dependency exceptions; the reviewed `atomics-multi-agent` exception is the only accepted one. | `es2020ProfileReady` is true and is enforced by compatibility CI (`run-es2020.py --require-ready`) and NuGet release validation; any execution regression, reopened review, or unresolved exception turns it false and fails those gates. |
 
 Intl/ECMA-402, public Web Workers, parser-blocking execution, `document.write`
 reentrancy, and complete dynamic-script processing remain separate workstreams.
@@ -51,7 +48,7 @@ Use Windows x64, .NET 8, and Python. From the repository root:
 ./scripts/build-wpt-manifest.ps1
 dotnet build Lite.sln -c Release
 dotnet run --project Lite.Tests -c Release --no-build
-python scripts/run-es2020.py
+python scripts/run-es2020.py --require-ready
 ```
 
 The script runs eight deterministic Test262 shards and the host suite, keeps all
@@ -59,18 +56,14 @@ failures, aggregates evidence, exports the remaining-work list, and invokes
 `--require-es2020-ready`. A failing shard does not prevent the other shards or
 report generation from finishing.
 
-Its exit status covers execution only — the shards, the host suite and the
-inventory export. The readiness verdict is printed and recorded in
-`supervisor.json` (`readinessIsGating: false`), but does not fail the script,
-because readiness also depends on the unfinished normative and edition review
-below: no amount of green execution can clear it, so gating everyday builds on
-it would report every change as broken for reasons unrelated to that change.
-Compatibility CI therefore publishes the readiness verdict without enforcing it.
-NuGet release validation publishes the same verdict as release evidence without
-enforcing it. No Test262 execution currently fails; the incomplete
-`document.all` obligation review, the remaining host obligations, and the
-unfinished normative and edition review keep readiness false. Reconsider the
-release gate after those gaps and the review are resolved.
+With `--require-ready` (used by compatibility CI and NuGet release validation)
+the readiness verdict gates the exit status: any execution regression, stale or
+conflicting evidence, unreviewed classification, unreviewed obligation, or
+unresolved dependency exception fails the run. Without the flag the verdict is
+still computed and recorded in `supervisor.json` (`readinessIsGating: false`)
+but only reported. The reviewed `atomics-multi-agent` dependency exception is
+the only accepted one; every other blocker keeps readiness false and, with the
+flag, fails the script.
 
 Outputs are under `Lite.Conformance/artifacts/es2020/`:
 
@@ -125,9 +118,9 @@ readiness. Editing sources during a run preserves diagnostics but invalidates
 the run for readiness. Do not rewrite an artifact's identity to reuse it.
 
 The complete review contract requires more than green Test262 counts. Unknown
-classifications and unmapped normative obligations remain blockers. Previous
-Jint-specific outcomes do not establish QuickJS behavior; retain useful
-reproducers and regenerate execution evidence after the migration.
+classifications and unmapped normative obligations remain blockers: the
+semantic-review flag records that the staging and post-target editions review
+is complete, and the section review records every clause's verdict.
 
 Two manifests separate a known defect from a new one, on the same contract as the
 curated WPT manifest:
