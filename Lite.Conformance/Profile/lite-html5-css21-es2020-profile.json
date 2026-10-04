@@ -3766,6 +3766,321 @@
         "Lite.QuickJs 2026-06-04"
       ],
       "notes": "Fixed by the 0002-strict-assignment-reference-order QuickJS patch: strict simple assignment captures the reference before the right-hand side is evaluated, so PutValue throws a ReferenceError for an unresolvable reference even when the RHS creates the property. Full Test262 passes (64,885 executions, zero unexpected failures)."
+    },
+    {
+      "id": "es2020.shared-memory-agent-clusters",
+      "specification": "es2020",
+      "clause": "8.7 Agent Clusters; 24.4 Atomics.wait, Atomics.notify multi-agent coverage",
+      "url": "https://262.ecma-international.org/11.0/#sec-agent-clusters",
+      "title": "Shared-memory agent clusters (multi-agent Atomics.wait and Atomics.notify coverage)",
+      "applicability": "included",
+      "status": "dependency-exception",
+      "tests": [
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/bigint/notify-all-on-loc.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/count-defaults-to-infinity-missing.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/count-defaults-to-infinity-undefined.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/negative-count.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/notify-all-on-loc.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/notify-all.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/notify-in-order-one-time.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/notify-in-order.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/notify-nan.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/notify-one.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/notify-renotify-noop.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/notify-two.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/notify-with-no-agents-waiting.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/notify-with-no-matching-agents-waiting.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/notify-zero.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/notify/undefined-index-defaults-to-zero.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/false-for-timeout-agent.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/nan-for-timeout.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/negative-timeout-agent.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-no-operation.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-add.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-and.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-compareExchange.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-exchange.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-or.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-store.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-sub.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/no-spurious-wakeup-on-xor.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/value-not-equal.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/waiterlist-block-indexedposition-wake.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/waiterlist-order-of-operations-is-fifo.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/bigint/was-woken-before-timeout.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/false-for-timeout-agent.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/good-views.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/nan-for-timeout.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/negative-timeout-agent.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-no-operation.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-add.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-and.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-compareExchange.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-exchange.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-or.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-store.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-sub.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/no-spurious-wakeup-on-xor.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/null-for-timeout-agent.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/object-for-timeout-agent.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/poisoned-object-for-timeout-throws-agent.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/symbol-for-index-throws-agent.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/symbol-for-timeout-throws-agent.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/symbol-for-value-throws-agent.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/true-for-timeout-agent.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/undefined-for-timeout.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/undefined-index-defaults-to-zero.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/value-not-equal.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/wait-index-value-not-equal.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/waiterlist-block-indexedposition-wake.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/waiterlist-order-of-operations-is-fifo.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        },
+        {
+          "suite": "test262",
+          "path": "test/built-ins/Atomics/wait/was-woken-before-timeout.js",
+          "assertion": "Multi-agent agent-cluster execution (blocked: the adapter provides no $262.agent host API)"
+        }
+      ],
+      "implementationAreas": [
+        "Lite.Conformance Test262 harness: $262.agent multi-agent host API",
+        "Web Workers workstream: agent-cluster execution"
+      ],
+      "upstreamIssues": [
+        "https://github.com/tc39/test262/blob/main/INTERPRETING.md",
+        "https://github.com/danisss9/Lite/blob/main/docs/es2020-conformance.md"
+      ],
+      "notes": "Reviewed host-boundary exception. The single-threaded QuickJS conformance adapter provides no $262.agent multi-agent host API, so cross-agent shared-memory executions cannot run in this host; the 59 affected Atomics.wait/Atomics.notify tests are named in Test262/es2020-applicability.json under dependencyExceptions (id atomics-multi-agent) and every agent-free Atomics case remains required. Agent-cluster coverage is deferred to the separate Web Workers workstream; implementing multi-agent execution retires this exception and returns its paths to the required set."
     }
   ]
 }

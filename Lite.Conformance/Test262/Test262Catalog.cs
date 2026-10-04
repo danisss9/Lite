@@ -30,6 +30,7 @@ internal static class Test262Catalog
         var sections = JsonNode.Parse(File.ReadAllText(ConformancePaths.Manifest(SectionsFile)))!["sections"]!.AsArray();
         var esids = sections.Select(x => x!["id"]!.GetValue<string>()).ToHashSet(StringComparer.Ordinal);
         var overrides = manifest["testOverrides"]!.AsArray().ToDictionary(x => x!["path"]!.GetValue<string>(), x => x!.AsObject(), StringComparer.Ordinal);
+        var dependencyExceptions = manifest["dependencyExceptions"]?.AsArray().OfType<JsonObject>().ToArray() ?? [];
         var suite = JsonNode.Parse(File.ReadAllText(ConformancePaths.Manifest("test-suites.lock.json")))!["suites"]!
             .AsArray().Single(x => x!["id"]!.GetValue<string>() == "test262")!;
         var revision = Git("rev-parse", "HEAD").Trim();
@@ -97,6 +98,30 @@ internal static class Test262Catalog
             foreach (var replacement in item.Value["replacements"]?.AsArray() ?? [])
                 if (!tests.Any(t => t.Path == replacement!.GetValue<string>() && t.Classification == "included"))
                     blockers.Add($"invalid-mixed-test-replacement:{item.Key}:{replacement}");
+        }
+        // A reviewed dependency exception moves host-blocked tests out of the required set while
+        // keeping the exclusion visible and named. An unreviewed exception, or one citing a path
+        // that is missing, a fixture, or an invalid test, fails closed as a readiness blocker.
+        foreach (var exception in dependencyExceptions)
+        {
+            var id = exception["id"]?.GetValue<string>();
+            var reason = exception["reason"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(reason))
+                throw new InvalidDataException("Dependency exceptions require a non-empty id and reason");
+            if (exception["reviewed"]?.GetValue<bool>() != true) blockers.Add($"es2020-unreviewed-dependency-exception:{id}");
+            var exceptionPaths = exception["paths"]?.AsArray().Select(p => p!.GetValue<string>()).ToHashSet(StringComparer.Ordinal) ?? [];
+            if (exceptionPaths.Count == 0) blockers.Add($"empty-dependency-exception:{id}");
+            foreach (var path in exceptionPaths)
+            {
+                if (overrides.ContainsKey(path))
+                    throw new InvalidDataException($"Dependency exception {id} conflicts with a test override: {path}");
+                var index = tests.FindIndex(t => t.Path == path);
+                if (index < 0) { blockers.Add($"unknown-dependency-exception-path:{id}:{path}"); continue; }
+                var test = tests[index];
+                if (test.Classification is "fixture" or "invalid")
+                { blockers.Add($"invalid-dependency-exception-path:{id}:{path}"); continue; }
+                tests[index] = test with { Classification = "dependency-exception", Reason = reason, RequiresReview = false };
+            }
         }
         if (manifest["semanticReviewComplete"]?.GetValue<bool>() != true) blockers.Add("es2020-semantic-review-incomplete");
         foreach (var group in tests.Where(t => t.Classification is "invalid" or "unreviewed" || t.RequiresReview).GroupBy(t => t.Classification))

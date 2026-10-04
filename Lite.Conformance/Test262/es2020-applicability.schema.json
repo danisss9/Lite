@@ -12,6 +12,13 @@
       "path": { "type": "string" }, "classification": { "enum": ["included", "post-target", "out-of-scope"] },
       "reason": { "type": "string", "minLength": 1 }, "replacements": { "type": "array", "items": { "type": "string" } }
     }, "additionalProperties": false } },
+    "dependencyExceptions": { "type": "array", "items": { "type": "object", "required": ["id", "reason", "reviewed", "paths"], "properties": {
+      "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$" },
+      "reason": { "type": "string", "minLength": 1 },
+      "reviewed": { "type": "boolean" },
+      "workstream": { "type": "string", "minLength": 1 },
+      "paths": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true }
+    }, "additionalProperties": false } },
     "target": { "type": "string" },
     "specification": { "type": "string", "format": "uri" },
     "excludedFeatures": {
