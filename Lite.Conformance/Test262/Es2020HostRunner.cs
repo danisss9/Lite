@@ -184,6 +184,31 @@ internal static class Es2020HostRunner
             Require(site.Referers.GetValueOrDefault("/modules/sub/dep.js")?.EndsWith("/modules/root.js") == true,
                 $"Descendant module fetch referrer was {site.Referers.GetValueOrDefault("/modules/sub/dep.js")}");
         },
+        ["module-identity-edges"] = site => Check(site.Empty(), """
+            const first = await import('/modules/root.js');
+            if (globalThis.__evaluations !== 1) throw Error('baseline evaluation');
+            const canonical = await import('/modules/../modules/root.js');
+            if (canonical !== first || globalThis.__evaluations !== 1) throw Error('dot-segment identity');
+            const queried = await import('/modules/root.js?v=1');
+            if (queried === first || globalThis.__evaluations !== 2) throw Error('query distinctness');
+            const again = await import('/modules/root.js');
+            if (again !== first || again.ns !== first.ns) throw Error('namespace identity across imports');
+            if (first.ns[Symbol.toStringTag] !== 'Module') throw Error('namespace toStringTag');
+            first.ns.value = 99;
+            if (first.ns.value !== 1) throw Error('namespace immutability');
+            """),
+        ["module-failed-load-caching"] = site =>
+        {
+            site.RequestCounts.Clear();
+            Check(site.Empty(), """
+                let first = null, second = null;
+                try { await import('/missing-identity.js'); } catch (e) { first = e.constructor.name; }
+                try { await import('/missing-identity.js'); } catch (e) { second = e.constructor.name; }
+                if (first !== 'TypeError' || second !== 'TypeError') throw Error('Expected TypeErrors, saw ' + first + ' then ' + second);
+                """);
+            Require(site.RequestCounts.GetValueOrDefault("/missing-identity.js") == 1,
+                $"The failed module was refetched: {site.RequestCounts.GetValueOrDefault("/missing-identity.js")} requests");
+        },
         ["module-base-and-classic-redirect"] = site =>
         {
             var (_, baseEngine) = HeadlessPage.Load(site.BaseUrl + "/base-page.html");
@@ -278,6 +303,8 @@ internal static class Es2020HostRunner
         internal Dictionary<string, string> Routes { get; } = new(StringComparer.Ordinal);
         /// <summary>Last Referer header per request path, for fetch-options assertions.</summary>
         internal Dictionary<string, string?> Referers { get; } = new(StringComparer.Ordinal);
+        /// <summary>Total request count per path, for failed-load-caching assertions.</summary>
+        internal Dictionary<string, int> RequestCounts { get; } = new(StringComparer.Ordinal);
         internal JsEngine Empty() => HeadlessPage.Load(BaseUrl + "/empty.html").Engine;
         private static WebApplication Start(Site site)
         {
@@ -287,7 +314,11 @@ internal static class Es2020HostRunner
             app.Run(async context =>
             {
                 var path = context.Request.Path.Value;
-                lock (site.Referers) site.Referers[path!] = context.Request.Headers.Referer.FirstOrDefault();
+                lock (site.Referers)
+                {
+                    site.Referers[path!] = context.Request.Headers.Referer.FirstOrDefault();
+                    site.RequestCounts[path!] = site.RequestCounts.GetValueOrDefault(path!) + 1;
+                }
                 if (path == "/redirect.js") { context.Response.Redirect("/modules/sub/main.js"); return; }
                 if (path == "/redirect-classic.js") { context.Response.Redirect("/scripts/redirected-importer.js"); return; }
                 // Redirect taint: a same-origin module that redirects cross-origin.

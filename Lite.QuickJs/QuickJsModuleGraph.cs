@@ -14,6 +14,9 @@ internal sealed class QuickJsModuleGraph(
 {
     private readonly ConcurrentDictionary<string, string> _sources = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, string> _responseUrls = new(StringComparer.Ordinal);
+    // The HTML module map records a null (fetch failure) entry: once a URL fails, later imports
+    // of it reject with the same outcome without refetching.
+    private readonly ConcurrentDictionary<string, Exception> _failures = new(StringComparer.Ordinal);
     private readonly CancellationTokenSource _lifetime = new();
 
     internal void RegisterInline(string url, string source)
@@ -59,13 +62,24 @@ internal sealed class QuickJsModuleGraph(
             if (!seen.Add(requested)) continue;
             string code;
             string responseUrl;
+            if (_failures.TryGetValue(requested, out var cachedFailure)) throw cachedFailure;
             if (_sources.TryGetValue(requested, out var inline))
                 (code, responseUrl) = (inline, _responseUrls.GetValueOrDefault(requested, requested));
             else
-                (code, responseUrl) = await fetchSource(new Uri(requested),
-                    // The entry fetch's credentials mode is inherited by every descendant; each
-                    // descendant's referrer is the URL of the module that imported it.
-                    parentReferrer, credentialsMode, linked.Token).ConfigureAwait(false);
+            {
+                try
+                {
+                    (code, responseUrl) = await fetchSource(new Uri(requested),
+                        // The entry fetch's credentials mode is inherited by every descendant; each
+                        // descendant's referrer is the URL of the module that imported it.
+                        parentReferrer, credentialsMode, linked.Token).ConfigureAwait(false);
+                }
+                catch (Exception error)
+                {
+                    _failures[requested] = error;
+                    throw;
+                }
+            }
             _responseUrls[requested] = responseUrl;
             _responseUrls[responseUrl] = responseUrl;
             _sources[responseUrl] = code;

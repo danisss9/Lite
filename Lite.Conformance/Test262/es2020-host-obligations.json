@@ -17,10 +17,10 @@
     },
     {
       "id": "module-resolution-and-identity",
-      "reviewed": false,
+      "reviewed": true,
       "requirement": "Importer-relative resolution, URL identity, live bindings, cycles, evaluation once, namespaces and failure caching",
-      "remaining": "Review URL edge cases, inline registry identity, failed-load caching and complete namespace integration.",
-      "tests": ["module-graphs-live-bindings-and-identity"]
+      "remaining": "Closed: module identity is keyed on the canonical absolute response URL (dot segments collapse, query strings distinguish), namespaces keep identity across imports with @@toStringTag and read-only properties, and the module map caches fetch failures so a failed URL rejects identically on later imports without refetching. Inline modules keep synthetic per-script registered specifiers, so each inline script is its own module evaluating exactly once; their response URL (and therefore import base and import.meta.url) is the document base URL.",
+      "tests": ["module-graphs-live-bindings-and-identity", "module-identity-edges", "module-failed-load-caching"]
     },
     {
       "id": "script-source-ownership",
