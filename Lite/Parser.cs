@@ -84,7 +84,8 @@ internal static class Parser
     private static readonly HashSet<string> SkipTags =
         ["STYLE", "NOSCRIPT", "META", "LINK", "TITLE"];
 
-    internal sealed record ScriptRecord(string? Code, string Url, bool IsModule = false, bool Inline = false);
+    internal sealed record ScriptRecord(string? Code, string Url, bool IsModule = false, bool Inline = false,
+        string? CrossOrigin = null, string? RequestedUrl = null);
 
     internal sealed class ParseState
     {
@@ -336,7 +337,7 @@ internal static class Parser
         // 1) In-position classic scripts (inline + external without defer/async), in document order.
         //    document.write() during these appends to the body (see JsDocument.write).
         foreach (var script in _pendingScripts)
-            jsEngine.Execute(script.Code!, script.Url);
+            jsEngine.Execute(script.Code!, script.Url, script.RequestedUrl);
 
         jsEngine.MarkDocumentInteractive();
 
@@ -2033,6 +2034,8 @@ internal static class Parser
         bool hasSrc = !string.IsNullOrEmpty(src);
         bool isAsync = (hasSrc || isModule) && scriptEl.HasAttribute("async");
         bool isDefer = hasSrc && scriptEl.HasAttribute("defer");
+        // crossorigin only matters where a fetch carries it; empty string means "anonymous".
+        var crossOrigin = scriptEl.GetAttribute("crossorigin");
 
         if (src != null)
         {
@@ -2052,14 +2055,20 @@ internal static class Parser
                 if (isModule)
                 {
                     // Let the module loader fetch it on import (so its own imports resolve).
-                    (isAsync ? _asyncScripts : _deferredScripts).Add(new(null, scriptUrl, true));
+                    (isAsync ? _asyncScripts : _deferredScripts).Add(new(null, scriptUrl, true,
+                        CrossOrigin: crossOrigin));
                     return;
                 }
                 try
                 {
-                    var code = Session.Client.GetStringAsync(scriptUrl).Result;
+                    // Follow the fetch to its final response: after a redirect the script's own
+                    // URL (and therefore the base for its dynamic imports) is the response URL,
+                    // while the request URL stays the script element's src for currentScript.
+                    using var response = Session.Client.GetAsync(scriptUrl).Result;
+                    var code = response.Content.ReadAsStringAsync().Result;
+                    var responseUrl = response.RequestMessage?.RequestUri?.AbsoluteUri ?? scriptUrl;
                     if (!string.IsNullOrWhiteSpace(code))
-                        BucketClassic(code, scriptUrl, isAsync, isDefer);
+                        BucketClassic(code, responseUrl, isAsync, isDefer, scriptUrl);
                 }
                 catch (Exception ex)
                 {
@@ -2093,9 +2102,10 @@ internal static class Parser
 
     /// <summary>Routes an external classic script's code into the in-position, deferred, or async
     /// execution bucket (HTML §"prepare the script element").</summary>
-    private static void BucketClassic(string code, string url, bool isAsync, bool isDefer)
+    private static void BucketClassic(string code, string url, bool isAsync, bool isDefer,
+        string? requestedUrl = null)
     {
-        var script = new ScriptRecord(code, url);
+        var script = new ScriptRecord(code, url, RequestedUrl: requestedUrl);
         if (isAsync) _asyncScripts.Add(script);
         else if (isDefer) _deferredScripts.Add(script);
         else _pendingScripts.Add(script);

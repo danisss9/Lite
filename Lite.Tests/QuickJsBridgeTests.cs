@@ -353,7 +353,7 @@ public static class QuickJsBridgeTests
     public static void PrefetchesStaticImportsBeforeNativeLinking()
     {
         using var session = new BrowserSession();
-        using var graph = new QuickJsModuleGraph(new BrowserModuleFetcher(session, "https://site.test/main.js").FetchSource,
+        using var graph = new QuickJsModuleGraph((uri, referrer, credentials, cancellation) => new BrowserModuleFetcher(session, "https://site.test/main.js").FetchSource(uri, null, cancellation),
             "https://site.test/main.js");
         const string entry = "https://site.test/main.js";
         graph.RegisterInline(entry,
@@ -372,7 +372,7 @@ public static class QuickJsBridgeTests
     public static void DynamicImportSettlesAfterAsynchronousPrefetch()
     {
         using var session = new BrowserSession();
-        using var graph = new QuickJsModuleGraph(new BrowserModuleFetcher(session, "https://site.test/main.js").FetchSource,
+        using var graph = new QuickJsModuleGraph((uri, referrer, credentials, cancellation) => new BrowserModuleFetcher(session, "https://site.test/main.js").FetchSource(uri, null, cancellation),
             "https://site.test/main.js");
         using var runtime = new QuickJsRuntime();
         using var realm = runtime.CreateRealm();
@@ -397,7 +397,7 @@ public static class QuickJsBridgeTests
     public static void DynamicImportRejectsInvalidSpecifierAndCancellation()
     {
         using var session = new BrowserSession();
-        using var graph = new QuickJsModuleGraph(new BrowserModuleFetcher(session, "https://site.test/main.js").FetchSource,
+        using var graph = new QuickJsModuleGraph((uri, referrer, credentials, cancellation) => new BrowserModuleFetcher(session, "https://site.test/main.js").FetchSource(uri, null, cancellation),
             "https://site.test/main.js");
         using var runtime = new QuickJsRuntime();
         using var realm = runtime.CreateRealm();

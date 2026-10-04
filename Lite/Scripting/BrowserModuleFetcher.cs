@@ -13,7 +13,8 @@ internal sealed class BrowserModuleFetcher(BrowserSession session, string docume
         "text/javascript1.4", "text/javascript1.5", "text/jscript", "text/livescript", "text/x-ecmascript", "text/x-javascript",
     };
 
-    internal async Task<(string Code, string Url)> FetchSource(Uri uri, CancellationToken cancellation)
+    internal async Task<(string Code, string Url)> FetchSource(Uri uri, ModuleFetchOptions? options,
+        CancellationToken cancellation)
     {
         if (uri.Scheme == "data")
         {
@@ -24,6 +25,9 @@ internal sealed class BrowserModuleFetcher(BrowserSession session, string docume
         }
         var origin = Uri.TryCreate(documentUrl, UriKind.Absolute, out var document) && document.Scheme is "http" or "https"
             ? document.GetLeftPart(UriPartial.Authority) : "null";
+        // Credentials mode travels with the whole graph: the entry fetch's mode governs every
+        // descendant, so the referrer is the only per-hop part that changes.
+        var credentialsMode = options?.CredentialsMode ?? "same-origin";
         for (var redirects = 0; redirects <= 20; redirects++)
         {
             if (uri.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(uri.UserInfo))
@@ -31,10 +35,24 @@ internal sealed class BrowserModuleFetcher(BrowserSession session, string docume
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
             var crossOrigin = origin != uri.GetLeftPart(UriPartial.Authority);
             if (crossOrigin) request.Headers.TryAddWithoutValidation("Origin", origin);
-            using var response = await (crossOrigin ? session.NoCookieModuleClient : session.ModuleClient)
+            if (options?.Referrer is { Length: > 0 } referrer &&
+                Uri.TryCreate(referrer, UriKind.Absolute, out var referrerUri) && !referrerUri.IsFile)
+                // Default referrer policy (strict-origin-when-cross-origin): cross-origin
+                // requests carry only the origin, same-origin requests the full URL.
+                request.Headers.Referrer = crossOrigin ? new Uri(origin) : referrerUri;
+            // "same-origin" attaches cookies to same-origin requests only; "omit" never does;
+            // "include" always does — and a credentialed cross-origin response then needs the
+            // exact origin echoed back, because "*" is not valid with credentials.
+            var withCredentials = credentialsMode switch
+            {
+                "omit" => false,
+                "include" => true,
+                _ => !crossOrigin,
+            };
+            using var response = await (withCredentials ? session.ModuleClient : session.NoCookieModuleClient)
                 .SendAsync(request, cancellation).ConfigureAwait(false);
-            if (crossOrigin && (!response.Headers.TryGetValues("Access-Control-Allow-Origin", out var origins) ||
-                !origins.Any(value => value == "*" || value == origin))) throw new IOException("Module response failed CORS");
+            if (crossOrigin && !CrossOriginAllowed(response, origin, withCredentials))
+                throw new IOException("Module response failed CORS");
             if (response.StatusCode is HttpStatusCode.MovedPermanently or HttpStatusCode.Found or HttpStatusCode.SeeOther or
                 HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect)
             {
@@ -48,5 +66,12 @@ internal sealed class BrowserModuleFetcher(BrowserSession session, string docume
                 .ConfigureAwait(false)), uri.AbsoluteUri);
         }
         throw new IOException("Too many module redirects");
+    }
+
+    private static bool CrossOriginAllowed(HttpResponseMessage response, string origin, bool withCredentials)
+    {
+        if (!response.Headers.TryGetValues("Access-Control-Allow-Origin", out var origins)) return false;
+        if (withCredentials) return origins.Any(value => value.Trim() == origin);
+        return origins.Any(value => value.Trim() == "*" || value.Trim() == origin);
     }
 }

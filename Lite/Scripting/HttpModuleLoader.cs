@@ -19,7 +19,11 @@ internal sealed class HttpModuleLoader : IDisposable
     {
         _post = post;
         _documentUrl = documentUrl;
-        _graph = new QuickJsModuleGraph(new BrowserModuleFetcher(session ?? new(), documentUrl).FetchSource,
+        var fetcher = new BrowserModuleFetcher(session ?? new(), documentUrl);
+        _graph = new QuickJsModuleGraph(
+            (uri, referrer, credentialsMode, cancellation) => fetcher.FetchSource(uri,
+                referrer is null && credentialsMode == "same-origin" ? null
+                    : new ModuleFetchOptions(referrer, credentialsMode), cancellation),
             documentUrl);
     }
 
@@ -42,7 +46,7 @@ internal sealed class HttpModuleLoader : IDisposable
         engine.Runtime.SetModuleProvider(engine.Realm, _graph.Normalize, url =>
         {
             if (_graph.Source(url) is null)
-                _graph.PrefetchAsync(url, _lifetime.Token).GetAwaiter().GetResult();
+                _graph.PrefetchAsync(url, null, "same-origin", _lifetime.Token).GetAwaiter().GetResult();
             var code = _graph.Source(url);
             return code is null ? null : QuickJsDynamicImportRewriter.Rewrite(code, url, module: true);
         });
@@ -52,7 +56,7 @@ internal sealed class HttpModuleLoader : IDisposable
     internal void RegisterSourceUrl(string key, string url) => _graph.RegisterResponseUrl(key, url);
     internal string ResponseUrl(string url) => _graph.ResponseUrl(url);
 
-    internal ModuleImportOperation StartImport(string url)
+    internal ModuleImportOperation StartImport(string url, ModuleFetchOptions? options = null)
     {
         if (_engine is null) throw new InvalidOperationException("Module loader is not bound");
         var operation = new ModuleImportOperation();
@@ -71,7 +75,8 @@ internal sealed class HttpModuleLoader : IDisposable
         {
             string? resolved = null;
             Exception? error = null;
-            try { resolved = await _graph.PrefetchAsync(url, _lifetime.Token).ConfigureAwait(false); }
+            try { resolved = await _graph.PrefetchAsync(url, options?.Referrer,
+                options?.CredentialsMode ?? "same-origin", _lifetime.Token).ConfigureAwait(false); }
             catch (Exception failure) { error = failure; }
             _post(() =>
             {

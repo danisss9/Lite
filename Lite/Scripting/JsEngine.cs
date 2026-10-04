@@ -619,13 +619,9 @@ internal class JsEngine : IDisposable
 
     internal event Action<JsEngine>? ScriptExecuted;
 
-    public void Execute(string script) => Execute(script, DocumentBaseUrl);
-
-    /// <summary>The script element currently being executed (HTML §4.11.1): exposed as
+    public void Execute(string script) => Execute(script, DocumentBaseUrl);    /// <summary>The script element currently being executed (HTML §4.11.1): exposed as
     /// <c>document.currentScript</c>. Cleared for timers, microtasks, and module code.</summary>
-    internal LayoutNode? CurrentScriptNode { get; private set; }
-
-    private LayoutNode? FindScriptNode(string script, string sourceUrl)
+    internal LayoutNode? CurrentScriptNode { get; private set; }    private LayoutNode? FindScriptNode(string script, string sourceUrl, string? alsoMatchUrl)
     {
         var stack = new Stack<LayoutNode>();
         stack.Push(_root);
@@ -636,7 +632,8 @@ internal class JsEngine : IDisposable
             {
                 if (n.Attributes.GetValueOrDefault("src") is { Length: > 0 } src)
                 {
-                    if (ResolveAgainstCurrent(src) == sourceUrl) return n;
+                    var resolved = ResolveAgainstCurrent(src);
+                    if (resolved == sourceUrl || resolved == alsoMatchUrl) return n;
                 }
                 else if (ScriptTextOf(n) == script) return n;
             }
@@ -651,11 +648,11 @@ internal class JsEngine : IDisposable
         n.Children.Count == 0 ? n.Text
             : string.Concat(n.Children.Where(c => c.TagName == "#text").Select(c => c.Text));
 
-    internal void Execute(string script, string sourceUrl)
+    internal void Execute(string script, string sourceUrl, string? requestedUrl = null)
     {
         if (string.IsNullOrWhiteSpace(script)) return;
         var previousScript = CurrentScriptNode;
-        CurrentScriptNode = FindScriptNode(script, sourceUrl);
+        CurrentScriptNode = FindScriptNode(script, sourceUrl, requestedUrl);
         try { _engine.Execute(script, sourceUrl); }
         catch (JavaScriptException ex) { ReportScriptError(ex.Error); }
         catch (QuickJsException ex)
@@ -734,8 +731,12 @@ internal class JsEngine : IDisposable
             while (index < scripts.Count)
             {
                 var script = scripts[index++];
-                if (!script.IsModule) { Execute(script.Code!, script.Url); continue; }
-                var operation = _moduleLoader.StartImport(script.Url);
+                if (!script.IsModule) { Execute(script.Code!, script.Url, script.RequestedUrl); continue; }
+                // The root module fetch carries the script element's credentials mode and the
+                // document URL as its referrer; its descendant graph inherits the credentials.
+                var options = new ModuleFetchOptions(DocumentState.Address,
+                    ModuleFetchOptions.CredentialsFor(script.CrossOrigin));
+                var operation = _moduleLoader.StartImport(script.Url, options);
                 _engine.ProcessTasks();
                 if (!operation.IsCompleted) { _imports.Add((operation, Continue)); return; }
                 if (operation.IsFaulted) ReportScriptError((JsValue)operation.Error!.Message);

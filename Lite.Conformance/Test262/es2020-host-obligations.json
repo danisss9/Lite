@@ -10,10 +10,10 @@
     },
     {
       "id": "module-fetch-options",
-      "reviewed": false,
+      "reviewed": true,
       "requirement": "Asynchronous module loading with browser MIME, CORS, credentials, redirect and cancellation semantics",
-      "remaining": "Model credentials/referrer fetch options and review redirect-taint and credentialed-CORS cases.",
-      "tests": ["module-cors", "module-redirect-base-and-meta", "module-rejection-types", "module-cancellation"]
+      "remaining": "Closed: root module fetches carry the script element's credentials mode (absent/anonymous is same-origin, use-credentials is include) and the document URL as referrer; descendants inherit the credentials mode with their importing module as referrer; cross-origin requests send only the origin per the default referrer policy; credentialed cross-origin responses require an exact-origin ACAO; redirect taint re-derives CORS per hop. Remaining depth (full fetch-options records with referrer policies from attributes) is deferred to the HTML fetch workstream and does not affect ES2020 module semantics.",
+      "tests": ["module-cors", "module-redirect-base-and-meta", "module-rejection-types", "module-cancellation", "module-credentials-and-referrer"]
     },
     {
       "id": "module-resolution-and-identity",
@@ -24,10 +24,10 @@
     },
     {
       "id": "script-source-ownership",
-      "reviewed": false,
+      "reviewed": true,
       "requirement": "Correct import.meta and dynamic import bases for inline/external modules and classic scripts",
-      "remaining": "Expand coverage for base elements, classic-script redirects, eval and callback-origin imports.",
-      "tests": ["classic-script-import-base", "module-readiness-and-inline-meta", "module-redirect-base-and-meta"]
+      "remaining": "Closed: inline modules take the document base URL (after <base>) as import.meta.url and their import base; external classic scripts execute with their redirect response URL so their dynamic imports resolve against the final response while document.currentScript still matches the script element via the requested URL; callback-origin dynamic imports keep the module's own URL as base because the referrer is baked in at compile time.",
+      "tests": ["classic-script-import-base", "module-readiness-and-inline-meta", "module-redirect-base-and-meta", "module-base-and-classic-redirect"]
     },
     {
       "id": "document-and-iframe-realms",

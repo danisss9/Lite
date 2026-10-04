@@ -139,6 +139,79 @@ internal static class Es2020HostRunner
             if (matches.length !== 1 || all.namedItem('all-target') !== first)
                 throw Error('document.all collection did not stay live');
             """),
+        ["module-credentials-and-referrer"] = site =>
+        {
+            site.Routes["/cred.html"] = $$"""
+                <!doctype html><html><body>
+                <script type='module' crossorigin='use-credentials' src='{{site.AlternateUrl}}/cred-star.js'></script>
+                <script type='module' crossorigin='use-credentials' src='{{site.AlternateUrl}}/cred-exact.js'></script>
+                <script type='module'>
+                  globalThis.__credResults = {};
+                  try {
+                    const m = await import('{{site.AlternateUrl}}/cred-dyn.js');
+                    __credResults.dynamicWildcard = m.value;
+                  } catch (e) { __credResults.dynamicWildcard = 'rejected: ' + (e && e.message ? e.message : String(e)); }
+                  await import('/modules/root.js');
+                  // A same-origin module that redirects cross-origin is tainted: the redirected
+                  // response still needs CORS, and a wildcard suffices for this dynamic import.
+                  try {
+                    const t = await import('/taint.js');
+                    __credResults.redirectTaint = t.value;
+                  } catch (e) { __credResults.redirectTaint = 'rejected: ' + (e && e.message ? e.message : String(e)); }
+                  globalThis.__credDone = true;
+                </script>
+                </body></html>
+                """;
+            site.Referers.Clear();
+            var (_, engine) = HeadlessPage.Load(site.BaseUrl + "/cred.html");
+            Require(HeadlessPage.PumpUntil(engine, () => engine.RawEngine.GetValue("__credDone").ToObject() is true),
+                "Credentials page did not finish");
+            // A credentialed cross-origin module fetch must reject a wildcard ACAO but accept the
+            // exact origin, while a dynamic import (always "same-origin" credentials) takes the
+            // wildcard. The two script-element modules above observe the difference.
+            Require(engine.RawEngine.GetValue("__credStarLoaded").IsUndefined(),
+                "Credentialed module accepted wildcard Access-Control-Allow-Origin");
+            Require(engine.RawEngine.GetValue("__credExactLoaded").ToObject() is true,
+                "Credentialed module rejected an exact-origin Access-Control-Allow-Origin");
+            Require(Convert.ToDouble(engine.RawEngine.GetValue("__credResults").Get("dynamicWildcard").ToObject()) == 3d,
+                "Dynamic import did not use same-origin credentials with a wildcard ACAO");
+            Require(Convert.ToDouble(engine.RawEngine.GetValue("__credResults").Get("redirectTaint").ToObject()) == 5d,
+                "Same-origin module redirecting cross-origin did not enforce CORS on the redirected response");
+            // Same-origin root and descendant module fetches carry their referrer URLs: the
+            // document base URL for the entry fetch, the importing module's URL for descendants.
+            Require(site.Referers.GetValueOrDefault("/modules/root.js") == site.BaseUrl + "/cred.html",
+                $"Root module fetch referrer was {site.Referers.GetValueOrDefault("/modules/root.js")}");
+            Require(site.Referers.GetValueOrDefault("/modules/sub/dep.js")?.EndsWith("/modules/root.js") == true,
+                $"Descendant module fetch referrer was {site.Referers.GetValueOrDefault("/modules/sub/dep.js")}");
+        },
+        ["module-base-and-classic-redirect"] = site =>
+        {
+            var (_, baseEngine) = HeadlessPage.Load(site.BaseUrl + "/base-page.html");
+            Require(HeadlessPage.PumpUntil(baseEngine, () =>
+                !baseEngine.RawEngine.GetValue("__baseMeta").IsUndefined() &&
+                !baseEngine.RawEngine.GetValue("__baseRel").IsUndefined()), "Base page did not finish");
+            // An inline module's import.meta.url is the document base URL (after <base>), and
+            // its relative imports resolve against that same base.
+            Require(baseEngine.RawEngine.GetValue("__baseMeta").ToString() == site.BaseUrl + "/basedir/",
+                $"Inline module import.meta.url was {baseEngine.RawEngine.GetValue("__baseMeta")}");
+            Require(Convert.ToDouble(baseEngine.RawEngine.GetValue("__baseRel").ToObject()) == 9d, "Import against <base> failed");
+            var (_, redirectEngine) = HeadlessPage.Load(site.BaseUrl + "/classic-redirect.html");
+            Require(HeadlessPage.PumpUntil(redirectEngine, () =>
+                redirectEngine.RawEngine.GetValue("__redirectedDone").ToObject() is true),
+                "Redirected classic script did not finish");
+            // The redirected classic script runs with its response URL, so its dynamic import
+            // of './neighbor.js' resolves next to the redirected-to file, not the redirector.
+            Require(Convert.ToDouble(redirectEngine.RawEngine.GetValue("__redirectedValue").ToObject()) == 42d,
+                "Redirected classic script resolved imports against the wrong base");
+            // A dynamic import inside a timer callback keeps the module's own URL as its base
+            // (the referrer is baked into the module at compile time, not at call time).
+            var (_, timerEngine) = HeadlessPage.Load(site.BaseUrl + "/timer-page.html");
+            Require(HeadlessPage.PumpUntil(timerEngine, () =>
+                timerEngine.RawEngine.GetValue("__timerDone").ToObject() is true),
+                "Timer-callback import did not finish");
+            Require(Convert.ToDouble(timerEngine.RawEngine.GetValue("__timerImport").ToObject()) == 1d,
+                "Timer-callback import did not resolve against the module's URL");
+        },
     };
     internal static string[] TestNames => Cases.Keys.Order(StringComparer.Ordinal).ToArray();
 
@@ -192,12 +265,21 @@ internal static class Es2020HostRunner
 
     private sealed class Site : IDisposable
     {
-        private readonly WebApplication _first = Start();
-        private readonly WebApplication _second = Start();
+        private readonly WebApplication _first;
+        private readonly WebApplication _second;
+        internal Site()
+        {
+            _first = Start(this);
+            _second = Start(this);
+        }
         internal string BaseUrl => _first.Urls.Single();
         internal string AlternateUrl => _second.Urls.Single();
+        /// <summary>Per-case page sources; a case installs absolute-URL HTML here before loading it.</summary>
+        internal Dictionary<string, string> Routes { get; } = new(StringComparer.Ordinal);
+        /// <summary>Last Referer header per request path, for fetch-options assertions.</summary>
+        internal Dictionary<string, string?> Referers { get; } = new(StringComparer.Ordinal);
         internal JsEngine Empty() => HeadlessPage.Load(BaseUrl + "/empty.html").Engine;
-        private static WebApplication Start()
+        private static WebApplication Start(Site site)
         {
             var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
             builder.WebHost.UseKestrelCore().UseUrls("http://127.0.0.1:0");
@@ -205,9 +287,14 @@ internal static class Es2020HostRunner
             app.Run(async context =>
             {
                 var path = context.Request.Path.Value;
+                lock (site.Referers) site.Referers[path!] = context.Request.Headers.Referer.FirstOrDefault();
                 if (path == "/redirect.js") { context.Response.Redirect("/modules/sub/main.js"); return; }
+                if (path == "/redirect-classic.js") { context.Response.Redirect("/scripts/redirected-importer.js"); return; }
+                // Redirect taint: a same-origin module that redirects cross-origin.
+                if (path == "/taint.js") { context.Response.Redirect(site.AlternateUrl + "/taint-target.js"); return; }
                 if (path == "/slow.js") await Task.Delay(200, context.RequestAborted);
-                var code = path switch
+                string? code = site.Routes.GetValueOrDefault(path!);
+                if (code is null) code = path switch
                 {
                     "/empty.html" => "<!doctype html><html><body></body></html>",
                     "/classic.html" => "<!doctype html><script src='/scripts/main.js'></script>",
@@ -218,9 +305,19 @@ internal static class Es2020HostRunner
                         <script type='module'>import '/modules/root.js'; __order.push('module');globalThis.__inlineMeta=import.meta.url;globalThis.__moduleReadyState=document.readyState;</script>
                         <script defer src='/defer.js'></script>
                         """,
+                    "/base-page.html" => """
+                        <!doctype html><html><head><base href='/basedir/'></head><body>
+                        <script type='module'>globalThis.__baseMeta=import.meta.url;
+                        const m = await import('./rel.js'); globalThis.__baseRel=m.value;</script>
+                        </body></html>
+                        """,
+                    "/classic-redirect.html" => "<!doctype html><script src='/redirect-classic.js'></script>",
+                    "/timer-page.html" => "<!doctype html><script type='module' src='/modules/timer-import.js'></script>",
                     "/defer.js" => "__order.push('defer');",
                     "/scripts/main.js" => "import('./neighbor.js').then(m=>{globalThis.__classicValue=m.value;globalThis.__classicDone=true;});",
                     "/scripts/neighbor.js" => "export const value=42;",
+                    "/scripts/redirected-importer.js" => "import('./neighbor.js').then(m=>{globalThis.__redirectedValue=m.value;globalThis.__redirectedDone=true;});",
+                    "/basedir/rel.js" => "export const value=9;",
                     "/modules/root.js" => "export {value,bump} from './sub/dep.js'; export * as ns from './sub/dep.js'; globalThis.__evaluations=(globalThis.__evaluations||0)+1;",
                     "/modules/sub/dep.js" => "export let value=1; export function bump(){value++;}",
                     "/modules/sub/main.js" => "export {value} from './dep.js'; export const url=import.meta.url;",
@@ -230,10 +327,20 @@ internal static class Es2020HostRunner
                     "/invalid.js" => "export const = ;",
                     "/cors.js" => "export const value=7;",
                     "/slow.js" => "export const slow=true;",
+                    "/cred-star.js" => "globalThis.__credStarLoaded=true;export const value=3;",
+                    "/cred-exact.js" => "globalThis.__credExactLoaded=true;export const value=4;",
+                    "/cred-dyn.js" => "export const value=3;",
+                    "/taint-target.js" => "export const value=5;",
+                    "/modules/timer-import.js" => "setTimeout(() => import('./sub/dep.js').then(m => { globalThis.__timerImport = m.value; globalThis.__timerDone = true; }), 0);",
                     _ => null,
                 };
                 if (code is null) { context.Response.StatusCode = 404; return; }
                 if (path == "/cors.js") context.Response.Headers.AccessControlAllowOrigin = "*";
+                // Credentialed cross-origin fetches must match the exact origin, so the star
+                // module stays a wildcard while the exact module echoes the request's Origin.
+                if (path is "/cred-star.js" or "/cred-dyn.js" or "/taint-target.js") context.Response.Headers.AccessControlAllowOrigin = "*";
+                if (path == "/cred-exact.js") context.Response.Headers.AccessControlAllowOrigin =
+                    context.Request.Headers.Origin.FirstOrDefault() ?? "null";
                 context.Response.ContentType = path!.EndsWith(".html") ? "text/html" : path.EndsWith(".txt") ? "text/plain" : "text/javascript";
                 await context.Response.WriteAsync(code);
             });

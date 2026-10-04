@@ -5,9 +5,11 @@ using System.Text.Json;
 
 namespace Lite.QuickJs;
 
-/// <summary>Fetches a static browser module graph before QuickJS links it.</summary>
+/// <summary>Fetches a static browser module graph before QuickJS links it. The fetch callback
+/// receives the requested URL, the importing module's URL (null for a root fetch — the referrer
+/// for the Referer header), and the credentials mode ("omit", "same-origin", or "include").</summary>
 internal sealed class QuickJsModuleGraph(
-    Func<Uri, CancellationToken, Task<(string Source, string ResponseUrl)>> fetchSource,
+    Func<Uri, string?, string, CancellationToken, Task<(string Source, string ResponseUrl)>> fetchSource,
     string documentUrl) : IDisposable
 {
     private readonly ConcurrentDictionary<string, string> _sources = new(StringComparer.Ordinal);
@@ -43,24 +45,27 @@ internal sealed class QuickJsModuleGraph(
 
     internal string? Source(string url) => _sources.GetValueOrDefault(url);
 
-    internal async Task<string> PrefetchAsync(string entryUrl, CancellationToken cancellation = default)
+    internal async Task<string> PrefetchAsync(string entryUrl, string? referrer = null,
+        string credentialsMode = "same-origin", CancellationToken cancellation = default)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, cancellation);
-        var pending = new Queue<string>();
+        var pending = new Queue<(string Url, string? Referrer)>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        pending.Enqueue(entryUrl);
+        pending.Enqueue((entryUrl, referrer));
         while (pending.Count > 0)
         {
             linked.Token.ThrowIfCancellationRequested();
-            var requested = pending.Dequeue();
+            var (requested, parentReferrer) = pending.Dequeue();
             if (!seen.Add(requested)) continue;
             string code;
             string responseUrl;
             if (_sources.TryGetValue(requested, out var inline))
                 (code, responseUrl) = (inline, _responseUrls.GetValueOrDefault(requested, requested));
             else
-                (code, responseUrl) = await fetchSource(new Uri(requested), linked.Token)
-                    .ConfigureAwait(false);
+                (code, responseUrl) = await fetchSource(new Uri(requested),
+                    // The entry fetch's credentials mode is inherited by every descendant; each
+                    // descendant's referrer is the URL of the module that imported it.
+                    parentReferrer, credentialsMode, linked.Token).ConfigureAwait(false);
             _responseUrls[requested] = responseUrl;
             _responseUrls[responseUrl] = responseUrl;
             _sources[responseUrl] = code;
@@ -75,7 +80,7 @@ internal sealed class QuickJsModuleGraph(
                     ExportAllDeclaration all => all.Source.Value,
                     _ => null,
                 };
-                if (specifier is not null) pending.Enqueue(Normalize(responseUrl, specifier));
+                if (specifier is not null) pending.Enqueue((Normalize(responseUrl, specifier), responseUrl));
             }
         }
         return _responseUrls.GetValueOrDefault(entryUrl, entryUrl);
@@ -99,7 +104,9 @@ internal sealed class QuickJsModuleGraph(
             Exception? failure = null;
             try
             {
-                url = await PrefetchAsync(Normalize(referrer, specifier), cancellation)
+                // A dynamic import always uses the "same-origin" credentials mode, and its
+                // referrer is the module (or document) that evaluated the import call.
+                url = await PrefetchAsync(Normalize(referrer, specifier), referrer, "same-origin", cancellation)
                     .ConfigureAwait(false);
             }
             catch (Exception error) { failure = error; }
