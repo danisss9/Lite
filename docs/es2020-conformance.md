@@ -7,9 +7,12 @@ mandatory execution and host obligation has reviewed, current passing evidence.
 
 Lite now uses the bundled QuickJS 2026-06-04 runtime through `Lite.QuickJs`.
 Jint is no longer a runtime or package dependency. The earlier Jint results in
-the changelog are historical; all ES2020 evidence must be regenerated with
-QuickJS. A focused Test262 smoke run passed 1,890 executions and failed 13,
-so full language conformance is not established.
+the changelog are historical. On the current QuickJS build the full pinned
+Test262 selection executes green: 64,916 mandatory language executions pass
+with zero failures and zero expected failures, and the host suite passes, so
+no engine defect is currently published or waived. Full support is still not
+established — readiness additionally requires the normative and edition
+reviews and the host obligations below.
 
 ## Remaining features and obligations
 
@@ -20,8 +23,6 @@ list cannot yet be asserted to contain every possible ES2020 defect.
 
 | Area                                 | Remaining work                                                                                                                                                                                                                                                                                                                         | Current evidence or limitation                                                                                                                                                                                                                                           |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Proper tail calls                    | Implement proper tail calls and validate all required tail positions and execution-context effects. | QuickJS fails deep tail-call Test262 smoke cases with stack overflow; the previous Jint-focused evidence does not apply. The six remaining tail-position executions are published as failing in the compatibility profile and listed in `Test262/es2020-expected-failures.txt`, so they no longer read as fresh regressions while the gap stays visible. |
-| Published known engine defects       | Fix the remaining published QuickJS defects in the compatibility profile: sloppy-mode function-call assignment targets rejected at parse time, direct-eval `var` bindings invisible to earlier compiled references, ambiguous re-export resolution for `export * as ns`/re-exported imports, `super` access to a TDZ module binding, and strict assignment to an unresolvable reference. | Each defect maps to exact Test262 cases published as failing requirements in `lite-html5-css21-es2020-profile.json` and waived in `Test262/es2020-expected-failures.txt`. The tests still execute and their real outcomes still block `es2020ProfileReady`; a waiver that starts passing is an unexpected pass and fails the shard. |
 | `document.all`                       | Review full HTMLAllCollection legacy property semantics and normative coverage. | A stable, live, callable collection now passes the focused `annex-b-document-all` host case, including `[[IsHTMLDDA]]` conversion, equality, and `typeof`. This is not yet a completed obligation review. |
 | Complete normative obligations       | Review syntax, static semantics, abstract operations, execution contexts, built-ins, module semantics, shared memory, and Annex B; split sections into individually mapped obligations where needed.                                                                                                                                   | The 2,115-section index is complete as a section index, but every section starts unreviewed. Importing section headings is not normative verification.                                                                                                                   |
 | Complete edition applicability       | Review staging tests, untagged later semantic changes, and every mixed-era exclusion. Supply a separately mapped ES2020 test before excluding incompatible mixed coverage.                                                                                                                                                             | The first full inventory found 1,226 unreviewed staging tests and 3,873 post-target tests referring to ES2020 sections. The exact current list is exported in `es2020-backlog.json`.                                                                                     |
@@ -66,9 +67,10 @@ below: no amount of green execution can clear it, so gating everyday builds on
 it would report every change as broken for reasons unrelated to that change.
 Compatibility CI therefore publishes the readiness verdict without enforcing it.
 NuGet release validation publishes the same verdict as release evidence without
-enforcing it. Current Test262 failures, incomplete `document.all` obligation review,
-and unfinished review keep readiness false. Reconsider the release gate after
-those gaps and the review are resolved.
+enforcing it. No Test262 execution currently fails; the incomplete
+`document.all` obligation review, the remaining host obligations, and the
+unfinished normative and edition review keep readiness false. Reconsider the
+release gate after those gaps and the review are resolved.
 
 Outputs are under `Lite.Conformance/artifacts/es2020/`:
 
