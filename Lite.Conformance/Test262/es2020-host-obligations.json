@@ -45,10 +45,10 @@
     },
     {
       "id": "error-and-rejection-reporting",
-      "reviewed": false,
+      "reviewed": true,
       "requirement": "Preserve JavaScript error identity and provide browser error/unhandled-rejection notifications",
-      "remaining": "Complete event semantics, source locations, cancellation/default reporting and callback exceptions.",
-      "tests": ["script-error-identity", "microtasks-and-rejection-events", "module-rejection-types"]
+      "remaining": "Closed: script errors dispatch real trusted cancelable ErrorEvents carrying message, filename, lineno/colno parsed from the error stack, and the error object by identity; a canceled event (listener preventDefault or a returning-true legacy onerror receiving the five spec arguments) suppresses the default report to diagnostics and console, and all default reporting flows through that single cancelable path. unhandledrejection dispatches a trusted cancelable PromiseRejectionEvent with promise and reason identity; canceling marks the promise handled, so no default report and no later rejectionhandled fires, while the non-canceled path still fires rejectionhandled on later handling. Exceptions thrown by event listeners and handler properties report through the same path.",
+      "tests": ["script-error-identity", "microtasks-and-rejection-events", "module-rejection-types", "error-event-semantics"]
     },
     {
       "id": "host-language-configuration",

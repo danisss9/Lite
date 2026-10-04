@@ -82,17 +82,41 @@ internal class JsWindow
 
     private void DispatchInternal(string type, JsValue evt)
     {
+        // "error" listener exceptions are not re-reported (the dispatch itself is the report),
+        // so an always-throwing error handler cannot recurse forever.
+        var reportExceptions = type != "error";
         foreach (var (t, fn) in _listeners.ToList())
         {
             if (t != type) continue;
             try { _engine.RawEngine.Invoke(fn, evt); }
-            catch (Exception ex) { Console.WriteLine($"[JS window {type}] {ex.Message}"); }
+            catch (Exception ex)
+            {
+                if (reportExceptions) _engine.ReportListenerError(ex);
+                else Console.WriteLine($"[JS window {type}] {ex.Message}");
+            }
         }
         var property = _engine.RawEngine.GetValue("on" + type);
         if (!property.IsUndefined() && !property.IsNull() && property.IsCallable())
         {
-            try { _engine.RawEngine.Invoke(property, evt); }
-            catch (Exception ex) { Console.WriteLine($"[JS window {type}] {ex.Message}"); }
+            try
+            {
+                // The Window error handler is the legacy one: it receives
+                // (message, filename, lineno, colno, error) and cancels the default report
+                // by returning true, exactly like preventDefault() on the event.
+                JsValue result;
+                if (type == "error" && evt.ToObject() is Dom.JsEvent errorEvent)
+                {
+                    result = _engine.RawEngine.Invoke(property, evt.Get("message"), evt.Get("filename"),
+                        evt.Get("lineno"), evt.Get("colno"), evt.Get("error"));
+                    if (result.IsBoolean() && result.AsBoolean()) errorEvent.preventDefault();
+                }
+                else result = _engine.RawEngine.Invoke(property, evt);
+            }
+            catch (Exception ex)
+            {
+                if (reportExceptions) _engine.ReportListenerError(ex);
+                else Console.WriteLine($"[JS window {type}] {ex.Message}");
+            }
         }
     }
 

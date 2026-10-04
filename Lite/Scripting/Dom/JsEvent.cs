@@ -68,6 +68,17 @@ public class JsEvent
     public string oldURL { get; internal set; } = string.Empty;
     public string newURL { get; internal set; } = string.Empty;
 
+    // ErrorEvent properties
+    public string message { get; internal set; } = string.Empty;
+    public string filename { get; internal set; } = string.Empty;
+    public long lineno { get; internal set; }
+    public long colno { get; internal set; }
+    public JsValue? error { get; internal set; }
+
+    // PromiseRejectionEvent properties
+    public JsValue? promise { get; internal set; }
+    public JsValue? reason { get; internal set; }
+
     // WheelEvent properties (deltaMode: 0=pixel, 1=line, 2=page)
     public float deltaX { get; internal set; }
     public float deltaY { get; internal set; }

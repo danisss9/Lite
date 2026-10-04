@@ -95,11 +95,10 @@ internal class JsEngine : IDisposable
             }
             catch (Exception ex)
             {
+                // The report itself is cancelable (ReportScriptError); no extra default report here.
                 var error = ex is QuickJsException js && js.ErrorValue is { } value
                     ? new JsValue(_engine, value.Clone()) : (JsValue)ex.Message;
                 ReportScriptError(error);
-                DocumentState.Session?.Diagnostics.Enqueue($"javascript task {CurrentUrl}: {ex.Message}");
-                Console.WriteLine($"[JS task] {ex.Message}");
                 if (ex is QuickJsException quickJsError) quickJsError.Dispose();
             }
             ran = true;
@@ -272,7 +271,15 @@ internal class JsEngine : IDisposable
                 EnqueueMacrotask(() =>
                 {
                     if (_unhandledRejections.TryGetValue(promise, out var pending) && _reportedRejections.Add(promise))
-                        DispatchPromiseEvent("unhandledrejection", promise, pending);
+                    {
+                        // Canceling unhandledrejection treats the promise as handled: no default
+                        // report and no later rejectionhandled event.
+                        if (DispatchPromiseEvent("unhandledrejection", promise, pending))
+                        {
+                            _unhandledRejections.Remove(promise);
+                            _reportedRejections.Remove(promise);
+                        }
+                    }
                 });
             }
             else if (_unhandledRejections.Remove(promise, out var previous) && _reportedRejections.Remove(promise))
@@ -747,19 +754,74 @@ internal class JsEngine : IDisposable
 
     private void ReportScriptError(JsValue error)
     {
-        DocumentState.Session?.Diagnostics.Enqueue($"javascript {CurrentUrl}: {error}");
-        ScriptFailed?.Invoke(error);
-        var evt = new JsObject(_engine);
-        evt.Set("type", "error"); evt.Set("error", error); evt.Set("message", error.ToString());
+        // The window error event is cancelable: a listener (or a returning-true onerror)
+        // prevents the default report to the diagnostics log and console.
+        var evt = new Dom.JsEvent();
+        evt.Init("error", false, true);
+        evt.isTrusted = true;
+        evt.message = error.ToString();
+        evt.error = error;
+        var (filename, line, column) = LocateError(error);
+        evt.filename = filename ?? CurrentUrl;
+        evt.lineno = line;
+        evt.colno = column;
         _jsWindow.DispatchEvent("error", JsValue.FromObject(_engine, evt));
-        Console.WriteLine($"[JS Error] {error}");
+        if (!evt.DefaultPrevented)
+        {
+            DocumentState.Session?.Diagnostics.Enqueue($"javascript {CurrentUrl}: {error}");
+            ScriptFailed?.Invoke(error);
+            Console.WriteLine($"[JS Error] {error}");
+        }
     }
 
-    private void DispatchPromiseEvent(string type, JsValue promise, JsValue reason)
+    /// <summary>Pulls a source location out of an error's stack trace (QuickJS frames look like
+    /// "at fn (filename:line:column)"). Falls back to the current document URL at 1:1.</summary>
+    private (string? Filename, long Line, long Column) LocateError(JsValue error)
     {
-        var evt = new JsObject(_engine);
-        evt.Set("type", type); evt.Set("promise", promise); evt.Set("reason", reason);
+        try
+        {
+            if (error.IsObject())
+            {
+                var stack = error.Get("stack");
+                if (stack.IsString())
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(
+                        stack.AsString(), @"\(([^()]+?):(\d+):(\d+)\)");
+                    if (match.Success)
+                {
+                    // Unnamed eval sources report against the document, like browsers do.
+                    var frame = match.Groups[1].Value;
+                    return (frame is "<eval>" or "" ? null : frame,
+                        long.Parse(match.Groups[2].Value), long.Parse(match.Groups[3].Value));
+                }
+                }
+            }
+        }
+        catch { /* location is best-effort */ }
+        return (null, 1, 1);
+    }
+
+    /// <summary>Reports an exception thrown by an event callback (listener or handler property)
+    /// through the standard script error path, as HTML's "report the exception" requires.</summary>
+    internal void ReportListenerError(Exception exception)
+    {
+        if (exception is QuickJsException quickJs && quickJs.ErrorValue is { } value)
+        {
+            ReportScriptError(new JsValue(_engine, value.Clone()));
+            quickJs.Dispose();
+        }
+        else ReportScriptError((JsValue)exception.Message);
+    }
+
+    private bool DispatchPromiseEvent(string type, JsValue promise, JsValue reason)
+    {
+        var evt = new Dom.JsEvent();
+        evt.Init(type, false, type == "unhandledrejection");
+        evt.isTrusted = true;
+        evt.promise = promise;
+        evt.reason = reason;
         _jsWindow.DispatchEvent(type, JsValue.FromObject(_engine, evt));
+        return evt.DefaultPrevented;
     }
 
     internal void CancelModuleLoads()

@@ -31,7 +31,7 @@ public static class RecaptchaTests
         engine.DrainTasks();
         True(continued, "An embed failure must not discard subsequent tasks.");
         Contains("TypeError: embed failed", engine.RawEngine.Evaluate("errors.join(',')").ToString());
-        True(session.Diagnostics.Any(d => d.Contains("javascript task") && d.Contains("embed failed")));
+        True(session.Diagnostics.Any(d => d.Contains("javascript") && d.Contains("embed failed")));
     }
 
     [Test]

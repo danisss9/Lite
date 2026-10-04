@@ -139,6 +139,73 @@ internal static class Es2020HostRunner
             if (matches.length !== 1 || all.namedItem('all-target') !== first)
                 throw Error('document.all collection did not stay live');
             """),
+        ["error-event-semantics"] = site =>
+        {
+            var engine = site.Empty();
+            var reported = new List<JsValue>();
+            engine.ScriptFailed += e => reported.Add(e);
+            // A throw from a timer callback dispatches a real cancelable ErrorEvent carrying the
+            // thrown object by identity and a location parsed from the error's stack.
+            Check(engine, """
+                globalThis.__fields = null;
+                const marker = { thrownMarker: true };
+                globalThis.__marker = marker;
+                addEventListener('error', e => { __fields = {
+                    message: e.message, filename: e.filename, lineno: e.lineno, colno: e.colno,
+                    sameError: e.error instanceof Error && e.error.message === 'boom',
+                    cancelable: e.cancelable,
+                    defaultPrevented: e.defaultPrevented, isTrustedEvent: e.isTrusted }; });
+                setTimeout(() => { throw new Error('boom'); }, 0);
+                for (let i = 0; i < 100 && !__fields; i++) await new Promise(r => setTimeout(r, 0));
+                if (!__fields) throw Error('no error event dispatched');
+                if (!__fields.sameError || !__fields.cancelable) throw Error('error event identity/cancelable');
+                if (__fields.defaultPrevented || !__fields.isTrustedEvent) throw Error('error event flags');
+                if (!String(__fields.filename).endsWith('/empty.html') || !(__fields.lineno > 0))
+                    throw Error('error event location: ' + __fields.filename + ':' + __fields.lineno);
+                """);
+            Require(reported.Count == 1, $"Default report ran {reported.Count} times");
+            var before = engine.DocumentState.Session!.Diagnostics.Count;
+            // A legacy onerror that returns true cancels the default report: no ScriptFailed,
+            // no diagnostics entry, and the handler receives the spec's five arguments.
+            Check(engine, """
+                globalThis.__onerror = null;
+                onerror = function (message, source, lineno, colno, err) {
+                    globalThis.__onerror = { message: message, sameError: err === __marker,
+                        sawSource: String(source).endsWith('/empty.html'), sawLine: lineno > 0 };
+                    return true;
+                };
+                setTimeout(() => { throw __marker; }, 0);
+                for (let i = 0; i < 100 && !__onerror; i++) await new Promise(r => setTimeout(r, 0));
+                if (!__onerror.sameError || !__onerror.sawSource || !__onerror.sawLine)
+                    throw Error('onerror legacy arguments: ' + JSON.stringify(__onerror));
+                """);
+            Require(reported.Count == 1, $"Canceled report still ran ({reported.Count} times)");
+            Require(engine.DocumentState.Session!.Diagnostics.Count == before,
+                "Canceled error still reached the diagnostics log");
+            // Canceling unhandledrejection marks the promise handled: no default report and no
+            // later rejectionhandled, while a listener may still inspect promise and reason.
+            Check(engine, """
+                const sentinel = { cancelMarker: true };
+                globalThis.__sawRejection = null;
+                let handledLater = false;
+                addEventListener('rejectionhandled', () => handledLater = true);
+                addEventListener('unhandledrejection', e => {
+                    if (e.reason === sentinel) {
+                        __sawRejection = { samePromise: typeof e.promise.then === 'function',
+                            sameReason: e.reason === sentinel, cancelable: e.cancelable };
+                        e.preventDefault();
+                    }
+                });
+                const rejected = Promise.reject(sentinel);
+                for (let i = 0; i < 100 && !__sawRejection; i++) await new Promise(r => setTimeout(r, 0));
+                if (!__sawRejection || !__sawRejection.sameReason || !__sawRejection.cancelable)
+                    throw Error('unhandledrejection event fields');
+                rejected.catch(() => {});
+                for (let i = 0; i < 20; i++) await new Promise(r => setTimeout(r, 0));
+                if (handledLater) throw Error('canceled rejection later fired rejectionhandled');
+                """);
+            Require(reported.Count == 1, $"Canceled rejection reported by default ({reported.Count} times)");
+        },
         ["module-credentials-and-referrer"] = site =>
         {
             site.Routes["/cred.html"] = $$"""
