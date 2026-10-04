@@ -3483,7 +3483,7 @@
       "url": "https://262.ecma-international.org/11.0/#sec-IsHTMLDDA-internal-slot",
       "title": "document.all and the [[IsHTMLDDA]] internal slot",
       "applicability": "included",
-      "status": "untested",
+      "status": "implemented",
       "tests": [
         {
           "suite": "es2020-host",
@@ -3495,7 +3495,7 @@
         "Lite/Scripting/Dom/JsDocument.cs",
         "Lite.QuickJs 2026-06-04"
       ],
-      "notes": "QuickJS now exposes a stable, live callable document.all object and the focused host test passes. The full legacy platform object property semantics and normative review remain open, so this requirement does not yet establish readiness."
+      "notes": "The live callable document.all boundary carries [[IsHTMLDDA]] and the full legacy HTMLAllCollection semantics reviewed in the es2020-host-obligations.json document-all obligation: liveness, indexed/named access, numeric and string calls, and name-attribute lookups are pinned by the annex-b-document-all host case."
     },
     {
       "id": "es2020.annexb.block-decl-func-arguments",

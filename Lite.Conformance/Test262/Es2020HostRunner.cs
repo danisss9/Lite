@@ -130,6 +130,12 @@ internal static class Es2020HostRunner
                 all['all-target'] !== first || all('all-target') !== first ||
                 all() !== null || all.item() !== null)
                 throw Error('document.all indexed, named or callable access');
+            if (all(0) !== all.item(0))
+                throw Error('document.all numeric call does not match indexed access');
+            const frame = document.createElement('iframe'); frame.name = 'frame-name';
+            document.body.appendChild(frame);
+            if (all.namedItem('frame-name') !== frame || all['frame-name'] !== frame)
+                throw Error('document.all name-attribute lookup');
             const second = document.createElement('div'); second.id = 'all-target';
             document.body.appendChild(second);
             const matches = all.namedItem('all-target');
