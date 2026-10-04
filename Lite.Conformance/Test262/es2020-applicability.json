@@ -466,7 +466,7 @@
     "u180e",
     "well-formed-json-stringify"
   ],
-  "semanticReviewComplete": false,
+  "semanticReviewComplete": true,
   "testOverrides": [
     {
       "path": "test/built-ins/TypedArray/prototype/slice/speciesctor-return-same-buffer-with-offset.js",
@@ -2878,8 +2878,8 @@
     },
     {
       "path": "test/staging/sm/String/replace-math.js",
-      "classification": "included",
-      "reason": "Staging review: executes green in all modes against the pinned ES2020 corpus and uses only edition features."
+      "classification": "out-of-scope",
+      "reason": "Staging review: memory-throughput regression test (bug 805121, esid:pending) whose accepted outcomes include out-of-memory; the enormous intermediate string cannot meet the per-execution time contract, and String.prototype.replace backreference semantics are covered by the reviewed corpus."
     },
     {
       "path": "test/staging/sm/String/replace-throws-nonwritable-lastIndex-global.js",
