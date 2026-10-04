@@ -206,6 +206,82 @@ internal static class Es2020HostRunner
                 """);
             Require(reported.Count == 1, $"Canceled rejection reported by default ({reported.Count} times)");
         },
+        ["iframe-realm-modules"] = site =>
+        {
+            site.Routes["/iframe-host.html"] = """
+                <!doctype html><body><iframe src='/iframe-child.html'></iframe></body></html>
+                """;
+            site.Routes["/iframe-child.html"] = """
+                <!doctype html><script>
+                globalThis.__childGlobal = 'child-only';
+                addEventListener('error', e => { globalThis.__childError = String(e.message); });
+                setTimeout(() => { throw new Error('child boom'); }, 0);
+                </script>
+                <script type='module'>
+                import '/modules/root.js';
+                document.addEventListener('DOMContentLoaded', () => { globalThis.__childReady = true; });
+                </script>
+                """;
+            var (_, parent) = HeadlessPage.Load(site.BaseUrl + "/iframe-host.html");
+            var child = parent.NestedEngines().Single();
+            Require(HeadlessPage.PumpUntil(parent, () =>
+                child.RawEngine.GetValue("__childReady").ToObject() is true &&
+                child.RawEngine.GetValue("__childError") is { } childError && !childError.IsUndefined()),
+                "Iframe child did not finish");
+            // The child realm keeps its own globals and its own module map: the same URL
+            // evaluates once there and once again in the parent, and no globals leak across.
+            Require(Convert.ToInt32(child.RawEngine.GetValue("__evaluations").ToObject()) == 1,
+                "Child module map did not evaluate its own graph");
+            Check(parent, "await import('/modules/root.js'); if (__evaluations !== 1) throw Error('parent map polluted');");
+            Require(parent.RawEngine.Evaluate("typeof __childGlobal === 'undefined'").ToObject() is true,
+                "Child global leaked into the parent realm");
+            // The child's error is reported in the child realm only.
+            Require(child.RawEngine.GetValue("__childError").ToString().Contains("child boom"),
+                "Child realm error was not observed by the child");
+            Require(parent.RawEngine.GetValue("__childError").IsUndefined(),
+                "Child realm error leaked into the parent realm");
+            // Canceling the parent's module loads also cancels pending loads in the child realm.
+            Check(child, "globalThis.__childCancelled = false; import('/slow.js').catch(e => __childCancelled = e instanceof TypeError);");
+            parent.CancelModuleLoads();
+            Require(HeadlessPage.PumpUntil(parent, () =>
+                child.RawEngine.GetValue("__childCancelled").ToObject() is true),
+                "Child pending module load did not cancel with the parent");
+        },
+        ["jobs-and-readiness-failures"] = site =>
+        {
+            site.Routes["/jobs-failures.html"] = """
+                <!doctype html><script>
+                globalThis.__events = [];
+                document.addEventListener('DOMContentLoaded', () => __events.push('dom'));
+                addEventListener('load', () => { __events.push('load'); globalThis.__readyStateAfterLoad = document.readyState; });
+                globalThis.__observerSaw = null;
+                const observer = new MutationObserver(() => { __observerSaw = __events.join(','); });
+                observer.observe(document.body, { childList: true });
+                document.body.appendChild(document.createElement('div'));
+                Promise.resolve().then(() => __events.push('promise'));
+                </script>
+                <script type='module' src='/missing-module-for-jobs.js'></script>
+                <script type='module' src='/throwing-module.js'></script>
+                """;
+            site.RequestCounts.Clear();
+            var (_, engine) = HeadlessPage.Load(site.BaseUrl + "/jobs-failures.html");
+            Require(HeadlessPage.PumpUntil(engine, () =>
+                engine.RawEngine.GetValue("__readyStateAfterLoad") is { } ready && !ready.IsUndefined()),
+                "Failed modules blocked document readiness");
+            // Loading (404) and evaluation failures do not hold the document back: deferred
+            // module completion (or failure) still reaches DOMContentLoaded and load.
+            var events = engine.RawEngine.GetValue("__events").ToString();
+            Require(events.Contains("dom") && events.Contains("load"),
+                $"Readiness events missing after module failures: {events}");
+            Require(engine.RawEngine.GetValue("__readyStateAfterLoad").ToString() == "complete",
+                "readyState did not reach complete after module failures");
+            Require(site.RequestCounts.GetValueOrDefault("/missing-module-for-jobs.js") == 1,
+                "The missing module was fetched more than once");
+            // The queued mutation observer callback runs within the same checkpoint turn, after
+            // the promise continuation queued behind it and before any timer macrotask.
+            Require(engine.RawEngine.GetValue("__observerSaw").ToString() == "promise",
+                $"Observer checkpoint order was {engine.RawEngine.GetValue("__observerSaw")}");
+        },
         ["module-credentials-and-referrer"] = site =>
         {
             site.Routes["/cred.html"] = $$"""
@@ -429,6 +505,7 @@ internal static class Es2020HostRunner
                     "/cred-exact.js" => "globalThis.__credExactLoaded=true;export const value=4;",
                     "/cred-dyn.js" => "export const value=3;",
                     "/taint-target.js" => "export const value=5;",
+                    "/throwing-module.js" => "throw new Error('module eval boom');",
                     "/modules/timer-import.js" => "setTimeout(() => import('./sub/dep.js').then(m => { globalThis.__timerImport = m.value; globalThis.__timerDone = true; }), 0);",
                     _ => null,
                 };

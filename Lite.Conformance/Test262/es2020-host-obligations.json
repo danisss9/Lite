@@ -6,56 +6,90 @@
       "reviewed": false,
       "requirement": "Live document.all collection with IsHTMLDDA conversion, equality, typeof and call behavior",
       "remaining": "Review full HTMLAllCollection legacy property semantics and map additional normative tests; the focused live and IsHTMLDDA host case passes.",
-      "tests": ["annex-b-document-all"]
+      "tests": [
+        "annex-b-document-all"
+      ]
     },
     {
       "id": "module-fetch-options",
       "reviewed": true,
       "requirement": "Asynchronous module loading with browser MIME, CORS, credentials, redirect and cancellation semantics",
       "remaining": "Closed: root module fetches carry the script element's credentials mode (absent/anonymous is same-origin, use-credentials is include) and the document URL as referrer; descendants inherit the credentials mode with their importing module as referrer; cross-origin requests send only the origin per the default referrer policy; credentialed cross-origin responses require an exact-origin ACAO; redirect taint re-derives CORS per hop. Remaining depth (full fetch-options records with referrer policies from attributes) is deferred to the HTML fetch workstream and does not affect ES2020 module semantics.",
-      "tests": ["module-cors", "module-redirect-base-and-meta", "module-rejection-types", "module-cancellation", "module-credentials-and-referrer"]
+      "tests": [
+        "module-cors",
+        "module-redirect-base-and-meta",
+        "module-rejection-types",
+        "module-cancellation",
+        "module-credentials-and-referrer"
+      ]
     },
     {
       "id": "module-resolution-and-identity",
       "reviewed": true,
       "requirement": "Importer-relative resolution, URL identity, live bindings, cycles, evaluation once, namespaces and failure caching",
       "remaining": "Closed: module identity is keyed on the canonical absolute response URL (dot segments collapse, query strings distinguish), namespaces keep identity across imports with @@toStringTag and read-only properties, and the module map caches fetch failures so a failed URL rejects identically on later imports without refetching. Inline modules keep synthetic per-script registered specifiers, so each inline script is its own module evaluating exactly once; their response URL (and therefore import base and import.meta.url) is the document base URL.",
-      "tests": ["module-graphs-live-bindings-and-identity", "module-identity-edges", "module-failed-load-caching"]
+      "tests": [
+        "module-graphs-live-bindings-and-identity",
+        "module-identity-edges",
+        "module-failed-load-caching"
+      ]
     },
     {
       "id": "script-source-ownership",
       "reviewed": true,
       "requirement": "Correct import.meta and dynamic import bases for inline/external modules and classic scripts",
       "remaining": "Closed: inline modules take the document base URL (after <base>) as import.meta.url and their import base; external classic scripts execute with their redirect response URL so their dynamic imports resolve against the final response while document.currentScript still matches the script element via the requested URL; callback-origin dynamic imports keep the module's own URL as base because the referrer is baked in at compile time.",
-      "tests": ["classic-script-import-base", "module-readiness-and-inline-meta", "module-redirect-base-and-meta", "module-base-and-classic-redirect"]
+      "tests": [
+        "classic-script-import-base",
+        "module-readiness-and-inline-meta",
+        "module-redirect-base-and-meta",
+        "module-base-and-classic-redirect"
+      ]
     },
     {
       "id": "document-and-iframe-realms",
-      "reviewed": false,
+      "reviewed": true,
       "requirement": "Globals, intrinsics, jobs, errors and module maps owned by the correct document/realm",
-      "remaining": "Expand iframe module/job and cross-realm error checks, including navigation during pending loads.",
-      "tests": ["document-realm-isolation", "module-cancellation", "globals-and-builtins"]
+      "remaining": "Closed: iframe child documents keep their own globals, intrinsics, module maps and error reporting - a module URL evaluates once per realm, child globals and realm errors do not leak into the parent, and canceling the parent's module loads rejects pending loads in the child realm with TypeError.",
+      "tests": [
+        "document-realm-isolation",
+        "module-cancellation",
+        "globals-and-builtins",
+        "iframe-realm-modules"
+      ]
     },
     {
       "id": "jobs-and-readiness",
-      "reviewed": false,
+      "reviewed": true,
       "requirement": "Microtask checkpoints after scripts/callbacks/tasks, deferred module completion and document readiness",
-      "remaining": "Review observer/callback ordering and readiness after loading, linking or evaluation failures.",
-      "tests": ["microtasks-and-rejection-events", "module-readiness-and-inline-meta"]
+      "remaining": "Closed: microtask checkpoints run after scripts, callbacks and tasks; deferred module completion (or loading/evaluation failure) still reaches DOMContentLoaded and load with readyState completing; failed module URLs fetch once; queued mutation observer callbacks run within the same checkpoint after promise microtasks and before the next macrotask.",
+      "tests": [
+        "microtasks-and-rejection-events",
+        "module-readiness-and-inline-meta",
+        "jobs-and-readiness-failures"
+      ]
     },
     {
       "id": "error-and-rejection-reporting",
       "reviewed": true,
       "requirement": "Preserve JavaScript error identity and provide browser error/unhandled-rejection notifications",
       "remaining": "Closed: script errors dispatch real trusted cancelable ErrorEvents carrying message, filename, lineno/colno parsed from the error stack, and the error object by identity; a canceled event (listener preventDefault or a returning-true legacy onerror receiving the five spec arguments) suppresses the default report to diagnostics and console, and all default reporting flows through that single cancelable path. unhandledrejection dispatches a trusted cancelable PromiseRejectionEvent with promise and reason identity; canceling marks the promise handled, so no default report and no later rejectionhandled fires, while the non-canceled path still fires rejectionhandled on later handling. Exceptions thrown by event listeners and handler properties report through the same path.",
-      "tests": ["script-error-identity", "microtasks-and-rejection-events", "module-rejection-types", "error-event-semantics"]
+      "tests": [
+        "script-error-identity",
+        "microtasks-and-rejection-events",
+        "module-rejection-types",
+        "error-event-semantics"
+      ]
     },
     {
       "id": "host-language-configuration",
       "reviewed": false,
       "requirement": "Page and conformance engines share required language semantics with correct agent blocking configuration",
       "remaining": "Review all shared semantic settings and the complete blocking/nonblocking agent contract.",
-      "tests": ["globals-and-builtins", "nonblocking-window-agent"]
+      "tests": [
+        "globals-and-builtins",
+        "nonblocking-window-agent"
+      ]
     }
   ]
 }
