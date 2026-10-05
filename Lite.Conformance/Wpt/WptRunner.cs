@@ -298,6 +298,16 @@ internal static class WptRunner
     {
         ConformanceServer.SetWorkerBaseUrl(url);
         var test = CatalogCase(path);
+        // A page referencing a resource that never made it into the vendored tree cannot be
+        // executed meaningfully; report it as an execution blocker instead of a failure.
+        var missingInput = test is null ? null : SuiteInputs.FindMissing(path);
+        if (missingInput is not null)
+        {
+            File.WriteAllText(output, JsonSerializer.Serialize(
+                new RunResult(Cat.Unsupported, $"Missing suite input: {missingInput}", 0, 0),
+                ExecutionEvidence.JsonOptions));
+            return 0;
+        }
         // The parent owns the server. Child workers only need its address for reference URLs.
         var result = test?.Kind switch
         {

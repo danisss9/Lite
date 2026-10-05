@@ -1422,6 +1422,30 @@ internal static class Parser
             return Encoding.BigEndianUnicode.GetString(bytes, 2, bytes.Length - 2);
         }
 
+        // 2b. @charset written in UTF-16 without a BOM: the sheet begins with NUL-interleaved
+        // octets, so the ASCII probe below cannot see it. CSS 2.1 §4.4 keeps this UTF-16
+        // decode only when the declaration itself names utf-16, and the endianness comes from
+        // the detected byte pattern, not from the declared name.
+        if (bytes.Length >= 20 && bytes[0] + bytes[1] == 0x40 && (bytes[0] == 0 || bytes[1] == 0))
+        {
+            var bigEndian = bytes[0] == 0;
+            var probeWidth = Math.Min(bytes.Length, 256);
+            var utf16Probe = bigEndian
+                ? Encoding.BigEndianUnicode.GetString(bytes, 0, probeWidth)
+                : Encoding.Unicode.GetString(bytes, 0, probeWidth);
+            if (utf16Probe.StartsWith("@charset \"", StringComparison.Ordinal))
+            {
+                var utf16End = utf16Probe.IndexOf("\";", 10, StringComparison.Ordinal);
+                if (utf16End > 10 && utf16Probe[10..utf16End].Contains("utf-16", StringComparison.OrdinalIgnoreCase))
+                {
+                    usedCharset = bigEndian ? "utf-16be" : "utf-16le";
+                    return bigEndian
+                        ? Encoding.BigEndianUnicode.GetString(bytes, 2, bytes.Length - 2)
+                        : Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
+                }
+            }
+        }
+
         // 2. @charset at the very start of the sheet. Its own name has to be readable as ASCII,
         //    which it is in every encoding CSS 2.1 allows here.
         var probe = Encoding.ASCII.GetString(bytes, 0, Math.Min(bytes.Length, 128));
