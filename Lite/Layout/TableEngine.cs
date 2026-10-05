@@ -639,8 +639,11 @@ internal static class TableEngine
     }
 
     /// <summary>Recursively measures intrinsic content widths (excluding the node's own box model).
-    /// Block children stack, so the column needs the widest child; text gives max = one-line width
-    /// and min = the widest single word.</summary>
+    /// Block children stack, so the column needs the widest child; consecutive INLINE-level children
+    /// share one line box (§10.3.5 max-content), so a run of them sums its members' widths — the
+    /// old per-child max measured "b" + "c" as 9px instead of 17px and wrapped every multi-run
+    /// anonymous cell. A run's min-content stays the widest member (breaks may occur between
+    /// inline boxes); a BR ends the run.</summary>
     private static (float Min, float Max) MeasureIntrinsic(LayoutNode node, float viewportH)
     {
         if (FormLayout.IntrinsicWidth(node) is { } controlWidth)
@@ -656,9 +659,21 @@ internal static class TableEngine
             foreach (var word in node.DisplayText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
                 min = Math.Max(min, font.MeasureText(word));
         }
+        float runMin = 0f, runMax = 0f;
+
+        void FlushInlineRun()
+        {
+            if (runMax <= 0f && runMin <= 0f) return;
+            max = Math.Max(max, runMax);
+            min = Math.Max(min, runMin);
+            runMin = runMax = 0f;
+        }
+
         foreach (var ch in node.Children)
         {
-            if (ch.GetDisplay() == DisplayType.None) continue;
+            var d = ch.GetDisplay();
+            if (d == DisplayType.None) continue;
+            if (ch.TagName == "BR") { FlushInlineRun(); continue; }
             var (cMin, cMax) = MeasureIntrinsic(ch, viewportH);
             var fs = ch.GetFontSize();
             var pad = ch.GetPadding(0f, viewportH, fs);
@@ -667,9 +682,19 @@ internal static class TableEngine
             var boxExtra = pad.Left + pad.Right + bord.Left + bord.Right + marg.Left + marg.Right;
             var w = ch.GetWidth(0f);  // explicit px/em width (0 for auto/percent)
             if (w > 0f) { cMin = Math.Max(cMin, w); cMax = Math.Max(cMax, w); }
+            var inline = d is DisplayType.Inline or DisplayType.InlineBlock
+                or DisplayType.InlineTable or DisplayType.InlineFlex;
+            if (inline)
+            {
+                runMin = Math.Max(runMin, cMin + boxExtra);
+                runMax += cMax + boxExtra;
+                continue;
+            }
+            FlushInlineRun();
             min = Math.Max(min, cMin + boxExtra);
             max = Math.Max(max, cMax + boxExtra);
         }
+        FlushInlineRun();
         return (min, max);
     }
 }

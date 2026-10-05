@@ -496,28 +496,30 @@ internal static class BoxEngine
     }
 
     /// <summary>
-    /// A table/row-group/row whose only content is bare text (e.g. a leaf <c>&lt;div
+    /// A table/row-group/row whose content is bare text (e.g. a leaf <c>&lt;div
     /// display:inline-table&gt;some text&lt;/div&gt;</c>) holds that text as its OWN
     /// <see cref="LayoutNode.Text"/> rather than a <c>#text</c> child — the parser only splits
-    /// text into an ordered child when the element also has element children (see
-    /// <c>Parser.Traverse</c>'s <c>hasMixedChildren</c> check). <see cref="WrapAnonymousTableBoxes"/>
-    /// only wraps <c>Children</c>, so that text would otherwise be invisible to anonymous-box
-    /// generation (§17.2.1) and the table would end up with zero rows. Splitting it into a real
-    /// <c>#text</c> child first makes it "misparented content" like any other, so the normal
-    /// wrapping path picks it up. Scoped to nodes with NO existing children, so a node that
-    /// already has its text ordered among element children (the common, already-correct case) is
-    /// never touched — avoids duplicating content.
+    /// text into an ordered child when the element also has renderable element children (see
+    /// <c>Parser.Traverse</c>'s <c>hasMixedChildren</c> check, which excludes scripts).
+    /// <see cref="WrapAnonymousTableBoxes"/> only wraps <c>Children</c>, so that text would
+    /// otherwise be invisible to anonymous-box generation (§17.2.1) and the table would end up
+    /// with zero rows. Splitting it into a real <c>#text</c> child makes it "misparented
+    /// content" like any other, so the normal wrapping path picks it up. Dynamic DOM mutation
+    /// (appendChild of a text node) leaves a node with BOTH own text and #text children — the
+    /// own text is the leading content, so it is inserted as the first child. The static parser
+    /// path never produces this shape (mixed content empties own text), so no duplication.
     /// </summary>
     private static void MigrateOwnTextToChild(LayoutNode node)
     {
-        if (node.Children.Count > 0 || string.IsNullOrEmpty(node.Text)) return;
+        if (string.IsNullOrEmpty(node.Text) || node.OwnTextMigratedToChild) return;
+        node.OwnTextMigratedToChild = true;
         var textChild = new LayoutNode(null, "#text", node.Text, node.Style) { Parent = node };
         // The child's Style object is shared with `node` (the usual #text convention), which
         // leaks node's own NON-inherited "display" (here table/inline-table) onto it — without
         // this override the text would be mistaken for another nested table (CollectInlineItems
         // dispatches purely on GetDisplay()), which is both wrong and pathologically slow.
         textChild.StyleOverrides["display"] = "inline";
-        node.Children.Add(textChild);
+        node.Children.Insert(0, textChild);
     }
 
     /// <summary>Wraps runs of misparented children into anonymous table-rows (<paramref name="wrapAsRow"/>)
@@ -546,7 +548,17 @@ internal static class BoxEngine
                 anon.StyleOverrides[$"border-{side}-width"] = "0";
             }
             anon.Parent = parent;
-            foreach (var c in run) { c.Parent = anon; anon.Children.Add(c); }
+            foreach (var c in run)
+            {
+                c.Parent = anon;
+                anon.Children.Add(c);
+                // A #text child created outside the parser (a JS appendChild into an inline
+                // table) shares its parent's Style object, so without an explicit override it
+                // can inherit a table-level display and lay out as its own block inside the
+                // anonymous cell instead of flowing with the rest of the run.
+                if (c.TagName == "#text" && !c.StyleOverrides.ContainsKey("display"))
+                    c.StyleOverrides["display"] = "inline";
+            }
             run.Clear();
             // Content inside a freshly-made anonymous row still needs an anonymous cell.
             if (wrapAsRow) WrapAnonymousTableBoxes(anon, wrapAsRow: false);

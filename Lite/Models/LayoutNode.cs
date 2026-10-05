@@ -37,6 +37,10 @@ public class LayoutNode
     /// resolved by TableEngine per CSS 2.1 §17.6.2.1; the painter honours them over the
     /// node's own border properties. Null outside collapsed tables.</summary>
     public Dictionary<string, EdgeBorder>? CollapsedEdgeBorders { get; internal set; }
+    /// <summary>Set once BoxEngine has split this node's own text into a leading #text child
+    /// (anonymous-table generation §17.2.1); Text is readonly, so the flag keeps the
+    /// normalization pass idempotent.</summary>
+    internal bool OwnTextMigratedToChild { get; set; }
     public string Text { get; }
     public ICssStyleDeclaration Style { get; }
     /// <summary>The element's href. Backed by <see cref="Attributes"/> (see <see cref="Id"/>).</summary>
