@@ -1916,22 +1916,26 @@ internal static class BoxEngine
     }
 
     /// <summary>
-    /// For an item aligned baseline/sub/super/middle, the distance from ITS OWN top down to
-    /// wherever it aligns against the line's shared baseline (CSS 2.1 §10.8.1). 'baseline' uses
-    /// the item's intrinsic ascent directly; 'sub'/'super' shift it down/up by ~0.15em (matching
-    /// the ratio Drawer/the old code already used); 'middle' aligns the item's vertical centre
-    /// with the baseline plus half an x-height (approximated as a quarter of the font size).
+    /// For an item aligned baseline/sub/super/middle/length/percentage, the distance from ITS
+    /// OWN top down to wherever it aligns against the line's shared baseline (CSS 2.1 §10.8.1).
+    /// 'baseline' uses the item's intrinsic ascent directly; 'sub'/'super' shift it down/up by
+    /// ~0.15em; 'middle' aligns the item's vertical centre with the baseline plus half an
+    /// x-height (approximated as a quarter of the font size); a &lt;length&gt;/&lt;percentage&gt;
+    /// raises (positive) or lowers (negative) the box's baseline by that distance.
     /// </summary>
     private static float AboveBaselineComponent(InlineItem item, VerticalAlignType vAlign)
     {
         var fontSize = item.Node.GetFontSize();
-        return vAlign switch
+        var above = vAlign switch
         {
             VerticalAlignType.Middle => item.Height / 2f + fontSize * 0.25f,
             VerticalAlignType.Sub => item.Ascent - fontSize * 0.15f,
             VerticalAlignType.Super => item.Ascent + fontSize * 0.15f,
             _ => item.Ascent, // baseline
         };
+        if (vAlign is VerticalAlignType.Length or VerticalAlignType.Percentage)
+            above += item.Node.GetVerticalAlignOffset();
+        return above;
     }
 
     private static InlineItem EdgeItem(LayoutNode node, float width) =>

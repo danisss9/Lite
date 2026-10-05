@@ -39,7 +39,7 @@ public enum TextTransform { None, Uppercase, Lowercase, Capitalize }
 public enum BorderStyle { None, Solid, Dotted, Dashed, Double, Groove, Ridge, Inset, Outset, Hidden }
 public enum ListStyleType { Disc, Circle, Square, Decimal, DecimalLeadingZero, LowerAlpha, UpperAlpha, LowerRoman, UpperRoman, None }
 public enum ListStylePosition { Outside, Inside }
-public enum VerticalAlignType { Baseline, Top, Middle, Bottom, TextTop, TextBottom, Sub, Super }
+public enum VerticalAlignType { Baseline, Top, Middle, Bottom, TextTop, TextBottom, Sub, Super, Length, Percentage }
 
 public static class StyleExtensions
 {
@@ -749,8 +749,26 @@ public static class StyleExtensions
             "text-bottom" => VerticalAlignType.TextBottom,
             "sub" => VerticalAlignType.Sub,
             "super" => VerticalAlignType.Super,
+            // §10.8.1: <length> raises (positive) or lowers (negative) the box's baseline;
+            // <percentage> does the same relative to the element's own line-height.
+            var v when v.EndsWith('%') => VerticalAlignType.Percentage,
+            var v when v.Length > 0 && (char.IsAsciiDigit(v[0]) || v[0] is '-' or '.' or '+') => VerticalAlignType.Length,
             _ => VerticalAlignType.Baseline,
         };
+    }
+
+    /// <summary>The §10.8.1 length/percentage offset in px (positive raises the box), or 0 for
+    /// the keyword kinds. Percentages resolve against the element's own line-height.</summary>
+    public static float GetVerticalAlignOffset(this LayoutNode node)
+    {
+        var kind = node.GetVerticalAlign();
+        if (kind is not (VerticalAlignType.Length or VerticalAlignType.Percentage)) return 0f;
+        var raw = (node.TryResolveStyle("vertical-align", out var ov)
+            ? ov : node.Style.GetPropertyValueSafe("vertical-align"))?.Trim() ?? "";
+        var fontSize = node.GetFontSize();
+        var lineHeight = node.GetLineHeight(fontSize);
+        // A percentage shifts relative to the element's own line-height (§10.8.1).
+        return CssUnits.TryParse(raw, lineHeight, lineHeight, lineHeight, lineHeight, out var px) ? px : 0f;
     }
 
     // ---- Outline properties ----
