@@ -1,10 +1,15 @@
 using Lite.Scripting.Runtime;
 using AngleSharp.Css.Dom;
 using Lite.Animation;
+using Lite.Extensions;
 using Lite.Layout;
 using SkiaSharp;
 
 namespace Lite.Models;
+
+/// <summary>A resolved border for one edge of a collapsed-table cell: the §17.6.2.1 winner
+/// among the adjoining cell, row/column groups, and the table.</summary>
+public readonly record struct EdgeBorder(float Width, BorderStyle Style, SKColor Color);
 
 /// <summary>A CSS property/value pair that is conditional on a media query.</summary>
 public record MediaConditionalStyle(string MediaText, string Property, string Value, string Target);
@@ -27,7 +32,11 @@ public class LayoutNode
     public string TagName { get; }
     /// <summary>The tag name exactly as the document language wrote it, when that case is
     /// meaningful (XML documents); null for HTML documents, where case is insignificant.</summary>
-    public string? SourceTagName { get; internal set; }
+    public string? SourceTagName { get; set; }
+    /// <summary>Collapsed-table conflict winners per edge ("top"/"right"/"bottom"/"left"),
+    /// resolved by TableEngine per CSS 2.1 §17.6.2.1; the painter honours them over the
+    /// node's own border properties. Null outside collapsed tables.</summary>
+    public Dictionary<string, EdgeBorder>? CollapsedEdgeBorders { get; internal set; }
     public string Text { get; }
     public ICssStyleDeclaration Style { get; }
     /// <summary>The element's href. Backed by <see cref="Attributes"/> (see <see cref="Id"/>).</summary>

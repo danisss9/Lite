@@ -1731,18 +1731,31 @@ internal static class Drawer
             return;
         }
 
-        DrawBorderSide(canvas, box.BorderBox.Left, box.BorderBox.Top + bw.Top / 2,
-                        box.BorderBox.Right, box.BorderBox.Top + bw.Top / 2,
-                        bw.Top, node.GetBorderTopColor(), node.GetBorderStyleTop());
-        DrawBorderSide(canvas, box.BorderBox.Right - bw.Right / 2, box.BorderBox.Top,
-                        box.BorderBox.Right - bw.Right / 2, box.BorderBox.Bottom,
-                        bw.Right, node.GetBorderRightColor(), node.GetBorderStyleRight());
-        DrawBorderSide(canvas, box.BorderBox.Left, box.BorderBox.Bottom - bw.Bottom / 2,
-                        box.BorderBox.Right, box.BorderBox.Bottom - bw.Bottom / 2,
-                        bw.Bottom, node.GetBorderBottomColor(), node.GetBorderStyleBottom());
-        DrawBorderSide(canvas, box.BorderBox.Left + bw.Left / 2, box.BorderBox.Top,
-                        box.BorderBox.Left + bw.Left / 2, box.BorderBox.Bottom,
-                        bw.Left, node.GetBorderLeftColor(), node.GetBorderStyleLeft());
+        // Collapsed tables: each edge paints the §17.6.2.1 dominant border, which may come
+        // from an adjoining cell or the table rather than this node's own properties.
+        var cw = node.CollapsedEdgeBorders;
+        (float width, BorderStyle style, SKColor color) Top() =>
+            cw is { } && cw.TryGetValue("top", out var t) ? (t.Width, t.Style, t.Color) : (bw.Top, node.GetBorderStyleTop(), node.GetBorderTopColor());
+        (float width, BorderStyle style, SKColor color) Right() =>
+            cw is { } && cw.TryGetValue("right", out var r) ? (r.Width, r.Style, r.Color) : (bw.Right, node.GetBorderStyleRight(), node.GetBorderRightColor());
+        (float width, BorderStyle style, SKColor color) Bottom() =>
+            cw is { } && cw.TryGetValue("bottom", out var b) ? (b.Width, b.Style, b.Color) : (bw.Bottom, node.GetBorderStyleBottom(), node.GetBorderBottomColor());
+        (float width, BorderStyle style, SKColor color) Left() =>
+            cw is { } && cw.TryGetValue("left", out var l) ? (l.Width, l.Style, l.Color) : (bw.Left, node.GetBorderStyleLeft(), node.GetBorderLeftColor());
+        var topE = Top(); var rightE = Right(); var bottomE = Bottom(); var leftE = Left();
+
+        DrawBorderSide(canvas, box.BorderBox.Left, box.BorderBox.Top + topE.width / 2,
+                        box.BorderBox.Right, box.BorderBox.Top + topE.width / 2,
+                        topE.width, topE.color, topE.style);
+        DrawBorderSide(canvas, box.BorderBox.Right - rightE.width / 2, box.BorderBox.Top,
+                        box.BorderBox.Right - rightE.width / 2, box.BorderBox.Bottom,
+                        rightE.width, rightE.color, rightE.style);
+        DrawBorderSide(canvas, box.BorderBox.Left, box.BorderBox.Bottom - bottomE.width / 2,
+                        box.BorderBox.Right, box.BorderBox.Bottom - bottomE.width / 2,
+                        bottomE.width, bottomE.color, bottomE.style);
+        DrawBorderSide(canvas, box.BorderBox.Left + leftE.width / 2, box.BorderBox.Top,
+                        box.BorderBox.Left + leftE.width / 2, box.BorderBox.Bottom,
+                        leftE.width, leftE.color, leftE.style);
     }
 
     private static void DrawBorderSide(SKCanvas canvas, float x1, float y1, float x2, float y2,

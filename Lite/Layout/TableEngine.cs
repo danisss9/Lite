@@ -189,6 +189,12 @@ internal static class TableEngine
             };
         }
 
+        // CSS 2.1 §17.6.2.1: in the collapsing model each shared edge is painted with the
+        // dominant border among all boxes adjoining it; store the winners on the cells for
+        // the painter.
+        if (collapse)
+            ResolveCollapsedBorders(table, placements);
+
         // ── Row boxes ──────────────────────────────────────────────────────
         for (int r = 0; r < rows.Count && r < rowCount; r++)
         {
@@ -275,6 +281,95 @@ internal static class TableEngine
     }
 
     private record RowInfo(LayoutNode Row, List<LayoutNode> Cells);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Collapsing border conflict resolution (CSS 2.1 §17.6.2.1)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Resolves every cell edge's dominant border among the adjoining cell (when a
+    /// shared edge) and the table box (at the outer boundary). Row, row-group, column, and
+    /// column-group borders join the candidates in a later pass. Tie-breaking follows the
+    /// specification: left over right, top over bottom, and cells over the table.</summary>
+    private static void ResolveCollapsedBorders(LayoutNode table, List<CellPlacement> placements)
+    {
+        var byPosition = new Dictionary<(int Row, int Col), CellPlacement>(placements.Count);
+        foreach (var p in placements)
+            byPosition[(p.Row, p.Col)] = p;
+        var tableBorders = NodeEdgeBorders(table);
+
+        foreach (var p in placements)
+        {
+            var own = NodeEdgeBorders(p.Cell);
+            var result = new Dictionary<string, EdgeBorder>(4, StringComparer.Ordinal);
+
+            var left = own["left"];
+            if (byPosition.TryGetValue((p.Row, p.Col - 1), out var west))
+                left = Dominant(NodeEdgeBorders(west.Cell)["right"], left); // left over right
+            else
+                left = Dominant(left, tableBorders["left"]);               // cell over table
+            result["left"] = left;
+
+            var right = own["right"];
+            if (byPosition.TryGetValue((p.Row, p.Col + p.ColSpan), out var east))
+                right = Dominant(right, NodeEdgeBorders(east.Cell)["left"]);
+            else
+                right = Dominant(right, tableBorders["right"]);
+            result["right"] = right;
+
+            var top = own["top"];
+            if (p.Row > 0 && byPosition.TryGetValue((p.Row - 1, p.Col), out var north))
+                top = Dominant(NodeEdgeBorders(north.Cell)["bottom"], top); // top over bottom
+            else
+                top = Dominant(top, tableBorders["top"]);
+            result["top"] = top;
+
+            var bottom = own["bottom"];
+            if (byPosition.TryGetValue((p.Row + p.RowSpan, p.Col), out var south))
+                bottom = Dominant(bottom, NodeEdgeBorders(south.Cell)["top"]);
+            else
+                bottom = Dominant(bottom, tableBorders["bottom"]);
+            result["bottom"] = bottom;
+
+            p.Cell.CollapsedEdgeBorders = result;
+        }
+    }
+
+    private static Dictionary<string, EdgeBorder> NodeEdgeBorders(LayoutNode node)
+    {
+        var widths = node.GetBorderWidth();
+        return new Dictionary<string, EdgeBorder>(4, StringComparer.Ordinal)
+        {
+            ["top"] = new(widths.Top, node.GetBorderStyleTop(), node.GetBorderTopColor()),
+            ["right"] = new(widths.Right, node.GetBorderStyleRight(), node.GetBorderRightColor()),
+            ["bottom"] = new(widths.Bottom, node.GetBorderStyleBottom(), node.GetBorderBottomColor()),
+            ["left"] = new(widths.Left, node.GetBorderStyleLeft(), node.GetBorderLeftColor()),
+        };
+    }
+
+    /// <summary>§17.6.2.1 dominance: hidden suppresses everything, then the widest border,
+    /// then the style order double > solid > dashed > dotted > ridge > outset > groove >
+    /// inset > none; 'a' wins exact ties (callers pass candidates in tie-winning order).</summary>
+    private static EdgeBorder Dominant(EdgeBorder a, EdgeBorder b)
+    {
+        if (a.Style == BorderStyle.Hidden) return a;
+        if (b.Style == BorderStyle.Hidden) return b;
+        if (a.Width != b.Width) return a.Width > b.Width ? a : b;
+        if (a.Style != b.Style) return StyleRank(a.Style) >= StyleRank(b.Style) ? a : b;
+        return a;
+    }
+
+    private static int StyleRank(BorderStyle style) => style switch
+    {
+        BorderStyle.Double => 9,
+        BorderStyle.Solid => 8,
+        BorderStyle.Dashed => 7,
+        BorderStyle.Dotted => 6,
+        BorderStyle.Ridge => 5,
+        BorderStyle.Outset => 4,
+        BorderStyle.Groove => 3,
+        BorderStyle.Inset => 2,
+        _ => 1,
+    };
 
     /// <summary>
     /// Builds a 2D grid placement list, handling colspan and rowspan.
