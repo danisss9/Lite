@@ -60,7 +60,7 @@ def main() -> int:
         except (OSError, json.JSONDecodeError) as error:
             problems.append(f"unreadable report {report_path.name}: {error}")
             continue
-        if report.get("formatVersion") != 5:
+        if report.get("formatVersion") != 6:
             problems.append(f"{report_path.name}: unexpected format version {report.get('formatVersion')}")
             continue
         if not report.get("completed"):

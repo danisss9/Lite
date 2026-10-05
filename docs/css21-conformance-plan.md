@@ -2,6 +2,8 @@
 
 Planning baseline: 17 September 2026. Scope: Windows x64, screen and print, retaining Lite's C#/AngleSharp/Jint/Skia architecture. This document is an implementation plan; it does not change the active compatibility profile or claim that any new coverage has passed.
 
+Execution status update, 5 October 2026: the Milestone 1 and 2 scaffolding described below now exists — `Profile/css21-sections.json` (841 sections), `Profile/css21-properties.json` (115 properties), `Profile/css21-requirements.json`, `Css21/css21-applicability.json`, the vendored and hash-pinned 2011-03-23 official suite (9,364 cataloged cases), the `--suite css21-inventory` and `--suite css21-full --media` commands, the `--require-css-ready` gate flag, and `scripts/run-css21-baseline.ps1` with `scripts/aggregate-css21-baseline.py`. The review content those files are meant to carry is still at zero: all 841 sections and 115 properties are `unreviewed`, the obligation inventory holds 5 seed records, no candidate case has been classified, and no complete baseline artifact has been collected (`css21-official-catalog-stale` is an active blocker). The phased remaining-work breakdown at the end of this document sequences the execution; the milestones above remain the normative definition of each package.
+
 ## Target and completion contract
 
 Keep the existing [CSS 2.1 Recommendation of 7 June 2011](https://www.w3.org/TR/2011/REC-CSS2-20110607/) as the normative target. Store checksummed copies of its source and a dated copy of the [errata](https://www.w3.org/Style/css2-updates/REC-CSS2-20110607-errata.html). The errata page has Working Draft status: review corrections individually, record their applicability and test impact, and do not silently replace the target with CSS 2.2 or later modules. Where an adopted correction changes the base Recommendation, report that compatibility decision explicitly.
@@ -130,3 +132,60 @@ Implement inventory/gates first, then full-suite execution. Start the render-con
 Each change should deliver a reviewed obligation mapping, a reproducer or applicable upstream case, the implementation, relevant regression evidence, and an updated blocker report. Runtime baselines from milestone 2 determine practical shard counts and estimates; a reliable completion date cannot be inferred from the 52-entry curated suite.
 
 Use `dotnet build Lite.sln -c Release` and the custom executable runner `dotnet run --project Lite.Tests -c Release --no-build` for code validation. Run the affected conformance groups, then the full media matrix for milestone closure. Store generated reports and render artifacts under ignored `Lite.Conformance/artifacts/`. Rebuild after source changes and finish edits before collecting evidence; do not combine evidence from different source/binary identities. All new CLI names and report fields described above are proposed work, not currently available commands.
+
+## Phased remaining-work breakdown
+
+Assessed 5 October 2026 from the committed trackers (`compatibility-report.json`, `Lite.Conformance/artifacts/css21-inventory.json`), not a fresh execution:
+
+- Done: the curated 52-entry gate (green, CI-enforced); official-suite vendoring with a verified tree hash and catalog; the readiness and inventory machinery (`Css21Inventory` fail-closed gates, schemas, blocker computation); screen behavior with focused regressions for box model, margin collapsing, block-in-inline, anonymous tables, float basics, absolute-position equations, replaced sizing, inline struts, generated content, counters, and Appendix E paint-order basics; three profile obligations marked `implemented`.
+- At zero: section, property, obligation, and test reviews (841 sections, 115 properties, 5 seed obligations, 0 of 9,364 official plus 9,290 WPT cases classified); the full-suite baseline artifact; Acid2 still recorded as `failing`.
+- Known engine gaps: no document-owned stylesheet origins (UA CSS injected as an ordinary style element); no user controls (alternate sets, author-style disable, user stylesheet) — the four `css21.ua.*` hard blockers; print rejected by `MediaQueryEvaluator` and no pagination layer; `FontRegistry` static and cleared per load.
+
+### Phase 1 — full screen baseline (closes Milestone 2's execution exit)
+
+1. Rebuild Release, rerun the unit suite, and regenerate the official catalog artifact to clear `css21-official-catalog-stale`.
+2. Run `scripts/run-css21-baseline.ps1` for `--media screen` over the official catalog; measure one shard's wall time before sizing the parallel run.
+3. Aggregate with `scripts/aggregate-css21-baseline.py` into `artifacts/css21-full-screen-baseline.md` / `.csv` with per-case outcomes (pass/fail/unsupported/manual-pending/timeout/crash) and the failure-cluster report.
+4. Triage clusters into engine defects, harness gaps (MIME handling, reviewed fuzzy comparison, font provisioning, viewport), and suite-classification issues.
+
+Exit: a complete baseline on one build identity and a cluster report that prioritizes all later engine work.
+
+### Phase 2 — inventory review closure (closes Milestone 1's content)
+
+Record all reviews through committed generator scripts, in batches that keep `--suite css21`, `--suite css21-inventory`, and `--suite profile` green:
+
+1. Sections (841): a `scripts/gen_css21_section_review.py` generator; chapter-by-chapter classification (normative-included, informative, permitted-choice, decomposed to obligations) with rationale; `reviewComplete` flips only from the generator.
+2. Properties (115): verify values, initial, appliesTo, inherited, and percentage bases against the pinned Recommendation; map `requirementIds`.
+3. Obligations: grow `css21-requirements.json` from the 5 seeds to one record per testable obligation with per-media status, decomposed from the section review; replace the `css21.13.pagination` placeholder with real chapter-13 obligations.
+4. Official suite (9,364): validate the generated proposals in `css21-official-proposals.json` in batches; write reviewed entries to `css21-applicability.json` (classification, media, requirementIds, dated rationale). Applicable-but-failing cases are recorded reviewed-failing with clause and gap reasons; they feed the Phase 3–4 engine queue and are never included or silently excluded.
+5. WPT CSS2 (9,290): classify as applicable, later-feature, informative, optional, defective, duplicate-of-official, or regression-only to clear `css21-unclassified-wpt-cases`.
+
+Exit: the five review blockers (`css21-sections-review-incomplete`, `css21-properties-review-incomplete`, `css21-obligation-inventory-incomplete`, `css21-test-review-incomplete`, `css21-unclassified-wpt-cases`) are gone.
+
+### Phase 3 — foundations (Milestone 3), driven by reviewed-failing clusters
+
+Document-owned stylesheet records with real UA, user, and author origins replacing the style-element injection; public host options plus example UI for alternate sets, author-style disable, and a user stylesheet file (closing the four `css21.ua.*` blockers); one cascade path for initial load and dynamic change; complete PropertyTable metadata; tokenization, error recovery, escapes, shorthand reset, `inherit`; the section 4.4 encoding-precedence audit; `@import` ordering, media restrictions, and cycles; complete selector behavior and genuine XHTML MIME dispatch (coordinated with the HTML workstream; remove unconditional entity decoding only once document-mode tests exist); enable `print` in `MediaQueryEvaluator` as the prerequisite for print execution.
+
+Exit: syntax, selector, cascade, and media obligations pass in both document modes; static and dynamic changes agree; user controls work through the host.
+
+### Phase 4 — screen rendering packages (Milestones 4–8)
+
+Each package: run its failing cluster, implement the behavior, add focused regressions, rerun the cluster plus the curated gate, then flip the obligation `untested` to `implemented` with exact mapped passing tests. Order: box generation and sizing; floats and positioning; inline text and fonts (persistent `FontRegistry`, Ahem provisioning, bidi and shaping, shared shaped runs for measuring and drawing); tables (both border-spacing axes, collapsed-border conflicts); generated content, painting, and UI with the complete Appendix E order. Keep Acid2 visible throughout: map failures to obligations, verify against an independent reference, never regenerate the stored baseline.
+
+Exit: all applicable screen obligations pass; the computed `css21ScreenReady` verdict is published as evidence (not yet enforced); scheduled CI gains the screen matrix as diagnostics.
+
+### Phase 5 — print and paged media (Milestone 9)
+
+Introduce the shared render context (media, viewport, device scale, page geometry); implement `Lite/Layout/PagedLayoutEngine.cs` as real pagination, not screenshot slicing; cover `@page` margins and first/left/right selectors, page-break properties, widows and orphans, page-relative fixed positioning; expose a deterministic paginated output API, PDF export, and Windows print/preview. Then run the print baseline, finish the print applicability review, and close the chapter-13 obligations.
+
+Exit: `css21PrintReady` and then `css21ProfileReady` become eligible.
+
+### Phase 6 — final audit and enforcement (Milestone 10)
+
+Run the full screen and print matrix on one identified build; publish obligation coverage separately from suite pass rates; add the CSS gate-hygiene regressions to `Css21CoverageTests`; rewrite `docs/css21-conformance.md` as the completed-program record; add `--require-css-ready` to CI and release only once the verdict is true. The overall profile claim stays `development-non-conforming` until the HTML and ES2020 tracks' remaining gates are settled.
+
+### Standing constraints
+
+- Edit only the `css21.*` profile prefix and the `Lite.Conformance/Css21/*` plus `Profile/css21-*` artifacts; keep the html5 and es2020 gates green (coordination rules in `docs/html5-conformance-plan.md`).
+- One build identity per evidence set: rebuild after source changes and never mix identities; expected-fail waivers are published in the profile and lapse automatically when a waived test passes.
+- The long poles are the 18,654-case applicability reviews (mitigated by generator scripts and batch commits) and the print pipeline (largest new engine component); the Phase 1 baseline wall time calibrates all later estimates.
