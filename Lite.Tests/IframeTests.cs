@@ -379,4 +379,31 @@ public static class IframeTests
 
         Equal("true|myframe", (string?)parent.RawEngine.GetValue("__info").ToObject());
     }
+
+    [Test]
+    public static void ScriptInsertedIframe_NavigatesToBlobUrl()
+    {
+        var page = Parser.ParseChildPage("<!doctype html><div id=host></div>", true,
+            "http://parent.test/page", 400, 200);
+        page.Engine.RawEngine.Execute("""
+            var frame = document.createElement('iframe');
+            frame.addEventListener('load', function () { window.blobLoadedListener = true; });
+            frame.onload = function () { window.blobLoadedProperty = true; };
+            document.getElementById('host').appendChild(frame);
+            window.__blobUrl = URL.createObjectURL(
+                new Blob(['<!doctype html><p id=blobinside>hi</p>'], { type: 'text/html' }));
+            frame.src = __blobUrl;
+            """);
+        page.Engine.DrainTree();
+
+        var listener = page.Engine.RawEngine.GetValue("blobLoadedListener").ToString();
+        var property = page.Engine.RawEngine.GetValue("blobLoadedProperty").ToString();
+        var url = page.Engine.RawEngine.GetValue("__blobUrl").ToString();
+        var frame = FindByTag(page.Root, "IFRAME");
+        var childLoaded = frame?.ChildPage is not null && FindById(frame.ChildPage.Root, "blobinside") is not null;
+        True(listener == "true",
+            $"listener={listener} property={property} childLoaded={childLoaded} url={url} childPage={(frame?.ChildPage is not null)}");
+        Equal("true", page.Engine.RawEngine.GetValue("blobLoadedProperty").ToString());
+        True(childLoaded, "blob: child document did not load");
+    }
 }

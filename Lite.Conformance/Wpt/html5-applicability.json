@@ -91,93 +91,93 @@
     },
     {
       "path": "dom/nodes/Element-childElement-null.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: Element Traversal attributes (firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, childElementCount, hasAttributes) per 3.2.2 Elements in the DOM and the DOM4 draft referenced by HTML 5.0."
     },
     {
       "path": "dom/nodes/Element-childElementCount.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: Element Traversal attributes (firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, childElementCount, hasAttributes) per 3.2.2 Elements in the DOM and the DOM4 draft referenced by HTML 5.0."
     },
     {
       "path": "dom/nodes/Element-childElementCount-nochild.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: Element Traversal attributes (firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, childElementCount, hasAttributes) per 3.2.2 Elements in the DOM and the DOM4 draft referenced by HTML 5.0."
     },
     {
       "path": "dom/nodes/Element-childElementCount-dynamic-add.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: Element Traversal attributes (firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, childElementCount, hasAttributes) per 3.2.2 Elements in the DOM and the DOM4 draft referenced by HTML 5.0. Dynamic growth covered."
     },
     {
       "path": "dom/nodes/Element-childElementCount-dynamic-remove.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: Element Traversal attributes (firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, childElementCount, hasAttributes) per 3.2.2 Elements in the DOM and the DOM4 draft referenced by HTML 5.0. Dynamic removal covered."
     },
     {
       "path": "dom/nodes/Element-firstElementChild.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: Element Traversal attributes (firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, childElementCount, hasAttributes) per 3.2.2 Elements in the DOM and the DOM4 draft referenced by HTML 5.0."
     },
     {
       "path": "dom/nodes/Element-lastElementChild.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: Element Traversal attributes (firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, childElementCount, hasAttributes) per 3.2.2 Elements in the DOM and the DOM4 draft referenced by HTML 5.0."
     },
     {
       "path": "dom/nodes/Element-nextElementSibling.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: Element Traversal attributes (firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, childElementCount, hasAttributes) per 3.2.2 Elements in the DOM and the DOM4 draft referenced by HTML 5.0."
     },
     {
       "path": "dom/nodes/Element-previousElementSibling.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: Element Traversal attributes (firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, childElementCount, hasAttributes) per 3.2.2 Elements in the DOM and the DOM4 draft referenced by HTML 5.0."
     },
     {
       "path": "dom/nodes/Element-siblingElement-null.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: Element Traversal attributes (firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, childElementCount, hasAttributes) per 3.2.2 Elements in the DOM and the DOM4 draft referenced by HTML 5.0."
     },
     {
       "path": "dom/nodes/Element-hasAttributes.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: Element Traversal attributes (firstElementChild, lastElementChild, nextElementSibling, previousElementSibling, childElementCount, hasAttributes) per 3.2.2 Elements in the DOM and the DOM4 draft referenced by HTML 5.0."
     },
     {
       "path": "dom/nodes/Node-childNodes-cache.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: childNodes indexed access and list caching semantics (3.1 Documents, DOM4 dependency); ChildNode.remove() used as scaffolding is defined by the referenced 2014 DOM4 draft."
     },
     {
       "path": "dom/nodes/Node-childNodes-cache-2.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: childNodes list identity across replaceChild mutations (3.1 Documents, DOM4 dependency)."
     },
     {
       "path": "dom/nodes/DocumentFragment-querySelectorAll-after-modification.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: querySelectorAll on a DocumentFragment reflects prior mutations (ParentNode querySelector in the referenced DOM4 draft; Selectors API dependency)."
     },
     {
       "path": "dom/nodes/ParentNode-querySelectorAll-removed-elements.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: querySelector/querySelectorAll exclude removed elements and reflect the authoritative tree (Selectors API dependency)."
     },
     {
       "path": "dom/nodes/getElementsByClassName-32.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: getElementsByClassName returns all elements with 32+ class tokens set via className (2014 getElementsByClassName; 3.2.5.7 The class attribute)."
     },
     {
       "path": "dom/nodes/getElementsByClassName-whitespace-class-names.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: getElementsByClassName treats the class attribute as a space-separated token list with whitespace handling (3.2.5.7 The class attribute)."
     },
     {
       "path": "dom/nodes/insertion-removing-steps/later-script-removed-by-earlier-script.html",
       "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "reason": "Reviewed 2026-10-03 (deferred): passes, but asserts isConnected and removal-cancels-execution under modern insertion/removing-steps naming; the equivalent 4.11.1 behavior in the 2014 snapshot needs clause-level confirmation before inclusion."
     },
     {
       "path": "dom/nodes/moveBefore/preserve-render-blocking-script.html",
@@ -186,168 +186,168 @@
     },
     {
       "path": "dom/nodes/CharacterData-appendData.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: CharacterData data/appendData/insertData/deleteData/replaceData/substringData semantics including IndexSizeError ranges, WebIDL argument conversion and UTF-16 surrogate handling (DOM4 draft referenced by HTML 5.0)."
     },
     {
       "path": "dom/nodes/CharacterData-data.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: CharacterData data/appendData/insertData/deleteData/replaceData/substringData semantics including IndexSizeError ranges, WebIDL argument conversion and UTF-16 surrogate handling (DOM4 draft referenced by HTML 5.0)."
     },
     {
       "path": "dom/nodes/CharacterData-deleteData.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: CharacterData data/appendData/insertData/deleteData/replaceData/substringData semantics including IndexSizeError ranges, WebIDL argument conversion and UTF-16 surrogate handling (DOM4 draft referenced by HTML 5.0)."
     },
     {
       "path": "dom/nodes/CharacterData-insertData.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: CharacterData data/appendData/insertData/deleteData/replaceData/substringData semantics including IndexSizeError ranges, WebIDL argument conversion and UTF-16 surrogate handling (DOM4 draft referenced by HTML 5.0)."
     },
     {
       "path": "dom/nodes/CharacterData-replaceData.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: CharacterData data/appendData/insertData/deleteData/replaceData/substringData semantics including IndexSizeError ranges, WebIDL argument conversion and UTF-16 surrogate handling (DOM4 draft referenced by HTML 5.0)."
     },
     {
       "path": "dom/nodes/CharacterData-substringData.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: CharacterData data/appendData/insertData/deleteData/replaceData/substringData semantics including IndexSizeError ranges, WebIDL argument conversion and UTF-16 surrogate handling (DOM4 draft referenced by HTML 5.0)."
     },
     {
       "path": "dom/nodes/CharacterData-surrogates.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: CharacterData data/appendData/insertData/deleteData/replaceData/substringData semantics including IndexSizeError ranges, WebIDL argument conversion and UTF-16 surrogate handling (DOM4 draft referenced by HTML 5.0)."
     },
     {
       "path": "dom/nodes/CharacterData-appendChild.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: CharacterData data/appendData/insertData/deleteData/replaceData/substringData semantics including IndexSizeError ranges, WebIDL argument conversion and UTF-16 surrogate handling (DOM4 draft referenced by HTML 5.0). HierarchyRequestError on text/comment children covered."
     },
     {
       "path": "dom/nodes/ChildNode-after.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "post-target",
+      "reason": "ChildNode before()/after()/replaceWith() are absent from the DOM4 draft referenced by HTML 5.0 (which defines only remove()) and were introduced after the 28 October 2014 snapshot; retained in the regression gate."
     },
     {
       "path": "dom/nodes/ChildNode-before.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "post-target",
+      "reason": "ChildNode before()/after()/replaceWith() are absent from the DOM4 draft referenced by HTML 5.0 (which defines only remove()) and were introduced after the 28 October 2014 snapshot; retained in the regression gate."
     },
     {
       "path": "dom/nodes/ChildNode-replaceWith.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "post-target",
+      "reason": "ChildNode before()/after()/replaceWith() are absent from the DOM4 draft referenced by HTML 5.0 (which defines only remove()) and were introduced after the 28 October 2014 snapshot; retained in the regression gate."
     },
     {
       "path": "dom/events/Event-type.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: createEvent, initEvent and the Event constructor with type reflection (DOM4 dependency; the referenced 2014-07-10 draft defines the Event constructor)."
     },
     {
       "path": "dom/events/Event-type-empty.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: createEvent, initEvent and the Event constructor with type reflection (DOM4 dependency; the referenced 2014-07-10 draft defines the Event constructor). Empty-string type and listeners covered."
     },
     {
       "path": "dom/events/Event-stopImmediatePropagation.html",
       "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "reason": "Reviewed 2026-10-03 (deferred): passes, but its single subtest also asserts cancelBubble alongside stopImmediatePropagation; cancelBubble is absent from the referenced 2014 DOM4 draft, so the assertions cannot be split without an inventory."
     },
     {
       "path": "dom/events/KeyEvent-initKeyEvent.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "regression-only",
+      "reason": "Regression asserting KeyboardEvent.prototype.initKeyEvent stays undefined and createEvent(\"KeyboardEvent\") works; no direct HTML 5.0 obligation mapping (regression evidence only)."
     },
     {
       "path": "dom/events/event-handler-attribute-replace-preserves-passive.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "post-target",
+      "reason": "Passive-by-default wheel listeners on body/documentElement post-date the 2014 snapshot; retained in the regression gate."
     },
     {
       "path": "dom/events/label-default-action.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: label activation behavior forwards clicks to the labeled control and button activation toggles the checkbox (4.10.4 The label element); ParentNode.append/ChildNode.remove are test scaffolding."
     },
     {
       "path": "dom/events/EventTarget-add-remove-listener.any.js",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "post-target",
+      "reason": "Constructible EventTarget (new EventTarget()) does not exist in the DOM4 draft referenced by HTML 5.0; introduced after the 2014 snapshot; retained in the regression gate."
     },
     {
       "path": "dom/events/Event-initEvent.html",
       "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "reason": "Reviewed 2026-10-03 (deferred): passes, but asserts Event.srcElement/returnValue/cancelBubble alongside initEvent; those members are absent from the referenced 2014 DOM4 draft, so a per-assertion inventory is required before inclusion."
     },
     {
       "path": "dom/events/EventTarget-dispatchEvent.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: dispatchEvent semantics - null listener argument conversion, createEvent alias coverage, nested-dispatch InvalidStateError, listener exception propagation and capture ordering (DOM4 dependency)."
     },
     {
       "path": "dom/events/remove-all-listeners.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "post-target",
+      "reason": "Assertions depend on AddEventListenerOptions {once}, which post-dates the referenced DOM4 draft; retained in the regression gate."
     },
     {
       "path": "dom/events/AddEventListenerOptions-once.any.js",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "post-target",
+      "reason": "AddEventListenerOptions {once} post-dates the referenced DOM4 draft, which accepts only a boolean capture argument; retained in the regression gate."
     },
     {
       "path": "dom/events/CustomEvent.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: CustomEvent with initCustomEvent mandatory-first-argument and default handling, dispatched and observed via detail (initCustomEvent is defined by the referenced 2014 DOM4 draft)."
     },
     {
       "path": "dom/events/Event-defaultPrevented.html",
       "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "reason": "Reviewed 2026-10-03 (deferred): passes, but exercises Event.returnValue alongside preventDefault/defaultPrevented; returnValue is absent from the referenced 2014 DOM4 draft, so a per-assertion inventory is required."
     },
     {
       "path": "dom/events/Event-defaultPrevented-after-dispatch.html",
       "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "reason": "Reviewed 2026-10-03 (deferred): passes, but asserts Event.returnValue/srcElement; absent from the referenced 2014 DOM4 draft, so a per-assertion inventory is required."
     },
     {
       "path": "dom/events/Event-dispatch-bubble-canceled.html",
       "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "reason": "Reviewed 2026-10-03 (deferred): passes, but sets Event.cancelBubble before dispatch; cancelBubble is absent from the referenced 2014 DOM4 draft, so a per-assertion inventory is required."
     },
     {
       "path": "dom/events/Event-dispatch-detached-click.html",
       "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "reason": "Reviewed 2026-10-03 (deferred): passes, but asserts Event.srcElement; absent from the referenced 2014 DOM4 draft, so a per-assertion inventory is required."
     },
     {
       "path": "dom/events/Event-dispatch-order.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: capture/bubble dispatch order across the window/document/element chain (DOM4 dependency dispatch semantics)."
     },
     {
       "path": "dom/events/Event-dispatch-propagation-stopped.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: stopPropagation halts remaining listeners with currentTarget/eventPhase invariants (DOM4 dependency)."
     },
     {
       "path": "dom/events/Event-returnValue.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "post-target",
+      "reason": "Event.returnValue is not defined by the DOM4 draft referenced by HTML 5.0 (legacy member formalized later); retained in the regression gate."
     },
     {
       "path": "dom/events/EventTarget-dispatchEvent-returnvalue.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "post-target",
+      "reason": "Event.returnValue is not defined by the referenced 2014 DOM4 draft; retained in the regression gate."
     },
     {
       "path": "dom/events/event-src-element-nullable.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "post-target",
+      "reason": "Event.srcElement is not defined by the referenced 2014 DOM4 draft (legacy member formalized later); retained in the regression gate."
     },
     {
       "path": "dom/events/non-cancelable-when-passive/generic-events-stay-cancelable.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "post-target",
+      "reason": "AddEventListenerOptions {passive} post-dates the referenced DOM4 draft; retained in the regression gate."
     },
     {
       "path": "html/semantics/interactive-elements/the-details-element/display-table-with-rt-crash.html",
@@ -386,13 +386,13 @@
     },
     {
       "path": "html/semantics/embedded-content/the-iframe-element/historical.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "regression-only",
+      "reason": "Negative checks for seamless/allowPaymentRequest, members added and removed after the 2014 snapshot (the 2014 REC itself defines seamless); regression evidence only."
     },
     {
       "path": "html/semantics/embedded-content/the-iframe-element/iframe-nosrc.html",
-      "classification": "unreviewed",
-      "reason": "Curated regression; assertions have not yet been reviewed against the HTML 5.0 snapshot."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-03: iframe without src/srcdoc keeps a stable initial about:blank contentDocument and does not refire load (4.7.2 The iframe element)."
     },
     {
       "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller.html",

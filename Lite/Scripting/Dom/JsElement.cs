@@ -1095,9 +1095,13 @@ public class JsElement
                 if (srcdoc is not null)
                     child = Parser.ParseChildPage(srcdoc, true, baseUrl, width, height,
                         parent.DocumentState.Session, parent, node);
+                else if (!string.IsNullOrWhiteSpace(src) && src.StartsWith("blob:", StringComparison.Ordinal))
+                    // blob: URLs resolve through the in-process registry; no relative resolution.
+                    child = Parser.ParseChildPage(src, false, src, width, height,
+                        parent.DocumentState.Session, parent, node);
                 else if (!string.IsNullOrWhiteSpace(src) &&
                     parent.ResolveAgainstCurrent(src) is { } childUrl &&
-                    Uri.TryCreate(childUrl, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
+                    Uri.TryCreate(childUrl, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" or "blob")
                     child = Parser.ParseChildPage(childUrl, false, childUrl, width, height,
                         parent.DocumentState.Session, parent, node);
                 else
@@ -1470,13 +1474,104 @@ public class JsElement
 
     public bool hasChildNodes() => Node.Children.Count > 0;
 
+    /// <summary>DOM Normalizer: merges adjacent #text children and removes empty ones,
+    /// keeping the AngleSharp document and the projection in sync.</summary>
+    public void normalize() => NormalizeNode(Node);
+
+    internal static void NormalizeNode(LayoutNode node)
+    {
+        foreach (var child in node.Children) NormalizeNode(child);
+        for (var i = node.Children.Count - 1; i > 0; i--)
+        {
+            var current = node.Children[i];
+            var previous = node.Children[i - 1];
+            if (current.TagName != "#text" || previous.TagName != "#text") continue;
+            var merged = (previous.DomNode?.TextContent ?? previous.TextOverride ?? previous.Text) +
+                (current.DomNode?.TextContent ?? current.TextOverride ?? current.Text);
+            if (previous.DomNode is not null) previous.DomNode.TextContent = merged;
+            previous.TextOverride = merged;
+            if (current.DomNode?.Parent is { } domParent) domParent.RemoveChild(current.DomNode);
+            node.Children.RemoveAt(i);
+        }
+        for (var i = node.Children.Count - 1; i >= 0; i--)
+        {
+            var child = node.Children[i];
+            if (child.TagName != "#text") continue;
+            var value = child.DomNode?.TextContent ?? child.TextOverride ?? child.Text;
+            if (value.Length != 0) continue;
+            if (child.DomNode?.Parent is { } domParent) domParent.RemoveChild(child.DomNode);
+            node.Children.RemoveAt(i);
+        }
+    }
+
     // ---- class list (minimal) ----
     public JsClassList classList => new(Node);
 
     // ---- dataset (data-* attributes) ----
-    public JsDataset dataset => new(Node);
+    private JsDataset? _dataset;
+    public JsDataset dataset => _dataset ??= new(Node);
 
     // ---- events ----
+    /// <summary>on* IDL attribute properties (element.onload = fn). Assignment replaces the
+    /// previously registered handler for the same event type, per HTML §8.1.5.2.</summary>
+    public JsValue? onload { get => GetOnProperty("onload"); set => SetOnProperty("onload", value); }
+    public JsValue? onerror { get => GetOnProperty("onerror"); set => SetOnProperty("onerror", value); }
+    public JsValue? onclick { get => GetOnProperty("onclick"); set => SetOnProperty("onclick", value); }
+    public JsValue? ondblclick { get => GetOnProperty("ondblclick"); set => SetOnProperty("ondblclick", value); }
+    public JsValue? onmousedown { get => GetOnProperty("onmousedown"); set => SetOnProperty("onmousedown", value); }
+    public JsValue? onmouseup { get => GetOnProperty("onmouseup"); set => SetOnProperty("onmouseup", value); }
+    public JsValue? onmouseover { get => GetOnProperty("onmouseover"); set => SetOnProperty("onmouseover", value); }
+    public JsValue? onmouseout { get => GetOnProperty("onmouseout"); set => SetOnProperty("onmouseout", value); }
+    public JsValue? onmousemove { get => GetOnProperty("onmousemove"); set => SetOnProperty("onmousemove", value); }
+    public JsValue? onkeydown { get => GetOnProperty("onkeydown"); set => SetOnProperty("onkeydown", value); }
+    public JsValue? onkeyup { get => GetOnProperty("onkeyup"); set => SetOnProperty("onkeyup", value); }
+    public JsValue? onkeypress { get => GetOnProperty("onkeypress"); set => SetOnProperty("onkeypress", value); }
+    public JsValue? onfocus { get => GetOnProperty("onfocus"); set => SetOnProperty("onfocus", value); }
+    public JsValue? onblur { get => GetOnProperty("onblur"); set => SetOnProperty("onblur", value); }
+    public JsValue? onchange { get => GetOnProperty("onchange"); set => SetOnProperty("onchange", value); }
+    public JsValue? oninput { get => GetOnProperty("oninput"); set => SetOnProperty("oninput", value); }
+    public JsValue? onsubmit { get => GetOnProperty("onsubmit"); set => SetOnProperty("onsubmit", value); }
+    public JsValue? onreset { get => GetOnProperty("onreset"); set => SetOnProperty("onreset", value); }
+    public JsValue? onselect { get => GetOnProperty("onselect"); set => SetOnProperty("onselect", value); }
+    public JsValue? onscroll { get => GetOnProperty("onscroll"); set => SetOnProperty("onscroll", value); }
+    public JsValue? onresize { get => GetOnProperty("onresize"); set => SetOnProperty("onresize", value); }
+    public JsValue? oncontextmenu { get => GetOnProperty("oncontextmenu"); set => SetOnProperty("oncontextmenu", value); }
+    public JsValue? onwheel { get => GetOnProperty("onwheel"); set => SetOnProperty("onwheel", value); }
+    public JsValue? onabort { get => GetOnProperty("onabort"); set => SetOnProperty("onabort", value); }
+    public JsValue? oncanplay { get => GetOnProperty("oncanplay"); set => SetOnProperty("oncanplay", value); }
+    public JsValue? ondurationchange { get => GetOnProperty("ondurationchange"); set => SetOnProperty("ondurationchange", value); }
+    public JsValue? onemptied { get => GetOnProperty("onemptied"); set => SetOnProperty("onemptied", value); }
+    public JsValue? onended { get => GetOnProperty("onended"); set => SetOnProperty("onended", value); }
+    public JsValue? onloadeddata { get => GetOnProperty("onloadeddata"); set => SetOnProperty("onloadeddata", value); }
+    public JsValue? onloadedmetadata { get => GetOnProperty("onloadedmetadata"); set => SetOnProperty("onloadedmetadata", value); }
+    public JsValue? onloadstart { get => GetOnProperty("onloadstart"); set => SetOnProperty("onloadstart", value); }
+    public JsValue? onpause { get => GetOnProperty("onpause"); set => SetOnProperty("onpause", value); }
+    public JsValue? onplay { get => GetOnProperty("onplay"); set => SetOnProperty("onplay", value); }
+    public JsValue? onplaying { get => GetOnProperty("onplaying"); set => SetOnProperty("onplaying", value); }
+    public JsValue? onprogress { get => GetOnProperty("onprogress"); set => SetOnProperty("onprogress", value); }
+    public JsValue? onratechange { get => GetOnProperty("onratechange"); set => SetOnProperty("onratechange", value); }
+    public JsValue? onseeked { get => GetOnProperty("onseeked"); set => SetOnProperty("onseeked", value); }
+    public JsValue? onseeking { get => GetOnProperty("onseeking"); set => SetOnProperty("onseeking", value); }
+    public JsValue? onstalled { get => GetOnProperty("onstalled"); set => SetOnProperty("onstalled", value); }
+    public JsValue? onsuspend { get => GetOnProperty("onsuspend"); set => SetOnProperty("onsuspend", value); }
+    public JsValue? ontimeupdate { get => GetOnProperty("ontimeupdate"); set => SetOnProperty("ontimeupdate", value); }
+    public JsValue? onvolumechange { get => GetOnProperty("onvolumechange"); set => SetOnProperty("onvolumechange", value); }
+    public JsValue? onwaiting { get => GetOnProperty("onwaiting"); set => SetOnProperty("onwaiting", value); }
+    public JsValue? ontoggle { get => GetOnProperty("ontoggle"); set => SetOnProperty("ontoggle", value); }
+
+    internal JsValue? GetOnProperty(string name) =>
+        Node.OnProperties?.TryGetValue(name, out var handler) == true ? handler : null;
+
+    internal void SetOnProperty(string name, JsValue? value)
+    {
+        Node.OnProperties ??= [];
+        if (Node.OnProperties.Remove(name, out var previous) && previous is not null)
+            Node.EventListeners.RemoveAll(e => ReferenceEquals(e.Handler, previous));
+        if (value is null || value.IsUndefined()) return;
+        Node.OnProperties[name] = value;
+        Node.EventListeners.Add(new EventListenerEntry(name[2..], value, null, Capture: false));
+    }
+
     public void addEventListener(string type, JsValue handler, JsValue? options = null)
     {
         bool capture = false, once = false;
@@ -1663,7 +1758,9 @@ public class JsClassList
     public int length => GetClasses().Length;
 }
 
-/// <summary>Proxy for element.dataset — maps data-* attributes to camelCase properties.</summary>
+/// <summary>Proxy target for element.dataset — maps data-* attributes to camelCase properties
+/// (HTML §2.7.3 DOMStringMap). Property access, deletion and enumeration are implemented by a
+/// JS proxy in <see cref="Runtime.QuickJsInterop"/>; this class supplies the underlying lookups.</summary>
 public class JsDataset
 {
     private readonly LayoutNode _node;
@@ -1683,6 +1780,14 @@ public class JsDataset
         _node.Attributes[attrName] = value;
     }
 
+    /// <summary>Removes the data-* attribute for a camelCase key (delete dataset.key).</summary>
+    public void remove(string key) => _node.Attributes.Remove("data-" + CamelToKebab(key));
+
+    /// <summary>CamelCase property names of every data-* attribute, in attribute order.</summary>
+    public string[] keys() => _node.Attributes.Keys
+        .Where(k => k.StartsWith("data-", StringComparison.Ordinal) && k.Length > 5)
+        .Select(k => KebabToCamel(k[5..])).ToArray();
+
     private static string CamelToKebab(string s)
     {
         var sb = new System.Text.StringBuilder();
@@ -1690,6 +1795,19 @@ public class JsDataset
         {
             if (char.IsUpper(c)) { sb.Append('-'); sb.Append(char.ToLowerInvariant(c)); }
             else sb.Append(c);
+        }
+        return sb.ToString();
+    }
+
+    internal static string KebabToCamel(string attribute)
+    {
+        var sb = new System.Text.StringBuilder();
+        var afterDash = false;
+        foreach (var c in attribute)
+        {
+            if (c == '-') { afterDash = true; continue; }
+            sb.Append(afterDash && char.IsAsciiLetterLower(c) ? char.ToUpperInvariant(c) : c);
+            afterDash = false;
         }
         return sb.ToString();
     }

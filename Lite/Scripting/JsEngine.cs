@@ -344,6 +344,19 @@ internal class JsEngine : IDisposable
         _engine.SetValue("URLSearchParams", typeof(JsUrlSearchParams));
         _engine.SetValue("FormData", typeof(JsFormData));
 
+        // Blob and blob: URL registry (File API dependency). Blob URLs resolve during
+        // iframe navigation through Parser.ParseChildPage.
+        _engine.SetValue("Blob", typeof(JsBlob));
+        _engine.SetValue("__createObjectURL", new Func<object, string>(blob =>
+            BlobUrlRegistry.Create(blob is JsBlob b ? b : new JsBlob(null, null))));
+        _engine.SetValue("__revokeObjectURL", new Action<string>(url => BlobUrlRegistry.Revoke(url)));
+        _engine.Execute("""
+            URL.createObjectURL = __createObjectURL;
+            URL.revokeObjectURL = __revokeObjectURL;
+            delete globalThis.__createObjectURL;
+            delete globalThis.__revokeObjectURL;
+            """, "lite/blob-urls.js");
+
         // navigator
         _engine.SetValue("navigator", new JsNavigator(DocumentState.Session, () => CurrentUrl));
 
@@ -448,7 +461,166 @@ internal class JsEngine : IDisposable
         // ---- JS-side shims: fetch() Promise wrapper + queueMicrotask polyfill ----
         _engine.Execute(HostShim);
         _engine.Execute("globalThis.MessageChannel = function MessageChannel() { return __createMessageChannel(); };");
+
+        InstallInterfaceObjects();
     }
+
+    /// <summary>
+    /// Installs the Web IDL interface objects (Node, Element, HTMLElement, …) with their
+    /// prototype hierarchy, Symbol.toStringTag tags and class constants, and defines
+    /// <c>__lite_brand</c>, which host wrappers are routed through at exposure time so
+    /// instanceof / constructor.name / Object.prototype.toString behave per spec.
+    /// </summary>
+    private void InstallInterfaceObjects()
+    {
+        _engine.Execute(InterfaceBootstrap, "lite/interfaces.js");
+        // Re-brand the globals that were exposed before the bootstrap existed.
+        _engine.Execute("""
+            for (const [g, name] of [['document', 'HTMLDocument'], ['location', 'Location'],
+                                     ['history', 'History'], ['navigator', 'Navigator']]) {
+              const v = globalThis[g];
+              if (v && typeof v === 'object') __lite_brand(v, name);
+            }
+            """, "lite/brand-globals.js");
+    }
+
+    private const string InterfaceBootstrap = """
+        (() => {
+          const __run = (phase, fn) => { try { return fn(); } catch (e) { throw new TypeError('[' + phase + '] ' + e.message); } };
+          const hostProto = __run('probe', () => Object.getPrototypeOf(document));
+          const parents = {
+            EventTarget: null, Node: 'EventTarget', Document: 'Node', HTMLDocument: 'Document',
+            DocumentFragment: 'Node', DocumentType: 'Node', CharacterData: 'Node',
+            Text: 'CharacterData', Comment: 'CharacterData', ProcessingInstruction: 'CharacterData',
+            Attr: 'Node', Element: 'Node', HTMLElement: 'Element', SVGElement: 'Element',
+            HTMLHtmlElement: 'HTMLElement', HTMLHeadElement: 'HTMLElement', HTMLBodyElement: 'HTMLElement',
+            HTMLFrameSetElement: 'HTMLElement', HTMLTitleElement: 'HTMLElement',
+            HTMLBaseElement: 'HTMLElement', HTMLLinkElement: 'HTMLElement', HTMLMetaElement: 'HTMLElement',
+            HTMLStyleElement: 'HTMLElement', HTMLScriptElement: 'HTMLElement',
+            HTMLIFrameElement: 'HTMLElement', HTMLFrameElement: 'HTMLElement',
+            HTMLDivElement: 'HTMLElement', HTMLParagraphElement: 'HTMLElement',
+            HTMLImageElement: 'HTMLElement', HTMLInputElement: 'HTMLElement',
+            HTMLButtonElement: 'HTMLElement', HTMLFormElement: 'HTMLElement',
+            HTMLLabelElement: 'HTMLElement', HTMLFieldSetElement: 'HTMLElement',
+            HTMLLegendElement: 'HTMLElement', HTMLSelectElement: 'HTMLElement',
+            HTMLDataListElement: 'HTMLElement', HTMLOptGroupElement: 'HTMLElement',
+            HTMLOptionElement: 'HTMLElement', HTMLTextAreaElement: 'HTMLElement',
+            HTMLOutputElement: 'HTMLElement', HTMLProgressElement: 'HTMLElement',
+            HTMLMeterElement: 'HTMLElement', HTMLAnchorElement: 'HTMLElement',
+            HTMLAreaElement: 'HTMLElement', HTMLMapElement: 'HTMLElement',
+            HTMLTableElement: 'HTMLElement', HTMLTableCaptionElement: 'HTMLElement',
+            HTMLTableColElement: 'HTMLElement', HTMLTableSectionElement: 'HTMLElement',
+            HTMLTableRowElement: 'HTMLElement', HTMLTableCellElement: 'HTMLElement',
+            HTMLUListElement: 'HTMLElement', HTMLOListElement: 'HTMLElement',
+            HTMLDListElement: 'HTMLElement', HTMLLIElement: 'HTMLElement',
+            HTMLBRElement: 'HTMLElement', HTMLHRElement: 'HTMLElement', HTMLPreElement: 'HTMLElement',
+            HTMLQuoteElement: 'HTMLElement', HTMLCanvasElement: 'HTMLElement',
+            HTMLMediaElement: 'HTMLElement', HTMLAudioElement: 'HTMLMediaElement',
+            HTMLVideoElement: 'HTMLMediaElement', HTMLSourceElement: 'HTMLElement',
+            HTMLTrackElement: 'HTMLElement', HTMLParamElement: 'HTMLElement',
+            HTMLObjectElement: 'HTMLElement', HTMLEmbedElement: 'HTMLElement',
+            HTMLAppletElement: 'HTMLElement', HTMLMarqueeElement: 'HTMLElement',
+            HTMLTemplateElement: 'HTMLElement', HTMLTimeElement: 'HTMLElement',
+            HTMLDataElement: 'HTMLElement', HTMLModElement: 'HTMLElement',
+            HTMLMenuElement: 'HTMLElement', HTMLDetailsElement: 'HTMLElement',
+            HTMLDialogElement: 'HTMLElement', HTMLKeygenElement: 'HTMLElement',
+            HTMLFontElement: 'HTMLElement', HTMLHeadingElement: 'HTMLElement',
+            HTMLDirectoryElement: 'HTMLElement',
+            Event: null, CustomEvent: 'Event', UIEvent: 'Event', MouseEvent: 'UIEvent',
+            WheelEvent: 'MouseEvent', FocusEvent: 'UIEvent', InputEvent: 'UIEvent',
+            KeyboardEvent: 'UIEvent', CompositionEvent: 'UIEvent', ProgressEvent: 'Event',
+            MessageEvent: 'Event', ErrorEvent: 'Event', HashChangeEvent: 'Event',
+            PopStateEvent: 'Event', PageTransitionEvent: 'Event', BeforeUnloadEvent: 'Event',
+            StorageEvent: 'Event', CloseEvent: 'Event', AnimationEvent: 'Event',
+            TransitionEvent: 'Event',
+            NodeList: null, HTMLCollection: null, HTMLAllCollection: 'HTMLCollection',
+            NamedNodeMap: null, DOMTokenList: null, DOMStringMap: null,
+            TreeWalker: null, NodeIterator: null, NodeFilter: null, Range: null,
+            Window: null, Location: null, History: null, Storage: null, Navigator: null,
+            Screen: null, DOMException: null, CSSStyleDeclaration: null, MediaError: null,
+            ValidityState: null, FormData: null, Blob: null, File: 'Blob', FileList: null,
+            URL: null, URLSearchParams: null,
+            XMLHttpRequest: null, XMLHttpRequestUpload: null, MessageChannel: null,
+            MessagePort: 'EventTarget', TextMetrics: null, DOMRect: null, DOMRectReadOnly: null,
+            CanvasRenderingContext2D: null, MutationObserver: null, MutationRecord: null,
+            ResizeObserver: null,
+          };
+          const statics = {
+            Node: {
+              ELEMENT_NODE: 1, ATTRIBUTE_NODE: 2, TEXT_NODE: 3, CDATA_SECTION_NODE: 4,
+              ENTITY_REFERENCE_NODE: 5, ENTITY_NODE: 6, PROCESSING_INSTRUCTION_NODE: 7,
+              COMMENT_NODE: 8, DOCUMENT_NODE: 9, DOCUMENT_TYPE_NODE: 10,
+              DOCUMENT_FRAGMENT_NODE: 11, NOTATION_NODE: 12,
+              DOCUMENT_POSITION_DISCONNECTED: 1, DOCUMENT_POSITION_PRECEDING: 2,
+              DOCUMENT_POSITION_FOLLOWING: 4, DOCUMENT_POSITION_CONTAINS: 8,
+              DOCUMENT_POSITION_CONTAINED_BY: 16, DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC: 32,
+            },
+            NodeFilter: {
+              FILTER_ACCEPT: 1, FILTER_REJECT: 2, FILTER_SKIP: 3,
+              SHOW_ALL: 4294967295, SHOW_ELEMENT: 1, SHOW_ATTRIBUTE: 2, SHOW_TEXT: 4,
+              SHOW_CDATA_SECTION: 8, SHOW_ENTITY_REFERENCE: 16, SHOW_ENTITY: 32,
+              SHOW_PROCESSING_INSTRUCTION: 64, SHOW_COMMENT: 128, SHOW_DOCUMENT: 256,
+              SHOW_DOCUMENT_TYPE: 512, SHOW_DOCUMENT_FRAGMENT: 1024, SHOW_NOTATION: 2048,
+            },
+            XMLHttpRequest: { UNSENT: 0, OPENED: 1, HEADERS_RECEIVED: 2, LOADING: 3, DONE: 4 },
+            MediaError: {
+              MEDIA_ERR_ABORTED: 1, MEDIA_ERR_NETWORK: 2, MEDIA_ERR_DECODE: 3,
+              MEDIA_ERR_SRC_NOT_SUPPORTED: 4,
+            },
+          };
+          const protos = Object.create(null);
+          __run('protos', () => {
+            for (const name of Object.keys(parents)) {
+              const parent = parents[name];
+              const proto = Object.create(parent ? protos[parent] : hostProto);
+              Object.defineProperty(proto, Symbol.toStringTag, { value: name, configurable: true });
+              protos[name] = proto;
+            }
+          });
+          __run('ctors', () => {
+            for (const name of Object.keys(parents)) {
+              const proto = protos[name];
+              const existing = globalThis[name];
+              let ctor;
+              if (typeof existing === 'function') {
+                // Host-bound constructor (Event, Blob, URL, ...): instances are branded to
+                // `proto` at exposure time, so point the visible prototype at it for instanceof.
+                ctor = existing;
+                let desc = null;
+                try { desc = Object.getOwnPropertyDescriptor(ctor, 'prototype'); } catch (e) { }
+                if (desc && !desc.writable) {
+                  // Class-defined constructor (e.g. the Worker shim): its prototype is fixed
+                  // and instances already chain to it — adopt it as the interface prototype.
+                  protos[name] = desc.value;
+                  continue;
+                }
+              } else {
+                ctor = function () { throw new TypeError('Illegal constructor: ' + name); };
+                Object.defineProperty(ctor, 'name', { value: name, configurable: true });
+                globalThis[name] = ctor;
+              }
+              try {
+                ctor.prototype = proto;
+              } catch (e) {
+                try { Object.defineProperty(ctor, 'prototype', { value: proto, writable: true, enumerable: false, configurable: true }); }
+                catch (e2) { /* keep the existing prototype; branding still fixes instances */ }
+              }
+              Object.defineProperty(proto, 'constructor', { value: ctor, writable: true, enumerable: false, configurable: true });
+              const constants = statics[name];
+              if (constants) {
+                for (const k of Object.keys(constants))
+                  Object.defineProperty(ctor, k, { value: constants[k], writable: false, enumerable: true, configurable: true });
+              }
+            }
+          });
+          globalThis.__lite_brand = (obj, name) => {
+            const proto = protos[name];
+            if (proto && (typeof obj === 'object' || typeof obj === 'function')) {
+              try { Object.setPrototypeOf(obj, proto); } catch (e) { /* frozen or non-extensible */ }
+            }
+          };
+        })();
+        """;
 
     private const string HostShim = """
         (function () {

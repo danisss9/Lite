@@ -52,6 +52,9 @@ public class LayoutNode
     public Dictionary<string, string> HoverStyles { get; } = [];
     public Dictionary<string, string> FocusStyles { get; } = [];
     public Dictionary<string, string> ActiveStyles { get; } = [];
+    /// <summary>on* IDL attribute handlers set as script properties (element.onload = fn).
+    /// Values are the stored handler; the registered listener lives in <see cref="EventListeners"/>.</summary>
+    public Dictionary<string, JsValue?>? OnProperties { get; set; }
     /// <summary>Styles applied from currently-matching @media rules. Rebuilt on each viewport resize.</summary>
     public Dictionary<string, string> MediaOverrides { get; } = [];
     public Dictionary<string, string> MediaHoverStyles { get; } = [];

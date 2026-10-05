@@ -82,4 +82,42 @@ public static class AttributeApiTests
         ");
         Equal(2, Convert.ToInt32(Global(e, "__n")));
     }
+
+    [Test]
+    public static void Dataset_NamedProperties_MapToDataAttributes()
+    {
+        var e = NewEngine();
+        e.Execute(@"
+            var d = document.createElement('div');
+            d.setAttribute('data-run-type', 'url');
+            d.setAttribute('data-long-prop-name', 'x');
+            globalThis.__results = [
+                d.dataset.runType === 'url',
+                d.dataset.longPropName === 'x',
+                d.dataset === d.dataset,
+                (d.dataset.assigned = 'yes') && d.getAttribute('data-assigned') === 'yes',
+                'assigned' in d.dataset,
+                (delete d.dataset.assigned) && d.getAttribute('data-assigned') === null,
+                JSON.stringify(Object.keys(d.dataset))
+            ].join(',');
+        ");
+        Equal("true,true,true,true,true,true,[\"runType\",\"longPropName\"]", (string?)Global(e, "__results"));
+    }
+
+    [Test]
+    public static void Blob_UrlRegistry_RegistersAndRevokes()
+    {
+        var e = NewEngine();
+        e.Execute(@"
+            var b = new Blob(['<p>hi</p>'], { type: 'text/html' });
+            globalThis.__url = URL.createObjectURL(b);
+            globalThis.__ok = b.size === 9 && b.type === 'text/html' && __url.indexOf('blob:') === 0;
+            URL.revokeObjectURL(__url);
+        ");
+        Equal(true, Convert.ToBoolean(Global(e, "__ok")));
+        Equal(false, Lite.Scripting.Dom.BlobUrlRegistry.TryResolve(
+            (string)Global(e, "__url")!, out _));
+        Equal(true, Lite.Scripting.Dom.BlobUrlRegistry.TryResolve(
+            Lite.Scripting.Dom.BlobUrlRegistry.Create(new Lite.Scripting.Dom.JsBlob("x", "text/plain")), out _));
+    }
 }

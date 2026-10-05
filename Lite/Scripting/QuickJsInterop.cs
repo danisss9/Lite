@@ -126,13 +126,80 @@ public sealed class Engine : IDisposable
             }
             return array.Clone();
         }
+        if (value is JsDataset dataset)
+        {
+            // DOMStringMap (HTML §2.7.3): camelCase named properties over data-* attributes with
+            // has/delete/enumeration. The proxy target is a bare object carrying only the
+            // toStringTag — DOMStringMap exposes no methods, and its ownKeys must enumerate
+            // exactly the named properties.
+            if (_indexProxies.TryGetValue(value, out var cachedDataset)) return cachedDataset.Clone();
+            using var datasetTarget = _realm.Object();
+            using var defineTag = _realm.Eval("(o, tag) => Object.defineProperty(o, Symbol.toStringTag, { value: tag })");
+            using var tagValue = ConvertToNative("DOMStringMap");
+            using var ignoredTag = defineTag.Call(arguments: [datasetTarget, tagValue]);
+            using var dataGet = _realm.HostFunction("dataset get", 1, (_, args) =>
+            {
+                var found = dataset.get(args[0].AsString());
+                return found is null ? _realm.Undefined() : ConvertToNative(found);
+            });
+            using var dataSet = _realm.HostFunction("dataset set", 2, (_, args) =>
+            {
+                dataset.set(args[0].AsString(), args[1].AsString());
+                return _realm.Undefined();
+            });
+            using var dataHas = _realm.HostFunction("dataset has", 1, (_, args) =>
+                _realm.Bool(dataset.get(args[0].AsString()) is not null));
+            using var dataDelete = _realm.HostFunction("dataset delete", 1, (_, args) =>
+            {
+                dataset.remove(args[0].AsString());
+                return _realm.Undefined();
+            });
+            using var dataKeys = _realm.HostFunction("dataset keys", 0, (_, _) =>
+                ConvertToNative(dataset.keys()));
+            using var makeDatasetProxy = _realm.Eval("""
+                (target, get, set, has, del, keys) => new Proxy(target, {
+                  get(t, p, r) {
+                    if (typeof p === 'string' && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(p)) return get(p);
+                    return Reflect.get(t, p, r);
+                  },
+                  set(t, p, v, r) {
+                    if (typeof p === 'string' && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(p)) { set(p, String(v)); return true; }
+                    return Reflect.set(t, p, v, r);
+                  },
+                  has(t, p) {
+                    return (typeof p === 'string' && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(p) && has(p)) || Reflect.has(t, p);
+                  },
+                  deleteProperty(t, p) {
+                    if (typeof p === 'string' && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(p) && has(p)) { del(p); return true; }
+                    return Reflect.deleteProperty(t, p);
+                  },
+                  ownKeys(t) {
+                    return [...keys(), ...Reflect.ownKeys(t)];
+                  },
+                  getOwnPropertyDescriptor(t, p) {
+                    if (typeof p === 'string' && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(p) && has(p))
+                      return { value: get(p), writable: true, enumerable: true, configurable: true };
+                    return Reflect.getOwnPropertyDescriptor(t, p);
+                  }
+                })
+                """);
+            var proxy2 = makeDatasetProxy.Call(arguments: [datasetTarget, dataGet, dataSet, dataHas, dataDelete, dataKeys]);
+            _indexProxies.Add(value, proxy2);
+            return proxy2.Clone();
+        }
         var hostType = value.GetType();
         var indexer = hostType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .FirstOrDefault(p => p.Name == "Item" && p.GetIndexParameters() is [{ ParameterType: var key }]
                 && key == typeof(int) && p.GetMethod is not null);
-        if (indexer is null) return _realm.HostObjects.Wrap(value, binding => BindMembers(hostType, binding));
+        if (indexer is null)
+        {
+            var wrapped = _realm.HostObjects.Wrap(value, binding => BindMembers(hostType, binding));
+            Brand(wrapped, value);
+            return wrapped;
+        }
         if (_indexProxies.TryGetValue(value, out var cached)) return cached.Clone();
         using var target = _realm.HostObjects.Wrap(value, binding => BindMembers(hostType, binding));
+        Brand(target, value);
         using var index = _realm.HostFunction("item", 1, (_, args) =>
             ConvertToNative(indexer.GetValue(value, [(int)args[0].AsNumber()])));
         using var named = _realm.HostFunction("namedItem", 1, (_, args) =>
@@ -165,6 +232,19 @@ public sealed class Engine : IDisposable
         var proxy = makeProxy.Call(arguments: [target, index, named, hasNames]);
         _indexProxies.Add(value, proxy);
         return proxy.Clone();
+    }
+
+    private QuickJsValue? _brand;
+
+    /// <summary>Chains a host wrapper into its Web IDL interface prototype so script-visible
+    /// identity (instanceof, constructor, toString tag) matches the interface it exposes.</summary>
+    private void Brand(QuickJsValue wrapped, object value)
+    {
+        var interfaceName = Dom.WebIdlInterfaces.For(value);
+        if (interfaceName is null) return;
+        if (_brand is null) _brand = _realm.Eval("(o, n) => globalThis.__lite_brand && __lite_brand(o, n)");
+        using var name = _realm.String(interfaceName);
+        using var ignored = _brand.Call(arguments: [wrapped, name]);
     }
 
     private QuickJsValue BindDelegate(Delegate callback) => _realm.HostFunction(callback.Method.Name,

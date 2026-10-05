@@ -276,6 +276,9 @@ public class JsDocument
     }
     public string compatMode => _document?.CompatMode ?? "CSS1Compat";
 
+    /// <summary>DOM Normalizer on the document: merges adjacent text nodes everywhere.</summary>
+    public void normalize() => JsElement.NormalizeNode(_root);
+
     // ---- cookies (the owning browser window's HTTP jar) ----
     public string cookie
     {
@@ -289,14 +292,14 @@ public class JsDocument
     }
 
     // ---- DOM Traversal Level 2 (Phase 9) ----
-    public JsTreeWalker createTreeWalker(JsElement root, int whatToShow = -1, object? filter = null)
+    public JsTreeWalker createTreeWalker(JsElement root, double whatToShow = 4294967295, JsValue? filter = null)
     {
-        return new JsTreeWalker(_engine, root.Node, whatToShow);
+        return new JsTreeWalker(_engine, root.Node, (uint)whatToShow, filter);
     }
 
-    public JsNodeIterator createNodeIterator(JsElement root, int whatToShow = -1, object? filter = null)
+    public JsNodeIterator createNodeIterator(JsElement root, double whatToShow = 4294967295, JsValue? filter = null)
     {
-        return new JsNodeIterator(_engine, root.Node, whatToShow);
+        return new JsNodeIterator(_engine, root.Node, (uint)whatToShow, filter);
     }
 
     // ---- tree helpers (iterative to avoid stack overflow from deep/cyclic trees) ----

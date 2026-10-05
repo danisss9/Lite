@@ -10,6 +10,7 @@ using Lite.Layout;
 using Lite.Models;
 using Lite.Network;
 using Lite.Scripting;
+using Lite.Scripting.Dom;
 using System.Text;
 
 namespace Lite;
@@ -73,6 +74,7 @@ internal static class Parser
         address { display: block; font-style: italic; }
         q::before { content: open-quote; }
         q::after { content: close-quote; }
+        script, style, noscript, meta, link, title, base { display: none; }
         """;
 
     // Tags that should not appear in the layout tree.
@@ -81,6 +83,9 @@ internal static class Parser
     // exposed as template.content (see the TEMPLATE clause in Traverse). HEAD and SCRIPT follow the
     // same rule: they are real DOM nodes (document.head, document.currentScript, script-element
     // bootstraps like getElementsByTagName('script')[0].parentNode.insertBefore) that never render.
+    // SkipTags now only means "projects into the DOM but renders nothing": the tags below ARE
+    // projected (tree-construction fidelity, document.head.children, …) and are kept invisible
+    // through the UA stylesheet's display:none rules.
     private static readonly HashSet<string> SkipTags =
         ["STYLE", "NOSCRIPT", "META", "LINK", "TITLE"];
 
@@ -456,6 +461,12 @@ internal static class Parser
             var address = baseUrl;
             string html;
             if (isSrcdoc) html = content;
+            else if (BlobUrlRegistry.TryResolve(content, out var blob) && blob is not null)
+            {
+                // blob: URLs (File API dependency) resolve from the in-process registry.
+                address = content;
+                html = blob.Content;
+            }
             else
             {
                 using var response = Session.Client.GetAsync(content).Result;
@@ -1148,7 +1159,6 @@ internal static class Parser
                         node.AddChild(Traverse(childEl, indent + 1, fontPx));
                         continue;
                     }
-                    if (SkipTags.Contains(childTag)) { CollectScriptsRecursive(childEl); continue; }
                     node.AddChild(Traverse(childEl, indent + 1, fontPx));
                 }
             }
@@ -1164,7 +1174,6 @@ internal static class Parser
                     node.AddChild(Traverse(child, indent + 1, fontPx));
                     continue;
                 }
-                if (SkipTags.Contains(childTag)) { CollectScriptsRecursive(child); continue; }
                 node.AddChild(Traverse(child, indent + 1, fontPx));
             }
         }
@@ -2012,16 +2021,6 @@ internal static class Parser
             }
         }
         return sb.ToString();
-    }
-
-    /// <summary>Recursively collect scripts from elements that are otherwise skipped (e.g. HEAD).</summary>
-    private static void CollectScriptsRecursive(IElement element)
-    {
-        foreach (var child in element.Children)
-        {
-            if (child.TagName == "SCRIPT") CollectScript(child);
-            else CollectScriptsRecursive(child);
-        }
     }
 
     private static void CollectScript(IElement scriptEl)
@@ -2988,7 +2987,7 @@ internal static class Parser
                     projection.StyleOverrides["display"] = "inline";
                     result.Add(projection);
                 }
-                else if (child is IElement element && !SkipTags.Contains(element.TagName.ToUpperInvariant()))
+                else if (child is IElement element)
                     result.Add(Traverse(element, 0));
             }
             foreach (var node in result) owner.Bind(node);
@@ -3055,7 +3054,6 @@ internal static class Parser
                 {
                     var ct = childEl.TagName.ToUpperInvariant();
                     if (ct == "SCRIPT") continue;          // innerHTML never runs scripts
-                    if (SkipTags.Contains(ct)) continue;
                     result.Add(Traverse(childEl, 0));
                 }
             }
