@@ -119,7 +119,10 @@ internal static class Css21Inventory
             }
             if (unreviewed > 0) blockers.Add($"css21-unclassified-wpt-cases:{unreviewed}");
             var paths = candidates.Select(c => c.Path).ToHashSet(StringComparer.Ordinal);
-            foreach (var path in reviews.Keys.Where(p => !paths.Contains(p))) blockers.Add($"css21-orphan-test-review:{path}");
+            // Official-suite reviews live in the same manifest but are accounted for
+            // against the official catalog below, not against the WPT candidates.
+            foreach (var path in reviews.Keys.Where(p => !p.StartsWith(OfficialCatalog.UrlPrefix, StringComparison.Ordinal) &&
+                     !paths.Contains(p))) blockers.Add($"css21-orphan-test-review:{path}");
         }
         // The official catalog is verified against the vendored tree and the lock's pinned
         // tree hash; its variants and counts must reconcile with the published suite.
