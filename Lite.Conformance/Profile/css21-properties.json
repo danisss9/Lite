@@ -3,7 +3,7 @@
   "target": "https://www.w3.org/TR/2011/REC-CSS2-20110607/",
   "archiveSha256": "ef072758dbf8618d2f6fe2fc60afd7cf4a73dc3b566ca39f06f4a6a297dbea60",
   "indexSha256": "07c417ff194c6999477932340d0521560b9ab067c8bc2462d39f3744881ca7b9",
-  "reviewComplete": false,
+  "reviewComplete": true,
   "properties": [
     {
       "name": "azimuth",
@@ -14,8 +14,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -27,9 +27,11 @@
       "inherited": false,
       "percentages": "allowed on 'background-position'",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.14.2.1.",
+      "requirementIds": [
+        "css21.14.2.1"
+      ]
     },
     {
       "name": "background-attachment",
@@ -40,9 +42,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.14.2.1.",
+      "requirementIds": [
+        "css21.14.2.1"
+      ]
     },
     {
       "name": "background-color",
@@ -53,9 +57,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.14.2.1.",
+      "requirementIds": [
+        "css21.14.2.1"
+      ]
     },
     {
       "name": "background-image",
@@ -66,9 +72,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.14.2.1.",
+      "requirementIds": [
+        "css21.14.2.1"
+      ]
     },
     {
       "name": "background-position",
@@ -79,9 +87,11 @@
       "inherited": false,
       "percentages": "refer to the size of the box itself",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.14.2.1.",
+      "requirementIds": [
+        "css21.14.2.1"
+      ]
     },
     {
       "name": "background-repeat",
@@ -92,9 +102,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.14.2.1.",
+      "requirementIds": [
+        "css21.14.2.1"
+      ]
     },
     {
       "name": "border",
@@ -105,9 +117,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.4.",
+      "requirementIds": [
+        "css21.8.5.4"
+      ]
     },
     {
       "name": "border-bottom",
@@ -118,9 +132,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.4.",
+      "requirementIds": [
+        "css21.8.5.4"
+      ]
     },
     {
       "name": "border-bottom-color",
@@ -131,9 +147,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.2.",
+      "requirementIds": [
+        "css21.8.5.2"
+      ]
     },
     {
       "name": "border-bottom-style",
@@ -144,9 +162,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.3.",
+      "requirementIds": [
+        "css21.8.5.3"
+      ]
     },
     {
       "name": "border-bottom-width",
@@ -157,9 +177,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.1.",
+      "requirementIds": [
+        "css21.8.5.1"
+      ]
     },
     {
       "name": "border-collapse",
@@ -170,9 +192,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.17.6.2.",
+      "requirementIds": [
+        "css21.17.6.2"
+      ]
     },
     {
       "name": "border-color",
@@ -183,9 +207,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.2.",
+      "requirementIds": [
+        "css21.8.5.2"
+      ]
     },
     {
       "name": "border-left",
@@ -196,9 +222,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.4.",
+      "requirementIds": [
+        "css21.8.5.4"
+      ]
     },
     {
       "name": "border-left-color",
@@ -209,9 +237,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.2.",
+      "requirementIds": [
+        "css21.8.5.2"
+      ]
     },
     {
       "name": "border-left-style",
@@ -222,9 +252,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.3.",
+      "requirementIds": [
+        "css21.8.5.3"
+      ]
     },
     {
       "name": "border-left-width",
@@ -235,9 +267,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.1.",
+      "requirementIds": [
+        "css21.8.5.1"
+      ]
     },
     {
       "name": "border-right",
@@ -248,9 +282,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.4.",
+      "requirementIds": [
+        "css21.8.5.4"
+      ]
     },
     {
       "name": "border-right-color",
@@ -261,9 +297,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.2.",
+      "requirementIds": [
+        "css21.8.5.2"
+      ]
     },
     {
       "name": "border-right-style",
@@ -274,9 +312,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.3.",
+      "requirementIds": [
+        "css21.8.5.3"
+      ]
     },
     {
       "name": "border-right-width",
@@ -287,9 +327,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.1.",
+      "requirementIds": [
+        "css21.8.5.1"
+      ]
     },
     {
       "name": "border-spacing",
@@ -300,9 +342,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.17.6.1.",
+      "requirementIds": [
+        "css21.17.6.1"
+      ]
     },
     {
       "name": "border-style",
@@ -313,9 +357,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.3.",
+      "requirementIds": [
+        "css21.8.5.3"
+      ]
     },
     {
       "name": "border-top",
@@ -326,9 +372,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.4.",
+      "requirementIds": [
+        "css21.8.5.4"
+      ]
     },
     {
       "name": "border-top-color",
@@ -339,9 +387,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.2.",
+      "requirementIds": [
+        "css21.8.5.2"
+      ]
     },
     {
       "name": "border-top-style",
@@ -352,9 +402,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.3.",
+      "requirementIds": [
+        "css21.8.5.3"
+      ]
     },
     {
       "name": "border-top-width",
@@ -365,9 +417,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.1.",
+      "requirementIds": [
+        "css21.8.5.1"
+      ]
     },
     {
       "name": "border-width",
@@ -378,9 +432,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.5.1.",
+      "requirementIds": [
+        "css21.8.5.1"
+      ]
     },
     {
       "name": "bottom",
@@ -391,9 +447,11 @@
       "inherited": false,
       "percentages": "refer to height of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.9.3.2.",
+      "requirementIds": [
+        "css21.9.3.2"
+      ]
     },
     {
       "name": "caption-side",
@@ -404,9 +462,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.17.4.1.",
+      "requirementIds": [
+        "css21.17.4.1"
+      ]
     },
     {
       "name": "clear",
@@ -417,9 +477,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.9.5.2.",
+      "requirementIds": [
+        "css21.9.5.2"
+      ]
     },
     {
       "name": "clip",
@@ -430,9 +492,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.11.1.2.",
+      "requirementIds": [
+        "css21.11.1.2"
+      ]
     },
     {
       "name": "color",
@@ -443,9 +507,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.14.1.",
+      "requirementIds": [
+        "css21.14.1"
+      ]
     },
     {
       "name": "content",
@@ -456,9 +522,12 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "all",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.12.2, css21.12.3.2.",
+      "requirementIds": [
+        "css21.12.2",
+        "css21.12.3.2"
+      ]
     },
     {
       "name": "counter-increment",
@@ -469,9 +538,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "all",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.12.4.",
+      "requirementIds": [
+        "css21.12.4"
+      ]
     },
     {
       "name": "counter-reset",
@@ -482,9 +553,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "all",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.12.4.",
+      "requirementIds": [
+        "css21.12.4"
+      ]
     },
     {
       "name": "cue",
@@ -495,8 +568,8 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -508,8 +581,8 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -521,8 +594,8 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -534,9 +607,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual, interactive",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.18.1.",
+      "requirementIds": [
+        "css21.18.1"
+      ]
     },
     {
       "name": "direction",
@@ -547,9 +622,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.9.10.",
+      "requirementIds": [
+        "css21.9.10"
+      ]
     },
     {
       "name": "display",
@@ -560,9 +637,12 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "all",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.9.2.4, css21.9.7.",
+      "requirementIds": [
+        "css21.9.2.4",
+        "css21.9.7"
+      ]
     },
     {
       "name": "elevation",
@@ -573,8 +653,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -586,9 +666,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.17.6.1.1.",
+      "requirementIds": [
+        "css21.17.6.1.1"
+      ]
     },
     {
       "name": "float",
@@ -599,9 +681,12 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.9.5.1, css21.9.7.",
+      "requirementIds": [
+        "css21.9.5.1",
+        "css21.9.7"
+      ]
     },
     {
       "name": "font",
@@ -612,9 +697,11 @@
       "inherited": true,
       "percentages": "see individual properties",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.15.8.",
+      "requirementIds": [
+        "css21.15.8"
+      ]
     },
     {
       "name": "font-family",
@@ -625,9 +712,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.15.3.",
+      "requirementIds": [
+        "css21.15.3"
+      ]
     },
     {
       "name": "font-size",
@@ -638,9 +727,11 @@
       "inherited": true,
       "percentages": "refer to inherited font size",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.15.7.",
+      "requirementIds": [
+        "css21.15.7"
+      ]
     },
     {
       "name": "font-style",
@@ -651,9 +742,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.15.4.",
+      "requirementIds": [
+        "css21.15.4"
+      ]
     },
     {
       "name": "font-variant",
@@ -664,9 +757,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.15.5.",
+      "requirementIds": [
+        "css21.15.5"
+      ]
     },
     {
       "name": "font-weight",
@@ -677,9 +772,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.15.6.",
+      "requirementIds": [
+        "css21.15.6"
+      ]
     },
     {
       "name": "height",
@@ -690,9 +787,11 @@
       "inherited": false,
       "percentages": "see prose",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.10.5.",
+      "requirementIds": [
+        "css21.10.5"
+      ]
     },
     {
       "name": "left",
@@ -703,9 +802,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.9.3.2.",
+      "requirementIds": [
+        "css21.9.3.2"
+      ]
     },
     {
       "name": "letter-spacing",
@@ -716,9 +817,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.16.4.",
+      "requirementIds": [
+        "css21.16.4"
+      ]
     },
     {
       "name": "line-height",
@@ -729,9 +832,11 @@
       "inherited": true,
       "percentages": "refer to the font size of the element itself",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.10.8.",
+      "requirementIds": [
+        "css21.10.8"
+      ]
     },
     {
       "name": "list-style",
@@ -742,9 +847,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.12.5.1.",
+      "requirementIds": [
+        "css21.12.5.1"
+      ]
     },
     {
       "name": "list-style-image",
@@ -755,9 +862,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.12.5.1.",
+      "requirementIds": [
+        "css21.12.5.1"
+      ]
     },
     {
       "name": "list-style-position",
@@ -768,9 +877,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.12.5.1.",
+      "requirementIds": [
+        "css21.12.5.1"
+      ]
     },
     {
       "name": "list-style-type",
@@ -781,9 +892,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.12.5.1.",
+      "requirementIds": [
+        "css21.12.5.1"
+      ]
     },
     {
       "name": "margin",
@@ -794,9 +907,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.3.",
+      "requirementIds": [
+        "css21.8.3"
+      ]
     },
     {
       "name": "margin-bottom",
@@ -807,9 +922,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.3.",
+      "requirementIds": [
+        "css21.8.3"
+      ]
     },
     {
       "name": "margin-left",
@@ -820,9 +937,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.3.",
+      "requirementIds": [
+        "css21.8.3"
+      ]
     },
     {
       "name": "margin-right",
@@ -833,9 +952,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.3.",
+      "requirementIds": [
+        "css21.8.3"
+      ]
     },
     {
       "name": "margin-top",
@@ -846,9 +967,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.3.",
+      "requirementIds": [
+        "css21.8.3"
+      ]
     },
     {
       "name": "max-height",
@@ -859,9 +982,11 @@
       "inherited": false,
       "percentages": "see prose",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.10.7.",
+      "requirementIds": [
+        "css21.10.7"
+      ]
     },
     {
       "name": "max-width",
@@ -872,9 +997,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.10.4.",
+      "requirementIds": [
+        "css21.10.4"
+      ]
     },
     {
       "name": "min-height",
@@ -885,9 +1012,11 @@
       "inherited": false,
       "percentages": "see prose",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.10.7.",
+      "requirementIds": [
+        "css21.10.7"
+      ]
     },
     {
       "name": "min-width",
@@ -898,9 +1027,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.10.4.",
+      "requirementIds": [
+        "css21.10.4"
+      ]
     },
     {
       "name": "orphans",
@@ -911,9 +1042,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual, paged",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.13.3.2.",
+      "requirementIds": [
+        "css21.13.3.2"
+      ]
     },
     {
       "name": "outline",
@@ -924,9 +1057,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual, interactive",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.18.4.",
+      "requirementIds": [
+        "css21.18.4"
+      ]
     },
     {
       "name": "outline-color",
@@ -937,9 +1072,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual, interactive",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.18.4.",
+      "requirementIds": [
+        "css21.18.4"
+      ]
     },
     {
       "name": "outline-style",
@@ -950,9 +1087,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual, interactive",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.18.4.",
+      "requirementIds": [
+        "css21.18.4"
+      ]
     },
     {
       "name": "outline-width",
@@ -963,9 +1102,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual, interactive",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.18.4.",
+      "requirementIds": [
+        "css21.18.4"
+      ]
     },
     {
       "name": "overflow",
@@ -976,9 +1117,12 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.10.6.3, css21.11.1.1.",
+      "requirementIds": [
+        "css21.10.6.3",
+        "css21.11.1.1"
+      ]
     },
     {
       "name": "padding",
@@ -989,9 +1133,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.4.",
+      "requirementIds": [
+        "css21.8.4"
+      ]
     },
     {
       "name": "padding-bottom",
@@ -1002,9 +1148,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.4.",
+      "requirementIds": [
+        "css21.8.4"
+      ]
     },
     {
       "name": "padding-left",
@@ -1015,9 +1163,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.4.",
+      "requirementIds": [
+        "css21.8.4"
+      ]
     },
     {
       "name": "padding-right",
@@ -1028,9 +1178,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.4.",
+      "requirementIds": [
+        "css21.8.4"
+      ]
     },
     {
       "name": "padding-top",
@@ -1041,9 +1193,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.8.4.",
+      "requirementIds": [
+        "css21.8.4"
+      ]
     },
     {
       "name": "page-break-after",
@@ -1054,9 +1208,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual, paged",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.13.3.1.",
+      "requirementIds": [
+        "css21.13.3.1"
+      ]
     },
     {
       "name": "page-break-before",
@@ -1067,9 +1223,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual, paged",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.13.3.1.",
+      "requirementIds": [
+        "css21.13.3.1"
+      ]
     },
     {
       "name": "page-break-inside",
@@ -1080,9 +1238,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual, paged",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.13.3.1.",
+      "requirementIds": [
+        "css21.13.3.1"
+      ]
     },
     {
       "name": "pause",
@@ -1093,8 +1253,8 @@
       "inherited": false,
       "percentages": "see descriptions of 'pause-before' and 'pause-after'",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1106,8 +1266,8 @@
       "inherited": false,
       "percentages": "see prose",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1119,8 +1279,8 @@
       "inherited": false,
       "percentages": "see prose",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1132,8 +1292,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1145,8 +1305,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1158,8 +1318,8 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1171,9 +1331,12 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.9.3.1, css21.9.7.",
+      "requirementIds": [
+        "css21.9.3.1",
+        "css21.9.7"
+      ]
     },
     {
       "name": "quotes",
@@ -1184,9 +1347,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.12.3.1.",
+      "requirementIds": [
+        "css21.12.3.1"
+      ]
     },
     {
       "name": "richness",
@@ -1197,8 +1362,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1210,9 +1375,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.9.3.2.",
+      "requirementIds": [
+        "css21.9.3.2"
+      ]
     },
     {
       "name": "speak",
@@ -1223,8 +1390,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1236,8 +1403,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1249,8 +1416,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1262,8 +1429,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1275,8 +1442,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1288,8 +1455,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1301,9 +1468,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.17.5.2.",
+      "requirementIds": [
+        "css21.17.5.2"
+      ]
     },
     {
       "name": "text-align",
@@ -1314,9 +1483,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.16.2.",
+      "requirementIds": [
+        "css21.16.2"
+      ]
     },
     {
       "name": "text-decoration",
@@ -1327,9 +1498,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.16.3.1.",
+      "requirementIds": [
+        "css21.16.3.1"
+      ]
     },
     {
       "name": "text-indent",
@@ -1340,9 +1513,11 @@
       "inherited": true,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.16.1.",
+      "requirementIds": [
+        "css21.16.1"
+      ]
     },
     {
       "name": "text-transform",
@@ -1353,9 +1528,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.16.5.",
+      "requirementIds": [
+        "css21.16.5"
+      ]
     },
     {
       "name": "top",
@@ -1366,9 +1543,11 @@
       "inherited": false,
       "percentages": "refer to height of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.9.3.2.",
+      "requirementIds": [
+        "css21.9.3.2"
+      ]
     },
     {
       "name": "unicode-bidi",
@@ -1379,9 +1558,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.9.10.",
+      "requirementIds": [
+        "css21.9.10"
+      ]
     },
     {
       "name": "vertical-align",
@@ -1392,9 +1573,11 @@
       "inherited": false,
       "percentages": "refer to the 'line-height' of the element itself",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.10.8.",
+      "requirementIds": [
+        "css21.10.8"
+      ]
     },
     {
       "name": "visibility",
@@ -1405,9 +1588,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.11.2.",
+      "requirementIds": [
+        "css21.11.2"
+      ]
     },
     {
       "name": "voice-family",
@@ -1418,8 +1603,8 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1431,8 +1616,8 @@
       "inherited": true,
       "percentages": "refer to inherited value",
       "mediaGroups": "aural",
-      "classification": "unreviewed",
-      "rationale": "",
+      "classification": "informative",
+      "rationale": "Aural property defined by informative Appendix A; no speech renderer is required, and the appendix records no executable screen or print obligation.",
       "requirementIds": []
     },
     {
@@ -1444,9 +1629,12 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.16.6, css21.16.6.1.",
+      "requirementIds": [
+        "css21.16.6",
+        "css21.16.6.1"
+      ]
     },
     {
       "name": "widows",
@@ -1457,9 +1645,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual, paged",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.13.3.2.",
+      "requirementIds": [
+        "css21.13.3.2"
+      ]
     },
     {
       "name": "width",
@@ -1470,9 +1660,11 @@
       "inherited": false,
       "percentages": "refer to width of containing block",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.10.2.",
+      "requirementIds": [
+        "css21.10.2"
+      ]
     },
     {
       "name": "word-spacing",
@@ -1483,9 +1675,11 @@
       "inherited": true,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.16.4.",
+      "requirementIds": [
+        "css21.16.4"
+      ]
     },
     {
       "name": "z-index",
@@ -1496,9 +1690,11 @@
       "inherited": false,
       "percentages": "N/A",
       "mediaGroups": "visual",
-      "classification": "unreviewed",
-      "rationale": "",
-      "requirementIds": []
+      "classification": "user-agent",
+      "rationale": "Normative property definition reviewed against the pinned Recommendation record (values, initial, applies-to, inheritance, percentage basis); decomposed to obligation css21.9.9.1.",
+      "requirementIds": [
+        "css21.9.9.1"
+      ]
     }
   ]
 }

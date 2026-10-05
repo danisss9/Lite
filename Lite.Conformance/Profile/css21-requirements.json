@@ -2,12 +2,2339 @@
   "$schema": "./css21-requirements.schema.json",
   "schemaVersion": 1,
   "target": "https://www.w3.org/TR/2011/REC-CSS2-20110607/",
-  "reviewComplete": false,
+  "reviewComplete": true,
   "requirements": [
-    { "id": "css21.ua.stylesheets", "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance", "title": "Retrieve applicable associated stylesheets and recover from retrieval failures", "media": ["screen", "print"], "status": "untested", "tests": [] },
-    { "id": "css21.ua.alternate-sets", "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance", "title": "Allow the user to select alternate stylesheet sets", "media": ["screen", "print"], "status": "untested", "tests": [] },
-    { "id": "css21.ua.author-disabled", "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance", "title": "Allow the user to disable author stylesheets", "media": ["screen", "print"], "status": "untested", "tests": [] },
-    { "id": "css21.ua.user-stylesheet", "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance", "title": "Allow the user to specify a user stylesheet file", "media": ["screen", "print"], "status": "untested", "tests": [] },
-    { "id": "css21.13.pagination", "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html", "title": "Paged-media obligation decomposition remains to be reviewed", "media": ["print"], "status": "untested", "tests": [] }
+    {
+      "id": "css21.ua.stylesheets",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance",
+      "title": "Retrieve applicable associated stylesheets and recover from retrieval failures",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.ua.alternate-sets",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance",
+      "title": "Allow the user to select alternate stylesheet sets",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.ua.author-disabled",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance",
+      "title": "Allow the user to disable author stylesheets",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.ua.user-stylesheet",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance",
+      "title": "Allow the user to specify a user stylesheet file",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.D",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/sample.html#q22.0",
+      "title": "Default style sheet for HTML 4",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.E",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/zindex.html#q23.0",
+      "title": "Elaborate description of Stacking Contexts",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.3.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance",
+      "title": "UA Conformance",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.3.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#errors",
+      "title": "Error conditions",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.3.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#text-css",
+      "title": "The text/css content type",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#syntax",
+      "title": "Syntax",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.1.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#tokenization",
+      "title": "Tokenization",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.1.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#keywords",
+      "title": "Keywords",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.1.2.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#vendor-keywords",
+      "title": "Vendor-specific extensions",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.1.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#characters",
+      "title": "Characters and case",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.1.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#statements",
+      "title": "Statements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.1.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#at-rules",
+      "title": "At-rules",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.1.6",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#block",
+      "title": "Blocks",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.1.7",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#rule-sets",
+      "title": "Rule sets, declaration blocks, and selectors",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.1.8",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#declaration",
+      "title": "Declarations and properties",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.1.9",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#comments",
+      "title": "Comments",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#parsing-errors",
+      "title": "Rules for handling parsing errors",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#values",
+      "title": "Values",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.3.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#numbers",
+      "title": "Integers and real numbers",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.3.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#length-units",
+      "title": "Lengths",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.3.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#percentage-units",
+      "title": "Percentages",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.3.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#uri",
+      "title": "URLs and URIs",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.3.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#counter",
+      "title": "Counters",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.3.6",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#color-units",
+      "title": "Colors",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.3.7",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#strings",
+      "title": "Strings",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.3.8",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#unsupported-values",
+      "title": "Unsupported Values",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#charset",
+      "title": "CSS style sheet representation",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.4.4.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#escaping",
+      "title": "Referring to characters not represented in a character encoding",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#pattern-matching",
+      "title": "Pattern matching",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#selector-syntax",
+      "title": "Selector syntax",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.2.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#grouping",
+      "title": "Grouping",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#universal-selector",
+      "title": "Universal selector",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#type-selectors",
+      "title": "Type selectors",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#descendant-selectors",
+      "title": "Descendant selectors",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.6",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#child-selectors",
+      "title": "Child selectors",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.7",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#adjacent-selectors",
+      "title": "Adjacent sibling selectors",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.8",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#attribute-selectors",
+      "title": "Attribute selectors",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.8.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#matching-attrs",
+      "title": "Matching attributes and attribute values",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.8.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#default-attrs",
+      "title": "Default attribute values in DTDs",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.8.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#class-html",
+      "title": "Class selectors",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.9",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#id-selectors",
+      "title": "ID selectors",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.10",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#pseudo-elements",
+      "title": "Pseudo-elements and pseudo-classes",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.11",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#pseudo-class-selectors",
+      "title": "Pseudo-classes",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.11.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#first-child",
+      "title": ":first-child pseudo-class",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.11.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#link-pseudo-classes",
+      "title": "The link pseudo-classes: :link and :visited",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.11.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#dynamic-pseudo-classes",
+      "title": "The dynamic pseudo-classes: :hover, :active, and :focus",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.11.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#lang",
+      "title": "The language pseudo-class: :lang",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.12",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#pseudo-element-selectors",
+      "title": "Pseudo-elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.12.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#first-line-pseudo",
+      "title": "The :first-line pseudo-element",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.12.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#first-letter",
+      "title": "The :first-letter pseudo-element",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.5.12.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/selector.html#before-and-after",
+      "title": "The :before and :after pseudo-elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#value-stages",
+      "title": "Specified, computed, and actual values",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.1.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#specified-value",
+      "title": "Specified values",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.1.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#computed-value",
+      "title": "Computed values",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.1.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#used-value",
+      "title": "Used values",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.1.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#actual-value",
+      "title": "Actual values",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#inheritance",
+      "title": "Inheritance",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.2.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#value-def-inherit",
+      "title": "The 'inherit' value",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#at-import",
+      "title": "The @import rule",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#cascade",
+      "title": "The cascade",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.4.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#cascading-order",
+      "title": "Cascading order",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.4.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#important-rules",
+      "title": "!important rules",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.4.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#specificity",
+      "title": "Calculating a selector's specificity",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.6.4.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#preshint",
+      "title": "Precedence of non-CSS presentational hints",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.7.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/media.html#media-sheets",
+      "title": "Specifying media-dependent style sheets",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.7.2.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/media.html#at-media-rule",
+      "title": "The @media rule",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.7.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/media.html#media-types",
+      "title": "Recognized media types",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.7.3.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/media.html#media-groups",
+      "title": "Media groups",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.8.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#box-dimensions",
+      "title": "Box dimensions",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.8.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#margin-properties",
+      "title": "Margin properties: 'margin-top', 'margin-right', 'margin-bottom', 'margin-left', and 'margin'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.8.3.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#collapsing-margins",
+      "title": "Collapsing margins",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.8.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#padding-properties",
+      "title": "Padding properties: 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', and 'padding'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.8.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#border-properties",
+      "title": "Border properties",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.8.5.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#border-width-properties",
+      "title": "Border width: 'border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width', and 'border-width'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.8.5.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#border-color-properties",
+      "title": "Border color: 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color', and 'border-color'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.8.5.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#border-style-properties",
+      "title": "Border style: 'border-top-style', 'border-right-style', 'border-bottom-style', 'border-left-style', and 'border-style'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.8.5.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#border-shorthand-properties",
+      "title": "Border shorthand properties: 'border-top', 'border-right', 'border-bottom', 'border-left', and 'border'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.8.6",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#bidi-box-model",
+      "title": "The box model for inline elements in bidirectional context",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.1.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#viewport",
+      "title": "The viewport",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.1.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#containing-block",
+      "title": "Containing blocks",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#box-gen",
+      "title": "Controlling box generation",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.2.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#block-boxes",
+      "title": "Block-level elements and block boxes",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.2.1.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#anonymous-block-level",
+      "title": "Anonymous block boxes",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.2.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#inline-boxes",
+      "title": "Inline-level elements and inline boxes",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.2.2.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#anonymous",
+      "title": "Anonymous inline boxes",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.2.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#run-in",
+      "title": "Run-in boxes",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.2.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#display-prop",
+      "title": "The 'display' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#positioning-scheme",
+      "title": "Positioning schemes",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.3.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#choose-position",
+      "title": "Choosing a positioning scheme: 'position' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.3.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#position-props",
+      "title": "Box offsets: 'top', 'right', 'bottom', 'left'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#normal-flow",
+      "title": "Normal flow",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.4.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#block-formatting",
+      "title": "Block formatting contexts",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.4.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#inline-formatting",
+      "title": "Inline formatting contexts",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.4.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#relative-positioning",
+      "title": "Relative positioning",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#floats",
+      "title": "Floats",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.5.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#float-position",
+      "title": "Positioning the float: the 'float' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.5.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#flow-control",
+      "title": "Controlling flow next to floats: the 'clear' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.6",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#absolute-positioning",
+      "title": "Absolute positioning",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.6.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#fixed-positioning",
+      "title": "Fixed positioning",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.7",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#dis-pos-flo",
+      "title": "Relationships between 'display', 'position', and 'float'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.8",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#comparison",
+      "title": "Comparison of normal flow, floats, and absolute positioning",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.8.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#comp-normal-flow",
+      "title": "Normal flow",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.8.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#comp-relpos",
+      "title": "Relative positioning",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.8.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#comp-float",
+      "title": "Floating a box",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.8.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#comp-abspos",
+      "title": "Absolute positioning",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.9",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#layers",
+      "title": "Layered presentation",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.9.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#z-index",
+      "title": "Specifying the stack level: the 'z-index' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.9.10",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#direction",
+      "title": "Text direction: the 'direction' and 'unicode-bidi' properties",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#containing-block-details",
+      "title": "Definition of \"containing block\"",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#the-width-property",
+      "title": "Content width: the 'width' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#Computing_widths_and_margins",
+      "title": "Calculating widths and margins",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.3.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#inline-width",
+      "title": "Inline, non-replaced elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.3.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#inline-replaced-width",
+      "title": "Inline, replaced elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.3.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#blockwidth",
+      "title": "Block-level, non-replaced elements in normal flow",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.3.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#block-replaced-width",
+      "title": "Block-level, replaced elements in normal flow",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.3.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#float-width",
+      "title": "Floating, non-replaced elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.3.6",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#float-replaced-width",
+      "title": "Floating, replaced elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.3.7",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#abs-non-replaced-width",
+      "title": "Absolutely positioned, non-replaced elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.3.8",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#abs-replaced-width",
+      "title": "Absolutely positioned, replaced elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.3.9",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#inlineblock-width",
+      "title": "'Inline-block', non-replaced elements in normal flow",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.3.10",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#inlineblock-replaced-width",
+      "title": "'Inline-block', replaced elements in normal flow",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#min-max-widths",
+      "title": "Minimum and maximum widths: 'min-width' and 'max-width'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#the-height-property",
+      "title": "Content height: the 'height' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.6",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#Computing_heights_and_margins",
+      "title": "Calculating heights and margins",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.6.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#inline-non-replaced",
+      "title": "Inline, non-replaced elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.6.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#inline-replaced-height",
+      "title": "Inline replaced elements, block-level replaced elements in normal flow, 'inline-block' replaced elements in normal flow and floating replaced elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.6.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#normal-block",
+      "title": "Block-level non-replaced elements in normal flow when 'overflow' computes to 'visible'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.6.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#abs-non-replaced-height",
+      "title": "Absolutely positioned, non-replaced elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.6.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#abs-replaced-height",
+      "title": "Absolutely positioned, replaced elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.6.6",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#block-root-margin",
+      "title": "Complicated cases",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.6.7",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#root-height",
+      "title": "'Auto' heights for block formatting context roots",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.7",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#min-max-heights",
+      "title": "Minimum and maximum heights: 'min-height' and 'max-height'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.8",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#line-height",
+      "title": "Line height calculations: the 'line-height' and 'vertical-align' properties",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.10.8.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#leading",
+      "title": "Leading and half-leading",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.11.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visufx.html#overflow-clipping",
+      "title": "Overflow and clipping",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.11.1.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visufx.html#overflow",
+      "title": "Overflow: the 'overflow' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.11.1.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visufx.html#clipping",
+      "title": "Clipping: the 'clip' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.11.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visufx.html#visibility",
+      "title": "Visibility: the 'visibility' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.12.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/generate.html#before-after-content",
+      "title": "The :before and :after pseudo-elements",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.12.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/generate.html#content",
+      "title": "The 'content' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.12.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/generate.html#quotes",
+      "title": "Quotation marks",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.12.3.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/generate.html#quotes-specify",
+      "title": "Specifying quotes with the 'quotes' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.12.3.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/generate.html#quotes-insert",
+      "title": "Inserting quotes with the 'content' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.12.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/generate.html#counters",
+      "title": "Automatic counters and numbering",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.12.4.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/generate.html#scope",
+      "title": "Nested counters and scope",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.12.4.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/generate.html#counter-styles",
+      "title": "Counter styles",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.12.4.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/generate.html#undisplayed-counters",
+      "title": "Counters in elements with 'display: none'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.12.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/generate.html#lists",
+      "title": "Lists",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.12.5.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/generate.html#list-style",
+      "title": "Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.13.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html#page-box",
+      "title": "Page boxes: the @page rule",
+      "media": [
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.13.2.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html#page-margins",
+      "title": "Page margins",
+      "media": [
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.13.2.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html#page-selectors",
+      "title": "Page selectors: selecting left, right, and first pages",
+      "media": [
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.13.2.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html#outside-page-box",
+      "title": "Content outside the page box",
+      "media": [
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.13.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html#page-breaks",
+      "title": "Page breaks",
+      "media": [
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.13.3.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html#page-break-props",
+      "title": "Page break properties: 'page-break-before', 'page-break-after', 'page-break-inside'",
+      "media": [
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.13.3.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html#break-inside",
+      "title": "Breaks inside elements: 'orphans', 'widows'",
+      "media": [
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.13.3.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html#allowed-page-breaks",
+      "title": "Allowed page breaks",
+      "media": [
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.13.3.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html#forced",
+      "title": "Forced page breaks",
+      "media": [
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.13.3.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html#best-page-breaks",
+      "title": "\"Best\" page breaks",
+      "media": [
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.13.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html#page-cascade",
+      "title": "Cascading in the page context",
+      "media": [
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.14.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/colors.html#colors",
+      "title": "Foreground color: the 'color' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.14.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/colors.html#background",
+      "title": "The background",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.14.2.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/colors.html#background-properties",
+      "title": "Background properties: 'background-color', 'background-image', 'background-repeat', 'background-attachment', 'background-position', and 'background'",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#algorithm",
+      "title": "Font matching algorithm",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#font-family-prop",
+      "title": "Font family: the 'font-family' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.3.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#generic-font-families",
+      "title": "Generic font families",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.3.1.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#serif-def",
+      "title": "serif",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.3.1.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#sans-serif-def",
+      "title": "sans-serif",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.3.1.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#cursive-def",
+      "title": "cursive",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.3.1.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#fantasy-def",
+      "title": "fantasy",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.3.1.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#monospace-def",
+      "title": "monospace",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#font-styling",
+      "title": "Font styling: the 'font-style' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#small-caps",
+      "title": "Small-caps: the 'font-variant' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.6",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#font-boldness",
+      "title": "Font boldness: the 'font-weight' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.7",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#font-size-props",
+      "title": "Font size: the 'font-size' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.15.8",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#font-shorthand",
+      "title": "Shorthand font property: the 'font' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.16.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/text.html#indentation-prop",
+      "title": "Indentation: the 'text-indent' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.16.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/text.html#alignment-prop",
+      "title": "Alignment: the 'text-align' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.16.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/text.html#decoration",
+      "title": "Decoration",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.16.3.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/text.html#lining-striking-props",
+      "title": "Underlining, overlining, striking, and blinking: the 'text-decoration' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.16.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/text.html#spacing-props",
+      "title": "Letter and word spacing: the 'letter-spacing' and 'word-spacing' properties",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.16.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/text.html#caps-prop",
+      "title": "Capitalization: the 'text-transform' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.16.6",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/text.html#white-space-prop",
+      "title": "White space: the 'white-space' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.16.6.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/text.html#white-space-model",
+      "title": "The 'white-space' processing model",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.16.6.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/text.html#ctrlchars",
+      "title": "Control and combining characters' details",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#table-display",
+      "title": "The CSS table model",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.2.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#anonymous-boxes",
+      "title": "Anonymous table objects",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#columns",
+      "title": "Columns",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#model",
+      "title": "Tables in the visual formatting model",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.4.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#caption-position",
+      "title": "Caption position and alignment",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#table-layout",
+      "title": "Visual layout of table contents",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.5.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#table-layers",
+      "title": "Table layers and transparency",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.5.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#width-layout",
+      "title": "Table width algorithms: the 'table-layout' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.5.2.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#fixed-table-layout",
+      "title": "Fixed table layout",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.5.2.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#auto-table-layout",
+      "title": "Automatic table layout",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.5.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#height-layout",
+      "title": "Table height algorithms",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.5.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#column-alignment",
+      "title": "Horizontal alignment in a column",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.5.5",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#dynamic-effects",
+      "title": "Dynamic row and column effects",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.6",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#borders",
+      "title": "Borders",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.6.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#separated-borders",
+      "title": "The separated borders model",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.6.1.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#empty-cells",
+      "title": "Borders and Backgrounds around empty cells: the 'empty-cells' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.6.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#collapsing-borders",
+      "title": "The collapsing border model",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.6.2.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#border-conflict-resolution",
+      "title": "Border conflict resolution",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.17.6.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/tables.html#table-border-styles",
+      "title": "Border styles",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.18.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/ui.html#cursor-props",
+      "title": "Cursors: the 'cursor' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.18.3",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/ui.html#system-fonts",
+      "title": "User preferences for fonts",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.18.4",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/ui.html#dynamic-outlines",
+      "title": "Dynamic outlines: the 'outline' property",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.18.4.1",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/ui.html#outline-focus",
+      "title": "Outlines and the focus",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    },
+    {
+      "id": "css21.E.2",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/zindex.html#painting-order",
+      "title": "Painting order",
+      "media": [
+        "screen",
+        "print"
+      ],
+      "status": "untested",
+      "tests": []
+    }
   ]
 }
