@@ -119,6 +119,10 @@ internal static class Parser
         /// suspension must change the sheet content the cache is keyed on.</summary>
         internal Dictionary<IElement, string> SuspendedSheetTexts = new();
         internal HashSet<IElement> SuspendedSheets = [];
+        /// <summary>The rules of each suspended sheet, captured at suspension time: the
+        /// recascade retracts exactly the properties these rules set on each element, because
+        /// the AngleSharp style store never invalidates its parse-time computed reports.</summary>
+        internal Dictionary<IElement, List<CssRule>> SuspendedRuleSnapshots = new();
     }
 
     [ThreadStatic] private static ParseState? _current;
@@ -354,38 +358,6 @@ internal static class Parser
         return result;
     }
 
-    /// <summary>Re-derives an element's style from the current CSSOM (sheet set, disabled
-    /// states, host controls included) and copies it into the layout node's existing style
-    /// declaration in place — replacing the object would orphan the text children that share
-    /// it. Used by rule-set-wide recascades; the dynamic resolver re-applies its own winners
-    /// on top afterwards.</summary>
-    internal static void RecomputeElementStyle(LayoutNode node)
-    {
-        if (node.DomNode is not IElement element || node.TagName.StartsWith('#')) return;
-        ICssStyleDeclaration fresh;
-        try
-        {
-            // The style collection caches per-element reports; a sheet-level change (a
-            // suspension) does not invalidate them. A benign attribute mutation drops the
-            // element's cached entry so the recompute sees the current rule set.
-            element.SetAttribute("data-lite-restyle", "1");
-            fresh = ComputeCurrentStyle(element);
-        }
-        catch { return; }
-        finally
-        {
-            element.RemoveAttribute("data-lite-restyle");
-        }
-        var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var decl in fresh)
-        {
-            node.Style.SetProperty(decl.Name, decl.Value, decl.IsImportant ? "important" : null);
-            keep.Add(decl.Name);
-        }
-        foreach (var decl in node.Style.ToArray())
-            if (!keep.Contains(decl.Name)) node.Style.RemoveProperty(decl.Name);
-    }
-
     /// <summary>The style sheet owned by the given &lt;style&gt;/&lt;link&gt; element, or null.</summary>
     internal static IStyleSheet? SheetFor(IElement? owner)
     {
@@ -410,6 +382,7 @@ internal static class Parser
         {
             if (!state.SuspendedSheets.Add(styleElement)) return;
             state.SuspendedSheetTexts[styleElement] = styleElement.TextContent;
+            state.SuspendedRuleSnapshots[styleElement] = SnapshotSheetRules(styleElement);
             styleElement.TextContent = "";
         }
         else
@@ -418,8 +391,36 @@ internal static class Parser
             if (state.SuspendedSheetTexts.TryGetValue(styleElement, out var text))
                 styleElement.TextContent = text;
             state.SuspendedSheetTexts.Remove(styleElement);
+            state.SuspendedRuleSnapshots.Remove(styleElement);
         }
         OnStyleSheetToggled(styleElement);
+    }
+
+    /// <summary>Captures a suspended sheet's style rules (selector, properties, importance)
+    /// so the recascade can retract exactly the declarations it had contributed.</summary>
+    private static List<CssRule> SnapshotSheetRules(IElement styleElement)
+    {
+        var snapshot = new List<CssRule>();
+        if (SheetFor(styleElement) is not ICssStyleSheet sheet) return snapshot;
+        CollectSnapshot(sheet.Rules, snapshot);
+        return snapshot;
+    }
+
+    private static void CollectSnapshot(ICssRuleList rules, List<CssRule> snapshot)
+    {
+        foreach (var rule in rules)
+        {
+            if (rule is ICssMediaRule media) { CollectSnapshot(media.Rules, snapshot); continue; }
+            if (rule is not ICssStyleRule style || string.IsNullOrEmpty(style.SelectorText)) continue;
+            var (props, important) = ParseDeclarations(style.Style.CssText);
+            if (props.Count == 0) continue;
+            foreach (var sel in SplitSelectorList(style.SelectorText))
+            {
+                var selector = sel.Trim();
+                if (selector.Length == 0) continue;
+                snapshot.Add(new CssRule(selector, ComputeSpecificity(selector), 0, props, important, RuleOrigin.Author));
+            }
+        }
     }
 
     internal static bool IsStyleSheetSuspended(ParseState state, IElement styleElement) =>
@@ -3829,7 +3830,7 @@ internal static class Parser
     }
 
     /// <summary>Parses a declaration block, separating normal and !important declarations.</summary>
-    private static (Dictionary<string, string> Props, HashSet<string> Important) ParseDeclarations(string cssText)
+    internal static (Dictionary<string, string> Props, HashSet<string> Important) ParseDeclarations(string cssText)
     {
         var props = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var important = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

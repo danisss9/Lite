@@ -91,7 +91,7 @@ css/CSS2/normal-flow/width-050.xht
 # ---- §15.7: 'font-size' computes to a length and descendants inherit THAT. Re-resolving the
 #      inherited specified value ("2em") at every level doubled the size again each time — the
 #      Gecko-imported anonymous-table tests reached 1024px and painted glyphs across the page. ----
-css/CSS2/tables/table-anonymous-objects-015.xht [expected-fail: style.disabled suspends the sheet (text parked, CSSOM rules drop, rule view refreshes) but the AngleSharp style store keeps the parse-time computed declarations per element with no invalidation path, so the suspended author-!important display still wins on existing elements. A store-aware recascade is queued with the stylesheet-origins work. Remove this waiver when the recascade lands.]
+css/CSS2/tables/table-anonymous-objects-015.xht
 
 # ---- A negative 'border-width' is invalid, so the side falls back to the initial 'medium'
 #      wherever it still has a visible style. ----

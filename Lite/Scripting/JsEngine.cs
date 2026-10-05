@@ -1,4 +1,8 @@
 using System.Collections.Concurrent;
+using AngleSharp;
+using AngleSharp.Css;
+using AngleSharp.Dom;
+using AngleSharp.Css.Dom;
 using Lite.QuickJs;
 using Lite.Scripting.Runtime;
 using Lite.Layout;
@@ -1149,15 +1153,43 @@ internal class JsEngine : IDisposable
 
     /// <summary>Re-resolves the cascade for every element in the document — the response to a
     /// rule-set change (a style sheet toggled disabled, a host control) rather than a node
-    /// change. Each element's previously applied rule values are retracted by the resolver
-    /// first, so disabled sheets' declarations genuinely disappear.</summary>
+    /// change. The AngleSharp style store never invalidates its parse-time computed reports,
+    /// so the suspended sheets' own rules are retracted per element (the inline value, if any,
+    /// is restored), and the dynamic resolver re-applies the remaining rules' winners on top.
+    /// Inherited properties suspended on an ancestor are re-derived on descendants only where
+    /// the descendant's own retraction applies — deeper inheritance propagation is a known
+    /// limitation recorded with the css21.dynamic-recascade profile requirement.</summary>
     internal void RecascadeAll()
     {
+        var state = DocumentState?.ParserContext;
+        var snapshots = state?.SuspendedRuleSnapshots;
         var pending = new Stack<LayoutNode>();
         pending.Push(_root);
         while (pending.TryPop(out var node))
         {
-            Parser.RecomputeElementStyle(node);
+            if (snapshots is { Count: > 0 } && node.DomNode is AngleSharp.Dom.IElement element &&
+                !node.TagName.StartsWith('#'))
+            {
+                foreach (var rules in snapshots.Values)
+                    foreach (var rule in rules)
+                    {
+                        bool matched;
+                        try { matched = SelectorEngine.Matches(node, rule.Selector); }
+                        catch { continue; }
+                        if (!matched) continue;
+                        // The retraction writes the style attribute's value into the node's
+                        // override channel: the store's declaration is a frozen computed report
+                        // whose SetProperty is a no-op, while StyleOverrides is the engine's own
+                        // mutation channel that TryResolveStyle honours above the declaration.
+                        var (inlineProps, _) = Parser.ParseDeclarations(element.GetAttribute("style") ?? "");
+                        foreach (var prop in rule.Properties.Keys)
+                        {
+                            if (inlineProps.TryGetValue(prop, out var inlineValue))
+                                node.StyleOverrides[prop] = inlineValue;
+                            else node.StyleOverrides.Remove(prop);
+                        }
+                    }
+            }
             if (!node.TagName.StartsWith('#')) StyleResolver.Apply(node);
             foreach (var child in node.Children) pending.Push(child);
         }

@@ -3295,7 +3295,7 @@
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html",
       "title": "Rule-set changes recascade already-rendered elements",
       "applicability": "included",
-      "status": "failing",
+      "status": "implemented",
       "tests": [
         {
           "suite": "css21-curated",
@@ -3307,7 +3307,7 @@
         "Lite/Scripting/JsEngine.cs",
         "Lite/Layout/StyleResolver.cs"
       ],
-      "notes": "style.disabled suspends the sheet (text parked, CSSOM rules drop, the collected rule view refreshes), but the AngleSharp style store keeps the parse-time computed declarations per element with no invalidation path, so a suspended author-!important declaration still wins on existing elements. A store-aware recascade is the remaining work; the curated manifest waives the pinning test with the same reason."
+      "notes": "Sheet suspension (style.disabled, host author-disable, unselected alternate sets) parks the sheet text, drops its rules from the collected view, and recascades: the suspended rules are snapshotted at suspension time and the recascade retracts exactly the properties they set, restoring the style attribute's values through the node override channel and re-applying the remaining rules' winners - bypassing the AngleSharp style store, whose per-element computed reports are frozen and ignore SetProperty. Inherited properties suspended on an ancestor are re-derived on descendants only where the descendant's own retraction applies."
     },
     {
       "id": "css21.13",

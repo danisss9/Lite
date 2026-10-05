@@ -1,6 +1,11 @@
 using Lite;
 using Lite.Models;
 using Lite.Network;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using static Lite.Tests.TestRunner;
 
 namespace Lite.Tests;
@@ -44,8 +49,10 @@ public static class StyleSheetControlsTests
             "</body></html>", isSrcdoc: true, "http://test/", 800, 600, session);
         var p = Find(page.Root, "P");
         True(p != null, "p missing");
-        True(p!.Style.GetPropertyValue("color").Contains("0, 128, 0"),
-            "re-enabling the sheet must restore its rules");
+        // After a recascade the winner lives in the resolver's override channel; read the way
+        // the engine does (override first, then the style declaration).
+        var color = p!.TryResolveStyle("color", out var resolved) ? resolved : p.Style.GetPropertyValue("color");
+        True(color.Contains("0, 128, 0"), $"re-enabling the sheet must restore its rules, got {color}");
     }
 
     [Test]
@@ -97,6 +104,57 @@ public static class StyleSheetControlsTests
         True(p != null, "p missing");
         True(p!.Style.GetPropertyValue("color").Contains("0, 0, 255"),
             $"the selected alternate set must apply, got {p.Style.GetPropertyValue("color")}");
+    }
+
+    [Test]
+    public static void XhtmlStyleElementDisabled_RevertsBakedDisplay()
+    {
+        // The real table-anonymous-objects-015 shape: an XHTML document (application/xhtml+xml)
+        // whose onload disables a stylesheet carrying an author-!important display.
+        using var server = new XmlSheetServer();
+        using var session = new BrowserSession();
+        var page = Parser.TraversePage(new NavigationRequest(server.BaseUrl + "/doc.xhtml"), 800, 600, session);
+        Console.WriteLine($"getElementById: {page.Engine.RawEngine.Evaluate("document.getElementById('s') !== null")}");
+        Console.WriteLine($"disabled after script: {page.Engine.RawEngine.Evaluate("document.getElementById('s') && document.getElementById('s').disabled")}");
+        Console.WriteLine($"style text len: {string.Join(",", page.Document!.QuerySelectorAll("style").Select(e => e.TextContent.Length))}");
+        Console.WriteLine($"sheets: {string.Join(",", page.Document!.StyleSheets.OfType<AngleSharp.Css.Dom.ICssStyleSheet>().Select(sh => sh.Rules.Length))}");
+        var span = Find(page.Root, "SPAN");
+        True(span != null, "span missing");
+        page.Engine.RecascadeAll();
+        var display = span!.TryResolveStyle("display", out var resolved) ? resolved : span.Style.GetPropertyValue("display");
+        Console.WriteLine($"display after manual recascade: {display}");
+        True(display == "table-cell",
+            $"the suspended sheet must stop holding the display down, got {display}");
+    }
+
+    private sealed class XmlSheetServer : IDisposable
+    {
+        private readonly Microsoft.AspNetCore.Builder.WebApplication _app;
+        internal string BaseUrl => _app.Urls.Single();
+
+        internal XmlSheetServer()
+        {
+            var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
+            builder.WebHost.UseKestrelCore();
+            builder.WebHost.UseUrls("http://127.0.0.1:0");
+            builder.Services.AddRoutingCore();
+            _app = builder.Build();
+            _app.Run(async ctx =>
+            {
+                ctx.Response.ContentType = "application/xhtml+xml; charset=utf-8";
+                await ctx.Response.WriteAsync(
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                    "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>x</title>" +
+                    "<style id='s'>span { display: block !important }</style></head>" +
+                    "<body><p><span style=\"display: table-cell\">a b</span>" +
+                    "<span style=\"display: table-cell\">c d</span></p>" +
+                    "<script>document.getElementById('s').disabled = true;</script>" +
+                    "</body></html>");
+            });
+            _app.Start();
+        }
+
+        public void Dispose() => _app.StopAsync().Wait();
     }
 
     private static LayoutNode? Find(LayoutNode node, string tag)
