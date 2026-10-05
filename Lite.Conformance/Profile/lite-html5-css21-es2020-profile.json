@@ -3289,6 +3289,27 @@
       "notes": "The approved Lite regression baseline currently differs; the baseline is not independent conformance evidence."
     },
     {
+      "id": "css21.dynamic-recascade",
+      "specification": "css21",
+      "clause": "Dynamic restyling (style.disabled, host controls)",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html",
+      "title": "Rule-set changes recascade already-rendered elements",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "css21-curated",
+          "path": "css/CSS2/tables/table-anonymous-objects-015.xht"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Parser.cs",
+        "Lite/Scripting/JsEngine.cs",
+        "Lite/Layout/StyleResolver.cs"
+      ],
+      "notes": "style.disabled suspends the sheet (text parked, CSSOM rules drop, the collected rule view refreshes), but the AngleSharp style store keeps the parse-time computed declarations per element with no invalidation path, so a suspended author-!important declaration still wins on existing elements. A store-aware recascade is the remaining work; the curated manifest waives the pinning test with the same reason."
+    },
+    {
       "id": "css21.13",
       "specification": "css21",
       "clause": "13",

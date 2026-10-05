@@ -109,6 +109,16 @@ internal static class Parser
         internal readonly List<CssRule> CssRules = [];
         internal readonly Dictionary<string, (string Value, int Count)> RawBackgrounds = new(StringComparer.Ordinal);
         internal readonly List<(string Selector, ICssStyleDeclaration Style)> PseudoElementRules = [];
+        /// <summary>The injected UA style sheet element and the host-provided user style sheet
+        /// elements: they decide each collected rule's cascade origin (CSS 2.1 §6.4.1).</summary>
+        internal IElement? UaStyleElement;
+        internal List<IElement> UserStyleElements = [];
+        /// <summary>Style sheets suspended out of the cascade (style.disabled, host controls):
+        /// their text is parked here while the element renders an empty sheet. AngleSharp drops
+        /// disabled sheets from its collection but keeps serving cached computed reports, so
+        /// suspension must change the sheet content the cache is keyed on.</summary>
+        internal Dictionary<IElement, string> SuspendedSheetTexts = new();
+        internal HashSet<IElement> SuspendedSheets = [];
     }
 
     [ThreadStatic] private static ParseState? _current;
@@ -213,6 +223,7 @@ internal static class Parser
         string address, string html, string? mediaType)
     {
         html = NormalizeImportantBangs(html);
+        html = InjectOriginSheets(html, Current.Session);
         var context = BrowsingContext.New(config.WithOnly<IDocumentFactory>(new XmlDispatchDocumentFactory()));
         return context.OpenAsync(req =>
         {
@@ -236,6 +247,193 @@ internal static class Parser
         StyleBlockRegex.Replace(html, static match =>
             ImportantBang.Replace(match.Value, "!important", int.MaxValue, match.Value.IndexOf('>') + 1));
 
+    /// <summary>Applies the host's user-agent style sheet controls at parse time: disabling
+    /// author influence entirely (a normative conformance point) and selecting the preferred
+    /// named set among alternate style sheets. Unselected alternate sheets are skipped from
+    /// fetching by the link loop; here every author sheet that is not part of the selected
+    /// preference is disabled in the CSSOM, which the cascade and rule collection honor.</summary>
+    private static void ApplyUserAgentSheetControls(IDocument document)
+    {
+        var session = Current.Session;
+        if (session is null) return;
+        var selectedSet = session.SelectedStyleSheetSet;
+        foreach (var sheet in document.StyleSheets)
+        {
+            if (sheet.OwnerNode is not IElement owner) continue;
+            if (owner == Current.UaStyleElement || Current.UserStyleElements.Contains(owner)) continue;
+            var title = owner.GetAttribute("title");
+            if (selectedSet is { Length: > 0 } && !string.IsNullOrEmpty(title) &&
+                !title.Equals(selectedSet, StringComparison.OrdinalIgnoreCase))
+            {
+                SetStyleSheetSuspended(Current, owner, true);
+                continue;
+            }
+            if (!session.AuthorStylesEnabled) SetStyleSheetSuspended(Current, owner, true);
+        }
+    }
+
+    /// <summary>Keeps only the !important declarations of a style sheet text (the user sheet's
+    /// second tier, which must outrank author !important per CSS 2.1 §6.4.1). Selector blocks
+    /// whose declarations all disappear are dropped.</summary>
+    internal static string ExtractImportantDeclarations(string css)
+    {
+        var sb = new StringBuilder();
+        var i = 0;
+        while (i < css.Length)
+        {
+            var open = IndexOfSignificant(css, i, '{');
+            if (open < 0) break;
+            var close = MatchingBrace(css, open);
+            if (close < 0) break;
+            var closeTrimmed = close;
+            while (closeTrimmed > open && char.IsWhiteSpace(css[closeTrimmed - 1])) closeTrimmed--;
+            if (css.AsSpan(open + 1, closeTrimmed - open - 1).ToString().TrimEnd().EndsWith("!important", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.Append(css, i, close - i + 1);
+                sb.Append('\n');
+            }
+            i = close + 1;
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Writes the UA style sheet and the host's user style sheet into the document
+    /// SOURCE, before the CSSOM is built: dynamically inserted style elements append after the
+    /// parse-time sheets, which would put UA and user rules ABOVE author rules in the cascade.
+    /// Source injection makes every sheet parse-time, so document order — UA &lt; user &lt;
+    /// author, with the user sheet's !important half last (§6.4.1 puts user !important above
+    /// author !important) — is exactly the cascade order. Marker attributes are removed after
+    /// tracking.</summary>
+    internal static string InjectOriginSheets(string html, BrowserSession? session)
+    {
+        var headSheets = new StringBuilder();
+        headSheets.Append("<style data-lite-origin=\"ua\">").Append(UserAgentStylesheet).Append("</style>");
+        string? importantSheet = null;
+        if (session?.UserStyleSheet is { Length: > 0 } userCss)
+        {
+            var normalized = ImportantBang.Replace(userCss, "!important");
+            headSheets.Append("<style data-lite-origin=\"user\">").Append(normalized).Append("</style>");
+            importantSheet = ExtractImportantDeclarations(normalized);
+        }
+        var originSheets = headSheets.ToString();
+        var head = Regex.Match(html, "<head\\b[^>]*>", RegexOptions.IgnoreCase);
+        string result;
+        if (head.Success)
+        {
+            var afterHead = head.Index + head.Length;
+            result = html[..afterHead] + originSheets + html[afterHead..];
+        }
+        else
+        {
+            var htmlTag = Regex.Match(html, "<html\\b[^>]*>", RegexOptions.IgnoreCase);
+            if (htmlTag.Success)
+            {
+                var afterHtml = htmlTag.Index + htmlTag.Length;
+                result = html[..afterHtml] + "<head>" + originSheets + "</head>" + html[afterHtml..];
+            }
+            else
+            {
+                // Nothing to anchor on: prepend — but never ahead of a doctype, which must stay
+                // the first bytes for standards mode.
+                var doctype = Regex.Match(html, "<!DOCTYPE[^>]*>", RegexOptions.IgnoreCase);
+                result = doctype.Success && doctype.Index == 0
+                    ? html[..doctype.Length] + originSheets + html[doctype.Length..]
+                    : originSheets + html;
+            }
+        }
+        // The user sheet's !important half must come AFTER every author sheet: §6.4.1 puts
+        // user !important above author !important, and document order is what the cascade sees.
+        if (importantSheet is { Length: > 0 } half)
+        {
+            var marked = "<style data-lite-origin=\"user\">" + half + "</style>";
+            var headEnd = Regex.Match(result, "</head\\s*>", RegexOptions.IgnoreCase);
+            if (headEnd.Success)
+                result = result[..headEnd.Index] + marked + result[headEnd.Index..];
+            else result += marked;
+        }
+        return result;
+    }
+
+    /// <summary>Re-derives an element's style from the current CSSOM (sheet set, disabled
+    /// states, host controls included) and copies it into the layout node's existing style
+    /// declaration in place — replacing the object would orphan the text children that share
+    /// it. Used by rule-set-wide recascades; the dynamic resolver re-applies its own winners
+    /// on top afterwards.</summary>
+    internal static void RecomputeElementStyle(LayoutNode node)
+    {
+        if (node.DomNode is not IElement element || node.TagName.StartsWith('#')) return;
+        ICssStyleDeclaration fresh;
+        try
+        {
+            // The style collection caches per-element reports; a sheet-level change (a
+            // suspension) does not invalidate them. A benign attribute mutation drops the
+            // element's cached entry so the recompute sees the current rule set.
+            element.SetAttribute("data-lite-restyle", "1");
+            fresh = ComputeCurrentStyle(element);
+        }
+        catch { return; }
+        finally
+        {
+            element.RemoveAttribute("data-lite-restyle");
+        }
+        var keep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var decl in fresh)
+        {
+            node.Style.SetProperty(decl.Name, decl.Value, decl.IsImportant ? "important" : null);
+            keep.Add(decl.Name);
+        }
+        foreach (var decl in node.Style.ToArray())
+            if (!keep.Contains(decl.Name)) node.Style.RemoveProperty(decl.Name);
+    }
+
+    /// <summary>The style sheet owned by the given &lt;style&gt;/&lt;link&gt; element, or null.</summary>
+    internal static IStyleSheet? SheetFor(IElement? owner)
+    {
+        if (owner is null) return null;
+        var document = owner.Owner ?? Document;
+        if (document is null) return null;
+        foreach (var sheet in document.StyleSheets)
+            if (sheet.OwnerNode == owner) return sheet;
+        return null;
+    }
+
+    /// <summary>A &lt;style&gt; element's disabled state changed (HTMLStyleElement.disabled), or
+    /// a host control toggled: rebuild the collected rule view and refresh the owning document's
+    /// frozen snapshot, so the dynamic resolver sees the new rule set. The AngleSharp CSSOM
+    /// honors Disabled in its own cascade.</summary>
+    /// <summary>Suspends (or resumes) a style sheet's participation in the cascade: the
+    /// element's text is parked and replaced by an empty sheet, which both the AngleSharp
+    /// cascade and its per-element computed cache observe, then the rule view is refreshed.</summary>
+    internal static void SetStyleSheetSuspended(ParseState state, IElement styleElement, bool suspended)
+    {
+        if (suspended)
+        {
+            if (!state.SuspendedSheets.Add(styleElement)) return;
+            state.SuspendedSheetTexts[styleElement] = styleElement.TextContent;
+            styleElement.TextContent = "";
+        }
+        else
+        {
+            if (!state.SuspendedSheets.Remove(styleElement)) return;
+            if (state.SuspendedSheetTexts.TryGetValue(styleElement, out var text))
+                styleElement.TextContent = text;
+            state.SuspendedSheetTexts.Remove(styleElement);
+        }
+        OnStyleSheetToggled(styleElement);
+    }
+
+    internal static bool IsStyleSheetSuspended(ParseState state, IElement styleElement) =>
+        state.SuspendedSheets.Contains(styleElement);
+
+    internal static void OnStyleSheetToggled(IElement styleElement)
+    {
+        var document = styleElement.Owner ?? Document;
+        if (document is null) return;
+        CollectCssRules(document);
+        if (Current.Document == document)
+            Current.Session?.AttachedDocumentState?.RefreshStyleRules([.. CssRules]);
+    }
+
     /// <summary>Core parse pipeline shared by the top-level load and child (iframe) loads. The
     /// caller must have already set the parse statics (base URL, viewport, cleared script lists)
     /// and opened <paramref name="document"/>. Inlines stylesheets, traverses to a LayoutNode tree,
@@ -252,21 +450,42 @@ internal static class Parser
 
         var head = document.Head ?? document.DocumentElement;
 
-        // Inject UA stylesheet first
-        var uaStyle = document.CreateElement("style");
-        uaStyle.TextContent = UserAgentStylesheet;
-        head.InsertBefore(uaStyle, head.FirstChild);
+        // Track the UA and user style sheets that InjectOriginSheets wrote into the source
+        // before the CSSOM was built: every sheet is parse-time, so the document order the
+        // cascade sees matches the DOM (UA < user < author). The marker attributes come off
+        // once tracked so the DOM carries no engine fingerprints.
+        foreach (var el in document.QuerySelectorAll("style[data-lite-origin]").ToList())
+        {
+            var origin = el.GetAttribute("data-lite-origin");
+            if (origin == "ua") Current.UaStyleElement = el;
+            else if (origin == "user") Current.UserStyleElements.Add(el);
+            el.RemoveAttribute("data-lite-origin");
+        }
+
+        // The user may disable author influence entirely (a normative UA conformance point) and
+        // may select a preferred named set among alternate style sheets (HTML4 §14.3): both are
+        // expressed by disabling sheets, which the cascade and CollectCssRules honor.
+        ApplyUserAgentSheetControls(document);
 
         // Eagerly fetch and inline all <link rel="stylesheet"> files so that
         // ComputeCurrentStyle() sees the fully-cascaded styles synchronously. The rel is a
-        // space-separated token set (HTML4 §6.12), so match any rel containing the "stylesheet"
-        // token (e.g. Acid2's rel="appendix stylesheet") — but skip alternate stylesheets.
+        // space-separated token set (HTML4 §14.3 / §6.12): alternate stylesheets belong to a
+        // named set — the selected set's sheets are fetched and applied, every other
+        // alternate is skipped (ApplyUserAgentSheetControls also disables its CSSOM sheet).
         foreach (var link in document.QuerySelectorAll("link[rel~='stylesheet']"))
         {
             var rel = link.GetAttribute("rel") ?? "";
-            if (rel.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                   .Any(t => t.Equals("alternate", StringComparison.OrdinalIgnoreCase)))
-                continue;
+            var isAlternate = rel.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Any(t => t.Equals("alternate", StringComparison.OrdinalIgnoreCase));
+            if (isAlternate)
+            {
+                var selectedSet = Session?.SelectedStyleSheetSet;
+                var title = link.GetAttribute("title");
+                if (selectedSet is not { Length: > 0 } ||
+                    string.IsNullOrEmpty(title) ||
+                    !title.Equals(selectedSet, StringComparison.OrdinalIgnoreCase))
+                    continue;
+            }
             var href = link.GetAttribute("href");
             if (string.IsNullOrEmpty(href)) continue;
             try
@@ -330,6 +549,10 @@ internal static class Parser
                 replacement.TextContent = styleEl.TextContent;
                 styleEl.Parent?.InsertBefore(replacement, styleEl);
                 styleEl.Parent?.RemoveChild(styleEl);
+                // Keep origin tracking pointing at the live element.
+                if (Current.UaStyleElement == styleEl) Current.UaStyleElement = replacement;
+                for (var u = 0; u < Current.UserStyleElements.Count; u++)
+                    if (Current.UserStyleElements[u] == styleEl) Current.UserStyleElements[u] = replacement;
             }
         }
 
@@ -374,6 +597,7 @@ internal static class Parser
         // even when there are no external or inline script blocks.
         var state = new DocumentState(document, address, _documentBaseUrl ?? address, CssRules.ToArray())
         { ParserContext = Current, Session = Session };
+        Session?.Attach(state);
         var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight, state);
         var page = new Page
         {
@@ -536,7 +760,8 @@ internal static class Parser
                 address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? content;
                 html = response.Content.ReadAsStringAsync().Result;
             }
-            var document = context.OpenAsync(req => req.Address(address).Content(NormalizeImportantBangs(html))).Result;
+            var document = context.OpenAsync(req => req.Address(address)
+                .Content(InjectOriginSheets(NormalizeImportantBangs(html), Current.Session))).Result;
             return ParseOpenedDocument(document, address, viewportWidth, viewportHeight, parentEngine, frameNode);
         }
         finally
@@ -3259,7 +3484,19 @@ internal static class Parser
         int Specificity,
         int Order,
         Dictionary<string, string> Properties,
-        HashSet<string> ImportantProps);
+        HashSet<string> ImportantProps,
+        RuleOrigin Origin = RuleOrigin.Author);
+
+    /// <summary>CSS 2.1 §6.4.1 cascade origins. Ascending precedence for normal declarations is
+    /// UA &lt; user &lt; author; for !important declarations author loses to user (the CSS 2.1
+    /// balance-of-power rule), so the tier order is UA-normal &lt; user-normal &lt; author-normal
+    /// &lt; author-important &lt; user-important.</summary>
+    internal enum RuleOrigin
+    {
+        Ua = 0,
+        User = 1,
+        Author = 2,
+    }
 
     internal static List<CssRule> CssRules => Current.CssRules;
 
@@ -3273,7 +3510,21 @@ internal static class Parser
         CollectRawBackgrounds(document);
         if (document.StyleSheets is null) return;
         foreach (var sheet in document.StyleSheets.OfType<ICssStyleSheet>())
-            CollectRulesFromSheet(sheet.Rules);
+        {
+            // A suspended sheet (style.disabled, host author-disable, unselected alternate set)
+            // contributes nothing to the cascade (CSS 2.1 §6.4).
+            if (sheet.OwnerNode is IElement ownerNode && Current.SuspendedSheets.Contains(ownerNode)) continue;
+            var origin = SheetOrigin(sheet);
+            CollectRulesFromSheet(sheet.Rules, origin);
+        }
+    }
+
+    private static RuleOrigin SheetOrigin(ICssStyleSheet sheet)
+    {
+        if (sheet.OwnerNode is not IElement owner) return RuleOrigin.Author;
+        if (owner == Current.UaStyleElement) return RuleOrigin.Ua;
+        if (Current.UserStyleElements.Contains(owner)) return RuleOrigin.User;
+        return RuleOrigin.Author;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -3478,13 +3729,13 @@ internal static class Parser
         return raw.Value;
     }
 
-    private static void CollectRulesFromSheet(ICssRuleList rules)
+    private static void CollectRulesFromSheet(ICssRuleList rules, RuleOrigin origin = RuleOrigin.Author)
     {
         foreach (var rule in rules)
         {
             if (rule is ICssMediaRule mediaRule)
             {
-                CollectRulesFromSheet(mediaRule.Rules);
+                CollectRulesFromSheet(mediaRule.Rules, origin);
                 continue;
             }
             if (rule is not ICssStyleRule styleRule) continue;
@@ -3513,7 +3764,7 @@ internal static class Parser
                 // are captured separately into Before/After/FirstLetter/FirstLineStyles by
                 // TryExtractPseudoElementRule. Pseudo-CLASSES (:hover, :first-child) are unaffected.
                 if (IsPseudoElementSelector(s)) continue;
-                CssRules.Add(new CssRule(s, ComputeSpecificity(s), CssRules.Count, props, important));
+                CssRules.Add(new CssRule(s, ComputeSpecificity(s), CssRules.Count, props, important, origin));
             }
         }
     }

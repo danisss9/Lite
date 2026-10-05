@@ -446,10 +446,28 @@ public class JsElement
         }
     }
 
+    /// <summary>Form controls reflect the disabled attribute; a &lt;style&gt; element's
+    /// disabled toggles its style sheet in and out of the cascade (CSSOM), re-collecting the
+    /// engine's rule view and recascading the whole document.</summary>
     public bool disabled
     {
-        get => Node.Attributes.ContainsKey("disabled");
-        set { if (value) Node.Attributes["disabled"] = ""; else Node.Attributes.Remove("disabled"); }
+        get => Node.TagName == "STYLE"
+            ? State?.ParserContext is { } parseState &&
+              Parser.IsStyleSheetSuspended(parseState, (Node.DomNode as AngleSharp.Dom.IElement)!)
+            : Node.Attributes.ContainsKey("disabled");
+        set
+        {
+            if (Node.TagName == "STYLE")
+            {
+                if (Node.DomNode is not AngleSharp.Dom.IElement styleElement ||
+                    State?.ParserContext is not { } parseState) return;
+                if (Parser.IsStyleSheetSuspended(parseState, styleElement) == value) return;
+                Parser.SetStyleSheetSuspended(parseState, styleElement, value);
+                JsEngine.For(_engine)?.RecascadeAll();
+                return;
+            }
+            if (value) Node.Attributes["disabled"] = ""; else Node.Attributes.Remove("disabled");
+        }
     }
 
     /// <summary>HTMLDetailsElement/HTMLDialogElement.open — reflects the <c>open</c> attribute.

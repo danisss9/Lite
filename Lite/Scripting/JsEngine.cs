@@ -1147,6 +1147,23 @@ internal class JsEngine : IDisposable
         return ran;
     }
 
+    /// <summary>Re-resolves the cascade for every element in the document — the response to a
+    /// rule-set change (a style sheet toggled disabled, a host control) rather than a node
+    /// change. Each element's previously applied rule values are retracted by the resolver
+    /// first, so disabled sheets' declarations genuinely disappear.</summary>
+    internal void RecascadeAll()
+    {
+        var pending = new Stack<LayoutNode>();
+        pending.Push(_root);
+        while (pending.TryPop(out var node))
+        {
+            Parser.RecomputeElementStyle(node);
+            if (!node.TagName.StartsWith('#')) StyleResolver.Apply(node);
+            foreach (var child in node.Children) pending.Push(child);
+        }
+        EnsureLayout();
+    }
+
     /// <summary>Runs Promise microtasks for this engine and all nested iframe engines.</summary>
     internal void FlushMicrotasksTree()
     {

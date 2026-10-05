@@ -17,7 +17,11 @@ internal sealed class DocumentState(IDocument? document, string address, string 
     internal string Address { get; } = address;
     internal string Url { get; set; } = address;
     internal string BaseUrl { get; } = baseUrl;
-    internal IReadOnlyList<Parser.CssRule> StyleRules { get; } = styleRules;
+    /// <summary>The rule set captured at parse time; refreshed when the rule set itself changes
+    /// (a style sheet toggled disabled, a host control), so the dynamic resolver follows.</summary>
+    internal IReadOnlyList<Parser.CssRule> StyleRules { get; private set; } = styleRules;
+
+    internal void RefreshStyleRules(IReadOnlyList<Parser.CssRule> rules) => StyleRules = rules;
 
     internal void Bind(LayoutNode root)
     {

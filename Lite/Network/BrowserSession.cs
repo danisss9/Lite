@@ -20,6 +20,23 @@ internal sealed class BrowserSession : IDisposable
     internal ConcurrentQueue<string> Diagnostics { get; } = new();
     internal Dictionary<string, SkiaSharp.SKBitmap?> Images { get; } = new(StringComparer.Ordinal);
 
+    // ── CSS user-agent controls (CSS 2.1 UA conformance, conform.html#conformance) ──
+    /// <summary>The user's style sheet text (the conformance requirement to allow a user
+    /// style sheet file; the host loads the file and hands over its text). Stamped as USER
+    /// origin: normal declarations lose to author rules, !important ones win (§6.4.1).</summary>
+    public string? UserStyleSheet { get; set; }
+    /// <summary>Whether author style sheets influence rendering at all (the conformance
+    /// requirement to let the user disable author styles). UA and user sheets are unaffected.</summary>
+    public bool AuthorStylesEnabled { get; set; } = true;
+    /// <summary>The preferred named style sheet set among alternate style sheets (HTML4 §14.3 /
+    /// the conformance requirement to select alternate sets). Null keeps the default set.</summary>
+    public string? SelectedStyleSheetSet { get; set; }
+    /// <summary>The document state of the page this session last loaded, so live control
+    /// toggles can refresh the rule view and recascade.</summary>
+    internal Models.DocumentState? AttachedDocumentState { get; private set; }
+
+    internal void Attach(Models.DocumentState state) => AttachedDocumentState = state;
+
     internal BrowserSession()
     {
         Client = CreateClient(allowAutoRedirect: true, useCookies: true);

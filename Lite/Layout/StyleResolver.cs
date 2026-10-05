@@ -51,8 +51,9 @@ internal static class StyleResolver
             node.StyleOverrides.Remove(prop);
         node.CascadeAppliedProps.Clear();
 
-        // Gather matching rules, then order them: importance is decided per-property below,
-        // so first sort all matches by (specificity, source order).
+        // Gather matching rules, then determine each declaration's cascade tier: CSS 2.1 §6.4.1
+        // orders (ascending) UA-normal < user-normal < author-normal < author-important <
+        // user-important, and only within one tier do specificity and source order decide.
         var matches = new List<Parser.CssRule>();
         foreach (var rule in node.OwningDocument?.StyleRules ?? Parser.CssRules)
         {
@@ -61,31 +62,34 @@ internal static class StyleResolver
             catch { continue; }
             if (ok) matches.Add(rule);
         }
-        matches.Sort((x, y) =>
-        {
-            int cmp = x.Specificity.CompareTo(y.Specificity);
-            return cmp != 0 ? cmp : x.Order.CompareTo(y.Order);
-        });
 
-        // Build the winning normal and important declarations (later in sorted order wins).
-        var normal = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var important = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        // Build the winning declaration per property across all five tiers (later tier wins;
+        // within a tier the later rule in (specificity, order) wins).
+        var winners = new Dictionary<string, (int Tier, int Specificity, int Order, string Value)>(StringComparer.OrdinalIgnoreCase);
         foreach (var rule in matches)
             foreach (var (prop, val) in rule.Properties)
             {
-                if (rule.ImportantProps.Contains(prop)) important[prop] = val;
-                else normal[prop] = val;
+                var important = rule.ImportantProps.Contains(prop);
+                var tier = rule.Origin switch
+                {
+                    Parser.RuleOrigin.Ua => 0,
+                    Parser.RuleOrigin.User => important ? 4 : 1,
+                    _ => important ? 3 : 2,
+                };
+                if (winners.TryGetValue(prop, out var current) &&
+                    (current.Tier > tier || current.Tier == tier &&
+                        (current.Specificity > rule.Specificity ||
+                         current.Specificity == rule.Specificity && current.Order > rule.Order)))
+                    continue;
+                winners[prop] = (tier, rule.Specificity, rule.Order, val);
             }
 
-        // Normal author rules: fill in only where no inline style is already present.
-        foreach (var (prop, val) in normal)
-            if (node.StyleOverrides.TryAdd(prop, val))
-                node.CascadeAppliedProps.Add(prop);
-
-        // !important author rules: override even inline styles.
-        foreach (var (prop, val) in important)
+        // Tiers 0-2 (UA/user/author normal) lose to an inline style; the important tiers (3-4)
+        // override even inline styles (§6.4.3).
+        foreach (var (prop, win) in winners)
         {
-            node.StyleOverrides[prop] = val;
+            if (win.Tier < 3 && node.StyleOverrides.ContainsKey(prop)) continue;
+            node.StyleOverrides[prop] = win.Value;
             node.CascadeAppliedProps.Add(prop);
         }
 
