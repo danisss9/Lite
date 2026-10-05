@@ -13,6 +13,7 @@ using Lite.Network;
 using Lite.Scripting;
 using Lite.Scripting.Dom;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Lite;
 
@@ -134,6 +135,7 @@ internal static class Parser
     /// innerHTML fragments can be parsed with the page's full stylesheet cascade.</summary>
     internal static IDocument? Document { get => Current.Document; private set => Current.Document = value; }
 
+
     /// <summary>Suppresses per-element debug logging during fragment (innerHTML) parsing.</summary>
     private static bool _verbose { get => Current.Verbose; set => Current.Verbose = value; }
     internal static int ViewportWidth { get => Current.ViewportWidth; private set => Current.ViewportWidth = value; }
@@ -210,6 +212,7 @@ internal static class Parser
     private static IDocument OpenDocument(IConfiguration config, HttpResponseMessage response,
         string address, string html, string? mediaType)
     {
+        html = NormalizeImportantBangs(html);
         var context = BrowsingContext.New(config.WithOnly<IDocumentFactory>(new XmlDispatchDocumentFactory()));
         return context.OpenAsync(req =>
         {
@@ -219,6 +222,19 @@ internal static class Parser
                 req.Header("Content-Type", mediaType);
         }).Result;
     }
+
+    private static readonly Regex StyleBlockRegex =
+        new("<style\\b[^>]*>.*?</style>", RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly Regex ImportantBang = new("!\\s+important", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>AngleSharp's declaration parser drops "! important" (bang and keyword separated
+    /// by whitespace) outright — a valid CSS 2.1 token sequence the official suite uses heavily —
+    /// so the whole declaration silently vanishes and every later rule wins. Normalizing the bang
+    /// inside style blocks before the CSSOM is built cannot change any stylesheet's meaning: the
+    /// two spellings are the same token sequence in CSS.</summary>
+    internal static string NormalizeImportantBangs(string html) =>
+        StyleBlockRegex.Replace(html, static match =>
+            ImportantBang.Replace(match.Value, "!important", int.MaxValue, match.Value.IndexOf('>') + 1));
 
     /// <summary>Core parse pipeline shared by the top-level load and child (iframe) loads. The
     /// caller must have already set the parse statics (base URL, viewport, cleared script lists)
@@ -520,7 +536,7 @@ internal static class Parser
                 address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? content;
                 html = response.Content.ReadAsStringAsync().Result;
             }
-            var document = context.OpenAsync(req => req.Address(address).Content(html)).Result;
+            var document = context.OpenAsync(req => req.Address(address).Content(NormalizeImportantBangs(html))).Result;
             return ParseOpenedDocument(document, address, viewportWidth, viewportHeight, parentEngine, frameNode);
         }
         finally
@@ -698,7 +714,6 @@ internal static class Parser
         var device = document.Context.GetService<IRenderDevice>() ?? new DefaultRenderDevice();
         var styles = window.GetStyleCollection(device);
         var cascaded = styles.GetDeclarations(element);
-
         try
         {
             var computed = styles.ComputeDeclarations(element);
@@ -716,7 +731,7 @@ internal static class Parser
                 System.Globalization.CultureInfo.InvariantCulture, out _))
             {
                 var inline = element.GetStyle();
-                var savedInlineCss = inline.CssText;
+                var savedLineHeightCss = inline.CssText;
                 try
                 {
                     inline.SetProperty(PropertyNames.LineHeight, "normal", "important");
@@ -731,7 +746,7 @@ internal static class Parser
                 }
                 finally
                 {
-                    inline.CssText = savedInlineCss;
+                    inline.CssText = savedLineHeightCss;
                 }
             }
 
@@ -746,6 +761,7 @@ internal static class Parser
             return cascaded;
         }
     }
+
 
     /// <summary>
     /// AngleSharp.Css resolves em/rem/percentage values against one global render device. CSS
