@@ -528,10 +528,14 @@ internal static class BoxEngine
         var newChildren = new List<LayoutNode>();
         var run = new List<LayoutNode>();
         var created = false;
+        // Render-invisible boxes (scripts, display:none) must not join a run of misparented
+        // content nor split one (a script between two bare texts is ONE cell, not two), so
+        // they are parked here and reinserted after the run they interrupted flushes.
+        var deferred = new List<LayoutNode>();
 
         void FlushRun()
         {
-            if (run.Count == 0) return;
+            if (run.Count == 0) { newChildren.AddRange(deferred); deferred.Clear(); return; }
             var anon = new LayoutNode(null, wrapAsRow ? "#anon-row" : "#anon-cell", "", parent.Style);
             anon.ResetNonInheritedStyles();
             anon.StyleOverrides["display"] = wrapAsRow ? "table-row" : "table-cell";
@@ -547,6 +551,8 @@ internal static class BoxEngine
             // Content inside a freshly-made anonymous row still needs an anonymous cell.
             if (wrapAsRow) WrapAnonymousTableBoxes(anon, wrapAsRow: false);
             newChildren.Add(anon);
+            newChildren.AddRange(deferred);
+            deferred.Clear();
             created = true;
         }
 
@@ -556,6 +562,15 @@ internal static class BoxEngine
             // white-space handling) so it never becomes (or pads) an anonymous cell.
             if (child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText))
                 continue;
+
+            // §17.2.1 groups rendered content: a display:none box (a script between two bare
+            // texts, a hidden element) renders nothing, so it neither joins a run of
+            // misparented content nor splits one into separate anonymous cells.
+            if (child.GetDisplay() == DisplayType.None || child.TagName == "SCRIPT")
+            {
+                deferred.Add(child);
+                continue;
+            }
 
             if (IsProperTableChild(child, atTableLevel: wrapAsRow))
             {
