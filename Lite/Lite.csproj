@@ -27,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AngleSharp.Xml" />
     <ProjectReference Include="..\Lite.QuickJs\Lite.QuickJs.csproj" />
     <PackageReference Include="AngleSharp" />
     <PackageReference Include="AngleSharp.Css" />

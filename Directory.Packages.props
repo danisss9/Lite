@@ -2,11 +2,11 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageVersion Include="AngleSharp" Version="1.7.3" />
     <PackageVersion Include="AngleSharp.Css" Version="1.0.2" />
     <PackageVersion Include="Acornima" Version="1.7.0" />
+    <PackageVersion Include="AngleSharp.Xml" Version="1.2.0" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <PackageVersion Include="LibVLCSharp" Version="3.9.3" />
     <PackageVersion Include="SkiaSharp" Version="3.119.0" />

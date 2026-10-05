@@ -4,6 +4,7 @@ using AngleSharp.Css;
 using AngleSharp.Dom;
 using AngleSharp.Css.Dom;
 using AngleSharp.Css.Values;
+using AngleSharp.Xml;
 using Lite.Animation;
 using Lite.Extensions;
 using Lite.Layout;
@@ -99,6 +100,9 @@ internal static class Parser
         internal IDocument? Document;
         internal int ViewportWidth = 800, ViewportHeight = 600, InlineModuleCounter;
         internal bool Verbose, IsFragment;
+        /// <summary>True when the document was served as XML (application/xhtml+xml and
+        /// friends): type selectors match case-sensitively per CSS 2.1 §5.1.</summary>
+        internal bool IsXmlDocument;
         internal readonly List<ScriptRecord> PendingScripts = [], DeferredScripts = [], AsyncScripts = [];
         internal readonly Dictionary<string, List<int>> Counters = new();
         internal readonly List<CssRule> CssRules = [];
@@ -108,6 +112,9 @@ internal static class Parser
 
     [ThreadStatic] private static ParseState? _current;
     private static ParseState Current { get => _current ??= new(); set => _current = value; }
+    /// <summary>Whether the document being parsed was served as XML; type selectors match
+    /// case-sensitively there (CSS 2.1 §5.1). Read by the selector engine.</summary>
+    internal static bool IsXmlDocument => Current.IsXmlDocument;
     private static string? _baseUrl { get => Current.BaseUrl; set => Current.BaseUrl = value; }
     internal static string? BaseUrl => _baseUrl;
     /// <summary>Base URL for resolving relative references — equals the document URL unless
@@ -163,9 +170,9 @@ internal static class Parser
                 DeviceHeight = viewportHeight,
                 ViewPortWidth = viewportWidth,
                 ViewPortHeight = viewportHeight
-            });
+            })
+            .WithXml();
 
-        var context = BrowsingContext.New(config);
         using var message = new HttpRequestMessage(new System.Net.Http.HttpMethod(request.Method), request.Url);
         if (request.Body is not null)
         {
@@ -186,10 +193,31 @@ internal static class Parser
             if (html.Length == 0)
                 response.EnsureSuccessStatusCode();
         }
-        var document = context.OpenAsync(req => req.Address(address).Content(html)).Result;
+        var mediaType = response.Content.Headers.ContentType?.MediaType;
+        Current.IsXmlDocument = mediaType is "application/xhtml+xml" or "text/xml" or "application/xml";
+        var document = OpenDocument(config, response, address, html, mediaType);
         _baseUrl = address;
         _documentBaseUrl = address;
         return ParseOpenedDocument(document, address, viewportWidth, viewportHeight);
+    }
+
+    /// <summary>Opens the response body as a document, dispatching on the response's MIME
+    /// type: XML types (XHTML 1.0 tests serve application/xhtml+xml) parse with the XML
+    /// parser, whose case sensitivity, CDATA style text, self-closing syntax, and
+    /// well-formedness handling all differ from the HTML parser. Everything else parses
+    /// as HTML. The request's MIME type must be restated because Content() defaults it to
+    /// text/html and the document factory dispatches on it.</summary>
+    private static IDocument OpenDocument(IConfiguration config, HttpResponseMessage response,
+        string address, string html, string? mediaType)
+    {
+        var context = BrowsingContext.New(config.WithOnly<IDocumentFactory>(new XmlDispatchDocumentFactory()));
+        return context.OpenAsync(req =>
+        {
+            req.Address(address);
+            req.Content(html);
+            if (mediaType is not null)
+                req.Header("Content-Type", mediaType);
+        }).Result;
     }
 
     /// <summary>Core parse pipeline shared by the top-level load and child (iframe) loads. The
@@ -271,6 +299,24 @@ internal static class Parser
         // corpus is authored this way. The markers are not valid CSS in any context, so removing
         // them unconditionally is safe; the common legacy "/* <![CDATA[ */ ... /* ]]> */" form
         // just leaves behind empty comments.
+        // XML documents (application/xhtml+xml): AngleSharp.Xml builds generic elements
+        // without the HTML style-sheet hookup, so parsed-in <style> elements never register
+        // a CSSOM sheet and CollectCssRules sees nothing (the injected UA sheet registers
+        // through the dynamic path). Rebuild each parsed style element as a fresh element,
+        // which does register; attributes and text are copied verbatim.
+        if (Current.IsXmlDocument)
+        {
+            foreach (var styleEl in document.QuerySelectorAll("style").ToList())
+            {
+                var replacement = document.CreateElement("style");
+                foreach (var attr in styleEl.Attributes)
+                    replacement.SetAttribute(attr.Name, attr.Value);
+                replacement.TextContent = styleEl.TextContent;
+                styleEl.Parent?.InsertBefore(replacement, styleEl);
+                styleEl.Parent?.RemoveChild(styleEl);
+            }
+        }
+
         foreach (var styleEl in document.QuerySelectorAll("style"))
         {
             var text = styleEl.TextContent;
@@ -775,6 +821,8 @@ internal static class Parser
 
         var href = tag == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, tag, directText, elementStyle, href);
+        if (Current.IsXmlDocument)
+            node.SourceTagName = element.TagName;
         // NOTE: node.DomNode is deliberately bound at the END of Traverse, not here. Attribute
         // capture below mirrors DOM values into the rendering cache; binding early would route
         // those writes back through element.SetAttribute — mutating the very NamedNodeMap the

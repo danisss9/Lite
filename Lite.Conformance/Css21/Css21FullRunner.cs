@@ -80,7 +80,6 @@ internal static class Css21FullRunner
         {
             WptRunner.RunResult result;
             if (media == "print") result = new(WptRunner.Cat.Unsupported, "Paginated execution is not implemented", 0, 0);
-            else if (test.Xhtml) result = new(WptRunner.Cat.Unsupported, "Authentic XHTML parsing is required for this variant", 0, 0);
             else result = WptRunner.RunOne(test.Path);
             var environment = test.Suite == "css21-wpt" && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LITE_WPT_BASE_URL"))
                 ? "upstream-wpt" : "local";

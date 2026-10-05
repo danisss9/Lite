@@ -25,6 +25,9 @@ public class LayoutNode
     /// JS-mutated ids stay in sync (selector matching reads one source of truth).</summary>
     public string? Id => Attributes.GetValueOrDefault("id");
     public string TagName { get; }
+    /// <summary>The tag name exactly as the document language wrote it, when that case is
+    /// meaningful (XML documents); null for HTML documents, where case is insignificant.</summary>
+    public string? SourceTagName { get; internal set; }
     public string Text { get; }
     public ICssStyleDeclaration Style { get; }
     /// <summary>The element's href. Backed by <see cref="Attributes"/> (see <see cref="Id"/>).</summary>

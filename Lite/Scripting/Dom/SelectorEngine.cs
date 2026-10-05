@@ -117,7 +117,10 @@ internal static class SelectorEngine
             return node.Id == simple[1..];
         }
 
-        // Tag selector
+        // Tag selector. CSS 2.1 §5.1: type selector case-sensitivity follows the document
+        // language — case-sensitive in XML documents (XHTML served as application/xhtml+xml).
+        if (Parser.IsXmlDocument)
+            return (node.SourceTagName ?? node.TagName).Equals(simple, StringComparison.Ordinal);
         return node.TagName.Equals(simple, StringComparison.OrdinalIgnoreCase);
     }
 
