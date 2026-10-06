@@ -163,31 +163,42 @@ internal static class TableEngine
         }
 
         // ── Pass 2: commit final positions to every cell ──────────────────
-        foreach (var p in placements)
+        void CommitPlacements()
         {
-            var cell = p.Cell;
-            var cellW = CellSpanWidth(colWidths, p.Col, p.ColSpan, spacing);
-            var cellH = 0f;
-            for (int r = p.Row; r < p.Row + p.RowSpan && r < rowCount; r++)
-                cellH += rowHeights[r] + (r > p.Row ? verticalSpacing : 0f);
-
-            var cx = CellX(contentX, colWidths, p.Col, spacing) + p.Marg.Left + p.Bord.Left + p.Pad.Left;
-            var cy = rowYs[p.Row] + p.Marg.Top + p.Bord.Top + p.Pad.Top;
-            var cw = p.MeasuredCW;
-            var finalH = Math.Max(0f,
-                cellH - p.Marg.Top - p.Bord.Top - p.Pad.Top
-                      - p.Pad.Bottom - p.Bord.Bottom - p.Marg.Bottom);
-
-            BoxEngine.LayoutChildrenPublic(cell.Children, cx, cy, cw, viewportW, viewportH, finalH);
-
-            cell.Box = new BoxDimensions
+            foreach (var p in placements)
             {
-                ContentBox = new SKRect(cx, cy, cx + cw, cy + finalH),
-                Padding = p.Pad,
-                Border = p.Bord,
-                Margin = p.Marg,
-            };
+                var cell = p.Cell;
+                var cellW = CellSpanWidth(colWidths, p.Col, p.ColSpan, spacing);
+                var cellH = 0f;
+                for (int r = p.Row; r < p.Row + p.RowSpan && r < rowCount; r++)
+                    cellH += rowHeights[r] + (r > p.Row ? verticalSpacing : 0f);
+
+                var cx = CellX(contentX, colWidths, p.Col, spacing) + p.Marg.Left + p.Bord.Left + p.Pad.Left;
+                var cy = rowYs[p.Row] + p.Marg.Top + p.Bord.Top + p.Pad.Top;
+                var cw = p.MeasuredCW;
+                var finalH = Math.Max(0f,
+                    cellH - p.Marg.Top - p.Bord.Top - p.Pad.Top
+                          - p.Pad.Bottom - p.Bord.Bottom - p.Marg.Bottom);
+
+                BoxEngine.LayoutChildrenPublic(cell.Children, cx, cy, cw, viewportW, viewportH, finalH);
+
+                cell.Box = new BoxDimensions
+                {
+                    ContentBox = new SKRect(cx, cy, cx + cw, cy + finalH),
+                    Padding = p.Pad,
+                    Border = p.Bord,
+                    Margin = p.Marg,
+                };
+            }
         }
+
+        CommitPlacements();
+
+        // CSS 2.1 §17.5.3 vertical alignment of cells within their rows: 'baseline' cells share
+        // the row baseline (the lowest first-baseline among them, which may grow the row so the
+        // shifted content fits); 'middle' centres the content box; 'bottom' pins it to the row
+        // bottom. 'top' (and the placement above) is the default geometry already committed.
+        AlignCellVerticalAlignment(placements, rowYs, rowHeights, rowCount, viewportW, viewportH, CommitPlacements);
 
         // CSS 2.1 §17.6.2.1: in the collapsing model each shared edge is painted with the
         // dominant border among all boxes adjoining it; store the winners on the cells for
@@ -480,6 +491,101 @@ internal static class TableEngine
             if (y.HasValue && (!best.HasValue || y.Value > best.Value)) best = y.Value;
         }
         return best;
+    }
+
+    /// <summary>CSS 2.1 §17.5.3 vertical alignment of cells within their rows. Baseline-aligned
+    /// cells (the initial value) share the row's baseline — the LOWEST first-line baseline among
+    /// them; a cell whose baseline sits above it shifts its content down, which may require the
+    /// row to grow (the caller re-commits all placements when that happens, because later rows
+    /// move). 'middle' centres the content box in the row; 'bottom' pins it to the row bottom.</summary>
+    private static void AlignCellVerticalAlignment(List<CellPlacement> placements,
+        float[] rowYs, float[] rowHeights, int rowCount, float viewportW, float viewportH, Action recommit)
+    {
+        var byPosition = new Dictionary<(int Row, int Col), CellPlacement>(placements.Count);
+        foreach (var p in placements) byPosition[(p.Row, p.Col)] = p;
+
+        for (var r = 0; r < rowCount; r++)
+        {
+            var rowCells = placements.Where(p => p.Row == r && p.RowSpan == 1).ToList();
+            if (rowCells.Count == 0) continue;
+
+            float? rowBaseline = null;
+            var baselineCells = new List<(CellPlacement P, float BaselineY, float ContentH)>();
+            foreach (var p in rowCells)
+            {
+                var va = p.Cell.GetVerticalAlign();
+                var contentTop = p.Cell.Box.ContentBox.Top;
+                var contentH = p.Cell.Box.ContentBox.Height;
+                switch (va)
+                {
+                    case VerticalAlignType.Baseline or VerticalAlignType.Length or VerticalAlignType.Percentage:
+                        if (BoxEngine.FindFirstBaselineY(p.Cell) is { } b)
+                        {
+                            // The offset kinds shift the first line within the cell too.
+                            b += p.Cell.GetVerticalAlignOffset();
+                            baselineCells.Add((p, b, contentH));
+                            rowBaseline = rowBaseline is { } cur ? Math.Max(cur, b) : b;
+                        }
+                        break;
+                }
+            }
+            if (rowBaseline is null) continue;
+
+            var growth = 0f;
+            var shifts = new List<(CellPlacement P, float Delta)>();
+            foreach (var (p, b, contentH) in baselineCells)
+            {
+                var delta = rowBaseline.Value - b;
+                if (delta > 0f) shifts.Add((p, delta));
+                // The shifted content must fit inside the row: content top + shift + height
+                // (plus the cell's bottom padding/border) may exceed the committed row height.
+                var cellBottomEdge = p.Cell.Box.ContentBox.Top + delta + contentH + p.Pad.Bottom + p.Bord.Bottom;
+                var rowBottom = rowYs[r] + rowHeights[r];
+                if (r + 1 >= rowCount || p.Row + p.RowSpan >= rowCount)
+                    growth = Math.Max(growth, cellBottomEdge - rowBottom);
+            }
+            if (growth > 0.5f)
+            {
+                rowHeights[r] += growth;
+                // Rows below this one move down.
+                for (var rr = r + 1; rr < rowCount; rr++) rowYs[rr] += growth;
+                recommit();
+            }
+            foreach (var (p, delta) in shifts)
+            {
+                if (delta <= 0f) continue;
+                ShiftCellContent(p, delta, viewportW, viewportH);
+            }
+
+            // middle / bottom cells
+            foreach (var p in rowCells)
+            {
+                var va = p.Cell.GetVerticalAlign();
+                if (va is not (VerticalAlignType.Middle or VerticalAlignType.Bottom)) continue;
+                var contentH = p.Cell.Box.ContentBox.Height;
+                var rowH = rowHeights[r] - p.Pad.Top - p.Bord.Top - p.Pad.Bottom - p.Bord.Bottom;
+                var delta = va == VerticalAlignType.Middle ? (rowH - contentH) / 2f : rowH - contentH;
+                if (delta <= 0.5f) continue;
+                ShiftCellContent(p, delta, viewportW, viewportH);
+            }
+        }
+    }
+
+    /// <summary>Re-lays a cell's children at a vertically shifted content top and moves the
+    /// cell's content box down by the same delta (the cell's outer geometry is unchanged).</summary>
+    private static void ShiftCellContent(CellPlacement p, float delta, float viewportW, float viewportH)
+    {
+        var cy = p.Cell.Box.ContentBox.Top + delta;
+        BoxEngine.LayoutChildrenPublic(p.Cell.Children, p.Cell.Box.ContentBox.Left, cy,
+            p.Cell.Box.ContentBox.Width, viewportW, viewportH, p.Cell.Box.ContentBox.Height);
+        p.Cell.Box = new BoxDimensions
+        {
+            ContentBox = new SKRect(p.Cell.Box.ContentBox.Left, cy,
+                p.Cell.Box.ContentBox.Right, p.Cell.Box.ContentBox.Bottom),
+            Padding = p.Cell.Box.Padding,
+            Border = p.Cell.Box.Border,
+            Margin = p.Cell.Box.Margin,
+        };
     }
 
     private static List<RowInfo> CollectRows(LayoutNode table)
