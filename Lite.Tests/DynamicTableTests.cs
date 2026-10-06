@@ -58,6 +58,22 @@ public static class DynamicTableTests
         True(bmp.Width > 0, "page must render");
     }
 
+    [Test]
+    public static void BodyMarginTop_PositionsContentDownTheCanvas()
+    {
+        // The document root is a block-formatting-context boundary: BODY's top margin must
+        // push the content down the canvas, not collapse through the root and escape above
+        // the viewport (padding-applies-to-016 rendered the whole page at y=0).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body { margin-top: 192px }</style></head><body>" +
+            "<p>x</p></body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var body = Find(page.Root, "BODY");
+        True(body != null, "body missing");
+        True(body!.Box.BorderBox.Top >= 190f,
+            $"body content must sit at its top margin, got y={body.Box.BorderBox.Top}");
+    }
+
     private static LayoutNode? Find(LayoutNode node, string tag)
     {
         if (node.TagName == tag) return node;

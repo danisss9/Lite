@@ -927,8 +927,12 @@ internal static class BoxEngine
             // The root's initial containing block has the viewport height even when the root's
             // own height is auto. Its percentage-height children (notably body) need that size.
             var childContainingH = node.TagName == "HTML" && !hasExplicitH ? viewportHeight : knownContentH;
+            // The document root is a block-formatting-context boundary: a top margin on BODY
+            // (or any first child) must push the content down the canvas, not collapse through
+            // the root and escape above the viewport.
+            var childBfc = establishesBfc || node.TagName == "HTML";
             contentH = LayoutChildrenImpl(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight,
-                childContainingH, border.Top + padding.Top, establishesBfc, floatCtx, ownsFloatContext, out trailingMargin);
+                childContainingH, border.Top + padding.Top, childBfc, floatCtx, ownsFloatContext, out trailingMargin);
         }
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
