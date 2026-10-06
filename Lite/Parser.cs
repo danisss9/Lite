@@ -358,6 +358,12 @@ internal static class Parser
         return result;
     }
 
+    /// <summary>The injected UA sheet's element and the user sheets' elements — document.styleSheets
+    /// must not list them (the CSSOM exposes author sheets only), or scripts mutating cssRules[0]
+    /// would target the wrong origin.</summary>
+    internal static IElement? UaStyleSheetOwner => Current.UaStyleElement;
+    internal static IReadOnlyList<IElement> UserStyleSheetOwners => Current.UserStyleElements;
+
     /// <summary>The style sheet owned by the given &lt;style&gt;/&lt;link&gt; element, or null.</summary>
     internal static IStyleSheet? SheetFor(IElement? owner)
     {

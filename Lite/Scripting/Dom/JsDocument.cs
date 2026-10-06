@@ -123,6 +123,21 @@ public class JsDocument
     public JsHtmlCollection links => new(() => _document is null ? Array.Empty<JsElement>() :
         _document.QuerySelectorAll("a,area").Where(e => e.HasAttribute("href")).Select(Wrap).ToArray());
 
+    /// <summary>The document's style sheets (CSSOM): rule mutation through a rule's style
+    /// refreshes the engine's rule view and recascades the document.</summary>
+    public JsStyleSheetList styleSheets => new(_engine, () =>
+    {
+        // The CSSOM list carries author sheets only — the injected UA sheet (and user sheets)
+        // never appear in document.styleSheets, or scripts mutating cssRules[0] would target
+        // the wrong origin.
+        var ua = Parser.UaStyleSheetOwner;
+        var user = Parser.UserStyleSheetOwners;
+        var list = _document is null ? null : _document.StyleSheets;
+        if (list is null) return Enumerable.Empty<AngleSharp.Css.Dom.ICssStyleSheet>();
+        return list.OfType<AngleSharp.Css.Dom.ICssStyleSheet>()
+            .Where(s => s.OwnerNode is not IElement owner || (owner != ua && !user.Contains(owner)));
+    });
+
     // ---- creation ----
     public JsElement createElement(string tagName)
     {

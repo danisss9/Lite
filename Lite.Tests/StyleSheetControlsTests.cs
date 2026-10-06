@@ -157,6 +157,21 @@ public static class StyleSheetControlsTests
         public void Dispose() => _app.StopAsync().Wait();
     }
 
+    [Test]
+    public static void CssomRuleMutation_RecascadesMatchingElements()
+    {
+        // table-anonymous-objects-013's mechanism: writing a rule's declaration through the
+        // CSSOM (styleSheets[i].cssRules[j].style.display) must restyle every matching element.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>p { color: red }</style></head><body><p>x</p>" +
+            "<script>document.styleSheets[0].cssRules[0].style.color = 'green';</script>" +
+            "</body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        var p = Find(page.Root, "P");
+        True(p != null, "p missing");
+        var color = p!.TryResolveStyle("color", out var resolved) ? resolved : p.Style.GetPropertyValue("color");
+        True(color.Contains("0, 128, 0"), $"the mutated rule must recascade matching elements, got {color}");
+    }
+
     private static LayoutNode? Find(LayoutNode node, string tag)
     {
         if (node.TagName == tag) return node;
