@@ -23,6 +23,17 @@ internal static class ConformanceServer
     /// <summary>Registers every vendored test font (vendor/wpt/fonts, including the CSSTest
     /// set the official CSS 2.1 suite requires installed) as a persistent typeface keyed by
     /// the family name its name table declares.</summary>
+    private static bool _testFontsProvisioned;
+
+    /// <summary>Idempotent test-font registration; called by Start and by isolated workers,
+    /// which reuse the parent's server URL and never run Start themselves.</summary>
+    internal static void EnsureTestFontsProvisioned()
+    {
+        if (_testFontsProvisioned) return;
+        _testFontsProvisioned = true;
+        ProvisionTestFonts();
+    }
+
     private static void ProvisionTestFonts()
     {
         var fontsRoot = Path.Combine(ConformancePaths.Vendor, "wpt", "fonts");
@@ -52,8 +63,8 @@ internal static class ConformanceServer
 
         // Provision the vendored test fonts (Ahem, the CSSTest family set) persistently: the
         // official CSS 2.1 suite references them by family name without @font-face, and the
-        // registry is cleared on every document load. All shards/workers share one call site.
-        ProvisionTestFonts();
+        // registry is cleared on every document load.
+        EnsureTestFontsProvisioned();
 
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
         builder.WebHost.UseKestrelCore();

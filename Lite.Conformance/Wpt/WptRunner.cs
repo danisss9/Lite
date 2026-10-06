@@ -297,6 +297,9 @@ internal static class WptRunner
     internal static int Worker(string path, string url, string output)
     {
         ConformanceServer.SetWorkerBaseUrl(url);
+        // Workers reuse the parent's server and never run Start, so they must provision the
+        // vendored test fonts (Ahem, CSSTest) themselves before rendering anything.
+        ConformanceServer.EnsureTestFontsProvisioned();
         var test = CatalogCase(path);
         // A page referencing a resource that never made it into the vendored tree cannot be
         // executed meaningfully; report it as an execution blocker instead of a failure.
