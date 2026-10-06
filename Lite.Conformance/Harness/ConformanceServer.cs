@@ -19,6 +19,19 @@ namespace Lite.Conformance.Harness;
 internal static class ConformanceServer
 {
     private static WebApplication? _app;
+
+    /// <summary>Registers every vendored test font (vendor/wpt/fonts, including the CSSTest
+    /// set the official CSS 2.1 suite requires installed) as a persistent typeface keyed by
+    /// the family name its name table declares.</summary>
+    private static void ProvisionTestFonts()
+    {
+        var fontsRoot = Path.Combine(ConformancePaths.Vendor, "wpt", "fonts");
+        if (!Directory.Exists(fontsRoot)) return;
+        foreach (var file in Directory.EnumerateFiles(fontsRoot, "*.ttf", SearchOption.AllDirectories)
+                     .Where(f => !f.EndsWith(".headers", StringComparison.OrdinalIgnoreCase))
+                     .OrderBy(f => f, StringComparer.Ordinal))
+            Lite.Layout.FontRegistry.RegisterFile(file);
+    }
     private static string? _baseUrl;
     public static string BaseUrl => _baseUrl
         ?? throw new InvalidOperationException("The conformance server has not been started.");
@@ -36,6 +49,11 @@ internal static class ConformanceServer
     public static void Start(bool cssRegressionMode = true)
     {
         if (_app is not null) return;
+
+        // Provision the vendored test fonts (Ahem, the CSSTest family set) persistently: the
+        // official CSS 2.1 suite references them by family name without @font-face, and the
+        // registry is cleared on every document load. All shards/workers share one call site.
+        ProvisionTestFonts();
 
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
         builder.WebHost.UseKestrelCore();
