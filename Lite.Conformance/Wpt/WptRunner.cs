@@ -301,6 +301,13 @@ internal static class WptRunner
         // A page referencing a resource that never made it into the vendored tree cannot be
         // executed meaningfully; report it as an execution blocker instead of a failure.
         var missingInput = test is null ? null : SuiteInputs.FindMissing(path);
+        if (missingInput is null && test is { Kind: "reftest" })
+            foreach (var reference in test.References)
+            {
+                var targetPath = reference.Url.StartsWith('/') ? reference.Url[1..] : reference.Url;
+                if (!SuiteInputs.FileExists(targetPath.Split('?')[0].Split('#')[0]))
+                { missingInput = $"{path} -> reference {reference.Url}"; break; }
+            }
         if (missingInput is not null)
         {
             File.WriteAllText(output, JsonSerializer.Serialize(

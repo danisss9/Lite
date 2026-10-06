@@ -63,6 +63,14 @@ internal static class SuiteInputs
         return File.Exists(resolved) ? null : value;
     }
 
+    /// <summary>Whether a case file exists in the vendored tree (reference-target checks).</summary>
+    internal static bool FileExists(string path)
+    {
+        var (root, relative) = Split(path);
+        if (root is null) return true;
+        return File.Exists(Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)));
+    }
+
     private static (string? Root, string Relative) Split(string path)
     {
         if (path.StartsWith(OfficialCatalog.UrlPrefix, StringComparison.Ordinal))
