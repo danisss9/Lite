@@ -284,6 +284,12 @@ internal static class IntrinsicSizer
                 : string.Join(' ', raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
             max = Math.Max(max, font.MeasureText(line));
         }
+        // A whitespace-only leaf still renders one collapsible space when it sits between inline
+        // content (§16.6.1) — shrink-to-fit widths that exclude it under-measure the run and force
+        // spurious wraps inside abs-pos/float boxes. (A whitespace sequence at a LINE boundary
+        // collapses to zero; max-content assumes no breaking, so the space counts.)
+        if (max <= 0f && rawLines.Any(l => l.Length > 0))
+            max = font.MeasureText(" ");
 
         if (noWrap) return (max, max);
 

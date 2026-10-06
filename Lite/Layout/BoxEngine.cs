@@ -1842,6 +1842,13 @@ internal static class BoxEngine
                 continue;
             }
 
+            // A whitespace-only text item that would cross the line's end collapses there
+            // (§16.6.1): it must neither wrap onto a fabricated line box nor commit one — the
+            // green overlay in the white-space band grew a ~45px phantom line from exactly this.
+            if (item.Kind == InlineItemKind.Text && item.Text != null && item.Text.Trim().Length == 0 &&
+                lineX + item.Width > bandRight)
+                continue;
+
             if (lineX > bandLeft && lineX + item.Width > bandRight)
                 CommitLine();
 
