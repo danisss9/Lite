@@ -2213,6 +2213,15 @@ internal static class Drawer
     private static float LineBandWidth(List<(float X, float Width)>? bands, int index, float fallback)
         => bands is { Count: > 0 } ? bands[Math.Min(index, bands.Count - 1)].Width : fallback;
 
+    /// <summary>True when the node or any ancestor is a floated box (CSS 2.1 §5.12.1 excludes
+    /// float content from :first-line styling).</summary>
+    private static bool DescendsFromFloat(LayoutNode node)
+    {
+        for (var n = node; n is not null && n.TagName != "HTML"; n = n.Parent)
+            if (n.GetFloat() != FloatType.None) return true;
+        return false;
+    }
+
     private static void DrawWrappedText(SKCanvas canvas, LayoutNode node, string text,
                                         float x, float y, float maxWidth,
                                         SKFont font, SKPaint paint)
@@ -2226,8 +2235,11 @@ internal static class Drawer
         var wordSpacing = node.GetWordSpacing(font.Size);
         var textIndent = node.GetTextIndent(maxWidth, font.Size);
 
-        // ::first-line styles are resolved from the node or its parent block.
+        // ::first-line styles are resolved from the node or its parent block. CSS 2.1 §5.12.1:
+        // they do not apply inside descendant floats — a float's content is not part of the
+        // block's first formatted line, so `div:first-line` must not style a floated span's text.
         var firstLineStyles = node.FirstLineStyles ?? node.Parent?.FirstLineStyles;
+        if (firstLineStyles is not null && DescendsFromFloat(node)) firstLineStyles = null;
 
         // Apply text-transform
         text = StyleExtensions.ApplyTextTransform(text, textTransform);
