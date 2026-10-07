@@ -31,7 +31,7 @@ import re
 from zipfile import ZipFile
 
 TARGET = 'https://www.w3.org/TR/2011/REC-CSS2-20110607/'
-REVIEW_DATE = '2026-10-05'
+REVIEW_DATE = '2026-10-07'
 zip_path = 'Lite.Conformance/vendor/css21-spec-20110607/css2.zip'
 proposals_path = 'Lite.Conformance/Css21/css21-official-proposals.json'
 sections_path = 'Lite.Conformance/Profile/css21-sections.json'
@@ -224,6 +224,45 @@ STEM_CLAUSES = {
     'sort-by-order': ('6.4.1', 'cascading order'),
     'float': ('9.5', 'floats'),
     'float-non-replaced-width': ('10.3.5', 'floating non-replaced element widths'),
+    # WPT css/CSS2 clusters added 2026-10-07 while closing the review blocker
+    # (unnumbered files whose only citations are bug trackers, editor's-draft
+    # file-level anchors, or nothing).
+    'floats-placement': ('9.5.1', 'float placement rules'),
+    'adjoining-floats': ('9.5', 'floats adjacent to boxes that must not overlap them'),
+    'floats-wrap-bfc': ('9.5', 'block formatting contexts beside floats'),
+    'new-fc': ('9.5', 'new block formatting contexts beside floats'),
+    'clearance-containing': ('9.5.2', 'clearance and float containment'),
+    'computed-float-position-absolute': ('9.7', "computed 'float' under absolute positioning"),
+    'table-sizing-with-adjacent-floats': ('9.5', 'a table beside floats must not overlap them and shrinks into the free band'),
+    'absolute-non-replaced-width': ('10.3.7', 'absolutely positioned non-replaced widths'),
+    'block-non-replaced-width': ('10.3.3', 'block non-replaced widths'),
+    'inline-block-non-replaced-width': ('10.3.9', 'inline-block non-replaced widths'),
+    'overflow-propagation': ('11.1.1', 'overflow propagation between body and viewport'),
+    'box-offsets-rel-pos': ('9.3.2', 'box offsets for relative positioning'),
+    'box-offsets-abs-pos': ('9.3.2', 'box offsets for absolute positioning'),
+    'right-offset': ('9.3.2', "the 'right' offset property"),
+    'top': ('9.3.2', "the 'top' offset property"),
+    'top-offset-percentage': ('9.3.2', 'percentage offsets resolved against the containing block'),
+    'left-offset-percentage': ('9.3.2', 'percentage offsets resolved against the containing block'),
+    'margin-em-inherit': ('6.2.1', "the 'inherit' value on margins"),
+    'margin-percentage-inherit': ('6.2.1', "the 'inherit' value on margins"),
+    'padding-em-inherit': ('6.2.1', "the 'inherit' value on padding"),
+    'padding-percentage-inherit': ('6.2.1', "the 'inherit' value on padding"),
+    'height-applies-to': ('10.7', "the 'height' property applicability"),
+    'outline-width': ('18.4', 'outline widths'),
+    'z-index-dynamic': ('9.9.1', 'z-index stacking dynamics'),
+    'z-index-stack': ('9.9.1', 'z-index stacking order'),
+    'column-visibility': ('11.2', "visibility 'collapse' on table columns"),
+    'white-space-collapsing': ('16.6.1', 'the white-space processing model'),
+    'shand-font': ('15.8', "the 'font' shorthand"),
+    'abspos-float-with-inline-container': ('10.1', 'containing blocks with inline containers'),
+    'anonymous-block-change': ('9.2.1.1', 'anonymous block boxes around inline content'),
+    'line-break-after-leading-float': ('9.5.1', 'line boxes beside leading floats'),
+    'zindex': ('9.9.1', 'z-index stacking order'),
+    'data-alignment': ('17.5.3', 'cell data alignment (vertical per 17.5.3; horizontal variants via inherited text-align)'),
+    'table-borders': ('17.6', 'borders on table elements'),
+    'table-organization': ('17.2', 'the CSS table model organization of rows and columns'),
+    'bidi-flag-emoji': ('9.10', 'bidirectional text ordering'),
 }
 
 

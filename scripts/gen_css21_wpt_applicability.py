@@ -3,7 +3,9 @@
 Css21/css21-applicability.json (complementary evidence per the plan).
 
 Run after scripts/gen_css21_section_review.py. For each of the 9,290 WPT
-candidates the test source is parsed for rel=help citations and flags:
+candidates the test source is parsed for rel=help citations and flags (any
+attribute order, both quote styles — the earlier order-and-quote-specific
+regex silently missed the single-quoted i18n suites):
 
 - Citations into /TR/CSS21/, /TR/CSS2/ or /TR/CSS22/ resolve through the same
   REC anchor map as the official suite (2.2 re-publishes the same anchors; a
@@ -30,7 +32,7 @@ from pathlib import Path
 import io
 from zipfile import ZipFile
 
-REVIEW_DATE = '2026-10-05'
+REVIEW_DATE = '2026-10-07'
 zip_path = Path('Lite.Conformance/vendor/css21-spec-20110607/css2.zip')
 wpt_root = Path('Lite.Conformance/vendor/wpt')
 sections_path = 'Lite.Conformance/Profile/css21-sections.json'
@@ -41,8 +43,23 @@ anchor_map_cache = Path('Lite.Conformance/artifacts/css21-anchor-map.json')
 
 REC_PREFIX = re.compile(r'^https?://[^/]+/TR/(CSS21|CSS2|CSS22)/', re.I)
 WGDRAFT_PREFIX = re.compile(r'^https?://drafts\.csswg\.org/css2/', re.I)
-help_re = re.compile(r'rel="help"\s+href="([^"]+)"', re.I)
-flag_re = re.compile(r'<meta\s+name="flags"\s+content="([^"]*)"', re.I)
+link_tag_re = re.compile(r'<link\b[^>]*>', re.I)
+help_rel_re = re.compile(r'rel\s*=\s*["\']?help\b', re.I)
+href_attr_re = re.compile(r'href\s*=\s*(["\'])([^"\']+)\1', re.I)
+flag_re = re.compile(r'<meta\s+name=["\']flags["\']\s+content=["\']([^"\']*)["\']', re.I)
+
+
+def extract_helps(text: str) -> list[str]:
+    """rel=help hrefs in any attribute order and both quote styles. The earlier
+    single regex (rel before href, double quotes only) silently missed the
+    single-quoted i18n suites and reversed-attribute links."""
+    helps = []
+    for tag in link_tag_re.findall(text):
+        if help_rel_re.search(tag):
+            m = href_attr_re.search(tag)
+            if m:
+                helps.append(m.group(2))
+    return helps
 
 head_re = re.compile(r'<h([2-6])[^>]*>(.*?)</h\1>', re.S | re.I)
 anchor_re = re.compile(r'<a\s+name="([^"]+)"', re.I)
@@ -73,23 +90,33 @@ def build_anchor_map() -> dict[str, str]:
     return amap
 
 
-def curated(source: str, helps: list[str]) -> dict | None:
-    """Cluster table for citation-less and file-level-citation cases."""
+def curated(source: str, helps: list[str], text: str | None = None) -> dict | None:
+    """Cluster table for citation-less and unresolvable-citation cases."""
     import gen_css21_official_applicability as official
-    stem = re.sub(r'[-_]?\d+[a-z]?(\.xht|\.htm|\.html)$', '', source.rsplit('/', 1)[-1])
-    table = official.STEM_CLAUSES
-    # Try the full stem, then progressively shorter dash-prefixes (cascade-import-dynamic -> cascade-import).
-    parts = stem.split('-')
-    for cut in range(len(parts), 0, -1):
-        candidate = '-'.join(parts[:cut])
-        if candidate in table:
-            clause, why = table[candidate]
-            return dict(classification='applicable', media=['screen'],
-                        ids=[f'css21.{clause}'],
-                        why=f'no resolvable anchor; classified by test cluster "{candidate}" ({why})')
-    if '/crashtests/' in source or stem.endswith('-crash') or 'crash' in stem.split('-'):
+    name = source.rsplit('/', 1)[-1]
+    # Numbered test names strip their number; unnumbered ones still lose the
+    # extension (the old stem kept e.g. "-crash.html" and matched nothing).
+    stem = re.sub(r'[-_]?\d+[a-z]?(\.xht|\.htm|\.html)$', '', name)
+    stem = re.sub(r'\.sub$', '', re.sub(r'\.(xht|htm|html)$', '', stem))
+    if source in FILE_OVERRIDES:
+        return dict(FILE_OVERRIDES[source])
+    if '/crashtests/' in source:
         return dict(classification='applicable', media=['screen'], ids=['css21.3.3'],
                     why='crashtest: malformed input must not crash the engine (error conditions)')
+    if re.search(r'-ref\d*$', stem):
+        return dict(classification='informative', media=[], ids=[],
+                    why=f'reference/support document paired with {stem}; not an independent assertion')
+    if 'crash' in stem.split('-') or stem.endswith('-crash'):
+        return dict(classification='applicable', media=['screen'], ids=['css21.3.3'],
+                    why='crashtest: malformed input must not crash the engine (error conditions)')
+    if 'should not crash' in (text or ''):
+        return dict(classification='applicable', media=['screen'], ids=['css21.3.3'],
+                    why='titled as a non-crash assertion; error-condition robustness (3.3) '
+                        'with the layout pinned by the reference')
+    if stem in CURATED_OPTIONAL_CLAUSES:
+        clause = CURATED_OPTIONAL_CLAUSES[stem]
+        return dict(classification='optional', media=[], ids=[],
+                    why=f'cites only the specification-permitted system colors of clause {clause}')
     # Errata-derived tests are named after the clause they pin (s-11-1-1b-001 -> 11.1.1).
     if '/css21-errata/' in source:
         m = re.search(r'\bs-(\d+(?:-\d+)*)', stem)
@@ -100,6 +127,31 @@ def curated(source: str, helps: list[str]) -> dict | None:
     if 'interpolation' in stem or 'animation' in stem or 'transition' in stem:
         return dict(classification='later-feature', media=[], ids=[],
                     why='interpolation/animation behavior defined by later CSS specifications')
+    if 'opacity' in stem or ('stacking' in stem and 'scroll' in stem):
+        return dict(classification='later-feature', media=[], ids=[],
+                    why='opacity/compositing-driven stacking is defined by later CSS specifications')
+    if stem.endswith('-paint-order'):
+        return dict(classification='applicable', media=['screen'], ids=['css21.E.2'],
+                    why='Appendix E.2 painting order with replaced/atomic inline-level content; '
+                        'the element kinds are later HTML features but the stacking obligation is E.2')
+    table = official.STEM_CLAUSES
+    # Try the full stem, then progressively shorter dash-prefixes (cascade-import-dynamic -> cascade-import).
+    parts = stem.split('-')
+    for cut in range(len(parts), 0, -1):
+        candidate = '-'.join(parts[:cut])
+        if candidate in table:
+            clause, why = table[candidate]
+            return dict(classification='applicable', media=['screen'],
+                        ids=[f'css21.{clause}'],
+                        why=f'no resolvable anchor; classified by test cluster "{candidate}" ({why})')
+    for h in helps:
+        if REC_PREFIX.match(h) or WGDRAFT_PREFIX.match(h):
+            frag = h[h.find('#'):] if '#' in h else ''
+            if frag in DRAFT_FRAGMENT_CLAUSES:
+                clause, why = DRAFT_FRAGMENT_CLAUSES[frag]
+                return dict(classification='applicable', media=['screen'],
+                            ids=[f'css21.{clause}'],
+                            why=f'cites the CSS2 editor\'s draft anchor {frag} for {why}')
     return None
 
 
@@ -123,7 +175,7 @@ def main() -> int:
             continue
         source = Path(str(wpt_root)) / path
         text = source.read_text(encoding='utf-8', errors='ignore') if source.exists() else ''
-        helps = help_re.findall(text)
+        helps = extract_helps(text)
         flags = flag_re.search(text)
         flags = flags.group(1).split() if flags else []
         rec, later, css1 = [], [], []
@@ -156,7 +208,7 @@ def main() -> int:
         print_only = any(cl.startswith(('13.2', '13.3', '13.4')) for cl in normative)
         media = ['print'] if (case['kind'] == 'print-reftest' or print_only) else ['screen']
         if not normative:
-            fallback = curated(path, helps)
+            fallback = curated(path, helps, text)
             if fallback is None:
                 if rec or helps:
                     unreviewed.append((path, [h for _, h in rec[:2]] + [h[:60] for h in later[:1]]))
@@ -223,6 +275,62 @@ def record(path: str, classification: str, ids: list[str], kind: str, flags: lis
 def clause_key(clause: str) -> list:
     parts = re.split(r'(\d+)', clause)
     return [int(p) if p.isdigit() else p for p in parts]
+
+
+# Individual review calls that no cluster rule can express. Each carries its own
+# dated rationale through curated(); provenance lives in this table.
+FILE_OVERRIDES = {
+    'css/CSS2/fonts/font-148.xht': dict(
+        classification='later-feature', media=[], ids=[],
+        why="font shorthand accepting a calc() font-size (css-fonts-4 and css-values-3 citations); "
+            "the calc notation is later-CSS"),
+    'css/CSS2/normal-flow/video-controls-hit-test-order.html': dict(
+        classification='later-feature', media=[], ids=[],
+        why='hit-testing of native video controls (cssom-view citation); UA chrome behavior '
+            'outside the CSS 2.1 rendering obligations'),
+    'css/CSS2/positioning/abspos-paged-001.xht': dict(
+        classification='applicable', media=['print'], ids=['css21.10.1'],
+        why='initial containing block in paged media; the chapter 13 intro anchor precedes the '
+            'first heading of the pinned target and the paged flag sets print media'),
+    'css/CSS2/positioning/abspos-paged-002.xht': dict(
+        classification='applicable', media=['print'], ids=['css21.10.1'],
+        why='initial containing block in paged media; the chapter 13 intro anchor precedes the '
+            'first heading of the pinned target and the paged flag sets print media'),
+    'css/CSS2/tables/table-intro-example-001.xht': dict(
+        classification='applicable', media=['screen'], ids=['css21.16.2'],
+        why='chapter 17 introduction example pinning cell text alignment (inherited text-align)'),
+    'css/CSS2/tables/table-intro-example-002.xht': dict(
+        classification='applicable', media=['screen'], ids=['css21.17.5.3'],
+        why='chapter 17 introduction example pinning cell vertical alignment'),
+    'css/CSS2/tables/table-intro-example-003.xht': dict(
+        classification='applicable', media=['screen'], ids=['css21.17.6'],
+        why='chapter 17 introduction example pinning border-collapse and table borders'),
+    'css/CSS2/tables/table-intro-example-004.xht': dict(
+        classification='applicable', media=['screen'], ids=['css21.17.4.1'],
+        why='chapter 17 introduction example pinning caption positioning'),
+}
+
+# Citation-less stems whose only cited section is specification-permitted.
+CURATED_OPTIONAL_CLAUSES = {
+    'system-colors': '18.2',
+}
+
+# Editor's-draft anchors that identify a section but resolve against no REC
+# heading (file-level or propdef fragments).
+DRAFT_FRAGMENT_CLAUSES = {
+    '#floats': ('9.5', 'floats'),
+    '#float-position': ('9.5.1', 'float positioning'),
+    '#propdef-float': ('9.5.1', "the 'float' property"),
+    '#propdef-clear': ('9.5.2', "the 'clear' property"),
+    '#inline-formatting': ('9.4.2', 'inline formatting'),
+    '#inline-boxes': ('9.4.2', 'inline boxes'),
+    '#height-layout': ('17.5.3', 'table height layout'),
+    '#blockwidth': ('10.3.3', 'block-level non-replaced widths'),
+    '#min-max-widths': ('10.4', 'minimum and maximum widths'),
+    '#min-max-heights': ('10.7', 'minimum and maximum heights'),
+    '#static-position': ('10.3.7', 'static positions of absolutely positioned boxes'),
+    '#stacking-context': ('9.9.1', 'stacking contexts'),
+}
 
 
 if __name__ == '__main__':
