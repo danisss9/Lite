@@ -138,14 +138,17 @@ public static class TableAnonymousDynamicTests
     [Test]
     public static void ToggleCycle_TrStaysInTheTree()
     {
-        // table-anonymous-objects-007: 9 display toggles none<->inline on row4, forced
-        // layout between each, ending at inline. The tr must remain in the layout tree.
+        // table-anonymous-objects-008: the TOGGLING table sits inside an absolutely positioned
+        // overlay (the layer-swap twin of 007); after 9 toggles ending at inline the tr must
+        // remain AND its cell content must actually render.
         var page = Parser.ParseChildPage(
             "<!DOCTYPE html><html><head></head><body>" +
+            "<div style=\"position: relative; font-size: 2em;\">" +
+            "<div style=\"position: absolute; z-index: 2; top: 0; color: green; padding: 1px;\">" +
             "<table border=\"5\">" +
             "<tr><td>Row 1</td></tr><tr><td>Row 2</td></tr><tr><td>Row 3</td></tr>" +
             "<tr id=\"row4\" style=\"display: none\"><td>Row 4</td></tr>" +
-            "</table></body></html>", isSrcdoc: true, "http://test/", 800, 600);
+            "</table></div></div></body></html>", isSrcdoc: true, "http://test/", 800, 600);
         var row4 = Find(page.Root, "TR", "row4");
         True(row4 != null, "row4 missing after parse");
 
@@ -157,12 +160,42 @@ public static class TableAnonymousDynamicTests
             var again = Find(page.Root, "TR", "row4");
             if (again == null)
             {
-                Console.WriteLine($"[007] DUMP after display={d}:");
+                Console.WriteLine($"[008] DUMP after display={d}:");
                 Dump(page.Root, 0);
                 True(false, $"row4 dropped from the tree after toggling display to {d}");
             }
-            Console.WriteLine($"[007] display={d}: row4 present, box={row4!.Box.ContentBox}");
+            row4 = again;
         }
+        BoxEngine.Layout(page.Root, 800, 600);
+        Console.WriteLine("[008] final tree:");
+        Dump(page.Root, 0);
+        foreach (var n in AllNodes(page.Root))
+        {
+            if (n.TagName is "TD" or "TABLE" or "TR")
+                Console.WriteLine($"[008] {n.TagName}{(n.Id != null ? "#" + n.Id : "")} box={n.Box.ContentBox} frags={n.InlineFragments?.Count ?? 0}");
+            foreach (var f in n.InlineFragments ?? [])
+                Console.WriteLine($"[008] fragment on {n.TagName}: '{f.Text}' {f.Rect}");
+        }
+        var found = AllNodes(page.Root)
+            .SelectMany(n => n.InlineFragments ?? [])
+            .Any(f => f.Text.Trim() == "Row 4");
+        var innerTd = AllNodes(page.Root).Last(n => n.TagName == "TD");
+        True(found || innerTd.Box.ContentBox.Width > 0,
+            "row4's 'Row 4' text must lay out after the cycle");
+
+        // Paint and count the pixels in row4's cell region: the harness render shows the
+        // green overlay's row4 missing entirely even though its boxes are laid out.
+        using var bmp = Drawer.DrawToBitmap(800, 600, page.Root, new Viewport { ViewportHeight = 600 });
+        var tdBox = innerTd.Box.ContentBox;
+        var painted = 0;
+        for (var y = (int)tdBox.Top; y < Math.Min((int)tdBox.Bottom, 600); y++)
+            for (var x = (int)tdBox.Left; x < Math.Min((int)tdBox.Right, 800); x++)
+            {
+                var c = bmp.GetPixel(x, y);
+                if (c.Red < 200 || c.Green < 200 || c.Blue < 200) painted++;
+            }
+        Console.WriteLine($"[008] painted pixels in inner cell region: {painted}");
+        True(painted > 50, $"row4's cell must paint content (got {painted} pixels)");
     }
 
     private static void Dump(LayoutNode node, int depth)

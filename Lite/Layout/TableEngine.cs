@@ -818,7 +818,13 @@ internal static class TableEngine
             var d = ch.GetDisplay();
             if (d == DisplayType.None) continue;
             if (ch.TagName == "BR") { FlushInlineRun(); continue; }
-            var (cMin, cMax) = MeasureIntrinsic(ch, viewportH);
+            // An inline-table child is consumed ATOMICALLY by the inline-run collector (sized
+            // by MeasureTableWidth, cell padding and border-spacing included), so its intrinsic
+            // measure must come from the same table model — recursing into it as plain inline
+            // text under-measures the cell and clamps the inner table narrower than its content.
+            var (cMin, cMax) = d == DisplayType.InlineTable
+                ? IntrinsicSizer.ContentMinMax(ch, viewportH)
+                : MeasureIntrinsic(ch, viewportH);
             var fs = ch.GetFontSize();
             var pad = ch.GetPadding(0f, viewportH, fs);
             var bord = ch.GetBorderWidth();

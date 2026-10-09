@@ -222,9 +222,13 @@ internal static class IntrinsicSizer
 
         if (node.TagName == "BR") { toks.Add(new InlineTok(true, 0f, 0f)); return; }
 
-        // Atomic inlines (inline-block, inline-flex, images, or anything with an explicit width) do
-        // not break internally — they contribute their full outer width to both min and max.
-        if (display is DisplayType.InlineBlock or DisplayType.InlineFlex
+        // Atomic inlines (inline-block, inline-flex, inline-table, images, or anything with an
+        // explicit width) do not break internally — they contribute their full outer width to
+        // both min and max. An inline-table MUST be measured through TableMinMax here: CollectInlineItems
+        // consumes it as one atomic item sized by MeasureTableWidth (cell padding and border-spacing
+        // included), so recursing into it as plain inline text under-measures the run and
+        // shrink-to-fit containers (floats, abs-pos overlays) wrap their content spuriously.
+        if (display is DisplayType.InlineBlock or DisplayType.InlineFlex or DisplayType.InlineTable
             || node.TagName == "IMG" || (node.TagName == "OBJECT" && node.Image != null)
             || node.GetWidth(0) > 0)
         {
