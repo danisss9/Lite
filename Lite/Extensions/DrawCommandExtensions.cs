@@ -1482,19 +1482,47 @@ public static class StyleExtensions
         return raw.Trim();
     }
 
+    // Resolved font-family lists: the first part that names an AVAILABLE font (a provisioned
+    // test font or an installed family, matched exactly apart from case) and its resolved name.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> s_fontFamilyCache = new();
+
     public static string GetFontFamily(this LayoutNode node)
     {
         var value = node.TryResolveStyle(PropertyNames.FontFamily, out var ov)
             ? ov
             : node.Style.GetPropertyValueSafe(PropertyNames.FontFamily);
         if (string.IsNullOrEmpty(value)) return "Arial";
-        var first = value.Split(',')[0].Trim().Trim('"', '\'');
-        return first switch
+        return s_fontFamilyCache.GetOrAdd(value, ResolveFontFamilyList);
+    }
+
+    private static string ResolveFontFamilyList(string value)
+    {
+        // §15.2? family-list matching: each name is tried in order; a QUOTED name's internal
+        // whitespace is significant ("CSSTest   FamilyName" with three spaces must NOT match
+        // the provisioned "CSSTest FamilyName" — Skia's FromFamilyName would fuzzy-match it),
+        // and matching is case-insensitive. The first part that names an available font wins;
+        // generic keywords map to their system implementations.
+        string? firstPart = null;
+        foreach (var rawPart in value.Split(','))
         {
-            "system-ui" or "ui-sans-serif" or "-apple-system" or "BlinkMacSystemFont" => "Segoe UI",
-            "monospace" or "ui-monospace" or "Courier" or "Courier New" => "Consolas",
-            _ => first,
-        };
+            var part = rawPart.Trim();
+            if (part.Length == 0) continue;
+            var name = part.Trim('"', '\'');
+            firstPart ??= name;
+            var mapped = name switch
+            {
+                "system-ui" or "ui-sans-serif" or "-apple-system" or "BlinkMacSystemFont" => "Segoe UI",
+                "monospace" or "ui-monospace" or "Courier" or "Courier New" => "Consolas",
+                _ => name,
+            };
+            if (Lite.Layout.FontRegistry.HasFamily(mapped)) return mapped;
+            using var probe = SKTypeface.FromFamilyName(mapped, SKFontStyleWeight.Normal,
+                SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
+            if (probe is not null && string.Equals(probe.FamilyName, mapped, StringComparison.OrdinalIgnoreCase))
+                return mapped;
+            // Not available: keep trying the remaining parts.
+        }
+        return firstPart ?? "Arial";
     }
 
     private static SKColor GetColor(LayoutNode node, string propertyName, SKColor defaultColor)

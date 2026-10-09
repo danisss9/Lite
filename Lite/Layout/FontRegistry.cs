@@ -70,6 +70,16 @@ internal static class FontRegistry
         return null;
     }
 
+    /// <summary>Whether a provisioned family exists under this exact name (case-insensitive).
+    /// Used by font-family list resolution: a provisioned name wins over Skia's fuzzy
+    /// FromFamilyName matching, which would e.g. let "CSSTest   FamilyName" (three spaces)
+    /// wrongly resolve to "CSSTest FamilyName".</summary>
+    internal static bool HasFamily(string family)
+    {
+        var prefix = family.Trim().Trim('"', '\'') + "|";
+        return _typefaces.Keys.Any(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static string MakeKey(string family, bool bold, bool italic) =>
         $"{family.Trim().Trim('\"', '\'')}|{(bold ? "b" : "n")}|{(italic ? "i" : "n")}";
 }
