@@ -1997,22 +1997,74 @@ internal static class Parser
         return best;
     }
 
+    /// <summary>The value of the 'font' declaration in a rule's raw CSS text, or null. Splits on
+    /// top-level semicolons only (strings and parens are respected), so a quoted family containing
+    /// ';' cannot split the declaration.</summary>
+    private static string? FontDeclarationValue(string cssText)
+    {
+        foreach (var decl in SplitTopLevelDeclarations(cssText))
+        {
+            var colon = decl.IndexOf(':');
+            if (colon <= 0) continue;
+            if (!decl[..colon].Trim().Equals("font", StringComparison.OrdinalIgnoreCase)) continue;
+            var value = decl[(colon + 1)..].Trim();
+            // Strip a trailing !important (the cascade already tracks importance separately).
+            var bang = value.LastIndexOf('!');
+            if (bang > 0 && value[bang..].Trim().StartsWith("!important", StringComparison.OrdinalIgnoreCase))
+                value = value[..bang].Trim();
+            return value.Length == 0 ? null : value;
+        }
+        return null;
+    }
+
+    /// <summary>Splits a declaration block body on semicolons that are not inside strings,
+    /// comments or parentheses.</summary>
+    private static IEnumerable<string> SplitTopLevelDeclarations(string css)
+    {
+        var depth = 0;
+        var start = 0;
+        char quote = '\0';
+        for (var i = 0; i < css.Length; i++)
+        {
+            var ch = css[i];
+            if (quote != '\0')
+            {
+                if (ch == '\\') i++;
+                else if (ch == quote) quote = '\0';
+                continue;
+            }
+            switch (ch)
+            {
+                case '"' or '\'': quote = ch; break;
+                case '(': depth++; break;
+                case ')': depth = Math.Max(0, depth - 1); break;
+                case ';' when depth == 0:
+                    yield return css[start..i];
+                    start = i + 1;
+                    break;
+            }
+        }
+        if (start < css.Length) yield return css[start..];
+    }
+
     /// <summary>Extracts the <c>/<line-height></c> component of a 'font' shorthand value
-    /// (§15.8): a unitless multiplier, a length or a percentage; negative is invalid.</summary>
+    /// (§15.8): a unitless multiplier, a length or a percentage; negative is invalid. The slash
+    /// may carry whitespace on either side — the CSSOM serializes the shorthand as
+    /// <c>font: 20px / 1 Ahem</c> — so the component is the next token AFTER the slash, not the
+    /// remainder of the slash's own whitespace token.</summary>
     private static string? LineHeightComponentOf(string shorthand)
     {
-        foreach (var token in shorthand.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
-        {
-            var slash = token.IndexOf('/');
-            if (slash < 0 || slash == token.Length - 1) continue;
-            var lh = token[(slash + 1)..].Trim();
-            if (lh.Length == 0) return null;
-            var numeric = lh.TrimEnd('%');
-            if (float.TryParse(numeric, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var v) && v >= 0f)
-                return lh;
-            return null;
-        }
+        var slash = shorthand.IndexOf('/');
+        if (slash < 0 || slash == shorthand.Length - 1) return null;
+        var rest = shorthand[(slash + 1)..].TrimStart();
+        if (rest.Length == 0) return null;
+        var end = rest.IndexOfAny(new[] { ' ', '\t' });
+        var lh = (end < 0 ? rest : rest[..end]).Trim();
+        if (lh.Length == 0) return null;
+        var numeric = lh.TrimEnd('%');
+        if (float.TryParse(numeric, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var v) && v >= 0f)
+            return lh;
         return null;
     }
 
@@ -3838,6 +3890,14 @@ internal static class Parser
             if (string.IsNullOrEmpty(styleRule.SelectorText)) continue;
 
             var (props, important) = ParseDeclarations(styleRule.Style.CssText);
+            // The CSSOM serializes a 'font' shorthand with spaces around the size/line-height
+            // slash ("font: 20px / 1 Ahem") and AngleSharp's cascade exposes no line-height
+            // longhand for it, so extract the component from the shorthand text here (§15.8) —
+            // without it every 'font: x/y' rule laid out at 'normal' leading.
+            if (!props.ContainsKey("line-height") &&
+                FontDeclarationValue(styleRule.Style.CssText) is { } fontValue &&
+                LineHeightComponentOf(fontValue) is { } fontLh)
+                props["line-height"] = fontLh;
             // A `background` AngleSharp refused to parse never reaches CssText, so it is merged in
             // from the stylesheet source before the empty-rule check — a rule whose only
             // declaration is such a shorthand would otherwise be dropped outright.

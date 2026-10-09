@@ -52,6 +52,14 @@ public static class TableAnonymousDynamicTests
             $"red 'd' must sit at the green text's d offset ({redD.Rect.Left:0.##} vs {expectedDx:0.##})");
     }
 
+    private static string FindRepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Lite.sln")))
+            dir = dir.Parent;
+        return dir!.FullName;
+    }
+
     private static IEnumerable<LayoutNode> AllNodes(LayoutNode node)
     {
         yield return node;
@@ -106,7 +114,11 @@ public static class TableAnonymousDynamicTests
     {
         // vertical-align-004's exact shape: the font shorthand comes from a <style> RULE (not
         // an inline attribute), so both the shorthand's line-height component and the cascade
-        // walk must agree.
+        // walk must agree. The harness renders this 4px apart with a 28px line box while the
+        // engine is coincident with the fallback font — register the real Ahem so the unit
+        // harness sees the same metrics the conformance harness does.
+        Lite.Layout.FontRegistry.RegisterFile(
+            Path.Combine(FindRepoRoot(), "Lite.Conformance", "vendor", "wpt", "fonts", "Ahem.ttf"));
         var page = Parser.ParseChildPage(
             "<!DOCTYPE html><html><head><style>" +
             "div { font: 20px/1 Ahem; position: relative; }" +

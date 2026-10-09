@@ -409,25 +409,38 @@ public static class StyleExtensions
     /// <summary>Returns the computed line-height in pixels. Falls back to fontSize * 1.4.</summary>
     public static float GetLineHeight(this LayoutNode node, float fontSize)
     {
-        if (node.TryResolveStyle(PropertyNames.LineHeight, out var ov))
+        // A unitless line-height (e.g. `1`, `1.5`) is a font-size MULTIPLIER, not a pixel length —
+        // and it INHERITS AS THE NUMBER (§10.8.1: "computed value: for length and percentage, the
+        // absolute value; otherwise as specified"), so each element multiplies its OWN font-size.
+        // A length inherits as the absolute computed value. Resolve the declaring element up the
+        // ancestor chain: the harness cascade exposes no inherited longhand for a shorthand
+        // component, so a span under `div { font: 20px/1 Ahem }` must find the multiplier on the
+        // div's override and apply it to the span's own 20px — not fall back to 'normal'.
+        for (var n = node; n is not null; n = n.Parent)
         {
-            ov = ov.Trim();
-            if (TryEvalCalc(ov, fontSize, fontSize, fontSize, out var calcPx)) return calcPx;
-            if (ov.EndsWith("px") && float.TryParse(ov[..^2],
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var px))
-                return px;
-            if (float.TryParse(ov,
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var mult))
-                return mult * fontSize;
+            if (n.TryResolveStyle(PropertyNames.LineHeight, out var ov))
+            {
+                ov = ov.Trim();
+                if (TryEvalCalc(ov, fontSize, fontSize, fontSize, out var calcPx)) return calcPx;
+                if (ov.EndsWith("px") && float.TryParse(ov[..^2],
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var px))
+                    return px;
+                if (float.TryParse(ov,
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var mult))
+                    return mult * fontSize;
+                // 'normal' (or an unparseable value) is this element's own cascaded value and
+                // terminates inheritance only when declared HERE; keep walking past it on an
+                // ancestor is wrong, so stop either way — 'normal' means no multiplier applies.
+                break;
+            }
         }
 
-        // A unitless line-height (e.g. `1`, `1.5`) is a font-size MULTIPLIER, not a pixel length —
-        // and it inherits as the number (so it multiplies each element's own font-size). Check the
-        // computed string for a bare number BEFORE the length branch, because AngleSharp surfaces
-        // it as a unitless length that CssUnits.ToPx would otherwise treat as pixels (e.g. `1`→1px,
-        // collapsing every line box to 1px tall). A value with any unit fails the bare-number parse.
+        // Check the computed string for a bare number BEFORE the length branch, because AngleSharp
+        // surfaces it as a unitless length that CssUnits.ToPx would otherwise treat as pixels
+        // (e.g. `1`→1px, collapsing every line box to 1px tall). A value with any unit fails the
+        // bare-number parse.
         var str = node.Style.GetPropertyValueSafe(PropertyNames.LineHeight);
         if (!string.IsNullOrEmpty(str) && str != "normal" &&
             float.TryParse(str, System.Globalization.NumberStyles.Float,
