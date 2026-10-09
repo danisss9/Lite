@@ -446,6 +446,19 @@ internal static class BoxEngine
         var newChildren = new List<LayoutNode>();
         var run = new List<LayoutNode>();
 
+        // True when another misparented table box follows in the child list, skipping
+        // whitespace-only text: such a box continues the current run.
+        bool AnotherMisparentedFollows(int fromIndex)
+        {
+            for (var k = fromIndex + 1; k < node.Children.Count; k++)
+            {
+                var later = node.Children[k];
+                if (later.TagName == "#text" && string.IsNullOrWhiteSpace(later.DisplayText)) continue;
+                return IsMisparentedTableBox(later);
+            }
+            return false;
+        }
+
         void FlushRun()
         {
             if (run.Count == 0) return;
@@ -466,13 +479,23 @@ internal static class BoxEngine
             newChildren.Add(anon);
         }
 
-        foreach (var child in node.Children)
+        for (var i = 0; i < node.Children.Count; i++)
         {
+            var child = node.Children[i];
             if (IsMisparentedTableBox(child)) { run.Add(child); continue; }
-            // Whitespace between misparented table boxes is not content and must not break the run
-            // (or it would split one table into several).
+            // Whitespace strictly BETWEEN two misparented table boxes is table-internal and is
+            // not content (§17.2.1) — it must not split one table into several. Whitespace at the
+            // run's END precedes ordinary inline content, so it belongs to the OUTER inline flow
+            // (§16.6.1) and must survive as the space between the anonymous table and what
+            // follows — dropping it made the red layer of the white-space reftests render
+            // "a bcd" where the reference reads "a bc d".
             if (run.Count > 0 && child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText))
+            {
+                if (AnotherMisparentedFollows(i)) continue;
+                FlushRun();
+                newChildren.Add(child);
                 continue;
+            }
             FlushRun();
             newChildren.Add(child);
         }
