@@ -1,3 +1,4 @@
+using AngleSharp.Css;
 using Lite.Extensions;
 using Lite.Models;
 using SkiaSharp;
@@ -590,9 +591,46 @@ internal static class TableEngine
 
     private static List<RowInfo> CollectRows(LayoutNode table)
     {
+        // §17.2.1: a table-header-group presents its rows above all other rows and a
+        // table-footer-group below them — the same order an explicit thead/tbody/tfoot table
+        // uses — regardless of DOM order. The infer-cells reftests author row-group,
+        // header-group and footer-group spans in interleaved order and expect the anonymous
+        // table to present header rows first.
+        var headers = new List<LayoutNode>();
+        var body = new List<LayoutNode>();
+        var footers = new List<LayoutNode>();
+        foreach (var child in table.Children)
+        {
+            switch (GroupKind(child))
+            {
+                case RowGroupKind.Header: headers.Add(child); break;
+                case RowGroupKind.Footer: footers.Add(child); break;
+                default: body.Add(child); break;
+            }
+        }
         var rows = new List<RowInfo>();
-        CollectRowsFrom(table.Children, rows);
+        CollectRowsFrom(headers, rows);
+        CollectRowsFrom(body, rows);
+        CollectRowsFrom(footers, rows);
         return rows;
+    }
+
+    private enum RowGroupKind { Header, Footer, Other }
+
+    /// <summary>Header/footer classification by the RESOLVED display value (all three group
+    /// kinds compute to DisplayType.TableRowGroup, so the tag and raw value decide).</summary>
+    private static RowGroupKind GroupKind(LayoutNode node)
+    {
+        if (node.TagName is "THEAD") return RowGroupKind.Header;
+        if (node.TagName is "TFOOT") return RowGroupKind.Footer;
+        var raw = node.TryResolveStyle(PropertyNames.Display, out var ov)
+            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.Display);
+        return raw?.Trim() switch
+        {
+            "table-header-group" => RowGroupKind.Header,
+            "table-footer-group" => RowGroupKind.Footer,
+            _ => RowGroupKind.Other,
+        };
     }
 
     private static void CollectRowsFrom(IEnumerable<LayoutNode> children, List<RowInfo> rows)
