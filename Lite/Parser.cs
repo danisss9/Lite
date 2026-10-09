@@ -1089,6 +1089,12 @@ internal static class Parser
         var fontPx = ResolveOwnFontSize(element, parentFontPx);
         node.ComputedFontSize = fontPx;
 
+        // §15.8: the 'font' shorthand's optional /<line-height> component. Nothing expands the
+        // shorthand, so the component used to vanish and the element laid out at 'normal'.
+        if (OwnFontLineHeightDeclaration(element) is { } fontLh &&
+            !node.StyleOverrides.ContainsKey(PropertyNames.LineHeight))
+            node.StyleOverrides[PropertyNames.LineHeight] = fontLh;
+
         // Extract flex-related CSS properties that AngleSharp doesn't cascade
         ExtractMatchedCssProperties(element, node);
 
@@ -1928,6 +1934,66 @@ internal static class Parser
     {
         var declared = OwnFontSizeDeclaration(element);
         return declared is null ? parentPx : ResolveFontSizeValue(declared, parentPx);
+    }
+
+    /// <summary>The line-height component of the winning 'font' shorthand (§15.8's optional
+    /// <c>/<line-height></c>), or null. The declaration block keeps the shorthand as one value
+    /// and nothing expanded it, so <c>font: 20px/1 Ahem</c> left line-height at 'normal' — every
+    /// Ahem vertical-alignment/leading reftest then drew its boxes one half-leading off. A direct
+    /// 'line-height' longhand participates in the same cascade and wins when it outranks the
+    /// shorthand.</summary>
+    private static string? OwnFontLineHeightDeclaration(IElement element)
+    {
+        string? best = null;
+        var bestKey = (Important: false, Specificity: -1, Order: -1);
+
+        foreach (var rule in CssRules)
+        {
+            var isFont = rule.Properties.TryGetValue("font", out var font) &&
+                         !string.IsNullOrWhiteSpace(font) && LineHeightComponentOf(font) is not null;
+            var direct = rule.Properties.TryGetValue("line-height", out var lh) &&
+                         !string.IsNullOrWhiteSpace(lh);
+            if (!isFont && !direct) continue;
+            try { if (!element.Matches(rule.Selector)) continue; }
+            catch { continue; }
+            var key = (rule.ImportantProps.Contains("line-height") || rule.ImportantProps.Contains("font"),
+                       rule.Specificity, rule.Order);
+            if (best is null || key.CompareTo(bestKey) > 0)
+            {
+                best = direct ? lh : LineHeightComponentOf(font!);
+                bestKey = key;
+            }
+        }
+
+        // An inline declaration outranks every non-important rule (CSS 2.1 §6.4.3).
+        if (element.GetAttribute("style") is { Length: > 0 } inline && !bestKey.Important)
+        {
+            var (props, _) = ParseDeclarations(inline);
+            if (props.TryGetValue("line-height", out var direct) && !string.IsNullOrWhiteSpace(direct))
+                return direct;
+            if (props.TryGetValue("font", out var font) && LineHeightComponentOf(font) is { } comp)
+                return comp;
+        }
+        return best;
+    }
+
+    /// <summary>Extracts the <c>/<line-height></c> component of a 'font' shorthand value
+    /// (§15.8): a unitless multiplier, a length or a percentage; negative is invalid.</summary>
+    private static string? LineHeightComponentOf(string shorthand)
+    {
+        foreach (var token in shorthand.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var slash = token.IndexOf('/');
+            if (slash < 0 || slash == token.Length - 1) continue;
+            var lh = token[(slash + 1)..].Trim();
+            if (lh.Length == 0) return null;
+            var numeric = lh.TrimEnd('%');
+            if (float.TryParse(numeric, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var v) && v >= 0f)
+                return lh;
+            return null;
+        }
+        return null;
     }
 
     /// <summary>The winning 'font-size' declaration for the element itself (inline style, then
