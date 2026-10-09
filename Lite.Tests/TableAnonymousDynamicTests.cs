@@ -102,6 +102,35 @@ public static class TableAnonymousDynamicTests
     }
 
     [Test]
+    public static void VerticalAlignZero_LineBoxGeometry()
+    {
+        // vertical-align-004's exact shape: the font shorthand comes from a <style> RULE (not
+        // an inline attribute), so both the shorthand's line-height component and the cascade
+        // walk must agree.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "div { font: 20px/1 Ahem; position: relative; }" +
+            "#d3 { position: absolute; top: 0; }" +
+            "#s1 { vertical-align: -0px; }" +
+            "</style></head><body>" +
+            "<div id=\"d1\"><div id=\"d2\"><span id=\"s1\">X</span></div><div id=\"d3\">X</div></div>" +
+            "</body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var d2 = Find(page.Root, "DIV", "d2");
+        var s1 = Find(page.Root, "SPAN", "s1");
+        var d3 = Find(page.Root, "DIV", "d3");
+        True(d2 != null && s1 != null && d3 != null, "nodes missing");
+        Console.WriteLine($"[va004] d2 lh={d2!.GetLineHeight(d2.GetFontSize()):0.##} normal={d2.IsNormalLineHeight()} box={d2.Box.ContentBox}");
+        Console.WriteLine($"[va004] s1 lh={s1!.GetLineHeight(s1.GetFontSize()):0.##} box={s1!.Box.ContentBox}");
+        Console.WriteLine($"[va004] d3 box={d3!.Box.ContentBox}");
+        foreach (var n in AllNodes(page.Root))
+            foreach (var f in n.InlineFragments ?? [])
+                Console.WriteLine($"[va004] fragment on {n.TagName}#{n.Id}: '{f.Text}' {f.Rect}");
+        True(Math.Abs(s1!.Box.ContentBox.Top - d3!.Box.ContentBox.Top) < 0.5f,
+            $"span and reference must coincide ({s1.Box.ContentBox.Top:0.##} vs {d3.Box.ContentBox.Top:0.##})");
+    }
+
+    [Test]
     public static void DynamicRemoval_WhiteSpaceBand_ShrinkToFitWidth()
     {
         // table-anonymous-objects-170: onload removes the display:table-cell span; the
