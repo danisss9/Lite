@@ -9,7 +9,8 @@ namespace Lite.Conformance.Wpt;
 /// official snapshot was recovered from an archive with an incomplete support/ subtree, so
 /// those cases must report as unsupported execution blockers rather than engine failures —
 /// missing inputs are blockers per the CSS 2.1 plan, never silent failures. Only resources
-/// the render consumes are scanned (stylesheet links, src attributes, CSS url() values);
+/// the render consumes are scanned (stylesheet links, src attributes, CSS url() values and
+/// @import targets);
 /// rel=reference/help/author links are metadata the reference graph resolves from the
 /// suite's own manifest, not render inputs. Resources referenced from linked CSS files are
 /// a known residual gap until the support subtree is recovered from the archive.</summary>
@@ -19,6 +20,13 @@ internal static class SuiteInputs
     private static readonly Regex Attr = new(@"\b(rel|href|src)\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex Src = new(@"\bsrc\s*=\s*""([^""]+)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex UrlValue = new(@"\burl\(\s*(['""]?)(?<ref>[^)""']+)\1\s*\)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    // @import "x.css" / @import url(x.css) inside a <style> block is a render input like a
+    // stylesheet link — the at-charset family imports its (missing) support files exactly this
+    // way, and without the scan those cases executed and failed on pixels instead of reporting
+    // the honest missing-input blocker.
+    private static readonly Regex Import = new(
+        @"@import\s+(?:url\(\s*(['""]?)(?<ref>[^)""']+)\1\s*\)|(['""])(?<ref>[^""]+)\2)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     internal static string? FindMissing(string path)
     {
@@ -45,6 +53,8 @@ internal static class SuiteInputs
             if (IsMissing(baseDir, root, src.Groups[1].Value) is { } missing) return $"{relative} -> {missing}";
         foreach (Match url in UrlValue.Matches(source))
             if (IsMissing(baseDir, root, url.Groups["ref"].Value) is { } missing) return $"{relative} -> {missing}";
+        foreach (Match import in Import.Matches(source))
+            if (IsMissing(baseDir, root, import.Groups["ref"].Value) is { } missing) return $"{relative} -> {missing}";
         return null;
     }
 

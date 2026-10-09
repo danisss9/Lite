@@ -1670,11 +1670,15 @@ internal static class Parser
         if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
         {
             usedCharset = "utf-16le";
+            // §4.4: the encoding detection is done; an @charset naming a DIFFERENT encoding is
+            // the mismatch the suite's "thrown out" tests pin — the sheet must not be applied.
+            if (CharsetContradictsBom(bytes, 2, "utf-16le", bigEndian: false)) return string.Empty;
             return Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
         }
         if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
         {
             usedCharset = "utf-16be";
+            if (CharsetContradictsBom(bytes, 2, "utf-16be", bigEndian: true)) return string.Empty;
             return Encoding.BigEndianUnicode.GetString(bytes, 2, bytes.Length - 2);
         }
 
@@ -1723,6 +1727,22 @@ internal static class Parser
                 return enc.GetString(bytes);
             }
         return Encoding.UTF8.GetString(bytes);
+    }
+
+    /// <summary>True when a BOM-decoded sheet begins with an @charset that names a different
+    /// encoding (§4.4's mismatch: the style sheet is thrown out). A plain "utf-16" declaration
+    /// leaves the endianness to the BOM and matches either side.</summary>
+    private static bool CharsetContradictsBom(byte[] bytes, int offset, string bomCharset, bool bigEndian)
+    {
+        var probe = bigEndian
+            ? Encoding.BigEndianUnicode.GetString(bytes, offset, Math.Min(bytes.Length - offset, 128))
+            : Encoding.Unicode.GetString(bytes, offset, Math.Min(bytes.Length - offset, 128));
+        if (!probe.StartsWith("@charset \"", StringComparison.Ordinal)) return false;
+        var end = probe.IndexOf("\";", 10, StringComparison.Ordinal);
+        if (end <= 10) return false;
+        var declared = probe[10..end].Trim();
+        if (declared.Equals("utf-16", StringComparison.OrdinalIgnoreCase)) return false;
+        return TryGetEncoding(declared)?.WebName.Equals(bomCharset, StringComparison.OrdinalIgnoreCase) != true;
     }
 
     /// <summary>Resolves a charset name to an encoding, or null when it is unknown. The legacy
