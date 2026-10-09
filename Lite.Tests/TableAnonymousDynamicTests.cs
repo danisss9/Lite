@@ -70,6 +70,38 @@ public static class TableAnonymousDynamicTests
     }
 
     [Test]
+    public static void AbsPosTable_CellDoesNotWrap()
+    {
+        // table-anonymous-objects-023's green reference side: an absolutely positioned table
+        // shrink-to-fits so its single cell holds "Some text" on ONE line.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head></head><body>" +
+            "<div style=\"position: relative; font-size: 2em;\">" +
+            "<div id=\"g\" style=\"position: absolute; z-index: 2; top: 0; color: green; padding: 1px;\">" +
+            "<table border=\"5\"><tbody><tr><td>Some text</td></tr></tbody></table>" +
+            "</div></div></body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var table = Find(page.Root, "TABLE");
+        var td = Find(page.Root, "TD");
+        True(table != null && td != null, "table/cell missing");
+        Console.WriteLine($"[023g] table box: {table!.Box.ContentBox} border={table.Box.Border.Left}/{table.Box.Border.Right}");
+        Console.WriteLine($"[023g] td box   : {td!.Box.ContentBox}");
+        var (min, max) = IntrinsicSizer.ContentMinMax(table, 600);
+        Console.WriteLine($"[023g] table intrinsic (min,max) = ({min:0.##}, {max:0.##})");
+        using (var font = TextMeasure.CreateFont(td))
+        {
+            Console.WriteLine($"[023g] MeasureText('Some text') @td font = {font.MeasureText("Some text"):0.##}");
+        }
+        var mw = TableEngine.MeasureTableWidth(table, 500, 800, 600);
+        Console.WriteLine($"[023g] MeasureTableWidth(avail 500) = {mw:0.##}");
+        var fragments = AllNodes(page.Root).SelectMany(n => n.InlineFragments ?? []).ToList();
+        foreach (var f in fragments) Console.WriteLine($"[023g] fragment '{f.Text}' x={f.Rect.Left:0.##} y={f.Rect.Top:0.##}");
+        var textH = td.Box.ContentBox.Height;
+        True(textH < 2 * td.GetLineHeight(td.GetFontSize()),
+            $"cell text wrapped: td height {textH:0.##} for line-height {td.GetLineHeight(td.GetFontSize()):0.##}");
+    }
+
+    [Test]
     public static void DynamicRemoval_WhiteSpaceBand_ShrinkToFitWidth()
     {
         // table-anonymous-objects-170: onload removes the display:table-cell span; the
@@ -146,21 +178,37 @@ public static class TableAnonymousDynamicTests
         // table-anonymous-objects-023: 10 caption<->"" cycles on a td with forced layouts.
         var page = Parser.ParseChildPage(
             "<!DOCTYPE html><html><head></head><body>" +
+            "<div style=\"position: relative; font-size: 2em;\">" +
             "<table border=\"5\"><tbody><tr><td id=\"t\">Some text</td></tr></tbody></table>" +
-            "</body></html>", isSrcdoc: true, "http://test/", 800, 600);
-        var td = Find(page.Root, "TD", "t");
-        True(td != null, "td missing");
+            "</div></body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        var td0 = Find(page.Root, "TD", "t");
+        True(td0 != null, "td missing");
+        Console.WriteLine($"[023] before: fs={td0!.GetFontSize():0.##} computed={td0.ComputedFontSize:0.##}");
         for (var i = 0; i < 10; i++)
         {
             BoxEngine.Layout(page.Root, 800, 600);
-            td!.StyleOverrides["display"] = "table-caption";
+            td0!.StyleOverrides["display"] = "table-caption";
             BoxEngine.Layout(page.Root, 800, 600);
-            td!.StyleOverrides.Remove("display");
+            td0!.StyleOverrides.Remove("display");
             var again = Find(page.Root, "TD", "t");
             True(again != null, $"td dropped after cycle {i}");
+            if (!ReferenceEquals(again, td0)) Console.WriteLine($"[023] cycle {i}: td INSTANCE REPLACED");
+            td0 = again;
         }
         BoxEngine.Layout(page.Root, 800, 600);
-        Console.WriteLine($"[023] td final box: {td!.Box.ContentBox}");
+        Console.WriteLine($"[023] after: fs={td0!.GetFontSize():0.##} computed={td0.ComputedFontSize:0.##}");
+        Console.WriteLine($"[023] td final box: {td0!.Box.ContentBox}");
+        var redTable = Find(page.Root, "TABLE");
+        Console.WriteLine($"[023] cycled table box : {redTable!.Box.ContentBox} border={redTable.Box.Border}");
+        var green = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head></head><body>" +
+            "<div style=\"position: relative; font-size: 2em;\">" +
+            "<div style=\"position: absolute; z-index: 2; top: 0; color: green; padding: 1px;\">" +
+            "<table border=\"5\"><tbody><tr><td>Some text</td></tr></tbody></table>" +
+            "</div></div></body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(green.Root, 800, 600);
+        var greenTable = Find(green.Root, "TABLE");
+        Console.WriteLine($"[023] fresh table box    : {greenTable!.Box.ContentBox} border={greenTable.Box.Border}");
     }
 
     private static LayoutNode? Find(LayoutNode node, string tag, string? id = null)

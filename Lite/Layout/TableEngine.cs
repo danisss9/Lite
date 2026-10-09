@@ -13,7 +13,7 @@ namespace Lite.Layout;
 internal static class TableEngine
 {
     /// <summary>Returns true if the table uses border-collapse: collapse.</summary>
-    private static bool IsBorderCollapse(LayoutNode table)
+    internal static bool IsBorderCollapse(LayoutNode table)
     {
         var raw = table.TryResolveStyle("border-collapse", out var ov)
             ? ov : table.Style.GetPropertyValueSafe("border-collapse");

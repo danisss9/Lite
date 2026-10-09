@@ -133,13 +133,18 @@ internal static class IntrinsicSizer
 
     /// <summary>
     /// Intrinsic widths of a table box. Cells in a row sit side by side, so a row sums its cells;
-    /// a table (or row group) is as wide as its widest row. This is the column model auto table
-    /// layout uses, reduced to the two intrinsic sizes.
+    /// a table (or row group) is as wide as its widest row. The border-spacing that
+    /// <see cref="TableEngine.MeasureTableWidth"/> and <see cref="TableEngine.LayoutTable"/> will
+    /// consume is part of the table's intrinsic width (§17.6.1) — omitting it made every
+    /// shrink-to-fit table (floats, abs-pos overlays) lay out narrower than its own max-content,
+    /// wrapping cell text that fit on one line.
     /// </summary>
     private static (float Min, float Max) TableMinMax(LayoutNode node, float viewportHeight)
     {
         var display = node.GetDisplay();
         var sumsChildren = display == DisplayType.TableRow;
+        var collapse = TableEngine.IsBorderCollapse(node);
+        var spacing = collapse ? 0f : TableEngine.GetBorderSpacing(node).Horizontal;
         float min = 0f, max = 0f;
 
         foreach (var child in node.Children)
@@ -152,6 +157,17 @@ internal static class IntrinsicSizer
             if (sumsChildren) { min += cMin; max += cMax; }
             else { min = Math.Max(min, cMin); max = Math.Max(max, cMax); }
         }
+        if (!sumsChildren) return (min, max);
+
+        // A row sums its cells: the spacing around and between them is part of the row's
+        // width, exactly as MeasureTableWidth's `spacing * (colCount + 1)` total.
+        var rendered = 0;
+        foreach (var child in node.Children)
+            if (child.GetDisplay() != DisplayType.None &&
+                !(child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText)))
+                rendered++;
+        min += spacing * (rendered + 1);
+        max += spacing * (rendered + 1);
         return (min, max);
     }
 
