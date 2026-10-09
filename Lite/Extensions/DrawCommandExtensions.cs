@@ -451,7 +451,13 @@ public static class StyleExtensions
         if (raw is CssLengthValue lh2)
             return CssUnits.ToPx(lh2, fontSize, fontSize, fontSize, fontSize);
 
-        return fontSize * 1.4f;
+        // 'normal' is the FONT's natural line box (ascent+descent), per §10.8.1 and browser
+        // behavior — a flat 1.4em multiple half-led every solid glyph (the Ahem suite's 1in
+        // test glyphs sat 0.2em below their divs and overlapped the reference swatches).
+        using var naturalFont = TextMeasure.CreateFont(node);
+        var m = naturalFont.Metrics;
+        var natural = -m.Ascent + m.Descent;
+        return natural > 0f ? natural : fontSize * 1.4f;
     }
 
     /// <summary>True when 'line-height' computes to 'normal' — i.e. nothing declared a length or a

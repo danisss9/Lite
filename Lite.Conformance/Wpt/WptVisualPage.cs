@@ -64,8 +64,13 @@ internal static class WptVisualPage
         {
             using var bitmap = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>());
             int red = 0;
+            // The suite's convention: failure red is #ff0000 EXACTLY, and expected colors use
+            // "maximum minus one" (#fe0000 and friends) precisely so a strict detector can tell
+            // them apart — the hex-value selftests (color/border-color/outline-color-011/012…)
+            // render their whole swatch in 254-red. Count only exact 255-red, so antialiased
+            // edges and 254-red swatches never read as failure.
             foreach (var pixel in bitmap.Pixels)
-                if (pixel.Red >= 200 && pixel.Green <= 80 && pixel.Blue <= 80) red++;
+                if (pixel.Red == 255 && pixel.Green == 0 && pixel.Blue == 0) red++;
             const string assertion = "Self-describing test shows no failure red (diagnostic)";
             return red == 0
                 ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)

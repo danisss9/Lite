@@ -2064,7 +2064,8 @@ internal static class BoxEngine
             if (node.TagName == "BR")
             {
                 using var brFont = TextMeasure.CreateFont(node);
-                var brH = brFont.Size * 1.4f;
+                // 'normal' line-height is the font's natural box, consistent with GetLineHeight.
+                var brH = -brFont.Metrics.Ascent + brFont.Metrics.Descent;
                 items.Add(new InlineItem(InlineItemKind.LineBreak, node, null, 0, brH,
                            default, default, default, 0, brH, TextMeasure.ComputeAscent(brFont, brH)));
                 continue;
