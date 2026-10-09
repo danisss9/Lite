@@ -1839,8 +1839,9 @@ internal static class BoxEngine
             lineStart = placed.Count;
         }
 
-        foreach (var item in items)
+        foreach (var itemOrig in items)
         {
+            var item = itemOrig;
             if (item.Kind == InlineItemKind.LineBreak)
             {
                 // An otherwise-empty line still needs the <br>'s own font metrics for its height.
@@ -1879,6 +1880,20 @@ internal static class BoxEngine
             if (lineX <= bandLeft && item.Kind == InlineItemKind.Text &&
                 item.Text != null && item.Text.Trim().Length == 0)
                 continue;
+
+            // §16.6.1: collapsible spaces at the START of a line are removed — including the
+            // spaces LEADING a text node that also carries words (" a " opens at the 'a'): the
+            // parser collapses each source text node to " x ", and a bare-text node landing at
+            // a line boundary painted one space too far right (white-space-12 reftests).
+            if (lineX <= bandLeft && item.Kind == InlineItemKind.Text && item.Text is { } leading &&
+                leading.Length > 0 && char.IsWhiteSpace(leading[0]))
+            {
+                var stripped = leading.TrimStart();
+                if (stripped.Length == 0) continue;
+                using (var stripFont = TextMeasure.CreateFont(item.Node))
+                    item = item with { Text = stripped, Width = stripFont.MeasureText(stripped),
+                                       ContentW = stripFont.MeasureText(stripped) };
+            }
 
             // For text items wider than the available space, re-measure with wrapping
             var effectiveItem = item;
