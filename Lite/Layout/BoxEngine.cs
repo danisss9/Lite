@@ -920,6 +920,22 @@ internal static class BoxEngine
         }
 
         var contentX = x + margin.Left + border.Left + padding.Left;
+        // §10.3.3: with a known width and non-auto margins, the difference between the box's
+        // outer sum and the containing-block width goes to the ignored margin — under the
+        // CONTAINING BLOCK's 'direction: rtl' the left margin absorbs it, anchoring the box at
+        // its right edge (the padding-right reftests pull an inner border over an outer one
+        // with a negative right margin, which only lines up when this box anchors right).
+        if (widthIsKnown && !node.IsAutoMarginLeft() && !node.IsAutoMarginRight() &&
+            (node.Parent ?? node).GetDirection() == "rtl")
+        {
+            var fillTarget = availableWidth - margin.Left - margin.Right
+                             - border.Left - border.Right - padding.Left - padding.Right;
+            if (Math.Abs(contentW - fillTarget) > 0.5f)
+            {
+                contentX = x + availableWidth - margin.Right - border.Right - padding.Right
+                             - contentW - padding.Left - border.Left;
+            }
+        }
         var contentY = y + margin.Top + border.Top + padding.Top;
 
         // Resolve this node's explicit height using parentContentHeight for % and viewportHeight for vh/vw.
