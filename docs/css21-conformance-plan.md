@@ -1,6 +1,6 @@
 # Full CSS 2.1 coverage plan
 
-Planning baseline: 17 September 2026. Scope: Windows x64, screen and print, retaining Lite's C#/AngleSharp/Jint/Skia architecture. This document is an implementation plan; it does not change the active compatibility profile or claim that any new coverage has passed.
+Planning baseline: 17 September 2026. Scope: Windows x64, screen media (print and paged media removed from scope on 9 October 2026), retaining Lite's C#/AngleSharp/Jint/Skia architecture. This document is an implementation plan; it does not change the active compatibility profile or claim that any new coverage has passed.
 
 Execution status update, 5 October 2026: the Milestone 1 and 2 scaffolding described below now exists — `Profile/css21-sections.json` (841 sections), `Profile/css21-properties.json` (115 properties), `Profile/css21-requirements.json`, `Css21/css21-applicability.json`, the vendored and hash-pinned 2011-03-23 official suite (9,364 cataloged cases), the `--suite css21-inventory` and `--suite css21-full --media` commands, the `--require-css-ready` gate flag, and `scripts/run-css21-baseline.ps1` with `scripts/aggregate-css21-baseline.py`. The phased remaining-work breakdown at the end of this document sequences the execution; the milestones above remain the normative definition of each package.
 
@@ -26,11 +26,13 @@ Evidence checkpoint, 9 October (source `4401891`): the full-screen baseline repo
 
 Further batches, 9 October (sources `337d009`, `de995dd`): the vertical-align cluster closed. Two more halves surfaced under instrumentation: AngleSharp serializes the font shorthand with spaces around the slash ("font: 20px / 1 Ahem"), so the line-height component extractor's whitespace split found a lone slash token and bailed — the component is now extracted from the shorthand text at rule-collection time whenever the cascade exposes no line-height longhand; and a unitless line-height inherits AS THE NUMBER (§10.8.1), so GetLineHeight now resolves the declaring element up the ancestor chain and multiplies that value against the self font-size — a span under 'div { font: 20px/1 Ahem }' no longer falls back to 'normal' in the browser pipeline, where AngleSharp's cascade exposes no inherited longhand. vertical-align 61 -> 88/92 (31 real failures -> 4). And §10.3.3's over-constrained resolution landed for in-flow blocks: with a known width and non-auto margins the difference goes to the ignored margin — the LEFT one under the CONTAINING BLOCK's rtl — anchoring the box at its right edge (the padding-right reftests pull an inner border over an outer one with margin-right: -4px). The anchor reads the containing block's direction, not the node's own: absolute-non-replaced-width-002 (rtl node, ltr parent, still flush left) caught that distinction when an earlier attempt used the node's own direction and broke the curated gate. padding-right 25 failing -> 80/80. Measured after both batches: floats filter 135/196 (baseline 132), table-anonymous-objects steady 171/204, direction filter at baseline 20/48, unit 308/308, curated gate 52/52. Validating baseline, 9 October late (source `8160290`): the official suite stands at 84.2% (7,613/9,039; 549 real failures, down 109 from the 658 the week opened with; 877 honest unsupported; zero crashes) and WPT at 42.2% (3,781 passing, 124 crashes, parked). The queue now leads with table anonymous objects (33) and block-in-inline insertion (18, reclassified to dynamic-restyling), followed by the ~15-failure families: color, margin-collapse, the four border-*-color swatch families, font-family-name, floats and outline-color. The block-in-inline-insert family (18) moves from the engine queue to dynamic-restyling work: each case inserts blocks into an inline via DOM at onload and matches NEITHER of its two acceptable references (split and nosplit), pointing at the mutation re-projection path rather than static splitting.
 
+Scope change, 9 October (after `f52647f`): print and paged media are removed from the CSS 2.1 plan by project decision. Milestone 9 and Phase 5 above are replaced with scope notes, the completion contract is screen-only, and `css21ProfileReady` is decided by the screen matrix alone. Print-applicable applicability records, the 11 print-only obligations, and `--media print` execution remain published unsupported blockers; `css21PrintReady` stays false.
+
 ## Target and completion contract
 
 Keep the existing [CSS 2.1 Recommendation of 7 June 2011](https://www.w3.org/TR/2011/REC-CSS2-20110607/) as the normative target. Store checksummed copies of its source and a dated copy of the [errata](https://www.w3.org/Style/css2-updates/REC-CSS2-20110607-errata.html). The errata page has Working Draft status: review corrections individually, record their applicability and test impact, and do not silently replace the target with CSS 2.2 or later modules. Where an adopted correction changes the base Recommendation, report that compatibility decision explicitly.
 
-The requested scope includes screen and print rendering, supported HTML and XHTML document modes, dynamic restyling, and CSS user-agent controls. CSS conformance is media-specific; report screen completion separately while print is under development. The [UA conformance requirements](https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance) include alternate stylesheet selection, disabling author styles, and allowing a user stylesheet file. These remain required even though the existing HTML profile excludes browser chrome.
+The requested scope is screen rendering, supported HTML and XHTML document modes, dynamic restyling, and CSS user-agent controls; print and paged media are out of scope (9 October 2026 decision), so print-applicable cases stay published unsupported blockers rather than completion criteria. `css21PrintReady` remains false and out of scope. The [UA conformance requirements](https://www.w3.org/TR/2011/REC-CSS2-20110607/conform.html#conformance) include alternate stylesheet selection, disabling author styles, and allowing a user stylesheet file. These remain required even though the existing HTML profile excludes browser chrome.
 
 [Appendix A](https://www.w3.org/TR/2011/REC-CSS2-20110607/aural.html) is informative and does not require a speech renderer. Classify every section and appendix by its actual normative status, including the normative stacking rules in Appendix E. The grammar appendix is informative; parsing obligations come from the normative syntax, selector, and property definitions. Keep modern extensions such as flexbox, custom properties, `rem`, and `initial`/`unset` in their existing regression coverage without counting them as CSS 2.1 requirements. Record cases where newer specifications intentionally differ from the pinned target.
 
@@ -64,15 +66,15 @@ Inventory every property and shorthand, legal value family, initial value, inher
 
 Classify candidate tests as applicable, mixed-version, later-feature-only, informative/optional, duplicate, or defective, with a precise justification. A missing engine feature or unsupported harness capability remains an applicable blocker. A duplicate is an alias to a canonical test while distinct document/media variants remain separately accounted for. Replacement tests for defects must cover the original obligation and retain provenance.
 
-Extend the profile and schema without changing historical profiles. Add `css21ScreenReady`, `css21PrintReady`, `css21ProfileReady`, per-media blocker lists, and computed obligation/test coverage counts. Add proposed `--suite css21-inventory` and `--require-css-ready` commands. Keep HTML, ECMAScript, CSS, and combined `releaseReady` results distinct. Preserve `--suite css21` as the existing fast regression gate.
+Extend the profile and schema without changing historical profiles. Add `css21ScreenReady` and `css21ProfileReady` (print readiness stays out of scope: `css21PrintReady` remains false), per-media blocker lists, and computed obligation/test coverage counts. Add proposed `--suite css21-inventory` and `--require-css-ready` commands. Keep HTML, ECMAScript, CSS, and combined `releaseReady` results distinct. Preserve `--suite css21` as the existing fast regression gate.
 
 **Exit:** every section is reviewed; every applicable obligation has a stable record; every candidate case/variant is classified; omissions are detected from the pinned catalogs rather than trusted completion flags. Readiness stays false until execution evidence is complete.
 
 ## Milestone 2: trustworthy full-suite execution
 
-Import and checksum the [official 23 March 2011 suite](https://www.w3.org/Style/CSS/Test/CSS2.1/20110323/), including HTML, XHTML, other-format cases, references, metadata, fonts, images, and licenses. Catalog print applicability as well as screen applicability. The printer conversion is noncanonical and may introduce conversion errors; review it separately. Retain the pinned WPT CSS2 corpus as complementary evidence and classify tests that depend on later CSS specifications.
+Import and checksum the [official 23 March 2011 suite](https://www.w3.org/Style/CSS/Test/CSS2.1/20110323/), including HTML, XHTML, other-format cases, references, metadata, fonts, images, and licenses. Catalog print applicability so print-only cases are published blockers rather than silent omissions (they are not executed: print is out of scope). Retain the pinned WPT CSS2 corpus as complementary evidence and classify tests that depend on later CSS specifications.
 
-Add proposed `--suite css21-full --media screen|print`, with filtering for diagnosis and complete sharding for evidence collection. Share catalog, serving, rendering, and evidence code with the newer WPT runner where practical. A filtered run can contribute individual results but cannot declare a complete suite by itself.
+Add proposed `--suite css21-full --media screen` (the print value exists in the CLI and reports every case unsupported), with filtering for diagnosis and complete sharding for evidence collection. Share catalog, serving, rendering, and evidence code with the newer WPT runner where practical. A filtered run can contribute individual results but cannot declare a complete suite by itself.
 
 Required runner work:
 
@@ -83,7 +85,7 @@ Required runner work:
 - Provision and fingerprint Ahem and special test fonts. Make generic/system font choices, DPI, locale, page dimensions, device color settings, and UA defaults reproducible. Respect tests requiring a viewport wider than the legacy 600px configuration.
 - Isolate cases and reference documents. Audit shared font/resource/style state so one page cannot change another page's result.
 - Add harness regression fixtures for reference alternatives/chains, equality and inequality, resource failures, blank-page false positives, delayed resources, viewport/DPI metadata, page count, and stale/missing evidence. Some legitimate tests are blank, so use known sanity fixtures and load assertions rather than a blanket nonblank rule.
-- Record source/binary/input identities, document mode, medium, render settings, dependencies, and artifacts. Produce expected/actual/diff images, geometry/style diagnostics, and per-page print output. Extend existing manual evidence validation for native controls and printer checks.
+- Record source/binary/input identities, document mode, medium, render settings, dependencies, and artifacts. Produce expected/actual/diff images, geometry/style diagnostics, and per-case artifacts. Extend existing manual evidence validation for native controls.
 
 **Exit:** every applicable case has an execution route, and a complete baseline reports pass/fail/unsupported/manual-pending/timeout/crash separately. No silent skip can become a pass. Runtime and failure clusters are measured before estimating the remaining work.
 
@@ -115,21 +117,11 @@ Each work package starts with its failing applicable test cluster, implements th
 
 Use logical formatting boxes and paint fragments separate from source DOM identity so anonymous-box generation, reflow, and pagination do not mutate the authoritative document. Preserve source text for whitespace/bidi processing. Scope the necessary model changes to rendering dependencies while coordinating with the existing DOM work.
 
-**Screen exit:** all applicable screen obligations and test variants pass, including interactive user-agent requirements, with no incomplete mappings or unsupported cases. `css21ScreenReady` can become true while the combined CSS gate remains false pending print.
+**Screen exit:** all applicable screen obligations and test variants pass, including interactive user-agent requirements, with no incomplete mappings or unsupported cases. `css21ScreenReady` and then `css21ProfileReady` become eligible once the profile reflects the print removal (print cases stay blockers, not criteria).
 
-## Milestone 9: print and paged media
+## Milestone 9: print and paged media - REMOVED FROM SCOPE
 
-Add an explicit rendering context shared by style resolution, layout, and painting: media type, CSS viewport, device scale, font environment, physical page dimensions, and margins. Host-selected paper size belongs in render options; do not require later-CSS page-size features to satisfy CSS 2.1.
-
-Implement a pagination layer over the formatting/fragment model, with page-specific layout and painting rather than slicing a tall screen screenshot. Proposed code: `Lite/Layout/PagedLayoutEngine.cs`, page/fragment result models, and print support in `Drawer` and the native host.
-
-Cover `@media print`, stylesheet media selection, `@page` margins and first/left/right page selectors, page-context cascade, page boxes and content outside them, page-break-before/after/inside, allowed/forced/avoided breaks, widows/orphans, oversized/unbreakable content, and page-relative fixed positioning. Audit interactions with margins, floats, tables, backgrounds, clipping, counters, and generated content. Implement or document permitted choices such as repeated table headers according to the pinned specification. The normative basis is [chapter 13](https://www.w3.org/TR/2011/REC-CSS2-20110607/page.html), supplemented by print-specific rules elsewhere in CSS 2.1.
-
-Provide a deterministic paginated output API and PDF export, then connect the same results to Windows print/preview. Keep print layout separate from the live screen document's state so printing and changing paper settings cannot alter the on-screen page. Use the same page geometry for exported artifacts and native output.
-
-Print tests compare page count, page dimensions, per-page geometry, and per-page images; they also verify content is neither lost nor duplicated. Exercise page parity, forced blank pages, repeated fixed content, nested avoidance, widow/orphan constraints, long tables, oversized content, and differing paper sizes. Add native preview/print-to-file checks and recorded manual physical-printer checks for output scaling and device behavior.
-
-**Print exit:** all applicable print obligations and variants pass through the paginated pipeline, supported native output is verified, and screen/print switching is isolated. `css21PrintReady` and then `css21ProfileReady` become eligible.
+Removed on 9 October 2026 by project decision. Chapter 13 (paged media) and the print medium are no longer completion criteria: `@media print` stays rejected by `MediaQueryEvaluator`, `--media print` execution stays entirely unsupported, print-applicable applicability records stay classified with media ["print"] as published blockers, and the 11 print-only obligations in `css21-requirements.json` stay `untested`. `css21PrintReady` remains false and is not part of any gate. The chapter-13 review content already committed (sections, applicability) is retained as honest inventory, not as a promise of execution. Should print return to scope, the shared render-context groundwork in the milestones above is the prerequisite.
 
 ## Milestone 10: final audit and permanent gates
 
@@ -139,8 +131,8 @@ Add CSS-specific gate regressions: missing requirement/test/variant, edited comp
 
 CI progression:
 
-1. Pull requests run inventory validation, focused unit tests, the existing curated CSS gate, changed feature clusters, and a small print smoke set once available.
-2. Scheduled jobs run the complete screen and print matrix with deterministic inputs and retained diagnostics. During implementation publish every failure; promote completed feature groups into required gates.
+1. Pull requests run inventory validation, focused unit tests, the existing curated CSS gate, and changed feature clusters.
+2. Scheduled jobs run the complete screen matrix with deterministic inputs and retained diagnostics. During implementation publish every failure; promote completed feature groups into required gates.
 3. A CSS completion/release claim requires fresh full evidence and `--require-css-ready`. Package publishing and overall HTML/CSS/ES readiness remain separate decisions; CSS completion alone does not imply `releaseReady`.
 
 Investigate Acid2 and keep its regression visible throughout. Map its CSS failures to obligations, diagnose other HTML/image dependencies separately, and verify against an independent reference. Never regenerate Lite's stored baseline to turn a failure into a pass, and never use Acid2 as a substitute for the requirement inventory.
@@ -149,7 +141,7 @@ The final CSS gate requires all applicable obligations and cases to be accounted
 
 ## Delivery order and validation
 
-Implement inventory/gates first, then full-suite execution. Start the render-context and fragment-model work during the foundations phase so print does not require a second layout redesign. Complete the screen work packages in dependency order: box/sizing, floats/positioning, inline/font behavior, tables, and paint/content/UI; implement print once these shared foundations are stable. Close with the full audit and claim gate.
+Implement inventory/gates first, then full-suite execution. Complete the screen work packages in dependency order: box/sizing, floats/positioning, inline/font behavior, tables, and paint/content/UI. Close with the full audit and claim gate.
 
 Each change should deliver a reviewed obligation mapping, a reproducer or applicable upstream case, the implementation, relevant regression evidence, and an updated blocker report. Runtime baselines from milestone 2 determine practical shard counts and estimates; a reliable completion date cannot be inferred from the 52-entry curated suite.
 
@@ -161,7 +153,7 @@ Assessed 5 October 2026 from the committed trackers (`compatibility-report.json`
 
 - Done: the curated 52-entry gate (green, CI-enforced); official-suite vendoring with a verified tree hash and catalog; the readiness and inventory machinery (`Css21Inventory` fail-closed gates, schemas, blocker computation); screen behavior with focused regressions for box model, margin collapsing, block-in-inline, anonymous tables, float basics, absolute-position equations, replaced sizing, inline struts, generated content, counters, and Appendix E paint-order basics; three profile obligations marked `implemented`.
 - At zero: section, property, obligation, and test reviews (841 sections, 115 properties, 5 seed obligations, 0 of 9,364 official plus 9,290 WPT cases classified); the full-suite baseline artifact; Acid2 still recorded as `failing`.
-- Known engine gaps: no document-owned stylesheet origins (UA CSS injected as an ordinary style element); no user controls (alternate sets, author-style disable, user stylesheet) — the four `css21.ua.*` hard blockers; print rejected by `MediaQueryEvaluator` and no pagination layer; `FontRegistry` static and cleared per load.
+- Known engine gaps: no document-owned stylesheet origins (UA CSS injected as an ordinary style element); no user controls (alternate sets, author-style disable, user stylesheet) — the four `css21.ua.*` hard blockers; print rejected by `MediaQueryEvaluator` and no pagination layer (out of scope since 9 October 2026); `FontRegistry` static and cleared per load.
 
 ### Phase 1 — full screen baseline (closes Milestone 2's execution exit)
 
@@ -186,7 +178,7 @@ Exit: the five review blockers (`css21-sections-review-incomplete`, `css21-prope
 
 ### Phase 3 — foundations (Milestone 3), driven by reviewed-failing clusters
 
-Document-owned stylesheet records with real UA, user, and author origins replacing the style-element injection; public host options plus example UI for alternate sets, author-style disable, and a user stylesheet file (closing the four `css21.ua.*` blockers); one cascade path for initial load and dynamic change; complete PropertyTable metadata; tokenization, error recovery, escapes, shorthand reset, `inherit`; the section 4.4 encoding-precedence audit; `@import` ordering, media restrictions, and cycles; complete selector behavior and genuine XHTML MIME dispatch (coordinated with the HTML workstream; remove unconditional entity decoding only once document-mode tests exist); enable `print` in `MediaQueryEvaluator` as the prerequisite for print execution.
+Document-owned stylesheet records with real UA, user, and author origins replacing the style-element injection; public host options plus example UI for alternate sets, author-style disable, and a user stylesheet file (closing the four `css21.ua.*` blockers); one cascade path for initial load and dynamic change; complete PropertyTable metadata; tokenization, error recovery, escapes, shorthand reset, `inherit`; the section 4.4 encoding-precedence audit; `@import` ordering, media restrictions, and cycles; complete selector behavior and genuine XHTML MIME dispatch (coordinated with the HTML workstream; remove unconditional entity decoding only once document-mode tests exist); `MediaQueryEvaluator` keeps rejecting `print` (out of scope).
 
 Exit: syntax, selector, cascade, and media obligations pass in both document modes; static and dynamic changes agree; user controls work through the host.
 
@@ -196,18 +188,16 @@ Each package: run its failing cluster, implement the behavior, add focused regre
 
 Exit: all applicable screen obligations pass; the computed `css21ScreenReady` verdict is published as evidence (not yet enforced); scheduled CI gains the screen matrix as diagnostics.
 
-### Phase 5 — print and paged media (Milestone 9)
+### Phase 5 — print and paged media — REMOVED FROM SCOPE
 
-Introduce the shared render context (media, viewport, device scale, page geometry); implement `Lite/Layout/PagedLayoutEngine.cs` as real pagination, not screenshot slicing; cover `@page` margins and first/left/right selectors, page-break properties, widows and orphans, page-relative fixed positioning; expose a deterministic paginated output API, PDF export, and Windows print/preview. Then run the print baseline, finish the print applicability review, and close the chapter-13 obligations.
-
-Exit: `css21PrintReady` and then `css21ProfileReady` become eligible.
+Removed on 9 October 2026 by project decision (see Milestone 9). No print execution, applicability execution, or pagination work is planned; print-only obligations stay `untested` and print-applicable cases stay published blockers. `css21ProfileReady` is decided by the screen matrix alone.
 
 ### Phase 6 — final audit and enforcement (Milestone 10)
 
-Run the full screen and print matrix on one identified build; publish obligation coverage separately from suite pass rates; add the CSS gate-hygiene regressions to `Css21CoverageTests`; rewrite `docs/css21-conformance.md` as the completed-program record; add `--require-css-ready` to CI and release only once the verdict is true. The overall profile claim stays `development-non-conforming` until the HTML and ES2020 tracks' remaining gates are settled.
+Run the full screen matrix on one identified build; publish obligation coverage separately from suite pass rates; add the CSS gate-hygiene regressions to `Css21CoverageTests`; rewrite `docs/css21-conformance.md` as the completed-program record; add `--require-css-ready` to CI and release only once the verdict is true. The overall profile claim stays `development-non-conforming` until the HTML and ES2020 tracks' remaining gates are settled.
 
 ### Standing constraints
 
 - Edit only the `css21.*` profile prefix and the `Lite.Conformance/Css21/*` plus `Profile/css21-*` artifacts; keep the html5 and es2020 gates green (coordination rules in `docs/html5-conformance-plan.md`).
 - One build identity per evidence set: rebuild after source changes and never mix identities; expected-fail waivers are published in the profile and lapse automatically when a waived test passes.
-- The long poles are the 18,654-case applicability reviews (mitigated by generator scripts and batch commits) and the print pipeline (largest new engine component); the Phase 1 baseline wall time calibrates all later estimates.
+- The long poles were the 18,654-case applicability reviews (closed 7 October) and the screen engine queue; the Phase 1 baseline wall time calibrates all later estimates.
