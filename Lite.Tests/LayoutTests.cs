@@ -359,6 +359,110 @@ public static class LayoutTests
         True(Math.Abs((w1 + w2) - 300f) < 1.5f, $"columns should fill the 300px table (got {w1 + w2})");
     }
 
+    // -- §8.3.1/§9.5.2 clearance (the margin-collapse-clear-* reftest family) --
+
+    // A style object carrying a real 1px black top border (GetBorderWidth reads node.Style,
+    // not StyleOverrides), standing in for the reftests' bordered parent containers.
+    private static readonly ICssStyleDeclarationCache _borderedStyle = new();
+    private static LayoutNode BorderedParent(params LayoutNode[] children)
+    {
+        var node = new LayoutNode(null, "DIV", "",
+            Parser.ParseFragment("<div style=\"border-top: 1px solid black\"></div>")[0].Style);
+        node.StyleOverrides["display"] = "block";
+        node.StyleOverrides["width"] = "200px";
+        foreach (var side in new[] { "right", "bottom", "left" })
+            node.StyleOverrides[$"border-{side}-width"] = "0";
+        foreach (var c in children) node.AddChild(c);
+        return node;
+    }
+
+    private static LayoutNode Float(Dictionary<string, string> styles, params LayoutNode[] children)
+    {
+        var node = Block(styles, children);
+        node.StyleOverrides["float"] = "left";
+        return node;
+    }
+
+    [Test]
+    public static void Clearance_Positive_PinsChainInsideParent()
+    {
+        // margin-collapse-clear-012: parent(border-top 1px) > float 100x100; empty cleared box
+        // (clear:left, mt 40, mb 80); empty sibling (mb 140). Clearance = 100-40 = 60; the cleared
+        // box's border edge lands at the float bottom (100); its collapsed chain with the sibling
+        // (collapse(40, 80, 0, 140) = 140) does NOT escape the parent's bottom: the parent's
+        // height covers the chain below its border edge (100 + 140 - 40 = 200).
+        var parent = BorderedParent(
+            Float(new() { ["height"] = "100px", ["width"] = "100px" }),
+            Block(new() { ["clear"] = "left", ["margin-top"] = "40px", ["margin-bottom"] = "80px" }),
+            Block(new() { ["margin-bottom"] = "140px" }));
+        LayoutTree(parent);
+        var cleared = parent.Children[1];
+        var sibling = parent.Children[2];
+        System.Console.WriteLine($"DBG parent.Top={parent.Box.BorderBox.Top} parent.mt={parent.Box.Margin.Top} parent.borderTop={parent.Box.Border.Top} float.Top={parent.Children[0].Box.BorderBox.Top} float.mt={parent.Children[0].Box.Margin.Top} cleared.Top={cleared.Box.BorderBox.Top} cleared.mt={cleared.Box.Margin.Top} sibling.Top={sibling.Box.BorderBox.Top} parentH={parent.Box.BorderBox.Height}");
+        True(Math.Abs(cleared.Box.BorderBox.Top - 101f) < 1f,
+            $"cleared box border edge must be at the float bottom (101), got {cleared.Box.BorderBox.Top}");
+        True(Math.Abs(parent.Box.BorderBox.Height - 201f) < 1f,
+            $"parent height must be 1 + 200 (chain stays inside), got {parent.Box.BorderBox.Height}");
+        // The empty sibling sits inside the collapsed chain's extent (its border edge at the
+        // chain origin + the collapsed margin); only the parent's height is visible geometry.
+    }
+
+    [Test]
+    public static void Clearance_Negative_BorderEdgeAtFloatBottom()
+    {
+        // margin-collapse-clear-014: sibling (mb 100, empty), float 100x100, cleared box (mt 120,
+        // mb 0). Hypothetical border edge = collapse(100,120) = 120; float bottom (placed at
+        // runY+pending=100) = 200 > 120 → clearance introduced with C = 200 - (100+120) = -20;
+        // margins severed (100 + 120 both apply) so the border edge = 200. Parent height 200.
+        var parent = BorderedParent(
+            Block(new() { ["margin-bottom"] = "100px" }),
+            Float(new() { ["height"] = "100px", ["width"] = "100px" }),
+            Block(new() { ["clear"] = "left", ["margin-top"] = "120px" }));
+        LayoutTree(parent);
+        var cleared = parent.Children[2];
+        True(Math.Abs(cleared.Box.BorderBox.Top - 201f) < 1f,
+            $"cleared box border edge must be at the float bottom (201), got {cleared.Box.BorderBox.Top}");
+        True(Math.Abs(parent.Box.BorderBox.Height - 201f) < 1f,
+            $"parent height must be 1 + 200, got {parent.Box.BorderBox.Height}");
+    }
+
+    [Test]
+    public static void Clearance_NotNeeded_KeepsNormalCollapse()
+    {
+        // margin-collapse-clear-015: float 100x100; cleared box (mt 0) containing a child with
+        // height 60 and margin-top 140. Hypothetical border edge = 140 > float bottom 100 → no
+        // clearance; the box collapses with the running margin normally and its child's margin
+        // collapses through it: border edge at 140, bottom at 200.
+        var parent = BorderedParent(
+            Float(new() { ["height"] = "100px", ["width"] = "100px" }),
+            Block(new() { ["clear"] = "left" },
+                Block(new() { ["height"] = "60px", ["margin-top"] = "140px" })));
+        LayoutTree(parent);
+        var cleared = parent.Children[1];
+        True(Math.Abs(cleared.Box.BorderBox.Top - 141f) < 1f,
+            $"cleared box border edge must be at the hypothetical (141), got {cleared.Box.BorderBox.Top}");
+        True(Math.Abs(parent.Box.BorderBox.Height - 201f) < 1f,
+            $"parent height must be 1 + 200, got {parent.Box.BorderBox.Height}");
+    }
+
+    [Test]
+    public static void Clearance_KeepsFloatsAndClearRegressionsGreen()
+    {
+        // Guard the pre-existing float-clear behaviour: a 50x50 float, then a cleared 20-high box
+        // with margin-top 10 — the box's border edge goes to the float bottom (50), its margin
+        // above is plain spacing (no clearance math without a float overhang conflict).
+        var parent = Block(new() { ["width"] = "200px" },
+            Float(new() { ["height"] = "50px", ["width"] = "50px" }),
+            Block(new() { ["clear"] = "left", ["margin-top"] = "10px", ["height"] = "20px" }));
+        LayoutTree(parent);
+        var cleared = parent.Children[1];
+        var floatTop = parent.Children[0].Box.BorderBox.Top;
+        True(Math.Abs(cleared.Box.BorderBox.Top - floatTop - 50f) < 1f,
+            $"cleared box border edge must be 50 below the float top, got {cleared.Box.BorderBox.Top - floatTop}");
+        True(Math.Abs(parent.Box.BorderBox.Height - 70f) < 1f,
+            $"parent must contain the cleared box (70), got {parent.Box.BorderBox.Height}");
+    }
+
     [Test]
     public static void SelfCollapsingBlock_CollapsesAllAdjoiningMargins()
     {

@@ -1493,6 +1493,11 @@ internal static class BoxEngine
         var pendingMargin = 0f;
         var firstBlockSeen = false;
         var lastPlacedWasBlock = false;
+        // §8.3.1: when a self-collapsing box with clearance collapses, its collapsed margin
+        // chain does NOT collapse with the parent's bottom margin — the chain stays inside the
+        // parent's height. True while the LAST adjoining chain contains such a box; a committed
+        // box or inline run below it ends the chain (its own trailing margin escapes normally).
+        var chainSeveredByClearance = false;
         // The line box a following float may join (§9.5.1): NaN once a block-level box has been
         // placed, since there is then no open line.
         var openLineY = float.NaN;
@@ -1538,13 +1543,16 @@ internal static class BoxEngine
             var clear = child.GetClear();
             var isBlockLevel = display == DisplayType.Block || display == DisplayType.ListItem
                             || display == DisplayType.Flex || display == DisplayType.Table;
-            if (clear != ClearType.None && (floatSide != FloatType.None || isBlockLevel))
+            // FLOATS with clear keep the cursor-adjust form (the float's margin box starts at the
+            // cleared position). Block-level boxes are handled inside their branch below, where
+            // the §9.5.2 clearance computation needs the hypothetical border edge.
+            if (clear != ClearType.None && floatSide != FloatType.None)
             {
-                var cleared = ApplyClear(clear, floats, runY + pendingMargin);
-                RetireFloats(floats, cleared);
+                var clearedForFloat = ApplyClear(clear, floats, runY + pendingMargin);
+                RetireFloats(floats, clearedForFloat);
                 // Keep runY + pendingMargin == cleared so the running margin still collapses with the
                 // next box exactly as before (clearance behaviour unchanged).
-                runY = cleared - pendingMargin;
+                runY = clearedForFloat - pendingMargin;
             }
 
             // Handle floated elements — taken out of normal flow but affect available width
@@ -1581,6 +1589,34 @@ internal static class BoxEngine
                 firstBlockSeen = true;
 
                 var borderTop = runY + gap;
+                // §9.5.2 clearance for block-level boxes: the hypothetical border edge is where
+                // this box would sit with clear:none (runY + gap). If that is not past the
+                // relevant floats, clearance is introduced: the border edge goes to the float
+                // bottom, and the margins ABOVE are severed — the preceding collapsed margin and
+                // this box's own top margin both apply as plain spacing inside the parent
+                // (§8.3.1: "clearance inhibits margin collapsing and acts as spacing above the
+                // margin-top"). The space runY..borderTop then holds pendingMargin +
+                // childEffectiveTop + C, with C possibly negative (down to keeping the edge at
+                // the hypothetical position).
+                var clearanceSevered = false;
+                if (clear != ClearType.None)
+                {
+                    var clearedBorder = ApplyClear(clear, floats, borderTop);
+                    if (clearedBorder > borderTop)
+                    {
+                        borderTop = clearedBorder;
+                        pendingMargin = 0f;
+                        clearanceSevered = true;
+                        chainSeveredByClearance = true;
+                        // The chain below (this box's own collapsed-through margins plus
+                        // following self-collapsing siblings) is adjoining from the box's top
+                        // margin edge — borderTop − childEffectiveTop — not from runY: the
+                        // following siblings' top margins collapse with the chain from there.
+                        runY = borderTop - childEffectiveTop;
+                    }
+                    RetireFloats(floats, borderTop);
+                }
+
                 var (effX, effW) = AvailableBand(floats, borderTop, 1, contentX, contentW);
                 var (h, childBottomMargin) = LayoutBlock(child, effX, borderTop - childMarginTop, effW,
                                                          viewportWidth, viewportHeight, parentContentHeight, floats);
@@ -1593,7 +1629,7 @@ internal static class BoxEngine
                 if (borderBoxH <= 0.01f && !EstablishesBlockFormattingContext(child))
                 {
                     var own = CollapseMargins(childEffectiveTop, childBottomMargin);
-                    pendingMargin = firstChildCollapse ? own : CollapseMargins(pendingMargin, own);
+                    pendingMargin = firstChildCollapse && !clearanceSevered ? own : CollapseMargins(pendingMargin, own);
                 }
                 else
                 {
@@ -1601,6 +1637,7 @@ internal static class BoxEngine
                     // its own last-child collapse-through) bottom margin becomes the running margin.
                     runY = borderTop + borderBoxH;
                     pendingMargin = childBottomMargin;
+                    chainSeveredByClearance = false; // a committed box ends the severed chain
                 }
                 lastPlacedWasBlock = true;
                 openLineY = float.NaN; // a block-level box closes any open line box
@@ -1640,6 +1677,7 @@ internal static class BoxEngine
                 // line box) and lays out at the committed position.
                 runY += pendingMargin;
                 pendingMargin = 0f;
+                chainSeveredByClearance = false; // a line box ends the severed chain
                 var runH = LayoutInlineRun(run, contentX, runY, contentW, viewportWidth, viewportHeight,
                                            floats, out var lastLineTop, out var lastLineWidth);
                 // Remember where the run's last line box sits: a float that comes right after it
@@ -1653,14 +1691,19 @@ internal static class BoxEngine
 
         // A block formatting context grows to contain its floats (CSS 2.1 §10.6.7); a non-BFC
         // block does not — its floats belong to an ancestor BFC and overflow this box. The last
-        // in-flow block child's bottom margin can collapse through only if no float extends past it.
+        // in-flow block child's bottom margin can collapse through only if no float extends past
+        // it, and (§8.3.1) not at all when the chain was severed by clearance: the resulting
+        // collapsed margin does not collapse with the parent block's bottom margin — it stays
+        // inside the parent's height (runY was set to the chain's origin when the severed box
+        // folded, so runY + pendingMargin already spans the chain's full extent).
         var contentBottom = runY + pendingMargin;
         var flowBottom = contentBottom;
         if (ownsFloatContext)
             foreach (var f in floats)
                 contentBottom = Math.Max(contentBottom, f.Bottom);
 
-        trailingMargin = (lastPlacedWasBlock && contentBottom <= flowBottom) ? pendingMargin : 0f;
+        trailingMargin = (lastPlacedWasBlock && contentBottom <= flowBottom && !chainSeveredByClearance)
+            ? pendingMargin : 0f;
         return (contentBottom - contentY) - trailingMargin;
     }
 
