@@ -572,6 +572,7 @@ internal static class Parser
                 .Replace("<![CDATA[", string.Empty, StringComparison.Ordinal)
                 .Replace("]]>", string.Empty, StringComparison.Ordinal);
             cleaned = NormalizeSignedZero(cleaned);
+            cleaned = NormalizeColorRanges(cleaned);
             if (cleaned != text) styleEl.TextContent = cleaned;
         }
 
@@ -2244,6 +2245,50 @@ internal static class Parser
         string.IsNullOrEmpty(css) || (!css.Contains("-0") && !css.Contains("+0"))
             ? css
             : System.Text.RegularExpressions.Regex.Replace(css, @"(?<=[:\s,(])[+-]0(?![\d.])", "0");
+
+    /// <summary>
+    /// Clamps out-of-range rgb()/rgba() components (§4.2.1/§4.2.2: "Values outside the device
+    /// gamut should be clipped": percentage components to [0,100], number components to [0,255]).
+    /// AngleSharp fails to parse an over-range value and DROPS the whole declaration, so
+    /// <c>rgb(101%, 0%, 0%)</c> — which must render exactly like #ff0000 — silently inherited;
+    /// the suite's -078 swatch family asserts precisely this clamping.
+    /// </summary>
+    private static string NormalizeColorRanges(string css)
+    {
+        if (string.IsNullOrEmpty(css) ||
+            !(css.Contains("rgb(", StringComparison.OrdinalIgnoreCase) || css.Contains("rgba(", StringComparison.OrdinalIgnoreCase)))
+            return css;
+
+        return System.Text.RegularExpressions.Regex.Replace(css,
+            @"rgba?\(([^)]*)\)",
+            match =>
+            {
+                var parts = match.Groups[1].Value.Split(',');
+                if (parts.Length < 3) return match.Value;
+                var clamped = new string[parts.Length];
+                for (var i = 0; i < parts.Length; i++)
+                {
+                    var part = parts[i].Trim();
+                    // Skip the CSS3 alpha comma-form's optional trailing component and anything
+                    // that isn't a bare number/percentage (space-separated modern syntax, var()…).
+                    var isPercent = part.EndsWith("%", StringComparison.Ordinal);
+                    var numeric = isPercent ? part[..^1] : part;
+                    if (!float.TryParse(numeric, System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out var value))
+                    {
+                        clamped[i] = parts[i];
+                        continue;
+                    }
+                    var limit = isPercent ? 100f : 255f;
+                    var fixedValue = Math.Clamp(value, 0f, limit);
+                    clamped[i] = fixedValue == value ? parts[i]
+                        : fixedValue.ToString("0.############", System.Globalization.CultureInfo.InvariantCulture)
+                          + (isPercent ? "%" : "");
+                }
+                return $"{match.Value[..match.Value.IndexOf('(')]}({string.Join(", ", clamped)})";
+            },
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
 
     /// <summary>
     /// The 'display' a ::before/::after box should use. Defaults to 'inline' (the initial value for

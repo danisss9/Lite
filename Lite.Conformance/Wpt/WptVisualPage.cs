@@ -74,9 +74,29 @@ internal static class WptVisualPage
             var (bitmap, root) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>());
             using (bitmap)
             {
+                // The suite's Ahem font-requirement notice ("Ahem_font_required_for_this_test.")
+                // is a red element BY DESIGN (white text on a red background) — it states the
+                // test's font dependency, not a failure. Exclude its box from the red scan.
+                var notices = new List<SKRectI>();
+                CollectNoticeBoxes(root, notices);
+
                 int red = 0;
-                foreach (var pixel in bitmap.Pixels)
-                    if (pixel.Red == 255 && pixel.Green == 0 && pixel.Blue == 0) red++;
+                var pixels = bitmap.Pixels;
+                var bitmapWidth = bitmap.Width;
+                for (int i = 0; i < pixels.Length; i++)
+                {
+                    var pixel = pixels[i];
+                    if (pixel.Red == 255 && pixel.Green == 0 && pixel.Blue == 0)
+                    {
+                        int x = i % bitmapWidth, y = i / bitmapWidth;
+                        bool inNotice = false;
+                        foreach (var n in notices)
+                        {
+                            if (n.Contains(x, y)) { inNotice = true; break; }
+                        }
+                        if (!inNotice) red++;
+                    }
+                }
                 const string assertion = "Self-describing test shows no failure red (diagnostic)";
                 if (red == 0)
                     return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
@@ -122,6 +142,19 @@ internal static class WptVisualPage
     }
 
     private static readonly SKColor PageBackground = new(255, 255, 255);
+
+    /// <summary>Collects the border boxes of the suite's standard Ahem font-requirement
+    /// notice (<c>Ahem_font_required_for_this_test.</c>, white on red) — a red element by
+    /// design that the no-red scan must ignore.</summary>
+    private static void CollectNoticeBoxes(Lite.Models.LayoutNode node, List<SKRectI> boxes)
+    {
+        if (node.DisplayText.Contains("Ahem_font_required_for_this_test", StringComparison.Ordinal))
+        {
+            var b = node.Box.BorderBox;
+            boxes.Add(new SKRectI((int)b.Left, (int)b.Top, (int)b.Right, (int)b.Bottom));
+        }
+        foreach (var child in node.Children) CollectNoticeBoxes(child, boxes);
+    }
 
     private static Lite.Models.LayoutNode? FindBoxById(Lite.Models.LayoutNode node, string id, out SKRectI? box)
     {

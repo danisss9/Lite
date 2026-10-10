@@ -1651,6 +1651,27 @@ internal static class BoxEngine
                 {
                     var own = CollapseMargins(childEffectiveTop, childBottomMargin);
                     pendingMargin = firstChildCollapse && !clearanceSevered ? own : CollapseMargins(pendingMargin, own);
+                    // §8.3.1: a self-collapsing box's border box sits at the BOTTOM of its
+                    // collapsed margin chain — the chain is spent above the box, so its
+                    // containing block for absolutely-positioned descendants (and any paint
+                    // origin) lands where the following content will (margin-collapse-137:
+                    // the abs child's top:0 must coincide with the following sibling the chain
+                    // flows into). The first-child escape part of the chain went ABOVE the
+                    // parent instead, so it is subtracted to keep that placement unchanged.
+                    // A box carrying its own text contains a line box and is NOT self-
+                    // collapsing (its text paints from its own position, margin-collapse-130).
+                    if (!clearanceSevered && string.IsNullOrEmpty(child.DisplayText))
+                    {
+                        var collapsedBorderTop = runY + pendingMargin - (firstChildCollapse ? childEffectiveTop : 0f);
+                        var dy = collapsedBorderTop - borderTop;
+                        if (MathF.Abs(dy) > 0.01f)
+                        {
+                            var box = child.Box;
+                            box.ContentBox = new SKRect(box.ContentBox.Left, box.ContentBox.Top + dy,
+                                box.ContentBox.Right, box.ContentBox.Bottom + dy);
+                            child.Box = box;
+                        }
+                    }
                 }
                 else
                 {
