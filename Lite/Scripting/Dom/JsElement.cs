@@ -203,9 +203,18 @@ public class JsElement
         get => DomNode?.TextContent ?? GetTextContentRecursive(Node);
         set
         {
-            if (DomNode is not null) DomNode.TextContent = value;
-            Node.Children.Clear();
-            Node.TextOverride = value;
+            if (DomNode is not null)
+            {
+                // The DOM replacement (a single text node) is authoritative; re-projection
+                // syncs the folded text and drops the LayoutNode children that went away.
+                DomNode.TextContent = value;
+                ReProjectAfterMutation();
+            }
+            else
+            {
+                Node.Children.Clear();
+                Node.TextOverride = value;
+            }
         }
     }
 
@@ -1149,13 +1158,26 @@ public class JsElement
         if (IsAncestor(child.Node, Node))
             throw new InvalidOperationException("The new child element contains the parent.");
         if (DomNode is { } parentDom && child.DomNode is { } childDom)
+        {
+            // Mirror into the authoritative DOM first, then rebuild this element's LayoutNode
+            // children in DOM order. A direct splice cannot find its insertion point once the
+            // layout normalizers have wrapped children in anonymous boxes (block-in-inline
+            // pieces, anonymous table rows/cells) — re-projection restores DOM order instead.
             parentDom.AppendChild(childDom);
-        // Remove from old rendering parent if attached.
-        child.Node.Parent?.Children.Remove(child.Node);
-        Node.AddChild(child.Node);
-        StyleResolver.ApplyTree(child.Node);
-        var prev = Node.Children.Count >= 2 ? Node.Children[^2] : null;
-        MutationObserverRegistry.NotifyChildList(_engine, Node, [child.Node], null, prev, null);
+            ReProjectAfterMutation();
+            var idx = Node.Children.IndexOf(child.Node);
+            var prev = idx > 0 ? Node.Children[idx - 1] : null;
+            MutationObserverRegistry.NotifyChildList(_engine, Node, [child.Node], null, prev, null);
+        }
+        else
+        {
+            // Layout-only fallback (no DOM mirror): the LayoutNode tree is the authority.
+            child.Node.Parent?.Children.Remove(child.Node);
+            Node.AddChild(child.Node);
+            StyleResolver.ApplyTree(child.Node);
+            var prev = Node.Children.Count >= 2 ? Node.Children[^2] : null;
+            MutationObserverRegistry.NotifyChildList(_engine, Node, [child.Node], null, prev, null);
+        }
         child.ExecuteInsertedScript();
         child.LoadInsertedIframe();
         return child;
@@ -1169,13 +1191,20 @@ public class JsElement
             if (!ReferenceEquals(childDom.Parent, parentDom))
                 ThrowDom("NotFoundError", "The node to be removed is not a child of this node.");
             parentDom.RemoveChild(childDom);
+            var idx = Node.Children.IndexOf(child.Node);
+            var prev = idx > 0 ? Node.Children[idx - 1] : null;
+            var next = idx >= 0 && idx + 1 < Node.Children.Count ? Node.Children[idx + 1] : null;
+            ReProjectAfterMutation();
+            child.Node.Parent = null;
+            MutationObserverRegistry.NotifyChildList(_engine, Node, null, [child.Node], prev, next);
+            return child;
         }
-        var idx = Node.Children.IndexOf(child.Node);
-        var prev = idx > 0 ? Node.Children[idx - 1] : null;
-        var next = idx >= 0 && idx + 1 < Node.Children.Count ? Node.Children[idx + 1] : null;
+        var layoutIdx = Node.Children.IndexOf(child.Node);
+        var layoutPrev = layoutIdx > 0 ? Node.Children[layoutIdx - 1] : null;
+        var layoutNext = layoutIdx >= 0 && layoutIdx + 1 < Node.Children.Count ? Node.Children[layoutIdx + 1] : null;
         Node.Children.Remove(child.Node);
         child.Node.Parent = null;
-        MutationObserverRegistry.NotifyChildList(_engine, Node, null, [child.Node], prev, next);
+        MutationObserverRegistry.NotifyChildList(_engine, Node, null, [child.Node], layoutPrev, layoutNext);
         return child;
     }
 
@@ -1190,6 +1219,12 @@ public class JsElement
             if (refNode?.DomNode is { } reference && !ReferenceEquals(reference.Parent, parentDom))
                 ThrowDom("NotFoundError", "Reference node not found");
             parentDom.InsertBefore(childDom, refNode?.DomNode);
+            ReProjectAfterMutation();
+            StyleResolver.ApplyTree(newNode.Node);
+            MutationObserverRegistry.NotifyChildList(_engine, Node, [newNode.Node], null, null, refNode?.Node);
+            newNode.ExecuteInsertedScript();
+            newNode.LoadInsertedIframe();
+            return newNode;
         }
         newNode.Node.Parent?.Children.Remove(newNode.Node);
         if (refNode is null)
@@ -1222,6 +1257,12 @@ public class JsElement
             if (!ReferenceEquals(oldDom.Parent, parentDom))
                 ThrowDom("NotFoundError", "Old node not found");
             parentDom.ReplaceChild(newDom, oldDom);
+            ReProjectAfterMutation();
+            StyleResolver.ApplyTree(newNode.Node);
+            oldNode.Node.Parent = null;
+            newNode.ExecuteInsertedScript();
+            newNode.LoadInsertedIframe();
+            return oldNode;
         }
         // Remove newNode from its old parent first (may shift indices)
         newNode.Node.Parent?.Children.Remove(newNode.Node);
@@ -1252,6 +1293,9 @@ public class JsElement
                 StyleResolver.ApplyTree(layout);
                 inserted.Add(layout);
             }
+            // The splices above placed every node; the re-projection restores DOM order for the
+            // DOM-backed ones (repairing any normalizer-wrapped topology) and is a no-op otherwise.
+            ReProjectAfterMutation();
             RunInsertedHooks(inserted);
         }
 
@@ -1268,6 +1312,7 @@ public class JsElement
                 StyleResolver.ApplyTree(layout);
                 inserted.Add(layout);
             }
+            ReProjectAfterMutation();
             RunInsertedHooks(inserted);
         }
 
@@ -1383,6 +1428,17 @@ public class JsElement
         private void MirrorAppend(INode? dom)
         {
             if (dom is not null && DomNode is { } parentDom) parentDom.AppendChild(dom);
+        }
+
+        /// <summary>After the AngleSharp DOM was mutated, rebuilds <paramref name="target"/>'s
+        /// (default: this element's) LayoutNode child list in DOM order — see
+        /// <see cref="Parser.ReProjectChildren"/>. Pages without a DOM mirror (layout-only
+        /// fallback) keep the direct splices their mutation performed.</summary>
+        private void ReProjectAfterMutation(LayoutNode? target = null)
+        {
+            var node = target ?? Node;
+            if (node.DomNode is IElement parentElement && node.DocumentState is { } owner)
+                Parser.ReProjectChildren(parentElement, owner);
         }
 
         /// <summary>Runs the inserted-content hooks (script execution, iframe load) after the whole

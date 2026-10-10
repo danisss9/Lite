@@ -41,8 +41,14 @@ public class LayoutNode
     /// (anonymous-table generation §17.2.1); Text is readonly, so the flag keeps the
     /// normalization pass idempotent.</summary>
     internal bool OwnTextMigratedToChild { get; set; }
-    public string Text { get; }
-    public ICssStyleDeclaration Style { get; }
+    public string Text { get; private set; }
+
+    /// <summary>Rewrites the node's own folded text after a DOM mutation (mutation
+    /// re-projection), mirroring what a fresh parse of the same markup would produce. This —
+    /// not <see cref="TextOverride"/> — is what the anonymous-table fixup migrates and the
+    /// painter draws for an element whose content is its own text.</summary>
+    internal void SetOwnText(string text) => Text = text;
+    public ICssStyleDeclaration Style { get; internal set; }
     /// <summary>The element's href. Backed by <see cref="Attributes"/> (see <see cref="Id"/>).</summary>
     public string? Href => Attributes.GetValueOrDefault("href");
     public LayoutNode? Parent { get; set; }
@@ -231,6 +237,11 @@ public class LayoutNode
 
     public string? TextOverride { get; set; }
     public string DisplayText => TextOverride ?? Text;
+    /// <summary>Set when block-in-inline suppression (BoxEngine.SuppressSharedStyleBorder)
+    /// removed a border this box would otherwise inherit from a SHARED style object.
+    /// GetBorderWidth honours this flag because it deliberately does not honour StyleOverrides
+    /// globally (Acid2 depends on shared-style border reads).</summary>
+    public bool SharedBorderSuppressed { get; set; }
     public List<EventListenerEntry> EventListeners { get; } = [];
     /// <summary>
     /// Neutralises the NON-INHERITED properties a synthesized box (an anonymous table box, a

@@ -48,11 +48,15 @@ public static class DynamicTableTests
         var cell = Find(span, "#anon-cell");
         True(cell != null, "expected an anonymous cell");
         var texts = cell!.Children.Where(c => c.TagName == "#text").ToList();
-        Equal(2, texts.Count);
+        True(texts.Count >= 1, "cell must carry text");
         True(texts.All(t => t.GetDisplay() == DisplayType.Inline),
             "cell text runs must be inline");
-        True(texts[0].Box.BorderBox.Top == texts[1].Box.BorderBox.Top,
-            "the appended text must share the first text's line, not stack");
+        True(texts.All(t => t.Box.BorderBox.Top == texts[0].Box.BorderBox.Top),
+            "all cell text must share the first text's line, not stack");
+        // Mutation re-projection folds the appended text into the span's own text, so the cell
+        // materializes one "bc" run; the old direct splice kept two children. Either way the
+        // painted run must read "bc".
+        Equal("bc", string.Concat(texts.Select(t => t.DisplayText)).Trim());
         var b = Find(page.Root, "BODY");
         using var bmp = Drawer.DrawToBitmap(800, 600, page.Root, new Viewport { ViewportHeight = 600 });
         True(bmp.Width > 0, "page must render");

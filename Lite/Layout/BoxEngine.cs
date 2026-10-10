@@ -244,6 +244,9 @@ internal static class BoxEngine
             block.StyleOverrides[$"border-{side}-style"] = "none";
             block.StyleOverrides[$"border-{side}-width"] = "0";
         }
+        // GetBorderWidth ignores StyleOverrides by design (Acid2), so the suppression needs the
+        // explicit flag to keep the inherited border out of the hoisted block's layout height.
+        block.SharedBorderSuppressed = true;
     }
 
     /// <summary>An empty inline piece (or one holding only collapsible whitespace) generates no

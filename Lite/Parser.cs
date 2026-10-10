@@ -3463,6 +3463,258 @@ internal static class Parser
         }
     }
 
+    /// <summary>
+    /// Re-projects an already-rendered element's DOM children onto its LayoutNode after a DOM
+    /// mutation (appendChild/insertBefore/…). Unlike <see cref="ProjectChildren"/> — a full
+    /// rebuild for never-rendered markup — this reuses the LayoutNode already bound to each DOM
+    /// child (first-bind-wins, <see cref="DocumentState.FindBound"/>) and rebuilds the child
+    /// list in DOM order. That is what repairs the stale topology the layout normalizers leave
+    /// behind: the block-in-inline splitter (§9.2.1.1) detaches the original inline element node
+    /// in favour of anonymous pieces, and the anonymous-table wrappers splice children into
+    /// <c>#anon-*</c> boxes, so a direct LayoutNode splice can no longer find its reference node
+    /// (it lives inside a piece) and falls off the end of the list. Re-projection restores DOM
+    /// order after every mutation; the normalizers then regenerate their anonymous boxes from
+    /// the repaired tree on the next layout pass.
+    /// </summary>
+    internal static void ReProjectChildren(IElement context, DocumentState owner)
+    {
+        var layout = owner.FindBound(context);
+        if (layout is null) return; // never rendered — nothing to re-project
+
+        var previous = Current;
+        Current = owner.ParserContext ?? new ParseState
+        {
+            Document = owner.Document,
+            BaseUrl = owner.Address,
+            DocumentBaseUrl = owner.BaseUrl,
+            Session = owner.Session
+        };
+        if (owner.ParserContext is null) Current.CssRules.AddRange(owner.StyleRules);
+        // Same fragment discipline as ProjectChildren: scripts in the subtree are parsed but
+        // never queued — the JS insertion hooks own execution for programmatically-inserted nodes.
+        var wasFragment = Current.IsFragment;
+        Current.IsFragment = true;
+        var savedCounters = _counters.ToDictionary(kv => kv.Key, kv => new List<int>(kv.Value));
+        var savedVerbose = _verbose;
+        _verbose = false;
+        try
+        {
+            ReProjectInto(layout, context, owner);
+            // Programmatically-created projections carry NeedsStyleResolution; reused nodes
+            // resolved long ago. ApplyTree applies only where the flag is still set, so this is
+            // a no-op walk for the common reuse case.
+            StyleResolver.ApplyTree(layout);
+        }
+        finally
+        {
+            Current.IsFragment = wasFragment;
+            _verbose = savedVerbose;
+            _counters.Clear();
+            foreach (var kv in savedCounters) _counters[kv.Key] = kv.Value;
+            Current = previous;
+        }
+    }
+
+    /// <summary>True for an element child that turns a parent into mixed content (the
+    /// <see cref="Traverse"/> hasMixedChildren test): anything but script and the projected-
+    /// but-never-rendered tags. When no such child exists, the parent keeps Traverse's folded
+    /// representation — its own text carries the content, and no #text children exist.</summary>
+    private static bool CountsAsMixedChild(IElement element)
+    {
+        var tag = element.TagName.ToUpperInvariant();
+        return tag != "SCRIPT" && !SkipTags.Contains(tag);
+    }
+
+    private static void ReProjectInto(LayoutNode layout, IElement dom, DocumentState owner)
+    {
+        if (!dom.ChildNodes.OfType<IElement>().Any(CountsAsMixedChild))
+        {
+            SyncFoldedText(layout, dom, owner);
+            return;
+        }
+
+        // Synthetic parse-time children (::before/::after/::first-letter, DomNode-less) have no
+        // DOM node to project from; keep them, anchored where CreatePseudoElementChildren put
+        // them. A previous normalize pass may have spliced them INSIDE #anon-* wrappers (a
+        // table-cell ::after is wrapped with the real cells), so harvest them back out to
+        // direct-child position — the normalizers will re-wrap them identically. Split pieces
+        // and wrapper husks themselves are functions of the current tree (the normalizers
+        // rebuild them next layout), so they are dropped.
+        var leading = new List<LayoutNode>();
+        var trailing = new List<LayoutNode>();
+        HarvestSyntheticPseudos(layout, leading, trailing);
+
+        var rebuilt = new List<LayoutNode>(leading);
+        foreach (var child in dom.ChildNodes)
+        {
+            switch (child)
+            {
+                case IText text:
+                {
+                    var rendered = CollapseWhitespace(text.Data);
+                    if (rendered.Length == 0) break;
+                    if (owner.FindBound(text) is { } bound && bound.TagName == "#text"
+                        && ReferenceEquals(bound.DomNode, text))
+                    {
+                        // Pick up .data mutations; the bound node keeps its identity and style.
+                        if (bound.DisplayText != rendered) bound.TextOverride = rendered;
+                        rebuilt.Add(bound);
+                    }
+                    else
+                    {
+                        var projection = new LayoutNode(null, "#text", rendered, ComputeCurrentStyle(dom))
+                        {
+                            DomNode = text
+                        };
+                        projection.ResetNonInheritedStyles();
+                        projection.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "inline";
+                        owner.Bind(projection);
+                        rebuilt.Add(projection);
+                    }
+                    break;
+                }
+                case IElement element:
+                {
+                    var tag = element.TagName.ToUpperInvariant();
+                    if (SkipTags.Contains(tag))
+                    {
+                        // Projected but never rendered (style/link/…): keep the parse-time box.
+                        if (owner.FindBound(element) is { } skip) rebuilt.Add(skip);
+                        break;
+                    }
+                    if (owner.FindBound(element) is { } bound && ReferenceEquals(bound.DomNode, element))
+                    {
+                        // Recurse: the reused subtree's child lists are the thing that went
+                        // stale (splits hoisted its children into anonymous pieces).
+                        ReProjectInto(bound, element, owner);
+                        rebuilt.Add(bound);
+                    }
+                    else
+                    {
+                        var fresh = Traverse(element, 0);
+                        owner.Bind(fresh);
+                        rebuilt.Add(fresh);
+                    }
+                    break;
+                }
+                // comments / processing instructions never render
+            }
+        }
+        rebuilt.AddRange(trailing);
+
+        layout.Children.Clear();
+        foreach (var c in rebuilt)
+        {
+            c.Parent = layout;
+            layout.Children.Add(c);
+        }
+    }
+
+    /// <summary>Syncs the folded-text representation of a parent whose DOM children are all
+    /// text (or empty): Traverse stores such content as the node's own text, not as #text
+    /// children. The exception is the pseudo-element fixup, which materializes the own text as
+    /// an unbound #text child (keeping boundary spaces around ::before/::after) — that carrier
+    /// is updated in place rather than the element's own text.</summary>
+    /// <summary>Pulls DomNode-less generated-content nodes (#pseudo-before/::after/first-letter)
+    /// out of <paramref name="layout"/>'s child list — and out of any DomNode-less anonymous
+    /// wrappers they were spliced into by a previous normalize pass — collecting them into the
+    /// leading (::before, ::first-letter) and trailing (::after) buckets for re-anchoring.</summary>
+    private static void HarvestSyntheticPseudos(LayoutNode layout, List<LayoutNode> leading, List<LayoutNode> trailing)
+    {
+        foreach (var child in layout.Children.ToList())
+        {
+            if (child.DomNode is null && child.TagName.StartsWith("#pseudo", StringComparison.Ordinal))
+            {
+                layout.Children.Remove(child);
+                (child.TagName == "#pseudo-after" ? trailing : leading).Add(child);
+            }
+            else if (child.DomNode is null)
+            {
+                HarvestSyntheticPseudos(child, leading, trailing);
+            }
+        }
+    }
+
+    /// <summary>Materializes the element's DOM text children as bound #text layout children
+    /// (the mixed-content representation Traverse builds), inserted between the preserved
+    /// leading/trailing synthetic children. Used when the folded own-text representation cannot
+    /// carry the content: generated-content pseudos sit in the child list, or the own text was
+    /// already migrated into the anonymous-table structure. <paramref name="covered"/> is the
+    /// already-represented collapsed text (the migrated own text) — DOM text nodes composing it
+    /// are skipped so the content is not duplicated.</summary>
+    private static void MaterializeTextChildren(LayoutNode layout, IElement dom, DocumentState owner,
+        List<LayoutNode> leading, List<LayoutNode> trailing, string covered = "")
+    {
+        var created = new List<LayoutNode>();
+        var accumulated = "";
+        foreach (var t in dom.ChildNodes.OfType<IText>())
+        {
+            var rendered = CollapseWhitespace(t.Data);
+            if (rendered.Length == 0) continue;
+            accumulated += rendered;
+            if (covered.Length > 0 && accumulated.Length <= covered.Length
+                && covered.StartsWith(accumulated, StringComparison.Ordinal)) continue;
+            var textChild = new LayoutNode(null, "#text", rendered, layout.Style) { DomNode = t };
+            textChild.ResetNonInheritedStyles();
+            textChild.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "inline";
+            owner.Bind(textChild);
+            created.Add(textChild);
+        }
+        if (created.Count == 0) return;
+        layout.SetOwnText(""); // the folded form must not double-paint beside the children
+        layout.Children.Clear();
+        foreach (var c in leading.Concat(created).Concat(trailing)) layout.Children.Add(c);
+    }
+
+    private static void SyncFoldedText(LayoutNode layout, IElement dom, DocumentState owner)
+    {
+        // Children whose DOM node no longer belongs to this element were removed or moved by
+        // script; the textContent setter replaces element children with a single text node.
+        layout.Children.RemoveAll(c => c.DomNode is { } d && !ReferenceEquals(d.Parent, dom));
+
+        var raw = string.Concat(dom.ChildNodes.OfType<IText>().Select(t => t.Data));
+        var ws = layout.Style.GetPropertyValueSafe("white-space")?.Trim().ToLowerInvariant();
+        var preserves = ws is "pre" or "pre-wrap";
+        var collapsed = NormalizeTextWhitespace(raw, ws);
+        var boundaryKept = preserves ? collapsed : collapsed.Trim();
+
+        var textChildren = layout.Children.Where(c => c.TagName == "#text").ToList();
+        if (textChildren.Count > 0)
+        {
+            // One text carrier suffices; the collapsed form keeps the boundary spaces (a line's
+            // leading/trailing spaces are stripped by the §16.6.1 line assembly, not here).
+            var first = textChildren[0];
+            if (first.DisplayText != collapsed) first.TextOverride = collapsed;
+            foreach (var extra in textChildren.Skip(1)) layout.Children.Remove(extra);
+        }
+        else if (layout.Children.Any(c => c.DomNode is null && c.TagName.StartsWith("#pseudo", StringComparison.Ordinal))
+                 && layout.Children.All(c => c.DomNode is not null
+                     || c.TagName.StartsWith("#pseudo", StringComparison.Ordinal)))
+        {
+            MaterializeTextChildren(layout, dom, owner,
+                leading: layout.Children.Where(c => c.TagName != "#pseudo-after").ToList(),
+                trailing: layout.Children.Where(c => c.TagName == "#pseudo-after").ToList());
+        }
+        else if (layout.OwnTextMigratedToChild)
+        {
+            // The anonymous-table migration already turned this node's own text into a #text
+            // child (now living inside #anon-* wrappers). Writing the folded text back would
+            // double-represent content the unwrap/rewrap cycle can no longer heal — materialize
+            // only the NEW DOM text as children; the next normalize pass re-wraps them into
+            // the same anonymous cell.
+            MaterializeTextChildren(layout, dom, owner,
+                leading: [.. layout.Children], trailing: [], covered: layout.DisplayText);
+        }
+        else if (layout.DisplayText != boundaryKept)
+        {
+            // The folded representation: write the node's OWN text (as a fresh parse of the
+            // same markup would), so every consumer — the anonymous-table migration, the
+            // painter, textContent — sees the mutation. Clear any stale override first.
+            layout.TextOverride = null;
+            layout.SetOwnText(boundaryKept);
+        }
+    }
+
     private static void QueueParsedDetailsNotifications(LayoutNode node, JsEngine engine)
     {
         if (node.TagName == "DETAILS" && node.Attributes.ContainsKey("open"))

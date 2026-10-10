@@ -1325,13 +1325,21 @@ public static class StyleExtensions
     };
 
     // Border widths
-    public static EdgeSizes GetBorderWidth(this LayoutNode node) => new()
+    public static EdgeSizes GetBorderWidth(this LayoutNode node)
     {
-        Top = GetBorderSideWidth(node, PropertyNames.BorderTopWidth),
-        Right = GetBorderSideWidth(node, PropertyNames.BorderRightWidth),
-        Bottom = GetBorderSideWidth(node, PropertyNames.BorderBottomWidth),
-        Left = GetBorderSideWidth(node, PropertyNames.BorderLeftWidth),
-    };
+        // A block hoisted out of a broken inline (§9.2.1.1) that shares the inline's style object
+        // has its inherited border suppressed — but GetBorderSideWidth deliberately ignores
+        // StyleOverrides (honouring them globally broke Acid2's pseudo/anonymous boxes), so the
+        // suppression must be readable here through the explicit flag.
+        if (node.SharedBorderSuppressed) return default;
+        return new()
+        {
+            Top = GetBorderSideWidth(node, PropertyNames.BorderTopWidth),
+            Right = GetBorderSideWidth(node, PropertyNames.BorderRightWidth),
+            Bottom = GetBorderSideWidth(node, PropertyNames.BorderBottomWidth),
+            Left = GetBorderSideWidth(node, PropertyNames.BorderLeftWidth),
+        };
+    }
 
     public static SKColor GetBorderTopColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderTopColor, SKColors.Black);
     public static SKColor GetBorderRightColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderRightColor, SKColors.Black);

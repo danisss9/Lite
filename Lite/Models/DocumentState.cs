@@ -1,3 +1,4 @@
+using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
 using Lite.Network;
 
@@ -39,6 +40,13 @@ internal sealed class DocumentState(IDocument? document, string address, string 
         }
     }
 
+    /// <summary>The rendering object already bound to a DOM node, if one exists — without
+    /// creating a lazy projection. This is the reuse lookup for mutation re-projection:
+    /// first-bind-wins means a parsed element keeps its LayoutNode identity across mutations,
+    /// which is what lets re-projection survive the layout normalizers' anonymous wrappers.</summary>
+    internal LayoutNode? FindBound(INode node)
+        => _layoutByDom.TryGetValue(node, out var bound) ? bound : null;
+
     // A DOM node can have no rendering object (head, comments, detached nodes, etc.).
     // Its lightweight projection exists only for legacy rendering/interaction callers;
     // the AngleSharp node retains identity, content and tree ownership.
@@ -65,8 +73,21 @@ internal sealed class DocumentState(IDocument? document, string address, string 
             // writes back to the element, and enumerating element.Attributes while its own
             // SetAttribute runs would throw "Collection was modified".
             if (key is IElement elementNode)
+            {
                 foreach (var attribute in elementNode.Attributes)
                     projection.Attributes[attribute.Name] = attribute.Value;
+                // The element gets its OWN computed cascade, not the borrowed render-root style:
+                // the root's computed 'display' (block) used to pass off as the projection's own,
+                // so a JS-created <span> laid out block-level. This is the same computation
+                // Traverse performs for parsed elements (UA sheet block list, author rules).
+                projection.Style = elementNode.ComputeCurrentStyle();
+            }
+            else if (key is IText)
+            {
+                // Text projections get the same explicit inline the parser gives #text children
+                // (they share their originating element's style object, which may not be inline).
+                projection.StyleOverrides["display"] = "inline";
+            }
             projection.DomNode = key;
             // Keep disconnected trees disconnected. A non-rendered ancestor is represented
             // lazily but is never inserted into the rendering children list.
