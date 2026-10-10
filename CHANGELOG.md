@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-10
+
 This work completes the ES2020 compatibility program: the compatibility profile now reports `es2020ProfileReady` true with zero blockers, and compatibility CI and NuGet release validation enforce it.
 
 - **Full ECMA-262 11th edition support is established.** The required language corpus grew to 67,117 Test262 executions across eight deterministic Windows shards — all passing with zero failures, zero expected failures, and zero waivers — and the browser JavaScript host suite grew to 20 passing cases covering module fetch options, identity, realms, error and rejection reporting, jobs and readiness, `document.all`, and the shared language/agent configuration.
