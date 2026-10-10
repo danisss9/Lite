@@ -142,6 +142,17 @@ internal static class IntrinsicSizer
     private static (float Min, float Max) TableMinMax(LayoutNode node, float viewportHeight)
     {
         var display = node.GetDisplay();
+        // Tables and row groups size by their COLUMNS (§17.5.2.1's preferred width): the
+        // per-column max across rows, summed. Delegating to the layout side's own measure
+        // keeps shrink-to-fit identical to the width the table actually gets — taking the
+        // widest ROW under-measured whenever rows distribute their columns differently
+        // (a lone wide cell under five narrow ones measured 276px against a 439px layout).
+        if (display is DisplayType.Table or DisplayType.InlineTable or DisplayType.TableRowGroup)
+        {
+            var (sumMin, sumMax, cols) = TableEngine.MeasureTableContentWidths(node, 0f, viewportHeight);
+            return cols == 0 ? (0f, 0f) : (sumMin, sumMax);
+        }
+
         var sumsChildren = display == DisplayType.TableRow;
         var collapse = TableEngine.IsBorderCollapse(node);
         var spacing = collapse ? 0f : TableEngine.GetBorderSpacing(node).Horizontal;

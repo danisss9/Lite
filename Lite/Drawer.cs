@@ -582,8 +582,12 @@ internal static class Drawer
             _hitRegions.Add(new HitRegion(box.BorderBox, cursor, NodeKey: node.NodeKey));
         }
 
-        // Draw own text content (block elements like <div>Text</div> with no child nodes)
-        if (!string.IsNullOrEmpty(node.DisplayText) && node.Children.Count == 0)
+        // Draw own text content (block elements like <div>Text</div> with no child nodes).
+        // Children that render nothing (display:none, e.g. a layout-probing <script> inside a
+        // float) don't count: layout's own-text height path (BoxEngine) measures the folded text
+        // whenever no child contributes height, so a script child must not mute the paint.
+        if (!string.IsNullOrEmpty(node.DisplayText) &&
+            (node.Children.Count == 0 || node.Children.All(c => c.GetDisplay() == DisplayType.None)))
         {
             using var font = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };

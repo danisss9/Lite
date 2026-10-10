@@ -660,12 +660,25 @@ internal static class TableEngine
     public static float MeasureTableWidth(LayoutNode table, float availW, float viewportW, float viewportH)
     {
         var explicitTableW = table.GetWidth(availW);
+        if (explicitTableW > 0f) return explicitTableW;
+        var (sumMin, sumMax, colCount) = MeasureTableContentWidths(table, availW, viewportH);
+        if (colCount == 0) return Math.Max(0f, explicitTableW);
+        return Math.Max(sumMin, Math.Min(sumMax, availW));
+    }
+
+    /// <summary>The table's intrinsic content width: the PER-COLUMN max across rows, summed
+    /// over the columns (§17.5.2.1's preferred-width definition), border-spacing included.
+    /// Shared with IntrinsicSizer.TableMinMax so a table's shrink-to-fit measure can never
+    /// disagree with the width the layout algorithm actually gives it.</summary>
+    internal static (float SumMin, float SumMax, int ColCount) MeasureTableContentWidths(
+        LayoutNode table, float availW, float viewportH)
+    {
         var rows = CollectRows(table);
-        if (rows.Count == 0) return Math.Max(0f, explicitTableW);
+        if (rows.Count == 0) return (0f, 0f, 0);
 
         var spacing = IsBorderCollapse(table) ? 0f : GetBorderSpacing(table).Horizontal;
         var placements = BuildGrid(rows, out var colCount, out _);
-        if (colCount == 0) return Math.Max(0f, explicitTableW);
+        if (colCount == 0) return (0f, 0f, 0);
 
         var colMin = new float[colCount];
         var colMax = new float[colCount];
@@ -688,10 +701,7 @@ internal static class TableEngine
         }
 
         var spacingTotal = spacing * (colCount + 1);
-        if (explicitTableW > 0f) return explicitTableW;
-        var sumMax = colMax.Sum() + spacingTotal;
-        var sumMin = colMin.Sum() + spacingTotal;
-        return Math.Max(sumMin, Math.Min(sumMax, availW));
+        return (colMin.Sum() + spacingTotal, colMax.Sum() + spacingTotal, colCount);
     }
 
     /// <summary>

@@ -1528,6 +1528,10 @@ public class JsElement
         foreach (var kvp in Node.Attributes) clone.Attributes[kvp.Key] = kvp.Value;
         foreach (var kvp in Node.StyleOverrides) clone.StyleOverrides[kvp.Key] = kvp.Value;
         clone.TextOverride = Node.TextOverride;
+        // The computed font size is parse-time state (§15.7 resolves em chains once); without it
+        // a cloned subtree falls back to resolving lengths against no base — a cloned table row
+        // rendered at 128px against its 32px siblings.
+        clone.ComputedFontSize = Node.ComputedFontSize;
         if (deep)
         {
             foreach (var child in Node.Children)
