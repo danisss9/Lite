@@ -1194,6 +1194,12 @@ internal static class BoxEngine
             if (child.GetFloat() != FloatType.None) continue; // floats don't collapse margins
             var isBlock = d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex or DisplayType.Table;
             if (!isBlock) return ownTop; // inline-level first child contains the margin
+            // A child with 'clear' set never joins the chain (§8.3.1: the top margin collapses
+            // with the first child only when "the child has no clearance"): clearance severs the
+            // margins above the child, so its top margin stays inside this block. When clearance
+            // ends up not being introduced the child still applies its own effective top margin
+            // as the gap below (see LayoutChildrenImpl), so the rendered geometry is unchanged.
+            if (child.TagName != "#text" && child.GetClear() != ClearType.None) return ownTop;
             // First in-flow block child: its effective top margin collapses with this block's.
             return CollapseMargins(ownTop, GetEffectiveTopMargin(child, cbWidth));
         }
@@ -1596,7 +1602,11 @@ internal static class BoxEngine
                 // and does not establish a BFC (§8.3.1). Otherwise it collapses with the running
                 // margin — max(positives)+min(negatives) so negative margins pull boxes together.
                 var firstChildCollapse = !firstBlockSeen && parentBorderPaddingTop == 0f && !parentEstablishesBfc;
-                var gap = firstChildCollapse ? 0f : CollapseMargins(pendingMargin, childEffectiveTop);
+                // A cleared box's effective top margin never escapes its parent (the chain stops
+                // at it, see GetEffectiveTopMargin), so it applies as the gap below even when the
+                // box is its parent's first — the first-child escape shortcut would drop it.
+                var gap = firstChildCollapse && clear == ClearType.None
+                    ? 0f : CollapseMargins(pendingMargin, childEffectiveTop);
                 firstBlockSeen = true;
 
                 var borderTop = runY + gap;
