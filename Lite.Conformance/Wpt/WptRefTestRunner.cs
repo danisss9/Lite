@@ -70,7 +70,7 @@ internal static class WptRefTestRunner
         SKBitmap Render(string path)
         {
             if (images.TryGetValue(path, out var bitmap)) return bitmap;
-            bitmap = WptVisualPage.Render(path, test.Options?["viewport_size"]?.GetValue<string>());
+            (bitmap, _) = WptVisualPage.Render(path, test.Options?["viewport_size"]?.GetValue<string>());
             images.Add(path, bitmap);
             return bitmap;
         }

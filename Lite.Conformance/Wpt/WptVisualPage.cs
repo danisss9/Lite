@@ -1,4 +1,5 @@
 using Lite.Conformance.Harness;
+using Lite.Extensions;
 using Lite.Layout;
 using SkiaSharp;
 
@@ -7,7 +8,7 @@ namespace Lite.Conformance.Wpt;
 /// <summary>Load/paint readiness shared by the pinned WPT reftest and crashtest protocols.</summary>
 internal static class WptVisualPage
 {
-    internal static SKBitmap Render(string path, string? viewport = null, string waitClass = "reftest-wait")
+    internal static (SKBitmap Bitmap, Lite.Models.LayoutNode Root) Render(string path, string? viewport = null, string waitClass = "reftest-wait")
     {
         var width = 800;
         var height = 600;
@@ -35,7 +36,7 @@ internal static class WptVisualPage
             throw new TimeoutException($"WPT document did not clear {waitClass}.");
         HeadlessPage.PumpFrames(engine, 2);
         engine.FlushMicrotasksTree();
-        return Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height });
+        return (Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height }), root);
     }
 
     internal static WptRunner.RunResult RunCrash(WptCase test)
@@ -44,39 +45,119 @@ internal static class WptVisualPage
             return new(WptRunner.Cat.Unsupported, "Crashtest requires test-driver or DPI support", 0, 0);
         try
         {
-            using var bitmap = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(), "test-wait");
-            const string assertion = "Document loaded and rendered without a crash";
-            return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+            var (bitmap, _) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(), "test-wait");
+            using (bitmap)
+            {
+                const string assertion = "Document loaded and rendered without a crash";
+                return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+            }
         }
         catch (TimeoutException ex) { return new(WptRunner.Cat.Timeout, ex.Message, 0, 0); }
         catch (Exception ex) { return new(WptRunner.Cat.Crash, ex.Message, 0, 0); }
     }
 
     /// <summary>Official CSS 2.1 suite self-describing tests state that, unless the test
-    /// says otherwise, any red on the page means failure. The no-red scan is a diagnostic
-    /// signal only — readiness requires reviewed evidence per case, never this heuristic
-    /// (red can legitimately appear in a passing rendering of some tests).</summary>
+    /// says otherwise, any red on the page means failure. The primary route is the no-red
+    /// scan counting only exact #ff0000 — the suite's failure red, from which the
+    /// "maximum minus one" expected colors (#fe0000) are deliberately distinguishable. When
+    /// failure red IS detected, the embedded-reference check arbitrates: the suite's swatch
+    /// selftests carry a #test/#reference pair whose assertion is "the boxes are the same
+    /// color", so a dominant-color match over the rendered boxes validates the test — the
+    /// only route that can pass the -012 family, whose expected color IS #ff0000. Both
+    /// routes are diagnostic signals: readiness requires reviewed evidence per case.</summary>
     internal static WptRunner.RunResult RunSelfTest(WptCase test)
     {
         if (test.TestDriver || test.Options?.ContainsKey("dpi") == true)
             return new(WptRunner.Cat.Unsupported, "Self-test requires test-driver or DPI support", 0, 0);
         try
         {
-            using var bitmap = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>());
-            int red = 0;
-            // The suite's convention: failure red is #ff0000 EXACTLY, and expected colors use
-            // "maximum minus one" (#fe0000 and friends) precisely so a strict detector can tell
-            // them apart — the hex-value selftests (color/border-color/outline-color-011/012…)
-            // render their whole swatch in 254-red. Count only exact 255-red, so antialiased
-            // edges and 254-red swatches never read as failure.
-            foreach (var pixel in bitmap.Pixels)
-                if (pixel.Red == 255 && pixel.Green == 0 && pixel.Blue == 0) red++;
-            const string assertion = "Self-describing test shows no failure red (diagnostic)";
-            return red == 0
-                ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
-                : new(WptRunner.Cat.Fail, $"{red} red pixels (diagnostic)", 1, 1, [new(assertion, 1, $"{red} red pixels")], 0);
+            var (bitmap, root) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>());
+            using (bitmap)
+            {
+                int red = 0;
+                foreach (var pixel in bitmap.Pixels)
+                    if (pixel.Red == 255 && pixel.Green == 0 && pixel.Blue == 0) red++;
+                const string assertion = "Self-describing test shows no failure red (diagnostic)";
+                if (red == 0)
+                    return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+
+                // Failure red present — the suite's own #test/#reference pair arbitrates when
+                // one exists (the outline selftests name their swatch #div1). The reference's
+                // dominant color is the asserted color; the test's is its dominant color
+                // EXCLUDING the page background (a border-side swatch's border box is half
+                // white content, half colored border), over the region the swatch paints —
+                // an outline paints OUTSIDE the border box, so its width inflates the crop.
+                var testNode = FindBoxById(root, "test", out var tbox)
+                    ?? FindBoxById(root, "div1", out tbox);
+                var refNode = FindBoxById(root, "reference", out var rbox);
+                if (testNode is not null && refNode is not null &&
+                    tbox is { } tb && rbox is { } rb)
+                {
+                    // An outline paints OUTSIDE the border box (a 0x0 swatch is all outline),
+                    // so the crop inflates by the outline width before the size check.
+                    var outline = testNode.GetOutlineStyle() is not (BorderStyle.None or BorderStyle.Hidden)
+                        ? (int)MathF.Ceiling(testNode.GetOutlineWidth()) : 0;
+                    if (outline > 0)
+                        tb = new SKRectI(tb.Left - outline, tb.Top - outline, tb.Right + outline, tb.Bottom + outline);
+                    if (tb.Width > 1 && tb.Height > 1 && rb.Width > 1 && rb.Height > 1)
+                    {
+                        var refColor = DominantColor(bitmap, rb);
+                        var testColor = DominantColor(bitmap, tb, refColor == PageBackground ? null : PageBackground);
+                        if (testColor == refColor)
+                        {
+                            const string pass = "Self-describing test: #test renders the same color as #reference";
+                            return new(WptRunner.Cat.Pass, pass, 1, 0, [new(pass, 0, null)], 0);
+                        }
+                        const string fail = "Self-describing test: #test and #reference render different colors";
+                        return new(WptRunner.Cat.Fail, fail, 1, 1,
+                            [new(fail, 1, $"#test {testColor} vs #reference {refColor}")], 0);
+                    }
+                }
+
+                return new(WptRunner.Cat.Fail, $"{red} red pixels (diagnostic)", 1, 1, [new(assertion, 1, $"{red} red pixels")], 0);
+            }
         }
         catch (TimeoutException ex) { return new(WptRunner.Cat.Timeout, ex.Message, 0, 0); }
         catch (Exception ex) { return new(WptRunner.Cat.Crash, ex.Message, 0, 0); }
+    }
+
+    private static readonly SKColor PageBackground = new(255, 255, 255);
+
+    private static Lite.Models.LayoutNode? FindBoxById(Lite.Models.LayoutNode node, string id, out SKRectI? box)
+    {
+        box = null;
+        if (node.Attributes.GetValueOrDefault("id") == id)
+        {
+            var b = node.Box.BorderBox;
+            // Zero-size boxes are returned too: an outline swatch is a 0x0 box whose paint
+            // region exists only after the caller inflates it by the outline width.
+            box = new SKRectI((int)b.Left, (int)b.Top, (int)b.Right, (int)b.Bottom);
+            return node;
+        }
+        foreach (var child in node.Children)
+            if (FindBoxById(child, id, out var childBox) is { } hit) { box = childBox; return hit; }
+        return null;
+    }
+
+    /// <summary>The most frequent color in a crop — the suite's swatches are solid, so the
+    /// mode is the asserted color (antialiased edge pixels are a small minority).
+    /// <paramref name="exclude"/>, when set, drops one color from the count (the page
+    /// background that fills the empty half of a border-side swatch's border box).</summary>
+    private static SKColor DominantColor(SKBitmap bitmap, SKRectI crop, SKColor? exclude = null)
+    {
+        crop = SKRectI.Intersect(crop, new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+        if (crop.IsEmpty) return default;
+        var counts = new Dictionary<int, int>();
+        int excludeKey = exclude.HasValue ? (exclude.Value.Red << 16) | (exclude.Value.Green << 8) | exclude.Value.Blue : -1;
+        for (int y = crop.Top; y < crop.Bottom; y++)
+            for (int x = crop.Left; x < crop.Right; x++)
+            {
+                var c = bitmap.GetPixel(x, y);
+                var key = (c.Red << 16) | (c.Green << 8) | c.Blue;
+                if (key == excludeKey) continue;
+                counts[key] = counts.GetValueOrDefault(key) + 1;
+            }
+        var best = counts.OrderByDescending(kv => kv.Value).First();
+        return new SKColor((byte)(best.Key >> 16), (byte)(best.Key >> 8), (byte)best.Key);
     }
 }
