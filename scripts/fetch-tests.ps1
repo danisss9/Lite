@@ -376,7 +376,11 @@ function Get-VendoredTreeSha256($DestRoot) {
     # canonical order: PowerShell's default culture sort orders hyphens differently and
     # produced a different tree hash for the same bytes.
     $keys = @($entries | ForEach-Object { "$($_.Rel)|$($_.Full)" })
-    [System.Array]::Sort($keys, [System.StringComparer]::Ordinal)
+    # OrdinalIgnoreCase, not Ordinal: the C# verifier (OfficialCatalog.CanonicalTree)
+    # upper-case folds before the ordinal comparison, which reorders '_' against letters.
+    # A plain ordinal sort produced a pin the verifier rejected once the support subtree
+    # carried names mixing underscores and letters (the generated *_color.png family).
+    [System.Array]::Sort($keys, [System.StringComparer]::OrdinalIgnoreCase)
     $tree = New-Object System.Text.StringBuilder
     $sha256 = [System.Security.Cryptography.SHA256]::Create()
     foreach ($key in $keys) {

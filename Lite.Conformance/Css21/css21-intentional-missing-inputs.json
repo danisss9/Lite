@@ -1,0 +1,56 @@
+{
+ "comment": "Suite resources that are deliberately absent: the test's own subject is a missing resource (broken-image and cursor fallback, invalid url() tokens) or the reference appears only inside prose or comments. The input scanner (Wpt.SuiteInputs) treats these as intentional and executes the case instead of reporting a missing-input blocker. Keyed by test-file stem (official html4 and WPT variants share stems); uri-012/013/016 are entirely about invalid url() tokens, so every resource they request is allowlisted by stem.",
+ "reviewed": "2026-10-11",
+ "byStem": [
+  "uri-012",
+  "uri-013",
+  "uri-016"
+ ],
+ "entries": [
+  {
+   "stem": "list-style-image-004",
+   "resources": ["404"],
+   "reason": "list-style-image: url(404) exercises the unavailable-image fallback; the marker must stay visible."
+  },
+  {
+   "stem": "list-style-image-007",
+   "resources": ["404"],
+   "reason": "list-style-image: url(404) exercises the unavailable-image fallback (HTML variant)."
+  },
+  {
+   "stem": "cursor-020",
+   "resources": ["inexistent.cur"],
+   "reason": "cursor: url(inexistent.cur) exercises fallback to the next specified cursor."
+  },
+  {
+   "stem": "cursor-fallback-001",
+   "resources": ["missing.cur"],
+   "reason": "When a specified cursor URL does not exist the next specified cursor is used."
+  },
+  {
+   "stem": "content-uri-001",
+   "resources": ["missingImage.png"],
+   "reason": "content: url() of a resource that cannot be displayed must be left out or indicated."
+  },
+  {
+   "stem": "content-138",
+   "resources": ["PASS PASS"],
+   "reason": "script[src=\"PASS PASS\"] never loads; script:before { content: attr(src) } is the subject."
+  },
+  {
+   "stem": "list-style-image-available-001",
+   "resources": ["missingImage.png"],
+   "reason": "If the list-style-image is not available the marker must be visible."
+  },
+  {
+   "stem": "before-after-images-001",
+   "resources": ["missing-image.png"],
+   "reason": "Generated-content url() of an unavailable image renders nothing."
+  },
+  {
+   "stem": "before-after-table-whitespace-001",
+   "resources": ["missing-image.png"],
+   "reason": "Generated-content url() of an unavailable image inside table whitespace renders nothing."
+  }
+ ]
+}

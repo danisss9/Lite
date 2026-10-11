@@ -123,7 +123,10 @@ internal static class ProfileRunner
         var htmlReady = htmlBlockers.Count == 0;
         var cssScreen = Css21Inventory.Evaluate("screen", evidence);
         var cssPrint = Css21Inventory.Evaluate("print", evidence);
-        var cssReady = cssScreen.Ready && cssPrint.Ready && evidenceBlockers.Count == 0;
+        // The 9 October 2026 scope decision removed print and paged media from the CSS 2.1
+        // plan: css21ProfileReady is decided by the screen matrix alone. Print readiness
+        // stays published separately as css21PrintReady with its own blocker list.
+        var cssReady = cssScreen.Ready && evidenceBlockers.Count == 0;
         foreach (var blocker in cssScreen.Blockers.Concat(cssPrint.Blockers).Distinct()) blockers.Add(blocker);
         // The combined claim must also have executed evidence for every included requirement.
         // Keep those cross-standard requirements out of the independent language/CSS gates.

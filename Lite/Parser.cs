@@ -584,6 +584,16 @@ internal static class Parser
                 styleEl.TextContent = InlineImports(text, _documentBaseUrl ?? _baseUrl ?? "");
         }
 
+        // §4.2 parsing errors: drop illegal declarations from the sheet text after import
+        // inlining (so imported sheets are covered) — see DropIllegalDeclarations.
+        foreach (var styleEl in document.QuerySelectorAll("style"))
+        {
+            var text = styleEl.TextContent;
+            if (!text.Contains('-')) continue;
+            var filtered = DropIllegalDeclarations(text);
+            if (filtered != text) styleEl.TextContent = filtered;
+        }
+
         // Collect @keyframes from all stylesheets before traversing the DOM
         AnimationRegistry.Clear();
         CollectKeyframes(document);
@@ -2247,6 +2257,99 @@ internal static class Parser
             : System.Text.RegularExpressions.Regex.Replace(css, @"(?<=[:\s,(])[+-]0(?![\d.])", "0");
 
     /// <summary>
+    /// §4.2 parsing errors: a declaration whose value is illegal for the property is dropped
+    /// from the stylesheet text before the CSSOM is built. AngleSharp's declaration map is
+    /// last-wins per property with no negative-value checks, so <c>width: 0; width: -1px</c>
+    /// would silently shadow the valid declaration with the illegal one (layout then reads
+    /// the negative as auto instead of the earlier 0). Only the illegal declaration's own
+    /// span is removed; sibling declarations, strings and url() values are left untouched.
+    /// </summary>
+    private static string DropIllegalDeclarations(string css)
+    {
+        if (string.IsNullOrEmpty(css) || !css.Contains('-')) return css;
+        // Scan a copy with comments and string interiors blanked (same length): comment
+        // prose can quote property/value text ('width : 100px ... right : -200px' inside a
+        // documentation comment), and a value class that spans it would delete real code.
+        var masked = MaskCommentsAndStrings(css);
+        var result = css;
+        foreach (var prop in NonNegativeProperties)
+        {
+            var pattern = new System.Text.RegularExpressions.Regex(
+                @"(?i)(^|[;{\s])(" + System.Text.RegularExpressions.Regex.Escape(prop) + @")\s*:\s*[^;{}]*");
+            for (int search = 0; ;)
+            {
+                var match = pattern.Match(masked, search);
+                if (!match.Success) break;
+                var colon = masked.IndexOf(':', match.Groups[2].Index + match.Groups[2].Length);
+                if (colon < 0 || colon >= match.Index + match.Length)
+                {
+                    search = match.Index + match.Groups[1].Length + 1;
+                    continue;
+                }
+                var value = masked.Substring(colon + 1, match.Index + match.Length - (colon + 1));
+                if (!ContainsNegativeNumber(value))
+                {
+                    search = match.Index + match.Length;
+                    continue;
+                }
+                // Remove the whole "prop: value" declaration — including the separator that
+                // preceded it so no doubled ';' remains — from both copies (they stay in
+                // lockstep), then rescan from the cut point.
+                var start = match.Groups[1].Length > 0 ? match.Groups[1].Index : match.Groups[2].Index;
+                var end = match.Index + match.Length;
+                result = result.Remove(start, end - start);
+                masked = masked.Remove(start, end - start);
+                search = start;
+            }
+        }
+        return result;
+    }
+
+    /// <summary>Blanks comment interiors and quoted-string interiors one-for-one (quotes
+    /// themselves kept, backslash escapes consumed), so pattern scans over the result see
+    /// only real code while every index still addresses the original string.</summary>
+    private static string MaskCommentsAndStrings(string css)
+    {
+        var chars = css.ToCharArray();
+        const int Normal = 0, InComment = 1, InDouble = 2, InSingle = 3;
+        var state = Normal;
+        for (var i = 0; i < chars.Length; i++)
+        {
+            var c = chars[i];
+            switch (state)
+            {
+                case Normal:
+                    if (c == '/' && i + 1 < chars.Length && chars[i + 1] == '*')
+                    {
+                        chars[i] = ' '; chars[i + 1] = ' '; state = InComment; i++;
+                    }
+                    else if (c == '"') state = InDouble;
+                    else if (c == '\'') state = InSingle;
+                    break;
+                case InComment:
+                    if (c == '*' && i + 1 < chars.Length && chars[i + 1] == '/')
+                    {
+                        chars[i] = ' '; chars[i + 1] = ' '; state = Normal; i++;
+                    }
+                    else chars[i] = ' ';
+                    break;
+                case InDouble:
+                case InSingle:
+                    var quote = state == InDouble ? '"' : '\'';
+                    if (c == '\\')
+                    {
+                        chars[i] = ' ';
+                        if (i + 1 < chars.Length) { chars[i + 1] = ' '; i++; }
+                    }
+                    else if (c == quote) state = Normal;
+                    else chars[i] = ' ';
+                    break;
+            }
+        }
+        return new string(chars);
+    }
+
+    /// <summary>
     /// Clamps out-of-range rgb()/rgba() components (§4.2.1/§4.2.2: "Values outside the device
     /// gamut should be clipped": percentage components to [0,100], number components to [0,255]).
     /// AngleSharp fails to parse an over-range value and DROPS the whole declaration, so
@@ -3642,7 +3745,52 @@ internal static class Parser
                     }
                     break;
                 }
-                // comments / processing instructions never render
+                case IComment comment:
+                {
+                    // Comments never render but must stay in the projected tree: CharacterData
+                    // anchors (before/after/replaceWith) resolve through the wrapper's bound
+                    // node, and the projection must not orphan them on re-projection.
+                    var data = comment.Data ?? string.Empty;
+                    if (owner.FindBound(comment) is { } bound && bound.TagName == "#comment"
+                        && ReferenceEquals(bound.DomNode, comment))
+                    {
+                        if (bound.DisplayText != data) bound.TextOverride = data;
+                        rebuilt.Add(bound);
+                    }
+                    else
+                    {
+                        var fresh = new LayoutNode(null, "#comment", data, ComputeCurrentStyle(dom))
+                        {
+                            DomNode = comment
+                        };
+                        fresh.ResetNonInheritedStyles();
+                        owner.Bind(fresh);
+                        rebuilt.Add(fresh);
+                    }
+                    break;
+                }
+                case IProcessingInstruction instruction:
+                {
+                    var data = instruction.Data ?? string.Empty;
+                    if (owner.FindBound(instruction) is { } bound && bound.TagName == "#pi"
+                        && ReferenceEquals(bound.DomNode, instruction))
+                    {
+                        if (bound.DisplayText != data) bound.TextOverride = data;
+                        rebuilt.Add(bound);
+                    }
+                    else
+                    {
+                        var fresh = new LayoutNode(null, "#pi", data, ComputeCurrentStyle(dom))
+                        {
+                            DomNode = instruction
+                        };
+                        fresh.Attributes["_pi_target"] = instruction.Target;
+                        fresh.ResetNonInheritedStyles();
+                        owner.Bind(fresh);
+                        rebuilt.Add(fresh);
+                    }
+                    break;
+                }
             }
         }
         rebuilt.AddRange(trailing);
@@ -3717,6 +3865,41 @@ internal static class Parser
         // script; the textContent setter replaces element children with a single text node.
         layout.Children.RemoveAll(c => c.DomNode is { } d && !ReferenceEquals(d.Parent, dom));
 
+        // CharacterData children never render but must exist in the projected tree with a live
+        // Parent pointer: a wrapper anchoring before/after/replaceWith resolves through
+        // Node.Parent, and an orphaned comment silently no-ops the whole insertion. The folded
+        // representation cannot interleave them with own text, so new ones join at the end in
+        // DOM order; kept ones get the invariant restored.
+        foreach (var child in dom.ChildNodes)
+        {
+            var (tag, data, target) = child switch
+            {
+                IComment comment => ("#comment", comment.Data ?? string.Empty, null),
+                IProcessingInstruction instruction => ("#pi", instruction.Data ?? string.Empty, instruction.Target),
+                _ => default,
+            };
+            if (tag is null) continue;
+            var bound = owner.FindBound(child);
+            if (bound is not null && bound.TagName == tag
+                && ReferenceEquals(bound.DomNode, child) && bound.Parent == layout)
+            {
+                if (bound.DisplayText != data) bound.TextOverride = data;
+                continue;
+            }
+            if (bound is not null)
+            {
+                bound.Parent?.Children.Remove(bound);
+                bound.Parent = null;
+                if (bound.DisplayText != data) bound.TextOverride = data;
+                layout.Children.Add(bound);
+                continue;
+            }
+            var fresh = new LayoutNode(null, tag, data, layout.Style) { DomNode = child };
+            if (target is not null) fresh.Attributes["_pi_target"] = target;
+            owner.Bind(fresh);
+            layout.Children.Add(fresh);
+        }
+
         var raw = string.Concat(dom.ChildNodes.OfType<IText>().Select(t => t.Data));
         var ws = layout.Style.GetPropertyValueSafe("white-space")?.Trim().ToLowerInvariant();
         var preserves = ws is "pre" or "pre-wrap";
@@ -3755,9 +3938,17 @@ internal static class Parser
             // The folded representation: write the node's OWN text (as a fresh parse of the
             // same markup would), so every consumer — the anonymous-table migration, the
             // painter, textContent — sees the mutation. Clear any stale override first.
+            // Text-node anchors whose wrapper needs a tree position are resolved through the
+            // authoritative DOM by the ChildNode operations instead (see JsElement).
             layout.TextOverride = null;
             layout.SetOwnText(boundaryKept);
         }
+
+        // Restate the "child in Children ⇒ child.Parent == layout" invariant: re-projection
+        // rebuilt the child list here, and an anchor resolves through Node.Parent.
+        foreach (var kept in layout.Children)
+            if (kept.Parent != layout)
+                kept.Parent = layout;
     }
 
     private static void QueueParsedDetailsNotifications(LayoutNode node, JsEngine engine)
@@ -4280,7 +4471,10 @@ internal static class Parser
         return false;
     }
 
-    /// <summary>Parses a declaration block, separating normal and !important declarations.</summary>
+    /// <summary>Parses a declaration block, separating normal and !important declarations.
+    /// §4.2 parsing errors: a declaration whose value is illegal for the property is ignored
+    /// here, so an earlier valid declaration of the same property survives the cascade
+    /// ('width: 0; width: -1px' computes to 0, not auto).</summary>
     internal static (Dictionary<string, string> Props, HashSet<string> Important) ParseDeclarations(string cssText)
     {
         var props = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -4293,6 +4487,7 @@ internal static class Parser
             if (colon < 0) continue;
             var prop = decl[..colon].Trim().ToLowerInvariant();
             var raw = decl[(colon + 1)..].Trim();
+            var importantCandidate = false;
             // "!important" may be written with whitespace after the bang ("! important"), which
             // is what the CSS 2.1 test suite does — matching the literal token alone missed it.
             if (raw.EndsWith("important", StringComparison.OrdinalIgnoreCase))
@@ -4301,13 +4496,51 @@ internal static class Parser
                 if (head.EndsWith('!'))
                 {
                     raw = head[..^1].TrimEnd();
-                    important.Add(prop);
+                    importantCandidate = true;
                 }
             }
-            if (!string.IsNullOrEmpty(raw)) props[prop] = raw;
+            if (string.IsNullOrEmpty(raw) || IsIllegalPropertyValue(prop, raw)) continue;
+            props[prop] = raw;
+            if (importantCandidate) important.Add(prop);
         }
         return (props, important);
     }
+
+    // Properties whose value grammar forbids negative lengths in CSS 2.1: width and
+    // min/max-width (§10.4), height and min/max-height (§10.7), padding (§8.4),
+    // border widths (§8.5.1), font-size (§15.7), line-height (§10.8.1), border-spacing
+    // (§17.6.1) and outline-width (§18.4). A negative value is a parse error, not a
+    // clamped computation.
+    private static readonly HashSet<string> NonNegativeProperties = new(StringComparer.Ordinal)
+    {
+        "width", "min-width", "max-width",
+        "height", "min-height", "max-height",
+        "padding", "padding-top", "padding-right", "padding-bottom", "padding-left",
+        "border-width", "border-top-width", "border-right-width", "border-bottom-width", "border-left-width",
+        "outline-width", "font-size", "line-height", "border-spacing",
+    };
+
+    /// <summary>True when a value carries a negative number (<c>-1px</c>, <c>-10%</c>, or a
+    /// bare negative <c>line-height</c>). <c>-0</c> equals 0 and stays legal; non-numeric
+    /// leading dashes (vendor junk) are not lengths.</summary>
+    internal static bool ContainsNegativeNumber(string value)
+    {
+        foreach (var token in value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (token.Length < 2 || token[0] != '-') continue;
+            var end = 1;
+            while (end < token.Length && (char.IsDigit(token[end]) || token[end] == '.')) end++;
+            if (end > 1 &&
+                double.TryParse(token[1..end], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var number) &&
+                number > 0)
+                return true;
+        }
+        return false;
+    }
+
+    private static bool IsIllegalPropertyValue(string prop, string value) =>
+        NonNegativeProperties.Contains(prop) && ContainsNegativeNumber(value);
 
     /// <summary>Computes a CSS specificity score (a*100 + b*10 + c) for a compound/complex selector.</summary>
     internal static int ComputeSpecificity(string selector)
