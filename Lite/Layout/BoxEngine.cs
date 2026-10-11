@@ -838,7 +838,7 @@ internal static class BoxEngine
     /// </summary>
     /// <summary>Lays out a block-level node. Returns its total margin-box height and its
     /// effective bottom margin (after any last-child collapse-through).</summary>
-    private static (float Height, float BottomMargin) LayoutBlock(
+    private static (float Height, MarginChain BottomMargin) LayoutBlock(
         LayoutNode node,
         float x, float y,
         float availableWidth,
@@ -849,7 +849,7 @@ internal static class BoxEngine
         if (node.GetDisplay() == DisplayType.None)
         {
             node.Box = default;
-            return (0f, 0f);
+            return (0f, MarginChain.Empty);
         }
 
         var fontSize = node.GetFontSize();
@@ -955,6 +955,7 @@ internal static class BoxEngine
         var establishesBfc = EstablishesBlockFormattingContext(node);
         float contentH;
         float trailingMargin = 0f; // last in-flow block child's bottom margin (collapse-through candidate)
+        var trailingChain = MarginChain.Empty; // the trailing chain's (maxPositive, minNegative) form
         var chainHasCommittedContent = true; // whether the trailing chain contains committed boxes
         if (nodeDisplay is DisplayType.Flex or DisplayType.InlineFlex)
             contentH = FlexEngine.LayoutFlex(node, contentX, contentY, contentW, knownContentH, viewportWidth, viewportHeight);
@@ -976,7 +977,7 @@ internal static class BoxEngine
             var childBfc = establishesBfc || node.TagName == "HTML";
             contentH = LayoutChildrenImpl(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight,
                 childContainingH, border.Top + padding.Top, childBfc, floatCtx, ownsFloatContext,
-                out trailingMargin, out chainHasCommittedContent);
+                out trailingMargin, out trailingChain, out chainHasCommittedContent);
         }
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
@@ -993,12 +994,13 @@ internal static class BoxEngine
         // bottom border/padding, an auto height, and is not a block formatting context, the last
         // in-flow child's bottom margin collapses with this block's own bottom margin (propagating
         // out) rather than adding to the content height. Otherwise it stays inside the content.
-        var effectiveBottomMargin = margin.Bottom;
+        var effectiveBottomChain = MarginChain.Of(margin.Bottom);
         if (trailingMargin != 0f && padding.Bottom == 0f && border.Bottom == 0f
             && node.IsAutoHeight() && !establishesBfc)
-            effectiveBottomMargin = CollapseMargins(margin.Bottom, trailingMargin);
+            effectiveBottomChain += trailingChain;
         else if (chainHasCommittedContent)
             contentH += trailingMargin;
+        var effectiveBottomMargin = effectiveBottomChain.Value;
         // else: the whole content self-collapsed into one chain (§8.3.1) — with a bottom
         // border/padding the chain can neither escape nor extend the height: a bordered box
         // with only empty children renders its borders alone (margin-collapse-128).
@@ -1071,7 +1073,7 @@ internal static class BoxEngine
         var totalH = margin.Top + border.Top + padding.Top
                    + contentH
                    + padding.Bottom + border.Bottom + effectiveBottomMargin;
-        return (totalH, effectiveBottomMargin);
+        return (totalH, effectiveBottomChain);
     }
 
     /// <summary>Measure a nested flex item's content at its available width before final placement.</summary>
@@ -1240,6 +1242,21 @@ internal static class BoxEngine
             if (node.StaticY is { } sy) node.StaticY = sy + additional;
         }
         foreach (var child in node.Children) TranslateSubtree(child, dy);
+    }
+
+    /// <summary>Collapsing margins per CSS 2.1 §8.3.1: a chain of adjoining margins collapses
+    /// to the sum of its largest positive and its most-negative member — a single running
+    /// scalar loses the negative part (collapse(collapse(2,−4),14) = 12, the true chain = 10),
+    /// so the chain is carried as (maxPositive, minNegative) while it accumulates.</summary>
+    private readonly record struct MarginChain(float Pos, float Neg)
+    {
+        public static readonly MarginChain Empty = new(0f, 0f);
+        public float Value => Pos + Neg;
+        public static MarginChain Of(float margin) => margin >= 0f ? new(margin, 0f) : new(0f, margin);
+        public static MarginChain operator +(MarginChain chain, float margin)
+            => new(MathF.Max(chain.Pos, MathF.Max(margin, 0f)), MathF.Min(chain.Neg, MathF.Min(margin, 0f)));
+        public static MarginChain operator +(MarginChain a, MarginChain b)
+            => new(MathF.Max(a.Pos, b.Pos), MathF.Min(a.Neg, b.Neg));
     }
 
     /// <summary>
@@ -1503,7 +1520,7 @@ internal static class BoxEngine
     {
         var h = LayoutChildrenImpl(children, contentX, contentY, contentW, viewportWidth, viewportHeight,
             parentContentHeight, parentBorderPaddingTop, parentEstablishesBfc,
-            new List<ActiveFloat>(), ownsFloatContext: true, out var trailing, out _);
+            new List<ActiveFloat>(), ownsFloatContext: true, out var trailing, out _, out _);
         return h + trailing;
     }
 
@@ -1528,13 +1545,14 @@ internal static class BoxEngine
         List<ActiveFloat> floats,
         bool ownsFloatContext,
         out float trailingMargin,
+        out MarginChain trailingChain,
         out bool chainHasCommittedContent)
     {
         // Running-margin model (CSS 2.1 §8.3.1): runY is the committed content bottom (the border
         // bottom of the last non-collapsing box) and pendingMargin is the collapsing margin still
         // accumulating below it. The previous single cursor is equivalent to runY + pendingMargin.
         var runY = contentY;
-        var pendingMargin = 0f;
+        var pending = MarginChain.Empty;
         var firstBlockSeen = false;
         var lastPlacedWasBlock = false;
         // §8.3.1: when a self-collapsing box with clearance collapses, its collapsed margin
@@ -1573,7 +1591,7 @@ internal static class BoxEngine
             var pos = child.GetPosition();
             if (pos == PositionType.Absolute || pos == PositionType.Fixed)
             {
-                var staticY = runY + pendingMargin;
+                var staticY = runY + pending.Value;
                 var (staticBandX, _) = AvailableBand(floats, staticY, 1, contentX, contentW);
                 child.StaticX = staticBandX;
                 child.StaticY = staticY;
@@ -1597,19 +1615,19 @@ internal static class BoxEngine
             // the §9.5.2 clearance computation needs the hypothetical border edge.
             if (clear != ClearType.None && floatSide != FloatType.None)
             {
-                var clearedForFloat = ApplyClear(clear, floats, runY + pendingMargin);
+                var clearedForFloat = ApplyClear(clear, floats, runY + pending.Value);
                 RetireFloats(floats, clearedForFloat);
                 // Keep runY + pendingMargin == cleared so the running margin still collapses with the
                 // next box exactly as before (clearance behaviour unchanged).
-                runY = clearedForFloat - pendingMargin;
+                runY = clearedForFloat - pending.Value;
             }
 
             // Handle floated elements — taken out of normal flow but affect available width
             if (floatSide != FloatType.None)
             {
-                var af = LayoutFloat(child, floatSide, floats, contentX, runY + pendingMargin, contentW,
+                var af = LayoutFloat(child, floatSide, floats, contentX, runY + pending.Value, contentW,
                                      viewportWidth, viewportHeight, parentContentHeight,
-                                     openLineY, openLineUsedW, pendingMargin);
+                                     openLineY, openLineUsedW, pending.Value);
                 floats.Add(af);
                 i++;
                 continue;
@@ -1638,7 +1656,7 @@ internal static class BoxEngine
                 // at it, see GetEffectiveTopMargin), so it applies as the gap below even when the
                 // box is its parent's first — the first-child escape shortcut would drop it.
                 var gap = firstChildCollapse && clear == ClearType.None
-                    ? 0f : CollapseMargins(pendingMargin, childEffectiveTop);
+                    ? 0f : (pending + childEffectiveTop).Value;
                 firstBlockSeen = true;
 
                 var borderTop = runY + gap;
@@ -1658,7 +1676,7 @@ internal static class BoxEngine
                     if (clearedBorder > borderTop)
                     {
                         borderTop = clearedBorder;
-                        pendingMargin = 0f;
+                        pending = MarginChain.Empty;
                         clearanceSevered = true;
                         chainSeveredByClearance = true;
                         // The chain below (this box's own collapsed-through margins plus
@@ -1674,7 +1692,7 @@ internal static class BoxEngine
                 var floatCountBefore = floats.Count;
                 var (h, childBottomMargin) = LayoutBlock(child, effX, borderTop - childMarginTop, effW,
                                                          viewportWidth, viewportHeight, parentContentHeight, floats);
-                var borderBoxH = h - childMarginTop - childBottomMargin;
+                var borderBoxH = h - childMarginTop - childBottomMargin.Value;
 
                 // Self-collapsing block (§8.3.1): no in-flow content / border / padding / height (a
                 // zero border-box height already implies height is auto-or-0 with no min-height), and
@@ -1682,8 +1700,8 @@ internal static class BoxEngine
                 // margin, and the box contributes no height (so neighbouring margins collapse through).
                 if (borderBoxH <= 0.01f && !EstablishesBlockFormattingContext(child))
                 {
-                    var own = CollapseMargins(childEffectiveTop, childBottomMargin);
-                    pendingMargin = firstChildCollapse && !clearanceSevered ? own : CollapseMargins(pendingMargin, own);
+                    var own = MarginChain.Empty + childEffectiveTop + childBottomMargin;
+                    pending = firstChildCollapse && !clearanceSevered ? own : pending + own;
                     // §8.3.1: a self-collapsing box's border box sits at the BOTTOM of its
                     // collapsed margin chain — the chain is spent above the box, so its
                     // containing block for absolutely-positioned descendants (and any paint
@@ -1695,7 +1713,7 @@ internal static class BoxEngine
                     // collapsing (its text paints from its own position, margin-collapse-130).
                     if (!clearanceSevered && string.IsNullOrEmpty(child.DisplayText))
                     {
-                        var collapsedBorderTop = runY + pendingMargin - (firstChildCollapse ? childEffectiveTop : 0f);
+                        var collapsedBorderTop = runY + pending.Value - (firstChildCollapse ? childEffectiveTop : 0f);
                         var dy = collapsedBorderTop - borderTop;
                         if (MathF.Abs(dy) > 0.01f)
                         {
@@ -1727,7 +1745,7 @@ internal static class BoxEngine
                     // Commit: runY advances to the child's border-box bottom; its (effective, after
                     // its own last-child collapse-through) bottom margin becomes the running margin.
                     runY = borderTop + borderBoxH;
-                    pendingMargin = childBottomMargin;
+                    pending = childBottomMargin;
                     chainSeveredByClearance = false; // a committed box ends the severed chain
                     hasCommittedContent = true;
                 }
@@ -1767,8 +1785,8 @@ internal static class BoxEngine
 
                 // Inline content commits the pending block margin (margins don't collapse across a
                 // line box) and lays out at the committed position.
-                runY += pendingMargin;
-                pendingMargin = 0f;
+                runY += pending.Value;
+                pending = MarginChain.Empty;
                 chainSeveredByClearance = false; // a line box ends the severed chain
                 hasCommittedContent = true;
                 var runH = LayoutInlineRun(run, contentX, runY, contentW, viewportWidth, viewportHeight,
@@ -1789,14 +1807,15 @@ internal static class BoxEngine
         // collapsed margin does not collapse with the parent block's bottom margin — it stays
         // inside the parent's height (runY was set to the chain's origin when the severed box
         // folded, so runY + pendingMargin already spans the chain's full extent).
-        var contentBottom = runY + pendingMargin;
+        var contentBottom = runY + pending.Value;
         var flowBottom = contentBottom;
         if (ownsFloatContext)
             foreach (var f in floats)
                 contentBottom = Math.Max(contentBottom, f.Bottom);
 
-        trailingMargin = (lastPlacedWasBlock && contentBottom <= flowBottom && !chainSeveredByClearance)
-            ? pendingMargin : 0f;
+        trailingChain = (lastPlacedWasBlock && contentBottom <= flowBottom && !chainSeveredByClearance)
+            ? pending : MarginChain.Empty;
+        trailingMargin = trailingChain.Value;
         chainHasCommittedContent = hasCommittedContent;
         return (contentBottom - contentY) - trailingMargin;
     }
@@ -2528,7 +2547,7 @@ internal static class BoxEngine
                     if (node.Children.Count > 0)
                         LayoutChildrenImpl(node.Children, contentX, contentY, item.ContentW,
                             viewportWidth, viewportHeight, item.ContentH, 0f, true,
-                            new List<ActiveFloat>(), true, out _, out _);
+                            new List<ActiveFloat>(), true, out _, out _, out _);
                     break;
                 }
             case InlineItemKind.InlineFlex:
