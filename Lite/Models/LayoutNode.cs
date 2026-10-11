@@ -242,6 +242,11 @@ public class LayoutNode
     /// GetBorderWidth honours this flag because it deliberately does not honour StyleOverrides
     /// globally (Acid2 depends on shared-style border reads).</summary>
     public bool SharedBorderSuppressed { get; set; }
+
+    /// <summary>The vertical shift already applied to this box by the self-collapse placement
+    /// (BoxEngine's collapsed-margin-chain anchoring) in the CURRENT layout pass. LayoutBlock
+    /// resets it when it writes a fresh Box, so repeated layout passes re-anchor correctly.</summary>
+    public float CollapseShiftApplied { get; set; }
     public List<EventListenerEntry> EventListeners { get; } = [];
     /// <summary>
     /// Neutralises the NON-INHERITED properties a synthesized box (an anonymous table box, a

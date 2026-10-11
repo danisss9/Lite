@@ -1059,6 +1059,7 @@ internal static class BoxEngine
         }
 
         margin.Bottom = effectiveBottomMargin;
+        node.CollapseShiftApplied = 0; // a fresh Box invalidates any prior self-collapse anchoring
         node.Box = new BoxDimensions
         {
             ContentBox = new SKRect(contentX, contentY, contentX + contentW, contentY + contentH),
@@ -1127,7 +1128,7 @@ internal static class BoxEngine
     // -------------------------------------------------------------------------
 
     /// <summary>Represents an active float whose occupied area affects subsequent layout.</summary>
-    private record struct ActiveFloat(float Left, float Top, float Right, float Bottom, FloatType Side);
+    private record struct ActiveFloat(float Left, float Top, float Right, float Bottom, FloatType Side, float CollapseShift = 0);
 
     /// <summary>
     /// True when the node establishes a new block formatting context (CSS 2.1 §9.4.1): floats,
@@ -1215,6 +1216,30 @@ internal static class BoxEngine
         var posMax = Math.Max(Math.Max(a, 0f), Math.Max(b, 0f));
         var negMin = Math.Min(Math.Min(a, 0f), Math.Min(b, 0f));
         return posMax + negMin;
+    }
+
+    /// <summary>Shifts a laid-out subtree vertically so its boxes sit <paramref name="dy"/>
+    /// below their laid-out origin: every box's content box, every line fragment, and every
+    /// recorded static position. Idempotent per node — a node already shifted to
+    /// <paramref name="dy"/> by a nested self-collapser's fold in the same chain is skipped
+    /// (each node records what it received in <see cref="LayoutNode.CollapseShiftApplied"/>).</summary>
+    private static void TranslateSubtree(LayoutNode node, float dy)
+    {
+        var additional = dy - node.CollapseShiftApplied;
+        node.CollapseShiftApplied = dy;
+        if (MathF.Abs(additional) > 0.01f)
+        {
+            var box = node.Box;
+            box.ContentBox = new SKRect(box.ContentBox.Left, box.ContentBox.Top + additional,
+                box.ContentBox.Right, box.ContentBox.Bottom + additional);
+            node.Box = box;
+            if (node.InlineFragments is { } fragments)
+                for (var i = 0; i < fragments.Count; i++)
+                    fragments[i] = (new SKRect(fragments[i].Rect.Left, fragments[i].Rect.Top + additional,
+                        fragments[i].Rect.Right, fragments[i].Rect.Bottom + additional), fragments[i].Text);
+            if (node.StaticY is { } sy) node.StaticY = sy + additional;
+        }
+        foreach (var child in node.Children) TranslateSubtree(child, dy);
     }
 
     /// <summary>
@@ -1340,7 +1365,7 @@ internal static class BoxEngine
         List<ActiveFloat> floats,
         float contentX, float cursorY, float contentW,
         float viewportWidth, float viewportHeight, float parentContentHeight,
-        float openLineY = float.NaN, float openLineUsedW = 0f)
+        float openLineY = float.NaN, float openLineUsedW = 0f, float chainOffset = 0f)
     {
         var fontSize = child.GetFontSize();
         var margin = child.GetMargin(contentW, viewportHeight, fontSize);
@@ -1439,6 +1464,10 @@ internal static class BoxEngine
                 : explicitH;
         if (replaced.HasValue) childContentH = replaced.Value.Height;
 
+        // The float's placement already sits at the running collapsed-margin chain's bottom
+        // (placeY = runY + pendingMargin) — recorded so the self-collapsing re-anchoring shift
+        // only moves the float by the chain's remaining growth (see the ActiveFloat return).
+        child.CollapseShiftApplied = chainOffset;
         child.Box = new BoxDimensions
         {
             ContentBox = new SKRect(placeContentX, placeContentY,
@@ -1453,7 +1482,10 @@ internal static class BoxEngine
         var outerLeft = placeContentX - padding.Left - border.Left - margin.Left;
         var outerRight = placeContentX + childContentW + padding.Right + border.Right + margin.Right;
 
-        return new ActiveFloat(outerLeft, outerTop, outerRight, outerBottom, side);
+        // The float's placement already sits at the running collapsed-margin chain's bottom
+        // (placeY = runY + pendingMargin): record that offset so a self-collapsing ancestor's
+        // re-anchoring shift only moves the float by the chain's remaining growth.
+        return new ActiveFloat(outerLeft, outerTop, outerRight, outerBottom, side, chainOffset);
     }
 
     /// <summary>Back-compat wrapper: returns content height INCLUDING any trailing child margin
@@ -1577,7 +1609,7 @@ internal static class BoxEngine
             {
                 var af = LayoutFloat(child, floatSide, floats, contentX, runY + pendingMargin, contentW,
                                      viewportWidth, viewportHeight, parentContentHeight,
-                                     openLineY, openLineUsedW);
+                                     openLineY, openLineUsedW, pendingMargin);
                 floats.Add(af);
                 i++;
                 continue;
@@ -1639,6 +1671,7 @@ internal static class BoxEngine
                 }
 
                 var (effX, effW) = AvailableBand(floats, borderTop, 1, contentX, contentW);
+                var floatCountBefore = floats.Count;
                 var (h, childBottomMargin) = LayoutBlock(child, effX, borderTop - childMarginTop, effW,
                                                          viewportWidth, viewportHeight, parentContentHeight, floats);
                 var borderBoxH = h - childMarginTop - childBottomMargin;
@@ -1666,10 +1699,26 @@ internal static class BoxEngine
                         var dy = collapsedBorderTop - borderTop;
                         if (MathF.Abs(dy) > 0.01f)
                         {
-                            var box = child.Box;
-                            box.ContentBox = new SKRect(box.ContentBox.Left, box.ContentBox.Top + dy,
-                                box.ContentBox.Right, box.ContentBox.Bottom + dy);
-                            child.Box = box;
+                            // The whole subtree laid out at the pre-shift origin (floats place
+                            // during the flow, abs static positions were recorded there), so
+                            // every descendant box, fragment and static position shifts with
+                            // the box — as do the floats the subtree escaped into the BFC list.
+                            // Nested self-collapsers in the same chain already shifted their own
+                            // subtrees by their own fold; the per-node applied marker keeps the
+                            // re-shift a no-op for them (the chain collapses to ONE margin).
+                            TranslateSubtree(child, dy);
+                            for (var fi = floatCountBefore; fi < floats.Count; fi++)
+                            {
+                                var f = floats[fi];
+                                var additional = dy - f.CollapseShift;
+                                if (MathF.Abs(additional) > 0.01f)
+                                {
+                                    f.Top += additional;
+                                    f.Bottom += additional;
+                                    f.CollapseShift = dy;
+                                    floats[fi] = f;
+                                }
+                            }
                         }
                     }
                 }
