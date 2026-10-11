@@ -1130,7 +1130,11 @@ internal static class BoxEngine
     // -------------------------------------------------------------------------
 
     /// <summary>Represents an active float whose occupied area affects subsequent layout.</summary>
-    private record struct ActiveFloat(float Left, float Top, float Right, float Bottom, FloatType Side, float CollapseShift = 0);
+    private record struct ActiveFloat(float Left, float Top, float Right, float Bottom, FloatType Side, float CollapseShift, LayoutNode Node)
+    {
+        public ActiveFloat(float l, float t, float r, float b, FloatType s, float cs)
+            : this(l, t, r, b, s, cs, null) { }
+    }
 
     /// <summary>
     /// True when the node establishes a new block formatting context (CSS 2.1 §9.4.1): floats,
@@ -1502,7 +1506,7 @@ internal static class BoxEngine
         // The float's placement already sits at the running collapsed-margin chain's bottom
         // (placeY = runY + pendingMargin): record that offset so a self-collapsing ancestor's
         // re-anchoring shift only moves the float by the chain's remaining growth.
-        return new ActiveFloat(outerLeft, outerTop, outerRight, outerBottom, side, chainOffset);
+        return new ActiveFloat(outerLeft, outerTop, outerRight, outerBottom, side, chainOffset, child);
     }
 
     /// <summary>Back-compat wrapper: returns content height INCLUDING any trailing child margin
@@ -1565,6 +1569,10 @@ internal static class BoxEngine
         // height nor paints — a bordered box with only empty children renders its borders alone,
         // with no stripe of background where the collapsed margin would sit (margin-collapse-128).
         var hasCommittedContent = false;
+        // The floats placed since the last committed box/line box belong to the current
+        // self-collapse chain: those that follow real collapsed margins ride the chain's
+        // bottom margin edge as later margins join it (margin-collapse-162).
+        var chainFloatStart = 0;
         // The line box a following float may join (§9.5.1): NaN once a block-level box has been
         // placed, since there is then no open line.
         var openLineY = float.NaN;
@@ -1689,7 +1697,6 @@ internal static class BoxEngine
                 }
 
                 var (effX, effW) = AvailableBand(floats, borderTop, 1, contentX, contentW);
-                var floatCountBefore = floats.Count;
                 var (h, childBottomMargin) = LayoutBlock(child, effX, borderTop - childMarginTop, effW,
                                                          viewportWidth, viewportHeight, parentContentHeight, floats);
                 var borderBoxH = h - childMarginTop - childBottomMargin.Value;
@@ -1725,17 +1732,34 @@ internal static class BoxEngine
                             // subtrees by their own fold; the per-node applied marker keeps the
                             // re-shift a no-op for them (the chain collapses to ONE margin).
                             TranslateSubtree(child, dy);
-                            for (var fi = floatCountBefore; fi < floats.Count; fi++)
+                        }
+                        // Chain floats that follow real collapsed margins ride the chain's
+                        // bottom margin edge: later siblings' top margins join the same chain
+                        // (a float out of flow does not interrupt the adjoining), and the
+                        // float's static position tracks the chain's bottom (margin-collapse-
+                        // 162's float lands on the following block). A float placed at a chain's
+                        // START (no margins above it, placement offset zero) stays there — the
+                        // following margins form a chain below it (margin-collapse-123).
+                        var chainBottomOffset = pending.Value - (firstChildCollapse ? childEffectiveTop : 0f);
+                        for (var fi = chainFloatStart; fi < floats.Count; fi++)
+                        {
+                            var f = floats[fi];
+                            if (f.CollapseShift <= 0f) continue;
+                            var additional = chainBottomOffset - f.CollapseShift;
+                            if (MathF.Abs(additional) > 0.01f)
                             {
-                                var f = floats[fi];
-                                var additional = dy - f.CollapseShift;
-                                if (MathF.Abs(additional) > 0.01f)
+                                f.Top += additional;
+                                f.Bottom += additional;
+                                f.CollapseShift = chainBottomOffset;
+                                if (f.Node is { } floatNode && floatNode.CollapseShiftApplied != dy)
                                 {
-                                    f.Top += additional;
-                                    f.Bottom += additional;
-                                    f.CollapseShift = dy;
-                                    floats[fi] = f;
+                                    var fb = floatNode.Box;
+                                    fb.ContentBox = new SKRect(fb.ContentBox.Left, fb.ContentBox.Top + additional,
+                                        fb.ContentBox.Right, fb.ContentBox.Bottom + additional);
+                                    floatNode.Box = fb;
                                 }
+                                if (f.Node is { } fn) fn.CollapseShiftApplied = chainBottomOffset;
+                                floats[fi] = f;
                             }
                         }
                     }
@@ -1748,6 +1772,7 @@ internal static class BoxEngine
                     pending = childBottomMargin;
                     chainSeveredByClearance = false; // a committed box ends the severed chain
                     hasCommittedContent = true;
+                    chainFloatStart = floats.Count; // a new chain starts after committed content
                 }
                 lastPlacedWasBlock = true;
                 openLineY = float.NaN; // a block-level box closes any open line box
@@ -1789,6 +1814,7 @@ internal static class BoxEngine
                 pending = MarginChain.Empty;
                 chainSeveredByClearance = false; // a line box ends the severed chain
                 hasCommittedContent = true;
+                chainFloatStart = floats.Count; // a new chain starts after committed content
                 var runH = LayoutInlineRun(run, contentX, runY, contentW, viewportWidth, viewportHeight,
                                            floats, out var lastLineTop, out var lastLineWidth);
                 // Remember where the run's last line box sits: a float that comes right after it
