@@ -1,0 +1,1391 @@
+{
+ "comment": "Provenance for the restored html4/*.xht reference documents of the vendored 2011-03-23 official suite. Each file's XHTML\u2192HTML transform equals the vendored .htm twin byte for byte, pinning it to the exact distribution content. Regenerate with scripts/restore-css21-xht-refs.py.",
+ "files": [
+  {
+   "target": "html4/abspos-containing-block-initial-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/abspos/abspos-containing-block-initial-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "326e235f4d1f71345f85c9e1fdacc3a7cd5bb933c93b273b97311ab6bcf351a0",
+   "bytes": 1015
+  },
+  {
+   "target": "html4/abspos-containing-block-initial-004-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/abspos/abspos-containing-block-initial-004-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "b5185558bc9010b706dee1ed7969d8444b3fb18c051865c238cbd2b9e07ba607",
+   "bytes": 618
+  },
+  {
+   "target": "html4/abspos-containing-block-initial-005-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/abspos/abspos-containing-block-initial-005-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "e3b43c8dcbd56b41b256b71a799607e561172888e27c13d9acb05f8f631003e8",
+   "bytes": 581
+  },
+  {
+   "target": "html4/abspos-containing-block-initial-007-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/abspos/abspos-containing-block-initial-007-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "33cd14d54cb34e47212e81dcfe1f508d57ce086428520a25fadc23e3e8e7853b",
+   "bytes": 677
+  },
+  {
+   "target": "html4/abspos-containing-block-initial-009-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/abspos/abspos-containing-block-initial-009-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "f1567a0dd99c2ec3abb7a838d795005904ae8fd4a549dce4d253e6d4b0259fec",
+   "bytes": 587
+  },
+  {
+   "target": "html4/abspos-non-replaced-width-margin-000-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/csswg-issues/submitted/css2.1/abspos-non-replaced-width-margin-000-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "57754803110fbb10144c62ecef0927eb1677f9813e55c715df3264b148f1e756",
+   "bytes": 23504
+  },
+  {
+   "target": "html4/abspos-replaced-width-margin-000-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/csswg-issues/submitted/css2.1/abspos-replaced-width-margin-000-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "caad54edc537496c24df6b1bf3b4823e21744bb4f12925dcf7cfe0ef20bdf586",
+   "bytes": 31293
+  },
+  {
+   "target": "html4/at-charset-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/syntax/at-charset-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "13bf037840ab419b58edfc0543186fbd9625fa5f058e482b1d65accc18ae0888",
+   "bytes": 239
+  },
+  {
+   "target": "html4/background-intrinsic-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/fantasai/submitted/css2.1/backgrounds/background-intrinsic-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "f86a666f304e7d99608e3d5cede1ea906ce6a9b12823174e3936177791af5058",
+   "bytes": 741
+  },
+  {
+   "target": "html4/before-after-display-types-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/generated-content/before-after-display-types-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "8a4fc7f2ab42694e163107894e88758380ca8dc6a78f8c3d3587beac45c68998",
+   "bytes": 2406
+  },
+  {
+   "target": "html4/before-after-dynamic-attr-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/generated-content/before-after-dynamic-attr-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "3a01d6467ff3e91aee4bbb35bbe1b39c026e6b885ae6bbf835663400f96f4c56",
+   "bytes": 234
+  },
+  {
+   "target": "html4/before-after-dynamic-restyle-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/generated-content/before-after-dynamic-restyle-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "157b16cc09c4eec9b428743160058e2eda33c684d4d7b69466a337f3b2ea7fd1",
+   "bytes": 290
+  },
+  {
+   "target": "html4/before-after-floated-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/generated-content/before-after-floated-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "f0b3ced7b98194a08bc5edf07992a0cbd33ba3ad14e0be15ac0742ed00c55239",
+   "bytes": 1222
+  },
+  {
+   "target": "html4/before-after-images-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/generated-content/before-after-images-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "8a8670e943cd66019c897f5924a33b68c6242a856a63fff30f20e94918df35c4",
+   "bytes": 284
+  },
+  {
+   "target": "html4/before-after-positioned-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/generated-content/before-after-positioned-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "804644e33e7b4b78292b52c6657f72b0e5495a800ce630d247f1ea610bbe6415",
+   "bytes": 1268
+  },
+  {
+   "target": "html4/before-after-table-parts-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/generated-content/before-after-table-parts-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "56862f95c27383b2e035f892d7e35b75f97462bd951497aa610344fbeb04125a",
+   "bytes": 4787
+  },
+  {
+   "target": "html4/before-after-table-whitespace-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/generated-content/before-after-table-whitespace-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "e43d9bec94f425c5a8d03296c36fd26eb2fee55ac6ebc9d986ff3181247d1eed",
+   "bytes": 796
+  },
+  {
+   "target": "html4/block-in-inline-append-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-append-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "3dff3f61daad6f9e10991215c82e483962b1f35eeb562cc38bf7265cbc1ab8e2",
+   "bytes": 546
+  },
+  {
+   "target": "html4/block-in-inline-append-002-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-append-002-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "56562e9903ede2b79d71978094ec499d35e39098b687bdbd0e0ccf47dc9de0c2",
+   "bytes": 1205
+  },
+  {
+   "target": "html4/block-in-inline-append-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-append-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "cf33e93a4ccb24790fe65ed68f4e872ad2453ab6b51a40a9617bcb2ab6591321",
+   "bytes": 656
+  },
+  {
+   "target": "html4/block-in-inline-empty-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-empty-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "ab9df99ea5c3d2255f7a3c19f3ba068684d7b544dbcd4d7d981719101da5d4c1",
+   "bytes": 406
+  },
+  {
+   "target": "html4/block-in-inline-empty-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-empty-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "e3ff057ce8e040c06f22df0254e58f9419812c9f9c75d1a87ecabd33e774bb9e",
+   "bytes": 406
+  },
+  {
+   "target": "html4/block-in-inline-empty-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-empty-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "8c984d0a47ab192c61907d71004789b5f4119663e26fa9ad630dde85e1201f71",
+   "bytes": 405
+  },
+  {
+   "target": "html4/block-in-inline-empty-004-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-empty-004-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "8ec4b82fb4ec39a9674d7d14d3e004ab0c14cfe3cea427e43a5ea44d055d50a2",
+   "bytes": 405
+  },
+  {
+   "target": "html4/block-in-inline-float-between-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-float-between-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "80131fc605cae0fa22b73ff27391d1b5aeb60ee07962b4a5466b0037662d4761",
+   "bytes": 483
+  },
+  {
+   "target": "html4/block-in-inline-insert-001-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-001-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "7018b9079740222dd95a7dba5c34e08083c1140c9faee020f51bf0ee3f851270",
+   "bytes": 797
+  },
+  {
+   "target": "html4/block-in-inline-insert-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "4817a85f4ed7de715fd8aba305f231aaf6fe5f49ff6b5957162a502789284068",
+   "bytes": 507
+  },
+  {
+   "target": "html4/block-in-inline-insert-002-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-002-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "02e467601a6384deeb4b90516c297edefb791ade0fe91f83f4356693f3e9cea9",
+   "bytes": 722
+  },
+  {
+   "target": "html4/block-in-inline-insert-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "e03271bff6ebfc26e4c86f14d93515972af4d3b90eb6661beaf3871a99fcd234",
+   "bytes": 455
+  },
+  {
+   "target": "html4/block-in-inline-insert-003-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-003-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "c76f731bcbd9270ccdbfe899b9d21563b4a35a1fe064e708b142a4629af658bb",
+   "bytes": 747
+  },
+  {
+   "target": "html4/block-in-inline-insert-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "f01510f67d705dd9351e24a4bcd58da89a1f33d5ab01bb9f95850e6cd981ffbc",
+   "bytes": 472
+  },
+  {
+   "target": "html4/block-in-inline-insert-004-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-004-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "9743602f2e2fa870ef0aeec5ad2e852c59dc200cc898e6fc927348610150b0ad",
+   "bytes": 763
+  },
+  {
+   "target": "html4/block-in-inline-insert-004-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-004-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "8bea1f7df026c6778bf46b4d6850ffcd2ae4bc77478617a5ddde338f496ac6ec",
+   "bytes": 488
+  },
+  {
+   "target": "html4/block-in-inline-insert-006-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-006-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "b473c7ad20b337defe0a17f7ef482899c223c22496bc62a5be7987d0e6b133d2",
+   "bytes": 525
+  },
+  {
+   "target": "html4/block-in-inline-insert-006-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-006-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "b747620e3cab5ef1f6cd6938816e41731d1589c80cd5b5433dae4bcaabd299fd",
+   "bytes": 356
+  },
+  {
+   "target": "html4/block-in-inline-insert-007-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-007-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "b8e919fa0a8203ba6dbf9dbc75fd2996979184d4a6601e1700564e76e5284d5a",
+   "bytes": 492
+  },
+  {
+   "target": "html4/block-in-inline-insert-007-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-007-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "dd49b926ffccba129a165d8416ce389d2c63d9ae1526fda88a6a41ec6ca34997",
+   "bytes": 358
+  },
+  {
+   "target": "html4/block-in-inline-insert-008-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-008-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "9d9ad081d11c6867cdc79044508bcea59f4d7f353ad0548a62a220ebe4d126d6",
+   "bytes": 596
+  },
+  {
+   "target": "html4/block-in-inline-insert-008-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-008-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "30c737f6ee9e5b7c9424006dc28d3f3cbcdaf7f745ad4417cf2bc2ed65846bf6",
+   "bytes": 407
+  },
+  {
+   "target": "html4/block-in-inline-insert-009-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-009-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "0abdd9d4069894fd74b52922bcc5d0e242759fe50d0500531470d7ed4d0c38fc",
+   "bytes": 1007
+  },
+  {
+   "target": "html4/block-in-inline-insert-009-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-009-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "450b1fc7c721c1133eaa5f79f6fd02c664f99c43a6e3a266b878862a2134368a",
+   "bytes": 540
+  },
+  {
+   "target": "html4/block-in-inline-insert-010-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-010-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "7240886f521398197eefb67f9ef9a9400b2594162c117a956ed7cf38b6fd1ddf",
+   "bytes": 1023
+  },
+  {
+   "target": "html4/block-in-inline-insert-010-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-010-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "01b4b5bbc037ae6b46e754a18e1cfa75603530992437075783c082dcd5817ded",
+   "bytes": 556
+  },
+  {
+   "target": "html4/block-in-inline-insert-011-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-011-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "1637d15dad7529f29b9a5fbab6fe656346b5f59933e7db04f33a366b685b9006",
+   "bytes": 1064
+  },
+  {
+   "target": "html4/block-in-inline-insert-011-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-011-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "fc8e2f978b2d5435590f21f8306712f0c9bf636d3c46e98861645612ecb1b31c",
+   "bytes": 554
+  },
+  {
+   "target": "html4/block-in-inline-insert-012-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-012-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "c19f41c977decfc01e679bc2927b1bc01cb2490b0aecbfcabf567f81ba3f2940",
+   "bytes": 513
+  },
+  {
+   "target": "html4/block-in-inline-insert-012-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-012-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "db3cf9897a4d30567dfe1f36aabe93bdd91314ae7b03a0f97b24992a1ae8b932",
+   "bytes": 326
+  },
+  {
+   "target": "html4/block-in-inline-insert-013-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-013-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "24f59782eae9e347a5f7cb6c66eec3fd75493d5c9ef9b3ac1f89e0c103f7eba1",
+   "bytes": 418
+  },
+  {
+   "target": "html4/block-in-inline-insert-013-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-013-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "a9cd15f6c8ffc5bac38340a9bb1ec37d917725aee553d48573c2742557aa9d5b",
+   "bytes": 315
+  },
+  {
+   "target": "html4/block-in-inline-insert-014-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-014-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "3567fe7e6624d123f7131219fe0a6d9a7539198c72d041c0e2d732ded0d2025a",
+   "bytes": 413
+  },
+  {
+   "target": "html4/block-in-inline-insert-014-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-014-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "e1793a7b3e8972de34a78710d68964a0f91e899a417530e4fdecba84448eb28a",
+   "bytes": 310
+  },
+  {
+   "target": "html4/block-in-inline-insert-015-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-015-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "457783522ea6845f8bfd16b4d3585afaabcae858a706068d0e911a480e4be277",
+   "bytes": 530
+  },
+  {
+   "target": "html4/block-in-inline-insert-015-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-015-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "ec9fdd33d39f75c6e6084c5caf6430e571b49248aec746ffacbcbe59f0d4087b",
+   "bytes": 326
+  },
+  {
+   "target": "html4/block-in-inline-insert-016-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-016-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "9a8f9a13ecd0fe2b9aabd749492182f074da114dedddf3738e75aef35ef6da30",
+   "bytes": 413
+  },
+  {
+   "target": "html4/block-in-inline-insert-016-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-016-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "e25ec6304c985f002fe8a983c9d8dc595866a83b1dcc7e0c0fb28fee8b9becde",
+   "bytes": 310
+  },
+  {
+   "target": "html4/block-in-inline-insert-017-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-insert-017-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "bdde347663a27803951fdbe23422775dc93a4d9d408c2ceba9050b905ffe37ca",
+   "bytes": 579
+  },
+  {
+   "target": "html4/block-in-inline-margins-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-margins-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "605302a364b1442f27d7135e731bad60509335dba42ca1b790fdfa8b3c0f07e0",
+   "bytes": 421
+  },
+  {
+   "target": "html4/block-in-inline-margins-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-margins-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "f8bb7e991d40442d52c23ec1b65dd1423f2db7c6ae015045a92498c4520dd5d0",
+   "bytes": 421
+  },
+  {
+   "target": "html4/block-in-inline-nested-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-nested-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "8a3cd812c59a088c4270c947cddeb9c1b3547bab85230d63bba5456c33ad5c6f",
+   "bytes": 323
+  },
+  {
+   "target": "html4/block-in-inline-nested-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-nested-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "6aa09c6760e6a324a075d2c216644a086ebf8bd29ecc9b6c73ea20fe05e38e63",
+   "bytes": 481
+  },
+  {
+   "target": "html4/block-in-inline-percents-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-percents-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "dda831ba76f15790c30b0b9224e2eac0820b9c27299a67f5472b68c028dac42e",
+   "bytes": 298
+  },
+  {
+   "target": "html4/block-in-inline-remove-000-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-000-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "7db39ccc2ed9e8ea245207a7a63e8d1cb5b1a8ab354bb24d3c419213d20d53e6",
+   "bytes": 247
+  },
+  {
+   "target": "html4/block-in-inline-remove-001-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-001-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "ca66bae23bb8d9978549bccbefa46ece84a30156dd3624ca631397aff7a807b1",
+   "bytes": 460
+  },
+  {
+   "target": "html4/block-in-inline-remove-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "401199fda3d4972c30a3e7ce67a8107f87e94109bd99cad1bff1370e3f05f796",
+   "bytes": 354
+  },
+  {
+   "target": "html4/block-in-inline-remove-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "0d1ebd1c46d9575d756d14332ce82c2dd84a57bbf2a07414ce5a18c3106caa38",
+   "bytes": 350
+  },
+  {
+   "target": "html4/block-in-inline-remove-003-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-003-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "681242b8314618af6de0862a4b00caeb03252e12ce8001bceca99e8b63b9e588",
+   "bytes": 458
+  },
+  {
+   "target": "html4/block-in-inline-remove-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "eecbb7635d23657b2abc90481f2e7c9cddd8cff68039f79700d530f8d6ff6dcc",
+   "bytes": 355
+  },
+  {
+   "target": "html4/block-in-inline-remove-004-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-004-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "57406d7cc40e16c9e61b30ddb7134150884cf739dc94f767850fe037c81c8287",
+   "bytes": 484
+  },
+  {
+   "target": "html4/block-in-inline-remove-004-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-004-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "6a7ffed52da1216ff54fd1f96021c05c0dd6af5dbddd0ac79a8a23d39445eb12",
+   "bytes": 387
+  },
+  {
+   "target": "html4/block-in-inline-remove-005-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-005-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "00827ff54f5747f633e307b6b41dbeea2d273789100092abaf3bb8eccda27701",
+   "bytes": 486
+  },
+  {
+   "target": "html4/block-in-inline-remove-005-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-005-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "83d1066fbd699503c91afe211ab99616b0f251f69964dac404c6eac33eec12ec",
+   "bytes": 382
+  },
+  {
+   "target": "html4/block-in-inline-remove-006-nosplit-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-006-nosplit-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "f375b2900c53fddf5af4dbccaf87123d4db2b69e84b622cb9cec1a9e8b737f7c",
+   "bytes": 493
+  },
+  {
+   "target": "html4/block-in-inline-remove-006-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-remove-006-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "4810351e544a3740d878211ceb5030dfd28ce24a650521396b9b56fd547243b5",
+   "bytes": 393
+  },
+  {
+   "target": "html4/block-in-inline-whitespace-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/block-in-inline-whitespace-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "63e9e976067af230c41ac6a224e91219a206d57d91ff58c358ef3962be1afbfa",
+   "bytes": 533
+  },
+  {
+   "target": "html4/border-collapse-dynamic-cell-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-cell-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "1f4c3e781102ed864c946f2cdf470525ed725e2ec8fb9e890d21e99152715b35",
+   "bytes": 568
+  },
+  {
+   "target": "html4/border-collapse-dynamic-cell-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-cell-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "7cb6a204a5cbd86e477cb32b5f3ceb8bd8adf9e06b086956c5179bc683477224",
+   "bytes": 587
+  },
+  {
+   "target": "html4/border-collapse-dynamic-cell-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-cell-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "e47f76918f4c9b08a4de52b2f54b0c653db3bca9523134ce5e716826efc02b04",
+   "bytes": 573
+  },
+  {
+   "target": "html4/border-collapse-dynamic-cell-004-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-cell-004-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "a4cc2b628b9a41964c356ecfe7fbcc0bbbecfb0a54c90ba529512b94c8d47ca2",
+   "bytes": 565
+  },
+  {
+   "target": "html4/border-collapse-dynamic-cell-005-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-cell-005-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "93633857336354df2cb9f8eb3496ca63abcd9bc709afc069b0f7af55a814e96a",
+   "bytes": 568
+  },
+  {
+   "target": "html4/border-collapse-dynamic-colgroup-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-colgroup-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "2bc1e27d1277c32dc2899d7b40d163fdcc63cfffad2ae4c7072591e332bfd2ac",
+   "bytes": 723
+  },
+  {
+   "target": "html4/border-collapse-dynamic-colgroup-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-colgroup-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "4955b8e8b8985e225c9926e3daa821eecdbc9c41b0fe00251b05f1cf3a6597f5",
+   "bytes": 722
+  },
+  {
+   "target": "html4/border-collapse-dynamic-colgroup-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-colgroup-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "ab3abcea6b8e4be2c6cd7642911b470c7aee34210cf3512dfedc21314650942b",
+   "bytes": 723
+  },
+  {
+   "target": "html4/border-collapse-dynamic-rowgroup-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-rowgroup-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "8098b0847394de754f2602928509a98a340904c8cfb41bcd6970baa6c9e32c61",
+   "bytes": 636
+  },
+  {
+   "target": "html4/border-collapse-dynamic-rowgroup-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-rowgroup-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "0a88797bc4c562e67d1fa159db2c9efc90e68e42aa7aeb82487ce796d432e1ba",
+   "bytes": 636
+  },
+  {
+   "target": "html4/border-collapse-dynamic-rowgroup-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-rowgroup-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "b759a413ec9203bc63af90f30925285b0ffcd1571e694f2ba5652f74c1db519c",
+   "bytes": 637
+  },
+  {
+   "target": "html4/border-collapse-dynamic-table-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-table-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "ab2fba77b8f9d2aac4573bdda957e0ece40d49b1e4bdc06279ff21bfdce11069",
+   "bytes": 714
+  },
+  {
+   "target": "html4/border-collapse-dynamic-table-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-table-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "0c075a1990610f2eff2e29562b8b538aee03726c80705e994156e43be6306650",
+   "bytes": 712
+  },
+  {
+   "target": "html4/border-collapse-dynamic-table-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-dynamic-table-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "affb7885d1112b44746aaa49768fa79bb7df5cdbf6849c253a6f5c42277607f3",
+   "bytes": 714
+  },
+  {
+   "target": "html4/border-collapse-offset-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-offset-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "c3aa995769c934401daedc446284723e3e8f715210e8f620ce10122760721b6a",
+   "bytes": 499
+  },
+  {
+   "target": "html4/border-collapse-offset-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/border-collapse-offset-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "e8899d5da2117f568e5ed500023c11ef90e72c489ca99e0af28a5f999cfd7777",
+   "bytes": 480
+  },
+  {
+   "target": "html4/first-letter-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/selectors/first-letter-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "3a78c85607c52e22de212d721e4ddbdde31f402383541edc760ce81efe7566e5",
+   "bytes": 315
+  },
+  {
+   "target": "html4/first-letter-dynamic-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/selectors/first-letter-dynamic-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "000d96dfbe2bac3f22714568a1fdab99b41ed934456e9d5acdd48b6a695b9599",
+   "bytes": 247
+  },
+  {
+   "target": "html4/first-letter-dynamic-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/selectors/first-letter-dynamic-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "1cfcb78b47b4d0d6aaf0bebc57524422cbf470c25af113586bcca49dba2bba16",
+   "bytes": 207
+  },
+  {
+   "target": "html4/first-letter-inherit-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/selectors/first-letter-inherit-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "7210aba0718abde85accd8a387d109901f6881a6322ded899d49e11178e0a2d3",
+   "bytes": 525
+  },
+  {
+   "target": "html4/first-letter-nested-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/selectors/first-letter-nested-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "52f6da8d7662f9bb32e71497c9ac5f8cb82c93d8b7e270bef871673357a3d87e",
+   "bytes": 367
+  },
+  {
+   "target": "html4/first-letter-quote-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/selectors/first-letter-quote-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "a88342d05aa9e3475effca6f08bf3bd039f3873e399f8da5f7769264483b005b",
+   "bytes": 336
+  },
+  {
+   "target": "html4/first-line-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/selectors/first-line-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "9f2c9da469c7e18b29b246c49b862e3f5f4b4e82f760edbb3b256cf4b9188a90",
+   "bytes": 290
+  },
+  {
+   "target": "html4/first-line-floats-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/selectors/first-line-floats-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "60653fe2ee595a8fadc162781657806c85ef4cc8f4fb410b43ac9423fb093551",
+   "bytes": 334
+  },
+  {
+   "target": "html4/first-line-inherit-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/selectors/first-line-inherit-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "fb311c32bb9ac8540941548084e7f2222d5151add38ffcf87f4e3cfab3ad9a1c",
+   "bytes": 348
+  },
+  {
+   "target": "html4/first-line-inherit-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/selectors/first-line-inherit-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "af58db9b0579b39d1ca181627ff6812d163d7d1c48421aac7e41b32b13645838",
+   "bytes": 292
+  },
+  {
+   "target": "html4/first-line-inherit-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/selectors/first-line-inherit-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "a97a4e2777192475fa4a85f919d09b33300b2befab2c302ac9582e8114379c12",
+   "bytes": 299
+  },
+  {
+   "target": "html4/floats-placement-vertical-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-placement-vertical-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "6c9b1cf7ae71cec42f8564136a48f399b41890a65590ce845889159726909a81",
+   "bytes": 940
+  },
+  {
+   "target": "html4/floats-placement-vertical-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-placement-vertical-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "2b0a05f6fa95559d695d1f45622482a98c4e15ef6a2f2e1f4e4f8ad9bb14bd0d",
+   "bytes": 724
+  },
+  {
+   "target": "html4/floats-placement-vertical-004-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-placement-vertical-004-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "bec379316056f55db81e73f76ddc45737f0fa252e5aa45368eb81a81e8de6a3b",
+   "bytes": 613
+  },
+  {
+   "target": "html4/floats-placement-vertical-004-ref2.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-placement-vertical-004-ref2.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "617491a42a6c15645b5b6c36dbea6cf6ada6937d602f27bcbb14a4650e866ee2",
+   "bytes": 685
+  },
+  {
+   "target": "html4/floats-rule3-outside-left-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-rule3-outside-left-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "9a898d82621274245c9f7b8bfda77865bc049cced92a9b29e52a5772750013bd",
+   "bytes": 410
+  },
+  {
+   "target": "html4/floats-rule3-outside-left-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-rule3-outside-left-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "9a9b49bfda3ec24e4ccbb0d760f365ef5ad01df986801c0c2337ca8ceff5ae38",
+   "bytes": 430
+  },
+  {
+   "target": "html4/floats-rule3-outside-right-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-rule3-outside-right-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "98911f2c17a0ff552ec89e47c23c1d4681f5ece82559841a67d6be61b685f5b4",
+   "bytes": 428
+  },
+  {
+   "target": "html4/floats-rule3-outside-right-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-rule3-outside-right-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "7a9bf06ee2a287d0610231e48f5e044bf1690210aeead0e189b834cee629275b",
+   "bytes": 449
+  },
+  {
+   "target": "html4/floats-rule7-outside-left-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-rule7-outside-left-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "a93c8becfb369d00eca62ed7710b41414ffb6995045e05b43af4350677d12bbd",
+   "bytes": 450
+  },
+  {
+   "target": "html4/floats-rule7-outside-right-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-rule7-outside-right-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "3a89afcb6b370eaa0e6fea32419d123453ca7466de216c979308b2239808e92f",
+   "bytes": 450
+  },
+  {
+   "target": "html4/floats-wrap-bfc-001-left-overflow-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-001-left-overflow-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "a207f6c6d387627c02a26d8959c5759588762ff9359e6dd6c4a835c1154f3c1e",
+   "bytes": 852
+  },
+  {
+   "target": "html4/floats-wrap-bfc-001-left-table-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-001-left-table-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "90b1f6dd4eecf24adf313aa2a42355ed95c3449ce1606ec6c77c738a29364f49",
+   "bytes": 779
+  },
+  {
+   "target": "html4/floats-wrap-bfc-001-right-overflow-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-001-right-overflow-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "7176ae7db95f5d2ed71f5a1e6056247ad6a60c3341fd06b06d85d8debf78b84e",
+   "bytes": 853
+  },
+  {
+   "target": "html4/floats-wrap-bfc-001-right-table-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-001-right-table-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "7b4abb7741af1afad4142596d75c99f533fd5f1350cc67df35040808ef7f53f2",
+   "bytes": 780
+  },
+  {
+   "target": "html4/floats-wrap-bfc-002-left-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-002-left-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "353723e977927b3a7536c5bdda86625962ad23774501ac578d73505e58a9a739",
+   "bytes": 854
+  },
+  {
+   "target": "html4/floats-wrap-bfc-002-right-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-002-right-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "037a8c7f32afee21c19c790ca608b5a4e86b58c74bb9057a048d07c2373a155f",
+   "bytes": 855
+  },
+  {
+   "target": "html4/floats-wrap-bfc-003-left-overflow-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-003-left-overflow-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "3e4e2c3a8cbc5b2d8787f8b516028bf4da29d42663a613a931eb2f816378e380",
+   "bytes": 779
+  },
+  {
+   "target": "html4/floats-wrap-bfc-003-left-table-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-003-left-table-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "51e39c99dc38dbb0931c9e7c669fdbe2660e58a52b0896ec65b4d9cb08c814e6",
+   "bytes": 791
+  },
+  {
+   "target": "html4/floats-wrap-bfc-003-right-overflow-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-003-right-overflow-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "9340b8dbd7778a800fc7bdd85cb0fd0722f16db2ad404eafeb3c2de25053b26a",
+   "bytes": 780
+  },
+  {
+   "target": "html4/floats-wrap-bfc-003-right-table-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-003-right-table-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "e7d8860a23fb0bed5c1f07f4c9c53c1a65e475442038ab66eab55cbcc8737f07",
+   "bytes": 793
+  },
+  {
+   "target": "html4/floats-wrap-bfc-004-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-004-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "b62dcd05452e5f3aae3d1061124eb6669b2331d9d49fd2a28b9cbb8351c4d68d",
+   "bytes": 3000
+  },
+  {
+   "target": "html4/floats-wrap-bfc-005-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-005-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "2019425e62cf9c025b66f587d9768a977b395333af0cee1b5444af09d82dc7fa",
+   "bytes": 1584
+  },
+  {
+   "target": "html4/floats-wrap-bfc-006-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-006-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "c66a05512dd8dca2d913551e88d3e95d20fb5889a91a550715886eef80b5a82f",
+   "bytes": 12645
+  },
+  {
+   "target": "html4/floats-wrap-bfc-007-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-007-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "379dc96e15594f10c9abe1d2b2e9042958ae2ff306eb2fd76b0aa51ff73e2fe0",
+   "bytes": 5442
+  },
+  {
+   "target": "html4/floats-wrap-bfc-outside-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-bfc-outside-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "9a270ea02c3ee93ff07c29ecf1bb96451b50c32c3c7d47e03b99edbb27103b6a",
+   "bytes": 608
+  },
+  {
+   "target": "html4/floats-wrap-top-below-001l-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-top-below-001l-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "f84b92ff4ae1ed5b0aaca7e3dcf573e1c8cde699cf044ce13639b2411f675e46",
+   "bytes": 809
+  },
+  {
+   "target": "html4/floats-wrap-top-below-001r-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-top-below-001r-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "7674eeefbc6e99674c16cf938a855569b7f83b91b7b25dadcdfd09b488dd7427",
+   "bytes": 812
+  },
+  {
+   "target": "html4/floats-wrap-top-below-002l-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-top-below-002l-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "27beff7f49485aa0c8f0aaff75a07a22abf40843cd5f879208c41ea22b03426b",
+   "bytes": 756
+  },
+  {
+   "target": "html4/floats-wrap-top-below-002r-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-top-below-002r-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "b2f306e575b095feb96db2af87828e7e9e6a4019d7bfc8e7f2d1be72ce15991c",
+   "bytes": 757
+  },
+  {
+   "target": "html4/floats-wrap-top-below-003l-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-top-below-003l-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "c77a17d7c1c91bb2789270a3808294839f5db2f281ab6ccfdf1270839e240ea6",
+   "bytes": 768
+  },
+  {
+   "target": "html4/floats-wrap-top-below-003r-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-wrap-top-below-003r-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "243b5dd429ca0e7c6124e4dda673c0a4c508d57961398a0cbec3bf3bf00776d8",
+   "bytes": 768
+  },
+  {
+   "target": "html4/floats-zero-height-wrap-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/floats/floats-zero-height-wrap-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "412a3cb0759fdfa5cfb0b349003d7416ee47529846d508d133f717fa64322d97",
+   "bytes": 718
+  },
+  {
+   "target": "html4/font-family-name-016-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/fontreftests/font-family-name-016-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "4535a7c66e72d58bda44c6c8fe40736ee7900b2e9cf5457eb4d12b562b05f301",
+   "bytes": 1080
+  },
+  {
+   "target": "html4/font-family-name-022-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/fontreftests/font-family-name-022-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "64911ee6fc590a4e9aa0c9a7cd839eb9ae63e97a32d7db905902c5b4de83ee68",
+   "bytes": 1143
+  },
+  {
+   "target": "html4/font-family-name-023-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/fontreftests/font-family-name-023-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "a38f4332d86fbe96ef94bf8392d7c0fad293a15eb9fc49fbc248ec411d61ad37",
+   "bytes": 1283
+  },
+  {
+   "target": "html4/font-family-name-024-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/fontreftests/font-family-name-024-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "40412c6562c73233c86da6ec5793d1ec02d5326f15ad702665b98435bd67b493",
+   "bytes": 1113
+  },
+  {
+   "target": "html4/font-family-name-mixcase-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/fontreftests/font-family-name-mixcase-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "cc9523f3febe0cad292f5b426039bdc3ecc0f4f32e43ff281f37dd5185281068",
+   "bytes": 1063
+  },
+  {
+   "target": "html4/font-family-name-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/fontreftests/font-family-name-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "a73fc5ccac1bb4ada97d20ff223d35aca59fea1f30efb7f4d36015f75e42e1a9",
+   "bytes": 1091
+  },
+  {
+   "target": "html4/font-weight-bolder-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/fontreftests/font-weight-bolder-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "68b049085a3a52647aa1ea52b070a2aa3c408bcb16fe304e5b7c129ec165c346",
+   "bytes": 5602
+  },
+  {
+   "target": "html4/font-weight-lighter-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/fontreftests/font-weight-lighter-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "aa47f78ffb7c8122f935257ac0bff84e8f2828e55768d9127e818aeea5718adf",
+   "bytes": 5588
+  },
+  {
+   "target": "html4/font-weight-normal-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/fontreftests/font-weight-normal-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "10964ec0028460d2595c8ba7a6d623209633b0dea027cb1655e82f393df537a3",
+   "bytes": 5578
+  },
+  {
+   "target": "html4/inline-block-000-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-block-000-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "667d511b1e220f6b04b0f46003b0d276f6d5d33700cfdb75f09311ca05cf5eeb",
+   "bytes": 406
+  },
+  {
+   "target": "html4/inline-block-height-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-block-height-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "87509934b31495c2f16ab3b79b15ce1f10c1e508d4b4d8243fd64473970ee4b0",
+   "bytes": 508
+  },
+  {
+   "target": "html4/inline-block-height-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-block-height-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "83537a8fae795413cf2f32cb6050fd0df973e5a489b358edb5990875b675a053",
+   "bytes": 510
+  },
+  {
+   "target": "html4/inline-block-valign-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-block-valign-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "0d32dfed5885aa5f4e6696b700aa040fbc7013084e5b8b9408517e628fc8f292",
+   "bytes": 497
+  },
+  {
+   "target": "html4/inline-block-valign-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-block-valign-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "3cf92b5ba5d29b771a1e6310d2b09b7cb47091c51958c45e7ecb874fb4337d23",
+   "bytes": 734
+  },
+  {
+   "target": "html4/inline-block-width-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-block-width-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "eb6f1be9283ea60f47815cc90a4450efe7045aa99cd09d797063538447361d7c",
+   "bytes": 619
+  },
+  {
+   "target": "html4/inline-block-width-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-block-width-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "b7ce222d5e4df05b78bf347d7088230405f3e6cf21079952a8bc7b5f739669b1",
+   "bytes": 558
+  },
+  {
+   "target": "html4/inline-block-zorder-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-block-zorder-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "93814f1a4c50a47299694142bdc3449f3643b908bfba860832124077e3c05cf9",
+   "bytes": 513
+  },
+  {
+   "target": "html4/inline-block-zorder-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-block-zorder-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "cf7eae93ca9989f71ea12a35c20b3c96a8a12163275b6513f75144ce4eb2a504",
+   "bytes": 596
+  },
+  {
+   "target": "html4/inline-block-zorder-004-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-block-zorder-004-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "ea691fb96c78cf21c58888241a57bcfcf835482838327ba741034161ed0e4f63",
+   "bytes": 619
+  },
+  {
+   "target": "html4/inline-table-height-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-table-height-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "682a7881f5bfbd8f5bee3a5be8c5159d7e3292b66d9ce78ff475b46a8d6751d6",
+   "bytes": 524
+  },
+  {
+   "target": "html4/inline-table-height-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-table-height-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "8d2c4f2dd46d56ebf96a79ee0eeaf247cfdf8dd0c2ea5d1452726855e6270343",
+   "bytes": 514
+  },
+  {
+   "target": "html4/inline-table-width-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-table-width-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "542a23eb3c3309a7ea3a66f331eb253c49b587c4738251cc2708f120f92dda81",
+   "bytes": 635
+  },
+  {
+   "target": "html4/inline-table-width-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-table-width-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "8004de1140ce46a7d8765a4c9e58485c6d74a8992e81bb21f1953a5322a33857",
+   "bytes": 574
+  },
+  {
+   "target": "html4/inline-table-zorder-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-table-zorder-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "85d10242a8be177c65ed45b79aa7e4a5af5fd27d8f1d3800dbd210122418c52a",
+   "bytes": 513
+  },
+  {
+   "target": "html4/inline-table-zorder-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-table-zorder-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "65644121be01cb46b7f47cad14108cdea8a0e07d84b371a4fedd3824e48c6890",
+   "bytes": 596
+  },
+  {
+   "target": "html4/inline-table-zorder-004-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/inline-table-zorder-004-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "92375ffec304a6cc30306d98484a34b8b42635eca1340e6cdf4f901dbabf3352",
+   "bytes": 619
+  },
+  {
+   "target": "html4/left-ltr-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/bzbarsky/submitted/css2.1/box/left-ltr-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "813251a595d200c8a7aed7e57936fa46ae39d7a3a1c23e98db405f0682b68d0e",
+   "bytes": 582
+  },
+  {
+   "target": "html4/left-rtl-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/bzbarsky/submitted/css2.1/box/left-rtl-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "ad1713eb53c1d15bca830f20c4c1b81c79f4633000b9a5847818ff7aac3628c8",
+   "bytes": 582
+  },
+  {
+   "target": "html4/quotes-035-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/hixie/submitted/css2.1-reftests/generated-content/quotes-035-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "68a3b9efb9b764c63bee137c66f7f9bbe0c3801523a9ea057df490044e638f8f",
+   "bytes": 481
+  },
+  {
+   "target": "html4/right-ltr-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/bzbarsky/submitted/css2.1/box/right-ltr-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "0f8cf16be536ed26abe642edea049bd386bed691a75c027cd3041fcdba25719b",
+   "bytes": 605
+  },
+  {
+   "target": "html4/right-rtl-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/bzbarsky/submitted/css2.1/box/right-rtl-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "0248e14c27bc848901684c8e62800046364b829a5075b1cde9a98b17ae3979d0",
+   "bytes": 605
+  },
+  {
+   "target": "html4/rtl-linebreak-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/bzbarsky/submitted/css2.1/box/rtl-linebreak-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "5960665bd42c4c5dfb4981442c2d52854e9ed07f562aa2fcbe49c2ebc87dc8f1",
+   "bytes": 806
+  },
+  {
+   "target": "html4/support/ref-green-box-100x100.xht",
+   "source": "csswg-test@fa44870087:contributors/csswg-issues/submitted/css2.1/support/ref-green-box-100x100.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "5acdf2d7f9fcae5de0ed76ad2f0dabd2094263e99fdc29b1d18f8202ea8bf270",
+   "bytes": 547
+  },
+  {
+   "target": "html4/table-backgrounds-bc-cell-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bc-cell-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "9b5b7cbd3dae8c52c449bf7a7dc2883042641422ca14a860f361d13e5318e5bc",
+   "bytes": 1589
+  },
+  {
+   "target": "html4/table-backgrounds-bc-colgroup-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bc-colgroup-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "8bf568a22d82fb1c98e5d60554be7322d647dfb89d2f164bb975255b0b104c6b",
+   "bytes": 1583
+  },
+  {
+   "target": "html4/table-backgrounds-bc-column-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bc-column-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "fd4d620b6e46eaa83410a31a9068ce7ae6d8a01dc9f64f82472c664a81f46af1",
+   "bytes": 1583
+  },
+  {
+   "target": "html4/table-backgrounds-bc-row-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bc-row-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "76148204a4789adf7cb7b46905b21c8f270a2a05fac0d8413ff651e7a6d35573",
+   "bytes": 1583
+  },
+  {
+   "target": "html4/table-backgrounds-bc-rowgroup-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bc-rowgroup-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "aea243a6d0418c4253205081e5eba5115064716e8e4d28af5c6313c1ad4503b8",
+   "bytes": 1583
+  },
+  {
+   "target": "html4/table-backgrounds-bc-table-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bc-table-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "ad7794b872b3e55865c120991aa55918b679c70bd0fd6213cb96afd057fe6463",
+   "bytes": 1584
+  },
+  {
+   "target": "html4/table-backgrounds-bs-cell-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bs-cell-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "5847d583b29f92d3bdf0fac66bb0b4beb6d96edc1e06a1dde346ab5702cbcf28",
+   "bytes": 1649
+  },
+  {
+   "target": "html4/table-backgrounds-bs-colgroup-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bs-colgroup-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "b8a6f2b9b42a072d65c0c650c6365a04091656ecdfed9a96012b9390761ac5ec",
+   "bytes": 2623
+  },
+  {
+   "target": "html4/table-backgrounds-bs-column-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bs-column-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "ba114dab46efda1005d527eed99c852c0b90a944da23df16ed69e49460a32fe1",
+   "bytes": 2623
+  },
+  {
+   "target": "html4/table-backgrounds-bs-row-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bs-row-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "d988d8323931d7e0667d150a6947466e910dcd1b15fd67fa1cdc9196572bfab8",
+   "bytes": 2622
+  },
+  {
+   "target": "html4/table-backgrounds-bs-rowgroup-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bs-rowgroup-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "7d9e9a7cfd593cb2c4a4ff16095875fa3a10f409e82e8ba08c83763313632495",
+   "bytes": 2621
+  },
+  {
+   "target": "html4/table-backgrounds-bs-table-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-backgrounds-bs-table-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "7e2df070adfee594e515505a1767eba4ccff36b8486ea690df02fa565d79d4c2",
+   "bytes": 1605
+  },
+  {
+   "target": "html4/table-in-inline-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/normal-flow/table-in-inline-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "9d86f79ae5577da77fe3701dfc38ba17933727083fdf149f446b4ca1a66cfb8a",
+   "bytes": 285
+  },
+  {
+   "target": "html4/table-vertical-align-baseline-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/tables/table-vertical-align-baseline-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "6cdda141b6959b8009527eb99ef8b6955069d1ed8df70a6e4e07e60d15c15460",
+   "bytes": 642
+  },
+  {
+   "target": "html4/text-indent-113-ref-margin.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-indent-113-ref-margin.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "c972fb31d888a0a9a0778875f3cc40faa0c4a2cf3d7774838f88c1ab5e70bbc2",
+   "bytes": 564
+  },
+  {
+   "target": "html4/text-indent-114-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-indent-114-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "d5fd3b77bae0b8008996d8d266e110b5c0c1b45e2008adc26ecf7a2256b6e0f6",
+   "bytes": 539
+  },
+  {
+   "target": "html4/text-indent-115-ref-block-margin.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-indent-115-ref-block-margin.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "89544190906691adca1988a6562949931a47a2f1dd27eeeed65266ef604de75c",
+   "bytes": 605
+  },
+  {
+   "target": "html4/text-indent-115-ref-inline-margin.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-indent-115-ref-inline-margin.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "b840dbba0481ceb9a1e103397c61d81ae6713bdd1c3cc7392d32bc7eb5ad6344",
+   "bytes": 600
+  },
+  {
+   "target": "html4/text-indent-intrinsic-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-indent-intrinsic-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "e914a6a48d63d2260957e701c17c9340097545be3f55ac672d76c2f057c34c92",
+   "bytes": 876
+  },
+  {
+   "target": "html4/text-indent-intrinsic-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-indent-intrinsic-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "2cd0e23808c91208a83a94a12b12df2632532de962445b58b8733d4b0631333a",
+   "bytes": 877
+  },
+  {
+   "target": "html4/text-indent-intrinsic-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-indent-intrinsic-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "bbbc9938b6d4f7e76b8fa1e4cc9e743ccc61cb1fb1315c772234e39da19db34d",
+   "bytes": 726
+  },
+  {
+   "target": "html4/text-indent-intrinsic-004-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-indent-intrinsic-004-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "6d3078d6d474eed85e3fd70299b82203207329ebbd0231a01a8135cc70725655",
+   "bytes": 726
+  },
+  {
+   "target": "html4/text-indent-percent-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-indent-percent-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "26fa20bc77e3a1388a530fed9342c90a75bc26dff991ccaba37b69f8f72dd1f5",
+   "bytes": 341
+  },
+  {
+   "target": "html4/text-indent-wrap-001-ref-float.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-indent-wrap-001-ref-float.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "985ad631ea5f0fcb7f5470b2a1f95a8607f461b4422533884cdf54fdd1fb71ea",
+   "bytes": 1397
+  },
+  {
+   "target": "html4/text-indent-wrap-001-ref-inline-margin.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-indent-wrap-001-ref-inline-margin.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "559d38693ec415fadf2111986dba751fb1c10ad802793d0ebddf2118e6c9254c",
+   "bytes": 1362
+  },
+  {
+   "target": "html4/text-transform-capitalize-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-transform-capitalize-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "15d727a93154d4743df7087184e1b08ae77a40bf14664bdf24b2139b9b64d878",
+   "bytes": 254
+  },
+  {
+   "target": "html4/text-transform-capitalize-003-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-transform-capitalize-003-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "d79b35d5e9a428e6b6c212aec7f8c762fe9fa2180056933c3a6a1be51e66b4db",
+   "bytes": 394
+  },
+  {
+   "target": "html4/text-transform-lowercase-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-transform-lowercase-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "1328b38ebe8fabbb39882f4352ad01071eb29621ebce4ec6720b61ccefe52b53",
+   "bytes": 228
+  },
+  {
+   "target": "html4/text-transform-uppercase-001-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-transform-uppercase-001-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "bd989978e3ef49011589fb3e7cf2ab3d61504638d4d658126c086627997feca8",
+   "bytes": 226
+  },
+  {
+   "target": "html4/text-transform-uppercase-002-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/text/text-transform-uppercase-002-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "79a973801e19c3b9c84b044286663217905f5a8db1f47446494d18447c08328b",
+   "bytes": 197
+  },
+  {
+   "target": "html4/uri-013-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/syntax/uri-013-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "a842455ce9c01b9c8fc6da513d5874f074e7a9f6833cc84692c24fc41fe313f6",
+   "bytes": 1507
+  },
+  {
+   "target": "html4/z-index-020-ref.xht",
+   "source": "csswg-test@fa44870087:contributors/mozilla/submitted/css2.1/zorder/z-index-020-ref.xht",
+   "verifiedBy": "xht->htm transform equals the vendored .htm twin byte for byte",
+   "sha256": "6eaf85e8a3853437eb249279017c67b9abee28075e0de2c691685257db63a401",
+   "bytes": 2287
+  }
+ ]
+}
