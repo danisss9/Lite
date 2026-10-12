@@ -114,13 +114,14 @@ internal static class IntrinsicSizer
             {
                 // Gather a maximal inline run, then measure it as a line.
                 var toks = new List<InlineTok>();
+                var pendingBoundarySpace = false;
                 while (i < children.Count)
                 {
                     var c = children[i];
                     var d = c.GetDisplay();
                     if (d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex or DisplayType.Table) break;
                     if (c.TagName != "#text" && c.GetFloat() != FloatType.None) break;
-                    FlattenInline(c, viewportHeight, toks);
+                    FlattenInline(c, viewportHeight, toks, ref pendingBoundarySpace);
                     i++;
                 }
                 var (rMin, rMax) = RunMinMax(toks);
@@ -223,8 +224,13 @@ internal static class IntrinsicSizer
     /// Flattens an inline subtree into a token stream: text words/atomic inlines become
     /// (min, max) atoms, <c>&lt;br&gt;</c> becomes a break, and an inline element's own horizontal
     /// padding/border/margin are emitted as unbreakable atoms around its content (they never wrap).
+    /// <paramref name="pendingBoundarySpace"/> carries the §16.6.1 boundary rule across leaves:
+    /// collapsible whitespace between two rendered atoms contributes exactly one space to
+    /// max-content, whichever leaf carries it — dropping it under-measured runs that bound an
+    /// atomic (an anonymous table) and wrapped abs-pos overlays that must not wrap.
     /// </summary>
-    private static void FlattenInline(LayoutNode node, float viewportHeight, List<InlineTok> toks)
+    private static void FlattenInline(LayoutNode node, float viewportHeight, List<InlineTok> toks,
+        ref bool pendingBoundarySpace)
     {
         var display = node.GetDisplay();
         if (display == DisplayType.None) return;
@@ -244,6 +250,7 @@ internal static class IntrinsicSizer
             || node.GetWidth(0) > 0)
         {
             var (m, x) = OuterMinMax(node, viewportHeight);
+            if (pendingBoundarySpace) { x += SpaceWidth(node); pendingBoundarySpace = false; }
             toks.Add(new InlineTok(false, m, x));
             return;
         }
@@ -251,7 +258,7 @@ internal static class IntrinsicSizer
         if (node.Children.Count == 0 && !string.IsNullOrEmpty(node.DisplayText))
         {
             var (m, x) = TextMinMax(node);
-            toks.Add(new InlineTok(false, m, x));
+            AppendTextToken(node, toks, m, x, ref pendingBoundarySpace);
             return;
         }
 
@@ -263,10 +270,53 @@ internal static class IntrinsicSizer
         var marg = node.GetMargin(0, viewportHeight, fs);
         var left = pad.Left + bord.Left + Math.Max(0f, marg.Left);
         var right = pad.Right + bord.Right + Math.Max(0f, marg.Right);
-        if (left > 0f) toks.Add(new InlineTok(false, left, left));
+        if (left > 0f)
+        {
+            if (pendingBoundarySpace) { left += SpaceWidth(node); pendingBoundarySpace = false; }
+            toks.Add(new InlineTok(false, left, left));
+        }
         foreach (var child in node.Children)
-            FlattenInline(child, viewportHeight, toks);
-        if (right > 0f) toks.Add(new InlineTok(false, right, right));
+            FlattenInline(child, viewportHeight, toks, ref pendingBoundarySpace);
+        if (right > 0f)
+        {
+            if (pendingBoundarySpace) { right += SpaceWidth(node); pendingBoundarySpace = false; }
+            toks.Add(new InlineTok(false, right, right));
+        }
+    }
+
+    /// <summary>Emits a text token with the boundary-space rule applied: the space a collapsing
+    /// leaf carries toward rendered content on either side counts once toward max-content. A
+    /// whitespace-only leaf measures one space via TextMinMax's fallback and just propagates the
+    /// boundary; a content leaf whose raw text starts (or inherits) collapsible whitespace adds
+    /// the one space its measured line excluded.</summary>
+    private static void AppendTextToken(LayoutNode node, List<InlineTok> toks, float min, float max,
+        ref bool pendingBoundarySpace)
+    {
+        var raw = node.DisplayText;
+        var ws = node.GetWhiteSpace();
+        var collapses = ws is not (WhiteSpace.Pre or WhiteSpace.PreWrap);
+        if (collapses && !string.IsNullOrEmpty(raw))
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                pendingBoundarySpace = true;
+            }
+            else
+            {
+                var startsWithWs = char.IsWhiteSpace(raw[0]);
+                var endsWithWs = char.IsWhiteSpace(raw[^1]);
+                if ((pendingBoundarySpace || startsWithWs && toks.Count > 0) && max > 0f)
+                    max += SpaceWidth(node);
+                pendingBoundarySpace = endsWithWs;
+            }
+        }
+        toks.Add(new InlineTok(false, min, max));
+    }
+
+    private static float SpaceWidth(LayoutNode node)
+    {
+        using var font = TextMeasure.CreateFont(node);
+        return font.MeasureText(" ");
     }
 
     /// <summary>

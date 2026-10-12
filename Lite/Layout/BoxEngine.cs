@@ -448,15 +448,23 @@ internal static class BoxEngine
 
         var newChildren = new List<LayoutNode>();
         var run = new List<LayoutNode>();
+        // Render-invisible children (scripts, display:none) neither join a run of misparented
+        // content nor split one (§17.2.1): reaching the main loop directly would flush the run
+        // at the script, so they are parked here and reinserted after the run they interrupted.
+        var deferred = new List<LayoutNode>();
 
         // True when another misparented table box follows in the child list, skipping
-        // whitespace-only text: such a box continues the current run.
+        // whitespace-only text and non-rendered nodes: such a box continues the current run.
+        // A <script> (display:none) between two cells is not renderable content (§16.6.1),
+        // so the cells still share one anonymous table — treating it as flow content split
+        // the run and rendered "b c" where the row reads "bc".
         bool AnotherMisparentedFollows(int fromIndex)
         {
             for (var k = fromIndex + 1; k < node.Children.Count; k++)
             {
                 var later = node.Children[k];
                 if (later.TagName == "#text" && string.IsNullOrWhiteSpace(later.DisplayText)) continue;
+                if (later.GetDisplay() == DisplayType.None) continue;
                 return IsMisparentedTableBox(later);
             }
             return false;
@@ -464,27 +472,45 @@ internal static class BoxEngine
 
         void FlushRun()
         {
-            if (run.Count == 0) return;
-            var anon = new LayoutNode(null, "#anon-table", "", node.Style);
-            anon.ResetNonInheritedStyles();
-            anon.StyleOverrides["display"] = inlineContext ? "inline-table" : "table";
-            foreach (var side in new[] { "top", "right", "bottom", "left" })
+            if (run.Count > 0)
             {
-                anon.StyleOverrides[$"margin-{side}"] = "0";
-                anon.StyleOverrides[$"padding-{side}"] = "0";
-                anon.StyleOverrides[$"border-{side}-width"] = "0";
+                var anon = new LayoutNode(null, "#anon-table", "", node.Style);
+                anon.ResetNonInheritedStyles();
+                anon.StyleOverrides["display"] = inlineContext ? "inline-table" : "table";
+                foreach (var side in new[] { "top", "right", "bottom", "left" })
+                {
+                    anon.StyleOverrides[$"margin-{side}"] = "0";
+                    anon.StyleOverrides[$"padding-{side}"] = "0";
+                    anon.StyleOverrides[$"border-{side}-width"] = "0";
+                }
+                anon.Parent = node;
+                foreach (var c in run) { c.Parent = anon; anon.Children.Add(c); }
+                run.Clear();
+                // A bare cell still needs a row between it and the table.
+                WrapAnonymousTableBoxes(anon, wrapAsRow: true);
+                newChildren.Add(anon);
             }
-            anon.Parent = node;
-            foreach (var c in run) { c.Parent = anon; anon.Children.Add(c); }
-            run.Clear();
-            // A bare cell still needs a row between it and the table.
-            WrapAnonymousTableBoxes(anon, wrapAsRow: true);
-            newChildren.Add(anon);
+            newChildren.AddRange(deferred);
+            deferred.Clear();
         }
 
         for (var i = 0; i < node.Children.Count; i++)
         {
             var child = node.Children[i];
+            if (child.GetDisplay() == DisplayType.None)
+            {
+                // A display:none TABLE-INTERNAL box (a cell toggled to none and back by script)
+                // keeps its DOM-relative position: the onload relayout is a style mutation, which
+                // re-runs the normalizers on the existing tree instead of re-projecting DOM order,
+                // so a cell parked at the run's end stayed there and rendered "a  dbc" where the
+                // row reads "a bc d". Non-table content (scripts, hidden elements) defers — it is
+                // not renderable content (§16.6.1), so it neither joins nor splits a run.
+                var cascadedDisplay = child.Style.GetPropertyValueSafe("display")?.Trim();
+                var tableInternal = cascadedDisplay is "table" or "inline-table" or "table-row"
+                    or "table-row-group" or "table-header-group" or "table-footer-group"
+                    or "table-column" or "table-column-group" or "table-caption" or "table-cell";
+                if (!tableInternal) { deferred.Add(child); continue; }
+            }
             if (IsMisparentedTableBox(child)) { run.Add(child); continue; }
             // Whitespace strictly BETWEEN two misparented table boxes is table-internal and is
             // not content (§17.2.1) — it must not split one table into several. Whitespace at the
@@ -596,10 +622,16 @@ internal static class BoxEngine
 
         foreach (var child in parent.Children)
         {
-            // Whitespace-only text between table boxes is not content — discard it (CSS 2.1
-            // white-space handling) so it never becomes (or pads) an anonymous cell.
+            // Whitespace-only text between table boxes is not content — discard it (§17.2.1:
+            // an anonymous cell whose interior is "collapsed white space" is not generated) so
+            // it never becomes (or pads) an anonymous cell. Under white-space:pre/pre-wrap the
+            // space is NOT collapsed: it is real cell content ("a <cell> </cell> d" reads
+            // "a  d" through the middle cell), so it joins the run and gets wrapped like any.
             if (child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText))
-                continue;
+            {
+                var wsMode = child.GetWhiteSpace();
+                if (wsMode is not (WhiteSpace.Pre or WhiteSpace.PreWrap)) continue;
+            }
 
             // §17.2.1 groups rendered content: a display:none box (a script between two bare
             // texts, a hidden element) renders nothing, so it neither joins a run of
