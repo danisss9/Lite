@@ -24,6 +24,8 @@ Re-basing onto a newer upstream tag is a deliberate, separately-reviewed act.
 | Patch | Motivation |
 | --- | --- |
 | 001 — menuitem parses as a normal element (`HtmlMenuItemElement` loses `Special\|SelfClosing`; `menuitem` removed from the `AllBodyClosed` void-close list) | menuitem is absent from the W3C HTML 5.0 REC, so its start tag takes the "any other start tag" path and accepts children; upstream's post-2014 void semantics hoisted content out as siblings. menuitem-element.dat 9→18/20 (two residuals: formatting reconstruction with `<p><b></p><menuitem>`, and the in-select case whose expectation is itself post-2014). |
+| 002 — foreign-content breakout applies in the fragment case (`ForeignNormalTag` no longer branches to `ForeignSpecialTag` when `IsFragmentCase`; the pop loop checks before popping, and the fragment-root case reprocesses through the insertion-mode rules via `Home` to avoid re-dispatching on the foreign context) | REC §8.2.5 pops breakout tags out of foreign content with no document/fragment distinction; upstream disabled the breakout for fragments, so `<nobr>`, `<div>`, `<h1>`, … inside an SVG/MathML fragment context stayed foreign (`<svg nobr>`, `<math div>`). foreign-fragment.dat 48→64/66. |
+| 003 — fragment context tokenizer states are HTML-namespace only (`ParseFragment` gates the RCDATA/RAWTEXT/… setup on `context.NamespaceUri == HTML`) | The context-element tokenizer state list names HTML elements; an SVG `<title>` fragment context is foreign content parsed in the data state with integration-point rules. Upstream matched on the local name alone, so SVG title fragments parsed their input as RCDATA text (`foreign-fragment.dat` svg title/svg desc cases). |
 
 ## Coordination
 

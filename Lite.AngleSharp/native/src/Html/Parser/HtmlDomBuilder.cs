@@ -293,30 +293,39 @@ namespace AngleSharp.Html.Parser
 
             var tagName = context.LocalName;
 
-            if (tagName.IsOneOf(TagNames.Title, TagNames.Textarea))
+            // Lite patch 003: the context-element tokenizer states apply to HTML-namespace
+            // context elements only. An SVG <title> or MathML context is foreign content —
+            // the tokenizer starts in the data state and HTML integration-point rules decide
+            // how tokens are processed. Upstream matched on the local name alone, so an SVG
+            // title fragment context wrongly parsed its input as RCDATA text
+            // (foreign-fragment.dat: svg title / svg desc cases).
+            if (context.NamespaceUri.Is(NamespaceNames.HtmlUri))
             {
-                _tokenizer.State = HtmlParseMode.RCData;
-            }
-            else if (tagName.IsOneOf(TagNames.Style, TagNames.Xmp, TagNames.Iframe, TagNames.NoEmbed))
-            {
-                _tokenizer.State = HtmlParseMode.Rawtext;
-            }
-            else if (tagName.Is(TagNames.Script))
-            {
-                _tokenizer.State = HtmlParseMode.Script;
-            }
-            else if (tagName.Is(TagNames.Plaintext))
-            {
-                _tokenizer.State = HtmlParseMode.Plaintext;
-            }
-            else if (tagName.Is(TagNames.NoScript) &&
-                     (options.IsScripting || context.Flags.HasFlag(NodeFlags.LiteralText)))
-            {
-                _tokenizer.State = HtmlParseMode.Rawtext;
-            }
-            else if (tagName.Is(TagNames.NoFrames) && !options.IsNotSupportingFrames)
-            {
-                _tokenizer.State = HtmlParseMode.Rawtext;
+                if (tagName.IsOneOf(TagNames.Title, TagNames.Textarea))
+                {
+                    _tokenizer.State = HtmlParseMode.RCData;
+                }
+                else if (tagName.IsOneOf(TagNames.Style, TagNames.Xmp, TagNames.Iframe, TagNames.NoEmbed))
+                {
+                    _tokenizer.State = HtmlParseMode.Rawtext;
+                }
+                else if (tagName.Is(TagNames.Script))
+                {
+                    _tokenizer.State = HtmlParseMode.Script;
+                }
+                else if (tagName.Is(TagNames.Plaintext))
+                {
+                    _tokenizer.State = HtmlParseMode.Plaintext;
+                }
+                else if (tagName.Is(TagNames.NoScript) &&
+                         (options.IsScripting || context.Flags.HasFlag(NodeFlags.LiteralText)))
+                {
+                    _tokenizer.State = HtmlParseMode.Rawtext;
+                }
+                else if (tagName.Is(TagNames.NoFrames) && !options.IsNotSupportingFrames)
+                {
+                    _tokenizer.State = HtmlParseMode.Rawtext;
+                }
             }
 
             var root = _elementFactory.Create(_document, TagNames.Html);
@@ -3785,35 +3794,44 @@ namespace AngleSharp.Html.Parser
         {
             RaiseErrorOccurred(HtmlParseError.TagCannotStartHere, ref tag);
 
-            if (!IsFragmentCase)
-            {
-                const NodeFlags Annotated = NodeFlags.HtmlTip | NodeFlags.MathTip | NodeFlags.HtmlMember;
-                var node = CurrentNode;
+            // Lite patch 002: the breakout applies in the fragment case as well — the HTML 5.0
+            // foreign-content algorithm (§8.2.5) pops until an HTML (integration-point) element
+            // and reprocesses the token, with no document/fragment distinction. Upstream
+            // disabled the breakout for fragments, so breakout tags inside a foreign fragment
+            // context stayed foreign (svg nobr, math div, svg div/h1 — foreign-fragment.dat).
+            // The loop checks BEFORE popping (the spec pops "while the current node is not…"),
+            // so a one-element fragment stack stops on its HTML root instead of popping it.
+            const NodeFlags Annotated = NodeFlags.HtmlTip | NodeFlags.MathTip | NodeFlags.HtmlMember;
+            var node = CurrentNode;
 
-                do
+            while ((node.Flags & Annotated) == NodeFlags.None)
+            {
+                if (node.LocalName.Is(TagNames.AnnotationXml))
                 {
-                    if (node.LocalName.Is(TagNames.AnnotationXml))
+                    var value = node.GetAttribute(default, AttributeNames.Encoding);
+
+                    if (value.Isi(MimeTypeNames.Html) || value.Isi(MimeTypeNames.ApplicationXHtml))
                     {
-                        var value = node.GetAttribute(default, AttributeNames.Encoding);
-
-                        if (value.Isi(MimeTypeNames.Html) || value.Isi(MimeTypeNames.ApplicationXHtml))
-                        {
-                            AddElement(ref tag);
-                            return;
-                        }
+                        AddElement(ref tag);
+                        return;
                     }
-
-                    CloseCurrentNode();
-                    node = CurrentNode;
                 }
-                while ((node.Flags & Annotated) == NodeFlags.None);
 
-                Consume(ref tag);
+                CloseCurrentNode();
+                node = CurrentNode;
             }
-            else
+
+            if (IsFragmentCase && _openElements.Count == 1)
             {
-                ForeignSpecialTag(ref tag);
+                // The fragment root is an HTML member, so the loop stopped on it immediately;
+                // reprocess through the insertion-mode rules directly. Consume would
+                // re-dispatch on the adjusted current node — the foreign fragment context —
+                // and recurse forever.
+                Home(ref tag);
+                return;
             }
+
+            Consume(ref tag);
         }
 
         #endregion
