@@ -144,7 +144,8 @@ internal static class BoxEngine
     private static bool IsInFlowBlockLevel(LayoutNode n)
         => n.TagName is not ("#text" or "#comment" or "#pi") && IsInFlow(n)
             && n.GetDisplay() is DisplayType.Block or DisplayType.ListItem
-                or DisplayType.Flex or DisplayType.Table;
+                or DisplayType.Flex or DisplayType.Table
+            && !(IsCssTableCaption(n) && WhitespaceOnlyInterior(n));
 
     /// <summary>Whether an inline box (transitively, through <b>in-flow</b> nested inline boxes)
     /// contains an in-flow block-level box, so it must be broken. Recursion stops at out-of-flow
@@ -435,9 +436,12 @@ internal static class BoxEngine
     private static void WrapMisparentedTableBoxes(LayoutNode node)
     {
         // Cheap pre-check: the overwhelming majority of boxes have no table children at all.
+        // Whitespace-only captions count too — they are dropped in the loop below (§17.2.1),
+        // and without them the run would break around the invisible block.
         var anyMisparented = false;
         foreach (var c in node.Children)
-            if (IsMisparentedTableBox(c)) { anyMisparented = true; break; }
+            if (IsMisparentedTableBox(c) || (IsCssTableCaption(c) && WhitespaceOnlyInterior(c)))
+                { anyMisparented = true; break; }
         if (!anyMisparented) return;
 
         // §17.2.1: "If the box's parent is an inline box, generate an anonymous INLINE-table box;
@@ -502,6 +506,10 @@ internal static class BoxEngine
         for (var i = 0; i < node.Children.Count; i++)
         {
             var child = node.Children[i];
+            // A whitespace-only caption generates nothing (§17.2.1): dropping it here keeps the
+            // surrounding inline flow on one line instead of breaking at an invisible block.
+            if (IsCssTableCaption(child) && WhitespaceOnlyInterior(child))
+                continue;
             if (child.GetDisplay() == DisplayType.None)
             {
                 // A display:none TABLE-INTERNAL box (a cell toggled to none and back by script)
@@ -551,6 +559,33 @@ internal static class BoxEngine
         var pos = child.GetPosition();
         return pos != PositionType.Absolute && pos != PositionType.Fixed;
     }
+
+    /// <summary>True when a box's interior is only collapsible whitespace (or nothing): per
+    /// §17.2.1 such a box generates nothing in anonymous-table construction. A whitespace-only
+    /// <c>display:table-caption</c> span in inline flow otherwise breaks the run like a block
+    /// while painting nothing, splitting 'a <caption></caption> bc d' onto three lines.</summary>
+    private static bool WhitespaceOnlyInterior(LayoutNode node)
+    {
+        if (!string.IsNullOrEmpty(node.Text) && !string.IsNullOrWhiteSpace(node.Text)) return false;
+        foreach (var c in node.Children)
+        {
+            if (c.GetDisplay() == DisplayType.None) continue;
+            if (c.TagName == "#text")
+            {
+                if (!string.IsNullOrWhiteSpace(c.DisplayText)) return false;
+            }
+            else return false; // an element child counts as content
+        }
+        return true;
+    }
+
+    /// <summary>True for a box styled <c>display:table-caption</c> — GetDisplay maps the
+    /// keyword to Block (captions lay out as blocks above/below their table), so the raw
+    /// value is what tells a CSS caption from an ordinary block.</summary>
+    private static bool IsCssTableCaption(LayoutNode node) =>
+        node.TryResolveStyle("display", out var d)
+            ? d?.Trim() == "table-caption"
+            : node.Style.GetPropertyValueSafe("display")?.Trim() == "table-caption";
 
     /// <summary>
     /// A table/row-group/row whose content is bare text (e.g. a leaf <c>&lt;div
@@ -640,8 +675,10 @@ internal static class BoxEngine
 
             // §17.2.1 groups rendered content: a display:none box (a script between two bare
             // texts, a hidden element) renders nothing, so it neither joins a run of
-            // misparented content nor splits one into separate anonymous cells.
-            if (child.GetDisplay() == DisplayType.None || child.TagName == "SCRIPT")
+            // misparented content nor splits one into separate anonymous cells. A
+            // whitespace-only caption generates nothing for the same reason.
+            if (child.GetDisplay() == DisplayType.None || child.TagName == "SCRIPT" ||
+                IsCssTableCaption(child) && WhitespaceOnlyInterior(child))
             {
                 deferred.Add(child);
                 continue;
