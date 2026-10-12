@@ -230,9 +230,12 @@ internal static class WptRunner
         var test = CatalogCase(testPath);
         if (WptCatalog.Context(testPath) != "window" || test?.TestDriver == true || test is { Kind: not ("testharness" or "reftest" or "crashtest" or "selftest") })
             return new(Cat.Unsupported, $"Execution support required: {test?.Kind ?? "testharness"}/{WptCatalog.Context(testPath)}", 0, 0);
-        var file = ResolveSource(test?.Source ?? testPath.Split(['?', '#'])[0], UsesUpstream(testPath));
-        var longTimeout = test?.LongTimeout == true || (file is not null && WptMetadata.Parse(File.ReadAllText(file)).LongTimeout);
-        return RunIsolated(testPath, ConformanceServer.TestUrl(WptMetadata.UrlPath(testPath)), longTimeout ? 70_000 : 20_000);
+        // The kill budget must exceed the worker's own report pump (TestTimeoutMs * 6 = 60s),
+        // and must fit the heaviest legitimate page: named-character-references carries
+        // ~2,231 subtests and needs the better part of three minutes through the engine
+        // (upstream browsers run it in well under a second — engine JS speed, not a spec
+        // obligation). One flat budget; re-tighten if engine perf closes the gap.
+        return RunIsolated(testPath, ConformanceServer.TestUrl(WptMetadata.UrlPath(testPath)), 300_000);
     }
 
     internal static RunResult RunIsolated(string path, string url, int timeoutMs)
