@@ -254,7 +254,6 @@ internal static class Parser
         string address, string html, string? mediaType)
     {
         html = NormalizeImportantBangs(html);
-        html = InjectOriginSheets(html, Current.Session);
         var context = BrowsingContext.New(config.WithOnly<IDocumentFactory>(new XmlDispatchDocumentFactory()));
         return context.OpenAsync(req =>
         {
@@ -328,61 +327,47 @@ internal static class Parser
         return sb.ToString();
     }
 
-    /// <summary>Writes the UA style sheet and the host's user style sheet into the document
-    /// SOURCE, before the CSSOM is built: dynamically inserted style elements append after the
-    /// parse-time sheets, which would put UA and user rules ABOVE author rules in the cascade.
-    /// Source injection makes every sheet parse-time, so document order — UA &lt; user &lt;
-    /// author, with the user sheet's !important half last (§6.4.1 puts user !important above
-    /// author !important) — is exactly the cascade order. Marker attributes are removed after
-    /// tracking.</summary>
-    internal static string InjectOriginSheets(string html, BrowserSession? session)
+    /// <summary>Writes the UA style sheet and the host's user style sheet into the PARSED
+    /// document, before any style resolution, so the cascade has its origins. The injection is
+    /// DOM-level (the UA sheet is head's first child, the user sheet's normal half follows it,
+    /// the user sheet's !important half is appended after every author sheet) and deliberately
+    /// not text-level: splicing the sheets into the fetched source re-anchors leading comments
+    /// and whitespace into head on the html5lib tree dumps, and synthesizing &lt;head&gt; when
+    /// the input lacks one flips the parser from before-head to after-head — landing every
+    /// following element in body. Because the call site is the first step of
+    /// ParseOpenedDocument, every sheet is still registered before CollectCssRules, so
+    /// document order — UA &lt; user &lt; author, with user !important last (§6.4.1 puts user
+    /// !important above author !important) — is exactly the cascade order. Marker attributes
+    /// are removed after tracking.</summary>
+    private static void InjectOriginSheetsDom(IDocument document)
     {
-        var headSheets = new StringBuilder();
-        headSheets.Append("<style data-lite-origin=\"ua\">").Append(UserAgentStylesheet).Append("</style>");
-        string? importantSheet = null;
-        if (session?.UserStyleSheet is { Length: > 0 } userCss)
+        var host = document.Head ?? document.DocumentElement;
+        if (host is null) return;
+
+        var ua = document.CreateElement("style");
+        ua.SetAttribute("data-lite-origin", "ua");
+        ua.TextContent = UserAgentStylesheet;
+        host.InsertBefore(ua, host.FirstChild);
+
+        if (Current.Session?.UserStyleSheet is { Length: > 0 } userCss)
         {
             var normalized = ImportantBang.Replace(userCss, "!important");
-            headSheets.Append("<style data-lite-origin=\"user\">").Append(normalized).Append("</style>");
-            importantSheet = ExtractImportantDeclarations(normalized);
-        }
-        var originSheets = headSheets.ToString();
-        var head = Regex.Match(html, "<head\\b[^>]*>", RegexOptions.IgnoreCase);
-        string result;
-        if (head.Success)
-        {
-            var afterHead = head.Index + head.Length;
-            result = html[..afterHead] + originSheets + html[afterHead..];
-        }
-        else
-        {
-            var htmlTag = Regex.Match(html, "<html\\b[^>]*>", RegexOptions.IgnoreCase);
-            if (htmlTag.Success)
+            var user = document.CreateElement("style");
+            user.SetAttribute("data-lite-origin", "user");
+            user.TextContent = normalized;
+            host.InsertBefore(user, ua.NextSibling);
+
+            // The user sheet's !important half must come AFTER every author sheet: §6.4.1 puts
+            // user !important above author !important, and document order is what the cascade sees.
+            var importantHalf = ExtractImportantDeclarations(normalized);
+            if (importantHalf.Length > 0)
             {
-                var afterHtml = htmlTag.Index + htmlTag.Length;
-                result = html[..afterHtml] + "<head>" + originSheets + "</head>" + html[afterHtml..];
-            }
-            else
-            {
-                // Nothing to anchor on: prepend — but never ahead of a doctype, which must stay
-                // the first bytes for standards mode.
-                var doctype = Regex.Match(html, "<!DOCTYPE[^>]*>", RegexOptions.IgnoreCase);
-                result = doctype.Success && doctype.Index == 0
-                    ? html[..doctype.Length] + originSheets + html[doctype.Length..]
-                    : originSheets + html;
+                var marked = document.CreateElement("style");
+                marked.SetAttribute("data-lite-origin", "user");
+                marked.TextContent = importantHalf;
+                host.AppendChild(marked);
             }
         }
-        // The user sheet's !important half must come AFTER every author sheet: §6.4.1 puts
-        // user !important above author !important, and document order is what the cascade sees.
-        if (importantSheet is { Length: > 0 } half)
-        {
-            var marked = "<style data-lite-origin=\"user\">" + half + "</style>";
-            var headEnd = Regex.Match(result, "</head\\s*>", RegexOptions.IgnoreCase);
-            if (headEnd.Success)
-                result = result[..headEnd.Index] + marked + result[headEnd.Index..];
-            else result += marked;
-        }
-        return result;
     }
 
     /// <summary>The injected UA sheet's element and the user sheets' elements — document.styleSheets
@@ -484,10 +469,11 @@ internal static class Parser
 
         var head = document.Head ?? document.DocumentElement;
 
-        // Track the UA and user style sheets that InjectOriginSheets wrote into the source
-        // before the CSSOM was built: every sheet is parse-time, so the document order the
-        // cascade sees matches the DOM (UA < user < author). The marker attributes come off
-        // once tracked so the DOM carries no engine fingerprints.
+        // Track the UA and user style sheets that InjectOriginSheetsDom inserted into the
+        // parsed document: every sheet is registered before CollectCssRules, so the document
+        // order the cascade sees matches the DOM (UA < user < author). The marker attributes
+        // come off once tracked so the DOM carries no engine fingerprints.
+        InjectOriginSheetsDom(document);
         foreach (var el in document.QuerySelectorAll("style[data-lite-origin]").ToList())
         {
             var origin = el.GetAttribute("data-lite-origin");
@@ -798,7 +784,7 @@ internal static class Parser
                 html = response.Content.ReadAsStringAsync().Result;
             }
             var document = context.OpenAsync(req => req.Address(address)
-                .Content(InjectOriginSheets(NormalizeImportantBangs(html), Current.Session))).Result;
+                .Content(NormalizeImportantBangs(html))).Result;
             return ParseOpenedDocument(document, address, viewportWidth, viewportHeight, parentEngine, frameNode);
         }
         finally

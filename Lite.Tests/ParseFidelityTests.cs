@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using Lite;
 using Lite.Models;
 using static Lite.Tests.TestRunner;
@@ -99,8 +100,7 @@ public static class ParseFidelityTests
 
     [Test]
     public static void Noscript_ParsesRawTextWithScriptingEnabled()
-    {
-        // REC §8.2.5.4.3 (in head noscript): with the scripting flag on, noscript content
+    {        // REC §8.2.5.4.3 (in head noscript): with the scripting flag on, noscript content
         // parses as raw text — one text child, no elements. The engine registers a scripting
         // service for parsing semantics only; its evaluation entry point no-ops and scripts
         // still execute through Lite's own loader (this test's host-div script proves it).
@@ -114,5 +114,35 @@ public static class ParseFidelityTests
         var host = Find(page.Root, n => n.Attributes.GetValueOrDefault("id") == "host");
         True(host != null, "host div missing");
         Equal("1|<strong>A</strong>", host!.DisplayText);
+    }
+
+    [Test]
+    public static void OriginSheetInjection_DoesNotSynthesizeHead()
+    {
+        // template.dat #3: with <html> but no <head> in the source, text-level UA-sheet
+        // injection synthesized <head>…</head>, flipping the parser from before-head to
+        // after-head so a following <template> landed in body. The DOM-level injection must
+        // leave the parse untouched: the template stays in head (REC §8.2.5.4.3).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><template>Hello</template>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var head = Find(page.Root, n => n.TagName == "HEAD");
+        True(head != null, "head missing");
+        True(head!.Children.Any(c => c.TagName == "TEMPLATE"), "template must stay in head");
+    }
+
+    [Test]
+    public static void OriginSheetInjection_KeepsLeadingCommentDocumentLevel()
+    {
+        // comments01.dat #11: a bogus comment before <html> must stay a document-level
+        // sibling; text-level sheet injection used to splice the UA sheet ahead of it and
+        // re-anchor it into head.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><!-- c --><html><head></head><body></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        True(page.Document is not null, "no document");
+        True(page.Document!.ChildNodes[1] is IComment, "leading comment must precede html at document level");
+        var head = Find(page.Root, n => n.TagName == "HEAD");
+        True(head != null && head.Children.All(c => c.TagName != "#comment"), "no comments may land in head");
     }
 }
