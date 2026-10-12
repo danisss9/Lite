@@ -10,3 +10,9 @@
 # (core.autocrlf=true is the Git default on Windows) would change the bytes and break the
 # pin, so keep the vendored tree byte-exact everywhere.
 Lite.Conformance/vendor/css21-official-20110323/** -text
+
+# The vendored AngleSharp tree must stay byte-comparable with the upstream tag it pins
+# (v1.7.3) so future re-bases and patch reviews are plain `git diff` against upstream.
+# Upstream sources are LF; an autocrlf checkout would rewrite them to CRLF and poison
+# every subsequent diff.
+Lite.AngleSharp/native/** -text

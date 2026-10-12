@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Vendored AngleSharp 1.7.3 (upstream tag v1.7.3, commit 0e6979a) built from
+       native/src with this repository's conformance patches. Produces the exact binary
+       identity of the pinned NuGet package — assembly "AngleSharp", version 1.7.3.0,
+       signed with upstream's committed Key.snk (token e83494dcdc6d31ea) — so NuGet
+       AngleSharp.Css 1.0.2 keeps binding without a fork of its own. See README.md. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>AngleSharp</AssemblyName>
+    <RootNamespace>AngleSharp</RootNamespace>
+    <Version>1.7.3.0</Version>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <NoWarn>$(NoWarn);SYSLIB0014</NoWarn>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>native\Key.snk</AssemblyOriginatorKeyFile>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>none</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="native\src\**\*.cs" />
+  </ItemGroup>
+
+</Project>

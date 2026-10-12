@@ -29,8 +29,12 @@
   <ItemGroup>
     <PackageReference Include="AngleSharp.Xml" />
     <ProjectReference Include="..\Lite.QuickJs\Lite.QuickJs.csproj" />
-    <PackageReference Include="AngleSharp" />
+    <ProjectReference Include="..\Lite.AngleSharp\Lite.AngleSharp.csproj" />
     <PackageReference Include="AngleSharp.Css" />
+    <!-- The vendored Lite.AngleSharp project provides the AngleSharp assembly itself; this
+         graph entry keeps AngleSharp.Css's NuGet dependency satisfied while excluding the
+         package's own DLL from compile and runtime. -->
+    <PackageReference Include="AngleSharp" ExcludeAssets="all" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="System.Text.Encoding.CodePages" />
   </ItemGroup>
