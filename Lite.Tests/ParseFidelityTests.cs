@@ -96,4 +96,23 @@ public static class ParseFidelityTests
         Equal("null|null|0", Probe(
             "document.head.firstChild + '|' + document.head.lastChild + '|' + document.head.children.length"));
     }
+
+    [Test]
+    public static void Noscript_ParsesRawTextWithScriptingEnabled()
+    {
+        // REC §8.2.5.4.3 (in head noscript): with the scripting flag on, noscript content
+        // parses as raw text — one text child, no elements. The engine registers a scripting
+        // service for parsing semantics only; its evaluation entry point no-ops and scripts
+        // still execute through Lite's own loader (this test's host-div script proves it).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><noscript><strong>A</strong></noscript></head>" +
+            "<body><div id=\"host\"></div>" +
+            "<script>document.getElementById('host').textContent = (function(){ " +
+            "var n = document.querySelector('noscript'); return n === null ? 'missing' : " +
+            "n.childNodes.length + '|' + n.textContent; })();</script></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var host = Find(page.Root, n => n.Attributes.GetValueOrDefault("id") == "host");
+        True(host != null, "host div missing");
+        Equal("1|<strong>A</strong>", host!.DisplayText);
+    }
 }

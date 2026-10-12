@@ -112,10 +112,12 @@ internal static class ParseAttribution
         }
 
         var pass = totals.GetValueOrDefault("pass");
+        var fixes = totals.GetValueOrDefault("pipeline-fixes");
         var total = totals.Values.Sum();
         Console.WriteLine();
         Console.WriteLine($"=== html5 parse attribution: {total} unique cases " +
                           $"(survey-aligned subtests ≈ {docCases * 3 + fragmentCases}) ===");
+        Console.WriteLine($"  engine-pass      {pass + fixes,5}  = pass + pipeline-fixes (pipeline output matches)");
         foreach (var key in new[] { "pass", "anglesharp", "pipeline", "mixed", "pipeline-fixes", "error" })
             Console.WriteLine($"  {key,-15} {totals.GetValueOrDefault(key),5}");
         Console.WriteLine();
@@ -184,14 +186,12 @@ internal static class ParseAttribution
 
     private static IDocument OpenNativeDocument(string content, string baseUrl)
     {
-        var config = Configuration.Default.WithCss().WithRenderDevice(new DefaultRenderDevice
-        {
-            DeviceWidth = ViewportWidth,
-            DeviceHeight = ViewportHeight,
-            ViewPortWidth = ViewportWidth,
-            ViewPortHeight = ViewportHeight,
-        });
-        var context = BrowsingContext.New(config);
+        // The engine's own parse configuration (scripting-flag semantics included), so the
+        // native baseline isolates AngleSharp's tree construction rather than configuration
+        // deltas the engine does not own. The context is deliberately NOT disposed: its
+        // disposal tears down the document before the caller dumps it (a diagnostic-run
+        // leak, bounded by the corpus size).
+        var context = BrowsingContext.New(Lite.Parser.ParseConfiguration(ViewportWidth, ViewportHeight));
         return context.OpenAsync(req => req.Address(baseUrl).Content(content)).Result;
     }
 

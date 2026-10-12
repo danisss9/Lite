@@ -4,6 +4,7 @@ using AngleSharp.Css;
 using AngleSharp.Dom;
 using AngleSharp.Css.Dom;
 using AngleSharp.Css.Values;
+using AngleSharp.Scripting;
 using AngleSharp.Xml;
 using Lite.Animation;
 using Lite.Extensions;
@@ -93,6 +94,39 @@ internal static class Parser
     private static readonly HashSet<string> SkipTags =
         ["STYLE", "NOSCRIPT", "META", "LINK", "TITLE"];
 
+    /// <summary>The parser configuration every HTML parse path shares. Registers a scripting
+    /// service so AngleSharp parses with the scripting flag ON (REC §8.2.5: &lt;noscript&gt;
+    /// content parses as raw text and the in-head-noscript rules apply — the parse-fidelity
+    /// corpus runs scripting-enabled). Lite executes scripts through its own loader; the
+    /// service's evaluation entry point deliberately no-ops.</summary>
+    internal static IConfiguration ParseConfiguration(int width, int height) => Configuration.Default
+        .WithCss()
+        .With(new ScriptingFlagOnlyService())
+        .WithRenderDevice(new DefaultRenderDevice
+        {
+            DeviceWidth = width,
+            DeviceHeight = height,
+            ViewPortWidth = width,
+            ViewPortHeight = height
+        });
+
+    /// <summary>Device-less variant for pre-page fragment parses (see ParseFragmentCore).</summary>
+    private static IConfiguration ParseConfiguration() => Configuration.Default
+        .WithCss()
+        .With(new ScriptingFlagOnlyService())
+        .WithRenderDevice();
+
+    private sealed class ScriptingFlagOnlyService : IScriptingService
+    {
+        public bool IsScripting => true;
+
+        public bool SupportsType(string mimeType) => mimeType is "text/javascript" or "application/javascript"
+            or "application/x-javascript" or "application/ecmascript" or "text/ecmascript" or "module";
+
+        public Task EvaluateScriptAsync(IResponse response, ScriptOptions options,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
     internal sealed record ScriptRecord(string? Code, string Url, bool IsModule = false, bool Inline = false,
         string? CrossOrigin = null, string? RequestedUrl = null);
 
@@ -180,16 +214,7 @@ internal static class Parser
         ViewportWidth = viewportWidth;
         ViewportHeight = viewportHeight;
 
-        var config = Configuration.Default
-            .WithCss()
-            .WithRenderDevice(new DefaultRenderDevice
-            {
-                DeviceWidth = viewportWidth,
-                DeviceHeight = viewportHeight,
-                ViewPortWidth = viewportWidth,
-                ViewPortHeight = viewportHeight
-            })
-            .WithXml();
+        var config = ParseConfiguration(viewportWidth, viewportHeight).WithXml();
 
         using var message = new HttpRequestMessage(new System.Net.Http.HttpMethod(request.Method), request.Url);
         if (request.Body is not null)
@@ -754,15 +779,7 @@ internal static class Parser
             ViewportWidth = viewportWidth;
             ViewportHeight = viewportHeight;
 
-            var config = Configuration.Default
-                .WithCss()
-                .WithRenderDevice(new DefaultRenderDevice
-                {
-                    DeviceWidth = viewportWidth,
-                    DeviceHeight = viewportHeight,
-                    ViewPortWidth = viewportWidth,
-                    ViewPortHeight = viewportHeight
-                });
+            var config = ParseConfiguration(viewportWidth, viewportHeight);
             var context = BrowsingContext.New(config);
             var address = baseUrl;
             string html;
@@ -3979,8 +3996,9 @@ internal static class Parser
         {
             // Include the render device so absolute units (in/pt/cm/…) resolve at 96 DPI,
             // matching TraverseHtml — otherwise a fragment parsed before any page load
-            // computes 1in as 64px instead of 96px.
-            var cfg = Configuration.Default.WithCss().WithRenderDevice();
+            // computes 1in as 64px instead of 96px. The scripting flag matters here too:
+            // fragments must parse with the same noscript semantics as documents.
+            var cfg = ParseConfiguration();
             doc = BrowsingContext.New(cfg).OpenNewAsync().Result;
             Document = doc;
         }
