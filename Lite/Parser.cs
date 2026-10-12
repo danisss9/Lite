@@ -1253,8 +1253,11 @@ internal static class Parser
 
         if (tag == "OPTION")
         {
-            // The option's value is its `value` attribute, falling back to its text content.
-            node.Attributes["value"] = element.GetAttribute("value") ?? element.TextContent.Trim();
+            // The effective option value (its `value` attribute, falling back to the text
+            // content) is IDL behavior, not an attribute: materializing the fallback here
+            // leaked value="" into the script-visible DOM and every serialization. Mirror
+            // only what the DOM carries; the JsElement.value getter applies the fallback.
+            if (element.GetAttribute("value") is { } optionValue) node.Attributes["value"] = optionValue;
             foreach (var attr in new[] { "label", "selected", "disabled" })
             {
                 var val = element.GetAttribute(attr);

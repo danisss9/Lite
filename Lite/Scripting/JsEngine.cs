@@ -1104,8 +1104,17 @@ internal class JsEngine : IDisposable
     /// <summary>Wires this (child) engine into a parent browsing context: sets <c>parent</c>,
     /// <c>top</c>, and <c>frameElement</c> as real cross-context references. Called by the parent
     /// once both engines exist (the child is parsed before its parent's engine is created).</summary>
+    /// <summary>The engine of the browsing context that embedded this page (its parent), with
+    /// the frame element wrapper that hosts it — set by <see cref="SetParentContext"/>. The
+    /// child document's <c>document.close</c> routes the written-markup replacement through
+    /// the parent, because frame navigation and the load event belong to the embedder.</summary>
+    internal JsEngine? ParentContextEngine { get; private set; }
+    internal object? FrameElementWrapper { get; private set; }
+
     internal void SetParentContext(JsEngine parent, object frameElement)
     {
+        ParentContextEngine = parent;
+        FrameElementWrapper = frameElement;
         TaskEnqueued += () => parent.TaskEnqueued?.Invoke();
         var parentProxy = GetWindowProxy(parent);
         _engine.SetValue("parent", parentProxy);

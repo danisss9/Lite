@@ -251,7 +251,14 @@ public sealed class Engine : IDisposable
         callback.Method.GetParameters().Length, (_, args) =>
         {
             var converted = ConvertParameters(callback.Method.GetParameters(), args);
-            try { return ConvertToNative(callback.DynamicInvoke(converted)); }
+            try
+            {
+                var result = callback.DynamicInvoke(converted);
+                // A void delegate DynamicInvokes to null, but WebIDL void operations must
+                // produce undefined: testharness rejects add_cleanup callbacks returning any
+                // value, which cascaded whole url-runner files to NOTRUN.
+                return callback.Method.ReturnType == typeof(void) ? _realm.Undefined() : ConvertToNative(result);
+            }
             catch (TargetInvocationException error) { throw error.InnerException ?? error; }
         });
 
@@ -316,7 +323,12 @@ public sealed class Engine : IDisposable
                     object?[] arguments;
                     try { arguments = ConvertParameters(parameters, args); }
                     catch (InvalidCastException error) { bindingFailure = error.Message; continue; }
-                    try { return ConvertToNative(candidate.Invoke(target, arguments)); }
+                    try
+                    {
+                        var result = candidate.Invoke(target, arguments);
+                        // Void operations must return undefined, not null (see BindDelegate).
+                        return candidate.ReturnType == typeof(void) ? _realm.Undefined() : ConvertToNative(result);
+                    }
                     catch (TargetInvocationException error) { throw error.InnerException ?? error; }
                 }
                 // WebIDL raises a TypeError (not an engine-internal error) when no overload can

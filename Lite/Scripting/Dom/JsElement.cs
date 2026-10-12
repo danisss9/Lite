@@ -365,6 +365,10 @@ public class JsElement
             "PROGRESS" => ProgressValue(),
             "METER" => MeterValue(),
             "OUTPUT" => textContent,
+            // An option's effective value is its `value` attribute, falling back to its text
+            // (HTML §4.10.12) — IDL behavior, deliberately not materialized as an attribute.
+            "OPTION" => Node.Attributes.TryGetValue("value", out var optionValue)
+                ? optionValue : textContent,
             _ => FormValue(),
         };
         set
@@ -584,9 +588,16 @@ public class JsElement
 
     public string name
     {
-        get => Node.Attributes.GetValueOrDefault("name", string.Empty);
+        get => DomNode is IDocumentType doctype ? doctype.Name
+            : Node.Attributes.GetValueOrDefault("name", string.Empty);
         set => Node.Attributes["name"] = value;
     }
+
+    /// <summary>DocumentType limbs (DOM): the doctype's public and system identifiers, empty
+    /// when absent. The html5lib tree dumps print `<!DOCTYPE name>` vs the quoted-id form
+    /// from exactly these three members.</summary>
+    public string publicId => (DomNode as IDocumentType)?.PublicIdentifier ?? string.Empty;
+    public string systemId => (DomNode as IDocumentType)?.SystemIdentifier ?? string.Empty;
 
     // ---- HTMLMediaElement (audio/video) — Phase D ----
 
@@ -876,15 +887,31 @@ public class JsElement
     }
 
     public JsHtmlCollection children => _childrenCollection ??= new JsHtmlCollection(() =>
-        DomNode is { } dom ? dom.ChildNodes.OfType<IElement>().Select(Wrap).ToArray() :
+        DomNode is { } dom ? VisibleDomChildren(dom).OfType<IElement>().Select(Wrap).ToArray() :
         Node.Children.Where(c => c.TagName != "#text").Select(c => For(_engine, c)).ToArray());
 
     public JsNodeList childNodes => _childNodeList ??= new JsNodeList(() =>
     {
-        if (DomNode is { } dom) return dom.ChildNodes.Select(Wrap).ToArray();
+        if (DomNode is { } dom) return VisibleDomChildren(dom).Select(Wrap).ToArray();
         EnsureTextChildMaterialized();
         return Node.Children.Select(c => For(_engine, c)).ToArray();
     });
+
+    /// <summary>The element's DOM children as script sees them. The engine-injected origin
+    /// sheets (the UA and user style elements the parser writes into the source to give the
+    /// cascade its origins) are DOM members for rule collection but are not author content:
+    /// a conforming UA keeps them out of script-visible child lists, and the html5lib tree
+    /// dumps read head.childNodes directly. The cascade is untouched — the elements stay in
+    /// the authoritative document. innerHTML/outerHTML and query paths still surface them
+    /// (a documented limitation, revisited with the DOM authority package).</summary>
+    private IEnumerable<INode> VisibleDomChildren(INode dom)
+    {
+        var parse = JsEngine.For(_engine)?.DocumentState?.ParserContext;
+        if (parse is null || (parse.UaStyleElement is null && parse.UserStyleElements.Count == 0))
+            return dom.ChildNodes;
+        return dom.ChildNodes.Where(c => !ReferenceEquals(parse.UaStyleElement, c)
+            && !parse.UserStyleElements.Any(e => ReferenceEquals(e, c)));
+    }
 
     public JsElement? parentElement => DomNode is { } dom ?
         dom.Parent is IElement parent ? Wrap(parent) : null :
@@ -901,7 +928,11 @@ public class JsElement
     {
         get
         {
-            if (DomNode is { } dom) return dom.FirstChild is { } child ? Wrap(child) : null;
+            if (DomNode is { } dom)
+            {
+                foreach (var child in VisibleDomChildren(dom)) return Wrap(child);
+                return null;
+            }
             EnsureTextChildMaterialized();
             return Node.Children.Count > 0 ? JsElement.For(_engine, Node.Children[0]) : null;
         }
@@ -911,7 +942,12 @@ public class JsElement
     {
         get
         {
-            if (DomNode is { } dom) return dom.LastChild is { } child ? Wrap(child) : null;
+            if (DomNode is { } dom)
+            {
+                INode? last = null;
+                foreach (var child in VisibleDomChildren(dom)) last = child;
+                return last is not null ? Wrap(last) : null;
+            }
             EnsureTextChildMaterialized();
             return Node.Children.Count > 0 ? JsElement.For(_engine, Node.Children[^1]) : null;
         }
@@ -1105,17 +1141,31 @@ public class JsElement
         if (Node.TagName != "IFRAME" || JsEngine.For(_engine) is not { } parent) return;
         var node = Node;
         var navigationVersion = ++node.FrameNavigationVersion;
+        var srcdoc = node.Attributes.GetValueOrDefault("srcdoc");
+        var src = node.Attributes.GetValueOrDefault("src");
+        var baseUrl = parent.DocumentBaseUrl;
+        var width = int.TryParse(node.Attributes.GetValueOrDefault("width"), out var w) && w > 0 ? w : 300;
+        var height = int.TryParse(node.Attributes.GetValueOrDefault("height"), out var h) && h > 0 ? h : 150;
+        node.StyleOverrides.TryAdd("display", "block");
+        node.StyleOverrides.TryAdd("width", width + "px");
+        node.StyleOverrides.TryAdd("height", height + "px");
+        if (srcdoc is null && string.IsNullOrWhiteSpace(src))
+        {
+            // A frame with no source shows about:blank immediately: the blank child page is
+            // assigned synchronously so contentDocument works in the same script that inserted
+            // the frame (the html5lib write runner calls contentDocument.open() right after
+            // inserting one), and no macrotask can replace it afterwards.
+            if (navigationVersion != node.FrameNavigationVersion || !For(_engine, node).isConnected) return;
+            var blank = Parser.ParseChildPage("<!doctype html><html><body></body></html>", true,
+                baseUrl, width, height, parent.DocumentState.Session, parent, node);
+            blank.IsInitialAboutBlank = true;
+            blank.Engine.SetCurrentUrl("about:blank");
+            node.ChildPage = blank;
+            return;
+        }
         parent.EnqueueMacrotask(() =>
         {
             if (navigationVersion != node.FrameNavigationVersion || !For(_engine, node).isConnected) return;
-            var srcdoc = node.Attributes.GetValueOrDefault("srcdoc");
-            var src = node.Attributes.GetValueOrDefault("src");
-            var baseUrl = parent.DocumentBaseUrl;
-            var width = int.TryParse(node.Attributes.GetValueOrDefault("width"), out var w) && w > 0 ? w : 300;
-            var height = int.TryParse(node.Attributes.GetValueOrDefault("height"), out var h) && h > 0 ? h : 150;
-            node.StyleOverrides.TryAdd("display", "block");
-            node.StyleOverrides.TryAdd("width", width + "px");
-            node.StyleOverrides.TryAdd("height", height + "px");
             try
             {
                 Page child;
@@ -1318,20 +1368,45 @@ public class JsElement
 
         /// <summary>Inserts nodes/strings into this element's parent, just before it. Anchored at the
         /// first preceding sibling not among the inserted nodes (DOM §4.2.8 "viable previous sibling"),
-        /// so this node itself may be one of the arguments.</summary>
-        public void before(params JsValue[] items) => InsertRelative(ToInsertionNodes(items), before: true);
+        /// so this node itself may be one of the arguments. CharacterData anchors always resolve
+        /// through the authoritative DOM: their projection folds content, so the wrapper's tree
+        /// position flips between folded and materialized forms as re-projections land.</summary>
+        public void before(params JsValue[] items)
+        {
+            var nodes = ToInsertionNodes(items);
+            if (IsCharacterData || Node.Parent is null)
+            {
+                InsertThroughDom(nodes, beforeSelf: true, removeSelf: false);
+                return;
+            }
+            InsertRelative(nodes, before: true);
+        }
 
         /// <summary>Inserts nodes/strings into this element's parent, just after it. Anchored at the
         /// first following sibling not among the inserted nodes (DOM §4.2.8 "viable next sibling").</summary>
-        public void after(params JsValue[] items) => InsertRelative(ToInsertionNodes(items), before: false);
+        public void after(params JsValue[] items)
+        {
+            var nodes = ToInsertionNodes(items);
+            if (IsCharacterData || Node.Parent is null)
+            {
+                InsertThroughDom(nodes, beforeSelf: false, removeSelf: false);
+                return;
+            }
+            InsertRelative(nodes, before: false);
+        }
 
         /// <summary>Replaces this element with the given nodes/strings. This node itself may be among
         /// the arguments; the insertion point then falls back to the viable next sibling (DOM §4.2.8).</summary>
         public void replaceWith(params JsValue[] items)
         {
+            var nodes = ToInsertionNodes(items);
+            if (IsCharacterData || Node.Parent is null)
+            {
+                InsertThroughDom(nodes, beforeSelf: false, removeSelf: true);
+                return;
+            }
             var parent = Node.Parent;
             if (parent is null) return;
-            var nodes = ToInsertionNodes(items);
             var parentDom = parent.DomNode;
             var viableNext = ViableSibling(parent, nodes, before: false);
             foreach (var (layout, dom) in nodes) DetachInsertionNode(layout, dom);
@@ -1377,6 +1452,50 @@ public class JsElement
                 inserted.Add(layout);
                 idx++;
             }
+            RunInsertedHooks(inserted);
+        }
+
+        /// <summary>DOM-anchored fallback for relative insertions when the projection has no
+        /// reliable tree position for this node: folded text and comment carriers hold content,
+        /// not node identity, so <see cref="Node.Parent"/> can be null or stale even though the
+        /// AngleSharp node still lives under its parent element. The authoritative DOM decides
+        /// the position and the parent's projection re-syncs afterwards, keeping both the
+        /// folded-text contract and the ChildNode anchoring semantics (DOM §4.2.8).</summary>
+        private void InsertThroughDom(List<(LayoutNode Layout, INode? Dom)> nodes, bool beforeSelf, bool removeSelf)
+        {
+            if (DomNode is not { } selfDom || selfDom.Parent is not IElement domParent) return;
+            var state = JsEngine.For(_engine)?.DocumentState;
+            var argDoms = new HashSet<INode>();
+            foreach (var (_, dom) in nodes)
+                if (dom is not null) argDoms.Add(dom);
+            // One insertion point for the whole list: the first sibling on this side that the
+            // operation does not move. before() anchors at this node itself; after() and
+            // replaceWith() start past it (replaceWith then removes this node). This node may
+            // itself be an argument — it detaches with the others and re-inserts in list order.
+            var siblings = domParent.ChildNodes.ToArray();
+            var selfIdx = Array.IndexOf(siblings, selfDom);
+            INode? anchor = null;
+            var start = beforeSelf ? Math.Max(selfIdx, 0) : selfIdx + 1;
+            for (var i = start; i < siblings.Length && anchor is null; i++)
+                if (!argDoms.Contains(siblings[i])) anchor = siblings[i];
+            if (removeSelf) DetachInsertionNode(Node, selfDom);
+            foreach (var (layout, dom) in nodes) DetachInsertionNode(layout, dom);
+            var inserted = new List<LayoutNode>();
+            foreach (var (layout, dom) in nodes)
+            {
+                if (dom is null)
+                {
+                    // Layout-only argument (no DOM mirror was created for it): the DOM is the
+                    // position authority here, so materialize a text node in its place.
+                    if (domParent.Owner is { } document)
+                        domParent.InsertBefore(document.CreateTextNode(layout.DisplayText ?? string.Empty), anchor);
+                }
+                else if (anchor is not null) domParent.InsertBefore(dom, anchor);
+                else domParent.AppendChild(dom);
+                StyleResolver.ApplyTree(layout);
+                inserted.Add(layout);
+            }
+            if (state is not null) Parser.ReProjectChildren(domParent, state);
             RunInsertedHooks(inserted);
         }
 

@@ -176,8 +176,8 @@
     },
     {
       "path": "dom/nodes/insertion-removing-steps/later-script-removed-by-earlier-script.html",
-      "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (deferred): passes, but asserts isConnected and removal-cancels-execution under modern insertion/removing-steps naming; the equivalent 4.11.1 behavior in the 2014 snapshot needs clause-level confirmation before inclusion."
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-11 (post-target): both subtests assert script2.isConnected (a DOM Standard addition absent from the referenced 2014 DOM4 draft) inside the script under test, and the 2014 REC's 4.11.1 prepare-a-script immediately executes inline scripts during preparation with no removal-cancels-execution step, so the deferred-execution model the test relies on is post-target."
     },
     {
       "path": "dom/nodes/moveBefore/preserve-render-blocking-script.html",
@@ -252,7 +252,7 @@
     {
       "path": "dom/events/Event-stopImmediatePropagation.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (deferred): passes, but its single subtest also asserts cancelBubble alongside stopImmediatePropagation; cancelBubble is absent from the referenced 2014 DOM4 draft, so the assertions cannot be split without an inventory."
+      "reason": "Reviewed 2026-10-11 (deferred): passes, but the page is one indivisible setup({single_test}) test mixing target stopImmediatePropagation semantics (DOM4 2014) with a post-target cancelBubble getter read; the subtest-level assertion inventory cannot split it. Stays out of the gate."
     },
     {
       "path": "dom/events/KeyEvent-initKeyEvent.html",
@@ -277,7 +277,7 @@
     {
       "path": "dom/events/Event-initEvent.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (deferred): passes, but asserts Event.srcElement/returnValue/cancelBubble alongside initEvent; those members are absent from the referenced 2014 DOM4 draft, so a per-assertion inventory is required before inclusion."
+      "reason": "Reviewed 2026-10-11 (deferred): passes; six of twelve subtests are pure 2014-target, but the four 'Properties of initEvent(...)' subtests and 'must unset the stop propagation flag' embed returnValue/srcElement/cancelBubble reads inside target subtests, and 'default parameter values' binds post-2014 Web IDL optional-argument defaults; the subtest-level inventory cannot split the mixed subtests. Stays out of the gate."
     },
     {
       "path": "dom/events/EventTarget-dispatchEvent.html",
@@ -301,23 +301,66 @@
     },
     {
       "path": "dom/events/Event-defaultPrevented.html",
-      "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (deferred): passes, but exercises Event.returnValue alongside preventDefault/defaultPrevented; returnValue is absent from the referenced 2014 DOM4 draft, so a per-assertion inventory is required."
+      "classification": "mixed",
+      "reason": "Reviewed 2026-10-11 (mixed): the six defaultPrevented/preventDefault/initEvent subtests are 2014-target obligations (DOM4 Event interface, referenced by HTML 5.0); the two returnValue subtests bind Event.returnValue, absent from the referenced 2014 DOM4 draft.",
+      "assertionInventoryComplete": true,
+      "assertions": [
+        {
+          "name": "When an event is created, defaultPrevented should be initialized to false.",
+          "classification": "included",
+          "reason": "DOM4 Event interface: defaultPrevented initializes to false (2014 target)."
+        },
+        {
+          "name": "initEvent should work correctly (not cancelable).",
+          "classification": "included",
+          "reason": "DOM4 Event interface: initEvent sets type/bubbles/cancelable and leaves defaultPrevented alone (2014 target)."
+        },
+        {
+          "name": "preventDefault() should not change defaultPrevented if cancelable is false.",
+          "classification": "included",
+          "reason": "DOM4 Event interface: preventDefault only acts on cancelable events (2014 target)."
+        },
+        {
+          "name": "returnValue should not change defaultPrevented if cancelable is false.",
+          "classification": "post-target",
+          "reason": "Event.returnValue is absent from the referenced 2014 DOM4 draft; it was added to the DOM Standard later."
+        },
+        {
+          "name": "initEvent should work correctly (cancelable).",
+          "classification": "included",
+          "reason": "DOM4 Event interface: initEvent re-initialization (2014 target)."
+        },
+        {
+          "name": "preventDefault() should change defaultPrevented if cancelable is true.",
+          "classification": "included",
+          "reason": "DOM4 Event interface: preventDefault sets the canceled flag on cancelable events (2014 target)."
+        },
+        {
+          "name": "returnValue should change defaultPrevented if cancelable is true.",
+          "classification": "post-target",
+          "reason": "Event.returnValue is absent from the referenced 2014 DOM4 draft; it was added to the DOM Standard later."
+        },
+        {
+          "name": "initEvent should unset defaultPrevented.",
+          "classification": "included",
+          "reason": "DOM4 Event interface: initEvent resets the canceled flag (2014 target)."
+        }
+      ]
     },
     {
       "path": "dom/events/Event-defaultPrevented-after-dispatch.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (deferred): passes, but asserts Event.returnValue/srcElement; absent from the referenced 2014 DOM4 draft, so a per-assertion inventory is required."
+      "reason": "Reviewed 2026-10-11 (deferred): passes, but 'Default prevention via preventDefault' embeds a srcElement assert inside a target subtest while 'Default prevention via returnValue' binds the post-target returnValue feature; the subtest-level inventory cannot split the first. Stays out of the gate."
     },
     {
       "path": "dom/events/Event-dispatch-bubble-canceled.html",
-      "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (deferred): passes, but sets Event.cancelBubble before dispatch; cancelBubble is absent from the referenced 2014 DOM4 draft, so a per-assertion inventory is required."
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-11 (post-target): the sole subtest binds cancelBubble - setting it before dispatch to block every listener - which is absent from the referenced 2014 DOM4 draft; a 2014-conformant engine treats the assignment as a no-op expando and the listeners fire."
     },
     {
       "path": "dom/events/Event-dispatch-detached-click.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (deferred): passes, but asserts Event.srcElement; absent from the referenced 2014 DOM4 draft, so a per-assertion inventory is required."
+      "reason": "Reviewed 2026-10-11 (deferred): passes, but the dispatch subtest embeds an srcElement assert inside a target subtest; the subtest-level inventory cannot split it. Stays out of the gate."
     },
     {
       "path": "dom/events/Event-dispatch-order.html",
@@ -482,7 +525,7 @@
     {
       "path": "dom/collections/HTMLCollection-supported-property-indices.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): Integer-like property names around 2^32 and the index getter edge cases differ; Lite fails 4/7 subtests. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-11 (failing): Integer-like property names around 2^32 and the index getter edge cases differ; Lite passes 4/7 subtests. Queued for the DOM authority package."
     },
     {
       "path": "dom/collections/HTMLCollection-supported-property-names.html",
@@ -492,7 +535,7 @@
     {
       "path": "dom/collections/domstringmap-supported-property-names.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): getOwnPropertyNames and enumeration of dataset (DOMStringMap, 2.7.3) supported property names; Lite fails all 5 subtests. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-11 (failing): getOwnPropertyNames and enumeration of dataset (DOMStringMap, 2.7.3) supported property names; property reads pass but enumeration misses the empty data attribute and the trailing-hyphen mapping (3/5 subtests pass). Queued for the DOM authority package."
     },
     {
       "path": "dom/collections/namednodemap-supported-property-names.html",
@@ -507,7 +550,7 @@
     {
       "path": "dom/lists/DOMTokenList-coverage-for-attributes.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): 99/175 subtests pass; failures concentrate on DOMTokenList interface identity (no exposed interface objects or prototype chain) and reflected-attribute edge cases (3.2.5.7 The class attribute). Mixed-era file; full per-assertion inventory deferred until interface identity lands. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-11 (failing): 134/175 subtests pass; remaining failures concentrate on DOMTokenList interface identity for relList/htmlFor across namespaces and reflected-attribute edge cases (3.2.5.7 The class attribute). Mixed-era file; full per-assertion inventory deferred until interface identity lands. Queued for the DOM authority package."
     },
     {
       "path": "dom/lists/DOMTokenList-Iterable.html",
@@ -526,8 +569,8 @@
     },
     {
       "path": "dom/traversal/NodeFilter-constants.html",
-      "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): NodeFilter interface constants (SHOW_*/FILTER_*) must exist on the NodeFilter interface object; Lite does not expose Web IDL interface objects (DOM dependency). 1/2 subtests pass. Queued for the DOM authority package."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-11 (included): NodeFilter interface constants (SHOW_*, FILTER_ACCEPT/REJECT/SKIP - DOM4 traversal, a dependency referenced by HTML 5.0) pass 2/2 on the current build; the Web IDL interface-object package landed since the 2026-10-03 review."
     },
     {
       "path": "dom/traversal/NodeIterator.html",
@@ -552,17 +595,17 @@
     {
       "path": "dom/traversal/TreeWalker-acceptNode-filter.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): Raw-function and object NodeFilter handling; subtests error because script-visible interface objects such as Element are not exposed. 0/12 subtests pass. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-11 (failing): Raw-function and object NodeFilter handling passes, but null and undefined filters must be treated as no filter while Lite invokes acceptNode on them (10/12 subtests pass). Queued for the DOM authority package."
     },
     {
       "path": "dom/traversal/TreeWalker-basic.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): document.createTreeWalker basic traversal and interface identity; 0/6 subtests pass (interface objects not exposed). Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-11 (failing): document.createTreeWalker basics; the whatToShow default, the null-root TypeError and a traversal node-type mismatch remain (3/6 subtests pass). Queued for the DOM authority package."
     },
     {
       "path": "dom/traversal/TreeWalker-currentNode.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): currentNode invariants (parent/previousSibling must not move currentNode outside the root); 1/4 subtests pass. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-11 (failing): currentNode invariants; setting currentNode to non-Node values must throw and detached-node handling diverges (2/4 subtests pass). Queued for the DOM authority package."
     },
     {
       "path": "dom/traversal/TreeWalker-nextNode-detached-currentNode.window.html",
@@ -576,8 +619,8 @@
     },
     {
       "path": "dom/traversal/TreeWalker-previousSiblingLastChildSkip.html",
-      "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): previousSibling must respect the filter; subtest errors on missing Element interface object. Queued for the DOM authority package."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-11 (included): previousSibling with a skipping filter passes 1/1 on the current build (DOM4 traversal dependency); the interface-objects package landed since the 2026-10-03 review."
     },
     {
       "path": "dom/traversal/TreeWalker-realm.html",
@@ -586,23 +629,23 @@
     },
     {
       "path": "dom/traversal/TreeWalker-traversal-reject.html",
-      "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): FILTER_REJECT semantics across nextNode/firstChild/lastChild; subtests error on missing Element interface object. Queued for the DOM authority package."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-11 (included): FILTER_REJECT semantics across nextNode/firstChild/lastChild pass 6/6 on the current build (DOM4 traversal dependency)."
     },
     {
       "path": "dom/traversal/TreeWalker-traversal-skip-most.html",
-      "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): FILTER_SKIP versus skipping-most semantics for siblings; subtests error on missing Element interface object. Queued for the DOM authority package."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-11 (included): FILTER_SKIP versus skip-most sibling semantics pass 2/2 on the current build (DOM4 traversal dependency)."
     },
     {
       "path": "dom/traversal/TreeWalker-traversal-skip.html",
-      "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): FILTER_SKIP semantics across traversal directions; subtests error on missing Element interface object. Queued for the DOM authority package."
+      "classification": "included",
+      "reason": "Reviewed 2026-10-11 (included): FILTER_SKIP semantics across traversal directions pass 6/6 on the current build (DOM4 traversal dependency)."
     },
     {
       "path": "dom/traversal/TreeWalker-walking-outside-a-tree.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): Walking after removing the currentNode from the tree must follow the 2014-era traversal algorithm; Lite differs. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-11 (failing): Walking after removing the currentNode from the tree must follow the 2014-era traversal algorithm; Lite invokes a null filter's acceptNode. Queued for the DOM authority package."
     },
     {
       "path": "dom/abort/AbortSignal.any.html",

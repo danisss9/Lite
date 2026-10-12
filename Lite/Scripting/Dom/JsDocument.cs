@@ -241,14 +241,24 @@ public class JsDocument
     public bool dispatchEvent(JsEvent? evt = null) => JsElement.For(_engine, _root).dispatchEvent(evt);
 
     // ---- document.write / open / close ----
-    // Minimal model: each write() parses its markup and appends the result to <body>. Because the
-    // document is parsed up front (not incrementally), writes land at the end of the body rather
-    // than at the script's position, and markup split across calls is not stitched together.
+    // A frame document's open()/write()/close() stream replaces the document: writes buffer,
+    // and close() swaps the owning frame's child page for a fresh parse of the buffer — the
+    // html5lib write corpus's open/write/close pattern then behaves like the spec's streamed
+    // parse (whole-input and per-character writes serialize identically; scripts in the
+    // written markup run through the child-page pipeline). A write() WITHOUT a prior open()
+    // keeps the legacy append-to-body behavior for callers that never re-open the stream.
 
-    public void open() { /* no-op: we never buffer/blank the document */ }
+    private string? _writeBuffer;
+
+    public void open() => _writeBuffer = string.Empty;
 
     public void write(string markup)
     {
+        if (_writeBuffer is not null)
+        {
+            _writeBuffer += markup ?? string.Empty;
+            return;
+        }
         if (string.IsNullOrEmpty(markup)) return;
         var target = FindFirst(_root, n => n.TagName == "BODY") ?? _root;
         foreach (var node in Parser.ParseFragment(markup, target.TagName, JsEngine.For(_engine)?.DocumentState))
@@ -262,7 +272,35 @@ public class JsDocument
 
     public void writeln(string markup) => write((markup ?? "") + "\n");
 
-    public void close() { /* no-op */ }
+    public void close()
+    {
+        if (_writeBuffer is null) return;
+        var markup = _writeBuffer;
+        _writeBuffer = null;
+        var engine = JsEngine.For(_engine);
+        if (engine?.ParentContextEngine is not { } parent ||
+            engine.FrameElementWrapper is not JsElement frame) return;
+        var frameNode = frame.Node;
+        var navigationVersion = ++frameNode.FrameNavigationVersion;
+        parent.EnqueueMacrotask(() =>
+        {
+            if (navigationVersion != frameNode.FrameNavigationVersion) return;
+            try
+            {
+                var width = int.TryParse(frameNode.Attributes.GetValueOrDefault("width"), out var w) && w > 0 ? w : 300;
+                var height = int.TryParse(frameNode.Attributes.GetValueOrDefault("height"), out var h) && h > 0 ? h : 150;
+                var child = Parser.ParseChildPage(markup, isSrcdoc: true, parent.DocumentBaseUrl,
+                    width, height, parent.DocumentState.Session, parent, frameNode);
+                frameNode.ChildPage = child;
+                EventDispatcher.DispatchToNode(frameNode, "load", parent);
+            }
+            catch (Exception ex)
+            {
+                parent.DocumentState.Session?.Diagnostics.Enqueue($"document.write: {ex.Message}");
+                Console.WriteLine($"[document.write] {ex.Message}");
+            }
+        });
+    }
 
     // ---- document metadata ----
     public string title
