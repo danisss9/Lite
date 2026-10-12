@@ -1197,8 +1197,20 @@ namespace AngleSharp.Html.Parser
             }
             else if (TagNames.AllBodyClosed.Contains(tagName))
             {
-                AddElement(ref tag, acknowledgeSelfClosing: true);
-                CloseCurrentNode();
+                // Lite patch 001b: menuitem is absent from the W3C HTML 5.0 REC (28 October
+                // 2014), so its start tag takes the "any other start tag" path and accepts
+                // children. Upstream's post-2014 list closes it immediately like a void
+                // element, which hoisted its content out as siblings
+                // (menuitem-element.dat, 11 cases). Param/Source/Track remain void.
+                if (tagName.Is(TagNames.MenuItem))
+                {
+                    AddElement(ref tag);
+                }
+                else
+                {
+                    AddElement(ref tag, acknowledgeSelfClosing: true);
+                    CloseCurrentNode();
+                }
             }
             else if (tagName.Is(TagNames.Hr))
             {

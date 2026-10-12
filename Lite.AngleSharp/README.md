@@ -23,7 +23,7 @@ Re-basing onto a newer upstream tag is a deliberate, separately-reviewed act.
 
 | Patch | Motivation |
 | --- | --- |
-| (none yet — pristine v1.7.3) | |
+| 001 — menuitem parses as a normal element (`HtmlMenuItemElement` loses `Special\|SelfClosing`; `menuitem` removed from the `AllBodyClosed` void-close list) | menuitem is absent from the W3C HTML 5.0 REC, so its start tag takes the "any other start tag" path and accepts children; upstream's post-2014 void semantics hoisted content out as siblings. menuitem-element.dat 9→18/20 (two residuals: formatting reconstruction with `<p><b></p><menuitem>`, and the in-select case whose expectation is itself post-2014). |
 
 ## Coordination
 

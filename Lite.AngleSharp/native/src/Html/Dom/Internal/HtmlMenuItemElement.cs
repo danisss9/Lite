@@ -13,8 +13,15 @@ namespace AngleSharp.Html.Dom
         /// <summary>
         /// Creates a new HTML menuitem element.
         /// </summary>
+        /// <remarks>
+        /// Lite patch 001: menuitem is absent from the W3C HTML 5.0 REC (28 October 2014),
+        /// so its start tag takes the "any other start tag" path — a normal, non-special,
+        /// non-void element that accepts children. Upstream flags it Special|SelfClosing
+        /// (post-2014 removal semantics), which hoisted content out as siblings and failed
+        /// menuitem-element.dat (html5lib corpus; 11 cases).
+        /// </remarks>
         public HtmlMenuItemElement(Document owner, String? prefix = null)
-            : base(owner, TagNames.MenuItem, prefix, NodeFlags.Special | NodeFlags.SelfClosing)
+            : base(owner, TagNames.MenuItem, prefix)
         {
         }
 
