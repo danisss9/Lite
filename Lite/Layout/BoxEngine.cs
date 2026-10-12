@@ -483,6 +483,11 @@ internal static class BoxEngine
                     anon.StyleOverrides[$"padding-{side}"] = "0";
                     anon.StyleOverrides[$"border-{side}-width"] = "0";
                 }
+                // The generated table has no cellspacing attribute, so the UA sheet's default
+                // spacing never applies to it (§17.6.1 initial value): with it, every cell gap
+                // in 'a <cells>b c</cells> d' shifted the row ~2px per boundary against the
+                // plain-text reference and the white-space reftests showed red fringes.
+                anon.StyleOverrides["border-spacing"] = "0";
                 anon.Parent = node;
                 foreach (var c in run) { c.Parent = anon; anon.Children.Add(c); }
                 run.Clear();
@@ -2109,23 +2114,33 @@ internal static class BoxEngine
             if (lineX > bandLeft && lineX + item.Width > bandRight)
                 CommitLine();
 
-            // Skip whitespace-only text at the start of a line
+            // Skip whitespace-only text at the start of a line — a COLLAPSING one (§16.6.1):
+            // under white-space:pre/pre-wrap a preserved space at a line's start renders, and
+            // a cell whose content is exactly that space ("a <cellws> </cellws> d") lost it.
             if (lineX <= bandLeft && item.Kind == InlineItemKind.Text &&
                 item.Text != null && item.Text.Trim().Length == 0)
-                continue;
+            {
+                var wsMode = item.Node?.GetWhiteSpace() ?? WhiteSpace.Normal;
+                if (wsMode is not (WhiteSpace.Pre or WhiteSpace.PreWrap)) continue;
+            }
 
             // §16.6.1: collapsible spaces at the START of a line are removed — including the
             // spaces LEADING a text node that also carries words (" a " opens at the 'a'): the
             // parser collapses each source text node to " x ", and a bare-text node landing at
             // a line boundary painted one space too far right (white-space-12 reftests).
+            // Preserved spaces (pre/pre-wrap) are content and stay.
             if (lineX <= bandLeft && item.Kind == InlineItemKind.Text && item.Text is { } leading &&
                 leading.Length > 0 && char.IsWhiteSpace(leading[0]))
             {
-                var stripped = leading.TrimStart();
-                if (stripped.Length == 0) continue;
-                using (var stripFont = TextMeasure.CreateFont(item.Node))
-                    item = item with { Text = stripped, Width = stripFont.MeasureText(stripped),
+                var wsMode = item.Node?.GetWhiteSpace() ?? WhiteSpace.Normal;
+                if (wsMode is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+                {
+                    var stripped = leading.TrimStart();
+                    if (stripped.Length == 0) continue;
+                    using (var stripFont = TextMeasure.CreateFont(item.Node))
+                        item = item with { Text = stripped, Width = stripFont.MeasureText(stripped),
                                        ContentW = stripFont.MeasureText(stripped) };
+                }
             }
 
             // For text items wider than the available space, re-measure with wrapping
