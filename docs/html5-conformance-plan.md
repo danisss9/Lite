@@ -1,6 +1,6 @@
 # Full HTML5 conformance plan
 
-Planning baseline: 3 October 2026. Scope: Windows x64, screen rendering, retaining Lite's C#/AngleSharp/QuickJS/Skia architecture. This document is an implementation plan; it does not change the active compatibility profile or claim that any new coverage has passed. The current state and confirmed-gap inventory live in [html5-conformance.md](html5-conformance.md); this document defines the order of work and the rules that keep each gate honest while it grows.
+Planning baseline: 12 October 2026 (refreshed from 3 October with the measured progress below). Scope: Windows x64, screen rendering, retaining Lite's C#/AngleSharp/QuickJS/Skia architecture. This document is an implementation plan; it does not change the active compatibility profile or claim that any new coverage has passed. The current state and confirmed-gap inventory live in [html5-conformance.md](html5-conformance.md); this document defines the order of work and the rules that keep each gate honest while it grows.
 
 ## Target and completion contract
 
@@ -10,16 +10,18 @@ Browser chrome, OS accessibility platform mappings, and HTTP/TLS internals retai
 
 Completion means every applicable user-agent obligation is inventoried from the pinned Recommendation, implemented, and supported by identity-matched passing evidence. It does not mean a selected manifest is green. `html5ProfileReady` must remain false until the section review and the evidence collection are complete; passing regressions and a green gate never establish readiness by themselves.
 
-## Verified starting point
+## Position at the planning baseline
 
-Measured from source and local artifacts on the baseline date (not a fresh full-corpus run):
+Measured from source and local artifacts on 12 October (curated gates executed on the current build; corpus numbers from the 11–12 October survey runs):
 
-- The `--suite html5` gate executes **1 test** (`lite/html5/iframe-initial-document.html`) and passes. `--suite wpt` (curated) passes 86/88 with both non-passes published as expected failures. Unit tests and the ES2020/CSS 2.1 gates are maintained by their own workstreams.
-- `Wpt/html5-applicability.json` holds **89 entries**: 1 `included`, 0 `mixed`, 59 `unreviewed`, 9 `post-target`, 20 `regression-only`.
-- The upstream WPT catalog (`--suite html5-inventory`, artifacts) contains **~15,372 candidate test cases** across the candidate roots (`html`, `dom`, `uievents`, `url`, `encoding`, `mimesniff`, `fetch`, `cors`, `cookies`, `webstorage`, `webmessaging`, `selection`, `FileAPI`, `custom-elements`, `shadow-dom`); all but ~16 are unreviewed.
+- The `--suite html5` gate executes **46 reviewed tests** and passes (45 `included` entries plus the one `mixed` entry gated on its completed assertion inventory). `--suite wpt` (curated) passes 86/88 with both non-passes published as expected failures. Unit tests (337/337) and the ES2020/CSS 2.1 gates are maintained by their own workstreams.
+- `Wpt/html5-applicability.json` holds **186 entries**: 45 `included`, 1 `mixed`, 90 `post-target`, 23 `regression-only`, 27 `unreviewed` (reviewed-failing or deferred `dom` entries feeding the Milestone 4 queue). The `dom` root is essentially reviewed; the large `html` root review has not started.
+- The upstream WPT catalog (`--suite html5-inventory`, artifacts) contains **~15,372 candidate test cases** across the candidate roots (`html`, `dom`, `uievents`, `url`, `encoding`, `mimesniff`, `fetch`, `cors`, `cookies`, `webstorage`, `webmessaging`, `selection`, `FileAPI`, `custom-elements`, `shadow-dom`); the `html` root remains effectively unreviewed.
 - The section inventory lists **762 REC sections, all unreviewed**; the profile holds 197 HTML 5.0 requirements of which 191 are untested, 1 implemented, 2 failing (both recorded regression fixtures for later-era features, not 2014 obligations), 3 profile-excluded.
+- Parse fidelity is measured, not estimated: the html5lib tree-construction corpus executes end to end through the engine at **4,572/5,497 subtests (83.2%)**, all three runners at 85.3%, 89/219 files whole, zero crashes. The ~925 remaining failures are genuine tree-construction mismatches in named clusters — adoption agency, semicolon-less named entities, `--!>` comment ends, foreign content, template, frameset, ruby — plus the named-character-references page-level timeout (~2,231 entity subtests unreported).
 - Runner machinery already works end to end: worker-process isolation, testharness/reftest/crashtest/selftest kinds, subtest-level evidence, upstream serving via `serve-wpt.ps1` where a test requires it. Unsupported execution kinds today: testdriver-based input automation, dedicated/serviceworker/shared worker contexts, manual-test recording.
 - The parser is AngleSharp's spec-oriented HTML5 parser; the repo-owned risk is the **projection layer** (`Parser.Traverse`), skipped metadata tags, collapsed whitespace, snapshot collections, and the non-authoritative DOM — all documented as confirmed gaps.
+- Four Milestone 4 packages have landed with regression coverage: interface objects and constants, traversal filters, origin-sheet visibility, and dynamic markup (frame-level `document.open`/`write`/`close` streams; top-level replacement and a streaming insertion point remain open).
 
 There are uncommitted CSS/ES workstream changes in the checkout from parallel efforts. This track touches only the files listed under "Coordination" below and must rebuild before collecting evidence.
 
@@ -38,6 +40,8 @@ Classification protocol (schema-constrained to `path`, `classification`, `reason
 
 Gate growth discipline: each batch is classified, then `--suite html5` must exit 0 before the batch is considered done; `inventoryComplete` flips to true only when every catalog candidate has a classification, and omissions are detected from the catalog rather than trusted from the flag.
 
+Progress at the baseline: the `dom` root is essentially reviewed (37 `included`, 82 `post-target`, 23 `regression-only`, 27 reviewed-failing/deferred entries queued for Milestone 4), the first `mixed` assertion inventory is complete, and two entries were reclassified `post-target` against the 2014 REC's own text on re-review. Remaining: the 27 unreviewed `dom` entries, the dependency roots in the batch order above, and the entire `html` root.
+
 **Exit:** a reviewed corpus of meaningful size across the dependency roots, zero unexpected failures, the reviewed-failing queue feeding Milestone 4, and the review protocol demonstrated end to end on the `dom` root.
 
 ## Milestone 2: parse fidelity and serialization
@@ -45,6 +49,8 @@ Gate growth discipline: each batch is classified, then `--suite html5` must exit
 Measure and fix HTML parsing/serialization conformance (REC §8), the section the project itself flags as "projection requires audit". Run the vendored tree-construction corpus (`html/syntax/parsing` html5lib runners over the 62 `.dat` files), the tokenizer cases, named-character-references, and serialization/innerHTML tests through the real pipeline. Where the projection layer (skipped metadata tags, whitespace collapsing, fragment contexts, script insertion) breaks parse-fidelity assertions, either fix the projection or record the reviewed-failing entry. Add WPT-independent unit fixtures for tokenizer edge cases only where WPT has no window-context equivalent.
 
 **Exit:** a measured parse-fidelity baseline with failure clusters named (foster parenting, adoption agency, foreign content, template, encoding restart), and no silent skip between the vendored corpus and the gate.
+
+Progress at the baseline: measured and largely closed — the corpus runs end to end at 4,572/5,497 subtests (83.2%) with the dynamic-markup, doctype-identity, option-value and origin-sheet-visibility clusters resolved. Remaining work: an attribution pass that separates projection-layer defects from AngleSharp parser deviations per cluster, the genuine tree-construction mismatch clusters (adoption agency, semicolon-less entities, `--!>` comment ends, foreign content, template, frameset, ruby), the named-character-references page-level timeout, encoding sniff/restart, scripting-flag parsing semantics, and the serialization residuals (innerHTML/outerHTML surfacing injected UA sheets).
 
 ## Milestone 3: harness automation
 
@@ -71,6 +77,8 @@ Each package starts from a measured failing cluster (Milestone 1 reviews, Milest
 | Editing and selection | no Range/Selection/designMode/execCommand | new DOM ranges, `Interaction` |
 | Obsolete and rendering | applet/marquee/frameset/frame processing, UA styles, print obligations | `Parser`, UA stylesheet, `Layout`, `Drawer` |
 
+Landed at the baseline, each with regression coverage: interface objects and constants (Web IDL), traversal filters (TreeWalker/NodeIterator), origin-sheet visibility (UA/user sheets hidden from script-visible child membership), and frame-level dynamic markup. The table rows remain open until their clusters pass; dynamic markup retains its top-level replacement and streaming-insertion residuals.
+
 **Exit:** each reviewed-failing entry in the package's cluster becomes `included` (passing) or receives a reviewed `profile-excluded`/`post-target` classification with justification.
 
 ## Milestone 5: section and obligation review closure
@@ -91,7 +99,7 @@ The profile JSON (`Lite.Conformance/Profile/lite-html5-css21-es2020-profile.json
 
 ## Delivery order and validation
 
-Milestone 1 runs now (dependency roots first), Milestone 2 next because parse fidelity feeds the largest `html`-root review decisions, Milestone 3 unblocks the deep `html` root and interactive clusters, Milestone 4 packages proceed in dependency order (DOM authority and dynamic markup before forms/media), Milestones 5 and 6 close. Each change delivers a reviewed classification or obligation mapping, a reproducer or upstream case, the implementation when required, regression evidence, and an updated reviewed-failing queue.
+At the baseline, Milestone 1 is mid-flight (the `dom` root is reviewed; the dependency roots and the `html` root remain), Milestone 2 has its baseline measured with four clusters closed, and four Milestone 4 packages have landed. The order from here: finish the `dom` stragglers and dependency roots while running the parse-fidelity attribution pass (projection defect versus AngleSharp deviation, cluster by cluster), then close the mismatch clusters; bring up Milestone 3 harness capability before the deep `html` root and the interactive clusters; then the remaining Milestone 4 packages in dependency order (DOM authority first — it unblocks collections, serialization fidelity and the editing package), with the `html` root review interleaving as clusters close; Milestones 5 and 6 close last. Each change delivers a reviewed classification or obligation mapping, a reproducer or upstream case, the implementation when required, regression evidence, and an updated reviewed-failing queue.
 
 Use `dotnet build Lite.sln -c Release` and the custom executable runner `dotnet run --project Lite.Tests -c Release --no-build` for code validation, then:
 
