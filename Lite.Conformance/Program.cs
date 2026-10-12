@@ -144,7 +144,7 @@ internal static class Program
         { Console.Error.WriteLine("--media requires --suite css21-full."); return 2; }
         if (cssCatalog is not null && !suite.Equals("css21-full", StringComparison.OrdinalIgnoreCase))
         { Console.Error.WriteLine("--catalog requires --suite css21-full."); return 2; }
-        if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html5" or "html5-inventory" or "css21" or "css21-full" or "css21-inventory" or "test262" or "es2020-inventory" or "es2020-host"))
+        if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html5" or "html5-inventory" or "html5-attribution" or "css21" or "css21-full" or "css21-inventory" or "test262" or "es2020-inventory" or "es2020-host"))
         { Console.WriteLine("--report is supported by profile, wpt, html5, html5-inventory, css21, and test262."); return 2; }
         if (survey is not null && suite.Equals("css21", StringComparison.OrdinalIgnoreCase) && reportPath is not null)
         { Console.WriteLine("CSS surveys do not produce readiness evidence; use the curated CSS gate with --report."); return 2; }
@@ -157,6 +157,7 @@ internal static class Program
                 "wpt" => WptRunner.Run(filter, shard, reportPath),
                 "html5" => WptRunner.RunHtml(filter, shard, reportPath),
                 "html5-inventory" => HtmlInventoryRunner.Run(reportPath),
+                "html5-attribution" => ParseAttribution.Run(reportPath),
                 "css21" when survey is not null => RefTestRunner.Survey(survey, surveyLimit),
                 "css21" => RefTestRunner.Run(filter, shard, reportPath),
                 "css21-inventory" => Css21Inventory.Run(reportPath),
@@ -204,7 +205,7 @@ internal static class Program
             Lite conformance harness
 
             Usage:
-              dotnet run --project Lite.Conformance -- --suite <wpt|html5|html5-inventory|css21|test262|acid|profile|all> [options]
+              dotnet run --project Lite.Conformance -- --suite <wpt|html5|html5-inventory|html5-attribution|css21|test262|acid|profile|all> [options]
 
             Options:
               --test262-set full|smoke|staging  Select the full corpus (default), the explicit smoke set,
