@@ -40,7 +40,7 @@ Classification protocol (schema-constrained to `path`, `classification`, `reason
 
 Gate growth discipline: each batch is classified, then `--suite html5` must exit 0 before the batch is considered done; `inventoryComplete` flips to true only when every catalog candidate has a classification, and omissions are detected from the catalog rather than trusted from the flag.
 
-Progress at the baseline: the `dom` root is essentially reviewed (37 `included`, 82 `post-target`, 23 `regression-only`, 27 reviewed-failing/deferred entries queued for Milestone 4), the first `mixed` assertion inventory is complete, and two entries were reclassified `post-target` against the 2014 REC's own text on re-review. Remaining: the 27 unreviewed `dom` entries, the dependency roots in the batch order above, and the entire `html` root.
+Progress at the baseline: the `dom` root is reviewed (45 `included`, 1 `mixed`, 93 `post-target`, 23 `regression-only`; the 24 remaining `unreviewed` entries all carry reviewed reasons — 20 reviewed-failing feeding the Milestone 4 queue and 4 reviewed-deferred whose embedded post-target member reads cannot be split at subtest level), the first `mixed` assertion inventory is complete, and two entries were reclassified `post-target` against the 2014 REC's own text on re-review. Remaining: the dependency roots in the batch order above and the entire `html` root.
 
 **Exit:** a reviewed corpus of meaningful size across the dependency roots, zero unexpected failures, the reviewed-failing queue feeding Milestone 4, and the review protocol demonstrated end to end on the `dom` root.
 

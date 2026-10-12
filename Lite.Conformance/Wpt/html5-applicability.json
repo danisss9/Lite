@@ -252,7 +252,7 @@
     {
       "path": "dom/events/Event-stopImmediatePropagation.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-11 (deferred): passes, but the page is one indivisible setup({single_test}) test mixing target stopImmediatePropagation semantics (DOM4 2014) with a post-target cancelBubble getter read; the subtest-level assertion inventory cannot split it. Stays out of the gate."
+      "reason": "Reviewed 2026-10-12 (deferred, passes): the single subtest asserts both stopImmediatePropagation dispatch semantics (2014-target, DOM4 2014 section 6.3) and e.cancelBubble === true after the call; cancelBubble is absent from the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710) (same basis as the 3 October cancelBubble reclassification), and the subtest-level inventory cannot split the two. Stays out of the gate."
     },
     {
       "path": "dom/events/KeyEvent-initKeyEvent.html",
@@ -277,7 +277,7 @@
     {
       "path": "dom/events/Event-initEvent.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-11 (deferred): passes; six of twelve subtests are pure 2014-target, but the four 'Properties of initEvent(...)' subtests and 'must unset the stop propagation flag' embed returnValue/srcElement/cancelBubble reads inside target subtests, and 'default parameter values' binds post-2014 Web IDL optional-argument defaults; the subtest-level inventory cannot split the mixed subtests. Stays out of the gate."
+      "reason": "Reviewed 2026-10-12 (deferred, passes): the initEvent core subtests (re-initialization, no effect during dispatch, stop-flag unsetting, Web IDL mandatory/default arguments) are 2014-target, but four \"Properties of initEvent\" subtests embed a srcElement read, the stop-propagation subtest embeds a cancelBubble read, and one subtest asserts returnValue — srcElement, cancelBubble and returnValue are all absent from the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710) and the subtest-level inventory cannot split them. Stays out of the gate."
     },
     {
       "path": "dom/events/EventTarget-dispatchEvent.html",
@@ -350,7 +350,7 @@
     {
       "path": "dom/events/Event-defaultPrevented-after-dispatch.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-11 (deferred): passes, but 'Default prevention via preventDefault' embeds a srcElement assert inside a target subtest while 'Default prevention via returnValue' binds the post-target returnValue feature; the subtest-level inventory cannot split the first. Stays out of the gate."
+      "reason": "Reviewed 2026-10-12 (deferred, passes): \"Default prevention via preventDefault\" is a 2014-target subtest (DOM4 2014 preventDefault/defaultPrevented/target) that embeds a srcElement assert, and \"Default prevention via returnValue\" binds returnValue, absent from the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710); srcElement is likewise absent, so neither subtest can be inventoried cleanly at subtest level. Stays out of the gate."
     },
     {
       "path": "dom/events/Event-dispatch-bubble-canceled.html",
@@ -360,7 +360,7 @@
     {
       "path": "dom/events/Event-dispatch-detached-click.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-11 (deferred): passes, but the dispatch subtest embeds an srcElement assert inside a target subtest; the subtest-level inventory cannot split it. Stays out of the gate."
+      "reason": "Reviewed 2026-10-12 (deferred, passes): the single subtest asserts dispatchEvent to a detached element (2014-target, DOM4 2014 section 7 Dispatching events: path is the target alone) together with evt.srcElement, absent from the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710); the subtest-level inventory cannot split them. Stays out of the gate."
     },
     {
       "path": "dom/events/Event-dispatch-order.html",
@@ -495,62 +495,62 @@
     {
       "path": "dom/collections/HTMLCollection-as-prototype.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): HTMLCollection prototype behavior (Web IDL legacy platform object): reading .length through the HTMLCollection prototype must throw; Lite allows it. 1/2 subtests pass. Queued for the DOM authority package; becomes included when passing."
+      "reason": "Reviewed 2026-10-12 (failing): HTMLCollection as a legacy platform object used as a prototype (the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710) section 6.1.1 supported property names; the Web IDL dependency referenced by HTML 5.0 ordinary-object internals) — failing assertion: Object.create(collection).length must throw TypeError (getter invoked with an incompatible receiver) (1/2 subtests) — engine gap: the collection getter runs with the wrong this instead of producing the ordinary-object prototype-chain behavior; the passing own-property-shadowing subtest cannot gate alone"
     },
     {
       "path": "dom/collections/HTMLCollection-delete.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): Strict delete on supported property names must throw TypeError and loose delete must return false; Lite differs. 2/4 subtests pass. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): HTMLCollection supported properties are non-deletable (the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710) section 6.1.1 supported property names; the Web IDL dependency referenced by HTML 5.0 legacy platform object [[Delete]]) — failing assertion: strict-mode delete of an indexed or named supported property must throw TypeError (2/4 subtests: Strict id, Strict name) — engine gap: delete succeeds on supported properties instead of failing as non-configurable"
     },
     {
       "path": "dom/collections/HTMLCollection-empty-name.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): getElementsByTagNameNS with an empty qualified-name must yield an empty collection and the empty-string named-property handling must follow Web IDL; Lite raises errors. 5/7 subtests pass. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): getElementsByTagNameNS on Document and Element (the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710) section 6.4 Elements) and the empty-string named getter (section 6.1.1: the empty string is never a supported property name) — failing assertion: Document.getElementsByTagNameNS / Element.getElementsByTagNameNS do not exist (2/7 subtests report \"not a function\"); the five empty-string subtests pass — engine gap: getElementsByTagNameNS is not implemented on the script-facing Document/Element wrappers"
     },
     {
       "path": "dom/collections/HTMLCollection-iterator.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): Iterable-declaration subtests over HTMLCollection fail; the file mixes 2014-era and post-2014 iterable additions, so a per-assertion inventory is deferred until the target assertions pass. 4/6 subtests pass. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): HTMLCollection iteration (the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710) section 6.1.1 defines only length, item, namedItem; Symbol.iterator and the iterable declaration post-date the 2014 snapshot) — failing assertion: Symbol.iterator in collection and the for-of subtest fail (2/6); the forEach-absence subtest also fails because the engine exposes a forEach extension — engine gap: the iterable-declaration subtests are post-target, but the engine's extra forEach diverges from the 2014 interface surface; re-review if the interface-objects package changes the surface"
     },
     {
       "path": "dom/collections/HTMLCollection-live-mutations.window.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): Live HTMLCollection mutation semantics: ownPropertyNames enumeration after insertions/removals differs; Lite collections are snapshots. 4/5 subtests pass. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): HTMLCollection live-ness and supported property name enumeration (the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710) section 6.1.1 supported property names: tree-order IDs and name attributes) — failing assertion: Object.getOwnPropertyNames must not surface an unexpected indexed \"0\" alongside the named properties (1/5 subtests: HTMLCollection ownPropertyNames) — engine gap: enumeration of the live collection's own properties diverges from the supported-property-name list"
     },
     {
       "path": "dom/collections/HTMLCollection-own-props.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): Web IDL legacy platform object own-property setting and enumeration over named/indexed properties differs in Lite. 5/8 subtests pass. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): HTMLCollection named/indexed property [[Set]] and [[DefineOwnProperty]] (the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710) section 6.1.1; the Web IDL dependency referenced by HTML 5.0 legacy platform object property semantics) — failing assertion: strict-mode assignment to a supported named property must throw TypeError; assignments must not shadow named or indexed properties (3/8 subtests) — engine gap: supported-property writes succeed and shadow the collection's own properties"
     },
     {
       "path": "dom/collections/HTMLCollection-supported-property-indices.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-11 (failing): Integer-like property names around 2^32 and the index getter edge cases differ; Lite passes 4/7 subtests. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): HTMLCollection indexed property names around the 2^32 boundary (the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710) section 6.1.1 supported property names; the Web IDL dependency referenced by HTML 5.0 canonical numeric string handling) — failing assertion: indices at and beyond 2^32-1 must behave as named properties; expanding defineProperty of an existing index must throw (4/7 subtests) — engine gap: boundary indices resolve to null and expando definitions shadow existing indices"
     },
     {
       "path": "dom/collections/HTMLCollection-supported-property-names.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): getOwnPropertyNames must enumerate supported property names of the live collection; Lite (snapshot collections) omits them. 2/6 subtests pass. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): HTMLCollection supported property names enumeration (the DOM4 draft referenced by HTML 5.0 (WD-dom-20140710) section 6.1.1: tree-order IDs then name attributes, plus canonical numeric indices) — failing assertion: Object.getOwnPropertyNames must list exactly the indices and supported names (4/6 subtests; the engine lists prototype members and omits named properties) — engine gap: own-property enumeration includes prototype methods and misses named properties"
     },
     {
       "path": "dom/collections/domstringmap-supported-property-names.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-11 (failing): getOwnPropertyNames and enumeration of dataset (DOMStringMap, 2.7.3) supported property names; property reads pass but enumeration misses the empty data attribute and the trailing-hyphen mapping (3/5 subtests pass). Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): DOMStringMap supported property names (HTML 5.0 section 2.7.3: dataset enumerates the data-* attribute names with hyphen-to-camelCase mapping) — failing assertion: Object.getOwnPropertyNames on a DOMStringMap must list the data attribute-derived names, including the empty data attribute and trailing-hyphen forms (2/5 subtests) — engine gap: the confirmed DOMStringMap enumeration gap documented in the confirmed-gap table"
     },
     {
       "path": "dom/collections/namednodemap-supported-property-names.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): getOwnPropertyNames of NamedNodeMap attribute names; Lite fails all 3 subtests. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): NamedNodeMap supported property names and enumeration (DOM4 2014 NamedNodeMap: indexed own properties plus attribute-name named properties) — failing assertion: Object.getOwnPropertyNames must list the indices and attribute names and nothing else (3/3 subtests) — engine gap: enumeration exposes prototype members (length/item/getNamedItem/...) and omits attribute names"
     },
     {
       "path": "dom/lists/DOMTokenList-stringifier.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): DOMTokenList stringifier must return the serialized content attribute value (3.2.5.7 The class attribute); String(classList) differs in Lite. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): DOMTokenList stringifier (DOM4 2014 DOMTokenList: the stringifier returns the reflected content attribute value verbatim, without token normalization; HTML 5.0 section 2.4 whitespace handling) — failing assertion: String(classList) must return \"   a  a b \" exactly, and classList.toString() likewise (1/1 subtests) — engine gap: the stringifier normalizes whitespace instead of reflecting the attribute verbatim"
     },
     {
       "path": "dom/lists/DOMTokenList-coverage-for-attributes.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-11 (failing): 134/175 subtests pass; remaining failures concentrate on DOMTokenList interface identity for relList/htmlFor across namespaces and reflected-attribute edge cases (3.2.5.7 The class attribute). Mixed-era file; full per-assertion inventory deferred until interface identity lands. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): DOMTokenList coverage for reflected token attributes (DOM4 2014 DOMTokenList + HTML 5.0 attribute reflections; the 2014 target reflects iframe.sandbox and td/th.headers as DOMSettableTokenList) — failing assertion: 41/175 subtests fail, concentrated in attribute/interface pairs introduced after the 2014 snapshot — engine gap: mixed-era coverage matrix: post-target pairs dominate the failures; a per-pair inventory is only worth building once the interface-objects work settles the 2014 surface"
     },
     {
       "path": "dom/lists/DOMTokenList-Iterable.html",
@@ -575,47 +575,47 @@
     {
       "path": "dom/traversal/NodeIterator.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): NodeIterator traversal (DOM dependency): the page produced no subtests, so a pass cannot be established. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): NodeIterator semantics (DOM4 2014 section 6.2 Traversal: root, referenceNode, whatToShow filters, nextNode/previousNode) — failing assertion: the page runs empty (0 subtests reported) — no engine failure is observable — engine gap: harness/engine integration gap: testharness reports no subtests; unblock before the traversal cluster can be gated"
     },
     {
       "path": "dom/traversal/NodeIterator-removal.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): NodeIterator removal semantics (DOM dependency): the page produced no subtests, so a pass cannot be established. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): NodeIterator removal behavior (DOM4 2014 section 6.2 Traversal: iterators stay live across removals, pre-removal referenceNode steps) — failing assertion: the page runs empty (0 subtests reported) — no engine failure is observable — engine gap: harness/engine integration gap: testharness reports no subtests; unblock before the traversal cluster can be gated"
     },
     {
       "path": "dom/traversal/TreeWalker-acceptNode-filter-cross-realm-null-browsing-context.html",
-      "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): Cross-realm NodeFilter (detached iframe) must still be invoked; Lite fails (harness error). Queued for the DOM authority package."
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-12 (post-target): the single subtest requires a NodeFilter belonging to a detached-iframe document (null browsing context) to go uncalled; the DOM4 draft referenced by HTML 5.0 defines filter invocation without browsing-context participation. Introduced after the 28 October 2014 snapshot."
     },
     {
       "path": "dom/traversal/TreeWalker-acceptNode-filter-cross-realm.html",
-      "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): NodeFilter as a cross-realm plain object without acceptNode must follow Web IDL callback semantics; Lite fails all 5 subtests. Queued for the DOM authority package."
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-12 (post-target): all five subtests bind cross-realm NodeFilter invocation and a TypeError thrown from the filter's associated realm; neither realms nor associated-realm exception semantics exist in the DOM4 draft referenced by HTML 5.0 (which defines NodeFilter invocation without any realm concept). Introduced after the 28 October 2014 snapshot."
     },
     {
       "path": "dom/traversal/TreeWalker-acceptNode-filter.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-11 (failing): Raw-function and object NodeFilter handling passes, but null and undefined filters must be treated as no filter while Lite invokes acceptNode on them (10/12 subtests pass). Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): TreeWalker filter invocation (DOM4 2014 section 6.2 Traversal: a null/undefined filter means no per-node filtering; otherwise acceptNode is called) — failing assertion: null filter must act as no-filter (2/12 subtests fail with \"cannot read property acceptNode of null\") — engine gap: createTreeWalker does not normalize a null filter to the no-filter path"
     },
     {
       "path": "dom/traversal/TreeWalker-basic.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-11 (failing): document.createTreeWalker basics; the whatToShow default, the null-root TypeError and a traversal node-type mismatch remain (3/6 subtests pass). Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): createTreeWalker argument handling (DOM4 2014 section 6.2 Traversal; the Web IDL dependency referenced by HTML 5.0 optional-argument defaults) — failing assertion: createTreeWalker(root, undefined, undefined) must apply the whatToShow/filter defaults (2/6 subtests) — engine gap: undefined whatToShow/filter are not converted to the default (4294967295 / null)"
     },
     {
       "path": "dom/traversal/TreeWalker-currentNode.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-11 (failing): currentNode invariants; setting currentNode to non-Node values must throw and detached-node handling diverges (2/4 subtests pass). Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): TreeWalker currentNode setter (DOM4 2014 section 6.2 Traversal: setting currentNode to a non-Node value must throw TypeError) — failing assertion: assigning non-Node values must throw (2/4 subtests) — engine gap: the setter accepts non-Node values without the interface-type check"
     },
     {
       "path": "dom/traversal/TreeWalker-nextNode-detached-currentNode.window.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): nextNode() from a detached currentNode without descendants must return null; Lite fails 3/3 subtests. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): TreeWalker nextNode from a detached currentNode (DOM4 2014 section 6.2 Traversal: nextNode returns null when no node follows in document order) — failing assertion: nextNode() must return null for a detached currentNode (3/3 subtests) — engine gap: nextNode misbehaves when the current node is detached from its document"
     },
     {
       "path": "dom/traversal/TreeWalker-previousNodeLastChildReject.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): previousNode must respect the filter; subtest errors on missing Element interface object. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): TreeWalker previousNode filter respect (DOM4 2014 section 6.2 Traversal: filtering steps apply to previousNode, rejecting subtrees as required) — failing assertion: previousNode must honour FILTER_REJECT on the last child (1/1 subtest) — engine gap: the previousNode walk does not apply the filter's reject semantics correctly"
     },
     {
       "path": "dom/traversal/TreeWalker-previousSiblingLastChildSkip.html",
@@ -624,8 +624,8 @@
     },
     {
       "path": "dom/traversal/TreeWalker-realm.html",
-      "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-03 (failing): TreeWalker nodes from a different realm; harness reports an error. Queued for the DOM authority package."
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-12 (post-target): both subtests bind realm identity of TreeWalker-produced nodes and filters across documents; the DOM4 draft referenced by HTML 5.0 has no realm model. Note for regression tracking: the failure message surfaces a raw CLR wrapper (\"Object of type Lite.Scripting...\") to script — wrapper leaks of this shape should never reach script even for cross-realm inputs; folded into the DOM-authority package."
     },
     {
       "path": "dom/traversal/TreeWalker-traversal-reject.html",
@@ -645,7 +645,7 @@
     {
       "path": "dom/traversal/TreeWalker-walking-outside-a-tree.html",
       "classification": "unreviewed",
-      "reason": "Reviewed 2026-10-11 (failing): Walking after removing the currentNode from the tree must follow the 2014-era traversal algorithm; Lite invokes a null filter's acceptNode. Queued for the DOM authority package."
+      "reason": "Reviewed 2026-10-12 (failing): TreeWalker walks outside a tree (DOM4 2014 section 6.2 Traversal: parent/root resolution when nodes leave the tree) — failing assertion: walking from a node removed from the tree must terminate cleanly (1/1 subtest, fails with \"cannot read property acceptNode of null\") — engine gap: same null-filter normalization gap as TreeWalker-acceptNode-filter, surfaced through a detached tree"
     },
     {
       "path": "dom/abort/AbortSignal.any.html",
