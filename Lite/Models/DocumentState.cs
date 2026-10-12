@@ -79,8 +79,10 @@ internal sealed class DocumentState(IDocument? document, string address, string 
                 // The element gets its OWN computed cascade, not the borrowed render-root style:
                 // the root's computed 'display' (block) used to pass off as the projection's own,
                 // so a JS-created <span> laid out block-level. This is the same computation
-                // Traverse performs for parsed elements (UA sheet block list, author rules).
-                projection.Style = elementNode.ComputeCurrentStyle();
+                // Traverse performs for parsed elements (UA sheet block list, author rules) —
+                // through the guarded path: AngleSharp's raw computation throws on declarations
+                // it cannot convert (unitless font-shorthand line-height).
+                projection.Style = Parser.ComputeCurrentStyleFor(elementNode);
             }
             else if (key is IText)
             {

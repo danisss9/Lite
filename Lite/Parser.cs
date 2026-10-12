@@ -946,6 +946,13 @@ internal static class Parser
     /// Lite resolves relative and unitless values during layout, so retaining the cascaded value
     /// is both sufficient and more accurate than discarding the declaration.
     /// </summary>
+    /// <summary>The guarded computed-style entry for code outside this class: AngleSharp's
+    /// own extension throws on declarations it computes but cannot convert (unitless
+    /// line-height from the font shorthand), which crashed presentational-hint resolution
+    /// and DOM-projection styling the moment their pages rendered.</summary>
+    internal static ICssStyleDeclaration ComputeCurrentStyleFor(IElement element) =>
+        ComputeCurrentStyle(element);
+
     private static ICssStyleDeclaration ComputeCurrentStyle(IElement element) =>
         ComputeCurrentStyle(element, out _);
 
@@ -1798,14 +1805,14 @@ internal static class Parser
             float.TryParse(raw[..^1], System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var pct))
         {
-            var declared = element.ComputeCurrentStyle().GetPropertyValueSafe(property)?.Trim();
+            var declared = ComputeCurrentStyle(element).GetPropertyValueSafe(property)?.Trim();
             if (string.IsNullOrEmpty(declared) || declared == "auto")
                 node.StyleOverrides[property] = $"{pct.ToString(System.Globalization.CultureInfo.InvariantCulture)}%";
             return;
         }
         if (int.TryParse(raw, out var px))
         {
-            var declared = element.ComputeCurrentStyle().GetPropertyValueSafe(property)?.Trim();
+            var declared = ComputeCurrentStyle(element).GetPropertyValueSafe(property)?.Trim();
             if (string.IsNullOrEmpty(declared) || declared == "auto")
                 node.StyleOverrides[property] = $"{px}px";
             // With no bitmap to measure, the attribute is all the intrinsic size there is.
