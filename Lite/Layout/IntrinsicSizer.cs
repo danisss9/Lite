@@ -257,6 +257,17 @@ internal static class IntrinsicSizer
 
         if (node.Children.Count == 0 && !string.IsNullOrEmpty(node.DisplayText))
         {
+            // A whitespace-only leaf emits no token — it only arms the boundary flag, so the
+            // space between two rendered atoms is counted exactly once (by the atom that
+            // follows, when it has a rendered predecessor). Emitting the space here AND at
+            // the next atom double-counted every interior boundary and inflated the columns
+            // of the infer-cells anonymous tables.
+            var ws = node.GetWhiteSpace();
+            if (string.IsNullOrWhiteSpace(node.DisplayText) && ws is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+            {
+                pendingBoundarySpace = true;
+                return;
+            }
             var (m, x) = TextMinMax(node);
             AppendTextToken(node, toks, m, x, ref pendingBoundarySpace);
             return;
