@@ -3705,8 +3705,36 @@ namespace AngleSharp.Html.Parser
             {
                 case HtmlTokenType.Character:
                 {
-                    AddCharacters(token.Data.Replace(Symbols.Null, Symbols.Replacement));
-                    _frameset = !token.HasContent && _frameset;
+                    // Lite patch 009: in foreign content the NUL replacement does not touch
+                    // frameset-ok, while any other non-whitespace character clears it —
+                    // Chromium keeps the frameset for "<svg>NUL</svg><frameset>" and for
+                    // "<svg>NUL </svg><frameset>", but drops it for "<svg>NULa</svg>
+                    // <frameset>" (plain-text-unsafe.dat #18/#19 vs #20). The upstream line
+                    // cleared for the NUL too, burying the frameset under the body.
+                    var hadNull = false;
+                    var hasContent = false;
+                    var data = token.Data;
+
+                    for (var i = 0; i < data.Length; i++)
+                    {
+                        var c = data[i];
+
+                        if (c == Symbols.Null)
+                        {
+                            hadNull = true;
+                        }
+                        else if (!c.IsSpaceCharacter())
+                        {
+                            hasContent = true;
+                        }
+                    }
+
+                    AddCharacters(hadNull
+                        ? data.Replace(Symbols.Null, Symbols.Replacement)
+                        : data);
+
+                    _frameset = !hasContent && _frameset;
+
                     return;
                 }
                 case HtmlTokenType.StartTag:
