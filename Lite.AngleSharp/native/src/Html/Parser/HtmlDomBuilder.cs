@@ -383,15 +383,37 @@ namespace AngleSharp.Html.Parser
         private void Consume(ref StructHtmlToken token)
         {
             var node = AdjustedCurrentNode;
-            
+
             if (node is null || token.Type == HtmlTokenType.EndOfFile ||
                 node.Flags.HasFlag(NodeFlags.HtmlMember) ||
-                (token.IsHtmlCompatible && IsHtmlTip(node)) ||
-                (node.Flags.HasFlag(NodeFlags.MathTip) && token.IsMathCompatible) ||
                 (node.Flags.HasFlag(NodeFlags.MathMember) && token.IsSvg &&
                  node.LocalName.Is(TagNames.AnnotationXml)))
             {
                 Home(ref token);
+            }
+            else if ((token.Type == HtmlTokenType.StartTag || token.Type == HtmlTokenType.Character) &&
+                     ((token.IsHtmlCompatible && IsHtmlTip(node)) ||
+                      (node.Flags.HasFlag(NodeFlags.MathTip) && token.IsMathCompatible)))
+            {
+                // Lite patch 010: tokens at HTML/MathML text integration points process
+                // with the IN-BODY rules (REC §8.2.5), regardless of the current insertion
+                // mode — except start tags the in-body mode itself ignores while a real
+                // table is in table scope, which fall through to the table modes:
+                // Chromium inserts the second <td> of
+                // "<table><tr><td><svg><desc><td>" as a sibling cell. Upstream dispatched
+                // everything by mode, so a <tr> token reaching a <mo> integration point
+                // inside a foreign fragment re-entered the table modes and inserted a
+                // stray <tr> at the fragment root (math.dat/svg.dat #1-4, tests9/tests10).
+                if (token.Type == HtmlTokenType.StartTag &&
+                    TagNames.AllNested.Contains(token.Name) &&
+                    IsInTableScope(TagNames.Table))
+                {
+                    Home(ref token);
+
+                    return;
+                }
+
+                InBody(ref token);
             }
             else
             {
