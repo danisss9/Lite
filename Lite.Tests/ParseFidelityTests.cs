@@ -145,4 +145,28 @@ public static class ParseFidelityTests
         var head = Find(page.Root, n => n.TagName == "HEAD");
         True(head != null && head.Children.All(c => c.TagName != "#comment"), "no comments may land in head");
     }
+
+    [Test]
+    public static void Template_AfterHead_LandsInHeadWithoutDoubleHead()
+    {
+        // template.dat #103-105: after </head>, the template must process using the in-head
+        // rules against the existing head, and the post-template reset must honor the head
+        // pointer (reset html → after head synthesizes the body; before head created a
+        // second empty head). One head carrying the template, plus a body — nothing more.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><head></head><template>Foo</template>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var doc = page.Document!;
+        var heads = doc.ChildNodes.OfType<IElement>()
+            .Concat(doc.ChildNodes.OfType<IElement>().SelectMany(e => e.ChildNodes.OfType<IElement>()))
+            .Where(e => e.LocalName == "head")
+            .ToList();
+        Equal(1, heads.Count);
+        var head = heads[0];
+        True(head.ChildNodes.OfType<IElement>().Any(e => e.LocalName == "template"), "template must sit in head");
+        var template = head.ChildNodes.OfType<IElement>().First(e => e.LocalName == "template")
+            as AngleSharp.Html.Dom.IHtmlTemplateElement;
+        True(template is not null && template.Content.TextContent == "Foo", "template content must hold Foo");
+        True(doc.QuerySelector("body") is not null, "the body must be synthesized");
+    }
 }

@@ -267,6 +267,23 @@ namespace AngleSharp.Html.Parser
                     element = _fragmentContext;
                 }
 
+                // Lite patch 008: the reset's html case follows the head pointer — before-
+                // head when the document has no head, otherwise AFTER HEAD (the 2014 reset
+                // algorithm: "If the head element pointer is null, switch the insertion
+                // mode to before head; otherwise, the head element pointer is not null,
+                // switch the insertion mode to after head"). Chromium matches: EOF then
+                // synthesizes the body. Upstream always selected before-head for html,
+                // which surfaced once the template-in-after-head handling left the stack
+                // as [html] at the </template> reset: the EOF created a second empty head
+                // and a body (template.dat #103-105).
+                if (last && _fragmentContext is null && element.LocalName.Is(TagNames.Html))
+                {
+                    _currentMode = _document.Head is null
+                        ? HtmlTreeMode.BeforeHead
+                        : HtmlTreeMode.AfterHead;
+                    break;
+                }
+
                 var mode = element.SelectMode(last, _templateModes);
 
                 if (mode.HasValue)
