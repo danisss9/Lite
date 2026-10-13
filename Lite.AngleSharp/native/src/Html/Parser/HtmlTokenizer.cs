@@ -290,6 +290,13 @@ namespace AngleSharp.Html.Parser
 
                     case Symbols.Null:
                         RaiseErrorOccurred(HtmlParseError.Null);
+                        // Lite patch 005 (revised): the data state emits U+0000 as-is; the
+                        // tree builder replaces it with U+FFFD in foreign content and drops
+                        // it in HTML content (AddCharacters). Dropping it here instead —
+                        // upstream's behavior — made foreign text lose the replacement
+                        // character, but replacing it here made HTML integration points
+                        // (svg foreignObject) keep NULs the spec ignores.
+                        Append(c);
                         break;
 
                     default:

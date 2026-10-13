@@ -996,6 +996,18 @@ namespace AngleSharp.Html.Parser
                         AddElement(frameSetElement, ref token);
                         _currentMode = HtmlTreeMode.InFrameset;
                     }
+                    else if (tagName.Is(TagNames.Template))
+                    {
+                        // Lite patch 006: template in after-head processes using the in-head
+                        // rules against the existing head. Browsers insert it into head;
+                        // upstream fell through to the anything-else branch, creating a body
+                        // and landing the template there (template.dat #103–105).
+                        RaiseErrorOccurred(HtmlParseError.TagMustBeInHead, ref token);
+                        var head = _document.Head;
+                        _openElements.Add(head!);
+                        InHead(ref token);
+                        CloseNode(head!);
+                    }
                     else if (TagNames.AllHeadNoTemplate.Contains(tagName))
                     {
                         RaiseErrorOccurred(HtmlParseError.TagMustBeInHead, ref token);
@@ -2350,13 +2362,29 @@ namespace AngleSharp.Html.Parser
                     }
                     else if (TagNames.AllInput.Contains(tagName))
                     {
+                        // Lite patch 004 (revised): input/keygen/textarea in select — the
+                        // 2014 REC pops until a select is popped, resets, and reprocesses.
+                        // In the fragment case the context select counts for the scope check
+                        // (browsers insert at the fragment root when the context is the
+                        // select: tests_innerHTML_1 #76/#77), while the document case closes
+                        // the select and reprocesses as its sibling (webkit02 #43). A plain
+                        // insert-in-place contradicts the sibling expectations instead.
                         RaiseErrorOccurred(HtmlParseError.IllegalElementInSelectDetected, ref token);
 
                         if (IsInSelectScope(TagNames.Select))
                         {
                             InSelectEndTagSelect();
-                            Home(ref token);
                         }
+                        else if (IsFragmentCase)
+                        {
+                            // The context select is not on the stack. Reset() substitutes
+                            // the fragment context at the last stack slot, which would
+                            // re-select InSelect here and loop forever — the popped-select
+                            // reset lands on the fragment root's in-body rules directly.
+                            _currentMode = HtmlTreeMode.InBody;
+                        }
+
+                        Home(ref token);
                     }
                     else if (tagName.IsOneOf(TagNames.Template, TagNames.Script) || IsCustomElementEverywhere(tagName))
                     {
@@ -2697,14 +2725,25 @@ namespace AngleSharp.Html.Parser
             {
                 case HtmlTokenType.Character:
                 {
-                    var str = token.TrimStart();
-                    AddCharacters(str);
+                    // Lite patch 007: frameset mode inserts every whitespace character (space,
+                    // tab, LF, FF per the in-frameset whitespace rule) and ignores all other
+                    // characters. Upstream TrimStart'ed the run and reprocessed the remainder,
+                    // dropping all but one space — " te st\n" dumps as "  \n" in browsers
+                    // (the corpus strips the trailing newline).
+                    var data = token.Data;
+                    var sb = new System.Text.StringBuilder(data.Length);
 
-                    if (!token.IsEmpty)
+                    for (var i = 0; i < data.Length; i++)
                     {
-                        break;
+                        var c = data[i];
+
+                        if (c.IsSpaceCharacter())
+                        {
+                            sb.Append(c);
+                        }
                     }
 
+                    AddCharacters(sb.ToString());
                     return;
                 }
                 case HtmlTokenType.Comment:
@@ -4381,13 +4420,31 @@ namespace AngleSharp.Html.Parser
             {
                 var node = CurrentNode;
 
-                if (_foster && TagNames.AllTableMajor.Contains(node.LocalName))
+                // Lite patch 005 companion: the data state now emits U+0000 (see the
+                // tokenizer), which the HTML modes ignore; Foreign() replaces it with
+                // U+FFFD before reaching here, so the strip only affects HTML text.
+                var hasNull = false;
+
+                for (var i = 0; i < text.Length && !hasNull; i++)
                 {
-                    AddCharactersWithFoster(text);
+                    hasNull = text[i] == Symbols.Null;
                 }
-                else
+
+                if (hasNull)
                 {
-                    node.AppendText(text, _emitWhitespaceTextNodes);
+                    text = text.ToString().Replace(Symbols.Null.ToString(), String.Empty);
+                }
+
+                if (text.Length != 0)
+                {
+                    if (_foster && TagNames.AllTableMajor.Contains(node.LocalName))
+                    {
+                        AddCharactersWithFoster(text);
+                    }
+                    else
+                    {
+                        node.AppendText(text, _emitWhitespaceTextNodes);
+                    }
                 }
             }
         }
