@@ -367,28 +367,33 @@ $Css21Worker = {
 }
 
 function Get-VendoredTreeSha256($DestRoot) {
-    $entries = @(Get-ChildItem -LiteralPath $DestRoot -Recurse -File | Where-Object {
+    # -Force: the C# verifier's Directory.EnumerateFiles returns hidden and system files
+    # too; skipping them here would desynchronize the two hash computations.
+    $entries = @(Get-ChildItem -LiteralPath $DestRoot -Recurse -File -Force | Where-Object {
             $_.Name -ne 'fetch-failures.log' -and $_.Extension -ne '.download' } | ForEach-Object {
         $rel = $_.FullName.Substring($DestRoot.Length).TrimStart('\', '/').Replace('\', '/').ToLowerInvariant()
         [pscustomobject]@{ Rel = $rel; Full = $_.FullName; Length = $_.Length }
     })
-    # Ordinal sort over the lowered forward-slash relative path, matching OfficialCatalog's
-    # canonical order: PowerShell's default culture sort orders hyphens differently and
-    # produced a different tree hash for the same bytes.
-    $keys = @($entries | ForEach-Object { "$($_.Rel)|$($_.Full)" })
-    # OrdinalIgnoreCase, not Ordinal: the C# verifier (OfficialCatalog.CanonicalTree)
-    # upper-case folds before the ordinal comparison, which reorders '_' against letters.
-    # A plain ordinal sort produced a pin the verifier rejected once the support subtree
-    # carried names mixing underscores and letters (the generated *_color.png family).
-    [System.Array]::Sort($keys, [System.StringComparer]::OrdinalIgnoreCase)
+    # Sort by the relative path alone, exactly matching OfficialCatalog.CanonicalTree:
+    # OrdinalIgnoreCase with an Ordinal tiebreak. OrdinalIgnoreCase, not Ordinal: the C#
+    # verifier upper-case folds before the ordinal comparison, which reorders '_' against
+    # letters (the generated *_color.png family). The sort key must never mix in the full
+    # path: for prefix pairs such as at-charset-001.css and at-charset-001.css.headers the
+    # '|' separator (0x7C) sorts after '.' (0x2E), reordering the pair and changing the
+    # tree hash relative to the C# verifier.
+    $ordered = [System.Collections.Generic.List[object]]$entries
+    $comparison = [Comparison[object]] {
+        param($x, $y)
+        $folded = [System.StringComparer]::OrdinalIgnoreCase.Compare($x.Rel, $y.Rel)
+        if ($folded -ne 0) { return $folded }
+        return [System.StringComparer]::Ordinal.Compare($x.Rel, $y.Rel)
+    }
+    $ordered.Sort($comparison)
     $tree = New-Object System.Text.StringBuilder
     $sha256 = [System.Security.Cryptography.SHA256]::Create()
-    foreach ($key in $keys) {
-        $bar = $key.IndexOf('|')
-        $relative = $key.Substring(0, $bar)
-        $full = $key.Substring($bar + 1)
-        [void]$tree.Append($relative).Append([char]0)
-        [void]$tree.Append(([System.BitConverter]::ToString($sha256.ComputeHash([System.IO.File]::ReadAllBytes($full))) -replace '-', '').ToLowerInvariant()).Append([char]10)
+    foreach ($entry in $ordered) {
+        [void]$tree.Append($entry.Rel).Append([char]0)
+        [void]$tree.Append(([System.BitConverter]::ToString($sha256.ComputeHash([System.IO.File]::ReadAllBytes($entry.Full))) -replace '-', '').ToLowerInvariant()).Append([char]10)
     }
     $hash = ([System.BitConverter]::ToString($sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($tree.ToString()))) -replace '-', '').ToLowerInvariant()
     $sha256.Dispose()
