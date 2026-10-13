@@ -806,28 +806,56 @@ internal static class TableEngine
             return (width, width);
         }
         float min = 0f, max = 0f;
+        // A whitespace-only text leaf arms the run's boundary flag instead of measuring: the
+        // space between two rendered atoms counts exactly once (by the atom that follows, when
+        // it has a rendered predecessor). Measuring each whitespace leaf at its raw or even
+        // collapsed length double-counted every interior boundary — with the spaces restored
+        // to cell content, the infer-cells columns came out one to two characters too wide.
+        var pendingBoundarySpace = false;
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
             using var font = TextMeasure.CreateFont(node);
-            max = font.MeasureText(node.DisplayText);
-            foreach (var word in node.DisplayText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
-                min = Math.Max(min, font.MeasureText(word));
+            var ws = node.GetWhiteSpace();
+            var preserves = ws is WhiteSpace.Pre or WhiteSpace.PreWrap;
+            var raw = node.DisplayText;
+            if (string.IsNullOrWhiteSpace(raw) && !preserves)
+            {
+                pendingBoundarySpace = true;
+            }
+            else
+            {
+                var text = preserves ? raw
+                    : string.Join(' ', raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+                max = font.MeasureText(text);
+                foreach (var word in text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                    min = Math.Max(min, font.MeasureText(word));
+            }
         }
         float runMin = 0f, runMax = 0f;
+        var runHasContent = false;
 
         void FlushInlineRun()
         {
-            if (runMax <= 0f && runMin <= 0f) return;
+            if (runMax <= 0f && runMin <= 0f) { runHasContent = false; return; }
             max = Math.Max(max, runMax);
             min = Math.Max(min, runMin);
             runMin = runMax = 0f;
+            runHasContent = false;
         }
 
         foreach (var ch in node.Children)
         {
             var d = ch.GetDisplay();
             if (d == DisplayType.None) continue;
-            if (ch.TagName == "BR") { FlushInlineRun(); continue; }
+            if (ch.TagName == "BR") { FlushInlineRun(); pendingBoundarySpace = false; continue; }
+            // A whitespace-only child arms the run boundary (its space renders only when the
+            // run already has content, exactly once); under pre/pre-wrap it measures as text.
+            if (ch.TagName == "#text" && string.IsNullOrWhiteSpace(ch.DisplayText))
+            {
+                var chWs = ch.GetWhiteSpace();
+                if (chWs is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+                { pendingBoundarySpace = true; continue; }
+            }
             // An inline-table child is consumed ATOMICALLY by the inline-run collector (sized
             // by MeasureTableWidth, cell padding and border-spacing included), so its intrinsic
             // measure must come from the same table model — recursing into it as plain inline
@@ -846,11 +874,19 @@ internal static class TableEngine
                 or DisplayType.InlineTable or DisplayType.InlineFlex;
             if (inline)
             {
+                if (pendingBoundarySpace && runHasContent)
+                {
+                    using var spaceFont = TextMeasure.CreateFont(ch);
+                    runMax += spaceFont.MeasureText(" ");
+                }
+                pendingBoundarySpace = false;
                 runMin = Math.Max(runMin, cMin + boxExtra);
                 runMax += cMax + boxExtra;
+                runHasContent = true;
                 continue;
             }
             FlushInlineRun();
+            pendingBoundarySpace = false;
             min = Math.Max(min, cMin + boxExtra);
             max = Math.Max(max, cMax + boxExtra);
         }
