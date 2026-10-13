@@ -587,6 +587,18 @@ internal static class BoxEngine
             ? d?.Trim() == "table-caption"
             : node.Style.GetPropertyValueSafe("display")?.Trim() == "table-caption";
 
+    /// <summary>True for a table container (table/inline-table/row-group/row/caption) whose
+    /// interior generates nothing — the anonymous-table construction around it is skipped
+    /// ("anonymous table objects only exist if the table has content").</summary>
+    private static bool IsEmptyTableBox(LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("display", out var d)
+            ? d?.Trim() : node.Style.GetPropertyValueSafe("display")?.Trim();
+        return raw is "table" or "inline-table" or "table-row-group" or "table-row"
+            or "table-header-group" or "table-footer-group" or "table-caption"
+            && WhitespaceOnlyInterior(node);
+    }
+
     /// <summary>
     /// A table/row-group/row whose content is bare text (e.g. a leaf <c>&lt;div
     /// display:inline-table&gt;some text&lt;/div&gt;</c>) holds that text as its OWN
@@ -630,6 +642,14 @@ internal static class BoxEngine
         void FlushRun()
         {
             if (run.Count == 0) { newChildren.AddRange(deferred); deferred.Clear(); return; }
+            // A run whose interior is only collapsible whitespace generates no cell (§17.2.1):
+            // trailing whitespace after the last proper child must not fabricate an empty one.
+            // Nor does an empty TABLE-ish element ("anonymous table objects only exist if the
+            // table has content" — tables-001): a display:table with no rows inside a run must
+            // not become a cell for the surrounding spacing to hang on.
+            if (run.All(c => (c.TagName == "#text" && string.IsNullOrWhiteSpace(c.DisplayText))
+                || (!c.TagName.StartsWith('#') && IsEmptyTableBox(c))))
+            { run.Clear(); newChildren.AddRange(deferred); deferred.Clear(); return; }
             var anon = new LayoutNode(null, wrapAsRow ? "#anon-row" : "#anon-cell", "", parent.Style);
             anon.ResetNonInheritedStyles();
             anon.StyleOverrides["display"] = wrapAsRow ? "table-row" : "table-cell";
@@ -660,17 +680,40 @@ internal static class BoxEngine
             created = true;
         }
 
-        foreach (var child in parent.Children)
+        // True when another proper table child follows at fromIndex, skipping whitespace-only
+        // text and non-rendered nodes — the counterpart of lastWasProper for the drop rule.
+        bool ProperTableChildFollows(int fromIndex)
         {
-            // Whitespace-only text between table boxes is not content — discard it (§17.2.1:
-            // an anonymous cell whose interior is "collapsed white space" is not generated) so
-            // it never becomes (or pads) an anonymous cell. Under white-space:pre/pre-wrap the
-            // space is NOT collapsed: it is real cell content ("a <cell> </cell> d" reads
-            // "a  d" through the middle cell), so it joins the run and gets wrapped like any.
+            for (var k = fromIndex + 1; k < parent.Children.Count; k++)
+            {
+                var later = parent.Children[k];
+                if (later.TagName == "#text" && string.IsNullOrWhiteSpace(later.DisplayText)) continue;
+                if (later.GetDisplay() == DisplayType.None || later.TagName == "SCRIPT") continue;
+                if (IsCssTableCaption(later) && WhitespaceOnlyInterior(later)) continue;
+                return IsProperTableChild(later, atTableLevel: wrapAsRow);
+            }
+            return false;
+        }
+
+        var lastWasProper = false;
+        for (var i = 0; i < parent.Children.Count; i++)
+        {
+            var child = parent.Children[i];
+            // Whitespace-only text is dropped only when it sits BETWEEN proper table children
+            // (table-internal, §17.2.1). Whitespace beside non-cell content is that content's
+            // interior: consecutive inline spans in a row merge into ONE anonymous cell, and
+            // the collapsible spaces between them render inside it ('Row 1, Col 1' must keep
+            // its space against the real-table reference — dropping them under-measured and
+            // misaligned the infer-cells overlays). Under pre/pre-wrap the space is content
+            // anywhere. A run that ends up whitespace-only still generates no cell.
             if (child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText))
             {
                 var wsMode = child.GetWhiteSpace();
-                if (wsMode is not (WhiteSpace.Pre or WhiteSpace.PreWrap)) continue;
+                if (wsMode is not (WhiteSpace.Pre or WhiteSpace.PreWrap) &&
+                    lastWasProper && ProperTableChildFollows(i))
+                    continue;
+                run.Add(child);
+                continue;
             }
 
             // §17.2.1 groups rendered content: a display:none box (a script between two bare
@@ -688,10 +731,12 @@ internal static class BoxEngine
             {
                 FlushRun();
                 newChildren.Add(child);
+                lastWasProper = true;
             }
             else
             {
                 run.Add(child);
+                lastWasProper = false;
             }
         }
         FlushRun();
