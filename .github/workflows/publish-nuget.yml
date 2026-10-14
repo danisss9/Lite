@@ -76,7 +76,7 @@ jobs:
         run: dotnet restore Lite.sln
 
       - name: Build
-        run: dotnet build Lite.sln --configuration Release --no-restore /p:Version=${{ steps.version.outputs.VERSION }}
+        run: dotnet build Lite.sln --configuration Release --no-restore
 
       - name: Audit vulnerable packages
         shell: pwsh
