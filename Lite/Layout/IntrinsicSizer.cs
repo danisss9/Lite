@@ -115,13 +115,14 @@ internal static class IntrinsicSizer
                 // Gather a maximal inline run, then measure it as a line.
                 var toks = new List<InlineTok>();
                 var pendingBoundarySpace = false;
+                var atLineStart = true;
                 while (i < children.Count)
                 {
                     var c = children[i];
                     var d = c.GetDisplay();
                     if (d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex or DisplayType.Table) break;
                     if (c.TagName != "#text" && c.GetFloat() != FloatType.None) break;
-                    FlattenInline(c, viewportHeight, toks, ref pendingBoundarySpace);
+                    FlattenInline(c, viewportHeight, toks, ref pendingBoundarySpace, ref atLineStart);
                     i++;
                 }
                 var (rMin, rMax) = RunMinMax(toks);
@@ -230,14 +231,14 @@ internal static class IntrinsicSizer
     /// atomic (an anonymous table) and wrapped abs-pos overlays that must not wrap.
     /// </summary>
     private static void FlattenInline(LayoutNode node, float viewportHeight, List<InlineTok> toks,
-        ref bool pendingBoundarySpace)
+        ref bool pendingBoundarySpace, ref bool atLineStart)
     {
         var display = node.GetDisplay();
         if (display == DisplayType.None) return;
         var pos = node.GetPosition();
         if (pos == PositionType.Absolute || pos == PositionType.Fixed) return;
 
-        if (node.TagName == "BR") { toks.Add(new InlineTok(true, 0f, 0f)); return; }
+        if (node.TagName == "BR") { toks.Add(new InlineTok(true, 0f, 0f)); atLineStart = true; return; }
 
         // Atomic inlines (inline-block, inline-flex, inline-table, images, or anything with an
         // explicit width) do not break internally — they contribute their full outer width to
@@ -250,7 +251,8 @@ internal static class IntrinsicSizer
             || node.GetWidth(0) > 0)
         {
             var (m, x) = OuterMinMax(node, viewportHeight);
-            if (pendingBoundarySpace) { x += SpaceWidth(node); pendingBoundarySpace = false; }
+            if (!atLineStart && pendingBoundarySpace) { x += SpaceWidth(node); pendingBoundarySpace = false; }
+            atLineStart = false;
             toks.Add(new InlineTok(false, m, x));
             return;
         }
@@ -269,7 +271,7 @@ internal static class IntrinsicSizer
                 return;
             }
             var (m, x) = TextMinMax(node);
-            AppendTextToken(node, toks, m, x, ref pendingBoundarySpace);
+            AppendTextToken(node, toks, m, x, ref pendingBoundarySpace, ref atLineStart);
             return;
         }
 
@@ -283,11 +285,12 @@ internal static class IntrinsicSizer
         var right = pad.Right + bord.Right + Math.Max(0f, marg.Right);
         if (left > 0f)
         {
-            if (pendingBoundarySpace) { left += SpaceWidth(node); pendingBoundarySpace = false; }
+            if (!atLineStart && pendingBoundarySpace) { left += SpaceWidth(node); pendingBoundarySpace = false; }
+            atLineStart = false;
             toks.Add(new InlineTok(false, left, left));
         }
         foreach (var child in node.Children)
-            FlattenInline(child, viewportHeight, toks, ref pendingBoundarySpace);
+            FlattenInline(child, viewportHeight, toks, ref pendingBoundarySpace, ref atLineStart);
         if (right > 0f)
         {
             if (pendingBoundarySpace) { right += SpaceWidth(node); pendingBoundarySpace = false; }
@@ -301,7 +304,7 @@ internal static class IntrinsicSizer
     /// boundary; a content leaf whose raw text starts (or inherits) collapsible whitespace adds
     /// the one space its measured line excluded.</summary>
     private static void AppendTextToken(LayoutNode node, List<InlineTok> toks, float min, float max,
-        ref bool pendingBoundarySpace)
+        ref bool pendingBoundarySpace, ref bool atLineStart)
     {
         var raw = node.DisplayText;
         var ws = node.GetWhiteSpace();
@@ -316,9 +319,15 @@ internal static class IntrinsicSizer
             {
                 var startsWithWs = char.IsWhiteSpace(raw[0]);
                 var endsWithWs = char.IsWhiteSpace(raw[^1]);
-                if ((pendingBoundarySpace || startsWithWs && toks.Count > 0) && max > 0f)
+                // A space joins rendered content on either side — at a LINE START (the run
+                // start, or right after a forced break) there is no rendered predecessor and a
+                // collapsible space collapses (§16.6.1): a float's max-content must not count
+                // it, or the shrink-to-fit box runs one space wider than the line it lays out
+                // (floats-124's trailing red).
+                if (!atLineStart && (pendingBoundarySpace || startsWithWs) && max > 0f)
                     max += SpaceWidth(node);
                 pendingBoundarySpace = endsWithWs;
+                atLineStart = false;
             }
         }
         toks.Add(new InlineTok(false, min, max));

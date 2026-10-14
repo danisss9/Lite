@@ -1535,15 +1535,18 @@ internal static class BoxEngine
         var padding = child.GetPadding(contentW, viewportHeight, fontSize);
         var border = child.GetBorderWidth();
 
-        // Shrink-to-fit: use explicit width or half container as heuristic
-        var explicitW = child.GetWidth(contentW);
+        // Shrink-to-fit: use explicit width or half container as heuristic. 'width: 0' is a used
+        // width of zero — only an AUTO width shrink-to-fits (floats-153's zero-width float with a
+        // negative margin must not grow to its text).
+        var hasExplicitW = !child.IsAutoWidth();
+        var explicitW = hasExplicitW ? child.GetWidth(contentW) : 0f;
         // A floated replaced box (§9.7 makes it block-level) is sized from the image, not
         // shrink-to-fit over children it does not have.
         var replaced = TryResolveReplacedSize(child, contentW, parentContentHeight, viewportHeight);
-        if (replaced.HasValue) explicitW = replaced.Value.Width;
+        if (replaced.HasValue) { explicitW = replaced.Value.Width; hasExplicitW = true; }
         var maxAvail = contentW - margin.Left - margin.Right - border.Left - border.Right - padding.Left - padding.Right;
         float childContentW;
-        if (explicitW > 0)
+        if (hasExplicitW)
         {
             var isBB = child.Style.GetPropertyValueSafe("box-sizing") == "border-box";
             childContentW = isBB
