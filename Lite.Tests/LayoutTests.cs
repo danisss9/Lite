@@ -1701,4 +1701,94 @@ public static class LayoutTests
         True(s2.Box.ContentBox.Height < 40f,
             $"the run stays on one line, got height {s2.Box.ContentBox.Height}");
     }
+
+    [Test]
+    public static void MarginCollapse_ChainBottom_PlacesFollowingSibling()
+    {
+        // margin-collapse-019: a self-collapsing first child (height 0, margins 40/40) folds its
+        // margins into ONE chain that escaped with the parent's top margin. The following sibling
+        // (margin-top 40) joins the SAME chain and lands at the chain bottom — the parent's
+        // content top — not 40px below it: the chain must not be spent twice.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body style='margin:0'><div style='width:100px;border-top:20px solid green'>" +
+            "<div id='p' style='margin:0'><div id='gap' style='height:0;margin:40px 0'></div>" +
+            "<div id='f' style='height:20px;margin-top:40px;background:green'></div></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var p = FindNode(page.Root, n => n.Id == "p")!;
+        var gap = FindNode(page.Root, n => n.Id == "gap")!;
+        var f = FindNode(page.Root, n => n.Id == "f")!;
+        True(Math.Abs(f.Box.ContentBox.Top - p.Box.ContentBox.Top) < 0.5f,
+            $"the follower should sit at the parent's content top (the chain bottom), got follower={f.Box.ContentBox.Top} parent={p.Box.ContentBox.Top}");
+        True(Math.Abs(gap.Box.ContentBox.Top - p.Box.ContentBox.Top) < 0.5f,
+            $"the self-collapser re-anchors to the chain bottom, got {gap.Box.ContentBox.Top} vs {p.Box.ContentBox.Top}");
+    }
+
+    [Test]
+    public static void MarginCollapse_SpentChain_FloatRidesToChainBottom()
+    {
+        // margin-collapse-162: a float placed mid-chain (after self-collapsing siblings whose
+        // margins escaped above the parent) must ride down to the chain bottom when a later
+        // sibling's larger margin joins the same chain. The whole chain {2, −4, 0, 14, 50, 50}
+        // collapses to 46; every participant — the collapser, the float, the empty sibling —
+        // sits at the chain bottom.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body style='margin:0 10px'><div id='c' style='margin:2px;padding:0'>" +
+            "<div id='c2' style='margin:-4px 20px'><div id='c3' style='margin:0 0 14px'></div></div></div>" +
+            "<div id='fl' style='float:left;width:320px;height:64px;background:green'></div>" +
+            "<div id='c4' style='margin:50px'></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var collapser = FindNode(page.Root, n => n.Id == "c")!;
+        var fl = FindNode(page.Root, n => n.Id == "fl")!;
+        var c4 = FindNode(page.Root, n => n.Id == "c4")!;
+        True(Math.Abs(fl.Box.ContentBox.Top - collapser.Box.ContentBox.Top) < 0.5f,
+            $"the float should ride to the chain bottom (the collapser's position {collapser.Box.ContentBox.Top}), got {fl.Box.ContentBox.Top}");
+        // The last sibling's 50px margin opens a fresh chain BELOW the ridden float (the float
+        // holds the spent chain's bottom edge) — it must not move the float either way.
+        True(Math.Abs(fl.Box.ContentBox.Top - collapser.Box.ContentBox.Top) < 0.5f
+            && c4.Box.ContentBox.Top >= fl.Box.ContentBox.Top,
+            $"the float holds the chain bottom; the sibling's chain opens below it (float={fl.Box.ContentBox.Top}, sibling={c4.Box.ContentBox.Top})");
+    }
+
+    [Test]
+    public static void MarginCollapse_CommittedBoxChain_FloatStaysAtFlowPoint()
+    {
+        // margin-collapse-163: after a COMMITTED box (padding-top breaks the collapse with its
+        // parent), the chain below it is a plain internal one. A float placed at its flow point
+        // (the committed box's bottom + the collapsed inner chain of 10) STAYS there when a later
+        // sibling's margin joins — later margins form a chain BELOW the float.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body style='margin:0 10px'><div id='c' style='margin:2px;padding-top:1px'>" +
+            "<div id='c2' style='margin:-4px 20px'><div id='c3' style='margin:0 0 14px'></div></div></div>" +
+            "<div id='fl' style='float:left;width:320px;height:64px;background:green'></div>" +
+            "<div id='c4' style='margin:50px'></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var committed = FindNode(page.Root, n => n.Id == "c")!;
+        var fl = FindNode(page.Root, n => n.Id == "fl")!;
+        True(Math.Abs(fl.Box.ContentBox.Top - (committed.Box.BorderBox.Bottom + 10f)) < 0.5f,
+            $"the float stays at its placement flow point (committed bottom + chain 10 = {committed.Box.BorderBox.Bottom + 10f}), got {fl.Box.ContentBox.Top}");
+    }
+
+    [Test]
+    public static void InlineBlock_ChildMarginBoxExtendsOwnLine()
+    {
+        // margin-collapse-015: an inline-block's own line box encloses its inline-block child's
+        // MARGIN BOX (§10.8.1), so the wrapper is 40px tall (child 20px + its 20px margin-bottom),
+        // and the wrapper's own 20px margin-bottom puts the following block 60px below the top.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body style='margin:0'><div style='width:200px;font:20px/0 Ahem'>" +
+            "<span id='w' style='display:inline-block;margin-bottom:20px'>" +
+            "<span id='c' style='display:inline-block;height:20px;margin-bottom:20px;background:green'></span></span>" +
+            "<div id='f' style='height:20px;background:green'></div></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var w = FindNode(page.Root, n => n.Id == "w")!;
+        var f = FindNode(page.Root, n => n.Id == "f")!;
+        True(Math.Abs(w.Box.ContentBox.Height - 40f) < 0.5f,
+            $"the inline-block wrapper's content height should be the child's margin box (40), got {w.Box.ContentBox.Height}");
+        True(Math.Abs(f.Box.ContentBox.Top - 60f) < 0.5f,
+            $"the follower sits after the wrapper's margin box (60), got {f.Box.ContentBox.Top}");
+    }
 }
