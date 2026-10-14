@@ -26,6 +26,9 @@ internal static class Drawer
     private static float _viewportHeight;
     /// <summary>Current viewport width — used for fixed background-attachment positioning.</summary>
     private static float _viewportWidth;
+    /// <summary>The BODY whose background propagated to the canvas (§14.2) — it paints no
+    /// background of its own this frame. Null when the root painted its own background.</summary>
+    private static LayoutNode? _propagatedBackgroundNode;
 
     /// <summary>Bitmap backing the pixel pointer returned by <see cref="Draw"/>; kept alive
     /// until the next Draw call so the Win32 blit never reads freed memory.</summary>
@@ -51,9 +54,17 @@ internal static class Drawer
 
         // Propagate the root/body background to the viewport canvas (CSS 2.1 §14.2). When neither
         // sets a background the canvas is the UA default — white, as in browsers (not a grey wash).
+        // When the root is fully transparent, the BODY's background — color AND image — becomes
+        // the canvas background, positioned relative to the ROOT's padding box, and the body
+        // paints no background of its own (its own box would place the image wrong).
         var body = root.Children.FirstOrDefault(c => c.TagName == "BODY") ?? root;
+        _propagatedBackgroundNode = null;
         var clearColor = root.GetBackgroundColor();
-        if (clearColor == SKColors.Transparent) clearColor = body.GetBackgroundColor();
+        if (clearColor == SKColors.Transparent && root.GetBackgroundImage() == null)
+        {
+            clearColor = body.GetBackgroundColor();
+            _propagatedBackgroundNode = body != root ? body : null;
+        }
         if (clearColor == SKColors.Transparent) clearColor = SKColors.White;
         canvas.Clear(clearColor);
         _hitRegions = [];
@@ -65,6 +76,11 @@ internal static class Drawer
 
         canvas.Save();
         canvas.Translate(0, -viewport.ScrollY);
+
+        // The propagated background image paints at the root's padding box (its positioning area
+        // is the canvas's origin), scrolling with the document, under all content.
+        if (_propagatedBackgroundNode is { } bgNode && bgNode.GetBackgroundImage() != null)
+            DrawBackgroundImage(canvas, bgNode, root.Box);
 
         PaintNode(canvas, root, width);
 
@@ -512,7 +528,8 @@ internal static class Drawer
     {
         var box = node.Box;
         DrawBoxShadows(canvas, box, node);
-        var bgColor = node.GetBackgroundColor();
+        // §14.2: a body whose background propagated to the canvas paints no background here.
+        var bgColor = node != _propagatedBackgroundNode ? node.GetBackgroundColor() : SKColors.Transparent;
         if (bgColor != SKColors.Transparent)
         {
             var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
@@ -525,9 +542,10 @@ internal static class Drawer
             else canvas.DrawRect(box.PaddingBox, bgPaint);
         }
         var gradient = node.GetLinearGradient();
-        if (gradient != null)
+        if (gradient != null && node != _propagatedBackgroundNode)
             DrawLinearGradient(canvas, box, node, gradient);
-        DrawBackgroundImage(canvas, node, box);
+        if (node != _propagatedBackgroundNode)
+            DrawBackgroundImage(canvas, node, box);
         DrawBorders(canvas, box, node);
         DrawOutline(canvas, box, node);
     }
@@ -552,25 +570,30 @@ internal static class Drawer
         // skip them here to avoid painting them twice. empty-cells:hide also suppresses them.
         if (node.ScrollState?.NeedsScrollbar != true && !IsEmptyCellHidden(node))
         {
-            DrawBoxShadows(canvas, box, node);
+            var propagated = node == _propagatedBackgroundNode;
+            if (!propagated) DrawBoxShadows(canvas, box, node);
 
-            // Background
-            var bgColor = node.GetBackgroundColor();
-            if (bgColor != SKColors.Transparent)
+            // Background — a body whose background propagated to the canvas (§14.2) paints
+            // no background of its own; borders and outline still draw.
+            if (!propagated)
             {
-                var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
-                using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
-                if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
-                else canvas.DrawRect(box.PaddingBox, bgPaint);
+                var bgColor = node.GetBackgroundColor();
+                if (bgColor != SKColors.Transparent)
+                {
+                    var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+                    using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
+                    if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
+                    else canvas.DrawRect(box.PaddingBox, bgPaint);
+                }
+
+                // Linear gradient background
+                var gradient = node.GetLinearGradient();
+                if (gradient != null)
+                    DrawLinearGradient(canvas, box, node, gradient);
+
+                // Background image
+                DrawBackgroundImage(canvas, node, box);
             }
-
-            // Linear gradient background
-            var gradient = node.GetLinearGradient();
-            if (gradient != null)
-                DrawLinearGradient(canvas, box, node, gradient);
-
-            // Background image
-            DrawBackgroundImage(canvas, node, box);
 
             DrawBorders(canvas, box, node);
             DrawOutline(canvas, box, node);
@@ -2115,6 +2138,7 @@ internal static class Drawer
             : box.PaddingBox;
 
         // Resolve image draw size
+        float fontSize = node.GetFontSize();
         float drawW = bitmap.Width, drawH = bitmap.Height;
         if (sizeW == "cover" || sizeW == "contain")
         {
@@ -2126,13 +2150,13 @@ internal static class Drawer
         }
         else
         {
-            if (sizeW != "auto") drawW = ResolveBgDimension(sizeW, area.Width);
-            if (sizeH != "auto") drawH = ResolveBgDimension(sizeH, area.Height);
+            if (sizeW != "auto") drawW = ResolveBgDimension(sizeW, area.Width, fontSize);
+            if (sizeH != "auto") drawH = ResolveBgDimension(sizeH, area.Height, fontSize);
         }
 
         // Resolve position
-        float offX = ResolveBgPosition(posX, area.Width, drawW);
-        float offY = ResolveBgPosition(posY, area.Height, drawH);
+        float offX = ResolveBgPosition(posX, area.Width, drawW, fontSize);
+        float offY = ResolveBgPosition(posY, area.Height, drawH, fontSize);
 
         canvas.Save();
         var (rx, ry) = node.GetBorderRadius(clipArea.Width, clipArea.Height);
@@ -2163,28 +2187,34 @@ internal static class Drawer
         canvas.Restore();
     }
 
-    private static float ResolveBgDimension(string val, float total)
+    private static float ResolveBgDimension(string val, float total, float fontSize)
     {
         val = val.Trim();
         if (val.EndsWith("px") && float.TryParse(val[..^2], System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var px)) return px;
         if (val.EndsWith('%') && float.TryParse(val[..^1], System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var pct)) return pct / 100f * total;
+        // Non-px lengths (em, pt, …) resolve through the shared unit table against the
+        // element's font size; percentages already resolved above.
+        if (CssUnits.TryParse(val, fontSize, total, total, total, out var length)) return length;
         return total;
     }
 
-    private static float ResolveBgPosition(string val, float areaSize, float imageSize)
+    private static float ResolveBgPosition(string val, float areaSize, float imageSize, float fontSize)
     {
         val = val.Trim();
+        // A percentage aligns pct% of the image with pct% of the area — the offset basis is
+        // (area − image), not the area itself (CSS 2.1 §14.2.1).
+        if (val.EndsWith('%') && float.TryParse(val[..^1], System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var pct))
+            return (areaSize - imageSize) * pct / 100f;
+        if (CssUnits.TryParse(val, fontSize, areaSize, areaSize, areaSize, out var length))
+            return length;
         return val switch
         {
             "left" or "top" => 0f,
             "center" => (areaSize - imageSize) / 2f,
             "right" or "bottom" => areaSize - imageSize,
-            _ when val.EndsWith("px") && float.TryParse(val[..^2], System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var px) => px,
-            _ when val.EndsWith('%') && float.TryParse(val[..^1], System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var pct) => (areaSize - imageSize) * pct / 100f,
             _ => 0f,
         };
     }

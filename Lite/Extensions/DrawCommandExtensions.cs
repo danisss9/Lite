@@ -1074,7 +1074,10 @@ public static class StyleExtensions
     {
         var raw = node.TryResolveStyle("background-size", out var ov)
             ? ov : node.Style.GetPropertyValueSafe("background-size");
-        if (string.IsNullOrWhiteSpace(raw) || raw == "auto") return ("auto", "auto");
+        // An unset longhand serialises as "initial"/"unset" — that is `auto auto` (the image's
+        // intrinsic size), not a size to resolve against the area: treating it as a length
+        // stretched the image over the positioning area and broke background-repeat tiling.
+        if (string.IsNullOrWhiteSpace(raw) || raw.Trim() is "auto" or "initial" or "unset") return ("auto", "auto");
         if (raw.Trim() == "cover") return ("cover", "cover");
         if (raw.Trim() == "contain") return ("contain", "contain");
         var parts = raw.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
