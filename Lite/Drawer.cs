@@ -609,9 +609,16 @@ internal static class Drawer
         // Children that render nothing (display:none, e.g. a layout-probing <script> inside a
         // float) don't count: layout's own-text height path (BoxEngine) measures the folded text
         // whenever no child contributes height, so a script child must not mute the paint.
+        // During the Appendix-E step-3 descent the text belongs to step 5: collect the node so
+        // PaintInlineContent draws the run after the SC's floats.
         if (!string.IsNullOrEmpty(node.DisplayText) &&
             (node.Children.Count == 0 || node.Children.All(c => c.GetDisplay() == DisplayType.None)))
         {
+            if (_stepFloats != null && node.GetDisplay() is not (DisplayType.Flex or DisplayType.InlineFlex))
+            {
+                _stepInlines!.Add(node);
+                return;
+            }
             using var font = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
 
@@ -721,28 +728,16 @@ internal static class Drawer
     private static bool IsAtomicInlineBox(LayoutNode n)
         => n.GetDisplay() is DisplayType.InlineBlock or DisplayType.InlineTable or DisplayType.InlineFlex;
 
-    /// <summary>Collects the in-flow atomic inline boxes of a stacking context (descending through
-    /// non-stacking, non-fixed boxes, stopping at each atomic inline and each nested stacking
-    /// context) so the SC root can paint them in Appendix-E step 5.</summary>
-    private static void CollectDeferredInlines(LayoutNode node, List<LayoutNode> items)
-    {
-        foreach (var child in node.Children)
-        {
-            if (child.GetDisplay() == DisplayType.None) continue;
-            if (child.GetPosition() == PositionType.Fixed) continue;
-            if (EstablishesStackingContext(child)) continue;   // painted by the SC collection (step 6)
-            if (IsAtomicInlineBox(child)) items.Add(child);    // step 5 — don't descend
-            else CollectDeferredInlines(child, items);
-        }
-    }
-
     /// <summary>
     /// Paints a node's descendants per CSS 2.1 Appendix E. The node's own background/borders are
     /// already painted by the caller, so the order here is: negative-z stacking contexts → in-flow
     /// non-positioned content → zero/positive-z stacking contexts (and positioned descendants).
-    /// A stacking-context root flattens & z-orders ALL positioned descendants in its subtree;
-    /// non-root nodes only paint their in-flow (non-stacking) children, since their positioned
-    /// descendants were already collected by the nearest ancestor stacking-context root.
+    /// <para>The in-flow content itself splits into the Appendix E steps of the NEAREST stacking
+    /// context: step 3 paints in-flow block-level descendants (backgrounds, borders, replaced
+    /// content), step 4 paints every float subtree, and step 5 paints the inline content — each
+    /// phase over the whole stacking-context subtree, so a float covers later in-flow block
+    /// backgrounds but sits under inline text (stack-floats-*, floats-008). Blocks reached during
+    /// the step-3 descent collect their own text into the step-5 list instead of drawing it.</para>
     /// </summary>
     private static void PaintChildrenSorted(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
@@ -752,19 +747,65 @@ internal static class Drawer
         // The root element (no parent) and any stacking-context-establishing box are roots.
         bool isScRoot = node.Parent is null || EstablishesStackingContext(node);
 
-        void PaintInFlow()
+        void SplitInFlowNode(LayoutNode child)
+        {
+            if (child.GetPosition() == PositionType.Fixed) return;             // PaintFixedNodes
+            if (EstablishesStackingContext(child)) return;                     // handled by SC root
+            if (_stepFloats == null)
+            {
+                // No step-3 descent active (a full-paint context: float subtree, z pass,
+                // atomic inline) — document order, exactly as before the phase split.
+                PaintNode(canvas, child, viewportWidth);
+                return;
+            }
+            if (child.TagName != "#text" && child.GetFloat() != FloatType.None)
+            {
+                _stepFloats.Add(child);                                        // step 4
+                return;
+            }
+            if (IsInlineLevelContent(child))
+            {
+                _stepInlines!.Add(child);                                      // step 5
+                // An inline box's BLOCK descendants are step-3 content: descend through the
+                // inline box (stack-floats-001's red block inside the inline paints under the
+                // float). Its inline-level descendants are NOT collected — they paint through
+                // this box's own step-5 recursion; collecting them here would paint them twice.
+                if (!IsAtomicInlineBox(child) && child.TagName != "IMG")
+                    foreach (var gc in child.Children)
+                        DescendForBlocks(gc);
+                return;
+            }
+            PaintNode(canvas, child, viewportWidth);                           // step 3
+        }
+
+        void DescendForBlocks(LayoutNode child)
+        {
+            if (child.GetPosition() == PositionType.Fixed) return;             // PaintFixedNodes
+            if (EstablishesStackingContext(child)) return;                     // handled by SC root
+            if (child.TagName != "#text" && child.GetFloat() != FloatType.None)
+            {
+                _stepFloats.Add(child);                                        // step 4
+                return;
+            }
+            if (IsInlineLevelContent(child))
+            {
+                if (!IsAtomicInlineBox(child) && child.TagName != "IMG")
+                    foreach (var gc in child.Children)
+                        DescendForBlocks(gc);
+                return;
+            }
+            PaintNode(canvas, child, viewportWidth);                           // step 3
+        }
+
+        void SplitInFlow()
         {
             foreach (var child in ordered)
-            {
-                if (child.GetPosition() == PositionType.Fixed) continue;       // PaintFixedNodes
-                if (EstablishesStackingContext(child)) continue;               // handled by SC root
-                PaintNode(canvas, child, viewportWidth);
-            }
+                SplitInFlowNode(child);
         }
 
         if (!isScRoot)
         {
-            PaintInFlow();
+            SplitInFlow();
             return;
         }
 
@@ -774,20 +815,124 @@ internal static class Drawer
         var negativeZ = items.Where(c => c.GetZIndex() < 0).OrderBy(c => c.GetZIndex()).ToList();
         var nonNegativeZ = items.Where(c => c.GetZIndex() >= 0).OrderBy(c => c.GetZIndex()).ToList();
 
-        // Appendix E: in-flow atomic inline boxes (step 5) paint after in-flow block content
-        // (step 3/4) but before z-index:auto/positive stacking contexts (step 6).
-        var deferredInlines = new List<LayoutNode>();
-        CollectDeferredInlines(node, deferredInlines);
+        foreach (var c in negativeZ) PaintNode(canvas, c, viewportWidth);      // step 2
 
-        foreach (var c in negativeZ) PaintNode(canvas, c, viewportWidth);
-
+        var savedFloats = _stepFloats;
+        var savedInlines = _stepInlines;
         var savedDeferred = _deferredInlines;
-        _deferredInlines = deferredInlines.Count > 0 ? new HashSet<LayoutNode>(deferredInlines) : null;
-        PaintInFlow();
+        _deferredInlines = null; // subsumed by the step-5 list
+        _stepFloats = [];
+        _stepInlines = [];
+        SplitInFlow();                                                         // step 3
+        // Deactivate the collectors BEFORE flushing: painting a float or an inline item runs
+        // full-paint paths whose text blocks must draw directly, not re-enqueue mid-iteration.
+        var step4Floats = _stepFloats;
+        var step5Items = _stepInlines;
+        _stepFloats = savedFloats;
+        _stepInlines = savedInlines;
         _deferredInlines = savedDeferred;
+        foreach (var f in step4Floats) PaintNode(canvas, f, viewportWidth);    // step 4
+        foreach (var i in step5Items) PaintInlineContent(canvas, i, viewportWidth);  // step 5
 
-        foreach (var c in deferredInlines) PaintNode(canvas, c, viewportWidth); // step 5
-        foreach (var c in nonNegativeZ) PaintNode(canvas, c, viewportWidth);
+        foreach (var c in nonNegativeZ) PaintNode(canvas, c, viewportWidth);   // steps 6/7
+    }
+
+    private static List<LayoutNode>? _stepFloats;
+    private static List<LayoutNode>? _stepInlines;
+
+    /// <summary>An in-flow, inline-level box or text run: Appendix-E step-5 content.
+    /// Atomic inlines (inline-block/-table/-flex, images) and text are inline-level; so is
+    /// display:inline. Everything in-flow that is not inline-level, a float, or positioned is
+    /// a step-3 block.</summary>
+    private static bool IsInlineLevelContent(LayoutNode n)
+        => n.TagName == "#text"
+           || n.GetDisplay() is DisplayType.Inline or DisplayType.InlineBlock
+               or DisplayType.InlineTable or DisplayType.InlineFlex;
+
+    /// <summary>Appendix-E step 5: paints one collected piece of inline content.
+    /// Atomic inlines paint whole; #text and blocks collected for their own text draw their
+    /// text runs; an inline box paints its own background/borders over its fragments and then
+    /// recurses into inline-level children only — its block children painted at step 3.</summary>
+    private static void PaintInlineContent(SKCanvas canvas, LayoutNode node, int viewportWidth)
+    {
+        if (node.GetDisplay() == DisplayType.None) return;
+        if (IsAtomicInlineBox(node) || node.TagName is "IMG" or "BR"
+            || node.GetPosition() is PositionType.Absolute or PositionType.Fixed
+            || node.TagName is "A" or "LABEL" or "BUTTON" or "INPUT" or "SELECT" or "TEXTAREA"
+                or "OBJECT" or "IFRAME" or "VIDEO" or "AUDIO" or "SVG" or "CANVAS" or "PROGRESS" or "METER")
+        {
+            // Elements with dedicated paint paths — hit regions, controls, replaced content —
+            // paint whole. A block-in-inline inside an anchor then paints at step 5 rather than
+            // step 3: an accepted deviation that keeps links clickable.
+            PaintNode(canvas, node, viewportWidth);
+            return;
+        }
+
+        bool isBlockWithOwnText = !IsInlineLevelContent(node) && node.TagName != "#text";
+        if (isBlockWithOwnText)
+        {
+            // A step-3 block collected for its own text: the background/borders painted in the
+            // block pass; only the text runs belong here.
+            DrawNodeText(canvas, node);
+            return;
+        }
+
+        // An inline box: own background/borders/text, then inline-level children only.
+        if (PaintInlineBoxOwnContent(canvas, node))
+            return; // the per-line fragments carried the whole subtree's text (old early-return)
+        foreach (var child in node.Children)
+        {
+            if (child.GetDisplay() == DisplayType.None) continue;
+            if (child.GetPosition() == PositionType.Fixed) continue;
+            if (EstablishesStackingContext(child)) continue;   // z passes own it
+            if (child.TagName != "#text" && child.GetFloat() != FloatType.None) continue; // step 4
+            if (!IsInlineLevelContent(child)) continue;        // step 3 painted it
+            PaintInlineContent(canvas, child, viewportWidth);
+        }
+    }
+
+    /// <summary>An inline box's own painting: background over the padding box (or per-line
+    /// fragments), borders where the fragments carry them, and its own text run. Returns true
+    /// when per-line fragments were drawn — they carry the text of the whole inline subtree,
+    /// so the caller must not recurse into the (differently-boxed) text children.</summary>
+    private static bool PaintInlineBoxOwnContent(SKCanvas canvas, LayoutNode node)
+    {
+        var bgColor = node.GetBackgroundColor();
+        using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+        using var font = TextMeasure.CreateFont(node);
+        if (node.InlineFragments is { Count: > 1 } fragments)
+        {
+            foreach (var (rect, text) in fragments)
+            {
+                if (bgColor != SKColors.Transparent)
+                {
+                    using var fragBg = new SKPaint { Color = bgColor };
+                    canvas.DrawRect(rect, fragBg);
+                }
+                DrawWrappedText(canvas, node, text, rect.Left, rect.Top, rect.Width, font, paint);
+            }
+            return true;
+        }
+        if (bgColor != SKColors.Transparent)
+        {
+            using var bgPaint = new SKPaint { Color = bgColor };
+            canvas.DrawRect(node.Box.PaddingBox, bgPaint);
+        }
+        if (!string.IsNullOrEmpty(node.DisplayText))
+            DrawWrappedText(canvas, node, node.DisplayText,
+                node.Box.ContentBox.Left, node.Box.ContentBox.Top, node.Box.ContentBox.Width, font, paint);
+        return false;
+    }
+
+    /// <summary>Draws a block's own text run (the step-5 half of a text-bearing block whose
+    /// background painted during the step-3 pass).</summary>
+    private static void DrawNodeText(SKCanvas canvas, LayoutNode node)
+    {
+        if (string.IsNullOrEmpty(node.DisplayText)) return;
+        using var font = TextMeasure.CreateFont(node);
+        using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
+        DrawWrappedText(canvas, node, node.DisplayText,
+            node.Box.ContentBox.Left, node.Box.ContentBox.Top, node.Box.ContentBox.Width, font, paint);
     }
 
     // -------------------------------------------------------------------------
@@ -817,6 +962,14 @@ internal static class Drawer
         _hitRegions.Add(new HitRegion(box.MarginBox, cursor, node.Href, NodeKey: node.NodeKey));
 
         if (string.IsNullOrEmpty(node.DisplayText)) return;
+
+        // Appendix-E step discipline: during the step-3 descent the text runs belong to step 5 —
+        // the block was collected there; drawing here would put P/H1/LABEL text under floats.
+        if (_stepFloats != null)
+        {
+            if (!_stepInlines!.Contains(node)) _stepInlines.Add(node);
+            return;
+        }
 
         using var font = TextMeasure.CreateFont(node);
         using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };

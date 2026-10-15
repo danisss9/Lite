@@ -1854,7 +1854,39 @@ internal static class BoxEngine
                     RetireFloats(floats, borderTop);
                 }
 
-                var (effX, effW) = AvailableBand(floats, borderTop, 1, contentX, contentW);
+                // §9.5: a plain in-flow block's border box OVERLAPS the floats beside it — only
+                // its inline (line box) content narrows, and a block that establishes a BFC may
+                // not overlap at all. Placing every block in the float's wake painted block
+                // backgrounds beside the float instead of under it (floats-008/135: the red
+                // block must slide UNDER the green/blue float, not out of its way).
+                var (effX, effW) = EstablishesBlockFormattingContext(child)
+                    ? AvailableBand(floats, borderTop, 1, contentX, contentW)
+                    : (contentX, contentW);
+                if (effW != contentW || effX != contentX)
+                {
+                    // §9.5 rule 6: "implementations should clear the said element by placing it
+                    // below any preceding floats" when it cannot fit beside them — the border box
+                    // must not overlap, and a BFC's specified width is not narrowed by the band
+                    // (floats-bfc-001's 200px BFC drops below the 150px float and grows its
+                    // auto-height parent to full coverage).
+                    var wantedW = child.IsAutoWidth()
+                        ? effW
+                        : Math.Max(0f, child.GetWidth(contentW)
+                                       + child.GetBorderWidth().Left + child.GetBorderWidth().Right
+                                       + (child.GetPadding(contentW, viewportHeight, childFontSize).Left
+                                          + child.GetPadding(contentW, viewportHeight, childFontSize).Right));
+                    if (wantedW > effW + 0.5f)
+                    {
+                        var floatBottom = borderTop;
+                        foreach (var f in floats) floatBottom = Math.Max(floatBottom, f.Bottom);
+                        if (floatBottom > borderTop + 0.5f)
+                        {
+                            borderTop = floatBottom;
+                            (effX, effW) = AvailableBand(floats, borderTop, 1, contentX, contentW);
+                            RetireFloats(floats, borderTop);
+                        }
+                    }
+                }
                 // The pre-layout state of the spent-chain flag: the ride gate below must know
                 // whether the CURRENT chain was opened by a re-anchored self-collapser (the box
                 // about to fold would set the flag itself before the ride runs).
