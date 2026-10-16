@@ -53,7 +53,7 @@ internal static class WptVisualPage
             }
         }
         catch (TimeoutException ex) { return new(WptRunner.Cat.Timeout, ex.Message, 0, 0); }
-        catch (Exception ex) { return new(WptRunner.Cat.Crash, ex.Message, 0, 0); }
+        catch (Exception ex) { return new(WptRunner.Cat.Crash, WptVisualPage.CrashDetail(ex), 0, 0); }
     }
 
     /// <summary>Official CSS 2.1 suite self-describing tests state that, unless the test
@@ -121,7 +121,11 @@ internal static class WptVisualPage
                         tb = new SKRectI(tb.Left - outline, tb.Top - outline, tb.Right + outline, tb.Bottom + outline);
                     if (tb.Width > 1 && tb.Height > 1 && rb.Width > 1 && rb.Height > 1)
                     {
-                        var refColor = DominantColor(bitmap, rb);
+                        // The reference's box may WRAP its swatch (an <img> swatch under a <br>
+                        // inside a full-width div): the page background must be excluded on this
+                        // side too, or the wrapping whitespace dominates the count and every
+                        // image-swatch selftest reads white (background-color-012/035/076+).
+                        var refColor = DominantColor(bitmap, rb, PageBackground);
                         var testColor = DominantColor(bitmap, tb, refColor == PageBackground ? null : PageBackground);
                         if (testColor == refColor)
                         {
@@ -138,7 +142,22 @@ internal static class WptVisualPage
             }
         }
         catch (TimeoutException ex) { return new(WptRunner.Cat.Timeout, ex.Message, 0, 0); }
-        catch (Exception ex) { return new(WptRunner.Cat.Crash, ex.Message, 0, 0); }
+        catch (Exception ex) { return new(WptRunner.Cat.Crash, WptVisualPage.CrashDetail(ex), 0, 0); }
+    }
+
+    /// <summary>Crash evidence names the innermost exception and where it was thrown: an
+    /// AggregateException's own message ("One or more errors occurred") says nothing.</summary>
+    internal static string CrashDetail(Exception ex)
+    {
+        var inner = ex;
+        while (inner is AggregateException { InnerExceptions.Count: 1 } aggregate) inner = aggregate.InnerExceptions[0];
+        while (inner.InnerException is { } next && inner is not AggregateException) inner = next;
+        // A cancelled async task's own trace may hold no Lite frame; the outer exception's
+        // trace then names the synchronous wait that surfaced it.
+        static string? LiteFrame(Exception e) => e.StackTrace?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault(f => f.Contains(" Lite.", StringComparison.Ordinal));
+        var frame = LiteFrame(inner) ?? LiteFrame(ex) ?? "";
+        return $"{inner.GetType().Name}: {inner.Message}" + (frame.Length > 0 ? $" ({frame})" : "");
     }
 
     private static readonly SKColor PageBackground = new(255, 255, 255);

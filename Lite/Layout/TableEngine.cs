@@ -313,38 +313,114 @@ internal static class TableEngine
         {
             var own = NodeEdgeBorders(p.Cell);
             var result = new Dictionary<string, EdgeBorder>(4, StringComparer.Ordinal);
+            // §17.6.2.1 element precedence on equal width and style: cell > row > row group >
+            // table. The embedded-element tests (border-conflict-element-*) turn exactly on the
+            // row and row-group borders joining the conflict at every edge they share.
+            var row = RowOf(p.Cell);
+            var rowBorders = row is null ? null : NodeEdgeBorders(row);
+            var rowGroup = row?.Parent?.GetDisplay() == DisplayType.TableRowGroup ? row.Parent : null;
+            var groupBorders = rowGroup is null ? null : NodeEdgeBorders(rowGroup);
 
             var left = own["left"];
             if (byPosition.TryGetValue((p.Row, p.Col - 1), out var west))
+            {
                 left = Dominant(NodeEdgeBorders(west.Cell)["right"], left); // left over right
+                var westRow = RowOf(west.Cell);
+                if (rowBorders is not null)
+                    left = Dominant(left, westRow is not null
+                        ? Dominant(NodeEdgeBorders(westRow)["right"], rowBorders["left"])
+                        : rowBorders["left"]);                              // left over right
+            }
             else
-                left = Dominant(left, tableBorders["left"]);               // cell over table
+            {
+                left = Dominant(left, Bd(rowBorders, "left"));
+                left = Dominant(left, Bd(groupBorders, "left"));
+                left = Dominant(left, tableBorders["left"]);                // cell over table
+            }
             result["left"] = left;
 
             var right = own["right"];
             if (byPosition.TryGetValue((p.Row, p.Col + p.ColSpan), out var east))
+            {
                 right = Dominant(right, NodeEdgeBorders(east.Cell)["left"]);
+                var eastRow = RowOf(east.Cell);
+                if (rowBorders is not null)
+                    right = Dominant(right, eastRow is not null
+                        ? Dominant(rowBorders["right"], NodeEdgeBorders(eastRow)["left"])
+                        : rowBorders["right"]);
+            }
             else
+            {
+                right = Dominant(right, Bd(rowBorders, "right"));
+                right = Dominant(right, Bd(groupBorders, "right"));
                 right = Dominant(right, tableBorders["right"]);
+            }
             result["right"] = right;
 
             var top = own["top"];
             if (p.Row > 0 && byPosition.TryGetValue((p.Row - 1, p.Col), out var north))
+            {
                 top = Dominant(NodeEdgeBorders(north.Cell)["bottom"], top); // top over bottom
+                var northRow = RowOf(north.Cell);
+                if (rowBorders is not null)
+                    top = Dominant(top, northRow is not null
+                        ? Dominant(NodeEdgeBorders(northRow)["bottom"], rowBorders["top"])
+                        : rowBorders["top"]);                               // top over bottom
+            }
             else
+            {
+                top = Dominant(top, Bd(rowBorders, "top"));
+                top = Dominant(top, Bd(groupBorders, "top"));
                 top = Dominant(top, tableBorders["top"]);
+            }
             result["top"] = top;
 
             var bottom = own["bottom"];
             if (byPosition.TryGetValue((p.Row + p.RowSpan, p.Col), out var south))
+            {
                 bottom = Dominant(bottom, NodeEdgeBorders(south.Cell)["top"]);
+                var southRow = RowOf(south.Cell);
+                if (rowBorders is not null)
+                    bottom = Dominant(bottom, southRow is not null
+                        ? Dominant(rowBorders["bottom"], NodeEdgeBorders(southRow)["top"])
+                        : rowBorders["bottom"]);
+            }
             else
+            {
+                bottom = Dominant(bottom, Bd(rowBorders, "bottom"));
+                bottom = Dominant(bottom, Bd(groupBorders, "bottom"));
                 bottom = Dominant(bottom, tableBorders["bottom"]);
+            }
             result["bottom"] = bottom;
 
             p.Cell.CollapsedEdgeBorders = result;
+
+            var rowCount = 0;
+            var colCount = 0;
+            foreach (var q in placements)
+            {
+                rowCount = Math.Max(rowCount, q.Row + q.RowSpan);
+                colCount = Math.Max(colCount, q.Col + q.ColSpan);
+            }
+            HashSet<string>? outer = null;
+            void Mark(string edge)
+            {
+                (outer ??= new HashSet<string>(StringComparer.Ordinal)).Add(edge);
+            }
+            if (p.Row == 0) Mark("top");
+            if (p.Col == 0) Mark("left");
+            if (p.Row + p.RowSpan >= rowCount) Mark("bottom");
+            if (p.Col + p.ColSpan >= colCount) Mark("right");
+            p.Cell.CollapsedOuterEdges = outer;
         }
     }
+
+
+    private static EdgeBorder Bd(Dictionary<string, EdgeBorder>? borders, string edge)
+        => borders is not null ? borders[edge] : default;
+
+    private static LayoutNode? RowOf(LayoutNode cell)
+        => cell.Parent?.GetDisplay() == DisplayType.TableRow ? cell.Parent : null;
 
     private static Dictionary<string, EdgeBorder> NodeEdgeBorders(LayoutNode node)
     {

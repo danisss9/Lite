@@ -37,6 +37,11 @@ public class LayoutNode
     /// resolved by TableEngine per CSS 2.1 §17.6.2.1; the painter honours them over the
     /// node's own border properties. Null outside collapsed tables.</summary>
     public Dictionary<string, EdgeBorder>? CollapsedEdgeBorders { get; internal set; }
+
+    /// <summary>For a cell in a collapsed table: the outer edges (touching the table's border
+    /// box boundary) whose §17.6.2.1 winning border paints in the TABLE's outer band rather
+    /// than at the cell's own box edge (border-conflict-element-018/024).</summary>
+    public HashSet<string>? CollapsedOuterEdges { get; internal set; }
     /// <summary>Set once BoxEngine has split this node's own text into a leading #text child
     /// (anonymous-table generation §17.2.1); Text is readonly, so the flag keeps the
     /// normalization pass idempotent.</summary>

@@ -1924,17 +1924,32 @@ internal static class Drawer
             cw is { } && cw.TryGetValue("left", out var l) ? (l.Width, l.Style, l.Color) : (bw.Left, node.GetBorderStyleLeft(), node.GetBorderLeftColor());
         var topE = Top(); var rightE = Right(); var bottomE = Bottom(); var leftE = Left();
 
-        DrawBorderSide(canvas, box.BorderBox.Left, box.BorderBox.Top + topE.width / 2,
-                        box.BorderBox.Right, box.BorderBox.Top + topE.width / 2,
+        // Outer edges of a collapsed table paint their winning border in the TABLE's outer
+        // band: the cell's box sits inside the table's border, and the shared edge is the
+        // table's boundary (border-conflict-element-018/024/032/039).
+        var outer = node.CollapsedOuterEdges;
+        LayoutNode? tableNode = null;
+        if (outer is not null)
+            for (var a = node.Parent; a is not null; a = a.Parent)
+                if (a.GetDisplay() == DisplayType.Table) { tableNode = a; break; }
+        var tableBox = tableNode?.Box.BorderBox ?? box.BorderBox;
+
+        var topY = outer?.Contains("top") == true ? tableBox.Top : box.BorderBox.Top;
+        var bottomY = outer?.Contains("bottom") == true ? tableBox.Bottom : box.BorderBox.Bottom;
+        var leftX = outer?.Contains("left") == true ? tableBox.Left : box.BorderBox.Left;
+        var rightX = outer?.Contains("right") == true ? tableBox.Right : box.BorderBox.Right;
+
+        DrawBorderSide(canvas, leftX, topY + topE.width / 2,
+                        rightX, topY + topE.width / 2,
                         topE.width, topE.color, topE.style);
-        DrawBorderSide(canvas, box.BorderBox.Right - rightE.width / 2, box.BorderBox.Top,
-                        box.BorderBox.Right - rightE.width / 2, box.BorderBox.Bottom,
+        DrawBorderSide(canvas, rightX - rightE.width / 2, topY,
+                        rightX - rightE.width / 2, bottomY,
                         rightE.width, rightE.color, rightE.style);
-        DrawBorderSide(canvas, box.BorderBox.Left, box.BorderBox.Bottom - bottomE.width / 2,
-                        box.BorderBox.Right, box.BorderBox.Bottom - bottomE.width / 2,
+        DrawBorderSide(canvas, leftX, bottomY - bottomE.width / 2,
+                        rightX, bottomY - bottomE.width / 2,
                         bottomE.width, bottomE.color, bottomE.style);
-        DrawBorderSide(canvas, box.BorderBox.Left + leftE.width / 2, box.BorderBox.Top,
-                        box.BorderBox.Left + leftE.width / 2, box.BorderBox.Bottom,
+        DrawBorderSide(canvas, leftX + leftE.width / 2, topY,
+                        leftX + leftE.width / 2, bottomY,
                         leftE.width, leftE.color, leftE.style);
     }
 
