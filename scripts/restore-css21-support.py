@@ -55,6 +55,21 @@ CSSWG_COMMIT = "fa4487008776579c206378d2df0ecea81b69cd80"
 # Encoding-sensitive stylesheets: the HTTP charsets the 2011 suite applied through its
 # per-directory .htaccess files (recovered from csswg-test@fa448700877). Files under
 # RemoveCharset rules are served bare, which is the server default, so they need nothing.
+# Encoding-sensitive TEST DOCUMENTS (the pages themselves): the charsets the 2011
+# suite's html4/.htaccess served them with. The conformance server decodes the response
+# with this charset (CSS 2.1 4.4 gives the transport encoding priority), which is what
+# makes the page's raw-encoded class attributes match the (UTF-8) stylesheet selectors.
+PAGE_CHARSETS = {
+    "character-encoding-003.htm": "iso-8859-1",
+    "character-encoding-006.htm": "iso-8859-1",
+    "character-encoding-009.htm": "iso-8859-1",
+    "character-encoding-013.htm": "iso-8859-1",
+    "character-encoding-014.htm": "iso-8859-15",
+    "character-encoding-015.htm": "iso-8859-1",
+    "character-encoding-016.htm": "iso-8859-1",
+    "character-encoding-017.htm": "iso-8859-15",
+}
+
 HTACCESS_CHARSETS = {
     "at-charset-001.css": "Shift_JIS",
     "at-charset-002.css": "Shift_JIS",
@@ -408,6 +423,26 @@ def main():
             write_with_headers(dest, data, headers_text, records, source_kind, source_ref,
                                headers_kind, headers_ref)
         restored += 1
+
+    # Third pass: the encoding-sensitive test documents themselves (see PAGE_CHARSETS).
+    for name, charset in sorted(PAGE_CHARSETS.items()):
+        dest = os.path.join(OFFICIAL, "html4", name)
+        if not os.path.exists(dest):
+            print(f"  page headers skipped (document absent): {name}")
+            continue
+        headers_path = dest + ".headers"
+        headers_text = f"Content-Type: text/html; charset={charset}".encode("ascii")
+        if not args.dry_run:
+            if not os.path.exists(headers_path):
+                with open(headers_path, "wb") as f:
+                    f.write(headers_text)
+            records.append({
+                "target": name + ".headers",
+                "source": f"contributors .htaccess at csswg-test@{CSSWG_COMMIT[:10]}",
+                "sourceKind": "recovered-htaccess-rule",
+                "sha256": hashlib.sha256(headers_text).hexdigest(),
+                "note": f"the page itself is served as {charset}",
+            })
 
     # Second-level inputs: resources referenced from the restored CSS files themselves
     # (the input scanner now follows linked CSS, so these must exist for honest execution).

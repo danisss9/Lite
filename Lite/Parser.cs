@@ -238,6 +238,15 @@ internal static class Parser
         }
         var mediaType = response.Content.Headers.ContentType?.MediaType;
         Current.IsXmlDocument = mediaType is "application/xhtml+xml" or "text/xml" or "application/xml";
+        // The body was decoded with the transport charset (CSS 2.1 §4.4: it wins; UTF-8 is the
+        // default when the response declares none). AngleSharp's parser re-encodes string
+        // content as UTF-8 bytes and honors <meta http-equiv=Content-Type> as an encoding
+        // change over those bytes — any other charset then MOJIBAKES every non-ASCII attribute
+        // (the class selectors of character-encoding-003..017 stop matching). The decode the
+        // meta once governed already happened, so the meta now describes OUR bytes: align it
+        // with UTF-8 and the parser's re-decode is a lossless no-op.
+        if (!Current.IsXmlDocument)
+            html = AlignMetaCharset(html, "utf-8");
         var document = OpenDocument(config, response, address, html, mediaType);
         _baseUrl = address;
         _documentBaseUrl = address;
@@ -267,6 +276,21 @@ internal static class Parser
     private static readonly Regex StyleBlockRegex =
         new("<style\\b[^>]*>.*?</style>", RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly Regex ImportantBang = new("!\\s+important", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex MetaContentTypeRegex =
+        new("<meta\\b[^>]*http-equiv\\s*=\\s*[\"']?content-type[\"']?[^>]*>",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex MetaCharsetRegex =
+        new("charset\\s*=\\s*[\"']?[A-Za-z0-9_\\- :]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>Rewrites the charset a <c>&lt;meta http-equiv=Content-Type&gt;</c> declares to
+    /// <paramref name="appliedCharset"/> — the encoding the document string was actually decoded
+    /// with. The element stays in the DOM; only the now-true statement is kept.</summary>
+    internal static string AlignMetaCharset(string html, string appliedCharset)
+    {
+        return MetaContentTypeRegex.Replace(html, match =>
+            MetaCharsetRegex.Replace(match.Value, m =>
+                m.Value[..(m.Value.IndexOf('=') + 1)] + appliedCharset));
+    }
 
     /// <summary>AngleSharp's declaration parser drops "! important" (bang and keyword separated
     /// by whitespace) outright — a valid CSS 2.1 token sequence the official suite uses heavily —
@@ -1669,6 +1693,7 @@ internal static class Parser
         string? referrerCharset, out string usedCharset)
     {
         usedCharset = "utf-8";
+
         // The pinned CSS 2.1 §4.4 gives transport metadata priority over BOM/@charset.
         // Strip a BOM only when it belongs to the selected encoding.
         if (TryGetEncoding(httpCharset) is { } transportEncoding)
@@ -1690,7 +1715,20 @@ internal static class Parser
             return Encoding.UTF32.GetString(bytes, 4, bytes.Length - 4);
         }
         if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+        {
+            // §4.4 / the i18n suite: a BOM-decoded sheet whose @charset names a DIFFERENT known
+            // encoding is thrown out — the declaration cannot be honored (character-encoding-017,
+            // at-charset-042). An utf-8 alias applies normally.
+            var ascii = Encoding.ASCII.GetString(bytes, 3, Math.Min(bytes.Length - 3, 128));
+            if (ascii.StartsWith("@charset \"", StringComparison.Ordinal))
+            {
+                var declaredEnd = ascii.IndexOf("\";", 10, StringComparison.Ordinal);
+                if (declaredEnd > 10 && TryGetEncoding(ascii[10..declaredEnd]) is { } bomDeclared &&
+                    !bomDeclared.WebName.Equals("utf-8", StringComparison.OrdinalIgnoreCase))
+                    return string.Empty;
+            }
             return Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
+        }
         if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
         {
             usedCharset = "utf-16le";
@@ -1736,10 +1774,17 @@ internal static class Parser
         if (probe.StartsWith("@charset \"", StringComparison.Ordinal))
         {
             var end = probe.IndexOf("\";", 10, StringComparison.Ordinal);
-            if (end > 10 && TryGetEncoding(probe[10..end]) is { } declared)
+            if (end > 10)
             {
-                usedCharset = declared.WebName;
-                return declared.GetString(bytes);
+                if (TryGetEncoding(probe[10..end]) is { } declared)
+                {
+                    usedCharset = declared.WebName;
+                    return declared.GetString(bytes);
+                }
+                // The @charset names an encoding this UA cannot decode: there is no honoring it
+                // and no fallback the declaration permits — the style sheet is ignored
+                // (character-encoding-018's unknown-encoding declaration).
+                return string.Empty;
             }
         }
 

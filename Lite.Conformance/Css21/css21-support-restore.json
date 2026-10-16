@@ -43,6 +43,83 @@
  },
  "files": [
   {
+   "target": "character-encoding-003.htm.headers",
+   "source": "contributors .htaccess at csswg-test@fa448700877",
+   "sourceKind": "recovered-htaccess-rule",
+   "sha256": "4e3bbdad1e1bd0580ccb385e25c5791b7b4b78a121e16d6164d080110ac33e4f",
+   "note": "the page itself is served as iso-8859-1"
+  },
+  {
+   "target": "character-encoding-006.htm.headers",
+   "source": "contributors .htaccess at csswg-test@fa448700877",
+   "sourceKind": "recovered-htaccess-rule",
+   "sha256": "4e3bbdad1e1bd0580ccb385e25c5791b7b4b78a121e16d6164d080110ac33e4f",
+   "note": "the page itself is served as iso-8859-1"
+  },
+  {
+   "target": "character-encoding-009.htm.headers",
+   "source": "contributors .htaccess at csswg-test@fa448700877",
+   "sourceKind": "recovered-htaccess-rule",
+   "sha256": "4e3bbdad1e1bd0580ccb385e25c5791b7b4b78a121e16d6164d080110ac33e4f",
+   "note": "the page itself is served as iso-8859-1"
+  },
+  {
+   "target": "character-encoding-013.htm.headers",
+   "source": "contributors .htaccess at csswg-test@fa448700877",
+   "sourceKind": "recovered-htaccess-rule",
+   "sha256": "4e3bbdad1e1bd0580ccb385e25c5791b7b4b78a121e16d6164d080110ac33e4f",
+   "note": "the page itself is served as iso-8859-1"
+  },
+  {
+   "target": "character-encoding-014.htm.headers",
+   "source": "contributors .htaccess at csswg-test@fa448700877",
+   "sourceKind": "recovered-htaccess-rule",
+   "sha256": "ae0307537ebb8d2bfbd4560ecbad19850073118f76d89ca1de1e48d119be89a2",
+   "note": "the page itself is served as iso-8859-15"
+  },
+  {
+   "target": "character-encoding-015.htm.headers",
+   "source": "contributors .htaccess at csswg-test@fa448700877",
+   "sourceKind": "recovered-htaccess-rule",
+   "sha256": "4e3bbdad1e1bd0580ccb385e25c5791b7b4b78a121e16d6164d080110ac33e4f",
+   "note": "the page itself is served as iso-8859-1"
+  },
+  {
+   "target": "character-encoding-016.htm.headers",
+   "source": "contributors .htaccess at csswg-test@fa448700877",
+   "sourceKind": "recovered-htaccess-rule",
+   "sha256": "4e3bbdad1e1bd0580ccb385e25c5791b7b4b78a121e16d6164d080110ac33e4f",
+   "note": "the page itself is served as iso-8859-1"
+  },
+  {
+   "target": "character-encoding-017.htm.headers",
+   "source": "contributors .htaccess at csswg-test@fa448700877",
+   "sourceKind": "recovered-htaccess-rule",
+   "sha256": "ae0307537ebb8d2bfbd4560ecbad19850073118f76d89ca1de1e48d119be89a2",
+   "note": "the page itself is served as iso-8859-15"
+  },
+  {
+   "target": "character-encoding-026.htm.headers",
+   "source": "contributors .htaccess at csswg-test@fa448700877",
+   "sourceKind": "recovered-htaccess-rule",
+   "sha256": "4e3bbdad1e1bd0580ccb385e25c5791b7b4b78a121e16d6164d080110ac33e4f",
+   "note": "the page itself is served as iso-8859-1"
+  },
+  {
+   "target": "character-encoding-027.htm.headers",
+   "source": "contributors .htaccess at csswg-test@fa448700877",
+   "sourceKind": "recovered-htaccess-rule",
+   "sha256": "4e3bbdad1e1bd0580ccb385e25c5791b7b4b78a121e16d6164d080110ac33e4f",
+   "note": "the page itself is served as iso-8859-1"
+  },
+  {
+   "target": "character-encoding-029.htm.headers",
+   "source": "contributors .htaccess at csswg-test@fa448700877",
+   "sourceKind": "recovered-htaccess-rule",
+   "sha256": "4e3bbdad1e1bd0580ccb385e25c5791b7b4b78a121e16d6164d080110ac33e4f",
+   "note": "the page itself is served as iso-8859-1"
+  },
+  {
    "target": "html4/support/'green block.png",
    "source": "csswg-test@fa44870087:contributors/microsoft/submitted/support/'green block.png",
    "sourceKind": "csswg-test-pre-snapshot",
