@@ -309,15 +309,55 @@ internal static class TableEngine
             byPosition[(p.Row, p.Col)] = p;
         var tableBorders = NodeEdgeBorders(table);
 
+        // Column and column-group borders conflict with the cell edges inside their span
+        // (§17.6.2.1: cell > row > row group > column > column group > table).
+        var columnByIndex = new Dictionary<int, Dictionary<string, EdgeBorder>>();
+        var columnIndex = 0;
+        void CollectColumns(LayoutNode container, bool allowDirect)
+        {
+            foreach (var child in container.Children)
+            {
+                var d = child.GetDisplay();
+                if (child.TagName is "COL" or "COLGROUP")
+                {
+                    var span = 1;
+                    if (child.Attributes.TryGetValue("span", out var raw))
+                        int.TryParse(raw, out span);
+                    span = Math.Clamp(span, 1, 1000);
+                    var borders = NodeEdgeBorders(child);
+                    for (var s = 0; s < span; s++)
+                        columnByIndex[columnIndex++] = borders;
+                }
+                else if (child.TagName == "COLGROUP")
+                {
+                    if (child.Children.Count == 0)
+                    {
+                        var gspan = 1;
+                        if (child.Attributes.TryGetValue("span", out var graw))
+                            int.TryParse(graw, out gspan);
+                        gspan = Math.Clamp(gspan, 1, 1000);
+                        var gborders = NodeEdgeBorders(child);
+                        for (var s = 0; s < gspan; s++)
+                            columnByIndex[columnIndex++] = gborders;
+                    }
+                    else CollectColumns(child, false);
+                }
+            }
+        }
+        CollectColumns(table, true);
+
         foreach (var p in placements)
         {
             var own = NodeEdgeBorders(p.Cell);
+            var columnBorders = columnByIndex.GetValueOrDefault(p.Col);
             var result = new Dictionary<string, EdgeBorder>(4, StringComparer.Ordinal);
             // §17.6.2.1 element precedence on equal width and style: cell > row > row group >
             // table. The embedded-element tests (border-conflict-element-*) turn exactly on the
             // row and row-group borders joining the conflict at every edge they share.
             var row = RowOf(p.Cell);
             var rowBorders = row is null ? null : NodeEdgeBorders(row);
+            if (Environment.GetEnvironmentVariable("LITE_TRACE_BC") == "1")
+                Console.WriteLine($"[BC] cell({p.Row},{p.Col}) row={(row is null ? "null" : row.TagName)} rowTop={(rowBorders is null ? "-" : rowBorders["top"].Width + "/" + rowBorders["top"].Style)} tableTop={tableBorders["top"].Width}");
             var rowGroup = row?.Parent?.GetDisplay() == DisplayType.TableRowGroup ? row.Parent : null;
             var groupBorders = rowGroup is null ? null : NodeEdgeBorders(rowGroup);
 
@@ -335,6 +375,7 @@ internal static class TableEngine
             {
                 left = Dominant(left, Bd(rowBorders, "left"));
                 left = Dominant(left, Bd(groupBorders, "left"));
+                left = Dominant(left, Bd(columnBorders, "left"));
                 left = Dominant(left, tableBorders["left"]);                // cell over table
             }
             result["left"] = left;
@@ -353,6 +394,7 @@ internal static class TableEngine
             {
                 right = Dominant(right, Bd(rowBorders, "right"));
                 right = Dominant(right, Bd(groupBorders, "right"));
+                right = Dominant(right, Bd(columnBorders, "right"));
                 right = Dominant(right, tableBorders["right"]);
             }
             result["right"] = right;

@@ -568,35 +568,53 @@ internal static class Drawer
 
         // Decorations are drawn before the scroll translate for scrollable elements;
         // skip them here to avoid painting them twice. empty-cells:hide also suppresses them.
+        // In a collapsed table the row/group/column boxes paint NO borders of their own —
+        // the cells carry the §17.6.2.1 resolved winners, and a row border painted at the
+        // row's box would draw an inner duplicate line (border-conflict-element-003/004/012).
+        // Only the row's own decorations are suppressed: its children (the cells) still paint.
+        var noDecorations = false;
         if (node.ScrollState?.NeedsScrollbar != true && !IsEmptyCellHidden(node))
         {
             var propagated = node == _propagatedBackgroundNode;
-            if (!propagated) DrawBoxShadows(canvas, box, node);
-
-            // Background — a body whose background propagated to the canvas (§14.2) paints
-            // no background of its own; borders and outline still draw.
-            if (!propagated)
+            if (node.GetDisplay() is DisplayType.TableRow or DisplayType.TableRowGroup
+                || node.TagName is "COL" or "COLGROUP")
             {
-                var bgColor = node.GetBackgroundColor();
-                if (bgColor != SKColors.Transparent)
+                for (var a = node.Parent; a is not null; a = a.Parent)
                 {
-                    var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
-                    using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
-                    if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
-                    else canvas.DrawRect(box.PaddingBox, bgPaint);
+                    if (a.GetDisplay() != DisplayType.Table) continue;
+                    noDecorations = TableEngine.IsBorderCollapse(a);
+                    break;
+                }
+            }
+            if (!noDecorations)
+            {
+                if (!propagated) DrawBoxShadows(canvas, box, node);
+
+                // Background — a body whose background propagated to the canvas (§14.2) paints
+                // no background of its own; borders and outline still draw.
+                if (!propagated)
+                {
+                    var bgColor = node.GetBackgroundColor();
+                    if (bgColor != SKColors.Transparent)
+                    {
+                        var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+                        using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
+                        if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
+                        else canvas.DrawRect(box.PaddingBox, bgPaint);
+                    }
+
+                    // Linear gradient background
+                    var gradient = node.GetLinearGradient();
+                    if (gradient != null)
+                        DrawLinearGradient(canvas, box, node, gradient);
+
+                    // Background image
+                    DrawBackgroundImage(canvas, node, box);
                 }
 
-                // Linear gradient background
-                var gradient = node.GetLinearGradient();
-                if (gradient != null)
-                    DrawLinearGradient(canvas, box, node, gradient);
-
-                // Background image
-                DrawBackgroundImage(canvas, node, box);
+                DrawBorders(canvas, box, node);
+                DrawOutline(canvas, box, node);
             }
-
-            DrawBorders(canvas, box, node);
-            DrawOutline(canvas, box, node);
         }
 
         if (!node.GetPointerEventsNone())
@@ -616,7 +634,7 @@ internal static class Drawer
         {
             if (_stepFloats != null && node.GetDisplay() is not (DisplayType.Flex or DisplayType.InlineFlex))
             {
-                _stepInlines!.Add(node);
+                Defer(_stepInlines!, canvas, node);
                 return;
             }
             using var font = TextMeasure.CreateFont(node);
@@ -760,12 +778,12 @@ internal static class Drawer
             }
             if (child.TagName != "#text" && child.GetFloat() != FloatType.None)
             {
-                _stepFloats.Add(child);                                        // step 4
+                Defer(_stepFloats, canvas, child);                             // step 4
                 return;
             }
             if (IsInlineLevelContent(child))
             {
-                _stepInlines!.Add(child);                                      // step 5
+                Defer(_stepInlines!, canvas, child);                           // step 5
                 // An inline box's BLOCK descendants are step-3 content: descend through the
                 // inline box (stack-floats-001's red block inside the inline paints under the
                 // float). Its inline-level descendants are NOT collected — they paint through
@@ -784,7 +802,7 @@ internal static class Drawer
             if (EstablishesStackingContext(child)) return;                     // handled by SC root
             if (child.TagName != "#text" && child.GetFloat() != FloatType.None)
             {
-                _stepFloats.Add(child);                                        // step 4
+                Defer(_stepFloats!, canvas, child);                            // step 4
                 return;
             }
             if (IsInlineLevelContent(child))
@@ -831,14 +849,38 @@ internal static class Drawer
         _stepFloats = savedFloats;
         _stepInlines = savedInlines;
         _deferredInlines = savedDeferred;
-        foreach (var f in step4Floats) PaintNode(canvas, f, viewportWidth);    // step 4
-        foreach (var i in step5Items) PaintInlineContent(canvas, i, viewportWidth);  // step 5
+        foreach (var f in step4Floats) PaintDeferred(canvas, f, () => PaintNode(canvas, f.Node, viewportWidth));                    // step 4
+        foreach (var i in step5Items) PaintDeferred(canvas, i, () => PaintInlineContent(canvas, i.Node, viewportWidth));  // step 5
 
         foreach (var c in nonNegativeZ) PaintNode(canvas, c, viewportWidth);   // steps 6/7
     }
 
-    private static List<LayoutNode>? _stepFloats;
-    private static List<LayoutNode>? _stepInlines;
+    private static List<DeferredPaint>? _stepFloats;
+    private static List<DeferredPaint>? _stepInlines;
+
+    /// <summary>A step-4/5 item with the canvas state it was collected under. The phases paint
+    /// from the stacking-context root, outside the clips and translations of the boxes between
+    /// it and the item — an 'overflow: hidden' table cell's clip (overflow-applies-to-*), a
+    /// scrolled container's offset — so the item replays that state when it finally paints.</summary>
+    private readonly record struct DeferredPaint(LayoutNode Node, SKMatrix Matrix, SKRectI DeviceClip);
+
+    private static void Defer(List<DeferredPaint> list, SKCanvas canvas, LayoutNode node)
+    {
+        foreach (var d in list)
+            if (ReferenceEquals(d.Node, node)) return;
+        list.Add(new DeferredPaint(node, canvas.TotalMatrix, canvas.DeviceClipBounds));
+    }
+
+    private static void PaintDeferred(SKCanvas canvas, DeferredPaint item, Action paint)
+    {
+        canvas.Save();
+        canvas.ResetMatrix();
+        canvas.ClipRect(SKRect.Create(item.DeviceClip.Left, item.DeviceClip.Top,
+            item.DeviceClip.Width, item.DeviceClip.Height));
+        canvas.SetMatrix(item.Matrix);
+        paint();
+        canvas.Restore();
+    }
 
     /// <summary>An in-flow, inline-level box or text run: Appendix-E step-5 content.
     /// Atomic inlines (inline-block/-table/-flex, images) and text are inline-level; so is
@@ -967,7 +1009,7 @@ internal static class Drawer
         // the block was collected there; drawing here would put P/H1/LABEL text under floats.
         if (_stepFloats != null)
         {
-            if (!_stepInlines!.Contains(node)) _stepInlines.Add(node);
+            Defer(_stepInlines!, canvas, node);
             return;
         }
 
@@ -2481,10 +2523,12 @@ internal static class Drawer
                 lineWidth = MeasureWithSpacing(line.Text, font, letterSpacing, wordSpacing);
 
             // text-align: justify — widen the inter-word gaps so every line except the last fills
-            // the available width (CSS 2.1 §16.2). Last lines and single-word lines stay unmodified.
+            // the available width (CSS 2.1 §16.2). Last lines and single-word lines stay unmodified,
+            // and so does pre/pre-wrap text: §16.2 forbids any justification from altering it.
             var lineWordSpacing = wordSpacing;
             var justified = false;
-            if (textAlign == TextAlign.Justify && lineIndex != lastLineIndex && lineWidth < LineBandWidth(bands, lineIndex, maxWidth))
+            if (textAlign == TextAlign.Justify && whiteSpace is not (WhiteSpace.Pre or WhiteSpace.PreWrap)
+                && lineIndex != lastLineIndex && lineWidth < LineBandWidth(bands, lineIndex, maxWidth))
             {
                 var gaps = line.Text.Count(c => c == ' ');
                 if (gaps > 0)

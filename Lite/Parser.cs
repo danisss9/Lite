@@ -1380,15 +1380,28 @@ internal static class Parser
         // document is parsed into its own Page (independent layout tree + JS engine).
         if (tag == "IFRAME")
         {
-            var fw = element.GetAttribute("width");
-            var fh = element.GetAttribute("height");
-            if (string.IsNullOrEmpty(fw)) fw = "300";
-            if (string.IsNullOrEmpty(fh)) fh = "150";
-            int cw = int.TryParse(fw.Replace("px", ""), out var pw) ? pw : 300;
-            int ch = int.TryParse(fh.Replace("px", ""), out var ph) ? ph : 150;
+            // width/height attributes are presentational hints (a pixel length or a percentage)
+            // that author CSS overrides; with neither, 'auto' resolves to the 300x150 default
+            // object size of a replaced element with no intrinsic dimensions (§10.3.2, §10.6.2).
+            var iframeStyle = ComputeCurrentStyle(element);
+            string? IframeSize(string attribute, int fallback)
+            {
+                var declared = iframeStyle.GetPropertyValueSafe(attribute)?.Trim();
+                if (!string.IsNullOrEmpty(declared) && declared != "auto") return null;
+                var raw = element.GetAttribute(attribute)?.Trim();
+                if (raw is { Length: > 1 } && raw.EndsWith('%') &&
+                    float.TryParse(raw[..^1], System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var pct))
+                    return $"{pct.ToString(System.Globalization.CultureInfo.InvariantCulture)}%";
+                return int.TryParse(raw?.Replace("px", ""), out var px) && px >= 0 ? $"{px}px" : $"{fallback}px";
+            }
+            var iframeWidth = IframeSize("width", 300);
+            var iframeHeight = IframeSize("height", 150);
+            int cw = iframeWidth is { } w0 && w0.EndsWith("px") && int.TryParse(w0[..^2], out var pw) ? pw : 300;
+            int ch = iframeHeight is { } h0 && h0.EndsWith("px") && int.TryParse(h0[..^2], out var ph) ? ph : 150;
             node.StyleOverrides["display"] = "block";
-            node.StyleOverrides["width"] = fw.EndsWith("px") ? fw : fw + "px";
-            node.StyleOverrides["height"] = fh.EndsWith("px") ? fh : fh + "px";
+            if (iframeWidth is not null) node.StyleOverrides["width"] = iframeWidth;
+            if (iframeHeight is not null) node.StyleOverrides["height"] = iframeHeight;
             foreach (var attr in new[] { "src", "srcdoc", "name", "sandbox" })
             {
                 var v = element.GetAttribute(attr);
@@ -4364,7 +4377,10 @@ internal static class Parser
                 var head = value[..^"important".Length].TrimEnd();
                 if (head.EndsWith('!')) value = head[..^1].TrimEnd();
             }
-            if (value.Length > 0) found = value;
+            // The rescue only restores a value the converters refused; one the CSS 2.1 §4.2
+            // scan rejects (a BAD_STRING, a BAD_URI such as an unclosed url(, a stray ';') is
+            // malformed and stays dropped.
+            if (value.Length > 0 && AngleSharp.Css.Parser.CssComponentScan.IsWellFormedValue(value)) found = value;
         }
         return found;
     }

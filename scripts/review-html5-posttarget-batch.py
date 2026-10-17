@@ -1,0 +1,219 @@
+#!/usr/bin/env python3
+"""One-shot per batch: record the HTML5 plan Milestone 1 quick post-target
+bulk classifications in Wpt/html5-applicability.json.
+
+Every rule below classifies catalog sources (the file-level `source` path,
+matching the manifest's Expand behaviour) whose assertions only bind behavior
+introduced after the pinned 28 October 2014 HTML 5.0 Recommendation, each with
+a one-line normative justification naming the later feature. Existing entries
+always win: this script never rewrites, overrides or deletes a review.
+
+Sanity gates before any write:
+- the inventory artifact's manifestSha256 must match the current WPT manifest,
+  so the classified set is derived from the catalog this review is about;
+- a rule that matches zero catalog sources is an error (no silent no-ops);
+- the result must satisfy the applicability schema's structural invariants
+  (classification enum, non-empty reasons, assertion fields only on mixed).
+"""
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+REVIEW_DATE = '2026-10-15'
+inventory_artifact = Path('Lite.Conformance/artifacts/html5-inventory.json')
+manifest_path = Path('Lite.Conformance/artifacts/wpt-manifest.json')
+applicability_path = Path('Lite.Conformance/Wpt/html5-applicability.json')
+
+# Whole directory trees whose every catalog file tests a post-2014 feature.
+PREFIX_RULES = [
+    ('shadow-dom/',
+     'Reviewed 2026-10-15 (post-target): the pinned REC has no shadow-tree concept — attachShadow, <slot> and shadow-root interfaces come from the separate Shadow DOM specification (v1, 2016+) integrated into the DOM and HTML standards after 28 October 2014.'),
+    ('custom-elements/',
+     'Reviewed 2026-10-15 (post-target): the customElements registry (define/upgrade, observedAttributes, custom-element reactions) was specified after the 2014 REC, which defines no custom-element machinery.'),
+    ('html/anonymous-iframe/',
+     'Reviewed 2026-10-15 (post-target): anonymous iframes (opaque partitioned origins for embedded content) were specified in 2023; the 2014 REC defines no anonymous-iframe origin mode.'),
+    ('html/cross-origin-embedder-policy/',
+     'Reviewed 2026-10-15 (post-target): Cross-Origin-Embedder-Policy and Cross-Origin-Resource-Policy enforcement entered Fetch/HTML in 2018+; the 2014 REC\'s fetching dependency (§2.6) has no embedder-policy step.'),
+    ('html/cross-origin-opener-policy/',
+     'Reviewed 2026-10-15 (post-target): Cross-Origin-Opener-Policy browsing-context-group isolation was specified in 2018+; the 2014 REC\'s opener model (§5.2, §7.4) has no COOP concept.'),
+    ('html/document-isolation-policy/',
+     'Reviewed 2026-10-15 (post-target): Document-Isolation-Policy was specified in 2024; the 2014 REC has no isolation pragma.'),
+    ('html/user-activation/',
+     'Reviewed 2026-10-15 (post-target): the User Activation API (navigator.userActivation, transient-activation propagation and expiry) was specified in 2018+; the 2014 REC\'s activation notion (§6.5 user interaction with the prompt APIs) exposes no activation state to script.'),
+    ('html/capability-delegation/',
+     'Reviewed 2026-10-15 (post-target): capability delegation (forwarding transient activation through postMessage) was specified in 2021.'),
+    ('html/browsers/origin/cross-origin-objects/',
+     'Reviewed 2026-10-15 (post-target): the cross-origin objects integration tested here (immutable [[Prototype]], own-property whitelist enumeration, cross-origin function wrappers) was specified after the 2014 REC; its §5.2.3 WindowProxy exotic object and §5.3 cross-origin member lists define a different model.'),
+    ('html/browsers/origin/origin-keyed-agent-clusters/',
+     'Reviewed 2026-10-15 (post-target): origin-keyed agent clusters (Origin-Agent-Cluster header, originAgentCluster) were specified in 2021; the 2014 REC defines no agent clusters.'),
+    ('html/browsers/origin/api/',
+     'Reviewed 2026-10-15 (post-target): the assertions read the Origin API (window/worker/self origin attribute, HyperlinkElementUtils origin), added to HTML in 2015+; the 2014 REC §5.3 defines origin comparison but no script-visible origin attribute.'),
+    ('html/browsers/browsing-the-web/history-traversal/pagereveal/',
+     'Reviewed 2026-10-15 (post-target): the PageReveal event and its ordering guarantees were specified in 2023+, absent from the 2014 REC\'s event model.'),
+    ('html/browsers/browsing-the-web/history-traversal/pageswap/',
+     'Reviewed 2026-10-15 (post-target): the PageSwap event and its navigation-timing guarantees were specified in 2023+, absent from the 2014 REC\'s event model.'),
+    ('html/browsers/windows/consume-user-activation/',
+     'Reviewed 2026-10-15 (post-target): user-activation consumption by window.open() was specified in 2018+; the 2014 REC has no transient activation to consume.'),
+    ('html/canvas/offscreen/',
+     'Reviewed 2026-10-15 (post-target): OffscreenCanvas and OffscreenCanvasRenderingContext2D were added to HTML after the 2014 REC, which defines only the document-attached canvas (§4.11.4).'),
+    ('html/canvas/element/wide-gamut-canvas/',
+     'Reviewed 2026-10-15 (post-target): canvas color-space selection (colorSpace, display-p3) post-dates the 2014 REC\'s Canvas 2D Context dependency.'),
+    ('html/canvas/element/color-type/',
+     'Reviewed 2026-10-15 (post-target): the canvas colorType/color-space API post-dates the 2014 REC\'s Canvas 2D Context dependency.'),
+    ('html/canvas/element/filters/',
+     'Reviewed 2026-10-15 (post-target): the context filter attribute comes from the CSS Filter Effects integration added to canvas after the 2014 snapshot; the Canvas 2D Context the 2014 REC references defines no filter member.'),
+    ('html/canvas/element/global-hdr-headroom/',
+     'Reviewed 2026-10-15 (post-target): canvas HDR headroom rendering was specified in 2023+, after the 2014 REC.'),
+    ('html/canvas/element/reset/',
+     'Reviewed 2026-10-15 (post-target): CanvasRenderingContext2D.reset() was added to the HTML standard in 2020; the 2014 REC\'s 2D context dependency resets state only through canvas resize (§4.11.4).'),
+    ('html/canvas/element/layers/',
+     'Reviewed 2026-10-15 (post-target): the canvas layers API (beginLayer/endLayer, layer filters) was added to the HTML standard in 2022+, absent from the 2014 REC.'),
+    ('html/canvas/element/manual/draw-element-image/privacy/',
+     'Reviewed 2026-10-15 (post-target): drawImage-from-element privacy redaction (iframes, cross-origin frames, filters, selection and visited-link painting) was specified in 2023+; the 2014 REC\'s drawImage accepts only canvas, img and video sources with no redaction model.'),
+    ('html/semantics/interestfor/',
+     'Reviewed 2026-10-15 (post-target): the interestfor attribute and interest events were specified in 2023+, absent from the 2014 REC.'),
+    ('html/semantics/popovers/',
+     'Reviewed 2026-10-15 (post-target): the popover API (popover attribute, showPopover/hidePopover/togglePopover, beforetoggle) was specified in 2022+, absent from the 2014 REC.'),
+    ('html/semantics/permission-element/',
+     'Reviewed 2026-10-15 (post-target): the <permission> element was specified in 2022+, absent from the 2014 REC\'s interactive elements.'),
+    ('html/dom/render-blocking/',
+     'Reviewed 2026-10-15 (post-target): blocking=render render-blocking documents were specified in 2023; the 2014 REC (§4.2.4) blocks rendering through stylesheets alone, with no blocking attribute.'),
+    ('html/links/manifest/',
+     'Reviewed 2026-10-15 (post-target): <link rel=manifest> is the Web App Manifest specification (2015+), not a 2014 REC link type (§4.8.2).'),
+]
+
+# Individual sources or filename families that test one post-2014 feature.
+EXACT_RULES = [
+    ('html/canvas/element/text/2d.text.drawing.style.letterSpacing.change.font.html',
+     'Reviewed 2026-10-15 (post-target): ctx.letterSpacing was added to canvas text rendering in 2018+; the Canvas 2D Context the 2014 REC references has no spacing attributes.'),
+    ('html/canvas/element/text/2d.text.drawing.style.letterSpacing.measure.html',
+     'Reviewed 2026-10-15 (post-target): ctx.letterSpacing was added to canvas text rendering in 2018+; the Canvas 2D Context the 2014 REC references has no spacing attributes.'),
+    ('html/canvas/element/text/2d.text.drawing.style.wordSpacing.change.font.html',
+     'Reviewed 2026-10-15 (post-target): ctx.wordSpacing was added to canvas text rendering in 2018+; the Canvas 2D Context the 2014 REC references has no spacing attributes.'),
+    ('html/canvas/element/text/2d.text.drawing.style.wordSpacing.measure.html',
+     'Reviewed 2026-10-15 (post-target): ctx.wordSpacing was added to canvas text rendering in 2018+; the Canvas 2D Context the 2014 REC references has no spacing attributes.'),
+    ('html/canvas/canvas-css-random.html',
+     'Reviewed 2026-10-15 (post-target): painting with CSS random-scheme function values (random()) was specified in 2023+.'),
+    ('html/canvas/canvas-sibling-index-crash.html',
+     'Reviewed 2026-10-15 (post-target): exercises the CSS sibling-index()/sibling-count() functions specified in 2023+.'),
+    ('html/canvas/text-metrics-for-unpaintable-crash.html',
+     'Reviewed 2026-10-15 (post-target): asserts post-2014 TextMetrics behavior for unpaintable canvases (the TextMetrics advance/alignment members post-date the 2014 snapshot).'),
+    ('html/canvas/color.window.js',
+     'Reviewed 2026-10-15 (post-target): the canvas colorSpace/colorType API post-dates the 2014 REC\'s Canvas 2D Context dependency.'),
+    ('html/canvas/historical.any.js',
+     'Reviewed 2026-10-15 (post-target): asserts the absence of members removed after the 2014 snapshot (scrollPathIntoView was part of the Canvas 2D Context specification the 2014 REC references).'),
+    ('html/canvas/historical.window.js',
+     'Reviewed 2026-10-15 (post-target): asserts the absence of members removed after the 2014 snapshot (scrollPathIntoView was part of the Canvas 2D Context specification the 2014 REC references).'),
+    ('html/dom/historical.html',
+     'Reviewed 2026-10-15 (post-target): asserts the post-2014 removal state — document.applets always empty, while the 2014 REC still defines applet elements (§4.7.5, §11 obsolete processing) and their document collections — plus layer/nolayer interface checks.'),
+    ('html/dom/aria-attribute-reflection-enumerated.tentative.html',
+     'Reviewed 2026-10-15 (post-target): aria-* IDL attribute reflection was specified after the 2014 REC (WAI-ARIA 1.2 era), which defines no ARIA attribute bindings.'),
+    ('html/dom/aria-attribute-reflection.html',
+     'Reviewed 2026-10-15 (post-target): aria-* IDL attribute reflection was specified after the 2014 REC (WAI-ARIA 1.2 era), which defines no ARIA attribute bindings.'),
+    ('html/dom/aria-attribute-reflection.tentative.html',
+     'Reviewed 2026-10-15 (post-target): aria-* IDL attribute reflection was specified after the 2014 REC (WAI-ARIA 1.2 era), which defines no ARIA attribute bindings.'),
+    ('html/dom/aria-element-reflection-disconnected.html',
+     'Reviewed 2026-10-15 (post-target): ARIA element reflection (ElementReflectionInterface referenced-element IDs) was specified in 2021+, absent from the 2014 REC.'),
+    ('html/dom/aria-element-reflection-labelledby.html',
+     'Reviewed 2026-10-15 (post-target): ARIA element reflection (ElementReflectionInterface referenced-element IDs) was specified in 2021+, absent from the 2014 REC.'),
+    ('html/dom/aria-element-reflection.html',
+     'Reviewed 2026-10-15 (post-target): ARIA element reflection (ElementReflectionInterface referenced-element IDs) was specified in 2021+, absent from the 2014 REC.'),
+    ('html/browsers/browsing-the-web/navigating-across-documents/cross-origin-top-navigation-with-user-activation-in-parent.window.js',
+     'Reviewed 2026-10-15 (post-target): activation-gated cross-origin top-level navigation (sandboxed-top-navigation-without-user-activation flag) was added to the sandbox model after the 2014 REC, whose §5.4 sandboxed top-level navigation flag allows navigation without activation.'),
+    ('html/browsers/browsing-the-web/navigating-across-documents/cross-origin-top-navigation-with-user-activation.window.js',
+     'Reviewed 2026-10-15 (post-target): activation-gated cross-origin top-level navigation (sandboxed-top-navigation-without-user-activation flag) was added to the sandbox model after the 2014 REC, whose §5.4 sandboxed top-level navigation flag allows navigation without activation.'),
+    ('html/browsers/browsing-the-web/navigating-across-documents/cross-origin-top-navigation-without-user-activation-nested.window.js',
+     'Reviewed 2026-10-15 (post-target): activation-gated cross-origin top-level navigation (sandboxed-top-navigation-without-user-activation flag) was added to the sandbox model after the 2014 REC, whose §5.4 sandboxed top-level navigation flag allows navigation without activation.'),
+    ('html/browsers/browsing-the-web/navigating-across-documents/cross-origin-top-navigation-without-user-activation.window.js',
+     'Reviewed 2026-10-15 (post-target): activation-gated cross-origin top-level navigation (sandboxed-top-navigation-without-user-activation flag) was added to the sandbox model after the 2014 REC, whose §5.4 sandboxed top-level navigation flag allows navigation without activation.'),
+    ('html/browsers/browsing-the-web/navigating-across-documents/same-origin-top-navigation-without-user-activation.window.js',
+     'Reviewed 2026-10-15 (post-target): the sandboxed-top-navigation-without-user-activation flag (governing same-origin top navigation too) was added to the sandbox model after the 2014 REC, whose §5.4 sandboxed top-level navigation flag allows navigation without activation.'),
+]
+
+
+def main() -> int:
+    if not inventory_artifact.exists():
+        print(f'Missing inventory artifact {inventory_artifact}; run the html5-inventory suite first.')
+        return 2
+    inventory = json.loads(inventory_artifact.read_text(encoding='utf-8'))
+    if inventory.get('formatVersion') != 1:
+        print('Unexpected inventory formatVersion.')
+        return 2
+    manifest_hash = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+    if inventory.get('manifestSha256') != manifest_hash:
+        print('Inventory artifact is stale versus the current WPT manifest; run the html5-inventory suite to regenerate it.')
+        return 2
+
+    sources = sorted({t['source'] for t in inventory['tests']})
+    applicability = json.loads(applicability_path.read_text(encoding='utf-8'))
+    existing = {t['path'] for t in applicability['tests']}
+
+    additions = []
+    matched = set()
+    for source in sources:
+        if source in existing:
+            continue
+        reason = None
+        for prefix, prefix_reason in PREFIX_RULES:
+            if source.startswith(prefix):
+                reason = prefix_reason
+                break
+        if reason is None:
+            for exact, exact_reason in EXACT_RULES:
+                if source == exact:
+                    reason = exact_reason
+                    break
+        if reason is not None:
+            matched.add(source)
+            additions.append({'path': source, 'classification': 'post-target', 'reason': reason})
+
+    unmatched = [p for p, _ in PREFIX_RULES] + [e for e, _ in EXACT_RULES]
+    for prefix, _ in PREFIX_RULES:
+        if not any(s.startswith(prefix) for s in sources):
+            print(f'ERROR: prefix rule matched no catalog source: {prefix}')
+            return 2
+    unmatched_exact = [e for e, _ in EXACT_RULES if e not in matched and e not in existing]
+    if unmatched_exact:
+        for e in unmatched_exact:
+            print(f'ERROR: exact rule matched no catalog source: {e}')
+        return 2
+
+    applicability['tests'].extend(additions)
+    errors = validate(applicability)
+    if errors:
+        for e in errors:
+            print(f'SCHEMA ERROR: {e}')
+        return 2
+
+    applicability_path.write_text(json.dumps(applicability, indent=2, ensure_ascii=False), encoding='utf-8')
+    counts = {}
+    for t in applicability['tests']:
+        counts[t['classification']] = counts.get(t['classification'], 0) + 1
+    print(f'Added {len(additions)} post-target reviews ({len(matched)} sources matched, '
+          f'{len(existing)} existing entries preserved).')
+    print(f'Manifest now holds {len(applicability["tests"])} entries: {counts}')
+    return 0
+
+
+def validate(applicability) -> list[str]:
+    errors = []
+    seen = set()
+    for t in applicability['tests']:
+        path = t.get('path', '')
+        if path in seen:
+            errors.append(f'duplicate path {path}')
+        seen.add(path)
+        if t.get('classification') not in ('included', 'mixed', 'unreviewed', 'post-target', 'regression-only', 'profile-excluded'):
+            errors.append(f'bad classification on {path}')
+        if not t.get('reason', '').strip():
+            errors.append(f'empty reason on {path}')
+        if t.get('classification') != 'mixed' and ('assertions' in t or 'assertionInventoryComplete' in t):
+            errors.append(f'assertion fields on non-mixed {path}')
+        if t.get('classification') == 'mixed' and not t.get('assertions'):
+            errors.append(f'mixed without assertions {path}')
+    return errors
+
+
+if __name__ == '__main__':
+    sys.exit(main())

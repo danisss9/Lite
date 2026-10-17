@@ -529,6 +529,10 @@ internal sealed class QuickJsValue : IDisposable
 
     internal void DetachArrayBuffer() => Native.lite_detach_array_buffer(Handle);
     internal void SetIsHtmlDda() => Native.lite_set_html_dda(Handle);
+    internal void InstallTest262Agent()
+    {
+        if (Native.lite_install_test262_agent(Handle) != 0) throw new InvalidOperationException("Test262 agent installation failed");
+    }
     internal void ResolveModule()
     {
         if (Native.lite_resolve_module(Handle) != 0) throw Realm.Exception();
@@ -630,6 +634,7 @@ internal static class Native
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_gc(nint runtime);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_detach_array_buffer(nint value);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_set_html_dda(nint value);
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern int lite_install_test262_agent(nint api);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint lite_global(nint context);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern nint lite_to_string(nint value, out nuint length);
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] internal static extern void lite_string_free(nint value);

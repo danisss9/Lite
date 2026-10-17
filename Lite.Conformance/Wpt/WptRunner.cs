@@ -225,10 +225,19 @@ internal static class WptRunner
         return false;
     }
 
+    /// <summary>A WPT "visual" test has no reference: a person reads the page. Under
+    /// css/CSS2 these are the CSS 2.1 suite's self-describing tests, whose stated
+    /// convention (any red means failure) the official suite's selftest route already
+    /// checks, so they run through it. Elsewhere no such convention is promised and a
+    /// red scan could pass a test it does not understand, so they stay unsupported.</summary>
+    internal static bool IsSelfDescribingVisual(WptCase? test) =>
+        test is { Kind: "visual" } && test.Path.Replace('\\', '/').StartsWith("css/CSS2/", StringComparison.Ordinal);
+
     internal static RunResult RunOne(string testPath)
     {
         var test = CatalogCase(testPath);
-        if (WptCatalog.Context(testPath) != "window" || test?.TestDriver == true || test is { Kind: not ("testharness" or "reftest" or "crashtest" or "selftest") })
+        if (WptCatalog.Context(testPath) != "window" || test?.TestDriver == true ||
+            test is { Kind: not ("testharness" or "reftest" or "crashtest" or "selftest") } && !IsSelfDescribingVisual(test))
             return new(Cat.Unsupported, $"Execution support required: {test?.Kind ?? "testharness"}/{WptCatalog.Context(testPath)}", 0, 0);
         // The kill budget must exceed the worker's own report pump (TestTimeoutMs * 6 = 60s),
         // and must fit the heaviest legitimate page: named-character-references carries
@@ -327,6 +336,7 @@ internal static class WptRunner
             "reftest" => WptRefTestRunner.Run(test, CatalogCase),
             "crashtest" => WptVisualPage.RunCrash(test),
             "selftest" => WptVisualPage.RunSelfTest(test),
+            _ when IsSelfDescribingVisual(test) => WptVisualPage.RunSelfTest(test),
             _ => RunInProcess(url),
         };
         File.WriteAllText(output, JsonSerializer.Serialize(result, ExecutionEvidence.JsonOptions));

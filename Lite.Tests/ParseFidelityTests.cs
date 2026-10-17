@@ -169,4 +169,52 @@ public static class ParseFidelityTests
         True(template is not null && template.Content.TextContent == "Foo", "template content must hold Foo");
         True(doc.QuerySelector("body") is not null, "the body must be synthesized");
     }
+
+    [Test]
+    public static void Menuitem_StartTag_ReconstructsActiveFormatting()
+    {
+        // menuitem-element.dat: with </p> having popped <b> off the open-element stack
+        // (it stays in the active formatting list), the unknown <menuitem> start tag takes
+        // the "any other start tag" rule — reconstruct first, so the menuitem nests inside
+        // the re-opened <b> instead of landing directly in body.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><p><b></p><menuitem>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var doc = page.Document!;
+        var body = doc.QuerySelector("body")!;
+        True(body != null, "no body");
+        var elements = body.ChildNodes.OfType<AngleSharp.Dom.IElement>().ToList();
+        Equal(2, elements.Count);
+        Equal("p", elements[0].LocalName);
+        Equal("b", elements[1].LocalName);
+        True(elements[1].ChildNodes.OfType<AngleSharp.Dom.IElement>().Any(e => e.LocalName == "menuitem"),
+            "menuitem must nest inside the reconstructed <b>");
+    }
+
+    [Test]
+    public static void SelectInTable_TemplateClose_RestoresSelectInTableMode()
+    {
+        // template.dat: after </template> inside a select whose ancestors are table-
+        // related, the reset's select step must switch to "in select in table" (a table
+        // element sits below the select), so the <caption> start tag closes the select and
+        // reprocesses through the in-table rules — the caption lands in the table, not
+        // its text inside the select.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><body><table><tr><td><select><template>Foo</template><caption>A</table>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var doc = page.Document!;
+        var select = doc.QuerySelector("select");
+        True(select != null, "no select");
+        True(select!.ChildNodes.OfType<AngleSharp.Dom.IElement>().Any(e => e.LocalName == "template"),
+            "the template stays inside the select");
+        var caption = doc.QuerySelector("caption");
+        True(caption != null, "no caption — the select-in-table reset must reprocess it");
+        Equal("A", caption!.TextContent);
+        var table = doc.QuerySelector("table")!;
+        True(table.ChildNodes.OfType<AngleSharp.Dom.IElement>()
+                .Any(e => e.LocalName == "caption" && e.ParentElement == table),
+            "the caption must be a table child, not select content");
+        True(string.IsNullOrWhiteSpace(select.TextContent),
+            "no stray text may leak into the select");
+    }
 }

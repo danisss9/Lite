@@ -1,0 +1,2130 @@
+namespace AngleSharp.Css
+{
+    using System;
+
+    /// <summary>
+    /// A collection of CSS keywords.
+    /// </summary>
+    public static class CssKeywords
+    {
+        /// <summary>
+        /// The distribute keyword.
+        /// </summary>
+        public static readonly String Distribute = "distribute";
+
+        /// <summary>
+        /// The horizontal keyword.
+        /// </summary>
+        public static readonly String Horizontal = "horizontal";
+
+        /// <summary>
+        /// The vertical keyword.
+        /// </summary>
+        public static readonly String Vertical = "vertical";
+
+        /// <summary>
+        /// The clip keyword.
+        /// </summary>
+        public static readonly String Clip = "clip";
+
+        /// <summary>
+        /// The cyclic keyword.
+        /// </summary>
+        public static readonly String Cyclic = "cyclic";
+
+        /// <summary>
+        /// The numeric keyword.
+        /// </summary>
+        public static readonly String Numeric = "numeric";
+
+        /// <summary>
+        /// The alphabetic keyword.
+        /// </summary>
+        public static readonly String Alphabetic = "alphabetic";
+
+        /// <summary>
+        /// The symbolic keyword.
+        /// </summary>
+        public static readonly String Symbolic = "symbolic";
+
+        /// <summary>
+        /// The legacy keyword.
+        /// </summary>
+        public static readonly String Legacy = "legacy";
+
+        /// <summary>
+        /// The normal keyword.
+        /// </summary>
+        public static readonly String Normal = "normal";
+
+        /// <summary>
+        /// The accumulate keyword.
+        /// </summary>
+        public static readonly String Accumulate = "accumulate";
+
+        /// <summary>
+        /// The add keyword.
+        /// </summary>
+        public static readonly String Add = "add";
+
+        /// <summary>
+        /// The arabic-indic keyword.
+        /// </summary>
+        public static readonly String ArabicIndic = "arabic-indic";
+
+        /// <summary>
+        /// The pre keyword.
+        /// </summary>
+        public static readonly String Pre = "pre";
+
+        /// <summary>
+        /// The nowrap keyword.
+        /// </summary>
+        public static readonly String Nowrap = "nowrap";
+
+        /// <summary>
+        /// The wrap keyword.
+        /// </summary>
+        public static readonly String Wrap = "wrap";
+
+        /// <summary>
+        /// The wrap-reverse keyword.
+        /// </summary>
+        public static readonly String WrapReverse = "wrap-reverse";
+
+        /// <summary>
+        /// The pre-wrap keyword.
+        /// </summary>
+        public static readonly String PreWrap = "pre-wrap";
+
+        /// <summary>
+        /// The pre-line keyword.
+        /// </summary>
+        public static readonly String PreLine = "pre-line";
+
+        /// <summary>
+        /// The distribute-all-line keyword.
+        /// </summary>
+        public static readonly String DistributeAllLines = "distribute-all-lines";
+
+        /// <summary>
+        /// The distribute-center-last" keyword.
+        /// </summary>
+        public static readonly String DistributeCenterLast = "distribute-center-last";
+
+        /// <summary>
+        /// The inter-cluster keyword.
+        /// </summary>
+        public static readonly String InterCluster = "inter-cluster";
+
+        /// <summary>
+        /// The inter-ideograph keyword.
+        /// </summary>
+        public static readonly String InterIdeograph = "inter-ideograph";
+
+        /// <summary>
+        /// The inter-word keyword.
+        /// </summary>
+        public static readonly String InterWord = "inter-word";
+
+        /// <summary>
+        /// The inter-character keyword.
+        /// </summary>
+        public static readonly String InterCharacter = "inter-character";
+
+        /// <summary>
+        /// The katakana keyword.
+        /// </summary>
+        public static readonly String Katakana = "katakana";
+
+        /// <summary>
+        /// The katakana-iroha keyword.
+        /// </summary>
+        public static readonly String KatakanaIroha = "katakana-iroha";
+
+        /// <summary>
+        /// The kashida keyword.
+        /// </summary>
+        public static readonly String Kashida = "kashida";
+
+        /// <summary>
+        /// The newspaper keyword.
+        /// </summary>
+        public static readonly String Newspaper = "newspaper";
+
+        /// <summary>
+		/// The Butt keyword.
+		/// </summary>
+		public static readonly String Butt = "butt";
+
+        /// <summary>
+        /// The miter keyword.
+        /// </summary>
+        public static readonly String Miter = "miter";
+
+        /// <summary>
+        /// The bevel keyword.
+        /// </summary>
+        public static readonly String Bevel = "bevel";
+
+        /// <summary>
+        /// The break-all keyword.
+        /// </summary>
+        public static readonly String BreakAll = "break-all";
+
+        /// <summary>
+        /// The keep-all keyword.
+        /// </summary>
+        public static readonly String KeepAll = "keep-all";
+
+        /// <summary>
+        /// The break-all keyword.
+        /// </summary>
+        public static readonly String BreakWord = "break-word";
+
+        /// <summary>
+        /// The important keyword.
+        /// </summary>
+        public static readonly String Important = "important";
+
+        /// <summary>
+        /// The !important keyword.
+        /// </summary>
+        public static readonly String BangImportant = "!important";
+
+        /// <summary>
+        /// The inherit keyword.
+        /// </summary>
+        public static readonly String Inherit = "inherit";
+
+        /// <summary>
+        /// The initial keyword.
+        /// </summary>
+        public static readonly String Initial = "initial";
+
+        /// <summary>
+        /// The unset keyword.
+        /// </summary>
+        public static readonly String Unset = "unset";
+
+        /// <summary>
+        /// The none keyword.
+        /// </summary>
+        public static readonly String None = "none";
+
+        /// <summary>
+        /// The auto keyword.
+        /// </summary>
+        public static readonly String Auto = "auto";
+
+        /// <summary>
+        /// The mixed keyword.
+        /// </summary>
+        public static readonly String Mixed = "mixed";
+
+        /// <summary>
+        /// The auto-fill keyword.
+        /// </summary>
+        public static readonly String AutoFill = "auto-fill";
+
+        /// <summary>
+        /// The auto-fit keyword.
+        /// </summary>
+        public static readonly String AutoFit = "auto-fit";
+
+        /// <summary>
+        /// The auto-flow keyword.
+        /// </summary>
+        public static readonly String AutoFlow = "auto-flow";
+
+        /// <summary>
+        /// The content keyword.
+        /// </summary>
+        public static readonly String Content = "content";
+
+        /// <summary>
+        /// The size keyword.
+        /// </summary>
+        public static readonly String Size = "size";
+
+        /// <summary>
+        /// The inline-size keyword.
+        /// </summary>
+        public static readonly String InlineSize = "inline-size";
+
+        /// <summary>
+        /// The min-content keyword.
+        /// </summary>
+        public static readonly String MinContent = "min-content";
+
+        /// <summary>
+        /// The max-content keyword.
+        /// </summary>
+        public static readonly String MaxContent = "max-content";
+
+        /// <summary>
+        /// The format keyword.
+        /// </summary>
+        public static readonly String Format = "format";
+
+        /// <summary>
+        /// The from keyword.
+        /// </summary>
+        public static readonly String From = "from";
+
+        /// <summary>
+        /// The from-image keyword for image-orientation.
+        /// </summary>
+        public static readonly String FromImage = "from-image";
+
+        /// <summary>
+        /// The to keyword.
+        /// </summary>
+        public static readonly String To = "to";
+
+        /// <summary>
+        /// The always keyword.
+        /// </summary>
+        public static readonly String Always = "always";
+
+        /// <summary>
+        /// The smooth keyword.
+        /// </summary>
+        public static readonly String Smooth = "smooth";
+
+        /// <summary>
+        /// The swap keyword (font-display).
+        /// </summary>
+        public static readonly String Swap = "swap";
+
+        /// <summary>
+        /// The fallback keyword (font-display).
+        /// </summary>
+        public static readonly String Fallback = "fallback";
+
+        /// <summary>
+        /// The optional keyword (font-display, animation-range).
+        /// </summary>
+        public static readonly String Optional = "optional";
+
+        /// <summary>
+        /// The on keyword (font-feature-settings).
+        /// </summary>
+        public static readonly String On = "on";
+
+        /// <summary>
+        /// The off keyword (font-feature-settings).
+        /// </summary>
+        public static readonly String Off = "off";
+
+        /// <summary>
+        /// The avoid keyword.
+        /// </summary>
+        public static readonly String Avoid = "avoid";
+
+        /// <summary>
+        /// The left keyword.
+        /// </summary>
+        public static readonly String Left = "left";
+
+        /// <summary>
+        /// The light keyword (color-scheme).
+        /// </summary>
+        public static readonly String Light = "light";
+
+        /// <summary>
+        /// The dark keyword (color-scheme).
+        /// </summary>
+        public static readonly String Dark = "dark";
+
+        /// <summary>
+        /// The right keyword.
+        /// </summary>
+        public static readonly String Right = "right";
+
+        /// <summary>
+        /// The footnote keyword.
+        /// </summary>
+        public static readonly String Footnote = "footnote";
+
+        /// <summary>
+        /// The both keyword.
+        /// </summary>
+        public static readonly String Both = "both";
+
+        /// <summary>
+        /// The forwards keyword.
+        /// </summary>
+        public static readonly String Forwards = "forwards";
+
+        /// <summary>
+        /// The backwards keyword.
+        /// </summary>
+        public static readonly String Backwards = "backwards";
+
+        /// <summary>
+        /// The page keyword.
+        /// </summary>
+        public static readonly String Page = "page";
+
+        /// <summary>
+        /// The dense keyword.
+        /// </summary>
+        public static readonly String Dense = "dense";
+
+        /// <summary>
+        /// The column keyword.
+        /// </summary>
+        public static readonly String Column = "column";
+
+        /// <summary>
+        /// The column-reverse keyword.
+        /// </summary>
+        public static readonly String ColumnReverse = "column-reverse";
+
+        /// <summary>
+        /// The row keyword.
+        /// </summary>
+        public static readonly String Row = "row";
+
+        /// <summary>
+        /// The row-reverse keyword.
+        /// </summary>
+        public static readonly String RowReverse = "row-reverse";
+
+        /// <summary>
+        /// The avoid-page keyword.
+        /// </summary>
+        public static readonly String AvoidPage = "avoid-page";
+
+        /// <summary>
+        /// The avoid-column keyword.
+        /// </summary>
+        public static readonly String AvoidColumn = "avoid-column";
+
+        /// <summary>
+        /// The avoid-region keyword.
+        /// </summary>
+        public static readonly String AvoidRegion = "avoid-region";
+
+        /// <summary>
+        /// The inset keyword.
+        /// </summary>
+        public static readonly String Inset = "inset";
+
+        /// <summary>
+        /// The outset keyword.
+        /// </summary>
+        public static readonly String Outset = "outset";
+
+        /// <summary>
+        /// The ridge keyword.
+        /// </summary>
+        public static readonly String Ridge = "ridge";
+
+        /// <summary>
+        /// The groove keyword.
+        /// </summary>
+        public static readonly String Groove = "groove";
+
+        /// <summary>
+        /// The fixed keyword.
+        /// </summary>
+        public static readonly String Fixed = "fixed";
+
+        /// <summary>
+        /// The local keyword.
+        /// </summary>
+        public static readonly String Local = "local";
+
+        /// <summary>
+        /// The scroll keyword.
+        /// </summary>
+        public static readonly String Scroll = "scroll";
+
+        /// <summary>
+        /// The no-repeat keyword.
+        /// </summary>
+        public static readonly String NoRepeat = "no-repeat";
+
+        /// <summary>
+        /// The repeat keyword.
+        /// </summary>
+        public static readonly String Repeat = "repeat";
+
+        /// <summary>
+        /// The repeat-x keyword.
+        /// </summary>
+        public static readonly String RepeatX = "repeat-x";
+
+        /// <summary>
+        /// The repeat-y keyword.
+        /// </summary>
+        public static readonly String RepeatY = "repeat-y";
+
+        /// <summary>
+        /// The round keyword.
+        /// </summary>
+        public static readonly String Round = "round";
+
+        /// <summary>
+        /// The span keyword.
+        /// </summary>
+        public static readonly String Span = "span";
+
+        /// <summary>
+        /// The space keyword.
+        /// </summary>
+        public static readonly String Space = "space";
+
+        /// <summary>
+        /// The space-around keyword.
+        /// </summary>
+        public static readonly String SpaceAround = "space-around";
+
+        /// <summary>
+        /// The space-between keyword.
+        /// </summary>
+        public static readonly String SpaceBetween = "space-between";
+
+        /// <summary>
+        /// The stretch keyword.
+        /// </summary>
+        public static readonly String Stretch = "stretch";
+
+        /// <summary>
+        /// The compact keyword.
+        /// </summary>
+        public static readonly String Compact = "compact";
+
+        /// <summary>
+        /// The line keyword.
+        /// </summary>
+        public static readonly String Line = "line";
+
+        /// <summary>
+        /// The inline keyword.
+        /// </summary>
+        public static readonly String Inline = "inline";
+
+        /// <summary>
+        /// The block keyword.
+        /// </summary>
+        public static readonly String Block = "block";
+
+        /// <summary>
+        /// The inline-block keyword.
+        /// </summary>
+        public static readonly String InlineBlock = "inline-block";
+
+        /// <summary>
+        /// The list-item keyword.
+        /// </summary>
+        public static readonly String ListItem = "list-item";
+
+        /// <summary>
+        /// The inline-table keyword.
+        /// </summary>
+        public static readonly String InlineTable = "inline-table";
+
+        /// <summary>
+        /// The table keyword.
+        /// </summary>
+        public static readonly String Table = "table";
+
+        /// <summary>
+        /// The table-caption keyword.
+        /// </summary>
+        public static readonly String TableCaption = "table-caption";
+
+        /// <summary>
+        /// The table-cell keyword.
+        /// </summary>
+        public static readonly String TableCell = "table-cell";
+
+        /// <summary>
+        /// The table-column keyword.
+        /// </summary>
+        public static readonly String TableColumn = "table-column";
+
+        /// <summary>
+        /// The table-column-group keyword.
+        /// </summary>
+        public static readonly String TableColumnGroup = "table-column-group";
+
+        /// <summary>
+        /// The table-footer-group keyword.
+        /// </summary>
+        public static readonly String TableFooterGroup = "table-footer-group";
+
+        /// <summary>
+        /// The table-header-group keyword.
+        /// </summary>
+        public static readonly String TableHeaderGroup = "table-header-group";
+
+        /// <summary>
+        /// The table-row keyword.
+        /// </summary>
+        public static readonly String TableRow = "table-row";
+
+        /// <summary>
+        /// The table-row-group keyword.
+        /// </summary>
+        public static readonly String TableRowGroup = "table-row-group";
+
+        /// <summary>
+        /// The flex keyword.
+        /// </summary>
+        public static readonly String Flex = "flex";
+
+        /// <summary>
+        /// The inline-flex keyword.
+        /// </summary>
+        public static readonly String InlineFlex = "inline-flex";
+
+        /// <summary>
+        /// The grid keyword.
+        /// </summary>
+        public static readonly String Grid = "grid";
+
+        /// <summary>
+        /// The inline-grid keyword.
+        /// </summary>
+        public static readonly String InlineGrid = "inline-grid";
+
+        /// <summary>
+        /// The visible keyword.
+        /// </summary>
+        public static readonly String Visible = "visible";
+
+        /// <summary>
+        /// The hidden keyword.
+        /// </summary>
+        public static readonly String Hidden = "hidden";
+
+        /// <summary>
+        /// The collapse keyword.
+        /// </summary>
+        public static readonly String Collapse = "collapse";
+
+        /// <summary>
+        /// The static keyword.
+        /// </summary>
+        public static readonly String Static = "static";
+
+        /// <summary>
+        /// The relative keyword.
+        /// </summary>
+        public static readonly String Relative = "relative";
+
+        /// <summary>
+        /// The absolute keyword.
+        /// </summary>
+        public static readonly String Absolute = "absolute";
+
+        /// <summary>
+        /// The sticky keyword.
+        /// </summary>
+        public static readonly String Sticky = "sticky";
+
+        /// <summary>
+        /// The serif keyword.
+        /// </summary>
+        public static readonly String Serif = "serif";
+
+        /// <summary>
+        /// The sans-serif keyword.
+        /// </summary>
+        public static readonly String SansSerif = "sans-serif";
+
+        /// <summary>
+        /// The monospace keyword.
+        /// </summary>
+        public static readonly String Monospace = "monospace";
+
+        /// <summary>
+        /// The cursive keyword.
+        /// </summary>
+        public static readonly String Cursive = "cursive";
+
+        /// <summary>
+        /// The fantasy keyword.
+        /// </summary>
+        public static readonly String Fantasy = "fantasy";
+
+        /// <summary>
+        /// The caption keyword.
+        /// </summary>
+        public static readonly String Caption = "caption";
+
+        /// <summary>
+        /// The icon keyword.
+        /// </summary>
+        public static readonly String Icon = "icon";
+
+        /// <summary>
+        /// The menu keyword.
+        /// </summary>
+        public static readonly String Menu = "menu";
+
+        /// <summary>
+        /// The message-box keyword.
+        /// </summary>
+        public static readonly String MessageBox = "message-box";
+
+        /// <summary>
+        /// The small-caption keyword.
+        /// </summary>
+        public static readonly String SmallCaption = "small-caption";
+
+        /// <summary>
+        /// The status-bar keyword.
+        /// </summary>
+        public static readonly String StatusBar = "status-bar";
+
+        /// <summary>
+        /// The italic keyword.
+        /// </summary>
+        public static readonly String Italic = "italic";
+
+        /// <summary>
+        /// The oblique keyword.
+        /// </summary>
+        public static readonly String Oblique = "oblique";
+
+        /// <summary>
+        /// The ultra-condensed keyword.
+        /// </summary>
+        public static readonly String UltraCondensed = "ultra-condensed";
+
+        /// <summary>
+        /// The extra-condensed keyword.
+        /// </summary>
+        public static readonly String ExtraCondensed = "extra-condensed";
+
+        /// <summary>
+        /// The condensed keyword.
+        /// </summary>
+        public static readonly String Condensed = "condensed";
+
+        /// <summary>
+        /// The semi-condensed keyword.
+        /// </summary>
+        public static readonly String SemiCondensed = "semi-condensed";
+
+        /// <summary>
+        /// The semi-expanded keyword.
+        /// </summary>
+        public static readonly String SemiExpanded = "semi-expanded";
+
+        /// <summary>
+        /// The expanded keyword.
+        /// </summary>
+        public static readonly String Expanded = "expanded";
+
+        /// <summary>
+        /// The extra-expanded keyword.
+        /// </summary>
+        public static readonly String ExtraExpanded = "extra-expanded";
+
+        /// <summary>
+        /// The ultra-expanded keyword.
+        /// </summary>
+        public static readonly String UltraExpanded = "ultra-expanded";
+
+        /// <summary>
+        /// The bold keyword.
+        /// </summary>
+        public static readonly String Bold = "bold";
+
+        /// <summary>
+        /// The bolder keyword.
+        /// </summary>
+        public static readonly String Bolder = "bolder";
+
+        /// <summary>
+        /// The lighter keyword.
+        /// </summary>
+        public static readonly String Lighter = "lighter";
+
+        /// <summary>
+        /// The center keyword.
+        /// </summary>
+        public static readonly String Center = "center";
+
+        /// <summary>
+        /// The flex-start keyword.
+        /// </summary>
+        public static readonly String FlexStart = "flex-start";
+
+        /// <summary>
+        /// The flex-end keyword.
+        /// </summary>
+        public static readonly String FlexEnd = "flex-end";
+
+        /// <summary>
+        /// The justify keyword.
+        /// </summary>
+        public static readonly String Justify = "justify";
+
+        /// <summary>
+        /// The justify-all keyword.
+        /// </summary>
+        public static readonly String JustifyAll = "justify-all";
+
+        /// <summary>
+        /// The underline keyword.
+        /// </summary>
+        public static readonly String Underline = "underline";
+
+        /// <summary>
+        /// The overline keyword.
+        /// </summary>
+        public static readonly String Overline = "overline";
+
+        /// <summary>
+        /// The line-through keyword.
+        /// </summary>
+        public static readonly String LineThrough = "line-through";
+
+        /// <summary>
+        /// The blink keyword.
+        /// </summary>
+        public static readonly String Blink = "blink";
+
+        /// <summary>
+        /// The solid keyword.
+        /// </summary>
+        public static readonly String Solid = "solid";
+
+        /// <summary>
+        /// The double keyword.
+        /// </summary>
+        public static readonly String Double = "double";
+
+        /// <summary>
+        /// The dotted keyword.
+        /// </summary>
+        public static readonly String Dotted = "dotted";
+
+        /// <summary>
+        /// The dashed keyword.
+        /// </summary>
+        public static readonly String Dashed = "dashed";
+
+        /// <summary>
+        /// The wavy keyword.
+        /// </summary>
+        public static readonly String Wavy = "wavy";
+
+        /// <summary>
+        /// The capitalize keyword.
+        /// </summary>
+        public static readonly String Capitalize = "capitalize";
+
+        /// <summary>
+        /// The uppercase keyword.
+        /// </summary>
+        public static readonly String Uppercase = "uppercase";
+
+        /// <summary>
+        /// The lowercase keyword.
+        /// </summary>
+        public static readonly String Lowercase = "lowercase";
+
+        /// <summary>
+        /// The full-width keyword.
+        /// </summary>
+        public static readonly String FullWidth = "full-width";
+
+        /// <summary>
+        /// The baseline keyword.
+        /// </summary>
+        public static readonly String Baseline = "baseline";
+
+        /// <summary>
+        /// The sub keyword.
+        /// </summary>
+        public static readonly String Sub = "sub";
+
+        /// <summary>
+        /// The super keyword.
+        /// </summary>
+        public static readonly String Super = "super";
+
+        /// <summary>
+        /// The text-top keyword.
+        /// </summary>
+        public static readonly String TextTop = "text-top";
+
+        /// <summary>
+        /// The text-bottom keyword.
+        /// </summary>
+        public static readonly String TextBottom = "text-bottom";
+
+        /// <summary>
+        /// The middle keyword.
+        /// </summary>
+        public static readonly String Middle = "middle";
+
+        /// <summary>
+        /// The top keyword.
+        /// </summary>
+        public static readonly String Top = "top";
+
+        /// <summary>
+        /// The bottom keyword.
+        /// </summary>
+        public static readonly String Bottom = "bottom";
+
+        /// <summary>
+        /// The open-quote keyword.
+        /// </summary>
+        public static readonly String OpenQuote = "open-quote";
+
+        /// <summary>
+        /// The no-open-quote keyword.
+        /// </summary>
+        public static readonly String NoOpenQuote = "no-open-quote";
+
+        /// <summary>
+        /// The close-quote keyword.
+        /// </summary>
+        public static readonly String CloseQuote = "close-quote";
+
+        /// <summary>
+        /// The no-close-quote keyword.
+        /// </summary>
+        public static readonly String NoCloseQuote = "no-close-quote";
+
+        /// <summary>
+        /// The embed keyword.
+        /// </summary>
+        public static readonly String Embed = "embed";
+
+        /// <summary>
+        /// The economy keyword (print-color-adjust).
+        /// </summary>
+        public static readonly String Economy = "economy";
+
+        /// <summary>
+        /// The exact keyword (print-color-adjust).
+        /// </summary>
+        public static readonly String Exact = "exact";
+
+        /// <summary>
+        /// The isolate keyword.
+        /// </summary>
+        public static readonly String Isolate = "isolate";
+
+        /// <summary>
+        /// The isolate-override keyword.
+        /// </summary>
+        public static readonly String IsolateOverride = "isolate-override";
+
+        /// <summary>
+        /// The bidi-override keyword.
+        /// </summary>
+        public static readonly String BidiOverride = "bidi-override";
+
+        /// <summary>
+        /// The plaintext keyword.
+        /// </summary>
+        public static readonly String Plaintext = "plaintext";
+
+        /// <summary>
+        /// The default keyword.
+        /// </summary>
+        public static readonly String Default = "default";
+
+        /// <summary>
+        /// The context-menu keyword.
+        /// </summary>
+        public static readonly String ContextMenu = "context-menu";
+
+        /// <summary>
+        /// The help keyword.
+        /// </summary>
+        public static readonly String Help = "help";
+
+        /// <summary>
+        /// The pointer keyword.
+        /// </summary>
+        public static readonly String Pointer = "pointer";
+
+        /// <summary>
+        /// The progress keyword.
+        /// </summary>
+        public static readonly String Progress = "progress";
+
+        /// <summary>
+        /// The wait keyword.
+        /// </summary>
+        public static readonly String Wait = "wait";
+
+        /// <summary>
+        /// The cell keyword.
+        /// </summary>
+        public static readonly String Cell = "cell";
+
+        /// <summary>
+        /// The crosshair keyword.
+        /// </summary>
+        public static readonly String Crosshair = "crosshair";
+
+        /// <summary>
+        /// The text keyword.
+        /// </summary>
+        public static readonly String Text = "text";
+
+        /// <summary>
+        /// The vertical-text keyword.
+        /// </summary>
+        public static readonly String VerticalText = "vertical-text";
+
+        /// <summary>
+        /// The alias keyword.
+        /// </summary>
+        public static readonly String Alias = "alias";
+
+        /// <summary>
+        /// The copy keyword.
+        /// </summary>
+        public static readonly String Copy = "copy";
+
+        /// <summary>
+        /// The move keyword.
+        /// </summary>
+        public static readonly String Move = "move";
+
+        /// <summary>
+        /// The no-drop keyword.
+        /// </summary>
+        public static readonly String NoDrop = "no-drop";
+
+        /// <summary>
+        /// The not-allowed keyword.
+        /// </summary>
+        public static readonly String NotAllowed = "not-allowed";
+
+        /// <summary>
+        /// The e-resize keyword.
+        /// </summary>
+        public static readonly String EastResize = "e-resize";
+
+        /// <summary>
+        /// The n-resize keyword.
+        /// </summary>
+        public static readonly String NorthResize = "n-resize";
+
+        /// <summary>
+        /// The ne-resize keyword.
+        /// </summary>
+        public static readonly String NorthEastResize = "ne-resize";
+
+        /// <summary>
+        /// The nw-resize keyword.
+        /// </summary>
+        public static readonly String NorthWestResize = "nw-resize";
+
+        /// <summary>
+        /// The s-resize keyword.
+        /// </summary>
+        public static readonly String SouthResize = "s-resize";
+
+        /// <summary>
+        /// The se-resize keyword.
+        /// </summary>
+        public static readonly String SouthEastResize = "se-resize";
+
+        /// <summary>
+        /// The sw-resize keyword.
+        /// </summary>
+        public static readonly String SouthWestResize = "sw-resize";
+
+        /// <summary>
+        /// The w-resize keyword.
+        /// </summary>
+        public static readonly String WestResize = "w-resize";
+
+        /// <summary>
+        /// The ew-resize keyword.
+        /// </summary>
+        public static readonly String EastWestResize = "ew-resize";
+
+        /// <summary>
+        /// The ns-resize keyword.
+        /// </summary>
+        public static readonly String NorthSouthResize = "ns-resize";
+
+        /// <summary>
+        /// The nesw-resize keyword.
+        /// </summary>
+        public static readonly String NorthEastSouthWestResize = "nesw-resize";
+
+        /// <summary>
+        /// The nwse-resize keyword.
+        /// </summary>
+        public static readonly String NorthWestSouthEastResize = "nwse-resize";
+
+        /// <summary>
+        /// The col-resize keyword.
+        /// </summary>
+        public static readonly String ColResize = "col-resize";
+
+        /// <summary>
+        /// The row-resize keyword.
+        /// </summary>
+        public static readonly String RowResize = "row-resize";
+
+        /// <summary>
+        /// The all-scroll keyword.
+        /// </summary>
+        public static readonly String AllScroll = "all-scroll";
+
+        /// <summary>
+        /// The zoom-in keyword.
+        /// </summary>
+        public static readonly String ZoomIn = "zoom-in";
+
+        /// <summary>
+        /// The zoom-out keyword.
+        /// </summary>
+        public static readonly String ZoomOut = "zoom-out";
+
+        /// <summary>
+        /// The grab keyword.
+        /// </summary>
+        public static readonly String Grab = "grab";
+
+        /// <summary>
+        /// The grabbing keyword.
+        /// </summary>
+        public static readonly String Grabbing = "grabbing";
+
+        /// <summary>
+        /// The thin keyword.
+        /// </summary>
+        public static readonly String Thin = "thin";
+
+        /// <summary>
+        /// The medium keyword.
+        /// </summary>
+        public static readonly String Medium = "medium";
+
+        /// <summary>
+        /// The thick keyword.
+        /// </summary>
+        public static readonly String Thick = "thick";
+
+        /// <summary>
+        /// The inside keyword.
+        /// </summary>
+        public static readonly String Inside = "inside";
+
+        /// <summary>
+        /// The outside keyword.
+        /// </summary>
+        public static readonly String Outside = "outside";
+
+        /// <summary>
+        /// The border-box keyword.
+        /// </summary>
+        public static readonly String BorderBox = "border-box";
+
+        /// <summary>
+        /// The padding-box keyword.
+        /// </summary>
+        public static readonly String PaddingBox = "padding-box";
+
+        /// <summary>
+        /// The content-box keyword.
+        /// </summary>
+        public static readonly String ContentBox = "content-box";
+
+        /// <summary>
+        /// The margin-box keyword.
+        /// </summary>
+        public static readonly String MarginBox = "margin-box";
+
+        /// <summary>
+        /// The reverse keyword.
+        /// </summary>
+        public static readonly String Reverse = "reverse";
+
+        /// <summary>
+        /// The alternate keyword.
+        /// </summary>
+        public static readonly String Alternate = "alternate";
+
+        /// <summary>
+        /// The alternate-reverse keyword.
+        /// </summary>
+        public static readonly String AlternateReverse = "alternate-reverse";
+
+        /// <summary>
+        /// The ease keyword.
+        /// </summary>
+        public static readonly String Ease = "ease";
+
+        /// <summary>
+        /// The ease-in keyword.
+        /// </summary>
+        public static readonly String EaseIn = "ease-in";
+
+        /// <summary>
+        /// The ease-out keyword.
+        /// </summary>
+        public static readonly String EaseOut = "ease-out";
+
+        /// <summary>
+        /// The ease-in-out keyword.
+        /// </summary>
+        public static readonly String EaseInOut = "ease-in-out";
+
+        /// <summary>
+        /// The linear keyword.
+        /// </summary>
+        public static readonly String Linear = "linear";
+
+        /// <summary>
+        /// The step-start keyword.
+        /// </summary>
+        public static readonly String StepStart = "step-start";
+
+        /// <summary>
+        /// The step-end keyword.
+        /// </summary>
+        public static readonly String StepEnd = "step-end";
+
+        /// <summary>
+        /// The disc keyword.
+        /// </summary>
+        public static readonly String Disc = "disc";
+
+        /// <summary>
+        /// The circle keyword.
+        /// </summary>
+        public static readonly String Circle = "circle";
+
+        /// <summary>
+        /// The square keyword.
+        /// </summary>
+        public static readonly String Square = "square";
+
+        /// <summary>
+        /// The decimal keyword.
+        /// </summary>
+        public static readonly String Decimal = "decimal";
+
+        /// <summary>
+        /// The decimal-leading-zero keyword.
+        /// </summary>
+        public static readonly String DecimalLeadingZero = "decimal-leading-zero";
+
+        /// <summary>
+        /// The lower-roman keyword.
+        /// </summary>
+        public static readonly String LowerRoman = "lower-roman";
+
+        /// <summary>
+        /// The upper-roman keyword.
+        /// </summary>
+        public static readonly String UpperRoman = "upper-roman";
+
+        /// <summary>
+        /// The lower-greek keyword.
+        /// </summary>
+        public static readonly String LowerGreek = "lower-greek";
+
+        /// <summary>
+        /// The lower-latin keyword.
+        /// </summary>
+        public static readonly String LowerLatin = "lower-latin";
+
+        /// <summary>
+        /// The upper-latin keyword.
+        /// </summary>
+        public static readonly String UpperLatin = "upper-latin";
+
+        /// <summary>
+        /// The malayalam keyword.
+        /// </summary>
+        public static readonly String Malayalam = "malayalam";
+
+        /// <summary>
+        /// The myanmar keyword.
+        /// </summary>
+        public static readonly String Myanmar = "myanmar";
+
+        /// <summary>
+        /// The mongolian keyword.
+        /// </summary>
+        public static readonly String Mongolian = "mongolian";
+
+        /// <summary>
+        /// The oriya keyword.
+        /// </summary>
+        public static readonly String Oriya = "oriya";
+
+        /// <summary>
+        /// The persian keyword.
+        /// </summary>
+        public static readonly String Persian = "persian";
+
+        /// <summary>
+        /// The tamil keyword.
+        /// </summary>
+        public static readonly String Tamil = "tamil";
+
+        /// <summary>
+        /// The thai keyword.
+        /// </summary>
+        public static readonly String Thai = "thai";
+
+        /// <summary>
+        /// The telugu keyword.
+        /// </summary>
+        public static readonly String Telugu = "telugu";
+
+        /// <summary>
+        /// The lao keyword.
+        /// </summary>
+        public static readonly String Lao = "lao";
+
+        /// <summary>
+        /// The tibetan keyword.
+        /// </summary>
+        public static readonly String Tibetan = "tibetan";
+
+        /// <summary>
+        /// The trad-chinese-formal keyword.
+        /// </summary>
+        public static readonly String TradChineseFormal = "trad-chinese-formal";
+
+        /// <summary>
+        /// The trad-chinese-informal keyword.
+        /// </summary>
+        public static readonly String TradChineseInformal = "trad-chinese-informal";
+
+        /// <summary>
+        /// The armenian keyword.
+        /// </summary>
+        public static readonly String Armenian = "armenian";
+
+        /// <summary>
+        /// The lower-armenian keyword.
+        /// </summary>
+        public static readonly String LowerArmenian = "lower-armenian";
+
+        /// <summary>
+        /// The upper-armenian keyword.
+        /// </summary>
+        public static readonly String UpperArmenian = "upper-armenian";
+
+        /// <summary>
+        /// The georgian keyword.
+        /// </summary>
+        public static readonly String Georgian = "georgian";
+
+        /// <summary>
+        /// The kannada keyword.
+        /// </summary>
+        public static readonly String Kannada = "kannada";
+
+        /// <summary>
+        /// The disclosure-open keyword.
+        /// </summary>
+        public static readonly String DisclosureOpen = "disclosure-open";
+
+        /// <summary>
+        /// The disclosure-closed keyword.
+        /// </summary>
+        public static readonly String DisclosureClosed = "disclosure-closed";
+
+        /// <summary>
+        /// The lower-alpha keyword.
+        /// </summary>
+        public static readonly String LowerAlpha = "lower-alpha";
+
+        /// <summary>
+        /// The upper-alpha keyword.
+        /// </summary>
+        public static readonly String UpperAlpha = "upper-alpha";
+
+        /// <summary>
+        /// The xx-small keyword.
+        /// </summary>
+        public static readonly String XxSmall = "xx-small";
+
+        /// <summary>
+        /// The x-small keyword.
+        /// </summary>
+        public static readonly String XSmall = "x-small";
+
+        /// <summary>
+        /// The small keyword.
+        /// </summary>
+        public static readonly String Small = "small";
+
+        /// <summary>
+        /// The large keyword.
+        /// </summary>
+        public static readonly String Large = "large";
+
+        /// <summary>
+        /// The x-large keyword.
+        /// </summary>
+        public static readonly String XLarge = "x-large";
+
+        /// <summary>
+        /// The xx-large keyword.
+        /// </summary>
+        public static readonly String XxLarge = "xx-large";
+
+        /// <summary>
+        /// The xxx-large keyword.
+        /// </summary>
+        public static readonly String XxxLarge = "xxx-large";
+
+        /// <summary>
+        /// The larger keyword.
+        /// </summary>
+        public static readonly String Larger = "larger";
+
+        /// <summary>
+        /// The smaller keyword.
+        /// </summary>
+        public static readonly String Smaller = "smaller";
+
+        /// <summary>
+        /// The and keyword.
+        /// </summary>
+        public static readonly String And = "and";
+
+        /// <summary>
+        /// The or keyword.
+        /// </summary>
+        public static readonly String Or = "or";
+
+        /// <summary>
+        /// The not keyword.
+        /// </summary>
+        public static readonly String Not = "not";
+
+        /// <summary>
+        /// The only keyword.
+        /// </summary>
+        public static readonly String Only = "only";
+
+        /// <summary>
+        /// The show keyword.
+        /// </summary>
+        public static readonly String Show = "show";
+
+        /// <summary>
+        /// The hide keyword.
+        /// </summary>
+        public static readonly String Hide = "hide";
+
+        /// <summary>
+        /// The invert keyword.
+        /// </summary>
+        public static readonly String Invert = "invert";
+
+        /// <summary>
+        /// The flat keyword.
+        /// </summary>
+        public static readonly String Flat = "flat";
+
+        /// <summary>
+        /// The preserve-3d keyword.
+        /// </summary>
+        public static readonly String Preserve3d = "preserve-3d";
+
+        /// <summary>
+        /// The small-caps keyword.
+        /// </summary>
+        public static readonly String SmallCaps = "small-caps";
+
+        /// <summary>
+        /// The weight keyword (font-synthesis).
+        /// </summary>
+        public static readonly String Weight = "weight";
+
+        /// <summary>
+        /// The style keyword (font-synthesis, caption sides).
+        /// </summary>
+        public static readonly String Style = "style";
+
+        /// <summary>
+        /// The slice keyword.
+        /// </summary>
+        public static readonly String Slice = "slice";
+
+        /// <summary>
+        /// The clone keyword.
+        /// </summary>
+        public static readonly String Clone = "clone";
+
+        /// <summary>
+        /// The replace keyword.
+        /// </summary>
+        public static readonly String Replace = "replace";
+
+        /// <summary>
+        /// The running keyword.
+        /// </summary>
+        public static readonly String Running = "running";
+
+        /// <summary>
+        /// The paused keyword.
+        /// </summary>
+        public static readonly String Paused = "paused";
+
+        /// <summary>
+        /// The infinite keyword.
+        /// </summary>
+        public static readonly String Infinite = "infinite";
+
+        /// <summary>
+        /// The cover keyword.
+        /// </summary>
+        public static readonly String Cover = "cover";
+
+        /// <summary>
+        /// The contain keyword.
+        /// </summary>
+        public static readonly String Contain = "contain";
+
+        /// <summary>
+        /// The ltr keyword.
+        /// </summary>
+        public static readonly String Ltr = "ltr";
+
+        /// <summary>
+        /// The rtl keyword.
+        /// </summary>
+        public static readonly String Rtl = "rtl";
+
+        /// <summary>
+        /// The all keyword.
+        /// </summary>
+        public static readonly String All = "all";
+
+        /// <summary>
+        /// The balance keyword.
+        /// </summary>
+        public static readonly String Balance = "balance";
+
+        /// <summary>
+        /// The separate keyword.
+        /// </summary>
+        public static readonly String Separate = "separate";
+
+        /// <summary>
+        /// The match-parent keyword.
+        /// </summary>
+        public static readonly String MatchParent = "match-parent";
+
+        /// <summary>
+        /// The start keyword.
+        /// </summary>
+        public static readonly String Start = "start";
+
+        /// <summary>
+        /// The end keyword.
+        /// </summary>
+        public static readonly String End = "end";
+
+        /// <summary>
+        /// The fill keyword.
+        /// </summary>
+        public static readonly String Fill = "fill";
+
+        /// <summary>
+        /// The cjk-decimal keyword.
+        /// </summary>
+        public static readonly String CjkDecimal = "cjk-decimal";
+
+        /// <summary>
+        /// The cjk-earthly-branch keyword.
+        /// </summary>
+        public static readonly String CjkEarthlyBranch = "cjk-earthly-branch";
+
+        /// <summary>
+        /// The cjk-heavenly-stem keyword.
+        /// </summary>
+        public static readonly String CjkHeavenlyStem = "cjk-heavenly-stem";
+
+        /// <summary>
+        /// The cjk-ideographic keyword.
+        /// </summary>
+        public static readonly String CjkIdeographic = "cjk-ideographic";
+
+        /// <summary>
+        /// The bengali keyword.
+        /// </summary>
+        public static readonly String Bengali = "bengali";
+
+        /// <summary>
+        /// The cambodian keyword.
+        /// </summary>
+        public static readonly String Cambodian = "cambodian";
+
+        /// <summary>
+        /// The devanagari keyword.
+        /// </summary>
+        public static readonly String Devanagari = "devanagari";
+
+        /// <summary>
+        /// The ethiopic-numeric keyword.
+        /// </summary>
+        public static readonly String EthiopicNumeric = "ethiopic-numeric";
+
+        /// <summary>
+        /// The gurmukhi keyword.
+        /// </summary>
+        public static readonly String Gurmukhi = "gurmukhi";
+
+        /// <summary>
+        /// The gujarati keyword.
+        /// </summary>
+        public static readonly String Gujarati = "gujarati";
+
+        /// <summary>
+        /// The hebrew keyword.
+        /// </summary>
+        public static readonly String Hebrew = "hebrew";
+
+        /// <summary>
+        /// The hiragana keyword.
+        /// </summary>
+        public static readonly String Hiragana = "hiragana"; 
+
+        /// <summary>
+        /// The hiragana-iroha keyword.
+        /// </summary>
+        public static readonly String HiraganaIroha = "hiragana-iroha";
+
+        /// <summary>
+        /// The japanese-formal keyword.
+        /// </summary>
+        public static readonly String JapaneseFormal = "japanese-formal";
+
+        /// <summary>
+        /// The japanese-informal keyword.
+        /// </summary>
+        public static readonly String JapaneseInformal = "japanese-informal";
+
+        /// <summary>
+        /// The simp-chinese-informal keyword.
+        /// </summary>
+        public static readonly String SimpChineseInformal = "simp-chinese-informal";
+
+        /// <summary>
+        /// The simp-chinese-formal keyword.
+        /// </summary>
+        public static readonly String SimpChineseFormal = "simp-chinese-formal";
+
+        /// <summary>
+        /// The korean-hangul-formal keyword.
+        /// </summary>
+        public static readonly String KoreanHangulFormal = "korean-hangul-formal";
+
+        /// <summary>
+        /// The korean-hanja-formal keyword.
+        /// </summary>
+        public static readonly String KoreanHanjaFormal = "korean-hanja-formal";
+
+        /// <summary>
+        /// The korean-hanja-informal keyword.
+        /// </summary>
+        public static readonly String KoreanHanjaInformal = "korean-hanja-informal";
+
+        /// <summary>
+        /// The screen keyword.
+        /// </summary>
+        public static readonly String Screen = "screen";
+
+        /// <summary>
+        /// The print keyword.
+        /// </summary>
+        public static readonly String Print = "print";
+
+        /// <summary>
+        /// The speech keyword.
+        /// </summary>
+        public static readonly String Speech = "speech";
+
+        /// <summary>
+        /// The stylesheet keyword.
+        /// </summary>
+        public static readonly String StyleSheet = "stylesheet";
+
+        /// <summary>
+        /// The portrait keyword.
+        /// </summary>
+        public static readonly String Portrait = "portrait";
+
+        /// <summary>
+        /// The landscape keyword.
+        /// </summary>
+        public static readonly String Landscape = "landscape";
+
+        /// <summary>
+        /// The progressive keyword.
+        /// </summary>
+        public static readonly String Progressive = "progressive";
+
+        /// <summary>
+        /// The interlace keyword.
+        /// </summary>
+        public static readonly String Interlace = "interlace";
+
+        /// <summary>
+        /// The at keyword.
+        /// </summary>
+        public static readonly String At = "at";
+
+        /// <summary>
+        /// The color keyword.
+        /// </summary>
+        public static readonly String Color = "color";
+
+        /// <summary>
+        /// The color-burn keyword.
+        /// </summary>
+        public static readonly String ColorBurn = "color-burn";
+
+        /// <summary>
+        /// The color-dodge keyword.
+        /// </summary>
+        public static readonly String ColorDodge = "color-dodge";
+
+        /// <summary>
+        /// The darken keyword.
+        /// </summary>
+        public static readonly String Darken = "darken";
+
+        /// <summary>
+        /// The difference keyword.
+        /// </summary>
+        public static readonly String Difference = "difference";
+
+        /// <summary>
+        /// The exclusion keyword.
+        /// </summary>
+        public static readonly String Exclusion = "exclusion";
+
+        /// <summary>
+        /// The hard-light keyword.
+        /// </summary>
+        public static readonly String HardLight = "hard-light";
+
+        /// <summary>
+        /// The hue keyword.
+        /// </summary>
+        public static readonly String Hue = "hue";
+
+        /// <summary>
+        /// The lighten keyword.
+        /// </summary>
+        public static readonly String Lighten = "lighten";
+
+        /// <summary>
+        /// The luminosity keyword.
+        /// </summary>
+        public static readonly String Luminosity = "luminosity";
+
+        /// <summary>
+        /// The multiply keyword.
+        /// </summary>
+        public static readonly String Multiply = "multiply";
+
+        /// <summary>
+        /// The overlay keyword.
+        /// </summary>
+        public static readonly String Overlay = "overlay";
+
+        /// <summary>
+        /// The saturation keyword.
+        /// </summary>
+        public static readonly String Saturation = "saturation";
+
+        /// <summary>
+        /// The soft-light keyword.
+        /// </summary>
+        public static readonly String SoftLight = "soft-light";
+
+        /// <summary>
+        /// The ellipse keyword.
+        /// </summary>
+        public static readonly String Ellipse = "ellipse";
+
+        /// <summary>
+        /// The closest-side keyword.
+        /// </summary>
+        public static readonly String ClosestSide = "closest-side";
+
+        /// <summary>
+        /// The closest-corner keyword.
+        /// </summary>
+        public static readonly String ClosestCorner = "closest-corner";
+
+        /// <summary>
+        /// The farthest-side keyword.
+        /// </summary>
+        public static readonly String FarthestSide = "farthest-side";
+
+        /// <summary>
+        /// The farthest-corner keyword.
+        /// </summary>
+        public static readonly String FarthestCorner = "farthest-corner";
+
+        /// <summary>
+        /// The slow keyword.
+        /// </summary>
+        public static readonly String Slow = "slow";
+
+        /// <summary>
+        /// The enabled keyword.
+        /// </summary>
+        public static readonly String Enabled = "enabled";
+
+        /// <summary>
+        /// The disabled keyword.
+        /// </summary>
+        public static readonly String Disabled = "disabled";
+
+        /// <summary>
+        /// The initial-only keyword.
+        /// </summary>
+        public static readonly String InitialOnly = "initial-only";
+
+        /// <summary>
+        /// The coarse keyword.
+        /// </summary>
+        public static readonly String Coarse = "coarse";
+
+        /// <summary>
+        /// The fine keyword.
+        /// </summary>
+        public static readonly String Fine = "fine";
+
+        /// <summary>
+        /// The on-demand keyword.
+        /// </summary>
+        public static readonly String OnDemand = "on-demand";
+
+        /// <summary>
+        /// The over keyword.
+        /// </summary>
+        public static readonly String Over = "over";
+
+        /// <summary>
+        /// The under keyword.
+        /// </summary>
+        public static readonly String Under = "under";
+
+        /// <summary>
+        /// The hover keyword.
+        /// </summary>
+        public static readonly String Hover = "hover";
+
+        /// <summary>
+        /// The scale-down keyword.
+        /// </summary>
+        public static readonly String ScaleDown = "scale-down";
+
+        /// <summary>
+        /// The currentColor keyword.
+        /// </summary>
+        public static readonly String CurrentColor = "currentColor";
+
+        /// <summary>
+        /// The left top keyword.
+        /// </summary>
+        public static readonly String LeftTop = "left top";
+
+        /// <summary>
+        /// The right top keyword.
+        /// </summary>
+        public static readonly String RightTop = "right top";
+
+        /// <summary>
+        /// The left bottom keyword.
+        /// </summary>
+        public static readonly String LeftBottom = "left bottom";
+
+        /// <summary>
+        /// The right bottom keyword.
+        /// </summary>
+        public static readonly String RightBottom = "right bottom";
+
+        /// <summary>
+        /// The stroke keyword.
+        /// </summary>
+        public static readonly String Stroke = "stroke";
+
+        /// <summary>
+        /// The painted keyword.
+        /// </summary>
+        public static readonly String Painted = "painted";
+
+        /// <summary>
+        /// The visibleStroke keyword.
+        /// </summary>
+        public static readonly String VisibleStroke = "visibleStroke";
+
+        /// <summary>
+        /// The visibleFill keyword.
+        /// </summary>
+        public static readonly String VisibleFill = "visibleFill";
+
+        /// <summary>
+        /// The visiblePainted keyword.
+        /// </summary>
+        public static readonly String VisiblePainted = "visiblePainted";
+
+        /// <summary>
+        /// The open keyword.
+        /// </summary>
+        public static readonly String Open = "open";
+
+        /// <summary>
+        /// The closed keyword.
+        /// </summary>
+        public static readonly String Closed = "closed";
+
+        /// <summary>
+        /// The fit-content keyword.
+        /// </summary>
+        public static readonly String FitContent = "fit-content";
+
+        /// <summary>
+        /// The x keyword.
+        /// </summary>
+        public static readonly String X = "x";
+
+        /// <summary>
+        /// The y keyword.
+        /// </summary>
+        public static readonly String Y = "y";
+
+        /// <summary>
+        /// The proximity keyword.
+        /// </summary>
+        public static readonly String Proximity = "proximity";
+
+        /// <summary>
+        /// The mandatory keyword.
+        /// </summary>
+        public static readonly String Mandatory = "mandatory";
+
+        /// <summary>
+        /// The crisp-edges shape rendering value.
+        /// </summary>
+        public static readonly String CrispEdges = "crisp-edges";
+
+        /// <summary>
+        /// The geometric-precision shape rendering value.
+        /// </summary>
+        public static readonly String GeometricPrecision = "geometric-precision";
+
+        /// <summary>
+        /// The optimize-speed shape rendering value.
+        /// </summary>
+        public static readonly String OptimizeSpeed = "optimize-speed";
+
+        /// <summary>
+        /// The optimize-quality image-rendering value.
+        /// </summary>
+        public static readonly String OptimizeQuality = "optimize-quality";
+
+        /// <summary>
+        /// The own keyword for anchor-scope.
+        /// </summary>
+        public static readonly String Own = "own";
+
+        /// <summary>
+        /// The flip-block keyword for position-try-order.
+        /// </summary>
+        public static readonly String FlipBlock = "flip-block";
+
+        /// <summary>
+        /// The flip-inline keyword for position-try-order.
+        /// </summary>
+        public static readonly String FlipInline = "flip-inline";
+
+        /// <summary>
+        /// The flip-start keyword for position-try-order.
+        /// </summary>
+        public static readonly String FlipStart = "flip-start";
+
+        /// <summary>
+        /// The flip-end keyword for position-try-order.
+        /// </summary>
+        public static readonly String FlipEnd = "flip-end";
+
+        /// <summary>
+        /// The prefer-hidden keyword for position-visibility.
+        /// </summary>
+        public static readonly String PreferHidden = "prefer-hidden";
+
+        /// <summary>
+        /// The prefer-no-overflow keyword for position-visibility.
+        /// </summary>
+        public static readonly String PreferNoOverflow = "prefer-no-overflow";
+
+        /// <summary>
+        /// The self-start keyword for position-area.
+        /// </summary>
+        public static readonly String SelfStart = "self-start";
+
+        /// <summary>
+        /// The self-end keyword for position-area.
+        /// </summary>
+        public static readonly String SelfEnd = "self-end";
+
+        /// <summary>
+        /// The span-all keyword for position-area.
+        /// </summary>
+        public static readonly String SpanAll = "span-all";
+
+        /// <summary>
+        /// The anywhere keyword for line-break.
+        /// </summary>
+        public static readonly String Anywhere = "anywhere";
+
+        /// <summary>
+        /// The from-font keyword for text-decoration-thickness.
+        /// </summary>
+        public static readonly String FromFont = "from-font";
+
+        /// <summary>
+        /// The hanging keyword for initial-letter-align.
+        /// </summary>
+        public static readonly String Hanging = "hanging";
+
+        /// <summary>
+        /// The leading keyword for initial-letter-align.
+        /// </summary>
+        public static readonly String Leading = "leading";
+
+        /// <summary>
+        /// The loose keyword for line-break.
+        /// </summary>
+        public static readonly String Loose = "loose";
+
+        /// <summary>
+        /// The manual keyword for hyphens.
+        /// </summary>
+        public static readonly String Manual = "manual";
+
+        /// <summary>
+        /// The pretty keyword for text-wrap.
+        /// </summary>
+        public static readonly String Pretty = "pretty";
+
+        /// <summary>
+        /// The preserve keyword for white-space-collapse.
+        /// </summary>
+        public static readonly String Preserve = "preserve";
+
+        /// <summary>
+        /// The preserve-breaks keyword for white-space-collapse.
+        /// </summary>
+        public static readonly String PreserveBreaks = "preserve-breaks";
+
+        /// <summary>
+        /// The preserve-spaces keyword for white-space-collapse.
+        /// </summary>
+        public static readonly String PreserveSpaces = "preserve-spaces";
+
+        /// <summary>
+        /// The stable keyword for text-wrap.
+        /// </summary>
+        public static readonly String Stable = "stable";
+
+        /// <summary>
+        /// The strict keyword for line-break.
+        /// </summary>
+        public static readonly String Strict = "strict";
+
+        /// <summary>
+        /// The luminance keyword for mask-mode.
+        /// </summary>
+        public static readonly String Luminance = "luminance";
+
+        /// <summary>
+        /// The alpha keyword for mask-mode.
+        /// </summary>
+        public static readonly String AlphaKeyword = "alpha";
+
+        /// <summary>
+        /// The subtract keyword for mask-composite.
+        /// </summary>
+        public static readonly String Subtract = "subtract";
+
+        /// <summary>
+        /// The intersect keyword for mask-composite.
+        /// </summary>
+        public static readonly String Intersect = "intersect";
+
+        /// <summary>
+        /// The exclude keyword for mask-composite.
+        /// </summary>
+        public static readonly String Exclude = "exclude";
+
+        /// <summary>
+        /// The fill-box keyword for mask-clip and mask-origin.
+        /// </summary>
+        public static readonly String FillBox = "fill-box";
+
+        /// <summary>
+        /// The stroke-box keyword for mask-clip and mask-origin.
+        /// </summary>
+        public static readonly String StrokeBox = "stroke-box";
+
+        /// <summary>
+        /// The view-box keyword for mask-clip and mask-origin.
+        /// </summary>
+        public static readonly String ViewBox = "view-box";
+
+        /// <summary>
+        /// The paint keyword for contain property.
+        /// </summary>
+        public static readonly String Paint = "paint";
+
+        /// <summary>
+        /// The layout keyword for contain property.
+        /// </summary>
+        public static readonly String Layout = "layout";
+
+        /// <summary>
+        /// The scroll-position keyword for will-change property.
+        /// </summary>
+        public static readonly String ScrollPosition = "scroll-position";
+
+        /// <summary>
+        /// The contents keyword for will-change property.
+        /// </summary>
+        public static readonly String Contents = "contents";
+
+        /// <summary>
+        /// The transform keyword for will-change property.
+        /// </summary>
+        public static readonly String Transform = "transform";
+
+        /// <summary>
+        /// The opacity keyword for will-change property.
+        /// </summary>
+        public static readonly String Opacity = "opacity";
+
+        /// <summary>
+        /// The manipulation keyword for touch-action property.
+        /// </summary>
+        public static readonly String Manipulation = "manipulation";
+    }
+}

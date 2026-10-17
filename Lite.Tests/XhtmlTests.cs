@@ -35,6 +35,44 @@ public static class XhtmlTests
         Equal(new SKColor(0, 128, 0).ToString(), p.GetColor().ToString());
     }
 
+    [Test]
+    public static void XhtmlDoctype_ResolvesHtmlNamedCharacterReferences()
+    {
+        // HTML5 REC 9.2: an XHTML public identifier makes the XML parser act as if the DTD
+        // declared the named character references. Without it &nbsp; was a fatal
+        // undefined-entity error and the whole load faulted.
+        using var server = new XmlTestServer();
+        using var session = new BrowserSession();
+        var page = Parser.TraversePage(new NavigationRequest(server.BaseUrl + "/entities.xht"), 800, 600, session);
+        var p = Find(page.Root, "P");
+        True(p != null, "expected the p element in the layout tree");
+        Equal("a\u00A0b\u00D7c", p!.DisplayText);
+    }
+
+    [Test]
+    public static void XhtmlNamedEntities_SkipCdataCommentsAndRequireListedDoctype()
+    {
+        static string Rewrite(string xml) => System.Text.Encoding.Latin1.GetString(
+            XhtmlNamedEntities.Apply(System.Text.Encoding.Latin1.GetBytes(xml)));
+        const string doctype = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"x.dtd\">";
+        Equal(doctype + "<p a=\"&#xA0;\">&#xA0;&amp;<![CDATA[&nbsp;]]><!--&nbsp;--></p>",
+            Rewrite(doctype + "<p a=\"&nbsp;\">&nbsp;&amp;<![CDATA[&nbsp;]]><!--&nbsp;--></p>"));
+        // No listed public identifier: the reference stays an XML well-formedness error.
+        Equal("<!DOCTYPE html><p>&nbsp;</p>", Rewrite("<!DOCTYPE html><p>&nbsp;</p>"));
+        // An unknown name is left for the parser to reject.
+        Equal(doctype + "<p>&bogus;</p>", Rewrite(doctype + "<p>&bogus;</p>"));
+    }
+
+    [Test]
+    public static void MalformedXml_RendersParseErrorInsteadOfFaulting()
+    {
+        using var server = new XmlTestServer();
+        using var session = new BrowserSession();
+        var page = Parser.TraversePage(new NavigationRequest(server.BaseUrl + "/malformed.xht"), 800, 600, session);
+        True(Find(page.Root, "H1")?.DisplayText.Contains("XML Parsing Error") == true,
+            "a well-formedness error must render the parse-error page");
+    }
+
     private static LayoutNode? Find(LayoutNode node, string tagName)
     {
         if (node.TagName == tagName) return node;
@@ -61,6 +99,22 @@ public static class XhtmlTests
             _app.Run(async ctx =>
             {
                 ctx.Response.ContentType = "application/xhtml+xml; charset=utf-8";
+                if (ctx.Request.Path == "/entities.xht")
+                {
+                    await ctx.Response.WriteAsync(
+                        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                        "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" " +
+                        "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">" +
+                        "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>x</title></head>" +
+                        "<body><p>a&nbsp;b&times;c</p></body></html>");
+                    return;
+                }
+                if (ctx.Request.Path == "/malformed.xht")
+                {
+                    await ctx.Response.WriteAsync(
+                        "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p>unclosed</body></html>");
+                    return;
+                }
                 await ctx.Response.WriteAsync(
                     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>x</title><style>" +

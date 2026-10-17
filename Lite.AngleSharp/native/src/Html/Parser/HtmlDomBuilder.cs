@@ -284,6 +284,32 @@ namespace AngleSharp.Html.Parser
                     break;
                 }
 
+                // Lite patch 012: the reset's select step checks the entries below the
+                // select (up to, but not including, the stack root): a table element there
+                // switches to "in select in table", everything else to "in select". Upstream
+                // always selected "in select", so after </template> inside a select whose
+                // ancestors are table-related the following <caption> was ignored instead of
+                // closing the select and reprocessing through the in-table rules
+                // (template.dat: <td><select><template>…</template><caption>).
+                if (element.LocalName.Is(TagNames.Select))
+                {
+                    var tableBelow = false;
+
+                    for (var j = i - 1; j >= 1; j--)
+                    {
+                        if (_openElements[j].LocalName.Is(TagNames.Table))
+                        {
+                            tableBelow = true;
+                            break;
+                        }
+                    }
+
+                    _currentMode = tableBelow
+                        ? HtmlTreeMode.InSelectInTable
+                        : HtmlTreeMode.InSelect;
+                    break;
+                }
+
                 var mode = element.SelectMode(last, _templateModes);
 
                 if (mode.HasValue)
@@ -1264,6 +1290,13 @@ namespace AngleSharp.Html.Parser
                 // (menuitem-element.dat, 11 cases). Param/Source/Track remain void.
                 if (tagName.Is(TagNames.MenuItem))
                 {
+                    // Lite patch 011: the "any other start tag" rule reconstructs the active
+                    // formatting elements first. A formatting element that an earlier </p>
+                    // popped from the open-element stack (while it stayed in the active
+                    // formatting list) must be re-opened as a clone before the new element
+                    // inserts, so <p><b></p><menuitem> nests <menuitem> inside the cloned
+                    // <b> (menuitem-element.dat) instead of directly into body.
+                    ReconstructFormatting();
                     AddElement(ref tag);
                 }
                 else

@@ -61,7 +61,7 @@ internal static class WptRefTestRunner
             return Result(false, "No reference path passed");
         }
         catch (TimeoutException ex) { return new(WptRunner.Cat.Timeout, ex.Message, 0, 0, Artifacts: artifacts); }
-        catch (Exception ex) { return new(WptRunner.Cat.Crash, ex.Message, 0, 0, Artifacts: artifacts); }
+        catch (Exception ex) { return new(WptRunner.Cat.Crash, WptVisualPage.CrashDetail(ex), 0, 0, Artifacts: artifacts); }
         finally { foreach (var image in images.Values) image.Dispose(); }
 
         WptRunner.RunResult Result(bool pass, string detail) => new(pass ? WptRunner.Cat.Pass : WptRunner.Cat.Fail, detail, 1,

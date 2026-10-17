@@ -19,7 +19,12 @@ internal static class Test262Execution
             return new("harness-error", string.Join("; ", meta.Errors.Append("Invalid execution metadata/mode")));
 
         using var runtime = new QuickJsRuntime();
-        runtime.SetCanBlock(meta.Flags.Contains("CanBlockIsTrue"));
+        // INTERPRETING.md: an unflagged test runs with either [[CanBlock]] value, so the
+        // adapter's main agent can block (as QuickJS's own run-test262 does) unless the test
+        // demands otherwise. The multi-agent helpers rely on this: safeBroadcast probes
+        // Atomics.wait on the main agent. The browser window agent's non-blocking main
+        // thread is a separate host obligation (es2020-host nonblocking-window-agent).
+        runtime.SetCanBlock(!meta.Flags.Contains("CanBlockIsFalse"));
         using var realm = runtime.CreateRealm();
         var loader = new Test262ModuleLoader(Path.GetDirectoryName(file)!,
             Path.Combine(sourceRoot ?? root, sourceRoot is null ? "test" : "supplemental"));

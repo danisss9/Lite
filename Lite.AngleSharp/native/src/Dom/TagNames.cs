@@ -937,9 +937,14 @@ namespace AngleSharp.Dom
             Tbody, Tr, Thead, Th, Tfoot, Td
         };
 
+        // Lite patch 012: the 2014 in-select-in-table list adds col/colgroup, which
+        // upstream lacked. `table` is NOT in the 2014 list (its start tag would fall to
+        // "anything else" → in-select → ignore), but the browser-derived corpus closes the
+        // select and inserts it (tables01 #7/#17) — the corpus is the operative contract,
+        // as with patch 010's table-scope exception, so table stays.
         internal static readonly HashSet<StringOrMemory> AllTableSelects = new (OrdinalStringOrMemoryComparer.Instance)
         {
-            Tr, Table, Tbody, Tfoot, Thead, Td, Th, Caption
+            Tr, Table, Tbody, Tfoot, Thead, Td, Th, Caption, Col, Colgroup
         };
 
         internal static readonly HashSet<StringOrMemory> AllTableCells = new (OrdinalStringOrMemoryComparer.Instance)

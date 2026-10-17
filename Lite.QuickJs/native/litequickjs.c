@@ -3,6 +3,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+#include <stdatomic.h>
+#include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #ifdef _WIN32
 #define LITE_API __declspec(dllexport)
@@ -22,7 +28,10 @@ typedef void (*LiteReleaseCallback)(char *);
 typedef void (*LiteRejectionCallback)(JSContext *, LiteValue *, LiteValue *, int);
 typedef int (*LiteInterruptCallback)(void);
 
+typedef struct LiteAgentHub LiteAgentHub;
+
 typedef struct LiteRuntimeState {
+    LiteAgentHub *agent_hub;
     LiteHostCallback callback;
     LiteNormalizeCallback normalize;
     LiteModuleSourceCallback module_source;
@@ -45,6 +54,415 @@ static LiteValue *lite_wrap(JSContext *context, JSValue value) {
     return result;
 }
 
+/* SharedArrayBuffer memory lives outside any one JS heap and is reference
+ * counted, so a buffer can be shared by several runtimes (Test262 agents, and
+ * later workers) and outlive the runtime that allocated it. The 16-byte header
+ * keeps the payload aligned for 64-bit atomics. */
+typedef struct LiteSabHeader {
+    _Atomic(int) ref_count;
+    int padding[3];
+} LiteSabHeader;
+
+static void *lite_sab_alloc(void *opaque, size_t size) {
+    (void)opaque;
+    LiteSabHeader *header = malloc(sizeof(LiteSabHeader) + size);
+    if (!header) return NULL;
+    atomic_init(&header->ref_count, 1);
+    return header + 1;
+}
+
+static void lite_sab_free(void *opaque, void *ptr) {
+    (void)opaque;
+    LiteSabHeader *header = (LiteSabHeader *)ptr - 1;
+    if (atomic_fetch_sub(&header->ref_count, 1) == 1) free(header);
+}
+
+static void lite_sab_dup(void *opaque, void *ptr) {
+    (void)opaque;
+    LiteSabHeader *header = (LiteSabHeader *)ptr - 1;
+    atomic_fetch_add(&header->ref_count, 1);
+}
+
+static const JSSharedArrayBufferFunctions lite_sab_functions = {
+    lite_sab_alloc, lite_sab_free, lite_sab_dup, NULL
+};
+
+/* Test262 multi-agent host ($262.agent, INTERPRETING.md). Each agent is its own
+ * runtime on its own thread, allowed to block in Atomics.wait. The hub is shared
+ * by the main runtime and its agents and freed when the last of them lets go. */
+typedef struct LiteAgentReport {
+    struct LiteAgentReport *next;
+    char *text;
+} LiteAgentReport;
+
+typedef struct LiteAgent {
+    struct LiteAgent *next;
+    LiteAgentHub *hub;
+    pthread_t thread;
+    char *script;
+    JSValue broadcast_func;
+    int broadcast_pending;
+    uint8_t *broadcast_buf;
+    size_t broadcast_size;
+    int32_t broadcast_value;
+    int finished;
+} LiteAgent;
+
+struct LiteAgentHub {
+    _Atomic(int) refs;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    LiteAgent *agents;
+    LiteAgentReport *reports;
+    LiteAgentReport *reports_tail;
+};
+
+static LiteAgentHub *lite_hub_new(void) {
+    LiteAgentHub *hub = calloc(1, sizeof(*hub));
+    if (!hub) return NULL;
+    atomic_init(&hub->refs, 1);
+    pthread_mutex_init(&hub->mutex, NULL);
+    pthread_cond_init(&hub->cond, NULL);
+    return hub;
+}
+
+static void lite_hub_release(LiteAgentHub *hub) {
+    if (!hub || atomic_fetch_sub(&hub->refs, 1) != 1) return;
+    for (LiteAgent *agent = hub->agents, *next; agent; agent = next) {
+        next = agent->next;
+        free(agent->script);
+        free(agent);
+    }
+    for (LiteAgentReport *report = hub->reports, *next; report; report = next) {
+        next = report->next;
+        free(report->text);
+        free(report);
+    }
+    pthread_cond_destroy(&hub->cond);
+    pthread_mutex_destroy(&hub->mutex);
+    free(hub);
+}
+
+static LiteAgentHub *lite_hub_of(JSContext *context, int create) {
+    LiteRuntimeState *state = JS_GetRuntimeOpaque(JS_GetRuntime(context));
+    if (!state) return NULL;
+    if (!state->agent_hub && create) state->agent_hub = lite_hub_new();
+    return state->agent_hub;
+}
+
+static int64_t lite_monotonic_ms(void) {
+#ifdef _WIN32
+    LARGE_INTEGER frequency, counter;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&counter);
+    return (int64_t)(counter.QuadPart * 1000 / frequency.QuadPart);
+#else
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (int64_t)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+#endif
+}
+
+static void lite_sleep_ms(uint32_t ms) {
+#ifdef _WIN32
+    Sleep(ms);
+#else
+    struct timespec delay = { ms / 1000, (long)(ms % 1000) * 1000000 };
+    nanosleep(&delay, NULL);
+#endif
+}
+
+static int lite_any_broadcast_pending(LiteAgentHub *hub) {
+    for (LiteAgent *agent = hub->agents; agent; agent = agent->next)
+        if (agent->broadcast_pending && !agent->finished) return 1;
+    return 0;
+}
+
+static void lite_install_agent_api(JSContext *context, JSValue api);
+
+static JSValue lite_agent_eval_script(JSContext *context, JSValueConst this_value,
+                                      int argc, JSValueConst *argv) {
+    (void)this_value; (void)argc;
+    size_t length;
+    const char *source = JS_ToCStringLen(context, &length, argv[0]);
+    if (!source) return JS_EXCEPTION;
+    JSValue result = JS_Eval(context, source, length, "<Test262 evalScript>", JS_EVAL_TYPE_GLOBAL);
+    JS_FreeCString(context, source);
+    return result;
+}
+
+static JSValue lite_agent_noop(JSContext *context, JSValueConst this_value,
+                               int argc, JSValueConst *argv) {
+    (void)context; (void)this_value; (void)argc; (void)argv;
+    return JS_UNDEFINED;
+}
+
+static void *lite_agent_main(void *argument) {
+    LiteAgent *agent = argument;
+    LiteAgentHub *hub = agent->hub;
+    JSRuntime *runtime = JS_NewRuntime();
+    LiteRuntimeState *state = runtime ? calloc(1, sizeof(*state)) : NULL;
+    JSContext *context = state ? JS_NewContext(runtime) : NULL;
+    if (context) {
+        state->agent_hub = hub;
+        JS_SetRuntimeOpaque(runtime, state);
+        JS_SetSharedArrayBufferFunctions(runtime, &lite_sab_functions);
+        JS_SetCanBlock(runtime, 1);
+        JS_SetContextOpaque(context, agent);
+
+        JSValue global = JS_GetGlobalObject(context);
+        JSValue api = JS_NewObject(context);
+        lite_install_agent_api(context, api);
+        JS_SetPropertyStr(context, api, "global", JS_DupValue(context, global));
+        JS_SetPropertyStr(context, api, "evalScript",
+            JS_NewCFunction(context, lite_agent_eval_script, "evalScript", 1));
+        JS_SetPropertyStr(context, global, "$262", api);
+        JS_SetPropertyStr(context, global, "print",
+            JS_NewCFunction(context, lite_agent_noop, "print", 1));
+        JS_FreeValue(context, global);
+
+        JSValue result = JS_Eval(context, agent->script, strlen(agent->script),
+            "<Test262 agent>", JS_EVAL_TYPE_GLOBAL);
+        JS_FreeValue(context, result);
+
+        for (;;) {
+            JSContext *job_context;
+            if (JS_ExecutePendingJob(runtime, &job_context) != 0) continue;
+            if (JS_IsUndefined(agent->broadcast_func)) break;
+
+            pthread_mutex_lock(&hub->mutex);
+            while (!agent->broadcast_pending) pthread_cond_wait(&hub->cond, &hub->mutex);
+            uint8_t *buffer = agent->broadcast_buf;
+            size_t size = agent->broadcast_size;
+            int32_t value = agent->broadcast_value;
+            agent->broadcast_pending = 0;
+            pthread_cond_broadcast(&hub->cond);
+            pthread_mutex_unlock(&hub->mutex);
+
+            JSValue arguments[2];
+            arguments[0] = JS_NewArrayBuffer(context, buffer, size, NULL, NULL, 1);
+            lite_sab_free(NULL, buffer); /* the broadcast's own reference */
+            arguments[1] = JS_NewInt32(context, value);
+            JSValue callback = agent->broadcast_func;
+            agent->broadcast_func = JS_UNDEFINED;
+            result = JS_Call(context, callback, JS_UNDEFINED, 2, arguments);
+            JS_FreeValue(context, result);
+            JS_FreeValue(context, callback);
+            JS_FreeValue(context, arguments[0]);
+            JS_FreeValue(context, arguments[1]);
+        }
+        JS_FreeValue(context, agent->broadcast_func);
+        agent->broadcast_func = JS_UNDEFINED;
+        JS_FreeContext(context);
+    }
+    if (runtime) JS_FreeRuntime(runtime);
+    free(state);
+
+    pthread_mutex_lock(&hub->mutex);
+    if (agent->broadcast_pending) {
+        agent->broadcast_pending = 0;
+        lite_sab_free(NULL, agent->broadcast_buf);
+    }
+    agent->finished = 1;
+    pthread_cond_broadcast(&hub->cond);
+    pthread_mutex_unlock(&hub->mutex);
+    lite_hub_release(hub);
+    return NULL;
+}
+
+static JSValue lite_agent_start(JSContext *context, JSValueConst this_value,
+                                int argc, JSValueConst *argv) {
+    (void)this_value; (void)argc;
+    if (JS_GetContextOpaque(context)) return JS_ThrowTypeError(context, "cannot be called inside an agent");
+    LiteAgentHub *hub = lite_hub_of(context, 1);
+    if (!hub) return JS_ThrowOutOfMemory(context);
+    const char *script = JS_ToCString(context, argv[0]);
+    if (!script) return JS_EXCEPTION;
+    LiteAgent *agent = calloc(1, sizeof(*agent));
+    char *copy = agent ? strdup(script) : NULL;
+    JS_FreeCString(context, script);
+    if (!copy) { free(agent); return JS_ThrowOutOfMemory(context); }
+    agent->script = copy;
+    agent->hub = hub;
+    agent->broadcast_func = JS_UNDEFINED;
+
+    pthread_mutex_lock(&hub->mutex);
+    LiteAgent **tail = &hub->agents;
+    while (*tail) tail = &(*tail)->next;
+    *tail = agent;
+    pthread_mutex_unlock(&hub->mutex);
+
+    atomic_fetch_add(&hub->refs, 1);
+    pthread_attr_t attributes;
+    pthread_attr_init(&attributes);
+    pthread_attr_setstacksize(&attributes, 8 << 20);
+    int failed = pthread_create(&agent->thread, &attributes, lite_agent_main, agent);
+    pthread_attr_destroy(&attributes);
+    if (failed) {
+        pthread_mutex_lock(&hub->mutex);
+        agent->finished = 2; /* never started: nothing to join */
+        pthread_mutex_unlock(&hub->mutex);
+        lite_hub_release(hub);
+        return JS_ThrowInternalError(context, "agent thread creation failed");
+    }
+    return JS_UNDEFINED;
+}
+
+static JSValue lite_agent_broadcast(JSContext *context, JSValueConst this_value,
+                                    int argc, JSValueConst *argv) {
+    (void)this_value; (void)argc;
+    if (JS_GetContextOpaque(context)) return JS_ThrowTypeError(context, "cannot be called inside an agent");
+    JSValue global = JS_GetGlobalObject(context);
+    JSValue constructor = JS_GetPropertyStr(context, global, "SharedArrayBuffer");
+    JS_FreeValue(context, global);
+    int shared = JS_IsInstanceOf(context, argv[0], constructor);
+    JS_FreeValue(context, constructor);
+    if (shared < 0) return JS_EXCEPTION;
+    if (!shared) return JS_ThrowTypeError(context, "broadcast requires a SharedArrayBuffer");
+    size_t size;
+    uint8_t *buffer = JS_GetArrayBuffer(context, &size, argv[0]);
+    if (!buffer) return JS_EXCEPTION;
+    int32_t value = 0;
+    if (JS_ToInt32(context, &value, argv[1])) return JS_EXCEPTION;
+    LiteAgentHub *hub = lite_hub_of(context, 0);
+    if (!hub) return JS_UNDEFINED;
+
+    pthread_mutex_lock(&hub->mutex);
+    for (LiteAgent *agent = hub->agents; agent; agent = agent->next) {
+        if (agent->finished) continue;
+        if (agent->broadcast_pending) lite_sab_free(NULL, agent->broadcast_buf);
+        lite_sab_dup(NULL, buffer);
+        agent->broadcast_pending = 1;
+        agent->broadcast_buf = buffer;
+        agent->broadcast_size = size;
+        agent->broadcast_value = value;
+    }
+    pthread_cond_broadcast(&hub->cond);
+    while (lite_any_broadcast_pending(hub)) pthread_cond_wait(&hub->cond, &hub->mutex);
+    pthread_mutex_unlock(&hub->mutex);
+    return JS_UNDEFINED;
+}
+
+static JSValue lite_agent_get_report(JSContext *context, JSValueConst this_value,
+                                     int argc, JSValueConst *argv) {
+    (void)this_value; (void)argc; (void)argv;
+    LiteAgentHub *hub = lite_hub_of(context, 0);
+    if (!hub) return JS_NULL;
+    pthread_mutex_lock(&hub->mutex);
+    LiteAgentReport *report = hub->reports;
+    if (report) {
+        hub->reports = report->next;
+        if (!hub->reports) hub->reports_tail = NULL;
+    }
+    pthread_mutex_unlock(&hub->mutex);
+    if (!report) return JS_NULL;
+    JSValue result = JS_NewString(context, report->text);
+    free(report->text);
+    free(report);
+    return result;
+}
+
+static JSValue lite_agent_report(JSContext *context, JSValueConst this_value,
+                                 int argc, JSValueConst *argv) {
+    (void)this_value; (void)argc;
+    if (!JS_GetContextOpaque(context)) return JS_ThrowTypeError(context, "must be called inside an agent");
+    LiteAgentHub *hub = lite_hub_of(context, 0);
+    const char *text = JS_ToCString(context, argv[0]);
+    if (!text) return JS_EXCEPTION;
+    LiteAgentReport *report = calloc(1, sizeof(*report));
+    if (report) report->text = strdup(text);
+    JS_FreeCString(context, text);
+    if (!report || !report->text) { free(report); return JS_ThrowOutOfMemory(context); }
+    pthread_mutex_lock(&hub->mutex);
+    if (hub->reports_tail) hub->reports_tail->next = report; else hub->reports = report;
+    hub->reports_tail = report;
+    pthread_mutex_unlock(&hub->mutex);
+    return JS_UNDEFINED;
+}
+
+static JSValue lite_agent_leaving(JSContext *context, JSValueConst this_value,
+                                  int argc, JSValueConst *argv) {
+    (void)this_value; (void)argc; (void)argv;
+    if (!JS_GetContextOpaque(context)) return JS_ThrowTypeError(context, "must be called inside an agent");
+    return JS_UNDEFINED;
+}
+
+static JSValue lite_agent_receive_broadcast(JSContext *context, JSValueConst this_value,
+                                            int argc, JSValueConst *argv) {
+    (void)this_value; (void)argc;
+    LiteAgent *agent = JS_GetContextOpaque(context);
+    if (!agent) return JS_ThrowTypeError(context, "must be called inside an agent");
+    if (!JS_IsFunction(context, argv[0])) return JS_ThrowTypeError(context, "expecting function");
+    JS_FreeValue(context, agent->broadcast_func);
+    agent->broadcast_func = JS_DupValue(context, argv[0]);
+    return JS_UNDEFINED;
+}
+
+static JSValue lite_agent_sleep(JSContext *context, JSValueConst this_value,
+                                int argc, JSValueConst *argv) {
+    (void)this_value; (void)argc;
+    uint32_t duration;
+    if (JS_ToUint32(context, &duration, argv[0])) return JS_EXCEPTION;
+    lite_sleep_ms(duration);
+    return JS_UNDEFINED;
+}
+
+static JSValue lite_agent_monotonic_now(JSContext *context, JSValueConst this_value,
+                                        int argc, JSValueConst *argv) {
+    (void)this_value; (void)argc; (void)argv;
+    return JS_NewInt64(context, lite_monotonic_ms());
+}
+
+static const JSCFunctionListEntry lite_agent_functions[] = {
+    JS_CFUNC_DEF("start", 1, lite_agent_start),
+    JS_CFUNC_DEF("broadcast", 2, lite_agent_broadcast),
+    JS_CFUNC_DEF("getReport", 0, lite_agent_get_report),
+    JS_CFUNC_DEF("report", 1, lite_agent_report),
+    JS_CFUNC_DEF("leaving", 0, lite_agent_leaving),
+    JS_CFUNC_DEF("receiveBroadcast", 1, lite_agent_receive_broadcast),
+    JS_CFUNC_DEF("sleep", 1, lite_agent_sleep),
+    JS_CFUNC_DEF("monotonicNow", 0, lite_agent_monotonic_now),
+};
+
+static void lite_install_agent_api(JSContext *context, JSValue api) {
+    JSValue agent = JS_NewObject(context);
+    JS_SetPropertyFunctionList(context, agent, lite_agent_functions,
+        sizeof(lite_agent_functions) / sizeof(lite_agent_functions[0]));
+    JS_SetPropertyStr(context, api, "agent", agent);
+}
+
+/* Waits up to timeout_ms for every agent to finish, then lets go of the hub. An
+ * agent still blocked (a failed test can leave one in an untimed Atomics.wait)
+ * keeps its own references and is detached rather than hanging teardown. */
+static void lite_agents_shutdown(LiteRuntimeState *state, int64_t timeout_ms) {
+    LiteAgentHub *hub = state->agent_hub;
+    if (!hub) return;
+    int64_t deadline = lite_monotonic_ms() + timeout_ms;
+    pthread_mutex_lock(&hub->mutex);
+    for (;;) {
+        int running = 0;
+        for (LiteAgent *agent = hub->agents; agent; agent = agent->next)
+            if (!agent->finished) running = 1;
+        if (!running || lite_monotonic_ms() >= deadline) break;
+        pthread_mutex_unlock(&hub->mutex);
+        lite_sleep_ms(1);
+        pthread_mutex_lock(&hub->mutex);
+    }
+    for (LiteAgent *agent = hub->agents; agent; agent = agent->next) {
+        if (agent->finished == 1) pthread_join(agent->thread, NULL);
+        else if (!agent->finished) pthread_detach(agent->thread);
+    }
+    pthread_mutex_unlock(&hub->mutex);
+    state->agent_hub = NULL;
+    lite_hub_release(hub);
+}
+
+LITE_API int lite_install_test262_agent(LiteValue *api) {
+    if (!api || !JS_IsObject(api->value)) return -1;
+    lite_install_agent_api(api->context, api->value);
+    return 0;
+}
+
 LITE_API JSRuntime *lite_runtime_new(void) {
     JSRuntime *runtime = JS_NewRuntime();
     if (!runtime) return NULL;
@@ -59,6 +477,7 @@ LITE_API JSRuntime *lite_runtime_new(void) {
     }
     state->host_class_id = lite_host_class_id;
     JS_SetRuntimeOpaque(runtime, state);
+    JS_SetSharedArrayBufferFunctions(runtime, &lite_sab_functions);
     JS_SetCanBlock(runtime, 0);
     return runtime;
 }
@@ -66,6 +485,7 @@ LITE_API JSRuntime *lite_runtime_new(void) {
 LITE_API void lite_runtime_free(JSRuntime *runtime) {
     if (!runtime) return;
     LiteRuntimeState *state = JS_GetRuntimeOpaque(runtime);
+    if (state) lite_agents_shutdown(state, 10000);
     JS_FreeRuntime(runtime);
     free(state);
 }

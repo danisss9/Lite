@@ -85,7 +85,7 @@
       "id": "host-language-configuration",
       "reviewed": true,
       "requirement": "Page and conformance engines share required language semantics with correct agent blocking configuration",
-      "remaining": "Closed: the page engine and the conformance harness execute the same embedded QuickJS 2026-06-04 native build (the supervisor verifies the runtime fingerprint is unchanged across a run), so language semantics are identical and Test262 evidence covers the language layer while the host cases cover the page layer. The main-thread window agent cannot block: Atomics.wait on a SharedArrayBuffer throws TypeError (the agent cluster's [[CanBlock]] is false), and the multi-agent Atomics coverage beyond that is the reviewed atomics-multi-agent dependency exception deferred to the Web Workers workstream.",
+      "remaining": "Closed: the page engine and the conformance harness execute the same embedded QuickJS 2026-06-04 native build (the supervisor verifies the runtime fingerprint is unchanged across a run), so language semantics are identical and Test262 evidence covers the language layer while the host cases cover the page layer. The main-thread window agent cannot block: Atomics.wait on a SharedArrayBuffer throws TypeError (the agent cluster's [[CanBlock]] is false). The conformance adapter configures its main agent as blocking unless a test is flagged CanBlockIsFalse, and multi-agent Atomics coverage runs through the native $262.agent host (agents on their own threads sharing SharedArrayBuffer memory), so no agent-cluster case is excluded.",
       "tests": [
         "globals-and-builtins",
         "nonblocking-window-agent"

@@ -42,11 +42,9 @@ internal sealed class QuickJsTest262Host(QuickJsRuntime runtime)
         });
         api.Set("gc", gc);
 
-        using var agent = realm.Object();
-        using var start = realm.HostFunction("start", 1, (_, _) =>
-            throw new NotSupportedException("Test262 agent execution is not implemented for QuickJS"));
-        agent.Set("start", start);
-        api.Set("agent", agent);
+        // $262.agent runs natively: each agent is its own runtime on its own thread,
+        // sharing SharedArrayBuffer memory with this one (litequickjs.c).
+        api.InstallTest262Agent();
 
         using var htmlDda = realm.HostFunction("IsHTMLDDA", 0, (owner, _) => owner.Null());
         htmlDda.SetIsHtmlDda();

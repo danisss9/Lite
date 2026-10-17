@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- Run Test262's multi-agent tests natively and retire the last ES2020 dependency exception: the QuickJS bridge implements `$262.agent` (start, broadcast, getReport, report, receiveBroadcast, leaving, sleep, monotonicNow) with each agent as its own QuickJS runtime on its own thread, SharedArrayBuffer memory reference-counted outside any one heap so main and agent runtimes share it, and a teardown that detaches an agent a failing test leaves blocked instead of hanging. The adapter main agent can block unless a test is flagged `CanBlockIsFalse`, as INTERPRETING.md allows (the browser window agent stays non-blocking). All 59 formerly excluded `Atomics.wait`/`Atomics.notify` tests pass in both modes; the full ES2020 run reads 67,235/67,235 required executions with no dependency exception and `es2020ProfileReady` true under `--require-ready`.
+- Run WPT `visual` tests under `css/CSS2` through the CSS 2.1 suite's self-describing route (the no-failure-red scan the official suite already uses) instead of reporting them unsupported; visual tests elsewhere stay unsupported because they promise no such convention.
+
 ## [0.1.2] - 2026-10-13
 
 This release closes the HTML5 parse-fidelity pipeline — a new attribution diagnostic splits every corpus failure into engine, pipeline and expectation-invalid classes, the scripting-flag package and DOM-level origin-sheet injection eliminate the entire pipeline-defect bucket, and a vendored AngleSharp fork carries ten 2014-REC tree-construction patches that lift the engine-pass to 92.0% of the corpus — while the CSS 2.1 track's table batches close the infer-cells band and lift the official suite to 8,543/9,039 (94.6%). The curated gates hold at 52/52 (css21), 46/46 (html5), 86 pass / 2 published expected-fails (wpt), and the unit suite grows to 341/341.

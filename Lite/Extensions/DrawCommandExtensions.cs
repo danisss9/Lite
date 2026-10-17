@@ -1518,7 +1518,13 @@ public static class StyleExtensions
         {
             var part = rawPart.Trim();
             if (part.Length == 0) continue;
+            var quoted = part[0] is '"' or '\'';
             var name = part.Trim('"', '\'');
+            // §15.3.1: an UNQUOTED generic keyword always matches and names the UA's own
+            // implementation; it is never an ordinary family. A quoted "sans-serif" is just a
+            // family name — the test suites provision fonts under exactly those names to prove
+            // the difference, so the keyword must not reach the registry or it renders in them.
+            if (!quoted && GenericFamily(name) is { } generic) return generic;
             firstPart ??= name;
             var mapped = name switch
             {
@@ -1534,6 +1540,27 @@ public static class StyleExtensions
             // Not available: keep trying the remaining parts.
         }
         return firstPart ?? "Arial";
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> s_genericFamilies =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The system family a CSS generic keyword resolves to (what Skia's font manager
+    /// picks for the keyword), or null when <paramref name="name"/> is not a generic.</summary>
+    private static string? GenericFamily(string name)
+    {
+        if (!name.Equals("serif", StringComparison.OrdinalIgnoreCase) &&
+            !name.Equals("sans-serif", StringComparison.OrdinalIgnoreCase) &&
+            !name.Equals("monospace", StringComparison.OrdinalIgnoreCase) &&
+            !name.Equals("cursive", StringComparison.OrdinalIgnoreCase) &&
+            !name.Equals("fantasy", StringComparison.OrdinalIgnoreCase))
+            return null;
+        if (name.Equals("monospace", StringComparison.OrdinalIgnoreCase)) return "Consolas";
+        return s_genericFamilies.GetOrAdd(name, static generic =>
+        {
+            using var typeface = SKTypeface.FromFamilyName(generic.ToLowerInvariant());
+            return typeface?.FamilyName ?? "Arial";
+        });
     }
 
     private static SKColor GetColor(LayoutNode node, string propertyName, SKColor defaultColor)

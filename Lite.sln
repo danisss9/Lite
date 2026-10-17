@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lite.QuickJs", "Lite.QuickJ
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lite.AngleSharp", "Lite.AngleSharp\Lite.AngleSharp.csproj", "{F89498D5-4F6B-4026-A49B-3C61558B5DC7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lite.AngleSharp.Css", "Lite.AngleSharp.Css\Lite.AngleSharp.Css.csproj", "{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -111,6 +113,18 @@ Global
 		{F89498D5-4F6B-4026-A49B-3C61558B5DC7}.Release|x64.Build.0 = Release|Any CPU
 		{F89498D5-4F6B-4026-A49B-3C61558B5DC7}.Release|x86.ActiveCfg = Release|Any CPU
 		{F89498D5-4F6B-4026-A49B-3C61558B5DC7}.Release|x86.Build.0 = Release|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Debug|x64.Build.0 = Debug|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Debug|x86.Build.0 = Debug|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Release|x64.ActiveCfg = Release|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Release|x64.Build.0 = Release|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Release|x86.ActiveCfg = Release|Any CPU
+		{95466DAC-F597-4C4D-A2CB-DD6A7E44015A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

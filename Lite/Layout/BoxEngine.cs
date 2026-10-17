@@ -21,8 +21,11 @@ internal static class BoxEngine
         NormalizeTableBoxes(root);
 
         LayoutBlock(root, 0, 0, viewportWidth, viewportWidth, viewportHeight, viewportHeight); // root: margin-box discarded
-        // Second pass: lay out all absolute/fixed nodes now that normal-flow boxes are finalised
-        LayoutPositioned(root, root.Box, viewportWidth, viewportHeight);
+        // Second pass: lay out all absolute/fixed nodes now that normal-flow boxes are finalised.
+        // With no positioned ancestor, an absolutely positioned box is contained by the initial
+        // containing block (CSS 2.1 §10.1), which is the viewport, not the root element's box.
+        var initialContainingBlock = new BoxDimensions { ContentBox = new SKRect(0, 0, viewportWidth, viewportHeight) };
+        LayoutPositioned(root, root.IsPositioned() ? root.Box : initialContainingBlock, viewportWidth, viewportHeight);
     }
 
     /// <summary>
@@ -2267,9 +2270,15 @@ internal static class BoxEngine
             lineStart = placed.Count;
         }
 
-        foreach (var itemOrig in items)
+        // CSS 2.1 16.6 / UAX #14: a line may only break at a break opportunity. Each placed entry
+        // remembers the item it came from so the line can be cut back to its last opportunity.
+        var placedSource = new List<int>();
+        var sourceIndex = 0;
+        for (var itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
-            var item = itemOrig;
+            var item = items[itemIndex];
+            while (placedSource.Count < placed.Count) placedSource.Add(sourceIndex);
+            sourceIndex = itemIndex;
             if (item.Kind == InlineItemKind.LineBreak)
             {
                 // An otherwise-empty line still needs the <br>'s own font metrics for its height.
@@ -2297,12 +2306,40 @@ internal static class BoxEngine
             // A whitespace-only text item that would cross the line's end collapses there
             // (§16.6.1): it must neither wrap onto a fabricated line box nor commit one — the
             // green overlay in the white-space band grew a ~45px phantom line from exactly this.
+            // The space is itself the break opportunity, so the line ends at it: what follows
+            // starts the next line instead of looking glued to the word before the space.
             if (item.Kind == InlineItemKind.Text && item.Text != null && item.Text.Trim().Length == 0 &&
-                lineX + item.Width > bandRight)
+                lineX + item.Width > bandRight && WrapsLines(item.Node))
+            {
+                if (lineX > bandLeft) CommitLine();
                 continue;
+            }
 
             if (lineX > bandLeft && lineX + item.Width > bandRight)
-                CommitLine();
+            {
+                if (BreakAllowedBefore(placed, lineStart, item))
+                    CommitLine();
+                else if (SplitAtFirstOpportunity(items, itemIndex) )
+                {
+                    // The glued head stays with the content before it; the tail, which now
+                    // starts after a break opportunity, is placed on its own turn.
+                    itemIndex--;
+                    continue;
+                }
+                else if (LastOpportunity(placed, lineStart) is { } cut && cut > lineStart)
+                {
+                    // No opportunity here: the unbreakable run moves down whole, from the line's
+                    // last opportunity (a word split across inline boxes is still one word).
+                    var resume = placedSource[cut];
+                    placed.RemoveRange(cut, placed.Count - cut);
+                    placedSource.RemoveRange(cut, placedSource.Count - cut);
+                    (maxAbove, maxBelow, maxTopH, maxBottomH, hasBaselineItem) = LineMetrics(placed, lineStart);
+                    CommitLine();
+                    itemIndex = resume - 1;
+                    continue;
+                }
+                // Otherwise nothing on this line can break: the content overflows it.
+            }
 
             // Skip whitespace-only text at the start of a line — a COLLAPSING one (§16.6.1):
             // under white-space:pre/pre-wrap a preserved space at a line's start renders, and
@@ -2423,6 +2460,150 @@ internal static class BoxEngine
         if (vAlign is VerticalAlignType.Length or VerticalAlignType.Percentage)
             above += item.Node.GetVerticalAlignOffset();
         return above;
+    }
+
+    /// <summary>White-space modes that allow soft wrapping (CSS 2.1 16.6): 'nowrap' and 'pre' never do.</summary>
+    private static bool WrapsLines(LayoutNode node) =>
+        node.GetWhiteSpace() is WhiteSpace.Normal or WhiteSpace.PreWrap or WhiteSpace.PreLine;
+
+    /// <summary>A collapsible or preserved space that offers a break: NOT a no-break space.</summary>
+    private static bool IsBreakSpace(char c) => c is ' ' or '\t' or '\n' or '\r' or '\f';
+
+    private static bool IsAtomicInline(InlineItem item) =>
+        item.Kind is InlineItemKind.Image or InlineItemKind.InlineBlock or InlineItemKind.InlineFlex or InlineItemKind.InlineTable;
+
+    private static bool IsAncestorOrSelf(LayoutNode ancestor, LayoutNode node)
+    {
+        for (var n = node; n is not null; n = n.Parent)
+            if (ReferenceEquals(n, ancestor)) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Whether a line may break between the content already on the line (from
+    /// <paramref name="lineStart"/>) and <paramref name="next"/>. A space at the boundary under a
+    /// wrapping white-space mode is an opportunity, so is an atomic inline beside it (treated as
+    /// an ideograph, CSS Text) and a &lt;wbr&gt;; text meeting text with no space is not: the
+    /// boundary of an inline box is no break opportunity on its own.
+    /// </summary>
+    private static bool BreakAllowedBefore(List<(InlineItem item, float relX, float relY)> placed, int lineStart, InlineItem next)
+    {
+        InlineItem? prev = null;
+        for (var k = placed.Count - 1; k >= lineStart; k--)
+        {
+            var it = placed[k].item;
+            if (it.Kind == InlineItemKind.InlineEdge)
+            {
+                if (it.Node.TagName == "WBR") return true;
+                continue;
+            }
+            if (it.Kind == InlineItemKind.OutOfFlow) continue;
+            prev = it;
+            break;
+        }
+        if (prev is null) return true;
+        return BreakBetween(prev, next);
+    }
+
+    private static bool BreakBetween(InlineItem prev, InlineItem next)
+    {
+        if (next.Kind == InlineItemKind.Text && next.Text is { Length: > 0 } nt && IsBreakSpace(nt[0]))
+            return WrapsLines(next.Node);
+        if (prev.Kind == InlineItemKind.Text && prev.Text is { Length: > 0 } pt && IsBreakSpace(pt[^1]))
+            return WrapsLines(prev.Node);
+        if (IsAtomicInline(next)) return WrapsLines(next.Node.Parent ?? next.Node) && (prev.Kind != InlineItemKind.Text || WrapsLines(prev.Node));
+        if (IsAtomicInline(prev)) return WrapsLines(prev.Node.Parent ?? prev.Node) && (next.Kind != InlineItemKind.Text || WrapsLines(next.Node));
+        return false;
+    }
+
+    /// <summary>
+    /// The placed index at which the current line can last be cut: just after the content item
+    /// preceding the latest break opportunity, keeping the closing edges of the inline boxes that
+    /// content belongs to (a span's end padding stays with its last word). Null when the line has
+    /// no opportunity after its first item.
+    /// </summary>
+    private static int? LastOpportunity(List<(InlineItem item, float relX, float relY)> placed, int lineStart)
+    {
+        for (var k = placed.Count - 1; k > lineStart; k--)
+        {
+            var it = placed[k].item;
+            if (it.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow) continue;
+            // Find the content before entry k and decide whether the boundary breaks.
+            var j = k - 1;
+            var wbr = false;
+            while (j >= lineStart && placed[j].item.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow)
+            {
+                if (placed[j].item.Node.TagName == "WBR") wbr = true;
+                j--;
+            }
+            if (j < lineStart) continue;
+            if (!wbr && !BreakBetween(placed[j].item, it)) continue;
+            var cut = j + 1;
+            while (cut < k && placed[cut].item.Kind == InlineItemKind.InlineEdge &&
+                   IsAncestorOrSelf(placed[cut].item.Node, placed[j].item.Node))
+                cut++;
+            return cut;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Splits text item <paramref name="index"/> after its first run of break spaces when its
+    /// white-space wraps, so the part glued to the preceding content stays on the line while the
+    /// rest starts after a real break opportunity. False when there is nothing to split off.
+    /// </summary>
+    private static bool SplitAtFirstOpportunity(List<InlineItem> items, int index)
+    {
+        var item = items[index];
+        if (item.Kind != InlineItemKind.Text || item.Text is not { Length: > 1 } text || !WrapsLines(item.Node))
+            return false;
+        var space = 0;
+        while (space < text.Length && !IsBreakSpace(text[space])) space++;
+        if (space == 0 || space >= text.Length) return false;
+        var end = space;
+        while (end < text.Length && IsBreakSpace(text[end])) end++;
+        if (end >= text.Length) return false;
+
+        using var font = TextMeasure.CreateFont(item.Node);
+        var lh = item.Node.GetLineHeight(item.Node.GetFontSize());
+        var (ls, wsp) = TextMeasure.SpacingOf(item.Node);
+        var head = text[..end];
+        var tail = text[end..];
+        var (hw, hh, ha) = TextMeasure.MeasureSingleLine(head, font, lh, ls, wsp);
+        var (tw, th, ta) = TextMeasure.MeasureSingleLine(tail, font, lh, ls, wsp);
+        items[index] = item with { Text = head, Width = hw, Height = hh, ContentW = hw, ContentH = hh, Ascent = ha };
+        items.Insert(index + 1, item with { Text = tail, Width = tw, Height = th, ContentW = tw, ContentH = th, Ascent = ta });
+        return true;
+    }
+
+    /// <summary>Recomputes the line's baseline accumulators from what is placed on it — needed
+    /// after the line is cut back to an earlier break opportunity.</summary>
+    private static (float Above, float Below, float TopH, float BottomH, bool HasBaseline) LineMetrics(
+        List<(InlineItem item, float relX, float relY)> placed, int lineStart)
+    {
+        float above = 0f, below = 0f, topH = 0f, bottomH = 0f;
+        var hasBaseline = false;
+        for (var k = lineStart; k < placed.Count; k++)
+        {
+            var it = placed[k].item;
+            if (it.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow) continue;
+            var va = it.Node.GetVerticalAlign();
+            switch (va)
+            {
+                case VerticalAlignType.Top or VerticalAlignType.TextTop:
+                    topH = Math.Max(topH, it.Height);
+                    break;
+                case VerticalAlignType.Bottom or VerticalAlignType.TextBottom:
+                    bottomH = Math.Max(bottomH, it.Height);
+                    break;
+                default:
+                    above = Math.Max(above, AboveBaselineComponent(it, va));
+                    below = Math.Max(below, it.Height - AboveBaselineComponent(it, va));
+                    hasBaseline = true;
+                    break;
+            }
+        }
+        return (above, below, topH, bottomH, hasBaseline);
     }
 
     private static InlineItem EdgeItem(LayoutNode node, float width) =>
@@ -2701,6 +2882,11 @@ internal static class BoxEngine
                 // aligns their bottom margin edge with the line's baseline (Ascent = full height).
                 items.Add(new InlineItem(InlineItemKind.Image, node, null, imgW, imgH,
                            imgMargin, imgPadding, imgBorder, w, h, imgH));
+            }
+            else if (node.TagName == "WBR")
+            {
+                // HTML: <wbr> represents a line break opportunity and nothing else.
+                items.Add(EdgeItem(node, 0f));
             }
             else if (!string.IsNullOrEmpty(node.DisplayText) && !node.Children.Any())
             {

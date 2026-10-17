@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Vendored AngleSharp.Css 1.0.2 (upstream tag v1.0.2, commit d158478) built from
+       native/src with this repository's CSS 2.1 conformance patches. Produces the exact
+       binary identity of the pinned NuGet package — assembly "AngleSharp.Css", version
+       1.0.2.0, signed with upstream's committed Key.snk (token e83494dcdc6d31ea) — and
+       compiles against the vendored Lite.AngleSharp core. See README.md. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>AngleSharp.Css</AssemblyName>
+    <RootNamespace>AngleSharp.Css</RootNamespace>
+    <Version>1.0.2.0</Version>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
+    <InformationalVersion>1.0.2</InformationalVersion>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>native\Key.snk</AssemblyOriginatorKeyFile>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>none</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="native\src\**\*.cs" />
+    <ProjectReference Include="..\Lite.AngleSharp\Lite.AngleSharp.csproj" />
+  </ItemGroup>
+
+</Project>

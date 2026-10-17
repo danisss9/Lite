@@ -252,7 +252,7 @@ internal static class RefTestRunner
                 for (var i=0;i<els.length;i++) {{
                 var e = els[i];
                 var cs = getComputedStyle(e);
-                console.log('[GEOM] ' + (e.id||e.tagName) +
+                console.log('[GEOM] ' + (e.id||e.tagName) + ' class=' + JSON.stringify(e.getAttribute('class')) + ' charset=' + document.characterSet +
                         ' offsetW=' + e.offsetWidth + ' offsetH=' + e.offsetHeight +
                         ' offsetLeft=' + e.offsetLeft + ' offsetTop=' + e.offsetTop +
                         ' clientW=' + e.clientWidth + ' clientH=' + e.clientHeight +

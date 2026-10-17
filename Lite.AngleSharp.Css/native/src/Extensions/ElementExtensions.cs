@@ -1,0 +1,491 @@
+#nullable enable
+namespace AngleSharp.Dom
+{
+    using AngleSharp.Attributes;
+    using AngleSharp.Css;
+    using AngleSharp.Css.Dom;
+    using AngleSharp.Html.Dom;
+    using AngleSharp.Text;
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+
+    /// <summary>
+    /// A set of useful extension methods for the Element class.
+    /// </summary>
+    [DomExposed("Element")]
+    public static class ElementExtensions
+    {
+        /// <summary>
+        /// Creates a pseudo element for the current element.
+        /// </summary>
+        /// <param name="element">The element to extend.</param>
+        /// <param name="pseudoElement">
+        /// The element to create (e.g. ::after).
+        /// </param>
+        /// <returns>The created element or null, if not possible.</returns>
+        [DomName("pseudo")]
+        public static IPseudoElement? Pseudo(this IElement element, String pseudoElement)
+        {
+            var factory = element.Owner?.Context.GetService<IPseudoElementFactory>();
+            return factory?.Create(element, pseudoElement);
+        }
+
+        /// <summary>
+        /// Gets the innerText of an element.
+        /// </summary>
+        /// <param name="element">The element to extend.</param>
+        /// <returns>The computed inner text.</returns>
+        [DomName("innerText")]
+        [DomAccessor(Accessors.Getter)]
+        public static String GetInnerText(this IElement element)
+        {
+            var hidden = new Nullable<Boolean>();
+
+            if (element.Owner == null)
+            {
+                hidden = true;
+            }
+
+            // Build the style collection once and cache computed styles for the
+            // entire traversal to avoid redundant stylesheet enumeration and
+            // repeated selector matching for the same elements.
+            var document = element.Owner;
+            var window = document?.DefaultView;
+            var device = window?.Document.Context.GetService<IRenderDevice>() ?? new DefaultRenderDevice();
+            var styleCollection = window is not null ? window.GetStyleCollection(device) : null;
+            var styleCache = new Dictionary<IElement, ICssStyleDeclaration>();
+
+            if (!hidden.HasValue)
+            {
+                var css = ComputeCachedStyle(element, styleCollection, styleCache);
+
+                if (!String.IsNullOrEmpty(css?.GetDisplay()))
+                {
+                    hidden = css!.GetDisplay() == CssKeywords.None;
+                }
+            }
+
+            if (!hidden.HasValue)
+            {
+                hidden = (element as IHtmlElement)?.IsHidden ?? false;
+            }
+
+            if (!hidden.Value)
+            {
+                var offset = 0;
+                var sb = StringBuilderPool.Obtain();
+                var requiredLineBreakCounts = new Dictionary<Int32, Int32>();
+                var textStyleCache = new Dictionary<ICssStyleDeclaration, TextStyleInfo>();
+                var parentStyle = element.ParentElement != null
+                    ? ComputeCachedStyle(element.ParentElement, styleCollection, styleCache)
+                    : null;
+                InnerTextCollection(element, sb, requiredLineBreakCounts, parentStyle, styleCollection, styleCache, textStyleCache);
+
+                // Remove any runs of consecutive required line break count items at the start or end of results.
+                requiredLineBreakCounts.Remove(0);
+                requiredLineBreakCounts.Remove(sb.Length);
+
+                // SortedDictionary would be nicer
+                foreach (var keyval in requiredLineBreakCounts.OrderBy(kv => kv.Key))
+                {
+                    var index = keyval.Key + offset;
+                    sb.Insert(index, new String(Symbols.LineFeed, keyval.Value));
+                    offset += keyval.Value;
+                }
+
+                return sb.ToPool();
+            }
+
+            return element.TextContent;
+        }
+
+        private static ICssStyleDeclaration? ComputeCachedStyle(IElement element, IStyleCollection? styleCollection, Dictionary<IElement, ICssStyleDeclaration> cache)
+        {
+            if (styleCollection == null)
+            {
+                return null;
+            }
+
+            if (cache.TryGetValue(element, out var cached))
+            {
+                return cached;
+            }
+
+            ICssStyleDeclaration style;
+            var parent = element.ParentElement;
+
+            if (parent != null && cache.TryGetValue(parent, out var parentStyle))
+            {
+                // Parent already computed — use incremental computation that
+                // skips the O(depth) ancestor walk.
+                style = styleCollection.ComputeDeclarationsWithParent(element, parentStyle);
+            }
+            else
+            {
+                style = styleCollection.ComputeDeclarations(element);
+            }
+
+            cache[element] = style;
+            return style;
+        }
+
+        /// <summary>
+        /// Sets the innerText of an element.
+        /// </summary>
+        /// <param name="element">The element to extend.</param>
+        /// <param name="value">The inner text to set.</param>
+        [DomName("innerText")]
+        [DomAccessor(Accessors.Setter)]
+
+        public static void SetInnerText(this IElement element, String? value)
+        {
+            if (String.IsNullOrEmpty(value))
+            {
+                element.TextContent = String.Empty;
+            }
+            else
+            {
+                var document = element.Owner;
+                var fragment = document!.CreateDocumentFragment();
+                var sb = StringBuilderPool.Obtain();
+
+                for (var i = 0; i < value!.Length; i++)
+                {
+                    var c = value[i];
+
+                    if (c == Symbols.LineFeed || c == Symbols.CarriageReturn)
+                    {
+                        if (c == Symbols.CarriageReturn && i + 1 < value.Length && value[i + 1] == Symbols.LineFeed)
+                        {
+                            // ignore carriage return if the next char is a line feed
+                            continue;
+                        }
+
+                        if (sb.Length > 0)
+                        {
+                            fragment.AppendChild(document.CreateTextNode(sb.ToString()));
+                            sb.Clear();
+                        }
+
+                        fragment.AppendChild(document.CreateElement(TagNames.Br));
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                    }
+                }
+
+                var remaining = sb.ToPool();
+
+                if (remaining.Length > 0)
+                {
+                    fragment.AppendChild(document.CreateTextNode(remaining));
+                }
+
+                while (element.HasChildNodes)
+                {
+                    element.RemoveChild(element.FirstChild);
+                }
+
+                element.AppendChild(fragment);
+            }
+        }
+
+        private static void InnerTextCollection(INode node, StringBuilder sb, Dictionary<Int32, Int32> requiredLineBreakCounts, ICssStyleDeclaration? parentStyle, IStyleCollection? styleCollection, Dictionary<IElement, ICssStyleDeclaration> styleCache, Dictionary<ICssStyleDeclaration, TextStyleInfo> textStyleCache)
+        {
+            if (HasCssBox(node))
+            {
+                var element = node as IElement;
+                var elementCss = element != null ? ComputeCachedStyle(element, styleCollection, styleCache) : null;
+                ItcInCssBox(elementCss, parentStyle, node, sb, requiredLineBreakCounts, styleCollection, styleCache, textStyleCache);
+            }
+        }
+
+        private static void ItcInCssBox(ICssStyleDeclaration? elementStyle, ICssStyleDeclaration? parentStyle, INode node, StringBuilder sb, Dictionary<Int32, Int32> requiredLineBreakCounts, IStyleCollection? styleCollection, Dictionary<IElement, ICssStyleDeclaration> styleCache, Dictionary<ICssStyleDeclaration, TextStyleInfo> textStyleCache)
+        {
+            var elementHidden = new Nullable<Boolean>();
+
+            if (elementStyle is not null)
+            {
+                if (!String.IsNullOrEmpty(elementStyle.GetDisplay()))
+                {
+                    elementHidden = elementStyle.GetDisplay() == CssKeywords.None;
+                }
+
+                if (!String.IsNullOrEmpty(elementStyle.GetVisibility()) && elementHidden != true)
+                {
+                    elementHidden = elementStyle.GetVisibility() != CssKeywords.Visible;
+                }
+            }
+
+            if (!elementHidden.HasValue)
+            {
+                elementHidden = (node as IHtmlElement)?.IsHidden ?? false;
+            }
+
+            if (!elementHidden.Value)
+            {
+                var isBlockLevel = new Nullable<Boolean>();
+                var startIndex = sb.Length;
+
+                foreach (var child in node.ChildNodes)
+                {
+                    InnerTextCollection(child, sb, requiredLineBreakCounts, elementStyle, styleCollection, styleCache, textStyleCache);
+                }
+
+                if (node is IText textElement)
+                {
+                    var lastLine = node.NextSibling is null ||
+                        String.IsNullOrEmpty(node.NextSibling.TextContent) ||
+                        node.NextSibling is IHtmlBreakRowElement;
+                    var styleInfo = GetTextStyleInfo(parentStyle, textStyleCache);
+                    ProcessText(textElement.Data, sb, styleInfo.WhiteSpace, styleInfo.TextTransform, lastLine, requiredLineBreakCounts);
+                }
+                else if (node is IHtmlBreakRowElement)
+                {
+                    sb.Append(Symbols.LineFeed);
+                }
+                else if (elementStyle is not null && ((node is IHtmlTableCellElement && String.IsNullOrEmpty(elementStyle.GetDisplay())) || elementStyle.GetDisplay() == CssKeywords.TableCell))
+                {
+                    if (((IElement)node).NextElementSibling is IElement nextSibling)
+                    {
+                        var nextSiblingCss = ComputeCachedStyle(nextSibling, styleCollection, styleCache);
+
+                        if (nextSibling is IHtmlTableCellElement && String.IsNullOrEmpty(nextSiblingCss!.GetDisplay()) || nextSiblingCss!.GetDisplay() == CssKeywords.TableCell)
+                        {
+                            sb.Append(Symbols.Tab);
+                        }
+                    }
+                }
+                else if (elementStyle is not null && ((node is IHtmlTableRowElement && String.IsNullOrEmpty(elementStyle.GetDisplay())) || elementStyle.GetDisplay() == CssKeywords.TableRow))
+                {
+                    if (((IElement)node).NextElementSibling is IElement nextSibling)
+                    {
+                        var nextSiblingCss = ComputeCachedStyle(nextSibling, styleCollection, styleCache);
+
+                        if (nextSibling is IHtmlTableRowElement && String.IsNullOrEmpty(nextSiblingCss!.GetDisplay()) || nextSiblingCss!.GetDisplay() == CssKeywords.TableRow)
+                        {
+                            sb.Append(Symbols.LineFeed);
+                        }
+                    }
+                }
+                else if (node is IHtmlParagraphElement)
+                {
+                    requiredLineBreakCounts.TryGetValue(startIndex, out var startIndexCount);
+
+                    if (startIndexCount < 2)
+                    {
+                        requiredLineBreakCounts[startIndex] = 2;
+                    }
+
+                    requiredLineBreakCounts.TryGetValue(sb.Length, out var endIndexCount);
+
+                    if (endIndexCount < 2)
+                    {
+                        requiredLineBreakCounts[sb.Length] = 2;
+                    }
+                }
+
+                if (elementStyle is not null)
+                {
+                    if (IsBlockLevelDisplay(elementStyle.GetDisplay()))
+                    {
+                        isBlockLevel = true;
+                    }
+                }
+
+                if (!isBlockLevel.HasValue)
+                {
+                    isBlockLevel = IsBlockLevel(node);
+                }
+
+                if (isBlockLevel.Value)
+                {
+                    requiredLineBreakCounts.TryGetValue(startIndex, out var startIndexCount);
+
+                    if (startIndexCount < 1)
+                    {
+                        requiredLineBreakCounts[startIndex] = 1;
+                    }
+
+                    requiredLineBreakCounts.TryGetValue(sb.Length, out var endIndexCount);
+
+                    if (endIndexCount < 1)
+                    {
+                        requiredLineBreakCounts[sb.Length] = 1;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sets the style on all elements of the collection.
+        /// </summary>
+        /// <typeparam name="TElement">The type of elements.</typeparam>
+        /// <param name="elements">The collection to go over.</param>
+        /// <param name="change">The action to trigger for each element style.</param>
+        /// <returns>The collection for chaining.</returns>
+        public static IEnumerable<TElement> SetStyle<TElement>(this IEnumerable<TElement> elements, Action<ICssStyleDeclaration> change)
+            where TElement : IElement
+        {
+            change = change ?? throw new ArgumentNullException(nameof(change));
+
+            foreach (var element in elements)
+            {
+                change.Invoke(element.GetStyle());
+            }
+
+            return elements;
+        }
+
+        private static Boolean HasCssBox(INode node)
+        {
+            return node.NodeName switch
+            {
+                "CANVAS" or "COL" or "COLGROUP" or "DETAILS" or "FRAME" or "FRAMESET" or "IFRAME" or "IMG" or "INPUT" or "LINK" or "METER" or "PROGRESS" or "TEMPLATE" or "TEXTAREA" or "VIDEO" or "WBR" or "SCRIPT" or "STYLE" or "NOSCRIPT" => false,
+                _ => true,
+            };
+        }
+
+        private static Boolean IsBlockLevelDisplay(String display)
+        {
+            // https://www.w3.org/TR/css-display-3/#display-value-summary
+            // https://hg.mozilla.org/mozilla-central/file/0acceb224b7d/servo/components/layout/query.rs#l1016
+            return display switch
+            {
+                "block" or "flow-root" or "flex" or "grid" or "table" or "table-caption" => true,
+                _ => false,
+            };
+        }
+
+        private static Boolean IsBlockLevel(INode node)
+        {
+            // https://developer.mozilla.org/en-US/docs/Web/HTML/Block-level_elements
+            return node.NodeName switch
+            {
+                "ADDRESS" or "ARTICLE" or "ASIDE" or "BLOCKQUOTE" or "CANVAS" or "DD" or "DIV" or "DL" or "DT" or "FIELDSET" or "FIGCAPTION" or "FIGURE" or "FOOTER" or "FORM" or "H1" or "H2" or "H3" or "H4" or "H5" or "H6" or "HEADER" or "GROUP" or "HR" or "LI" or "MAIN" or "NAV" or "NOSCRIPT" or "OL" or "OPTION" or "OUTPUT" or "P" or "PRE" or "SECTION" or "TABLE" or "TFOOT" or "UL" or "VIDEO" => true,
+                _ => false,
+            };
+        }
+
+        private static Boolean IsWhiteSpace(Char c) => Char.IsWhiteSpace(c) && c != Symbols.NoBreakSpace;
+
+        private static TextStyleInfo GetTextStyleInfo(ICssStyleDeclaration? style, Dictionary<ICssStyleDeclaration, TextStyleInfo> cache)
+        {
+            if (style is null)
+            {
+                return default;
+            }
+
+            if (cache.TryGetValue(style, out var info))
+            {
+                return info;
+            }
+
+            info = new TextStyleInfo(style.GetWhiteSpace(), style.GetTextTransform());
+            cache[style] = info;
+            return info;
+        }
+
+        private static void ProcessText(String text, StringBuilder sb, String? whiteSpace, String? textTransform, Boolean lastLine, Dictionary<Int32, Int32> requiredLineBreakCounts)
+        {
+            var startIndex = sb.Length;
+            var isWhiteSpace = startIndex <= 0 || IsWhiteSpace(sb[startIndex - 1]) || (requiredLineBreakCounts.ContainsKey(startIndex) && IsWhiteSpace(text[0]));
+
+            for (var i = 0; i < text.Length; i++)
+            {
+                var c = text[i];
+
+                if (Char.IsWhiteSpace(c) && c != Symbols.NoBreakSpace)
+                {
+                    // https://drafts.csswg.org/css-text/#white-space-property
+                    switch (whiteSpace)
+                    {
+                        case "pre":
+                        case "pre-wrap":
+                            break;
+                        case "pre-line":
+                            if (c == Symbols.Space || c == Symbols.Tab)
+                            {
+                                if (isWhiteSpace)
+                                {
+                                    continue;
+                                }
+
+                                c = Symbols.Space;
+                            }
+                            break;
+                        case "nowrap":
+                        case "normal":
+                        default:
+                            if (isWhiteSpace)
+                            {
+                                continue;
+                            }
+
+                            c = Symbols.Space;
+                            break;
+                    }
+
+                    isWhiteSpace = true;
+                }
+                else
+                {
+                    // https://drafts.csswg.org/css-text/#propdef-text-transform
+                    switch (textTransform)
+                    {
+                        case "uppercase":
+                            c = Char.ToUpperInvariant(c);
+                            break;
+                        case "lowercase":
+                            c = Char.ToLowerInvariant(c);
+                            break;
+                        case "capitalize":
+                            if (isWhiteSpace)
+                            {
+                                c = Char.ToUpperInvariant(c);
+                            }
+                            break;
+                        case "none":
+                        default:
+                            break;
+                    }
+
+                    isWhiteSpace = false;
+                }
+
+                sb.Append(c);
+            }
+
+            // ended with whitespace
+            if (isWhiteSpace && lastLine)
+            {
+                for (var offset = sb.Length - 1; offset >= startIndex; offset--)
+                {
+                    var c = sb[offset];
+
+                    if (!Char.IsWhiteSpace(c) || c == Symbols.NoBreakSpace)
+                    {
+                        sb.Remove(offset + 1, sb.Length - 1 - offset);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private readonly struct TextStyleInfo
+        {
+            public TextStyleInfo(String? whiteSpace, String? textTransform)
+            {
+                WhiteSpace = whiteSpace;
+                TextTransform = textTransform;
+            }
+
+            public String? WhiteSpace { get; }
+
+            public String? TextTransform { get; }
+        }
+    }
+}
