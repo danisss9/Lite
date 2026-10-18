@@ -1,44 +1,17 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Lite.Animation;
 using Lite.Interaction;
 using Lite.Layout;
 using Lite.Models;
-using Lite.Models.Delegates;
-using Lite.Models.Structs;
 using Lite.Network;
+using Lite.Platform;
 using Lite.Scripting;
-using Lite.Utils;
 using SkiaSharp;
 
 namespace Lite;
 
 public class BrowserWindow
 {
-    private const string CLASS_NAME = "LiteBrowserWindowClass";
-    private const int WS_OVERLAPPEDWINDOW = 0xCF0000;
-    private const int SW_SHOW = 5;
-    private const int WM_PAINT = 0x000F;
-    private const int WM_DESTROY = 0x0002;
-    private const int WM_SIZE = 0x0005;
-    private const int WM_TIMER = 0x0113;
-    private const int WM_CHAR = 0x0102;
-    private const int WM_KEYDOWN = 0x0100;
-    private const int WM_KEYUP = 0x0101;
-    private const int WM_LBUTTONDOWN = 0x0201;
-    private const int WM_LBUTTONUP = 0x0202;
-    private const int WM_MOUSEMOVE = 0x0200;
-    private const int WM_MOUSEWHEEL = 0x020A;
-    private const int WM_SETCURSOR = 0x0020;
-    // Custom message posted (thread-safely) when the JS event loop has work to drain.
-    private const uint WM_APP_TASK = 0x8000; // WM_APP
-    private const int HTCLIENT = 1;
-    private const int IDC_ARROW = 32512;
-    private const int IDC_IBEAM = 32513;
-    private const int IDC_HAND = 32649;
-    private const uint BI_RGB = 0;
-    private const uint DIB_RGB_COLORS = 0;
-
     private string _url;
     private readonly string _title;
     private readonly int _initialWidth;
@@ -51,7 +24,7 @@ public class BrowserWindow
     private IntPtr _pixels;
     private List<HitRegion> _hitRegions = [];
     private readonly Viewport _viewport = new();
-    private WndProcDelegate? _wndProcDelegate;
+    private IWindowHost _host = null!;
 
     // Scrollbar drag state
     private bool _draggingScrollbar;
@@ -64,7 +37,6 @@ public class BrowserWindow
 
     // Animation timer
     private const uint AnimationTimerMs = 16; // ~60 fps
-    private static readonly IntPtr AnimationTimerId = new(1);
     private bool _timerRunning;
 
     // Browser-style loading indicator shown while a navigation loads on a background thread,
@@ -106,52 +78,13 @@ public class BrowserWindow
         // Bind viewport to JS engine for window.scrollTo/scrollBy
         JsEngine.Instance?.SetViewport(_viewport);
 
-        _wndProcDelegate = WndProc;
-        var hInstance = Marshal.GetHINSTANCE(typeof(BrowserWindow).Module);
-
-        var wcex = new WNDCLASSEX
-        {
-            cbSize = (uint)Marshal.SizeOf(typeof(WNDCLASSEX)),
-            style = 0,
-            lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProcDelegate),
-            cbClsExtra = 0,
-            cbWndExtra = 0,
-            hInstance = hInstance,
-            hIcon = IntPtr.Zero,
-            hCursor = IntPtr.Zero,
-            hbrBackground = IntPtr.Zero,
-            lpszMenuName = null,
-            lpszClassName = CLASS_NAME,
-            hIconSm = IntPtr.Zero
-        };
-
-        var regResult = User32.RegisterClassEx(ref wcex);
-        if (regResult == 0)
-        {
-            Console.WriteLine("Window class registration failed!");
-            return;
-        }
-
-        var hWnd = User32.CreateWindowEx(
-            0,
-            CLASS_NAME,
-            _title,
-            WS_OVERLAPPEDWINDOW,
-            100, 100, _initialWidth, _initialHeight,
-            IntPtr.Zero,
-            IntPtr.Zero,
-            hInstance,
-            IntPtr.Zero
-        );
-
-        if (hWnd == IntPtr.Zero)
+        _host = CreateHost();
+        if (!_host.Create(_title, _initialWidth, _initialHeight))
         {
             Console.WriteLine("Window creation failed!");
+            _host.Dispose();
             return;
         }
-
-        User32.ShowWindow(hWnd, SW_SHOW);
-        User32.UpdateWindow(hWnd);
 
         // autofocus: focus first element with the attribute
         if (_rootNode != null)
@@ -164,720 +97,666 @@ public class BrowserWindow
         if (_rootNode != null)
         {
             AnimationEngine.Tick(_rootNode); // initial frame
-            StartAnimationTimer(hWnd);
+            StartAnimationTimer();
         }
 
         // Wake the message loop whenever the JS event loop queues work (timers, fetch, etc.).
-        // PostMessage is thread-safe, so this is safe to call from background timer threads.
+        // PostTask is thread-safe, so this is safe to call from background timer threads.
         if (JsEngine.Instance is { } jsEngine)
         {
-            jsEngine.TaskEnqueued += () => User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
+            jsEngine.TaskEnqueued += () => _host.PostTask();
             // Form submission (and other JS-driven navigation) routes through here.
-            jsEngine.OnNavigate = request => Navigate(request, hWnd);
+            jsEngine.OnNavigate = request => Navigate(request);
             // document.title updates the window caption.
-            jsEngine.OnTitleChange = t => SetWindowTitle(hWnd, t.Length == 0 ? _title : t);
+            jsEngine.OnTitleChange = t => _host.SetTitle(t.Length == 0 ? _title : t);
             // Reflect the parsed document's <title> in the caption.
             if (Parser.Document?.Title is { Length: > 0 } docTitle)
-                SetWindowTitle(hWnd, docTitle);
+                _host.SetTitle(docTitle);
             // Flush any tasks already queued during initial script execution (incl. iframe load).
             if (jsEngine.HasPendingTreeTasks)
-                User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
+                _host.PostTask();
         }
 
-        while (User32.GetMessage(out var msg, IntPtr.Zero, 0, 0))
-        {
-            User32.TranslateMessage(ref msg);
-            User32.DispatchMessage(ref msg);
-        }
+        _host.RunLoop();
+        _host.Dispose();
         _rootNode?.DocumentState?.Engine?.Dispose();
         _session.Dispose();
     }
 
-    private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+    /// <summary>Picks the native windowing backend for the current OS.</summary>
+    private IWindowHost CreateHost()
     {
-        // While a navigation is loading, freeze interaction with the (soon-to-be-replaced)
-        // page and its JS engine. Paint, sizing, the timer (which drives the loading
-        // animation) and destroy still run.
-        if (_loading != null && msg is WM_LBUTTONDOWN or WM_LBUTTONUP or WM_MOUSEMOVE
-            or WM_MOUSEWHEEL or WM_CHAR or WM_KEYDOWN or WM_KEYUP or WM_APP_TASK)
-            return IntPtr.Zero;
+        if (OperatingSystem.IsWindows()) return new Win32WindowHost(this);
+        if (OperatingSystem.IsLinux()) return new X11WindowHost(this);
+        throw new PlatformNotSupportedException("Lite supports Windows (Win32) and Linux (X11) windows.");
+    }
 
-        switch (msg)
+    // ---- Host callbacks -------------------------------------------------------------------
+    // Each native window host (Win32, X11) translates its events into these calls on the UI
+    // thread. While a navigation is loading, interaction with the (soon-to-be-replaced) page
+    // and its JS engine is frozen; paint, sizing, the timer (which drives the loading
+    // animation) and close still run.
+
+    /// <summary>The current frame: a BGRA8888 premultiplied buffer of <c>Width*Height</c> pixels.</summary>
+    internal (IntPtr Pixels, int Width, int Height) Frame => (_pixels, _width, _height);
+
+    /// <summary>Drains the JS event loop after <see cref="IWindowHost.PostTask"/> woke the UI thread.</summary>
+    internal void OnTask()
+    {
+        if (_loading != null) return;
+        if (_rootNode != null && JsEngine.Instance is { } taskEngine)
         {
-            case WM_PAINT:
-                var hdc = User32.BeginPaint(hWnd, out var ps);
-
-                var bmi = new BITMAPINFO();
-                bmi.bmiHeader.biSize = (uint)Marshal.SizeOf(typeof(BITMAPINFOHEADER));
-                bmi.bmiHeader.biWidth = _width;
-                bmi.bmiHeader.biHeight = -_height;
-                bmi.bmiHeader.biPlanes = 1;
-                bmi.bmiHeader.biBitCount = 32;
-                bmi.bmiHeader.biCompression = BI_RGB;
-                bmi.bmiHeader.biSizeImage = (uint)(_width * _height * 4);
-                bmi.bmiHeader.biXPelsPerMeter = 0;
-                bmi.bmiHeader.biYPelsPerMeter = 0;
-                bmi.bmiHeader.biClrUsed = 0;
-                bmi.bmiHeader.biClrImportant = 0;
-
-                Gdi32.SetDIBitsToDevice(
-                    hdc,
-                    0, 0,
-                    (uint)_width, (uint)_height,
-                    0, 0,
-                    0, (uint)_height,
-                    _pixels,
-                    ref bmi,
-                    DIB_RGB_COLORS);
-
-                User32.EndPaint(hWnd, ref ps);
-
-                return IntPtr.Zero;
-
-            case WM_DESTROY:
-                User32.PostQuitMessage(0);
-                break;
-
-            case WM_APP_TASK:
-                if (_rootNode != null && JsEngine.Instance is { } taskEngine)
-                {
-                    // A drained task may itself start a navigation (e.g. location.href = …).
-                    // Skip the live redraw while a loading/reveal overlay owns the screen so we
-                    // don't clobber its frame; the animation timer keeps it updated instead.
-                    if (taskEngine.DrainTree() && _loading == null && _pageTransition == null)
-                    {
-                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    }
-                    // If a drained task queued more work, make sure we come back for it.
-                    if (taskEngine.HasPendingTreeTasks)
-                        User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
-                }
-                break;
-
-            case WM_TIMER:
-                // Phase 1: a navigation is loading on a background thread. Animate the loading
-                // indicator and commit the new page once it's ready (and has shown long enough).
-                if (_loading != null)
-                {
-                    if (_loadReady && _loading.ElapsedMs >= MinLoadingMs)
-                    {
-                        FinalizeNavigation(hWnd);
-                    }
-                    else
-                    {
-                        var prevFrame = _transitionFrame;
-                        _pixels = _loading.RenderFrame(_width, _height, out _transitionFrame);
-                        prevFrame?.Dispose();
-                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    }
-                    break;
-                }
-
-                // Phase 2: reveal cross-fade out of the loading screen after a load completed.
-                if (_pageTransition != null)
-                {
-                    if (!_pageTransition.IsComplete)
-                    {
-                        var prevFrame = _transitionFrame;
-                        _pixels = _pageTransition.RenderFrame(_width, _height, out _transitionFrame);
-                        prevFrame?.Dispose();
-                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                        break;
-                    }
-
-                    // Reveal finished — drop the snapshots and resume live rendering below.
-                    _pageTransition.Dispose();
-                    _pageTransition = null;
-                    _transitionFrame?.Dispose();
-                    _transitionFrame = null;
-                }
-
-                // Phase 3: normal CSS animation / requestAnimationFrame tick.
-                if (_rootNode != null)
-                {
-                    var stillRunning = AnimationEngine.Tick(_rootNode);
-
-                    // Dispatch animation/transition lifecycle events
-                    foreach (var ev in AnimationEngine.DrainEvents())
-                        EventDispatcher.Dispatch(ev.Node.NodeKey, ev.EventType, _rootNode);
-
-                    // Flush requestAnimationFrame callbacks
-                    var engine = JsEngine.Instance;
-                    var rafRan = engine?.FlushRAFTree(_rafStopwatch.Elapsed.TotalMilliseconds) ?? false;
-
-                    (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    if (!stillRunning && !(engine?.HasPendingTreeRAF ?? false))
-                        StopAnimationTimer(hWnd);
-                }
-                break;
-
-            case WM_SIZE:
-                User32.GetClientRect(hWnd, out var clientRect);
-                _width = clientRect.right - clientRect.left;
-                _height = clientRect.bottom - clientRect.top;
-                _viewport.ViewportHeight = _height;
-
-                // While loading, only re-render the loading frame at the new size (re-sizing the
-                // pixel buffer to match the client area) and leave the in-flight engine untouched.
-                if (_loading != null)
-                {
-                    var prevFrame = _transitionFrame;
-                    _pixels = _loading.RenderFrame(_width, _height, out _transitionFrame);
-                    prevFrame?.Dispose();
-                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    break;
-                }
-
-                // Update JS window.innerWidth / innerHeight
-                JsEngine.Instance?.UpdateViewportSize(_width, _height);
-
-                if (_pageTransition != null)
-                {
-                    var prevFrame = _transitionFrame;
-                    _pixels = _pageTransition.RenderFrame(_width, _height, out _transitionFrame);
-                    prevFrame?.Dispose();
-                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    break;
-                }
-
-                if (_rootNode != null)
-                {
-                    // Re-evaluate @media queries against the new viewport size
-                    _rootNode.ReapplyMediaStyles(_width, _height);
-                    (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                }
-
-                break;
-
-            case WM_MOUSEWHEEL:
-                {
-                    var delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
-                    var scrollAmount = -delta / 120f * 60f;
-
-                    // Try scrolling a per-element scrollable container first
-                    User32.GetCursorPos(out var wheelPt);
-                    User32.ScreenToClient(hWnd, ref wheelPt);
-                    var contentPtY = wheelPt.Y + _viewport.ScrollY;
-                    var scrollTarget = _rootNode != null
-                        ? FindScrollableAncestor(_rootNode, wheelPt.X, contentPtY)
-                        : null;
-
-                    // Dispatch a cancelable wheel event; preventDefault() suppresses the scroll.
-                    var wheelPrevented = DispatchWheelEvent(scrollTarget ?? _rootNode, wheelPt.X, wheelPt.Y, contentPtY, -delta / 120f * 60f);
-
-                    if (!wheelPrevented)
-                    {
-                        if (scrollTarget?.ScrollState != null)
-                            scrollTarget.ScrollState.ScrollBy(scrollAmount);
-                        else
-                            _viewport.ScrollBy(scrollAmount);
-                    }
-
-                    if (_rootNode != null)
-                    {
-                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    }
-                    break;
-                }
-
-            case WM_LBUTTONDOWN:
-                {
-                    var x = (short)(lParam.ToInt32() & 0xFFFF);
-                    var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
-                    if (HandleFramePointer("mousedown", x, y, hWnd)) break;
-
-                    if (_viewport.HitThumb(x, y, _width))
-                    {
-                        _draggingScrollbar = true;
-                        _scrollbarGrabOffset = y - _viewport.ThumbTop;
-                        User32.SetCapture(hWnd);
-                    }
-                    else if (_viewport.HitTrack(x, _width))
-                    {
-                        var targetScrollY = _viewport.ScrollYFromThumbTop(y, _viewport.ThumbHeight / 2f);
-                        _viewport.ScrollTo(targetScrollY);
-                        if (_rootNode != null)
-                        {
-                            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                            User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                        }
-                    }
-                    else
-                    {
-                        // Set :active on the node under cursor
-                        var contentY = y + _viewport.ScrollY;
-                        if (_rootNode != null)
-                            AnimationEngine.SnapshotForTransition(_rootNode);
-                        if (PseudoClassState.SetActive(_rootNode, x, contentY) && _rootNode != null)
-                        {
-                            if (AnimationEngine.DetectAndStartTransitions(_rootNode))
-                                StartAnimationTimer(hWnd);
-                            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                            User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                        }
-
-                        // Dispatch mousedown event with coordinates
-                        if (_rootNode != null)
-                        {
-                            var jsEngine = JsEngine.Instance;
-                            for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
-                            {
-                                var region = _hitRegions[ri];
-                                if (!region.Bounds.Contains(x, contentY)) continue;
-                                if (jsEngine != null)
-                                {
-                                    var mdNode = FindNodeByKey(_rootNode, region.NodeKey);
-                                    if (mdNode != null)
-                                        DispatchMouseEvent("mousedown", mdNode, x, y, contentY, jsEngine);
-                                }
-                                break;
-                            }
-                        }
-
-                        // Start range drag if clicking on a range slider
-                        if (_rootNode != null)
-                        {
-                            for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
-                            {
-                                var region = _hitRegions[ri];
-                                if (!region.Bounds.Contains(x, contentY)) continue;
-                                if (region.InputAction == InputAction.Range)
-                                {
-                                    var node = FindNodeByKey(_rootNode, region.NodeKey);
-                                    if (node != null)
-                                    {
-                                        node.Attributes.TryGetValue("min", out var minStr);
-                                        node.Attributes.TryGetValue("max", out var maxStr);
-                                        node.Attributes.TryGetValue("step", out var stepStr);
-                                        float.TryParse(minStr ?? "0", System.Globalization.NumberStyles.Float,
-                                            System.Globalization.CultureInfo.InvariantCulture, out var minV);
-                                        float.TryParse(maxStr ?? "100", System.Globalization.NumberStyles.Float,
-                                            System.Globalization.CultureInfo.InvariantCulture, out var maxV);
-                                        float.TryParse(stepStr ?? "1", System.Globalization.NumberStyles.Float,
-                                            System.Globalization.CultureInfo.InvariantCulture, out var step);
-                                        _draggingRange = node.NodeKey;
-                                        _draggingRangeRect = region.Bounds;
-                                        _rangeMin = minV;
-                                        _rangeMax = maxV;
-                                        _rangeStep = step;
-                                        // Set initial value at click position
-                                        var ratio = Math.Clamp((x - region.Bounds.Left) / region.Bounds.Width, 0f, 1f);
-                                        var newVal = minV + ratio * (maxV - minV);
-                                        newVal = (float)(Math.Round(newVal / step) * step);
-                                        newVal = Math.Clamp(newVal, minV, maxV);
-                                        FormState.TextInputValues[node.NodeKey] =
-                                            newVal == Math.Floor(newVal)
-                                                ? ((int)newVal).ToString()
-                                                : newVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                                        EventDispatcher.Dispatch(node.NodeKey, "input", _rootNode);
-                                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                                    }
-                                }
-                                else if (region.InputAction == InputAction.MediaToggle)
-                                {
-                                    var node = FindNodeByKey(_rootNode, region.NodeKey);
-                                    if (node != null && JsEngine.Instance is { } mediaEngine)
-                                    {
-                                        var el = Scripting.Dom.JsElement.For(mediaEngine.RawEngine, node);
-                                        if (el.paused) el.play(); else el.pause();
-                                        User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
-                                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                                    }
-                                }
-                                break;
-                            }
-                        }
-                    }
-                    break;
-                }
-
-            case WM_MOUSEMOVE:
-                {
-                    if (_draggingScrollbar)
-                    {
-                        var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
-                        var targetScrollY = _viewport.ScrollYFromThumbTop(y, _scrollbarGrabOffset);
-                        _viewport.ScrollTo(targetScrollY);
-                        if (_rootNode != null)
-                        {
-                            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                            User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                        }
-                    }
-                    else if (_draggingRange != null && _rootNode != null)
-                    {
-                        var mx = (short)(lParam.ToInt32() & 0xFFFF);
-                        var ratio = Math.Clamp((mx - _draggingRangeRect.Left) / _draggingRangeRect.Width, 0f, 1f);
-                        var newVal = _rangeMin + ratio * (_rangeMax - _rangeMin);
-                        newVal = (float)(Math.Round(newVal / _rangeStep) * _rangeStep);
-                        newVal = Math.Clamp(newVal, _rangeMin, _rangeMax);
-                        FormState.TextInputValues[_draggingRange.Value] =
-                            newVal == Math.Floor(newVal)
-                                ? ((int)newVal).ToString()
-                                : newVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                        EventDispatcher.Dispatch(_draggingRange.Value, "input", _rootNode);
-                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    }
-                    else
-                    {
-                        // Update :hover state
-                        var mx = (short)(lParam.ToInt32() & 0xFFFF);
-                        var my = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
-                        var contentY = my + _viewport.ScrollY;
-
-                        if (_rootNode != null)
-                            AnimationEngine.SnapshotForTransition(_rootNode);
-                        var hoverChanged = PseudoClassState.UpdateHover(_rootNode, mx, contentY);
-                        if (hoverChanged && _rootNode != null)
-                        {
-                            if (AnimationEngine.DetectAndStartTransitions(_rootNode))
-                                StartAnimationTimer(hWnd);
-                            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                            User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                        }
-                    }
-                    break;
-                }
-
-            case WM_LBUTTONUP:
-                {
-                    var frameX = (short)(lParam.ToInt32() & 0xFFFF);
-                    var frameY = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
-                    if (HandleFramePointer("mouseup", frameX, frameY, hWnd)) break;
-                    // Release range drag
-                    _draggingRange = null;
-
-                    if (_draggingScrollbar)
-                    {
-                        _draggingScrollbar = false;
-                        User32.ReleaseCapture();
-                        break;
-                    }
-
-                    // Clear :active state
-                    if (_rootNode != null)
-                        AnimationEngine.SnapshotForTransition(_rootNode);
-                    var activeChanged = PseudoClassState.ClearActive();
-                    if (activeChanged && _rootNode != null && AnimationEngine.DetectAndStartTransitions(_rootNode))
-                        StartAnimationTimer(hWnd);
-
-                    var x = (short)(lParam.ToInt32() & 0xFFFF);
-                    var y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
-                    var contentY = y + _viewport.ScrollY;
-                    var handled = false;
-                    var prevFocus = FormState.FocusedInput;
-
-                    // Close any open dropdown if clicking outside it
-                    var clickedOnDropdown = false;
-
-                    // Dispatch mouseup event with coordinates
-                    if (_rootNode != null)
-                    {
-                        var jsEngine = JsEngine.Instance;
-                        for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
-                        {
-                            var region = _hitRegions[ri];
-                            if (!region.Bounds.Contains(x, contentY)) continue;
-                            if (jsEngine != null)
-                            {
-                                var node = FindNodeByKey(_rootNode, region.NodeKey);
-                                if (node != null)
-                                    DispatchMouseEvent("mouseup", node, x, y, contentY, jsEngine);
-                            }
-                            break;
-                        }
-                    }
-
-                    for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
-                    {
-                        var region = _hitRegions[ri];
-                        if (!region.Bounds.Contains(x, contentY)) continue;
-
-                        if (region.Href != null)
-                        {
-                            Navigate(region.Href, hWnd);
-                            handled = true;
-                            break;
-                        }
-
-                        if (region.InputAction == InputAction.TextInput)
-                        {
-                            FormState.FocusedInput = region.NodeKey;
-                            handled = true;
-                            break;
-                        }
-
-                        if (region.InputAction == InputAction.Checkbox)
-                        {
-                            if (!FormState.CheckedBoxes.Remove(region.NodeKey))
-                                FormState.CheckedBoxes.Add(region.NodeKey);
-                            handled = true;
-                            break;
-                        }
-
-                        if (region.InputAction == InputAction.Radio)
-                        {
-                            FormState.SelectRadio(region.NodeKey);
-                            handled = true;
-                            break;
-                        }
-
-                        if (region.InputAction == InputAction.NumberUp || region.InputAction == InputAction.NumberDown)
-                        {
-                            var node = FindNodeByKey(_rootNode, region.NodeKey);
-                            if (node != null)
-                            {
-                                node.Attributes.TryGetValue("step", out var stepStr);
-                                node.Attributes.TryGetValue("min", out var minStr);
-                                node.Attributes.TryGetValue("max", out var maxStr);
-                                node.Attributes.TryGetValue("value", out var defVal);
-                                float.TryParse(stepStr ?? "1", System.Globalization.NumberStyles.Float,
-                                    System.Globalization.CultureInfo.InvariantCulture, out var step);
-                                float.TryParse(minStr, System.Globalization.NumberStyles.Float,
-                                    System.Globalization.CultureInfo.InvariantCulture, out var minV);
-                                float.TryParse(maxStr, System.Globalization.NumberStyles.Float,
-                                    System.Globalization.CultureInfo.InvariantCulture, out var maxV);
-                                var hasMin = !string.IsNullOrEmpty(minStr);
-                                var hasMax = !string.IsNullOrEmpty(maxStr);
-                                var curText = FormState.GetTextValue(node.NodeKey, defVal ?? "0");
-                                float.TryParse(curText, System.Globalization.NumberStyles.Float,
-                                    System.Globalization.CultureInfo.InvariantCulture, out var curVal);
-                                curVal += region.InputAction == InputAction.NumberUp ? step : -step;
-                                if (hasMin && curVal < minV) curVal = minV;
-                                if (hasMax && curVal > maxV) curVal = maxV;
-                                FormState.TextInputValues[node.NodeKey] =
-                                    curVal == Math.Floor(curVal)
-                                        ? ((int)curVal).ToString()
-                                        : curVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                                EventDispatcher.Dispatch(node.NodeKey, "input", _rootNode);
-                            }
-                            handled = true;
-                            break;
-                        }
-
-                        if (region.InputAction == InputAction.Range)
-                        {
-                            // Range click is handled in WM_LBUTTONDOWN; just consume
-                            handled = true;
-                            break;
-                        }
-
-                        if (region.InputAction == InputAction.SelectDropdown)
-                        {
-                            clickedOnDropdown = true;
-                            // Check if this is a dropdown option click
-                            if (FormState.OpenDropdown == region.NodeKey && Drawer.SelectOptionMap.TryGetValue(ri, out var optIdx))
-                            {
-                                var node = FindNodeByKey(_rootNode, region.NodeKey);
-                                if (node != null)
-                                {
-                                    node.Attributes.TryGetValue("_optionValues", out var optValStr);
-                                    if (optValStr != null)
-                                    {
-                                        var vals = optValStr.Split('|');
-                                        if (optIdx < vals.Length)
-                                            FormState.TextInputValues[node.NodeKey] = vals[optIdx];
-                                    }
-                                }
-                                FormState.OpenDropdown = null;
-                            }
-                            else if (FormState.OpenDropdown == region.NodeKey)
-                            {
-                                // Clicking the select again closes it
-                                FormState.OpenDropdown = null;
-                            }
-                            else
-                            {
-                                // Open dropdown
-                                FormState.OpenDropdown = region.NodeKey;
-                            }
-                            handled = true;
-                            break;
-                        }
-
-                        if (region.InputAction == InputAction.Button)
-                        {
-                            DispatchClickWithCoords(region.NodeKey, x, y, contentY);
-                            var btn = FindNodeByKey(_rootNode, region.NodeKey);
-                            if (btn != null && IsSubmitControl(btn) && FindAncestorForm(btn) is { } submitForm)
-                                SubmitForm(submitForm, hWnd, btn);
-                            handled = true;
-                            break;
-                        }
-
-                        if (region.InputAction == InputAction.FileOpen)
-                        {
-                            OpenFilePicker(region.NodeKey, hWnd);
-                            handled = true;
-                            break;
-                        }
-
-                        if (DispatchClickWithCoords(region.NodeKey, x, y, contentY))
-                        {
-                            handled = true;
-                            break;
-                        }
-                    }
-
-                    // Close dropdown if clicked elsewhere
-                    if (!clickedOnDropdown && FormState.OpenDropdown != null)
-                    {
-                        FormState.OpenDropdown = null;
-                        handled = true;
-                    }
-
-                    var focusChanged = !handled && FormState.FocusedInput != null;
-                    if (focusChanged) FormState.FocusedInput = null;
-
-                    // Fire "change" event if value changed since focus
-                    if (prevFocus != null && prevFocus != FormState.FocusedInput && _rootNode != null)
-                    {
-                        var currentVal = FormState.TextInputValues.GetValueOrDefault(prevFocus.Value, "");
-                        if (currentVal != (_focusedValueSnapshot ?? ""))
-                            EventDispatcher.Dispatch(prevFocus.Value, "change", _rootNode);
-                    }
-
-                    // Snapshot value for newly focused input
-                    if (FormState.FocusedInput != null && FormState.FocusedInput != prevFocus)
-                        _focusedValueSnapshot = FormState.TextInputValues.GetValueOrDefault(FormState.FocusedInput.Value, "");
-                    else if (FormState.FocusedInput == null)
-                        _focusedValueSnapshot = null;
-
-                    // Update :focus pseudo-class state
-                    if (FormState.FocusedInput != prevFocus)
-                    {
-                        if (_rootNode != null)
-                            AnimationEngine.SnapshotForTransition(_rootNode);
-                        PseudoClassState.UpdateFocus(_rootNode, FormState.FocusedInput);
-                        if (_rootNode != null && AnimationEngine.DetectAndStartTransitions(_rootNode))
-                            StartAnimationTimer(hWnd);
-                    }
-
-                    if ((handled || focusChanged || activeChanged) && _rootNode != null)
-                    {
-                        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    }
-                    break;
-                }
-
-            case WM_KEYDOWN:
-            case WM_KEYUP:
-                {
-                    if (_rootNode == null) break;
-                    var vk = (int)wParam.ToInt64();
-                    var keyName = MapVirtualKey(vk);
-                    var eventType = msg == WM_KEYDOWN ? "keydown" : "keyup";
-                    var modifiers = GetKeyModifiers();
-
-                    // Dispatch to focused element or body
-                    var targetNode = FormState.FocusedInput != null
-                        ? FindNodeByKey(_rootNode, FormState.FocusedInput.Value)
-                        : FindFirst(_rootNode, n => n.TagName == "BODY");
-                    if (targetNode != null)
-                    {
-                        var jsEngine = JsEngine.Instance;
-                        if (jsEngine != null)
-                        {
-                            var evt = new Scripting.Dom.JsEvent();
-                            evt.Init(eventType, true, true);
-                            evt.key = keyName;
-                            evt.keyCode = vk;
-                            evt.code = MapVirtualKeyToCode(vk);
-                            evt.ctrlKey = modifiers.ctrl;
-                            evt.shiftKey = modifiers.shift;
-                            evt.altKey = modifiers.alt;
-                            evt.metaKey = modifiers.meta;
-                            evt.target = new Scripting.Dom.JsElement(jsEngine.RawEngine, targetNode);
-                            EventDispatcher.DispatchEvent(targetNode, evt, jsEngine);
-                        }
-                    }
-
-                    // Handle Enter in single-line input → submit
-                    if (msg == WM_KEYDOWN && vk == 0x0D && FormState.FocusedInput != null)
-                    {
-                        var focNode = FindNodeByKey(_rootNode, FormState.FocusedInput.Value);
-                        if (focNode != null && focNode.TagName == "INPUT")
-                        {
-                            // Walk up to find <form>, then submit (dispatch + navigate).
-                            if (FindAncestorForm(focNode) is { } formNode)
-                                SubmitForm(formNode, hWnd);
-                        }
-                    }
-                    break;
-                }
-
-            case WM_CHAR:
-                {
-                    if (FormState.FocusedInput == null || _rootNode == null) break;
-                    var c = (char)wParam.ToInt32();
-                    if (c == '\b')
-                    {
-                        var key = FormState.FocusedInput.Value;
-                        if (FormState.TextInputValues.TryGetValue(key, out var cur) && cur.Length > 0)
-                            FormState.TextInputValues[key] = cur[..^1];
-                    }
-                    else if (c == '\r')
-                    {
-                        // Enter key — only allow in textareas
-                        var focusedNode = FindNodeByKey(_rootNode, FormState.FocusedInput.Value);
-                        if (focusedNode?.TagName == "TEXTAREA")
-                        {
-                            var key = FormState.FocusedInput.Value;
-                            FormState.TextInputValues.TryGetValue(key, out var cur);
-                            FormState.TextInputValues[key] = (cur ?? string.Empty) + '\n';
-                        }
-                    }
-                    else if (!char.IsControl(c))
-                    {
-                        var key = FormState.FocusedInput.Value;
-                        FormState.TextInputValues.TryGetValue(key, out var cur);
-                        FormState.TextInputValues[key] = (cur ?? string.Empty) + c;
-                    }
-
-                    // Fire "input" event on the focused element
-                    EventDispatcher.Dispatch(FormState.FocusedInput.Value, "input", _rootNode);
-
-                    (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                    User32.InvalidateRect(hWnd, IntPtr.Zero, false);
-                    break;
-                }
-
-            case WM_SETCURSOR:
-                if ((lParam.ToInt32() & 0xFFFF) == HTCLIENT)
-                {
-                    User32.GetCursorPos(out var pt);
-                    User32.ScreenToClient(hWnd, ref pt);
-                    var cursorId = IDC_ARROW;
-                    var contentPtY = pt.Y + _viewport.ScrollY;
-                    foreach (var region in _hitRegions)
-                    {
-                        if (region.Bounds.Contains(pt.X, contentPtY))
-                        {
-                            cursorId = region.Cursor switch
-                            {
-                                CursorType.Pointer => IDC_HAND,
-                                CursorType.Text => IDC_IBEAM,
-                                _ => IDC_ARROW
-                            };
-                        }
-                    }
-                    User32.SetCursor(User32.LoadCursor(IntPtr.Zero, cursorId));
-                    return new IntPtr(1);
-                }
-                return User32.DefWindowProc(hWnd, msg, wParam, lParam);
-
-            default:
-                return User32.DefWindowProc(hWnd, msg, wParam, lParam);
+            // A drained task may itself start a navigation (e.g. location.href = …).
+            // Skip the live redraw while a loading/reveal overlay owns the screen so we
+            // don't clobber its frame; the animation timer keeps it updated instead.
+            if (taskEngine.DrainTree() && _loading == null && _pageTransition == null)
+            {
+                (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                _host.Invalidate();
+            }
+            // If a drained task queued more work, make sure we come back for it.
+            if (taskEngine.HasPendingTreeTasks)
+                _host.PostTask();
         }
-        return IntPtr.Zero;
+    }
+
+    /// <summary>Animation timer tick: loading indicator, reveal cross-fade, then CSS animations and rAF.</summary>
+    internal void OnTimer()
+    {
+        // Phase 1: a navigation is loading on a background thread. Animate the loading
+        // indicator and commit the new page once it's ready (and has shown long enough).
+        if (_loading != null)
+        {
+            if (_loadReady && _loading.ElapsedMs >= MinLoadingMs)
+            {
+                FinalizeNavigation();
+            }
+            else
+            {
+                var prevFrame = _transitionFrame;
+                _pixels = _loading.RenderFrame(_width, _height, out _transitionFrame);
+                prevFrame?.Dispose();
+                _host.Invalidate();
+            }
+            return;
+        }
+
+        // Phase 2: reveal cross-fade out of the loading screen after a load completed.
+        if (_pageTransition != null)
+        {
+            if (!_pageTransition.IsComplete)
+            {
+                var prevFrame = _transitionFrame;
+                _pixels = _pageTransition.RenderFrame(_width, _height, out _transitionFrame);
+                prevFrame?.Dispose();
+                _host.Invalidate();
+                return;
+            }
+
+            // Reveal finished — drop the snapshots and resume live rendering below.
+            _pageTransition.Dispose();
+            _pageTransition = null;
+            _transitionFrame?.Dispose();
+            _transitionFrame = null;
+        }
+
+        // Phase 3: normal CSS animation / requestAnimationFrame tick.
+        if (_rootNode != null)
+        {
+            var stillRunning = AnimationEngine.Tick(_rootNode);
+
+            // Dispatch animation/transition lifecycle events
+            foreach (var ev in AnimationEngine.DrainEvents())
+                EventDispatcher.Dispatch(ev.Node.NodeKey, ev.EventType, _rootNode);
+
+            // Flush requestAnimationFrame callbacks
+            var engine = JsEngine.Instance;
+            var rafRan = engine?.FlushRAFTree(_rafStopwatch.Elapsed.TotalMilliseconds) ?? false;
+
+            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+            _host.Invalidate();
+            if (!stillRunning && !(engine?.HasPendingTreeRAF ?? false))
+                StopAnimationTimer();
+        }
+    }
+
+    /// <summary>The client area changed size; re-lays out and repaints at the new size.</summary>
+    internal void OnResize(int width, int height)
+    {
+        _width = width;
+        _height = height;
+        _viewport.ViewportHeight = _height;
+
+        // While loading, only re-render the loading frame at the new size (re-sizing the
+        // pixel buffer to match the client area) and leave the in-flight engine untouched.
+        if (_loading != null)
+        {
+            var prevFrame = _transitionFrame;
+            _pixels = _loading.RenderFrame(_width, _height, out _transitionFrame);
+            prevFrame?.Dispose();
+            _host.Invalidate();
+            return;
+        }
+
+        // Update JS window.innerWidth / innerHeight
+        JsEngine.Instance?.UpdateViewportSize(_width, _height);
+
+        if (_pageTransition != null)
+        {
+            var prevFrame = _transitionFrame;
+            _pixels = _pageTransition.RenderFrame(_width, _height, out _transitionFrame);
+            prevFrame?.Dispose();
+            _host.Invalidate();
+            return;
+        }
+
+        if (_rootNode != null)
+        {
+            // Re-evaluate @media queries against the new viewport size
+            _rootNode.ReapplyMediaStyles(_width, _height);
+            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+            _host.Invalidate();
+        }
+    }
+
+    /// <summary>Mouse wheel at client point (x, y); <paramref name="delta"/> is in WHEEL_DELTA units (120 per notch, positive away from the user).</summary>
+    internal void OnWheel(int x, int y, int delta)
+    {
+        if (_loading != null) return;
+        var scrollAmount = -delta / 120f * 60f;
+
+        // Try scrolling a per-element scrollable container first
+        var contentPtY = y + _viewport.ScrollY;
+        var scrollTarget = _rootNode != null
+            ? FindScrollableAncestor(_rootNode, x, contentPtY)
+            : null;
+
+        // Dispatch a cancelable wheel event; preventDefault() suppresses the scroll.
+        var wheelPrevented = DispatchWheelEvent(scrollTarget ?? _rootNode, x, y, contentPtY, -delta / 120f * 60f);
+
+        if (!wheelPrevented)
+        {
+            if (scrollTarget?.ScrollState != null)
+                scrollTarget.ScrollState.ScrollBy(scrollAmount);
+            else
+                _viewport.ScrollBy(scrollAmount);
+        }
+
+        if (_rootNode != null)
+        {
+            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+            _host.Invalidate();
+        }
+    }
+
+    /// <summary>Primary button pressed at client point (x, y).</summary>
+    internal void OnMouseDown(int x, int y)
+    {
+        if (_loading != null) return;
+        if (HandleFramePointer("mousedown", x, y)) return;
+
+        if (_viewport.HitThumb(x, y, _width))
+        {
+            _draggingScrollbar = true;
+            _scrollbarGrabOffset = y - _viewport.ThumbTop;
+            _host.CaptureMouse();
+        }
+        else if (_viewport.HitTrack(x, _width))
+        {
+            var targetScrollY = _viewport.ScrollYFromThumbTop(y, _viewport.ThumbHeight / 2f);
+            _viewport.ScrollTo(targetScrollY);
+            if (_rootNode != null)
+            {
+                (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                _host.Invalidate();
+            }
+        }
+        else
+        {
+            // Set :active on the node under cursor
+            var contentY = y + _viewport.ScrollY;
+            if (_rootNode != null)
+                AnimationEngine.SnapshotForTransition(_rootNode);
+            if (PseudoClassState.SetActive(_rootNode, x, contentY) && _rootNode != null)
+            {
+                if (AnimationEngine.DetectAndStartTransitions(_rootNode))
+                    StartAnimationTimer();
+                (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                _host.Invalidate();
+            }
+
+            // Dispatch mousedown event with coordinates
+            if (_rootNode != null)
+            {
+                var jsEngine = JsEngine.Instance;
+                for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
+                {
+                    var region = _hitRegions[ri];
+                    if (!region.Bounds.Contains(x, contentY)) continue;
+                    if (jsEngine != null)
+                    {
+                        var mdNode = FindNodeByKey(_rootNode, region.NodeKey);
+                        if (mdNode != null)
+                            DispatchMouseEvent("mousedown", mdNode, x, y, contentY, jsEngine);
+                    }
+                    break;
+                }
+            }
+
+            // Start range drag if clicking on a range slider
+            if (_rootNode != null)
+            {
+                for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
+                {
+                    var region = _hitRegions[ri];
+                    if (!region.Bounds.Contains(x, contentY)) continue;
+                    if (region.InputAction == InputAction.Range)
+                    {
+                        var node = FindNodeByKey(_rootNode, region.NodeKey);
+                        if (node != null)
+                        {
+                            node.Attributes.TryGetValue("min", out var minStr);
+                            node.Attributes.TryGetValue("max", out var maxStr);
+                            node.Attributes.TryGetValue("step", out var stepStr);
+                            float.TryParse(minStr ?? "0", System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, out var minV);
+                            float.TryParse(maxStr ?? "100", System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, out var maxV);
+                            float.TryParse(stepStr ?? "1", System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, out var step);
+                            _draggingRange = node.NodeKey;
+                            _draggingRangeRect = region.Bounds;
+                            _rangeMin = minV;
+                            _rangeMax = maxV;
+                            _rangeStep = step;
+                            // Set initial value at click position
+                            var ratio = Math.Clamp((x - region.Bounds.Left) / region.Bounds.Width, 0f, 1f);
+                            var newVal = minV + ratio * (maxV - minV);
+                            newVal = (float)(Math.Round(newVal / step) * step);
+                            newVal = Math.Clamp(newVal, minV, maxV);
+                            FormState.TextInputValues[node.NodeKey] =
+                                newVal == Math.Floor(newVal)
+                                    ? ((int)newVal).ToString()
+                                    : newVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                            EventDispatcher.Dispatch(node.NodeKey, "input", _rootNode);
+                            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                            _host.Invalidate();
+                        }
+                    }
+                    else if (region.InputAction == InputAction.MediaToggle)
+                    {
+                        var node = FindNodeByKey(_rootNode, region.NodeKey);
+                        if (node != null && JsEngine.Instance is { } mediaEngine)
+                        {
+                            var el = Scripting.Dom.JsElement.For(mediaEngine.RawEngine, node);
+                            if (el.paused) el.play(); else el.pause();
+                            _host.PostTask();
+                            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                            _host.Invalidate();
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    /// <summary>Pointer moved to client point (x, y).</summary>
+    internal void OnMouseMove(int x, int y)
+    {
+        if (_loading != null) return;
+        if (_draggingScrollbar)
+        {
+            var targetScrollY = _viewport.ScrollYFromThumbTop(y, _scrollbarGrabOffset);
+            _viewport.ScrollTo(targetScrollY);
+            if (_rootNode != null)
+            {
+                (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                _host.Invalidate();
+            }
+        }
+        else if (_draggingRange != null && _rootNode != null)
+        {
+            var ratio = Math.Clamp((x - _draggingRangeRect.Left) / _draggingRangeRect.Width, 0f, 1f);
+            var newVal = _rangeMin + ratio * (_rangeMax - _rangeMin);
+            newVal = (float)(Math.Round(newVal / _rangeStep) * _rangeStep);
+            newVal = Math.Clamp(newVal, _rangeMin, _rangeMax);
+            FormState.TextInputValues[_draggingRange.Value] =
+                newVal == Math.Floor(newVal)
+                    ? ((int)newVal).ToString()
+                    : newVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            EventDispatcher.Dispatch(_draggingRange.Value, "input", _rootNode);
+            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+            _host.Invalidate();
+        }
+        else
+        {
+            // Update :hover state
+            var contentY = y + _viewport.ScrollY;
+
+            if (_rootNode != null)
+                AnimationEngine.SnapshotForTransition(_rootNode);
+            var hoverChanged = PseudoClassState.UpdateHover(_rootNode, x, contentY);
+            if (hoverChanged && _rootNode != null)
+            {
+                if (AnimationEngine.DetectAndStartTransitions(_rootNode))
+                    StartAnimationTimer();
+                (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+                _host.Invalidate();
+            }
+        }
+    }
+
+    /// <summary>Primary button released at client point (x, y).</summary>
+    internal void OnMouseUp(int x, int y)
+    {
+        if (_loading != null) return;
+        if (HandleFramePointer("mouseup", x, y)) return;
+        // Release range drag
+        _draggingRange = null;
+
+        if (_draggingScrollbar)
+        {
+            _draggingScrollbar = false;
+            _host.ReleaseMouse();
+            return;
+        }
+
+        // Clear :active state
+        if (_rootNode != null)
+            AnimationEngine.SnapshotForTransition(_rootNode);
+        var activeChanged = PseudoClassState.ClearActive();
+        if (activeChanged && _rootNode != null && AnimationEngine.DetectAndStartTransitions(_rootNode))
+            StartAnimationTimer();
+
+        var contentY = y + _viewport.ScrollY;
+        var handled = false;
+        var prevFocus = FormState.FocusedInput;
+
+        // Close any open dropdown if clicking outside it
+        var clickedOnDropdown = false;
+
+        // Dispatch mouseup event with coordinates
+        if (_rootNode != null)
+        {
+            var jsEngine = JsEngine.Instance;
+            for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
+            {
+                var region = _hitRegions[ri];
+                if (!region.Bounds.Contains(x, contentY)) continue;
+                if (jsEngine != null)
+                {
+                    var node = FindNodeByKey(_rootNode, region.NodeKey);
+                    if (node != null)
+                        DispatchMouseEvent("mouseup", node, x, y, contentY, jsEngine);
+                }
+                break;
+            }
+        }
+
+        for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
+        {
+            var region = _hitRegions[ri];
+            if (!region.Bounds.Contains(x, contentY)) continue;
+
+            if (region.Href != null)
+            {
+                Navigate(region.Href);
+                handled = true;
+                break;
+            }
+
+            if (region.InputAction == InputAction.TextInput)
+            {
+                FormState.FocusedInput = region.NodeKey;
+                handled = true;
+                break;
+            }
+
+            if (region.InputAction == InputAction.Checkbox)
+            {
+                if (!FormState.CheckedBoxes.Remove(region.NodeKey))
+                    FormState.CheckedBoxes.Add(region.NodeKey);
+                handled = true;
+                break;
+            }
+
+            if (region.InputAction == InputAction.Radio)
+            {
+                FormState.SelectRadio(region.NodeKey);
+                handled = true;
+                break;
+            }
+
+            if (region.InputAction == InputAction.NumberUp || region.InputAction == InputAction.NumberDown)
+            {
+                var node = FindNodeByKey(_rootNode, region.NodeKey);
+                if (node != null)
+                {
+                    node.Attributes.TryGetValue("step", out var stepStr);
+                    node.Attributes.TryGetValue("min", out var minStr);
+                    node.Attributes.TryGetValue("max", out var maxStr);
+                    node.Attributes.TryGetValue("value", out var defVal);
+                    float.TryParse(stepStr ?? "1", System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var step);
+                    float.TryParse(minStr, System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var minV);
+                    float.TryParse(maxStr, System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var maxV);
+                    var hasMin = !string.IsNullOrEmpty(minStr);
+                    var hasMax = !string.IsNullOrEmpty(maxStr);
+                    var curText = FormState.GetTextValue(node.NodeKey, defVal ?? "0");
+                    float.TryParse(curText, System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var curVal);
+                    curVal += region.InputAction == InputAction.NumberUp ? step : -step;
+                    if (hasMin && curVal < minV) curVal = minV;
+                    if (hasMax && curVal > maxV) curVal = maxV;
+                    FormState.TextInputValues[node.NodeKey] =
+                        curVal == Math.Floor(curVal)
+                            ? ((int)curVal).ToString()
+                            : curVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    EventDispatcher.Dispatch(node.NodeKey, "input", _rootNode);
+                }
+                handled = true;
+                break;
+            }
+
+            if (region.InputAction == InputAction.Range)
+            {
+                // Range click is handled in OnMouseDown; just consume
+                handled = true;
+                break;
+            }
+
+            if (region.InputAction == InputAction.SelectDropdown)
+            {
+                clickedOnDropdown = true;
+                // Check if this is a dropdown option click
+                if (FormState.OpenDropdown == region.NodeKey && Drawer.SelectOptionMap.TryGetValue(ri, out var optIdx))
+                {
+                    var node = FindNodeByKey(_rootNode, region.NodeKey);
+                    if (node != null)
+                    {
+                        node.Attributes.TryGetValue("_optionValues", out var optValStr);
+                        if (optValStr != null)
+                        {
+                            var vals = optValStr.Split('|');
+                            if (optIdx < vals.Length)
+                                FormState.TextInputValues[node.NodeKey] = vals[optIdx];
+                        }
+                    }
+                    FormState.OpenDropdown = null;
+                }
+                else if (FormState.OpenDropdown == region.NodeKey)
+                {
+                    // Clicking the select again closes it
+                    FormState.OpenDropdown = null;
+                }
+                else
+                {
+                    // Open dropdown
+                    FormState.OpenDropdown = region.NodeKey;
+                }
+                handled = true;
+                break;
+            }
+
+            if (region.InputAction == InputAction.Button)
+            {
+                DispatchClickWithCoords(region.NodeKey, x, y, contentY);
+                var btn = FindNodeByKey(_rootNode, region.NodeKey);
+                if (btn != null && IsSubmitControl(btn) && FindAncestorForm(btn) is { } submitForm)
+                    SubmitForm(submitForm, btn);
+                handled = true;
+                break;
+            }
+
+            if (region.InputAction == InputAction.FileOpen)
+            {
+                OpenFilePicker(region.NodeKey);
+                handled = true;
+                break;
+            }
+
+            if (DispatchClickWithCoords(region.NodeKey, x, y, contentY))
+            {
+                handled = true;
+                break;
+            }
+        }
+
+        // Close dropdown if clicked elsewhere
+        if (!clickedOnDropdown && FormState.OpenDropdown != null)
+        {
+            FormState.OpenDropdown = null;
+            handled = true;
+        }
+
+        var focusChanged = !handled && FormState.FocusedInput != null;
+        if (focusChanged) FormState.FocusedInput = null;
+
+        // Fire "change" event if value changed since focus
+        if (prevFocus != null && prevFocus != FormState.FocusedInput && _rootNode != null)
+        {
+            var currentVal = FormState.TextInputValues.GetValueOrDefault(prevFocus.Value, "");
+            if (currentVal != (_focusedValueSnapshot ?? ""))
+                EventDispatcher.Dispatch(prevFocus.Value, "change", _rootNode);
+        }
+
+        // Snapshot value for newly focused input
+        if (FormState.FocusedInput != null && FormState.FocusedInput != prevFocus)
+            _focusedValueSnapshot = FormState.TextInputValues.GetValueOrDefault(FormState.FocusedInput.Value, "");
+        else if (FormState.FocusedInput == null)
+            _focusedValueSnapshot = null;
+
+        // Update :focus pseudo-class state
+        if (FormState.FocusedInput != prevFocus)
+        {
+            if (_rootNode != null)
+                AnimationEngine.SnapshotForTransition(_rootNode);
+            PseudoClassState.UpdateFocus(_rootNode, FormState.FocusedInput);
+            if (_rootNode != null && AnimationEngine.DetectAndStartTransitions(_rootNode))
+                StartAnimationTimer();
+        }
+
+        if ((handled || focusChanged || activeChanged) && _rootNode != null)
+        {
+            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+            _host.Invalidate();
+        }
+    }
+
+    /// <summary>Key pressed or released; <paramref name="vk"/> is a Win32 virtual-key code (other hosts translate to it).</summary>
+    internal void OnKey(bool down, int vk, KeyModifiers modifiers)
+    {
+        if (_loading != null) return;
+        if (_rootNode == null) return;
+        var keyName = MapVirtualKey(vk);
+        var eventType = down ? "keydown" : "keyup";
+
+        // Dispatch to focused element or body
+        var targetNode = FormState.FocusedInput != null
+            ? FindNodeByKey(_rootNode, FormState.FocusedInput.Value)
+            : FindFirst(_rootNode, n => n.TagName == "BODY");
+        if (targetNode != null)
+        {
+            var jsEngine = JsEngine.Instance;
+            if (jsEngine != null)
+            {
+                var evt = new Scripting.Dom.JsEvent();
+                evt.Init(eventType, true, true);
+                evt.key = keyName;
+                evt.keyCode = vk;
+                evt.code = MapVirtualKeyToCode(vk);
+                evt.ctrlKey = modifiers.Ctrl;
+                evt.shiftKey = modifiers.Shift;
+                evt.altKey = modifiers.Alt;
+                evt.metaKey = modifiers.Meta;
+                evt.target = new Scripting.Dom.JsElement(jsEngine.RawEngine, targetNode);
+                EventDispatcher.DispatchEvent(targetNode, evt, jsEngine);
+            }
+        }
+
+        // Handle Enter in single-line input → submit
+        if (down && vk == 0x0D && FormState.FocusedInput != null)
+        {
+            var focNode = FindNodeByKey(_rootNode, FormState.FocusedInput.Value);
+            if (focNode != null && focNode.TagName == "INPUT")
+            {
+                // Walk up to find <form>, then submit (dispatch + navigate).
+                if (FindAncestorForm(focNode) is { } formNode)
+                    SubmitForm(formNode);
+            }
+        }
+    }
+
+    /// <summary>A character was typed ('\b' for Backspace, '\r' for Enter).</summary>
+    internal void OnChar(char c)
+    {
+        if (_loading != null) return;
+        if (FormState.FocusedInput == null || _rootNode == null) return;
+        if (c == '\b')
+        {
+            var key = FormState.FocusedInput.Value;
+            if (FormState.TextInputValues.TryGetValue(key, out var cur) && cur.Length > 0)
+                FormState.TextInputValues[key] = cur[..^1];
+        }
+        else if (c == '\r')
+        {
+            // Enter key — only allow in textareas
+            var focusedNode = FindNodeByKey(_rootNode, FormState.FocusedInput.Value);
+            if (focusedNode?.TagName == "TEXTAREA")
+            {
+                var key = FormState.FocusedInput.Value;
+                FormState.TextInputValues.TryGetValue(key, out var cur);
+                FormState.TextInputValues[key] = (cur ?? string.Empty) + '\n';
+            }
+        }
+        else if (!char.IsControl(c))
+        {
+            var key = FormState.FocusedInput.Value;
+            FormState.TextInputValues.TryGetValue(key, out var cur);
+            FormState.TextInputValues[key] = (cur ?? string.Empty) + c;
+        }
+
+        // Fire "input" event on the focused element
+        EventDispatcher.Dispatch(FormState.FocusedInput.Value, "input", _rootNode);
+
+        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+        _host.Invalidate();
+    }
+
+    /// <summary>The cursor to show over client point (x, y): the topmost hit region's cursor.</summary>
+    internal CursorType CursorAt(int x, int y)
+    {
+        var cursor = CursorType.Default;
+        var contentPtY = y + _viewport.ScrollY;
+        foreach (var region in _hitRegions)
+        {
+            if (region.Bounds.Contains(x, contentPtY))
+                cursor = region.Cursor;
+        }
+        return cursor;
     }
 
     /// <summary>
@@ -886,9 +765,9 @@ public class BrowserWindow
     /// (same document, differing only by #hash) scroll to the target and fire hashchange
     /// without a reload.
     /// </summary>
-    private void Navigate(string href, IntPtr hWnd) => Navigate(new NavigationRequest(href), hWnd);
+    private void Navigate(string href) => Navigate(new NavigationRequest(href));
 
-    private void Navigate(NavigationRequest request, IntPtr hWnd)
+    private void Navigate(NavigationRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Url)) return;
 
@@ -911,7 +790,7 @@ public class BrowserWindow
             if (_rootNode != null)
             {
                 (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-                User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                _host.Invalidate();
             }
             return;
         }
@@ -945,8 +824,8 @@ public class BrowserWindow
         _transitionFrame?.Dispose();
         _pixels = _loading.RenderFrame(w, h, out _transitionFrame);
 
-        StartAnimationTimer(hWnd); // drives the loading animation + the completion check
-        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+        StartAnimationTimer(); // drives the loading animation + the completion check
+        _host.Invalidate();
 
         Task.Run(() =>
         {
@@ -962,7 +841,7 @@ public class BrowserWindow
     /// screen. Runs on the UI thread (from the animation timer) once the load is ready and the
     /// loading indicator has been shown for at least <see cref="MinLoadingMs"/>.
     /// </summary>
-    private void FinalizeNavigation(IntPtr hWnd)
+    private void FinalizeNavigation()
     {
         // The last loading frame doubles as the "from" image for the reveal fade.
         var fromImage = CaptureFrame();
@@ -983,7 +862,7 @@ public class BrowserWindow
             if (_rootNode != null)
                 (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
             fromImage?.Dispose();
-            User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+            _host.Invalidate();
             return;
         }
 
@@ -1009,11 +888,11 @@ public class BrowserWindow
             engine.TransferTreeToCurrentThread();
             engine.SetViewport(_viewport);
             engine.UpdateViewportSize(_width, _height);
-            engine.TaskEnqueued += () => User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
-            engine.OnNavigate = request => Navigate(request, hWnd);
-            engine.OnTitleChange = t => SetWindowTitle(hWnd, t.Length == 0 ? _title : t);
+            engine.TaskEnqueued += () => _host.PostTask();
+            engine.OnNavigate = request => Navigate(request);
+            engine.OnTitleChange = t => _host.SetTitle(t.Length == 0 ? _title : t);
             engine.NotifyNavigated(_url);
-            SetWindowTitle(hWnd, newPage?.Document?.Title is { Length: > 0 } t2 ? t2 : _title);
+            _host.SetTitle(newPage?.Document?.Title is { Length: > 0 } t2 ? t2 : _title);
         }
 
         // Re-apply autofocus for the freshly loaded page.
@@ -1041,9 +920,9 @@ public class BrowserWindow
 
         // Run any tasks queued while scripts executed during the load (incl. iframe load events).
         if (JsEngine.Instance is { HasPendingTreeTasks: true })
-            User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
+            _host.PostTask();
 
-        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+        _host.Invalidate();
     }
 
     /// <summary>
@@ -1057,17 +936,17 @@ public class BrowserWindow
         return SKImage.FromPixelCopy(info, _pixels, _width * 4);
     }
 
-    private void StartAnimationTimer(IntPtr hWnd)
+    private void StartAnimationTimer()
     {
         if (_timerRunning) return;
-        User32.SetTimer(hWnd, AnimationTimerId, AnimationTimerMs, IntPtr.Zero);
+        _host.StartTimer(AnimationTimerMs);
         _timerRunning = true;
     }
 
-    private void StopAnimationTimer(IntPtr hWnd)
+    private void StopAnimationTimer()
     {
         if (!_timerRunning) return;
-        User32.KillTimer(hWnd, AnimationTimerId);
+        _host.StopTimer();
         _timerRunning = false;
     }
 
@@ -1095,18 +974,18 @@ public class BrowserWindow
     }
 
     /// <summary>Dispatches a submit event for the form; if not prevented, navigates to the action URL.</summary>
-    private void SubmitForm(LayoutNode form, IntPtr hWnd, LayoutNode? submitter = null)
+    private void SubmitForm(LayoutNode form, LayoutNode? submitter = null)
     {
         var engine = JsEngine.Instance;
         if (engine == null || _rootNode == null) return;
         if (Interaction.FormSubmitter.PrepareNavigation(form, engine, fireSubmitEvent: true, submitter: submitter)
             is { } request)
-            Navigate(request, hWnd);
+            Navigate(request);
     }
 
     /// <summary>Shows the native Open dialog for an &lt;input type=file&gt;, records the chosen files
     /// in <see cref="FormState"/>, and fires an "input"/"change" event.</summary>
-    private void OpenFilePicker(Guid nodeKey, IntPtr hWnd)
+    private void OpenFilePicker(Guid nodeKey)
     {
         if (_rootNode == null) return;
         var node = FindNodeByKey(_rootNode, nodeKey);
@@ -1114,7 +993,7 @@ public class BrowserWindow
 
         var multiple = node.Attributes.ContainsKey("multiple");
         var accept = node.Attributes.GetValueOrDefault("accept", "");
-        var paths = Utils.Comdlg32.ShowOpenDialog(hWnd, accept, multiple);
+        var paths = _host.ShowOpenFileDialog(accept, multiple);
         if (paths.Length == 0) return;
 
         var selected = new List<Interaction.SelectedFile>();
@@ -1163,9 +1042,6 @@ public class BrowserWindow
         return StripFragment(a) == StripFragment(b);
     }
 
-    /// <summary>Sets the window title bar text.</summary>
-    private void SetWindowTitle(IntPtr hWnd, string title) => User32.SetWindowText(hWnd, title);
-
     /// <summary>Walks up from a node to find its containing &lt;form&gt;.</summary>
     private static LayoutNode? FindAncestorForm(LayoutNode? node)
     {
@@ -1194,7 +1070,7 @@ public class BrowserWindow
         DispatchPointerOrMouse(eventType, node, x, y, contentY, engine, isPointer: false);
     }
 
-    private bool HandleFramePointer(string eventType, int x, int y, IntPtr hWnd)
+    private bool HandleFramePointer(string eventType, int x, int y)
     {
         if (_rootNode is null) return false;
         var contentY = y + _viewport.ScrollY;
@@ -1218,10 +1094,10 @@ public class BrowserWindow
             click.isTrusted = true;
             click.target = Scripting.Dom.JsElement.For(page.Engine.RawEngine, node);
             EventDispatcher.DispatchEvent(node, click, page.Engine);
-            User32.PostMessage(hWnd, WM_APP_TASK, IntPtr.Zero, IntPtr.Zero);
+            _host.PostTask();
         }
         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
-        User32.InvalidateRect(hWnd, IntPtr.Zero, false);
+        _host.Invalidate();
         return true;
     }
 
@@ -1373,16 +1249,6 @@ public class BrowserWindow
         0xDE => "Quote",
         _ => "Unidentified"
     };
-
-    private static (bool ctrl, bool shift, bool alt, bool meta) GetKeyModifiers()
-    {
-        return (
-            ctrl: (User32.GetKeyState(0x11) & 0x8000) != 0,
-            shift: (User32.GetKeyState(0x10) & 0x8000) != 0,
-            alt: (User32.GetKeyState(0x12) & 0x8000) != 0,
-            meta: (User32.GetKeyState(0x5B) & 0x8000) != 0 || (User32.GetKeyState(0x5C) & 0x8000) != 0
-        );
-    }
 
     /// <summary>
     /// Finds the innermost scrollable ancestor at the given content-space coordinates.

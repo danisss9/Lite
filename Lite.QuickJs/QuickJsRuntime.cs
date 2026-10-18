@@ -590,11 +590,12 @@ internal static class Native
         var basePath = Path.GetDirectoryName(assembly.Location)!;
         foreach (var asset in new[]
         {
-            Path.Combine(basePath, "runtimes", "win-x64", "native", "litequickjs.dll"),
-            Path.Combine(basePath, "litequickjs.dll"),
+            QuickJsNativeAsset.PathBeside(basePath),
+            Path.Combine(basePath, QuickJsNativeAsset.FileName),
         })
             if (File.Exists(asset)) return NativeLibrary.Load(asset);
-        throw new DllNotFoundException($"The Windows x64 QuickJS native asset was not found beside {assembly.Location}");
+        throw new DllNotFoundException(
+            $"The {QuickJsNativeAsset.RuntimeIdentifier} QuickJS native asset was not found beside {assembly.Location}");
     }
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate nint HostCallback(nint context, int id, nint arguments, int count);

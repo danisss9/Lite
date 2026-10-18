@@ -1,6 +1,6 @@
 # Lite
 
-Lite is an experimental HTML, CSS, and JavaScript rendering engine for Windows, written in C#. It turns a URL into a native Win32 window without embedding WebView2 or another browser engine.
+Lite is an experimental HTML, CSS, and JavaScript rendering engine for Windows and Linux, written in C#. It turns a URL into a native window (Win32 on Windows, X11 on Linux) without embedding WebView2 or another browser engine.
 
 HTML and CSS are parsed with AngleSharp, layout is calculated by Lite's own layout engine, pixels are drawn with SkiaSharp, and JavaScript runs in QuickJS through Lite's native bridge. The project is intended for developers exploring browser internals, building constrained HTML-driven interfaces, or experimenting with a small managed rendering stack.
 
@@ -14,7 +14,7 @@ HTML and CSS are parsed with AngleSharp, layout is calculated by Lite's own layo
 
 ## Highlights
 
-- Native Windows host and message loop with mouse, keyboard, scrolling, navigation, and page transitions
+- Native Win32 (Windows) and X11 (Linux) hosts with mouse, keyboard, scrolling, navigation, and page transitions
 - Custom block, inline, flex, table, float, absolute, and fixed-position layout
 - CSS cascade, selectors, media queries, custom properties, generated content, transforms, transitions, and keyframe animations
 - DOM APIs, events, timers, promises, `fetch`, XMLHttpRequest, Web Storage, history, and ES modules
@@ -25,11 +25,12 @@ HTML and CSS are parsed with AngleSharp, layout is calculated by Lite's own layo
 
 ## Requirements
 
-- Windows
-- .NET 8 SDK and MinGW-w64 GCC to build the repository's QuickJS native library
+- Windows x64, or Linux x64 with an X11 display (Wayland desktops work through XWayland)
+- .NET 8 SDK
+- To build the repository's QuickJS native library: MinGW-w64 GCC on Windows; `gcc`, `git`, `curl`, and `xz` on Linux
 - An HTTP or HTTPS URL to render
 
-Lite currently uses Win32 directly, so it is not cross-platform. Local pages should be served over HTTP; the example project includes a small static-file server for that purpose.
+On Linux, Lite talks to `libX11.so.6` directly (install `libx11-6` on minimal systems). `<input type=file>` and `alert()` use `zenity` or `kdialog` when one is installed; without them the file picker is unavailable and alerts go to stderr. Local pages should be served over HTTP; the example project includes a small static-file server for that purpose.
 
 ## Install
 
@@ -61,7 +62,7 @@ var window = new BrowserWindow(
 window.Run();
 ```
 
-`BrowserWindow.Run()` loads the document, creates the native window, and enters the Win32 message loop. It blocks the calling thread until the window closes, so call it from the application's main UI thread.
+`BrowserWindow.Run()` loads the document, creates the native window, and enters the platform's message loop (Win32 on Windows, X11 on Linux). It blocks the calling thread until the window closes, so call it from the application's main UI thread.
 
 The constructor is:
 
@@ -90,13 +91,13 @@ Pass a URL to open a remote page in the example window instead of starting the g
 dotnet run --project Lite.Example -- https://lite.duckduckgo.com/lite/
 ```
 
-Real audio and video playback use LibVLC when its native Windows libraries are available. If initialization fails, the example falls back to Lite's simulated media timeline.
+Real audio and video playback use LibVLC when its native libraries are available: the bundled `VideoLAN.LibVLC.Windows` package on Windows, or the system `libvlc` on Linux (for example `sudo apt install libvlc-dev vlc-plugin-base`). If initialization fails, the example falls back to Lite's simulated media timeline.
 
 ## How it works
 
 | Area | Responsibility |
 | --- | --- |
-| `BrowserWindow` | Owns the native window, input dispatch, navigation, animation timer, and JavaScript event-loop pump |
+| `BrowserWindow` | Owns input dispatch, navigation, animation timing, and the JavaScript event-loop pump; a platform host (`Win32WindowHost` or `X11WindowHost`) owns the native window and message loop |
 | `Parser` | Downloads and parses documents, stylesheets, scripts, and modules into Lite's layout tree |
 | `StyleResolver` | Resolves the cascade and reapplies styles after DOM mutations |
 | `BoxEngine` | Calculates block, inline, flex, table, float, and positioned layouts |
@@ -109,7 +110,7 @@ The main rendering path is:
 
 ```text
 URL -> resource loading -> HTML/CSS parsing -> style resolution
-    -> layout tree -> box layout -> SkiaSharp painting -> Win32 window
+    -> layout tree -> box layout -> SkiaSharp painting -> Win32 / X11 window
 
 JavaScript -> DOM mutation/event -> style and layout invalidation -> repaint
 ```
@@ -132,13 +133,15 @@ Build the complete solution:
 dotnet build Lite.sln
 ```
 
+The QuickJS bridge is built as part of `Lite.QuickJs`: `build-quickjs.ps1` produces `runtimes/win-x64/native/litequickjs.dll` on Windows and `build-quickjs.sh` produces `runtimes/linux-<arch>/native/liblitequickjs.so` on Linux, both from the same pinned QuickJS archive and patches.
+
 Run the regression suite:
 
 ```powershell
 dotnet run --project Lite.Tests/Lite.Tests.csproj -c Release
 ```
 
-The upstream conformance suites are downloaded separately and pinned by `Lite.Conformance/test-suites.lock.json`:
+The upstream conformance suites are downloaded separately and pinned by `Lite.Conformance/test-suites.lock.json` (on Linux, run the scripts with PowerShell 7 `pwsh`):
 
 ```powershell
 # -IncludeCss21Official verifies the official CSS 2.1 snapshot, which is committed to the
@@ -159,7 +162,7 @@ Lite targets the [HTML 5.0 Recommendation of 28 October 2014](https://www.w3.org
 
 Curated green tests protect existing behavior; they do not establish complete standards conformance. `--suite html5` runs the small set of reviewed assertions. `html5ProfileReady` remains false until all applicable requirements and required dependencies have current passing evidence. See [HTML 5.0 implementation and evidence](docs/html5-conformance.md) for the remaining work, upstream WPT serving, and report commands.
 
-For JavaScript, see [ES2020 conformance](docs/es2020-conformance.md): full ECMA-262 11th edition support is established, with `es2020ProfileReady` true — 67,117 required Test262 executions pass, the browser host suite passes, all host obligations and all 2,115 specification clauses are reviewed, and the verdict is enforced by compatibility CI and NuGet release validation. `--suite test262` runs the complete classified corpus; `--test262-set smoke` selects the small regression set; `--test262-set staging` executes the upstream staging tests as a review diagnostic. `python scripts/run-es2020.py --require-ready` runs eight Windows shards, the host checks, and gates on the readiness verdict.
+For JavaScript, see [ES2020 conformance](docs/es2020-conformance.md): full ECMA-262 11th edition support is established, with `es2020ProfileReady` true — 67,117 required Test262 executions pass, the browser host suite passes, all host obligations and all 2,115 specification clauses are reviewed, and the verdict is enforced by compatibility CI and NuGet release validation. `--suite test262` runs the complete classified corpus; `--test262-set smoke` selects the small regression set; `--test262-set staging` executes the upstream staging tests as a review diagnostic. `python scripts/run-es2020.py --require-ready` runs eight shards, the host checks, and gates on the readiness verdict.
 
 ## Contributing
 

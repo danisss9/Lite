@@ -117,3 +117,60 @@ jobs:
             compatibility-report.json
             Lite.Conformance/artifacts
           if-no-files-found: warn
+
+  linux-build:
+    # Builds the Linux QuickJS bridge and the solution, then runs the unit tests against the
+    # Linux natives. The CSS 2.1/WPT/Test262 gates stay on Windows above: their reference
+    # baselines were recorded with Windows fonts.
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore pinned conformance inputs
+        id: vendor-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: Lite.Conformance/vendor
+          key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
+
+      - name: Fetch pinned tests
+        shell: pwsh
+        run: ./scripts/fetch-tests.ps1 -IncludeCss21Official
+
+      - name: Save pinned conformance inputs
+        if: always() && steps.vendor-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: Lite.Conformance/vendor
+          key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
+
+      - name: Generate pinned WPT manifest
+        shell: pwsh
+        run: ./scripts/build-wpt-manifest.ps1
+
+      - name: Restore
+        run: dotnet restore Lite.sln
+
+      - name: Build
+        run: dotnet build Lite.sln --configuration Release --no-restore
+
+      - name: Unit tests
+        run: dotnet run --project Lite.Tests/Lite.Tests.csproj --configuration Release --no-build --no-restore -- --report Lite.Conformance/artifacts/unit-results-linux.json
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-results-linux
+          path: Lite.Conformance/artifacts/unit-results-linux.json
+          if-no-files-found: warn

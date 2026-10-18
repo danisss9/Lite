@@ -16,3 +16,6 @@ Lite.Conformance/vendor/css21-official-20110323/** -text
 # Upstream sources are LF; an autocrlf checkout would rewrite them to CRLF and poison
 # every subsequent diff.
 Lite.AngleSharp/native/** -text
+
+# Shell scripts run under bash on Linux, which rejects CRLF line endings.
+*.sh text eol=lf

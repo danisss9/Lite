@@ -32,10 +32,13 @@ $Test262Sha = $Test262Pin.revision
 $WptDirs = @($WptPin.sparseCheckout)
 $Test262Dirs = @($Test262Pin.sparseCheckout)
 New-Item -ItemType Directory -Force $Vendor | Out-Null
+# Windows PowerShell aliases bare `curl` to Invoke-WebRequest; on Linux/macOS pwsh it is the real binary.
+$CurlCommand = if ($PSVersionTable.PSEdition -eq 'Core' -and -not $IsWindows) { 'curl' } else { 'curl.exe' }
 
 function Resolve-VendorDestination($RelativePath) {
     $candidate = [IO.Path]::GetFullPath((Join-Path (Join-Path $RepoRoot 'Lite.Conformance') $RelativePath))
-    $vendorRoot = [IO.Path]::GetFullPath($Vendor).TrimEnd('\') + '\'
+    $separator = [IO.Path]::DirectorySeparatorChar
+    $vendorRoot = [IO.Path]::GetFullPath($Vendor).TrimEnd($separator) + $separator
     if (-not $candidate.StartsWith($vendorRoot, [StringComparison]::OrdinalIgnoreCase)) {
         throw "Refusing suite destination outside the vendor directory: $candidate"
     }
@@ -209,12 +212,12 @@ function Get-Css21CdxRows {
     # kept beside a .new candidate so a failed download never destroys a known-good copy.
     $name = "cdx-css21-" + $DirectoryPrefix.TrimEnd('/')
     $query = "https://web.archive.org/cdx/search/cdx?url=test.csswg.org%2Fsuites%2Fcss2.1%2F20110323%2F$DirectoryPrefix*&output=json&collapse=urlkey"
-    $cached = Join-Path $env:TEMP "$name.json"
-    $candidate = Join-Path $env:TEMP "$name.json.new"
+    $cached = Join-Path ([IO.Path]::GetTempPath()) "$name.json"
+    $candidate = Join-Path ([IO.Path]::GetTempPath()) "$name.json.new"
     $delays = @(0, 10, 20, 40, 60, 90, 120, 180)
     foreach ($delay in $delays) {
         if ($delay -gt 0) { Start-Sleep -Seconds $delay }
-        & curl.exe -s --max-time 420 $query -o $candidate
+        & $CurlCommand -s --max-time 420 $query -o $candidate
         try {
             $rows = Get-Content -LiteralPath $candidate -Raw | ConvertFrom-Json
             if ($rows.Count -gt 1) {
@@ -431,7 +434,7 @@ function Import-Css21OfficialSnapshot {
     }
 
     $workerCount = 2
-    $linesFile = Join-Path $env:TEMP 'css21-official-cdx.tsv'
+    $linesFile = Join-Path ([IO.Path]::GetTempPath()) 'css21-official-cdx.tsv'
     [System.IO.File]::WriteAllLines($linesFile, [string[]]$allLines)
 
     $logPath = Join-Path $destRoot 'fetch-failures.log'

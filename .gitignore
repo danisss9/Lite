@@ -34,6 +34,8 @@ bld/
 [Oo]bj/
 Lite.QuickJs/runtimes/win-x64/native/*.dll
 Lite/runtimes/win-x64/native/*.dll
+# Linux QuickJS bridge and its compiler-specific build record (build-quickjs.sh)
+Lite.QuickJs/runtimes/linux-*/
 [Ll]og/
 [Ll]ogs/
 
