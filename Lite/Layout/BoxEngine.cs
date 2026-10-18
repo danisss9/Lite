@@ -2315,7 +2315,23 @@ internal static class BoxEngine
                 continue;
             }
 
-            if (lineX > bandLeft && lineX + item.Width > bandRight)
+            // §16.6.1: a collapsible space at the END of a line is removed, so it cannot force
+            // the wrap. Fit a text item that ends with a collapsible space by its trimmed text:
+            // if the words fit, the item stays on the line and the trailing space collapses at
+            // the line end (or renders as the boundary when later content continues it). Fitting
+            // by the untrimmed width wrapped the whole item for one space too many — the abs-pos
+            // overlays of the white-space band shed their last word (" d") off an exactly-sized
+            // shrink-to-fit box.
+            var fitWidth = item.Width;
+            if (item.Kind == InlineItemKind.Text && item.Text is { } fitText && fitText.Length > 0 &&
+                char.IsWhiteSpace(fitText[^1]) &&
+                item.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+            {
+                using var fitFont = TextMeasure.CreateFont(item.Node);
+                var (fitLs, fitWsp) = TextMeasure.SpacingOf(item.Node);
+                fitWidth = TextMeasure.MeasureSingleLine(fitText.TrimEnd(), fitFont, -1f, fitLs, fitWsp).Width;
+            }
+            if (lineX > bandLeft && lineX + fitWidth > bandRight)
             {
                 if (BreakAllowedBefore(placed, lineStart, item))
                     CommitLine();
@@ -2375,7 +2391,12 @@ internal static class BoxEngine
             if (item.Kind == InlineItemKind.Text && item.Text != null)
             {
                 var availW = bandRight - lineX;
-                if (availW > 0 && item.Width > availW)
+                // An item that only overflows by its TRAILING collapsible space fits (the fit
+                // check above passed it): re-measuring it here would re-wrap the full text into
+                // a rect sized without that space, and the wrap's own line-start strip then ate
+                // the LEADING space of " d " — the abs-pos overlays of the white-space band drew
+                // their last word one space left of the text-run reference.
+                if (availW > 0 && fitWidth > availW)
                 {
                     using var font = TextMeasure.CreateFont(item.Node);
                     var ws = item.Node.GetWhiteSpace();

@@ -52,6 +52,49 @@ public static class TableAnonymousDynamicTests
             $"red 'd' must sit at the green text's d offset ({redD.Rect.Left:0.##} vs {expectedDx:0.##})");
     }
 
+    [Test]
+    public static void StaticWhitespaceTextArroundCells_ShrinkToFitWidth()
+    {
+        // table-anonymous-objects-178's overlay: [ws span[ws "a" ws cell-b cell-c ws "d" ws] ws]
+        // — the abs-pos div must shrink-to-fit wide enough that "a bc d" stays on ONE line.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head></head><body>" +
+            "<div style=\"position: relative; font-size: 2em;\">" +
+            "<div id=\"g\" style=\"position: absolute; z-index: 2; top: 0; color: green; padding: 1px;\">\n" +
+            "    <span>\n" +
+            "      a\n" +
+            "      <span style=\"display: table-cell\">b</span><span style=\"display: table-cell\">c</span>\n" +
+            "      d\n" +
+            "    </span>\n" +
+            "  </div>\n" +
+            "<div id=\"r\" style=\"position: relative; z-index: 1; color: red; padding: 1px;\">\n" +
+            "    a bc d\n" +
+            "  </div>\n" +
+            "</div></body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var g = Find(page.Root, "DIV", "g")!;
+        var r = Find(page.Root, "DIV", "r")!;
+        Console.WriteLine($"[178] red DisplayText='{r.DisplayText?.Replace("\n", "\\n")}' children={r.Children.Count}");
+        foreach (var rc in r.Children)
+            Console.WriteLine($"[178] red child {rc.TagName} text='{rc.DisplayText?.Replace("\n", "\\n")}' box={rc.Box.ContentBox} fragments={rc.InlineFragments?.Count ?? 0}");
+        using (var f77 = TextMeasure.CreateFont(r))
+            Console.WriteLine($"[178] red font size {f77.Size:0.##} 'a bc d '={f77.MeasureText("a bc d "):0.####} 'a bc d'={f77.MeasureText("a bc d"):0.####} 'bc'={f77.MeasureText("bc"):0.####} 'b'={f77.MeasureText("b"):0.####} 'c'={f77.MeasureText("c"):0.####}");
+        foreach (var n in AllNodes(g))
+        {
+            Console.WriteLine($"[178] node {n.TagName}#{n.Id} display={n.GetDisplay()} text='{(n.DisplayText ?? "").Replace("\n", "\\n").Replace(" ", "·")}' box={n.Box.ContentBox}");
+            var (nmin, nmax) = IntrinsicSizer.ContentMinMax(n, 600);
+            Console.WriteLine($"[178]       intrinsic=({nmin:0.##},{nmax:0.##}) measureTableW(avail 500)={(n.GetDisplay() is DisplayType.Table or DisplayType.InlineTable ? TableEngine.MeasureTableWidth(n, 500, 800, 600).ToString("0.##") : "n/a")}");
+        }
+        DumpFragments(g, "green");
+        DumpFragments(r, "red  ");
+        Console.WriteLine($"[178] green box {g.Box.ContentBox}");
+        Console.WriteLine($"[178] red   box {r.Box.ContentBox}");
+        var (min, max) = IntrinsicSizer.ContentMinMax(g, 600);
+        Console.WriteLine($"[178] green intrinsic (min,max) = ({min:0.##}, {max:0.##})");
+        True(g.Box.ContentBox.Height <= r.Box.ContentBox.Height + 1f,
+            $"green overlay must be one line tall (green {g.Box.ContentBox.Height:0.##} vs red {r.Box.ContentBox.Height:0.##})");
+    }
+
     private static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
