@@ -7,12 +7,31 @@
     <Version>0.1.2</Version>
     <PackageId>danisss9.Lite.QuickJs</PackageId>
     <Authors>danisss9</Authors>
-    <Description>QuickJS native bridge and managed runtime for Lite on Windows x64.</Description>
-    <PackageTags>quickjs;javascript;lite;win32</PackageTags>
+    <Description>QuickJS native bridge and managed runtime for Lite on Windows x64 and Linux x64.</Description>
+    <PackageTags>quickjs;javascript;lite;win32;linux</PackageTags>
     <RepositoryUrl>https://github.com/danisss9/Lite</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <QuickJsNativeOutput Condition="'$(QuickJsNativeOutput)' == ''">$(MSBuildProjectDirectory)\runtimes\win-x64\native\litequickjs.dll</QuickJsNativeOutput>
+  </PropertyGroup>
+
+  <!-- The native bridge is built for the host OS: MinGW litequickjs.dll on Windows (win-x64),
+       gcc liblitequickjs.so on Linux (linux-<arch>). A package built on one OS also carries the
+       other OS's asset when CI has dropped it into runtimes/ before packing. -->
+  <PropertyGroup>
+    <QuickJsWindowsNative>$(MSBuildProjectDirectory)\runtimes\win-x64\native\litequickjs.dll</QuickJsWindowsNative>
+    <QuickJsLinuxNative>$(MSBuildProjectDirectory)/runtimes/linux-x64/native/liblitequickjs.so</QuickJsLinuxNative>
+    <QuickJsHostArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant())</QuickJsHostArch>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <QuickJsNativeRid>win-x64</QuickJsNativeRid>
+    <QuickJsNativeFile>litequickjs.dll</QuickJsNativeFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
+    <QuickJsNativeRid>linux-$(QuickJsHostArch)</QuickJsNativeRid>
+    <QuickJsNativeFile>liblitequickjs.so</QuickJsNativeFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <QuickJsNativeOutput Condition="'$(QuickJsNativeOutput)' == ''">$(MSBuildProjectDirectory)/runtimes/$(QuickJsNativeRid)/native/$(QuickJsNativeFile)</QuickJsNativeOutput>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,14 +40,25 @@
     <InternalsVisibleTo Include="Lite.Conformance" />
     <None Include="README.md" Pack="true" PackagePath="\" />
     <None Include="native\LICENSE.quickjs.txt" Pack="true" PackagePath="licenses\LICENSE.quickjs.txt" />
-    <Content Include="$(QuickJsNativeOutput)" Link="runtimes\win-x64\native\litequickjs.dll" CopyToOutputDirectory="PreserveNewest"
-             Pack="true" PackagePath="runtimes\win-x64\native\" />
-    <Content Include="$(QuickJsNativeOutput).build.json" Link="runtimes\win-x64\native\litequickjs.dll.build.json"
-             CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes\win-x64\native\" />
+    <Content Include="$(QuickJsNativeOutput)" Link="runtimes\$(QuickJsNativeRid)\native\$(QuickJsNativeFile)" CopyToOutputDirectory="PreserveNewest"
+             Pack="true" PackagePath="runtimes\$(QuickJsNativeRid)\native\" />
+    <Content Include="$(QuickJsNativeOutput).build.json" Link="runtimes\$(QuickJsNativeRid)\native\$(QuickJsNativeFile).build.json"
+             CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes\$(QuickJsNativeRid)\native\" />
+  </ItemGroup>
+
+  <!-- Cross-OS assets: packed only (never copied to this OS's build output) when present. -->
+  <ItemGroup Condition="'$(QuickJsNativeRid)' != 'win-x64' And Exists('$(QuickJsWindowsNative)')">
+    <None Include="$(QuickJsWindowsNative);$(QuickJsWindowsNative).build.json" Pack="true" PackagePath="runtimes\win-x64\native\" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(QuickJsNativeRid)' != 'linux-x64' And Exists('$(QuickJsLinuxNative)')">
+    <None Include="$(QuickJsLinuxNative);$(QuickJsLinuxNative).build.json" Pack="true" PackagePath="runtimes\linux-x64\native\" />
   </ItemGroup>
 
   <Target Name="BuildQuickJsNative" BeforeTargets="CoreCompile">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build-quickjs.ps1&quot; -OutputPath &quot;$(QuickJsNativeOutput)&quot;" />
+    <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))"
+          Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build-quickjs.ps1&quot; -OutputPath &quot;$(QuickJsNativeOutput)&quot;" />
+    <Exec Condition="!$([MSBuild]::IsOSPlatform('Windows'))"
+          Command="bash &quot;$(MSBuildProjectDirectory)/build-quickjs.sh&quot; --output-path &quot;$(QuickJsNativeOutput)&quot;" />
   </Target>
 
   <ItemGroup>

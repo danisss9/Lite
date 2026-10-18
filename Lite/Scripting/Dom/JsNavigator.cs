@@ -20,8 +20,8 @@ public class JsNavigator
         languages = neutral == language ? [language] : [language, neutral];
     }
     public string appName { get; } = "Netscape";
-    public string appVersion { get; } = "5.0 (Windows)";
-    public string platform { get; } = "Win32";
+    public string appVersion { get; } = OperatingSystem.IsWindows() ? "5.0 (Windows)" : "5.0 (X11)";
+    public string platform { get; } = Lite.Network.BrowserSession.Platform;
     public string product { get; } = "Gecko";
     public string vendor { get; } = "";
     public string language { get; }

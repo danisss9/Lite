@@ -9,7 +9,28 @@ permissions:
   contents: write
 
 jobs:
+  linux-native:
+    # The packages are packed on Windows; this job contributes the Linux QuickJS bridge so
+    # danisss9.Lite.QuickJs carries runtimes/linux-x64 beside runtimes/win-x64.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Linux QuickJS bridge
+        run: bash Lite.QuickJs/build-quickjs.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quickjs-linux-x64
+          path: |
+            Lite.QuickJs/runtimes/linux-x64/native/liblitequickjs.so
+            Lite.QuickJs/runtimes/linux-x64/native/liblitequickjs.so.build.json
+          if-no-files-found: error
+
   publish:
+    needs: linux-native
     runs-on: windows-latest
     # The official CSS 2.1 snapshot is committed to the repo; the fetch step only clones
     # WPT/test262 (or restores them from cache) and verifies hash pins.
@@ -129,6 +150,12 @@ jobs:
             compatibility-report.json
             Lite.Conformance/artifacts
           if-no-files-found: warn
+
+      - name: Download Linux QuickJS bridge
+        uses: actions/download-artifact@v4
+        with:
+          name: quickjs-linux-x64
+          path: Lite.QuickJs/runtimes/linux-x64/native
 
       - name: Pack QuickJS bridge
         run: dotnet pack Lite.QuickJs/Lite.QuickJs.csproj --configuration Release --no-build /p:Version=${{ steps.version.outputs.VERSION }} --output nupkg

@@ -7,8 +7,15 @@ namespace Lite.Network;
 /// <summary>Network and cookie state owned by one browser window.</summary>
 internal sealed class BrowserSession : IDisposable
 {
-    internal const string UserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Lite/1.0";
+    /// <summary>The OS token browsers report for this host: navigator.platform's value.</summary>
+    internal static readonly string Platform = OperatingSystem.IsWindows()
+        ? "Win32"
+        : "Linux " + (System.Runtime.InteropServices.RuntimeInformation.OSArchitecture ==
+            System.Runtime.InteropServices.Architecture.Arm64 ? "aarch64" : "x86_64");
+
+    internal static readonly string UserAgent = "Mozilla/5.0 (" +
+        (OperatingSystem.IsWindows() ? "Windows NT 10.0; Win64; x64" : "X11; " + Platform) +
+        ") AppleWebKit/537.36 (KHTML, like Gecko) Lite/1.0";
 
     private readonly CookieContainer _cookies = new();
     internal string Language { get; } = CultureInfo.CurrentUICulture.Name is { Length: > 0 } locale

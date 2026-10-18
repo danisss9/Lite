@@ -9,8 +9,8 @@
     <!-- NuGet package metadata -->
     <PackageId>danisss9.Lite</PackageId>
     <Authors>danisss9</Authors>
-    <Description>Lightweight HTML/CSS/JS rendering engine for Windows.</Description>
-    <PackageTags>html;css;javascript;renderer;browser;lite;win32</PackageTags>
+    <Description>Lightweight HTML/CSS/JS rendering engine for Windows and Linux.</Description>
+    <PackageTags>html;css;javascript;renderer;browser;lite;win32;linux;x11</PackageTags>
     <RepositoryUrl>https://github.com/danisss9/Lite</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -37,6 +37,8 @@
          package's own DLL from compile and runtime. -->
     <PackageReference Include="AngleSharp" ExcludeAssets="all" />
     <PackageReference Include="SkiaSharp" />
+    <!-- libSkiaSharp.so for Linux hosts (the Windows natives ship with SkiaSharp itself). -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
     <PackageReference Include="System.Text.Encoding.CodePages" />
   </ItemGroup>
 

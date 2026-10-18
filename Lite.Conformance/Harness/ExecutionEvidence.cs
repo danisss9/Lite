@@ -68,7 +68,7 @@ internal static class ExecutionEvidence
     private static string NativeBuildHash()
     {
         var directory = Path.GetDirectoryName(typeof(Lite.BrowserWindow).Assembly.Location)!;
-        var native = Path.Combine(directory, "runtimes", "win-x64", "native", "litequickjs.dll");
+        var native = Lite.QuickJs.QuickJsNativeAsset.PathBeside(directory);
         var stamp = native + ".build.json";
         using var document = JsonDocument.Parse(File.ReadAllText(stamp));
         var build = document.RootElement;
@@ -86,9 +86,10 @@ internal static class ExecutionEvidence
     {
         var directory = Path.GetDirectoryName(typeof(Lite.BrowserWindow).Assembly.Location)!;
         var input = new StringBuilder(HashFile(Path.Combine(root, "Directory.Packages.props")));
-        foreach (var name in new[] { "AngleSharp.dll", "AngleSharp.Css.dll", "Lite.QuickJs.dll", "litequickjs.dll", "Acornima.dll", "SkiaSharp.dll", "YamlDotNet.dll" })
-            input.Append('\n').Append(name).Append(':').Append(HashFile(name == "litequickjs.dll"
-                ? Path.Combine(directory, "runtimes", "win-x64", "native", name)
+        var native = Lite.QuickJs.QuickJsNativeAsset.FileName;
+        foreach (var name in new[] { "AngleSharp.dll", "AngleSharp.Css.dll", "Lite.QuickJs.dll", native, "Acornima.dll", "SkiaSharp.dll", "YamlDotNet.dll" })
+            input.Append('\n').Append(name).Append(':').Append(HashFile(name == native
+                ? Lite.QuickJs.QuickJsNativeAsset.PathBeside(directory)
                 : Path.Combine(directory, name)));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(input.ToString()))).ToLowerInvariant();
     }

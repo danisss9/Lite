@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run eight Windows Test262 shards and report complete, matching ES2020 evidence.
+"""Run eight Test262 shards and report complete, matching ES2020 evidence.
 
 Build Release and fetch the pinned suites before invoking this script. A failing
 shard does not prevent the other shards, host checks, or backlog from completing.
@@ -15,6 +15,7 @@ import concurrent.futures
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import subprocess
 import sys
@@ -23,6 +24,9 @@ from datetime import datetime, timezone
 
 
 ROOT = Path(__file__).resolve().parent.parent
+# .NET's RuntimeInformation.ProcessArchitecture names, as used in the runtimes/<rid> folder.
+NATIVE_ARCH = {"x86_64": "x64", "amd64": "x64", "aarch64": "arm64", "arm64": "arm64"}.get(
+    platform.machine().lower(), platform.machine().lower())
 
 
 def main():
@@ -42,9 +46,10 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
 
     def runtime_hashes():
+        native = (dll.parent / "runtimes/win-x64/native/litequickjs.dll" if os.name == "nt"
+            else dll.parent / f"runtimes/linux-{NATIVE_ARCH}/native/liblitequickjs.so")
         candidates = [dll, dll.with_suffix(".deps.json"), dll.parent / "Lite.dll",
-            dll.parent / "Lite.QuickJs.dll", dll.parent / "runtimes/win-x64/native/litequickjs.dll",
-            dll.parent / "runtimes/win-x64/native/litequickjs.dll.build.json"]
+            dll.parent / "Lite.QuickJs.dll", native, native.with_name(native.name + ".build.json")]
         if any(not path.is_file() for path in candidates):
             parser.error("The selected conformance DLL lacks a complete adjacent QuickJS runtime")
         return {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in candidates}

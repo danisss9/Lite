@@ -33,7 +33,7 @@ internal class JsWindow
         innerHeight = viewportHeight;
     }
 
-    public void alert(object? message) => Lite.Utils.User32.MessageBox(IntPtr.Zero, message?.ToString() ?? "", "Alert", 0);
+    public void alert(object? message) => Lite.Platform.PlatformDialogs.Alert(message?.ToString() ?? "");
 
     // ---- window-level events ----
     public void addEventListener(string type, JsValue fn, JsValue? options = null)

@@ -20,7 +20,7 @@ internal static class TextMeasure
         // Check @font-face registry before falling back to system fonts
         var customTypeface = FontRegistry.Resolve(family, bold, italic);
         var typeface = customTypeface
-                       ?? SKTypeface.FromFamilyName(family, weight, SKFontStyleWidth.Normal, slant)
+                       ?? SystemTypeface(family, weight, slant)
                        ?? SKTypeface.Default;
 
         // If the node has short text (pseudo-element content), check for missing glyphs
@@ -28,23 +28,31 @@ internal static class TextMeasure
         var text = node.DisplayText;
         if (!string.IsNullOrEmpty(text) && text.Length <= 20 && !ContainsAllGlyphs(typeface, text))
         {
-            foreach (var fallback in _symbolFallbacks)
+            foreach (var fallback in PlatformFonts.SymbolFallbacks)
             {
-                var fb = SKTypeface.FromFamilyName(fallback, weight, SKFontStyleWidth.Normal, slant);
+                var fb = SystemTypeface(fallback, weight, slant);
                 if (fb != null && ContainsAllGlyphs(fb, text))
                 {
                     typeface = fb;
                     break;
                 }
-                fb?.Dispose();
             }
         }
 
         return new SKFont(typeface, size);
     }
 
-    private static readonly string[] _symbolFallbacks =
-        ["Segoe UI Symbol", "Segoe UI Emoji", "Arial Unicode MS", "Lucida Sans Unicode"];
+    // Installed-font lookups, shared for the process. Matching is cheap with DirectWrite but
+    // goes through a full fontconfig query on Linux, and layout asks once per text node per
+    // frame — uncached, a single keystroke could cost a second of re-layout. The typefaces are
+    // never disposed: SKFont does not own its typeface.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(string Family, SKFontStyleWeight Weight, SKFontStyleSlant Slant), SKTypeface?> s_systemTypefaces = new();
+
+    /// <summary>The installed typeface Skia matches for a family and style (cached).</summary>
+    internal static SKTypeface? SystemTypeface(string family, SKFontStyleWeight weight = SKFontStyleWeight.Normal,
+        SKFontStyleSlant slant = SKFontStyleSlant.Upright) =>
+        s_systemTypefaces.GetOrAdd((family, weight, slant),
+            static key => SKTypeface.FromFamilyName(key.Family, key.Weight, SKFontStyleWidth.Normal, key.Slant));
 
     private static bool ContainsAllGlyphs(SKTypeface typeface, string text)
     {

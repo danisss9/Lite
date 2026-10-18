@@ -87,7 +87,9 @@ public static class HostObjectTests
         var e = NewEngine();
         e.Execute("globalThis.__ua = navigator.userAgent; globalThis.__plat = navigator.platform;");
         Contains("Lite", Global(e, "__ua")?.ToString());
-        Equal("Win32", Global(e, "__plat")?.ToString());
+        var platform = Global(e, "__plat")?.ToString();
+        if (OperatingSystem.IsWindows()) Equal("Win32", platform);
+        else True(platform?.StartsWith("Linux ", StringComparison.Ordinal) == true, $"unexpected platform {platform}");
     }
 
     [Test]

@@ -1544,13 +1544,13 @@ internal static class Drawer
         if (string.IsNullOrEmpty(text) && node.Attributes.TryGetValue("placeholder", out var ph))
         {
             using var phPaint = new SKPaint { Color = new SKColor(170, 170, 170), IsAntialias = true };
-            using var phFont = new SKFont(SKTypeface.FromFamilyName("Consolas"), 13);
+            using var phFont = new SKFont(TextMeasure.SystemTypeface(PlatformFonts.Monospace), 13);
             canvas.DrawText(ph, rect.Left + 4, rect.Top + 16, SKTextAlign.Left, phFont, phPaint);
         }
         else if (!string.IsNullOrEmpty(text))
         {
             using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
-            using var textFont = new SKFont(SKTypeface.FromFamilyName("Consolas"), 13);
+            using var textFont = new SKFont(TextMeasure.SystemTypeface(PlatformFonts.Monospace), 13);
             var lines = text.Split('\n');
             var lineY = rect.Top + 16;
             foreach (var line in lines)

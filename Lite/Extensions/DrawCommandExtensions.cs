@@ -1528,8 +1528,8 @@ public static class StyleExtensions
             firstPart ??= name;
             var mapped = name switch
             {
-                "system-ui" or "ui-sans-serif" or "-apple-system" or "BlinkMacSystemFont" => "Segoe UI",
-                "monospace" or "ui-monospace" or "Courier" or "Courier New" => "Consolas",
+                "system-ui" or "ui-sans-serif" or "-apple-system" or "BlinkMacSystemFont" => Lite.Layout.PlatformFonts.SystemUi,
+                "monospace" or "ui-monospace" or "Courier" or "Courier New" => Lite.Layout.PlatformFonts.Monospace,
                 _ => name,
             };
             if (Lite.Layout.FontRegistry.HasFamily(mapped)) return mapped;
@@ -1555,7 +1555,7 @@ public static class StyleExtensions
             !name.Equals("cursive", StringComparison.OrdinalIgnoreCase) &&
             !name.Equals("fantasy", StringComparison.OrdinalIgnoreCase))
             return null;
-        if (name.Equals("monospace", StringComparison.OrdinalIgnoreCase)) return "Consolas";
+        if (name.Equals("monospace", StringComparison.OrdinalIgnoreCase)) return Lite.Layout.PlatformFonts.Monospace;
         return s_genericFamilies.GetOrAdd(name, static generic =>
         {
             using var typeface = SKTypeface.FromFamilyName(generic.ToLowerInvariant());
