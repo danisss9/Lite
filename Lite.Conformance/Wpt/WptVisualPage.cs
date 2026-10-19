@@ -66,8 +66,11 @@ internal static class WptVisualPage
     /// only route that can pass the -012 family, whose expected color IS #ff0000. Both
     /// routes are diagnostic signals: readiness requires reviewed evidence per case.
     /// <paramref name="embeddedRequired"/> runs the embedded-reference check even without
-    /// red, for cases whose stated condition is the swatch pair's colour match.</summary>
-    internal static WptRunner.RunResult RunSelfTest(WptCase test, bool embeddedRequired = false)
+    /// red, for cases whose stated condition is the swatch pair's colour match.
+    /// <paramref name="statedCondition"/>, when set, decides a red-free render by the case's
+    /// machine-checked stated condition instead of the scan alone.</summary>
+    internal static WptRunner.RunResult RunSelfTest(WptCase test, bool embeddedRequired = false,
+        Func<SKBitmap, Lite.Models.LayoutNode, WptRunner.RunResult>? statedCondition = null)
     {
         if (test.TestDriver || test.Options?.ContainsKey("dpi") == true)
             return new(WptRunner.Cat.Unsupported, "Self-test requires test-driver or DPI support", 0, 0);
@@ -100,6 +103,13 @@ internal static class WptVisualPage
                     }
                 }
                 const string assertion = "Self-describing test shows no failure red (diagnostic)";
+                if (red == 0 && statedCondition is not null)
+                {
+                    var stated = statedCondition(bitmap, root);
+                    var subtests = new List<SubtestEvidence> { new(assertion, 0, null) };
+                    subtests.AddRange(stated.Subtests ?? []);
+                    return stated with { Detail = $"{assertion}; {stated.Detail}", Total = subtests.Count, Subtests = subtests };
+                }
                 if (red == 0 && !embeddedRequired)
                     return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
 

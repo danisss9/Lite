@@ -17,6 +17,10 @@ the runner's twin oracle uses when one exists:
              sentence asks the reader to hover/click/focus/resize/scroll).
 - unstated:  no pass sentence found; needs an individual review.
 
+A "check" is attached where the whole visual sentence matches a template that
+Css21/VisualChecks.cs evaluates against the render (one-shape, same-dimension,
+bar-gap); unmatched sentences stay unchecked.
+
 Cases covered: official html4 selftests (no reftest.list entry) and WPT
 css/CSS2 visual/manual cases. Entries are generated proposals with
 "reviewed": false; a reviewed entry (reviewed true) is never overwritten, so
@@ -82,6 +86,38 @@ def classify(sentence: str | None, kind: str, flags: list[str]) -> str:
     return 'visual'
 
 
+COLOR = (r'(maroon|red|orange|yellow|olive|purple|fuchsia|white|lime|green|navy|blue|aqua|teal|black|silver|gr[ae]y)')
+NO_RED_CONJUNCT = re.compile(r',?\s+and\s+(?:there\s+is\s+)?no\s+red(?:\s+visible)?(?:\s+on\s+(?:the|this)\s+page)?$')
+ONE_SHAPE = re.compile(
+    rf'^there\s+(?:is|should\s+be)\s+(?:an?|only\s+one)\s+(?:{COLOR}\s+)?(box|square|rectangle|block|bar)'
+    r'(?:\s+below(?:\s+this\s+line)?)?$')
+SAME_DIMENSION = re.compile(
+    rf'^(?:the|both)\s+(two\s+)?(?:{COLOR}\s+(?:and\s+{COLOR}\s+)?)?(?:boxes|bars|squares)\s+below\s+are\s+the\s+same\s+'
+    r'(size|width|height)$')
+BAR_GAP = re.compile(r'^the\s+middle\s+bar\s+is\s+as\s+wide\s+as\s+the\s+space\s+between\s+the\s+first\s+and\s+last\s+bars$')
+
+
+def visual_check(sentence: str | None) -> dict | None:
+    """A machine check for the stated condition, when the whole sentence matches a known
+    template (Css21/VisualChecks.cs evaluates it). Anything unmatched stays unchecked."""
+    if not sentence:
+        return None
+    match = passes_re.search(sentence)
+    if not match or not re.match(r'^\s*(?:test\s+)?pass', sentence, re.I):
+        return None
+    clause = ' '.join(match.group(1).strip().lower().rstrip('.!').split())
+    clause = NO_RED_CONJUNCT.sub('', clause)
+    if m := ONE_SHAPE.match(clause):
+        shape = 'box' if m.group(2) == 'block' else m.group(2)
+        return {k: v for k, v in {'kind': 'one-shape', 'shape': shape, 'color': m.group(1)}.items() if v}
+    if m := SAME_DIMENSION.match(clause):
+        count = 2 if m.group(1) or clause.startswith('both') else None
+        return {k: v for k, v in {'kind': 'same-dimension', 'dimension': m.group(4), 'count': count}.items() if v}
+    if BAR_GAP.match(clause):
+        return {'kind': 'bar-gap'}
+    return None
+
+
 def walk(tree: dict, prefix: str, kind: str, into: list) -> None:
     for name, node in tree.items():
         path = prefix + name
@@ -122,14 +158,18 @@ def main() -> None:
         flags = (flags_re.search(text).group(1).split() if flags_re.search(text) else [])
         sentence = pass_sentence(text)
         twins = sorted(reftest_by_stem.get(Path(path).stem, []))
-        entries.append({
+        condition = classify(sentence, kind, flags)
+        entry = {
             'path': path,
             'suite': suite,
-            'condition': classify(sentence, kind, flags),
+            'condition': condition,
             'sentence': sentence,
             'twin': twins[0] if twins else None,
             'reviewed': False,
-        })
+        }
+        if condition in ('visual', 'compound-no-red') and (check := visual_check(sentence)):
+            entry['check'] = check
+        entries.append(entry)
 
     catalog = json.loads(official_catalog.read_text(encoding='utf-8-sig'))
     for case in catalog['cases']:

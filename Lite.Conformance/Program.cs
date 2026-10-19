@@ -214,6 +214,7 @@ internal static class Program
               --suite es2020-inventory Export test/section inventories and an exhaustive remaining-work report
               --suite es2020-host      Run Lite browser JavaScript integration tests
               --filter <substring>   Only run tests whose path contains the substring
+                                     (css21-full: @<file> runs exactly the paths listed one per line)
               --update-baselines     (acid) Approve the current render as the new baseline
               --geom <url> <sel>     Print the geometry of elements matching a selector
               --geom-post <url> <body> <sel>  Probe geometry in a form POST response

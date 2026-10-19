@@ -208,6 +208,104 @@ public static class Css21CoverageTests
         True(SelfTestOracle.Decide(path, "no-red", failed, null, _ => null) == failed);
     }
 
+    [Test]
+    public static void VisualChecks_OneShapeIsStrictAboutCountShapeAndColor()
+    {
+        var green = new SkiaSharp.SKColor(0, 0x80, 0);
+        // A box with nested text is one top-level shape; its fractional edge is antialiased.
+        var boxed = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20.5f, 30, 120.5f, 130), Fill(green));
+            c.DrawRect(new SkiaSharp.SKRect(40, 60, 60, 70), Fill(SkiaSharp.SKColors.Black));
+        });
+        True(Judge(boxed, new VisualCheck("one-shape", "square", "green")).Passed);
+        True(!Judge(boxed, new VisualCheck("one-shape", "box", "blue")).Passed);
+        var twoBoxes = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 120, 60), Fill(green));
+            c.DrawRect(new SkiaSharp.SKRect(20, 80, 120, 110), Fill(green));
+        });
+        True(!Judge(twoBoxes, new VisualCheck("one-shape", "box")).Passed);
+        True(!Judge(twoBoxes, new VisualCheck("one-shape", "square")).Passed);
+        // A glyph-like blob (an L) does not cover its bounding box's perimeter.
+        var blob = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 30, 130), Fill(green));
+            c.DrawRect(new SkiaSharp.SKRect(20, 120, 120, 130), Fill(green));
+        });
+        True(!Judge(blob, new VisualCheck("one-shape", "box")).Passed);
+        // Two adjacent bars merge into the single bar the border-spacing tests require.
+        var oneBar = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 120, 50), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(120, 30, 220, 50), Fill(SkiaSharp.SKColors.Black));
+        });
+        True(Judge(oneBar, new VisualCheck("one-shape", "bar")).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_ComparesDimensionsAndBarGaps()
+    {
+        var black = SkiaSharp.SKColors.Black;
+        var same = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 120.4f, 60), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(20.6f, 80, 121, 140), Fill(black));
+        });
+        True(Judge(same, new VisualCheck("same-dimension", Dimension: "width", Count: 2)).Passed);
+        True(!Judge(same, new VisualCheck("same-dimension", Dimension: "size", Count: 2)).Passed);
+        True(!Judge(same, new VisualCheck("same-dimension", Dimension: "width", Count: 3)).Passed);
+        var bars = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 30, 110, 50), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(206, 30, 306, 50), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(110, 90, 206, 110), Fill(black));
+        });
+        True(Judge(bars, new VisualCheck("bar-gap")).Passed);
+        var shortBar = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 30, 110, 50), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(206, 30, 306, 50), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(110, 90, 190, 110), Fill(black));
+        });
+        True(!Judge(shortBar, new VisualCheck("bar-gap")).Passed);
+        // border-spacing-029: the middle bar touches the outer bars only at their corners.
+        var cornerTouching = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(4, 166, 124, 186), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(124, 146, 220, 166), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(220, 166, 340, 186), Fill(black));
+        });
+        True(Judge(cornerTouching, new VisualCheck("bar-gap")).Passed);
+        // table-layout-applies-to-010: a black bar stacked edge to edge on a blue one.
+        var stacked = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(8, 50, 328, 82.5f), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(8, 82.5f, 328, 114), Fill(SkiaSharp.SKColors.Blue));
+        });
+        True(Judge(stacked, new VisualCheck("same-dimension", Dimension: "width", Count: 2)).Passed);
+        True(!Judge(stacked, new VisualCheck("one-shape", "bar")).Passed);
+    }
+
+    private static SkiaSharp.SKBitmap Render(Action<SkiaSharp.SKCanvas> draw)
+    {
+        var bitmap = new SkiaSharp.SKBitmap(400, 300);
+        using var canvas = new SkiaSharp.SKCanvas(bitmap);
+        canvas.Clear(SkiaSharp.SKColors.White);
+        draw(canvas);
+        return bitmap;
+    }
+
+    private static SkiaSharp.SKPaint Fill(SkiaSharp.SKColor color) =>
+        new() { Color = color, Style = SkiaSharp.SKPaintStyle.Fill, IsAntialias = true };
+
+    private static WptRunner.RunResult Judge(SkiaSharp.SKBitmap bitmap, VisualCheck check)
+    {
+        var components = VisualChecks.Components(bitmap, 0, out var clipped);
+        True(!clipped);
+        return VisualChecks.Judge(check, VisualChecks.TopLevel(components));
+    }
+
     private static TestEvidence Evidence() => new("css21-wpt", "css/CSS2/example.html", "pass", "ok", [new("assertion", 0, null)],
         0, "upstream-wpt", Css: new("screen", "html", "inventory", 800, 600, 0, 1, null));
 

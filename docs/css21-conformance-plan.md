@@ -215,6 +215,21 @@ Evidence checkpoint, 19 October (source `ad1d6f4`; two full screen baselines on 
 - **Result.** Official 5,250/9,039 (58.1%): 1,637 fail, 1,257 of them former red-scan passes caught by their twin; 2,150 unsupported, of which 1,641 visual, 359 manual, 82 compound, 59 unstated. WPT 4,563/8,904 (51.2%): 2,138 fail; 2,191 unsupported, of which 1,612 visual and 411 manual. No case moved fail→pass and no reftest verdict changed between the two runs, so the run is free of contention noise.
 - **Next.** Machine checks or reviewed references for the large `visual` class (same-width/height, green-square and word-present patterns), then the engine queue led by table-anonymous-objects 95, content 83, font-size 41, white-space-processing 35, background 31, bidi-box-model 27, text-transform-bicameral 22, and the 4-digit hex colour that CSS 2.1 must reject (color-030, outline-color-030: Lite parses `#1000` as CSS Color 4 #RGBA).
 
+Visual checks, 19 October (follow-up to the oracle checkpoint above): stated pass conditions that match a template now get a strict machine check instead of "unsupported" (`Css21/VisualChecks.cs`; templates and the `check` field come from `scripts/gen_css21_pass_conditions.py`).
+- **How the check works.** The region below the instruction paragraph, plus any following `class="instruction…"` notes, is segmented into ink components. Segmentation uses 4-neighbour connectivity, joins only colours within 48 per channel, and drops antialiased seams at most 1px thick, so corner-touching or differently coloured adjacent boxes stay separate.
+- **The three templates.**
+  - `one-shape`: exactly one top-level rectangle; a square has equal sides; a named colour must dominate (the suite's prose calls lime "green").
+  - `same-dimension`: the stated count of rectangles share a width, height or size.
+  - `bar-gap`: the middle bar equals the gap between the outer bars.
+- **Tolerances.** Antialiasing is the only slack: 1px on edges, and missing corner pixels. Ink clipped at the viewport edge, or a missing instruction paragraph, is unsupported, never a pass.
+- **Result.** 600 formerly unsupported no-twin cases are decided: 430 pass, 170 fail. Pass and fail renders were audited by eye.
+- **The failures are real engine gaps.**
+  - `outline` painting: outline-width 42, outline-style 10, outline-applies-to 10, outline-width-applies-to 8. For example, `outline: solid green; outline-width: 1pc` paints nothing, and an outline on a table-footer-group is not painted.
+  - `empty-cells-applies-to` (8): an inline-table inside a table row renders nothing.
+  - `fixed-table-layout` (7): a col width of 100px gives a 105px cell.
+  - `default-attribute-selector`: a styled `<input>` keeps its UA chrome.
+  - character-encoding-017/018/028: the encoding-dependent selector never matches.
+
 ### Standing constraints
 
 - Edit only the `css21.*` profile prefix and the `Lite.Conformance/Css21/*` plus `Profile/css21-*` artifacts; keep the html5 and es2020 gates green (coordination rules in `docs/html5-conformance-plan.md`).

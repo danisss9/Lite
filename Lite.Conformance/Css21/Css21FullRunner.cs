@@ -23,8 +23,12 @@ internal static class Css21FullRunner
         var reviews = reviewFile["tests"]!.AsArray().OfType<JsonObject>()
             .ToDictionary(t => Css21Inventory.Text(t, "path"));
 
+        // "@file" selects exactly the paths listed one per line; anything else is a substring.
+        var listed = filter is ['@', .. var listFile]
+            ? File.ReadLines(listFile).Select(l => l.Trim()).Where(l => l.Length > 0).ToHashSet(StringComparer.Ordinal)
+            : null;
         bool Selected(string path) =>
-            filter is null || path.Contains(filter, StringComparison.Ordinal);
+            filter is null || (listed?.Contains(path) ?? path.Contains(filter, StringComparison.Ordinal));
         bool ReviewAllows(string path)
         {
             if (!reviews.TryGetValue(path, out var review)) return true;
