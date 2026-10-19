@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "./lite-html5-css21-es2020-profile.schema.json",
   "schemaVersion": 2,
   "name": "Lite HTML 5.0/CSS 2.1/ES2020 compatibility profile",
@@ -4129,6 +4129,62 @@
         "https://github.com/tc39/test262/blob/main/INTERPRETING.md"
       ],
       "notes": "Closed by the native $262.agent host in the QuickJS bridge (litequickjs.c): each agent is a separate QuickJS runtime on its own thread with [[CanBlock]] true, SharedArrayBuffer memory is reference-counted outside any one heap so main and agent runtimes share it, broadcast hands every live agent the buffer and waits until each has taken it, and reports flow through a mutex-guarded queue. The adapter main agent can block unless a test is flagged CanBlockIsFalse (INTERPRETING.md: unflagged tests run with either value; safeBroadcast probes Atomics.wait on the main agent). All 59 formerly excluded multi-agent Atomics.wait/Atomics.notify tests pass in both modes, and the atomics-multi-agent dependency exception is retired. The browser window agent stays non-blocking (es2020-host nonblocking-window-agent)."
+    },
+    {
+      "id": "css21.8.3.1.margin-collapse",
+      "specification": "css21",
+      "clause": "Collapsing margins (8.3.1)",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/box.html#collapsing-margins",
+      "title": "Collapsed margin chains, clearance, and collapse-through",
+      "applicability": "included",
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "html4/margin-collapse-125.htm"
+        },
+        {
+          "suite": "css21-official",
+          "path": "html4/margin-collapse-135.htm"
+        },
+        {
+          "suite": "css21-official",
+          "path": "html4/margin-collapse-137.htm"
+        },
+        {
+          "suite": "css21-official",
+          "path": "html4/margin-collapse-138.htm"
+        },
+        {
+          "suite": "css21-official",
+          "path": "html4/margin-collapse-143.htm"
+        },
+        {
+          "suite": "css21-official",
+          "path": "html4/margin-collapse-146.htm"
+        },
+        {
+          "suite": "css21-official",
+          "path": "html4/margin-collapse-clear-001.htm"
+        },
+        {
+          "suite": "css21-official",
+          "path": "html4/margin-collapse-clear-004.htm"
+        },
+        {
+          "suite": "css21-curated",
+          "path": "css21/margin-collapse-neg.html"
+        },
+        {
+          "suite": "css21-curated",
+          "path": "css/CSS2/normal-flow/margin-collapse-through-zero-height-block.html"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Layout/BoxEngine.cs",
+        "Lite/Layout/IntrinsicSizer.cs"
+      ],
+      "notes": "Collapsed margins carry as (maxPositive, minNegative) chains through LayoutBlock's returned bottom margin, clearance computes against the float bottom with margins severed and possibly negative, and self-collapsing boxes re-anchor to the bottom of their spent chain. The complete official margin-collapse family passes 110/110 on the 18 October build (probes css21-cluster-margin-collapse.json); these entries map the mixed-sign chain, clearance, and self-collapse cases the implementation was driven by."
     }
   ]
 }

@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "./css21-requirements.schema.json",
   "schemaVersion": 1,
   "target": "https://www.w3.org/TR/2011/REC-CSS2-20110607/",
@@ -826,8 +826,15 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "html4/margin-collapse-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The official margin-collapse family passes 110/110 (chains carried as (maxPositive, minNegative) pairs, clearance per 9.5.2/8.3.1, self-collapsing re-anchoring); flip recorded 18 October 2026 with the family run as evidence."
     },
     {
       "id": "css21.8.4",

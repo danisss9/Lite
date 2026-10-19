@@ -9,14 +9,15 @@ Each track's normative detail lives in its own document —
 [es2020-conformance.md](es2020-conformance.md) — and nothing here changes a
 completion contract or claims new passing coverage.
 
-Snapshot written 18 October 2026. Numbers are the last recorded, identity-matched
-evidence: the CSS 2.1 and HTML5 checkpoints of 12 October (source `5b2c483`..`f9c0a66`
-era) and the 0.1.2 release notes of 13 October. Roughly seven engine commits landed
-after the CSS baseline (background/canvas propagation, spent margin chains, float
-`width:0`, Appendix E paint steps, page transport charsets, table row borders) and are
-not yet reflected in any suite number; refresh before re-ranking the queue (commands
-at the end). The combined claim remains `development-non-conforming` and
-`releaseReady` false.
+Snapshot written 18 October 2026 and refreshed the same day after the first CSS 2.1
+implementation pass of the roadmap below (commits `18e883d` + `78f8be0`): the official
+margin-collapse family is closed at 110/110 (the `css21.8.3.1` obligation is now
+`implemented`), table-anonymous-objects recovered its six regressed white-space cases to
+198/204, border-conflict rose to 350/353 with the col/colgroup conflict package, and
+character-encoding closed at 37/37. Unit suite 360/360; curated gates css21 52/52, wpt
+86 pass / 2 published expected-fails, html5 46/46. The refreshed full-screen baseline on
+this build identity supersedes the Oct 12 numbers below once it aggregates into
+`Lite.Conformance/artifacts/css21-full-screen-baseline.md`.
 
 ## Track status at a glance
 
