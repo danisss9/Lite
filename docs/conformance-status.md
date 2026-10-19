@@ -24,7 +24,7 @@ this build identity supersedes the Oct 12 numbers below once it aggregates into
 | Track | Readiness | Last recorded position |
 | --- | --- | --- |
 | ES2020 | **`es2020ProfileReady` true** — enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, zero failures and zero expected failures, no dependency exception; host suite 20/20; all 2,115 ECMA-262 clauses reviewed |
-| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | Official 2011 suite 8,543/9,039 (94.6%), 494 real failures, 2 unsupported, 0 crashes; WPT `css/CSS2` 44.9% and parked, with `visual` tests now executing through the self-describing route; applicability review complete (18,654 cases); the 213-record obligation inventory still reads `untested` |
+| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 19 October, strengthened oracle (twin reftests + stated pass conditions): official 2011 suite 5,250/9,039 (58.1%; 95.8% under the old no-red scan alone), 1,637 fail, 2,150 unsupported pending references or manual evidence; WPT `css/CSS2` 4,563/8,904 (51.2%), 2,138 fail, 2,191 unsupported; applicability review complete (18,654 cases); obligations 1/202 screen `implemented` |
 | HTML5 | `html5ProfileReady` false | Reviewed gate 46/46, curated wpt 86 pass / 2 published expected-fails, unit 341/341; html5lib parse fidelity at 92.0% engine-pass (1,740/1,891 unique cases); applicability manifest 3,984 entries (51 `included`, 1 `mixed`, 3,885 `post-target`, 23 `regression-only`, 24 `unreviewed`); REC section review 0/762 |
 
 ## Roadmap

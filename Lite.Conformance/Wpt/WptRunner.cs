@@ -335,8 +335,8 @@ internal static class WptRunner
         {
             "reftest" => WptRefTestRunner.Run(test, CatalogCase),
             "crashtest" => WptVisualPage.RunCrash(test),
-            "selftest" => WptVisualPage.RunSelfTest(test),
-            _ when IsSelfDescribingVisual(test) => WptVisualPage.RunSelfTest(test),
+            "selftest" => SelfTestOracle.Run(test, Catalog(), CatalogCase),
+            _ when IsSelfDescribingVisual(test) => SelfTestOracle.Run(test, Catalog(), CatalogCase),
             _ => RunInProcess(url),
         };
         File.WriteAllText(output, JsonSerializer.Serialize(result, ExecutionEvidence.JsonOptions));

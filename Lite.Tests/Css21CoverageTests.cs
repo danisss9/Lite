@@ -160,6 +160,54 @@ public static class Css21CoverageTests
         True(!Css21Inventory.HasEvidence([official with { Outcome = "fail" }], official.Suite, official.Path, "screen", "inventory"));
     }
 
+    [Test]
+    public static void OfficialTwin_EquivalenceIgnoresSyntaxButNotRevisedValuesOrText()
+    {
+        const string html4 = "<html><head><style type=\"text/css\">\n  div { width: 2in }\n</style></head>" +
+            "<body>\n<p>Test passes if there is no red.</p>\n<div><br></div></body></html>";
+        const string xhtml = "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><style type=\"text/css\"><![CDATA[\ndiv { width: 2in }\n]]></style>" +
+            "<!-- reviewed --></head><body><p>Test passes if there is no red.</p><div><br /></div></body></html>";
+        True(OfficialTwinOracle.Normalize(html4) == OfficialTwinOracle.Normalize(xhtml));
+        True(OfficialTwinOracle.Normalize(html4) != OfficialTwinOracle.Normalize(xhtml.Replace("2in", "200px")));
+        True(OfficialTwinOracle.Normalize(html4) != OfficialTwinOracle.Normalize(xhtml.Replace("no red", "no red visible")));
+    }
+
+    [Test]
+    public static void OfficialTwin_RetargetsReferencesOntoTheOfficialDocument()
+    {
+        var twin = RefCase("css/CSS2/floats/floats-001.xht", null) with
+        {
+            References = [new("floats-001-ref.xht", "=="), new("/css/reference/ref-filled-green-100px-square.xht", "!=")],
+        };
+        var subject = OfficialTwinOracle.Retarget("css21-official/html4/floats-001.htm", twin);
+        True(subject.Path == "css21-official/html4/floats-001.htm");
+        True(subject.References[0] == new WptReference("/css/CSS2/floats/floats-001-ref.xht", "=="));
+        True(subject.References[1] == new WptReference("/css/reference/ref-filled-green-100px-square.xht", "!="));
+    }
+
+    [Test]
+    public static void OfficialTwin_NeverTurnsARedScanFailureIntoAPassAndSkipsNonOfficialCases()
+    {
+        var failed = new WptRunner.RunResult(WptRunner.Cat.Fail, "3 red pixels (diagnostic)", 1, 1);
+        var twin = new OfficialTwinOracle.Twin(RefCase("css/CSS2/floats/floats-001.xht", null), false);
+        True(OfficialTwinOracle.Strengthen(twin, "css21-official/html4/floats-001.htm", failed, _ => null) == failed);
+        True(OfficialTwinOracle.Find("css/CSS2/floats/floats-001.xht", [RefCase("css/CSS2/floats/floats-001.xht", null)]) is null);
+    }
+
+    [Test]
+    public static void SelfTestOracle_RedScanPassesOnlyWhereNoRedIsTheWholeCondition()
+    {
+        const string path = "css21-official/html4/example.htm";
+        var scanned = new WptRunner.RunResult(WptRunner.Cat.Pass, "Self-describing test shows no failure red (diagnostic)", 1, 0,
+            [new("Self-describing test shows no failure red (diagnostic)", 0, null)], 0);
+        True(SelfTestOracle.Decide(path, "no-red", scanned, null, _ => null).Passed);
+        True(SelfTestOracle.Decide(path, "same-color", scanned, null, _ => null).Passed);
+        foreach (var condition in new[] { "compound-no-red", "visual", "manual", "unstated" })
+            True(SelfTestOracle.Decide(path, condition, scanned, null, _ => null).Cat == WptRunner.Cat.Unsupported);
+        var failed = new WptRunner.RunResult(WptRunner.Cat.Fail, "3 red pixels (diagnostic)", 1, 1);
+        True(SelfTestOracle.Decide(path, "no-red", failed, null, _ => null) == failed);
+    }
+
     private static TestEvidence Evidence() => new("css21-wpt", "css/CSS2/example.html", "pass", "ok", [new("assertion", 0, null)],
         0, "upstream-wpt", Css: new("screen", "html", "inventory", 800, 600, 0, 1, null));
 

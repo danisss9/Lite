@@ -64,8 +64,10 @@ internal static class WptVisualPage
     /// selftests carry a #test/#reference pair whose assertion is "the boxes are the same
     /// color", so a dominant-color match over the rendered boxes validates the test — the
     /// only route that can pass the -012 family, whose expected color IS #ff0000. Both
-    /// routes are diagnostic signals: readiness requires reviewed evidence per case.</summary>
-    internal static WptRunner.RunResult RunSelfTest(WptCase test)
+    /// routes are diagnostic signals: readiness requires reviewed evidence per case.
+    /// <paramref name="embeddedRequired"/> runs the embedded-reference check even without
+    /// red, for cases whose stated condition is the swatch pair's colour match.</summary>
+    internal static WptRunner.RunResult RunSelfTest(WptCase test, bool embeddedRequired = false)
     {
         if (test.TestDriver || test.Options?.ContainsKey("dpi") == true)
             return new(WptRunner.Cat.Unsupported, "Self-test requires test-driver or DPI support", 0, 0);
@@ -98,10 +100,11 @@ internal static class WptVisualPage
                     }
                 }
                 const string assertion = "Self-describing test shows no failure red (diagnostic)";
-                if (red == 0)
+                if (red == 0 && !embeddedRequired)
                     return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
 
-                // Failure red present — the suite's own #test/#reference pair arbitrates when
+                // Failure red present (or a "same color" case, which the scan alone cannot
+                // decide) — the suite's own #test/#reference pair arbitrates when
                 // one exists (the outline selftests name their swatch #div1). The reference's
                 // dominant color is the asserted color; the test's is its dominant color
                 // EXCLUDING the page background (a border-side swatch's border box is half
@@ -138,6 +141,8 @@ internal static class WptVisualPage
                     }
                 }
 
+                if (red == 0)
+                    return new(WptRunner.Cat.Unsupported, "Same-color pass condition without an embedded #test/#reference pair", 0, 0);
                 return new(WptRunner.Cat.Fail, $"{red} red pixels (diagnostic)", 1, 1, [new(assertion, 1, $"{red} red pixels")], 0);
             }
         }
@@ -209,6 +214,8 @@ internal static class WptVisualPage
                 if (key == excludeKey) continue;
                 counts[key] = counts.GetValueOrDefault(key) + 1;
             }
+        // A crop painted entirely in the excluded color (an empty swatch) IS that color.
+        if (counts.Count == 0) return exclude ?? default;
         var best = counts.OrderByDescending(kv => kv.Value).First();
         return new SKColor((byte)(best.Key >> 16), (byte)(best.Key >> 8), (byte)best.Key);
     }
