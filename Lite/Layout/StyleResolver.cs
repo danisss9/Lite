@@ -1,3 +1,4 @@
+using Lite.Extensions;
 using Lite.Models;
 using Lite.Scripting.Dom;
 
@@ -24,6 +25,13 @@ internal static class StyleResolver
     /// </summary>
     internal static void ApplyTree(LayoutNode root)
     {
+        // A detached subtree has nothing to inherit from: resolving it now would stamp the
+        // initial values and clear the flag, so the resolution after the real insertion
+        // skipped it (appendChild into a not-yet-inserted span re-projects that span — its
+        // later insertBefore left the cell without its inherited color). Defer until connected.
+        var top = root;
+        while (top.Parent is { } up) top = up;
+        if (top.TagName is not ("HTML" or "#document")) return;
         var stack = new Stack<LayoutNode>();
         stack.Push(root);
         while (stack.Count > 0)
@@ -32,12 +40,25 @@ internal static class StyleResolver
             if (node.Parent?.OwningDocument is { } document) node.DocumentState = document;
             if (node.NeedsStyleResolution)
             {
-                Apply(node);
+                Apply(node, null, created: true);
                 node.NeedsStyleResolution = false;
             }
+            else if (node.TagName == "#text") InheritIntoText(node);
             foreach (var child in node.Children)
                 stack.Push(child);
         }
+    }
+
+    /// <summary>A parsed #text node shares its element's style object; a script-created one
+    /// (createTextNode) carries the render root's, so it painted in the root's color — the
+    /// inserted "bc" of table-anonymous-objects-009 came out black inside a red cell. Stamp
+    /// the parent's inherited values onto it; non-inherited properties stay out, since a
+    /// text run must never pick up its parent's float/clear/display.</summary>
+    private static void InheritIntoText(LayoutNode text)
+    {
+        if (text.Parent is not { } parent || ReferenceEquals(text.Style, parent.Style)) return;
+        foreach (var prop in InheritedProperties)
+            if (EffectiveValue(parent, prop) is { } inherited) text.StyleOverrides[prop] = inherited;
     }
 
     /// <summary>Applies matching author rules + inheritance to a single node. Idempotent:
@@ -50,7 +71,13 @@ internal static class StyleResolver
     /// never went through the override channel, so a rule that stopped matching (a class/id
     /// change) stamps its initial/inherited fallback instead of leaving the parse-time
     /// AngleSharp value exposed.</summary>
-    internal static void Apply(LayoutNode node, List<string>? alsoRetract)
+    /// <param name="created">True for a script-created node resolved on insertion: its
+    /// parse-time declaration was computed while detached, so inherited properties are taken
+    /// from the parent's effective values. A parsed node's own declaration already carries
+    /// its specified and inherited values (inline style attribute included), so only the
+    /// override channel is inherited — stamping the parent's values there would override
+    /// what the node declares itself (Acid2's nested font sizes).</param>
+    internal static void Apply(LayoutNode node, List<string>? alsoRetract, bool created = false)
     {
         if (node.TagName.StartsWith('#')) return; // text / fragment / document nodes
 
@@ -115,7 +142,7 @@ internal static class StyleResolver
             foreach (var prop in InheritedProperties)
             {
                 if (node.StyleOverrides.ContainsKey(prop)) continue;
-                if (parent.TryResolveStyle(prop, out var inherited) && !string.IsNullOrEmpty(inherited))
+                if ((created ? EffectiveValue(parent, prop) : OverrideValue(parent, prop)) is { } inherited)
                 {
                     node.StyleOverrides[prop] = inherited;
                     node.CascadeAppliedProps.Add(prop);
@@ -165,6 +192,30 @@ internal static class StyleResolver
         else node.StyleOverrides.Remove(prop); // unknown property → drop the unusable keyword
     }
 
+    private static string? OverrideValue(LayoutNode node, string prop) =>
+        node.TryResolveStyle(prop, out var value) && !string.IsNullOrEmpty(value) ? value : null;
+
     private static string? InheritedOrNull(LayoutNode node, string prop) =>
-        node.Parent is { } p && p.TryResolveStyle(prop, out var v) && !string.IsNullOrEmpty(v) ? v : null;
+        node.Parent is { } p ? EffectiveValue(p, prop) : null;
+
+    /// <summary>A node's value for <paramref name="prop"/> as the getters read it: the
+    /// override channel first, then the parse-time computed declaration. A parent styled by
+    /// the parser (<c>style="color: red"</c>) carries its value only in the declaration, so
+    /// reading overrides alone left every script-inserted child without its inherited
+    /// color (table-anonymous-objects-009's inserted "bc" cell painted black, not red).
+    /// Inheritance passes COMPUTED values (§6.2): font-size goes over as the parent's resolved
+    /// pixels, and a declared value with a font-relative or percentage unit is not copied
+    /// verbatim (a child re-resolving "2em" would double it) — the getters already resolve
+    /// those against the declaring element.</summary>
+    private static string? EffectiveValue(LayoutNode node, string prop)
+    {
+        if (prop == "font-size")
+            return node.GetFontSize().ToString(System.Globalization.CultureInfo.InvariantCulture) + "px";
+        if (node.TryResolveStyle(prop, out var value) && !string.IsNullOrEmpty(value)) return value;
+        var declared = node.Style.GetPropertyValueSafe(prop);
+        return string.IsNullOrEmpty(declared) || RelativeLength.IsMatch(declared) ? null : declared;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex RelativeLength =
+        new(@"\d(?:em|ex|ch|rem)\b|\d%", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 }

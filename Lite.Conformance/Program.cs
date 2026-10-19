@@ -57,6 +57,8 @@ internal static class Program
                 case "--survey" when i + 1 < args.Length:
                     survey = args[++i];
                     break;
+                case "--compare" when i + 2 < args.Length:
+                    return WptRefTestRunner.CompareDocuments(args[i + 1], args[i + 2]);
                 case "--geom" when i + 2 < args.Length:
                     return RefTestRunner.ProbeGeometry(args[i + 1], args[i + 2]);
                 case "--geom-post" when i + 3 < args.Length:
@@ -216,6 +218,7 @@ internal static class Program
               --filter <substring>   Only run tests whose path contains the substring
                                      (css21-full: @<file> runs exactly the paths listed one per line)
               --update-baselines     (acid) Approve the current render as the new baseline
+              --compare <a> <b>      Render two served documents as a reftest pair and report the pixel diff
               --geom <url> <sel>     Print the geometry of elements matching a selector
               --geom-post <url> <body> <sel>  Probe geometry in a form POST response
               --render <url> [name] [width] [height]  Render a local or absolute URL to PNG

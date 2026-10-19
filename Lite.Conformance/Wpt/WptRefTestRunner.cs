@@ -48,7 +48,7 @@ internal static class WptRefTestRunner
                     }
                     else
                     {
-                        var name = "wpt-reference-" + Guid.NewGuid().ToString("N");
+                        var name = $"wpt-reference-{Path.GetFileNameWithoutExtension(test.Path)}-{Guid.NewGuid().ToString("N")[..8]}";
                         PixelDiff.WriteFailureArtifacts(name, right, left, tolerance: 0);
                         foreach (var suffix in new[] { "expected", "actual", "diff" })
                         {
@@ -73,6 +73,25 @@ internal static class WptRefTestRunner
             (bitmap, _) = WptVisualPage.Render(path, test.Options?["viewport_size"]?.GetValue<string>());
             images.Add(path, bitmap);
             return bitmap;
+        }
+    }
+
+    /// <summary>Diagnostic: renders two served documents exactly as a reference pair is
+    /// rendered and reports the exact pixel diff, writing expected/actual/diff artifacts.</summary>
+    internal static int CompareDocuments(string left, string right)
+    {
+        ConformanceServer.Start(cssRegressionMode: false);
+        ConformanceServer.EnsureTestFontsProvisioned();
+        var (test, _) = WptVisualPage.Render(left.TrimStart('/'));
+        var (reference, _) = WptVisualPage.Render(right.TrimStart('/'));
+        using (test)
+        using (reference)
+        {
+            var comparison = PixelDiff.Compare(reference, test, tolerance: 0, pixelBudget: 0);
+            var name = "compare-" + Path.GetFileNameWithoutExtension(left);
+            PixelDiff.WriteFailureArtifacts(name, reference, test, tolerance: 0);
+            Console.WriteLine($"{(comparison.Match ? "MATCH" : "DIFFER")} {comparison.DiffPixels} px; artifacts {name}-*.png");
+            return comparison.Match ? 0 : 1;
         }
     }
 

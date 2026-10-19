@@ -142,6 +142,10 @@ internal static class Parser
         internal bool IsXmlDocument;
         internal readonly List<ScriptRecord> PendingScripts = [], DeferredScripts = [], AsyncScripts = [];
         internal readonly Dictionary<string, List<int>> Counters = new();
+        /// <summary>The counter instances each open element pushed (innermost last); an implicit
+        /// counter-reset (§12.4.1) joins the enclosing element's list, so it ends with the
+        /// scope of the element's parent rather than living for the rest of the document.</summary>
+        internal readonly Stack<List<string>> CounterScopes = new();
         internal readonly List<CssRule> CssRules = [];
         internal readonly Dictionary<string, (string Value, int Count)> RawBackgrounds = new(StringComparer.Ordinal);
         internal readonly List<(string Selector, ICssStyleDeclaration Style)> PseudoElementRules = [];
@@ -1483,6 +1487,10 @@ internal static class Parser
         // children, and snapshot the resulting state onto the node (for counter()/counters() and the
         // ::before/::after generated content). The pushed instances are popped after the subtree.
         ApplyCounters(node, out var pushedCounters);
+        Current.CounterScopes.Push(pushedCounters);
+        // ::before comes next in document order: its counter properties apply now, inside this
+        // element's scope, and its content reads the counters as they stand at that point.
+        var beforeCounters = PseudoCounters(node, node.BeforeStyles, pushedCounters);
 
         if (objectShowsImage || tag is "IFRAME" or "AUDIO" or "VIDEO")
         {
@@ -1555,11 +1563,18 @@ internal static class Parser
         if (tag == "PICTURE")
             SelectPictureSource(element, node);
 
+        // ::after follows the children: its counter properties apply after the whole subtree,
+        // and a counter-reset it makes has no following siblings to scope over.
+        var afterPushed = new List<string>();
+        var afterCounters = PseudoCounters(node, node.AfterStyles, afterPushed);
+        PopCounters(afterPushed);
+
         // Leaving this node's subtree: pop the counter instances it introduced (scope ends).
+        Current.CounterScopes.Pop();
         PopCounters(pushedCounters);
 
-        // Create ::before and ::after pseudo-element children (using the snapshot taken above)
-        CreatePseudoElementChildren(node, directTextRaw);
+        // Create ::before and ::after pseudo-element children, each reading its own snapshot.
+        CreatePseudoElementChildren(node, directTextRaw, beforeCounters, afterCounters);
         // ::first-letter runs after them: the spec includes ::before content in the first letter,
         // and the split needs the final child list.
         CreateFirstLetterChild(node);
@@ -1576,38 +1591,74 @@ internal static class Parser
     private static void ApplyCounters(LayoutNode node, out List<string> pushed)
     {
         pushed = new List<string>();
+        // An implicit reset made by this element scopes over its following siblings, so it
+        // belongs to the enclosing element's list (document root when there is none).
+        var enclosing = Current.CounterScopes.Count > 0 ? Current.CounterScopes.Peek() : null;
+        // §12.4: an element that is not displayed cannot increment or reset a counter. The
+        // authored keyword decides: table-column(-group) maps to no box internally, yet such
+        // elements are displayed and their counters apply (counter-increment-applies-to-005).
+        var display = node.TryResolveStyle("display", out var ov) ? ov : node.Style.GetPropertyValueSafe("display");
+        if (!display.Trim().Equals("none", StringComparison.OrdinalIgnoreCase))
+            ApplyCounterProperties(node.StyleOverrides.GetValueOrDefault("counter-reset"),
+                node.StyleOverrides.GetValueOrDefault("counter-increment"), pushed, enclosing);
+        var (values, stacks) = SnapshotCounters();
+        node.CounterValues = values;
+        node.CounterStacks = stacks;
+    }
 
-        if (node.StyleOverrides.TryGetValue("counter-reset", out var crReset) &&
-            !crReset.Equals("none", StringComparison.OrdinalIgnoreCase))
-        {
-            foreach (var part in ParseCounterSpec(crReset))
+    /// <summary>Applies a pseudo-element's counter-reset/counter-increment (§12.4: they apply
+    /// to pseudo-elements too) and snapshots the counters its content reads. Instances it
+    /// creates — explicit or implicit — join <paramref name="scope"/>.</summary>
+    private static (Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) PseudoCounters(
+        LayoutNode node, Dictionary<string, string>? pseudoStyles, List<string> scope)
+    {
+        if (pseudoStyles is null || !pseudoStyles.ContainsKey("content") ||
+            ResolvePseudoDisplay(node, pseudoStyles).Equals("none", StringComparison.OrdinalIgnoreCase))
+            return (node.CounterValues, node.CounterStacks);
+        ApplyCounterProperties(pseudoStyles.GetValueOrDefault("counter-reset"),
+            pseudoStyles.GetValueOrDefault("counter-increment"), scope, scope);
+        return SnapshotCounters();
+    }
+
+    /// <summary>counter-reset pushes a nested instance onto <paramref name="pushed"/>; an
+    /// increment of a counter in no scope behaves as an implicit reset to 0 on the same box
+    /// (§12.4.1), recorded on <paramref name="implicitScope"/> — or never popped when null.</summary>
+    private static void ApplyCounterProperties(string? reset, string? increment, List<string> pushed, List<string>? implicitScope)
+    {
+        if (reset is not null && !reset.Equals("none", StringComparison.OrdinalIgnoreCase))
+            foreach (var part in ParseCounterSpec(reset, 0))
             {
                 if (!_counters.TryGetValue(part.Name, out var stack))
                     _counters[part.Name] = stack = new List<int>();
                 stack.Add(part.Value);              // push a new nested instance
                 pushed.Add(part.Name);
             }
-        }
 
-        if (node.StyleOverrides.TryGetValue("counter-increment", out var crInc) &&
-            !crInc.Equals("none", StringComparison.OrdinalIgnoreCase))
-        {
-            foreach (var part in ParseCounterSpec(crInc))
+        if (increment is not null && !increment.Equals("none", StringComparison.OrdinalIgnoreCase))
+            foreach (var part in ParseCounterSpec(increment, 1))
             {
-                if (!_counters.TryGetValue(part.Name, out var stack) || stack.Count == 0)
-                    // Not in scope: auto-create a document-root instance (not popped by this node).
-                    _counters[part.Name] = stack = new List<int> { 0 };
-                stack[^1] += part.Value == 0 ? 1 : part.Value;
+                if (!_counters.TryGetValue(part.Name, out var stack))
+                    _counters[part.Name] = stack = new List<int>();
+                if (stack.Count == 0)
+                {
+                    stack.Add(0);
+                    implicitScope?.Add(part.Name);
+                }
+                stack[^1] += part.Value;
             }
-        }
+    }
 
-        if (_counters.Count == 0) return;
+    private static (Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) SnapshotCounters()
+    {
+        Dictionary<string, int>? values = null;
+        Dictionary<string, List<int>>? stacks = null;
         foreach (var (name, stack) in _counters)
         {
             if (stack.Count == 0) continue;
-            (node.CounterValues ??= new())[name] = stack[^1];
-            (node.CounterStacks ??= new())[name] = new List<int>(stack);
+            (values ??= new())[name] = stack[^1];
+            (stacks ??= new())[name] = new List<int>(stack);
         }
+        return (values, stacks);
     }
 
     /// <summary>Pops the counter instances pushed by a node's counter-reset when its subtree ends.</summary>
@@ -1625,8 +1676,22 @@ internal static class Parser
     /// <param name="directTextRaw">The element's own text before it was trimmed, so a boundary
     /// space that sits between the text and an adjacent pseudo-element can be restored — that
     /// space is mid-line, not end-of-line, so §16.6.1 keeps it.</param>
-    private static void CreatePseudoElementChildren(LayoutNode node, string directTextRaw = "")
+    /// <param name="beforeCounters">Counter snapshot ::before's content reads (after its own
+    /// counter properties, before the children).</param>
+    /// <param name="afterCounters">Counter snapshot ::after's content reads (after the children
+    /// and its own counter properties).</param>
+    private static void CreatePseudoElementChildren(LayoutNode node, string directTextRaw,
+        (Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) beforeCounters,
+        (Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) afterCounters)
     {
+        string? ContentWith((Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) counters, string content)
+        {
+            var (values, stacks) = (node.CounterValues, node.CounterStacks);
+            (node.CounterValues, node.CounterStacks) = counters;
+            try { return ParseContentValue(content, node); }
+            finally { (node.CounterValues, node.CounterStacks) = (values, stacks); }
+        }
+
         bool hasBefore = node.BeforeStyles != null && node.BeforeStyles.TryGetValue("content", out var beforeContent)
                          && ParseContentValue(beforeContent!, node) != null;
         bool hasAfter = node.AfterStyles != null && node.AfterStyles.TryGetValue("content", out var afterContent)
@@ -1653,7 +1718,7 @@ internal static class Parser
 
         if (hasBefore)
         {
-            var text = ParseContentValue(node.BeforeStyles!["content"], node);
+            var text = ContentWith(beforeCounters, node.BeforeStyles!["content"]);
             var pseudoNode = new LayoutNode(null, "#pseudo-before", text!, node.Style);
             pseudoNode.StyleOverrides["display"] = ResolvePseudoDisplay(node, node.BeforeStyles!);
             foreach (var (p, v) in node.BeforeStyles!)
@@ -1668,7 +1733,7 @@ internal static class Parser
 
         if (hasAfter)
         {
-            var text = ParseContentValue(node.AfterStyles!["content"], node);
+            var text = ContentWith(afterCounters, node.AfterStyles!["content"]);
             var pseudoNode = new LayoutNode(null, "#pseudo-after", text!, node.Style);
             pseudoNode.StyleOverrides["display"] = ResolvePseudoDisplay(node, node.AfterStyles!);
             foreach (var (p, v) in node.AfterStyles!)
@@ -2642,7 +2707,9 @@ internal static class Parser
     }
 
     /// <summary>Parses "counter-reset: name value name2 value2" or "counter-increment: name value" specs.</summary>
-    private static List<(string Name, int Value)> ParseCounterSpec(string spec)
+    /// <param name="defaultValue">The value an omitted integer means: 0 for counter-reset,
+    /// 1 for counter-increment (an explicit "x 0" increments by zero).</param>
+    private static List<(string Name, int Value)> ParseCounterSpec(string spec, int defaultValue)
     {
         var result = new List<(string, int)>();
         var tokens = spec.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -2651,7 +2718,7 @@ internal static class Parser
         {
             if (tokens[i] == "none") break;
             var name = tokens[i];
-            int val = 0;
+            int val = defaultValue;
             if (i + 1 < tokens.Length && int.TryParse(tokens[i + 1], out var parsed))
             {
                 val = parsed;

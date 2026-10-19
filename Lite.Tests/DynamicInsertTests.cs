@@ -224,4 +224,26 @@ public static class DynamicInsertTests
         var b = FindById(container, "b");
         True(b != null && b!.Parent == container, "remaining span must stay in place");
     }
+
+    [Test]
+    public static void ElementBuiltWhileDetached_InheritsOnceInserted()
+    {
+        // table-anonymous-objects-009: a span is created, given a text child while still
+        // detached (which re-projects it), and only then inserted under a red, 2em parent.
+        // It must inherit the computed color and font size of where it lands — not the
+        // initial values of the detached moment, and not a re-resolved "2em" (4em).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head></head><body>" +
+            "<div style=\"font-size: 2em;\"><div style=\"color: red;\">" +
+            "<span style=\"display: block\"><span id=\"t\" style=\"display: table-cell\">a</span></span>" +
+            "</div></div></body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        page.Engine.RawEngine.Execute("var c = document.createElement('span'); c.id = 'c';" +
+            "c.style.display = 'table-cell'; c.appendChild(document.createTextNode('bc'));" +
+            "var t = document.getElementById('t'); t.parentNode.insertBefore(c, t);");
+        BoxEngine.Layout(page.Root, 800, 600);
+        var inserted = FindById(page.Root, "c");
+        True(inserted != null, "inserted span missing");
+        True(inserted!.GetColor() == new SkiaSharp.SKColor(255, 0, 0), $"inherited color {inserted.GetColor()}");
+        True(Math.Abs(inserted.GetFontSize() - 32f) < 0.01f, $"inherited font size {inserted.GetFontSize()}");
+    }
 }
