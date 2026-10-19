@@ -788,7 +788,32 @@ public class JsElement
             if (node.Attributes.TryGetValue(name, out var value)) element.SetAttribute(name, value);
             else element.RemoveAttribute(name);
         }
-        if (name is "class" or "id") StyleResolver.Apply(node);
+        if (name is "class" or "id" || name.StartsWith("data-"))
+        {
+            // Rules that matched the OLD attribute value but not the new one lose their
+            // winners entirely; collect their properties so the recascade stamps the
+            // initial/inherited fallbacks instead of leaving the parse-time cascade exposed
+            // (table-anonymous-objects-053's cell stayed display:table-cell after its id
+            // went away).
+            var lost = new List<string>();
+            if (!string.IsNullOrEmpty(oldValue))
+            {
+                // The new value is already in place; recreate the OLD value just long enough
+                // to collect the rules that matched it, then restore the current state.
+                var hadNew = node.Attributes.TryGetValue(name, out var current);
+                node.Attributes[name] = oldValue!;
+                foreach (var rule in node.OwningDocument?.StyleRules ?? Parser.CssRules)
+                {
+                    bool ok;
+                    try { ok = SelectorEngine.Matches(node, rule.Selector); }
+                    catch { continue; }
+                    if (ok) lost.AddRange(rule.Properties.Keys);
+                }
+                if (hadNew) node.Attributes[name] = current!;
+                else node.Attributes.Remove(name);
+            }
+            StyleResolver.Apply(node, lost.Distinct().ToList());
+        }
         if ((node.OwningDocument?.Engine ?? JsEngine.Instance) is { } eng)
         {
             MutationObserverRegistry.NotifyAttribute(eng.RawEngine, node, name, oldValue);

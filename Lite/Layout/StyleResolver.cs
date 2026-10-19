@@ -43,10 +43,22 @@ internal static class StyleResolver
     /// <summary>Applies matching author rules + inheritance to a single node. Idempotent:
     /// values stamped by a previous resolution are retracted first, so this can re-run
     /// after a class/id change without stale rule values masquerading as inline styles.</summary>
-    internal static void Apply(LayoutNode node)
+    internal static void Apply(LayoutNode node) => Apply(node, null);
+
+    /// <summary>Applies matching rules to <paramref name="node"/>; properties in
+    /// <paramref name="alsoRetract"/> are treated as previously applied even when this node
+    /// never went through the override channel, so a rule that stopped matching (a class/id
+    /// change) stamps its initial/inherited fallback instead of leaving the parse-time
+    /// AngleSharp value exposed.</summary>
+    internal static void Apply(LayoutNode node, List<string>? alsoRetract)
     {
         if (node.TagName.StartsWith('#')) return; // text / fragment / document nodes
 
+        var previouslyApplied = new List<string>(node.CascadeAppliedProps);
+        if (alsoRetract is not null)
+            foreach (var prop in alsoRetract)
+                if (!previouslyApplied.Contains(prop))
+                    previouslyApplied.Add(prop);
         foreach (var prop in node.CascadeAppliedProps)
             node.StyleOverrides.Remove(prop);
         node.CascadeAppliedProps.Clear();
@@ -108,6 +120,25 @@ internal static class StyleResolver
                     node.StyleOverrides[prop] = inherited;
                     node.CascadeAppliedProps.Add(prop);
                 }
+            }
+        }
+
+        // A rule that STOPPED matching (a class/id change, a sheet edit) leaves property with
+        // no winner at all. Without a stamped fallback the read path falls through to the
+        // AngleSharp computed declaration — frozen at parse time — and the dropped value keeps
+        // applying forever (table-anonymous-objects-053's cell stayed display:table-cell
+        // after its id went away). Stamp the initial value, or the parent's for inherited
+        // properties, so the override channel carries the real cascade result.
+        foreach (var prop in previouslyApplied)
+        {
+            if (winners.ContainsKey(prop) || node.StyleOverrides.ContainsKey(prop)) continue;
+            var fallback = PropertyTable.IsInherited(prop)
+                ? (InheritedOrNull(node, prop) ?? PropertyTable.InitialValue(prop))
+                : PropertyTable.InitialValue(prop);
+            if (!string.IsNullOrEmpty(fallback))
+            {
+                node.StyleOverrides[prop] = fallback;
+                node.CascadeAppliedProps.Add(prop);
             }
         }
     }

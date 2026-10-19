@@ -335,4 +335,55 @@ public static class TableAnonymousDynamicTests
         foreach (var c in node.Children) { var f = Find(c, tag, id); if (f != null) return f; }
         return null;
     }
+
+
+    [Test]
+    public static void DynamicCellRemoval_BaselineMatchesStatic()
+    {
+        // table-anonymous-objects-053/054: the red span's cell loses its id (and with it
+        // display:table-cell) after a forced layout; the re-projected inline run must land
+        // its 'x' exactly where the green overlay's statically-identical run puts it.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "#tablecell { display: table-cell; }" +
+            ".border { border: 1px solid blue; }" +
+            "</style></head><body>" +
+            "<div style=\"position: relative; font-size: 2em;\">" +
+            "<div id=\"r\" style=\"position: relative; z-index: 1; color: red; padding: 1px;\">\n\n" +
+            "   <span class=\"border\">\n" +
+            "      <span id=\"tablecell\">x</span>\n" +
+            "   </span>\n" +
+            "   <script>document.body.offsetWidth;</script>\n" +
+            "</div>\n" +
+            "<div id=\"g\" style=\"position: absolute; z-index: 2; top: 0; color: green; padding: 1px;\">\n\n" +
+            "   <span class=\"border\">\n" +
+            "      <span>x</span>\n" +
+            "   </span>\n" +
+            "</div>\n" +
+            "</div></body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        // The script's offsetWidth read forces the layout; then the id attribute is removed
+        // through the engine's own attribute-change path (attributes + DOM mirror + recascade).
+        var tablecell = Find(page.Root, "SPAN", "tablecell")!;
+        True(tablecell != null, "tablecell missing");
+        tablecell.Attributes.Remove("id");
+        if (tablecell.DomNode is AngleSharp.Dom.IElement el) el.RemoveAttribute("id");
+        Scripting.Dom.JsElement.OnAttributeChanged(tablecell, "id", "tablecell");
+        BoxEngine.Layout(page.Root, 800, 600);
+        var g = Find(page.Root, "DIV", "g")!;
+        var r = Find(page.Root, "DIV", "r")!;
+        foreach (var n in AllNodes(r))
+            Console.WriteLine($"[053n] {n.TagName}#{n.Id} disp={n.GetDisplay()} box={n.Box.ContentBox} children={n.Children.Count}");
+        DumpFragments(r, "red  ");
+        DumpFragments(g, "green");
+        var greenX = AllNodes(g).SelectMany(n => n.InlineFragments ?? [])
+            .FirstOrDefault(f => f.Text.Trim() == "x");
+        var redX = AllNodes(r).SelectMany(n => n.InlineFragments ?? [])
+            .FirstOrDefault(f => f.Text.Trim() == "x");
+        True(greenX.Rect != default && redX.Rect != default,
+            $"missing fragment after mutation (red={(redX.Rect == default)} green={(greenX.Rect == default)})");
+        Console.WriteLine($"[053] red x={redX.Rect.Left:0.##} y={redX.Rect.Top:0.##} green x={greenX.Rect.Left:0.##} y={greenX.Rect.Top:0.##}");
+        True(Math.Abs(redX.Rect.Top - greenX.Rect.Top) < 0.5f,
+            $"red 'x' must sit on the green 'x's baseline ({redX.Rect.Top:0.##} vs {greenX.Rect.Top:0.##})");
+    }
 }
