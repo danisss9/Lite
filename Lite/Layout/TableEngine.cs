@@ -310,46 +310,64 @@ internal static class TableEngine
         var tableBorders = NodeEdgeBorders(table);
 
         // Column and column-group borders conflict with the cell edges inside their span
-        // (§17.6.2.1: cell > row > row group > column > column group > table).
+        // (§17.6.2.1: cell > row > row group > column > column group > table). A column's
+        // left/right edges run the full table height — they conflict with every cell edge in
+        // the column's span — and its top/bottom edges coincide with the table's top/bottom
+        // over that column, so a 'border' set on a col beats the table's own border around
+        // the whole frame (border-conflict-element-032). A column group's edges do the same
+        // over its first/last column (border-conflict-element-039).
         var columnByIndex = new Dictionary<int, Dictionary<string, EdgeBorder>>();
+        var groupByIndex = new Dictionary<int, Dictionary<string, EdgeBorder>>();
+        var firstInGroup = new HashSet<int>();
+        var lastInGroup = new HashSet<int>();
         var columnIndex = 0;
-        void CollectColumns(LayoutNode container, bool allowDirect)
+        int SpanOf(LayoutNode node)
+        {
+            var span = 1;
+            if (node.Attributes.TryGetValue("span", out var raw))
+                int.TryParse(raw, out span);
+            return Math.Clamp(span, 1, 1000);
+        }
+        void CollectColumns(LayoutNode container)
         {
             foreach (var child in container.Children)
             {
-                var d = child.GetDisplay();
-                if (child.TagName is "COL" or "COLGROUP")
+                if (child.TagName == "COL")
                 {
-                    var span = 1;
-                    if (child.Attributes.TryGetValue("span", out var raw))
-                        int.TryParse(raw, out span);
-                    span = Math.Clamp(span, 1, 1000);
                     var borders = NodeEdgeBorders(child);
-                    for (var s = 0; s < span; s++)
+                    for (var s = 0; s < SpanOf(child); s++)
                         columnByIndex[columnIndex++] = borders;
                 }
                 else if (child.TagName == "COLGROUP")
                 {
+                    var start = columnIndex;
                     if (child.Children.Count == 0)
                     {
-                        var gspan = 1;
-                        if (child.Attributes.TryGetValue("span", out var graw))
-                            int.TryParse(graw, out gspan);
-                        gspan = Math.Clamp(gspan, 1, 1000);
-                        var gborders = NodeEdgeBorders(child);
-                        for (var s = 0; s < gspan; s++)
-                            columnByIndex[columnIndex++] = gborders;
+                        var borders = NodeEdgeBorders(child);
+                        for (var s = 0; s < SpanOf(child); s++)
+                            columnByIndex[columnIndex++] = borders;
                     }
-                    else CollectColumns(child, false);
+                    else CollectColumns(child);
+                    // The group's own borders join the conflict at the covered columns' outer
+                    // edges; the column wins element ties (column > column group).
+                    var gborders = NodeEdgeBorders(child);
+                    for (var i = start; i < columnIndex; i++)
+                        groupByIndex[i] = gborders;
+                    if (columnIndex > start) { firstInGroup.Add(start); lastInGroup.Add(columnIndex - 1); }
                 }
             }
         }
-        CollectColumns(table, true);
+        CollectColumns(table);
 
         foreach (var p in placements)
         {
             var own = NodeEdgeBorders(p.Cell);
             var columnBorders = columnByIndex.GetValueOrDefault(p.Col);
+            var colGroupBorders = groupByIndex.GetValueOrDefault(p.Col);
+            var westColumn = columnByIndex.GetValueOrDefault(p.Col - 1);
+            var westColGroup = groupByIndex.GetValueOrDefault(p.Col - 1);
+            var eastColumn = columnByIndex.GetValueOrDefault(p.Col + p.ColSpan);
+            var eastColGroup = groupByIndex.GetValueOrDefault(p.Col + p.ColSpan);
             var result = new Dictionary<string, EdgeBorder>(4, StringComparer.Ordinal);
             // §17.6.2.1 element precedence on equal width and style: cell > row > row group >
             // table. The embedded-element tests (border-conflict-element-*) turn exactly on the
@@ -370,12 +388,31 @@ internal static class TableEngine
                     left = Dominant(left, westRow is not null
                         ? Dominant(NodeEdgeBorders(westRow)["right"], rowBorders["left"])
                         : rowBorders["left"]);                              // left over right
+                // Column borders join every vertical edge they span, the groups' facing edges
+                // join at a group boundary — candidates in precedence order (§17.6.2.1 column >
+                // column group), and same-type ties go to the left, or to the right under
+                // 'direction: rtl' (border-conflict-element-029).
+                var rtl = table.GetDirection() == "rtl";
+                if (columnBorders is not null)
+                    left = Dominant(left, westColumn is not null
+                        ? (rtl ? Dominant(columnBorders["left"], westColumn["right"])
+                               : Dominant(westColumn["right"], columnBorders["left"]))
+                        : columnBorders["left"]);
+                if (westColGroup is not null && lastInGroup.Contains(p.Col - 1))
+                    left = Dominant(left, rtl
+                        ? Dominant(Bd(colGroupBorders, "left"), westColGroup["right"])
+                        : Dominant(westColGroup["right"], Bd(colGroupBorders, "left")));
+                else if (colGroupBorders is not null && firstInGroup.Contains(p.Col))
+                    left = Dominant(left, colGroupBorders["left"]);
             }
             else
             {
                 left = Dominant(left, Bd(rowBorders, "left"));
                 left = Dominant(left, Bd(groupBorders, "left"));
                 left = Dominant(left, Bd(columnBorders, "left"));
+                left = Dominant(left, firstInGroup.Contains(p.Col)
+                    ? Dominant(Bd(columnBorders, "left"), Bd(colGroupBorders, "left"))
+                    : Bd(columnBorders, "left"));
                 left = Dominant(left, tableBorders["left"]);                // cell over table
             }
             result["left"] = left;
@@ -389,12 +426,28 @@ internal static class TableEngine
                     right = Dominant(right, eastRow is not null
                         ? Dominant(rowBorders["right"], NodeEdgeBorders(eastRow)["left"])
                         : rowBorders["right"]);
+                var eastColSpanIndex = p.Col + p.ColSpan;
+                var rtl2 = table.GetDirection() == "rtl";
+                if (columnBorders is not null)
+                    right = Dominant(right, eastColumn is not null
+                        ? (rtl2 ? Dominant(eastColumn["left"], columnBorders["right"])
+                                : Dominant(columnBorders["right"], eastColumn["left"]))
+                        : columnBorders["right"]);
+                if (eastColGroup is not null && firstInGroup.Contains(eastColSpanIndex))
+                    right = Dominant(right, rtl2
+                        ? Dominant(eastColGroup["left"], Bd(colGroupBorders, "right"))
+                        : Dominant(Bd(colGroupBorders, "right"), eastColGroup["left"]));
+                else if (colGroupBorders is not null && lastInGroup.Contains(p.Col + p.ColSpan - 1))
+                    right = Dominant(right, colGroupBorders["right"]);
             }
             else
             {
                 right = Dominant(right, Bd(rowBorders, "right"));
                 right = Dominant(right, Bd(groupBorders, "right"));
                 right = Dominant(right, Bd(columnBorders, "right"));
+                right = Dominant(right, lastInGroup.Contains(p.Col + p.ColSpan - 1)
+                    ? Dominant(Bd(columnBorders, "right"), Bd(colGroupBorders, "right"))
+                    : Bd(columnBorders, "right"));
                 right = Dominant(right, tableBorders["right"]);
             }
             result["right"] = right;
@@ -408,11 +461,26 @@ internal static class TableEngine
                     top = Dominant(top, northRow is not null
                         ? Dominant(NodeEdgeBorders(northRow)["bottom"], rowBorders["top"])
                         : rowBorders["top"]);                               // top over bottom
+                // The row groups' facing borders join the shared horizontal edge too: a group's
+                // top at its first row, the north group's bottom at its last (§17.6.2.1 —
+                // border-conflict-style-105/106's hidden tfoot/thead border suppresses the
+                // red cells' edges on BOTH sides of the boundary).
+                var northRowGroup = northRow?.Parent?.GetDisplay() == DisplayType.TableRowGroup
+                    ? northRow.Parent : null;
+                if (rowGroup is not null && ReferenceEquals(FirstRowOf(rowGroup), row))
+                    top = Dominant(top, Bd(groupBorders, "top"));
+                if (northRowGroup is not null && ReferenceEquals(LastRowOf(northRowGroup), northRow))
+                    top = Dominant(top, NodeEdgeBorders(northRowGroup)["bottom"]);
             }
             else
             {
                 top = Dominant(top, Bd(rowBorders, "top"));
                 top = Dominant(top, Bd(groupBorders, "top"));
+                // A column's top edge coincides with the table's top over its span (§17.6.2.1:
+                // column above column group above table on ties) — a border set on a col/colgroup
+                // beats the table's own border along the top of its columns (032/039).
+                top = Dominant(top, Bd(columnBorders, "top"));
+                top = Dominant(top, Bd(colGroupBorders, "top"));
                 top = Dominant(top, tableBorders["top"]);
             }
             result["top"] = top;
@@ -426,11 +494,21 @@ internal static class TableEngine
                     bottom = Dominant(bottom, southRow is not null
                         ? Dominant(rowBorders["bottom"], NodeEdgeBorders(southRow)["top"])
                         : rowBorders["bottom"]);
+                // Same at the south boundary: the own group's bottom at its last row, the
+                // south group's top at its first row.
+                var southRowGroup = southRow?.Parent?.GetDisplay() == DisplayType.TableRowGroup
+                    ? southRow.Parent : null;
+                if (rowGroup is not null && ReferenceEquals(LastRowOf(rowGroup), row))
+                    bottom = Dominant(bottom, Bd(groupBorders, "bottom"));
+                if (southRowGroup is not null && ReferenceEquals(FirstRowOf(southRowGroup), southRow))
+                    bottom = Dominant(bottom, NodeEdgeBorders(southRowGroup)["top"]);
             }
             else
             {
                 bottom = Dominant(bottom, Bd(rowBorders, "bottom"));
                 bottom = Dominant(bottom, Bd(groupBorders, "bottom"));
+                bottom = Dominant(bottom, Bd(columnBorders, "bottom"));
+                bottom = Dominant(bottom, Bd(colGroupBorders, "bottom"));
                 bottom = Dominant(bottom, tableBorders["bottom"]);
             }
             result["bottom"] = bottom;
@@ -463,6 +541,15 @@ internal static class TableEngine
 
     private static LayoutNode? RowOf(LayoutNode cell)
         => cell.Parent?.GetDisplay() == DisplayType.TableRow ? cell.Parent : null;
+
+    /// <summary>The group's first/last ROW child, skipping the whitespace text nodes the
+    /// projection keeps between the row elements (a colgroup/row-group's Children[0] can be
+    /// a #text node, so the raw ends misidentify the boundary rows).</summary>
+    private static LayoutNode? FirstRowOf(LayoutNode group)
+        => group.Children.FirstOrDefault(c => c.GetDisplay() == DisplayType.TableRow);
+
+    private static LayoutNode? LastRowOf(LayoutNode group)
+        => group.Children.LastOrDefault(c => c.GetDisplay() == DisplayType.TableRow);
 
     private static Dictionary<string, EdgeBorder> NodeEdgeBorders(LayoutNode node)
     {

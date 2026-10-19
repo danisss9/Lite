@@ -612,9 +612,14 @@ internal static class Drawer
                     DrawBackgroundImage(canvas, node, box);
                 }
 
-                DrawBorders(canvas, box, node);
-                DrawOutline(canvas, box, node);
-            }
+                // In a collapsed table the TABLE's own border does not paint either: its
+                // §17.6.2 contribution is already one of the resolved winners the cells draw
+                // in the outer band, and painting it separately drew the losing border over
+                // the winner at the frame (border-conflict-element-039's red sides).
+                var suppressTableBorder = node.GetDisplay() is DisplayType.Table or DisplayType.InlineTable
+                                          && TableEngine.IsBorderCollapse(node);
+                if (!suppressTableBorder) DrawBorders(canvas, box, node);
+                DrawOutline(canvas, box, node);            }
         }
 
         if (!node.GetPointerEventsNone())
