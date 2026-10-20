@@ -2445,6 +2445,21 @@ internal static class Drawer
         var color = node.GetOutlineColor();
         var offset = node.GetOutlineOffset();
 
+        // A solid outline is the same filled ring a solid border is (see DrawBorderSide): the
+        // outline-width tests compare an outline against an equal border, and a centred stroke
+        // rasterises a different fringe at fractional offsets.
+        if (style == BorderStyle.Solid)
+        {
+            var inner = SKRect.Inflate(box.BorderBox, offset, offset);
+            var outer = SKRect.Inflate(inner, width, width);
+            using var fill = new SKPaint { Color = color, IsAntialias = false };
+            canvas.DrawRect(new SKRect(outer.Left, outer.Top, outer.Right, inner.Top), fill);
+            canvas.DrawRect(new SKRect(outer.Left, inner.Bottom, outer.Right, outer.Bottom), fill);
+            canvas.DrawRect(new SKRect(outer.Left, inner.Top, inner.Left, inner.Bottom), fill);
+            canvas.DrawRect(new SKRect(inner.Right, inner.Top, outer.Right, inner.Bottom), fill);
+            return;
+        }
+
         var outlineRect = SKRect.Inflate(box.BorderBox, offset + width / 2f, offset + width / 2f);
         using var paint = new SKPaint
         {

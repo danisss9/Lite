@@ -1073,7 +1073,7 @@ internal static class Parser
         ex is ArgumentException &&
             ex.Message.StartsWith("A non null render device", StringComparison.Ordinal);
 
-    private static LayoutNode Traverse(IElement element, int indent, float parentFontPx = DefaultFontSizePx)
+    private static LayoutNode Traverse(IElement element, int indent, float parentFontPx = DefaultFontSizePx, LayoutNode? parentNode = null)
     {
         // Normalize tag name to uppercase — AngleSharp returns lowercase for SVG namespace elements
         var tag = element.TagName.ToUpperInvariant();
@@ -1135,7 +1135,8 @@ internal static class Parser
         // layout then re-resolved against the parent's already-scaled size, so a single
         // `font-size: 2em` doubled again at every level below it. Resolve it once here, against
         // the parent's computed size, and hand the result down.
-        var fontPx = ResolveOwnFontSize(element, parentFontPx);
+        float fontPx;
+        using (CssUnits.ForFont(parentNode)) fontPx = ResolveOwnFontSize(element, parentFontPx);
         node.ComputedFontSize = fontPx;
 
         // §15.8: the 'font' shorthand's optional /<line-height> component. Nothing expands the
@@ -1529,10 +1530,10 @@ internal static class Parser
                     if (childTag == "SCRIPT")
                     {
                         CollectScript(childEl);
-                        node.AddChild(Traverse(childEl, indent + 1, fontPx));
+                        node.AddChild(Traverse(childEl, indent + 1, fontPx, node));
                         continue;
                     }
-                    node.AddChild(Traverse(childEl, indent + 1, fontPx));
+                    node.AddChild(Traverse(childEl, indent + 1, fontPx, node));
                 }
             }
         }
@@ -1544,10 +1545,10 @@ internal static class Parser
                 if (childTag == "SCRIPT")
                 {
                     CollectScript(child);
-                    node.AddChild(Traverse(child, indent + 1, fontPx));
+                    node.AddChild(Traverse(child, indent + 1, fontPx, node));
                     continue;
                 }
-                node.AddChild(Traverse(child, indent + 1, fontPx));
+                node.AddChild(Traverse(child, indent + 1, fontPx, node));
             }
         }
 
@@ -3620,7 +3621,7 @@ internal static class Parser
         {
             if (ch == '\n') { sb.Append('\n'); lastWasSpace = false; continue; }
             if (ch == '\r') continue;
-            if (char.IsWhiteSpace(ch) && ch != '\u00A0')
+            if (IsCollapsibleSpace(ch))
             {
                 if (!lastWasSpace) { sb.Append(' '); lastWasSpace = true; }
             }
@@ -3629,18 +3630,21 @@ internal static class Parser
         return sb.ToString();
     }
 
+    /// <summary>The characters §16.6.1 processes: space, tab and the line breaks (plus form
+    /// feed, white space to the tokenizer). Everything else char.IsWhiteSpace accepts is an
+    /// ordinary character that must survive as authored: U+00A0 must never collapse or become
+    /// a break opportunity, and neither may U+2000..U+200A or U+3000
+    /// (white-space-processing-054: three EN QUADs between "XX" and "XX").</summary>
+    private static bool IsCollapsibleSpace(char ch) => ch is ' ' or '\t' or '\n' or '\r' or '\f';
+
     private static string CollapseWhitespace(string text)
     {
         if (string.IsNullOrEmpty(text)) return "";
-        const char NoBreakSpace = '\u00A0';
         var sb = new System.Text.StringBuilder(text.Length);
         var lastWasSpace = false;
         foreach (var ch in text)
         {
-            // U+00A0 NO-BREAK SPACE is whitespace to char.IsWhiteSpace but NOT collapsible
-            // whitespace in CSS (§16.6.1) — it must survive as a real character and must never
-            // become a line-break opportunity. That is the whole point of authoring it.
-            if (char.IsWhiteSpace(ch) && ch != NoBreakSpace)
+            if (IsCollapsibleSpace(ch))
             {
                 if (!lastWasSpace) { sb.Append(' '); lastWasSpace = true; }
             }

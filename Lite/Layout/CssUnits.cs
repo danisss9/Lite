@@ -23,6 +23,28 @@ internal static class CssUnits
     /// defaults to the CSS initial 16px.</summary>
     public static float RootFontSize { get; set; } = 16f;
 
+    [ThreadStatic] private static Lite.Models.LayoutNode? t_fontScope;
+
+    /// <summary>Scopes 'ex' resolution to <paramref name="node"/>'s font (its x-height) until
+    /// the returned scope is disposed. Callers resolving a length for an element pass the
+    /// element; 'font-size' passes the parent, whose font its relative units refer to.
+    /// Unscoped conversions keep the 0.5em approximation.</summary>
+    public static FontScope ForFont(Lite.Models.LayoutNode? node)
+    {
+        var previous = t_fontScope;
+        t_fontScope = node;
+        return new FontScope(previous);
+    }
+
+    public readonly struct FontScope : IDisposable
+    {
+        private readonly Lite.Models.LayoutNode? _previous;
+        internal FontScope(Lite.Models.LayoutNode? previous) => _previous = previous;
+        public void Dispose() => t_fontScope = _previous;
+    }
+
+    private static float ExRatio => t_fontScope is { } node ? TextMeasure.XHeightRatio(node) : 0.5f;
+
     /// <summary>Converts an AngleSharp <see cref="CssLengthValue"/> to pixels.</summary>
     /// <param name="fontSize">The element's font-size (for em/ex/ch).</param>
     /// <param name="pctBasis">The basis for percentage values.</param>
@@ -38,7 +60,7 @@ internal static class CssUnits
             CssLengthValue.Unit.Px => v,
             CssLengthValue.Unit.Em => v * fontSize,
             CssLengthValue.Unit.Rem => v * RootFontSize,
-            CssLengthValue.Unit.Ex => v * fontSize * 0.5f,   // approximation: ex ≈ 0.5em
+            CssLengthValue.Unit.Ex => v * fontSize * ExRatio,
             CssLengthValue.Unit.Ch => v * fontSize * 0.5f,    // approximation: ch ≈ 0.5em
             CssLengthValue.Unit.Percent => v / 100f * pctBasis,
             CssLengthValue.Unit.Vw => v / 100f * vw,
@@ -61,7 +83,7 @@ internal static class CssUnits
             "px" or "" => value,
             "em" => value * fontSize,
             "rem" => value * RootFontSize,
-            "ex" => value * fontSize * 0.5f,
+            "ex" => value * fontSize * ExRatio,
             "ch" => value * fontSize * 0.5f,
             "%" => value / 100f * pctBasis,
             "vw" => value / 100f * vw,

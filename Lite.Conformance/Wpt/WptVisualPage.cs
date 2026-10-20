@@ -138,9 +138,16 @@ internal static class WptVisualPage
                         // inside a full-width div): the page background must be excluded on this
                         // side too, or the wrapping whitespace dominates the count and every
                         // image-swatch selftest reads white (background-color-012/035/076+).
-                        var refColor = DominantColor(bitmap, rb, PageBackground);
-                        var testColor = DominantColor(bitmap, tb, refColor == PageBackground ? null : PageBackground);
-                        if (testColor == refColor)
+                        // The canvas color is whatever the page paints (outline-color-029 sets a
+                        // black body), so it is measured, not assumed white.
+                        var page = DominantColor(bitmap, new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+                        var refColor = DominantColor(bitmap, rb, page);
+                        var testColor = DominantColor(bitmap, tb, refColor == page ? null : page);
+                        // One level of slack per channel: CSS 2.1 leaves percentage-to-integer
+                        // rounding undefined and the suite encodes both choices (background-color-052's
+                        // swatch is #7f7f7f for 50%; colors-001 requires 50% to be #80).
+                        if (Math.Abs(testColor.Red - refColor.Red) <= 1 && Math.Abs(testColor.Green - refColor.Green) <= 1 &&
+                            Math.Abs(testColor.Blue - refColor.Blue) <= 1)
                         {
                             const string pass = "Self-describing test: #test renders the same color as #reference";
                             return new(WptRunner.Cat.Pass, pass, 1, 0, [new(pass, 0, null)], 0);
@@ -175,7 +182,6 @@ internal static class WptVisualPage
         return $"{inner.GetType().Name}: {inner.Message}" + (frame.Length > 0 ? $" ({frame})" : "");
     }
 
-    private static readonly SKColor PageBackground = new(255, 255, 255);
 
     /// <summary>Collects the border boxes of the suite's standard Ahem font-requirement
     /// notice (<c>Ahem_font_required_for_this_test.</c>, white on red) — a red element by

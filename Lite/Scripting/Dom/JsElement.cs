@@ -751,10 +751,9 @@ public class JsElement
         {
             var old = Node.Attributes.GetValueOrDefault("class");
             Node.Attributes["class"] = value;
-            // Re-run the full, idempotent cascade so rules that no longer match are retracted
-            // and higher-specificity rules win (enables dynamic class-based styling).
-            StyleResolver.Apply(Node);
-            MutationObserverRegistry.NotifyAttribute(_engine, Node, "class", old);
+            // The shared attribute path: lost-rule fallbacks, dependents (descendant and sibling
+            // combinators — background-root-101's head.after + body) and the MutationRecord.
+            OnAttributeChanged(Node, "class", old);
         }
     }
 
@@ -813,6 +812,7 @@ public class JsElement
                 else node.Attributes.Remove(name);
             }
             StyleResolver.Apply(node, lost.Distinct().ToList());
+            RecascadeDependents(node, name, oldValue);
         }
         if ((node.OwningDocument?.Engine ?? JsEngine.Instance) is { } eng)
         {
@@ -822,6 +822,58 @@ public class JsElement
                 QueueDetailsToggle(node, eng);
             if (node.TagName == "IFRAME" && name is "src" or "srcdoc")
                 For(eng.RawEngine, node).LoadInsertedIframe();
+        }
+    }
+
+    /// <summary>A class/id change can change what matches the element's DESCENDANTS and its
+    /// FOLLOWING SIBLINGS (descendant, child and sibling combinators): background-root-101's
+    /// <c>head.after + body</c> must repaint the canvas green once the head's class changes.
+    /// Only rules whose selector mentions the old or new token can change, so each candidate
+    /// is re-cascaded only when such a rule matches it before or after the change — and the
+    /// rules it lost hand their properties to the fallback stamping, as on the element itself.</summary>
+    private static void RecascadeDependents(LayoutNode node, string name, string? oldValue)
+    {
+        node.Attributes.TryGetValue(name, out var newValue);
+        var tokens = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var value in new[] { oldValue, newValue })
+        {
+            if (string.IsNullOrEmpty(value)) continue;
+            if (name == "class")
+                foreach (var cls in value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)) tokens.Add("." + cls);
+            else if (name == "id") tokens.Add("#" + value);
+        }
+        if (name.StartsWith("data-")) tokens.Add("[" + name);
+        if (tokens.Count == 0) return;
+        var relevant = (node.OwningDocument?.StyleRules ?? Parser.CssRules)
+            .Where(r => tokens.Any(t => r.Selector.Contains(t, StringComparison.Ordinal))).ToList();
+        if (relevant.Count == 0) return;
+
+        var candidates = new List<LayoutNode>();
+        void Collect(LayoutNode n)
+        {
+            if (n.TagName.StartsWith('#')) return;
+            candidates.Add(n);
+            foreach (var c in n.Children) Collect(c);
+        }
+        foreach (var c in node.Children) Collect(c);
+        if (node.Parent is { } parent)
+            foreach (var sibling in parent.Children.SkipWhile(c => !ReferenceEquals(c, node)).Skip(1)) Collect(sibling);
+
+        List<Parser.CssRule> Matching(LayoutNode target) => relevant.Where(r =>
+        {
+            try { return SelectorEngine.Matches(target, r.Selector); }
+            catch { return false; }
+        }).ToList();
+
+        foreach (var target in candidates)
+        {
+            var now = Matching(target);
+            // Re-create the old attribute state to see what matched before the change.
+            if (oldValue is null) node.Attributes.Remove(name); else node.Attributes[name] = oldValue;
+            var before = Matching(target);
+            if (newValue is null) node.Attributes.Remove(name); else node.Attributes[name] = newValue;
+            if (now.Count == 0 && before.Count == 0) continue;
+            StyleResolver.Apply(target, before.Except(now).SelectMany(r => r.Properties.Keys).Distinct().ToList());
         }
     }
 
@@ -1954,9 +2006,10 @@ public class JsClassList
     private string[] GetClasses() => DomWhitespace.Split(_node.Attributes.GetValueOrDefault("class", ""));
     private void SetClasses(IEnumerable<string> classes)
     {
+        var old = _node.Attributes.GetValueOrDefault("class");
         _node.Attributes["class"] = string.Join(" ", classes);
-        // Re-run the cascade so class-dependent rules apply/retract immediately.
-        Lite.Layout.StyleResolver.Apply(_node);
+        // Same path as setAttribute("class"): fallbacks, dependents and the MutationRecord.
+        JsElement.OnAttributeChanged(_node, "class", old);
     }
 
     public void add(string cls)

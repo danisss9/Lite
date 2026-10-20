@@ -23,6 +23,16 @@ public static class CssErrorRecoveryTests
     }
 
     [Test]
+    public static void PercentageRgb_ClampsToTheGamut()
+    {
+        // Patch 002: 101% clips to 255 (the unclamped byte cast wrapped it to 2); rounding is
+        // upstream's (colors-001 needs 50% to be #80, i.e. CSS 'green' at 0% 50% 0%).
+        var sheet = Parse("a { color: rgb(50%, 1%, 101%) } b { color: rgb(-5%, 100%, 0%) }");
+        Equal("rgba(128, 3, 255, 1)", Declared(sheet, "a", "color"));
+        Equal("rgba(0, 255, 0, 1)", Declared(sheet, "b", "color"));
+    }
+
+    [Test]
     public static void StrayAtSign_DropsTheMalformedRuleSetThroughItsBlock()
     {
         // at-rule-001: '@ import' is not an at-keyword, so everything up to the end of the

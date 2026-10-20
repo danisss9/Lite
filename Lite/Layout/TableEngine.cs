@@ -232,6 +232,20 @@ internal static class TableEngine
             };
         }
 
+        // ── Row-group boxes (§17.5.1: a group spans its rows) ─────────────────
+        // Without a box of its own a row group painted nothing — its outline (§18.4 applies
+        // to every element; outline-applies-to-001's blue frame) and its background layer.
+        foreach (var group in rows.Take(rowCount).Select(r => r.Row.Parent).OfType<LayoutNode>()
+                     .Where(p => !ReferenceEquals(p, table) && p.GetDisplay() == DisplayType.TableRowGroup).Distinct())
+        {
+            var spanned = rows.Take(rowCount).Where(r => ReferenceEquals(r.Row.Parent, group)).Select(r => r.Row.Box.BorderBox).ToList();
+            group.Box = new BoxDimensions
+            {
+                ContentBox = new SKRect(spanned.Min(b => b.Left), spanned.Min(b => b.Top),
+                    spanned.Max(b => b.Right), spanned.Max(b => b.Bottom)),
+            };
+        }
+
         if (caption is not null && captionBottom)
             ry += LayoutCaptionBlock(caption, contentX, ry, contentW, viewportW, viewportH);
 

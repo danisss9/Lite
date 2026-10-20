@@ -446,7 +446,9 @@ namespace AngleSharp.Css.Parser
 
             if (unit.Dimension == "%" && Double.TryParse(unit.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var val))
             {
-                return (Byte)Math.Round((255.0 * val) / 100.0);
+                // Lite patch 002: clamp to the gamut before the byte cast (CSS 2.1 §4.3.6 — the
+                // unclamped cast wrapped 101% to 2).
+                return (Byte)Math.Round(Math.Clamp(255.0 * val / 100.0, 0.0, 255.0));
             }
 
             return null;

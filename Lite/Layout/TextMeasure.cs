@@ -10,7 +10,9 @@ internal static class TextMeasure
 {
     public static SKFont CreateFont(LayoutNode node)
     {
-        var size = Math.Max(1f, node.GetFontSize());
+        // A zero font size is legal (§15.7) and must render and measure nothing (font-size-002's
+        // "font-size: 0px" text painted, and took space, at the old 1px floor).
+        var size = Math.Max(0f, node.GetFontSize());
         var family = node.GetFontFamily();
         var bold = node.GetFontBold();
         var italic = node.GetFontItalic();
@@ -40,6 +42,29 @@ internal static class TextMeasure
         }
 
         return new SKFont(typeface, size);
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<SKTypeface, float> s_xHeightRatios = new();
+
+    /// <summary>The x-height of the node's first available font as a fraction of the em —
+    /// the 'ex' unit (CSS 2.1 §4.3.2: "equal to the font's x-height"). Ahem's is 0.8, so the
+    /// old fixed 0.5em approximation sized every ex length in the suite's Ahem tests wrong
+    /// (font-size-083: '6ex' at 20px is 96px, not 60). 0.5 when the font reports none.</summary>
+    internal static float XHeightRatio(LayoutNode node)
+    {
+        var bold = node.GetFontBold();
+        var italic = node.GetFontItalic();
+        var family = node.GetFontFamily();
+        var typeface = FontRegistry.Resolve(family, bold, italic)
+                       ?? SystemTypeface(family, bold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
+                           italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright)
+                       ?? SKTypeface.Default;
+        return s_xHeightRatios.GetOrAdd(typeface, static t =>
+        {
+            using var font = new SKFont(t, 100f);
+            var xHeight = font.Metrics.XHeight;
+            return xHeight > 0f ? xHeight / 100f : 0.5f;
+        });
     }
 
     // Installed-font lookups, shared for the process. Matching is cheap with DirectWrite but

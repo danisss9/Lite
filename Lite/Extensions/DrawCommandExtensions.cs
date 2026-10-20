@@ -409,6 +409,7 @@ public static class StyleExtensions
     /// <summary>Returns the computed line-height in pixels. Falls back to fontSize * 1.4.</summary>
     public static float GetLineHeight(this LayoutNode node, float fontSize)
     {
+        using var font = CssUnits.ForFont(node);
         // A unitless line-height (e.g. `1`, `1.5`) is a font-size MULTIPLIER, not a pixel length —
         // and it INHERITS AS THE NUMBER (§10.8.1: "computed value: for length and percentage, the
         // absolute value; otherwise as specified"), so each element multiplies its OWN font-size.
@@ -538,6 +539,7 @@ public static class StyleExtensions
 
         var box = node.Box.BorderBox;
         var fontSize = node.GetFontSize();
+        using var font = CssUnits.ForFont(node);
         float Edge(string s, float autoVal) =>
             s.Trim().Equals("auto", StringComparison.OrdinalIgnoreCase) ? autoVal :
             CssUnits.TryParse(s.Trim(), fontSize, 0, 0, 0, out var px) ? px : autoVal;
@@ -671,6 +673,7 @@ public static class StyleExtensions
     /// its text unspaced.</summary>
     private static float GetSpacing(LayoutNode node, string property, float fontSize)
     {
+        using var font = CssUnits.ForFont(node);
         var raw = node.TryResolveStyle(property, out var ov)
             ? ov : node.Style.GetPropertyValueSafe(property);
         if (string.IsNullOrWhiteSpace(raw)) return 0f;
@@ -786,8 +789,10 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValueSafe("vertical-align"))?.Trim() ?? "";
         var fontSize = node.GetFontSize();
         var lineHeight = node.GetLineHeight(fontSize);
-        // A percentage shifts relative to the element's own line-height (§10.8.1).
-        return CssUnits.TryParse(raw, lineHeight, lineHeight, lineHeight, lineHeight, out var px) ? px : 0f;
+        // A percentage shifts relative to the element's own line-height (§10.8.1); em and ex,
+        // like every length, refer to the element's font.
+        using var font = CssUnits.ForFont(node);
+        return CssUnits.TryParse(raw, fontSize, lineHeight, lineHeight, lineHeight, out var px) ? px : 0f;
     }
 
     // ---- Outline properties ----
@@ -796,14 +801,17 @@ public static class StyleExtensions
     {
         var raw = node.TryResolveStyle("outline-width", out var ov)
             ? ov : node.Style.GetPropertyValueSafe("outline-width");
-        if (string.IsNullOrWhiteSpace(raw)) return 0f;
+        // Initial value is 'medium' (§18.4); the painter draws nothing while the style is none.
+        if (string.IsNullOrWhiteSpace(raw)) return 3f;
         raw = raw.Trim();
         return raw switch
         {
             "thin" => 1f,
             "medium" => 3f,
             "thick" => 5f,
-            _ => raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px) ? px : 0f,
+            // Every CSS length unit, em against the element's own font size (outline-width-017's
+            // 5pt and 028's 5pc read as 0 when only px was understood).
+            _ => CssUnits.TryParse(raw, node.GetFontSize(), 0f, 0f, 0f, out var px) && px >= 0f ? px : 3f,
         };
     }
 
@@ -834,8 +842,7 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValueSafe("outline-offset");
         if (string.IsNullOrWhiteSpace(raw)) return 0f;
         raw = raw.Trim();
-        if (raw.EndsWith("px") && float.TryParse(raw[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px)) return px;
-        return 0f;
+        return CssUnits.TryParse(raw, node.GetFontSize(), 0f, 0f, 0f, out var px) ? px : 0f;
     }
 
     // ---- Background image properties ----
@@ -1226,6 +1233,7 @@ public static class StyleExtensions
 
     private static float GetOffset(LayoutNode node, string prop, float total, float size)
     {
+        using var font = CssUnits.ForFont(node);
         if (node.TryResolveStyle(prop, out var ov))
         {
             ov = ov.Trim();
@@ -1721,6 +1729,7 @@ public static class StyleExtensions
     /// the auto/none behaviour.</summary>
     private static float GetSizeOrDefault(LayoutNode node, string propertyName, float total, float size, float defaultValue, float viewportSize = -1f)
     {
+        using var font = CssUnits.ForFont(node);
         var vp = viewportSize >= 0 ? viewportSize : total;
         // Check StyleOverrides first
         if (node.TryResolveStyle(propertyName, out var overrideStr))
@@ -1756,6 +1765,9 @@ public static class StyleExtensions
     /// </summary>
     private static float GetSize(LayoutNode node, string propertyName, float total = 0, float size = 0, float viewportSize = -1f, float defaultValue = 0f)
     {
+        // 'ex' is the element's own x-height — except in 'font-size', whose relative units
+        // refer to the parent's font.
+        using var font = CssUnits.ForFont(propertyName == PropertyNames.FontSize ? node.Parent : node);
         var vp = viewportSize >= 0 ? viewportSize : total;
         // Inline style override (e.g. from element.style.setProperty)
         if (node.TryResolveStyle(propertyName, out var overrideStr))
