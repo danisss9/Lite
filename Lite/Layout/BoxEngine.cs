@@ -511,7 +511,7 @@ internal static class BoxEngine
             var child = node.Children[i];
             // A whitespace-only caption generates nothing (§17.2.1): dropping it here keeps the
             // surrounding inline flow on one line instead of breaking at an invisible block.
-            if (IsCssTableCaption(child) && WhitespaceOnlyInterior(child))
+            if (IsCssTableCaption(child) && WhitespaceOnlyInterior(child) && RendersNoBoxOfItsOwn(child))
                 continue;
             if (child.GetDisplay() == DisplayType.None)
             {
@@ -580,6 +580,20 @@ internal static class BoxEngine
             else return false; // an element child counts as content
         }
         return true;
+    }
+
+    /// <summary>True when a content-less box would still paint nothing and take no space: no
+    /// height or min-height, no border, padding or background. Only such a caption may be
+    /// skipped; a caption element always generates its box, so an empty one with
+    /// 'height: 1in; background: black' must still paint (*-applies-to-015).</summary>
+    private static bool RendersNoBoxOfItsOwn(LayoutNode node)
+    {
+        if (node.GetHeight() > 0 || node.GetMinHeight() > 0) return false;
+        var border = node.GetBorderWidth();
+        if (border.Top + border.Right + border.Bottom + border.Left > 0) return false;
+        var padding = node.GetPadding(0, 0, node.GetFontSize());
+        if (padding.Top + padding.Right + padding.Bottom + padding.Left > 0) return false;
+        return node.GetBackgroundColor().Alpha == 0 && node.GetBackgroundImage() is null;
     }
 
     /// <summary>True for a box styled <c>display:table-caption</c> — GetDisplay maps the
@@ -724,7 +738,7 @@ internal static class BoxEngine
             // misparented content nor splits one into separate anonymous cells. A
             // whitespace-only caption generates nothing for the same reason.
             if (child.GetDisplay() == DisplayType.None || child.TagName == "SCRIPT" ||
-                IsCssTableCaption(child) && WhitespaceOnlyInterior(child))
+                IsCssTableCaption(child) && WhitespaceOnlyInterior(child) && RendersNoBoxOfItsOwn(child))
             {
                 deferred.Add(child);
                 continue;
@@ -756,7 +770,11 @@ internal static class BoxEngine
         if (atTableLevel)
         {
             if (child.GetDisplay() is DisplayType.TableRow or DisplayType.TableRowGroup) return true;
-            return child.TagName is "TBODY" or "THEAD" or "TFOOT" or "CAPTION" or "COL" or "COLGROUP";
+            if (child.TagName is "TBODY" or "THEAD" or "TFOOT" or "CAPTION" or "COL" or "COLGROUP") return true;
+            // The CSS display values are proper too: a div styled 'display: table-caption' or
+            // 'table-column' is the table's caption/column, not content to wrap in a cell.
+            var raw = child.TryResolveStyle("display", out var d) ? d?.Trim() : child.Style.GetPropertyValueSafe("display")?.Trim();
+            return raw is "table-caption" or "table-column" or "table-column-group";
         }
         return child.GetDisplay() == DisplayType.TableCell;
     }
@@ -1474,7 +1492,7 @@ internal static class BoxEngine
                 case InlineItemKind.OutOfFlow or InlineItemKind.LineBreak or InlineItemKind.InlineEdge:
                     continue;
                 case InlineItemKind.Text when item.Text is { } t:
-                    var trimmed = t.TrimStart();
+                    var trimmed = t.TrimStartCss();
                     if (trimmed.Length == 0) continue;
                     if (item.Node.GetWhiteSpace() is WhiteSpace.NoWrap or WhiteSpace.Pre) return item.Width;
                     var end = trimmed.IndexOf(' ');
@@ -2308,7 +2326,7 @@ internal static class BoxEngine
             // green overlay in the white-space band grew a ~45px phantom line from exactly this.
             // The space is itself the break opportunity, so the line ends at it: what follows
             // starts the next line instead of looking glued to the word before the space.
-            if (item.Kind == InlineItemKind.Text && item.Text != null && item.Text.Trim().Length == 0 &&
+            if (item.Kind == InlineItemKind.Text && item.Text != null && item.Text.IsCssWhiteSpaceOnly() &&
                 lineX + item.Width > bandRight && WrapsLines(item.Node))
             {
                 if (lineX > bandLeft) CommitLine();
@@ -2329,7 +2347,7 @@ internal static class BoxEngine
             {
                 using var fitFont = TextMeasure.CreateFont(item.Node);
                 var (fitLs, fitWsp) = TextMeasure.SpacingOf(item.Node);
-                fitWidth = TextMeasure.MeasureSingleLine(fitText.TrimEnd(), fitFont, -1f, fitLs, fitWsp).Width;
+                fitWidth = TextMeasure.MeasureSingleLine(fitText.TrimEndCss(), fitFont, -1f, fitLs, fitWsp).Width;
             }
             if (lineX > bandLeft && lineX + fitWidth > bandRight)
             {
@@ -2361,7 +2379,7 @@ internal static class BoxEngine
             // under white-space:pre/pre-wrap a preserved space at a line's start renders, and
             // a cell whose content is exactly that space ("a <cellws> </cellws> d") lost it.
             if (lineX <= bandLeft && item.Kind == InlineItemKind.Text &&
-                item.Text != null && item.Text.Trim().Length == 0)
+                item.Text != null && item.Text.IsCssWhiteSpaceOnly())
             {
                 var wsMode = item.Node?.GetWhiteSpace() ?? WhiteSpace.Normal;
                 if (wsMode is not (WhiteSpace.Pre or WhiteSpace.PreWrap)) continue;
@@ -2378,7 +2396,7 @@ internal static class BoxEngine
                 var wsMode = item.Node?.GetWhiteSpace() ?? WhiteSpace.Normal;
                 if (wsMode is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
                 {
-                    var stripped = leading.TrimStart();
+                    var stripped = leading.TrimStartCss();
                     if (stripped.Length == 0) continue;
                     using (var stripFont = TextMeasure.CreateFont(item.Node))
                         item = item with { Text = stripped, Width = stripFont.MeasureText(stripped),

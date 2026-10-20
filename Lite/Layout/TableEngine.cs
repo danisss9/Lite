@@ -68,7 +68,7 @@ internal static class TableEngine
 
         // Caption (CSS 2.1 §17.4): a block spanning the table width, placed above (default) or
         // below the table box per caption-side.
-        var caption = table.Children.FirstOrDefault(c => c.TagName == "CAPTION" && c.GetDisplay() != DisplayType.None);
+        var caption = table.Children.FirstOrDefault(c => IsCaption(c) && c.GetDisplay() != DisplayType.None);
         bool captionBottom = false;
         float captionTopH = 0f;
         if (caption is not null)
@@ -254,17 +254,36 @@ internal static class TableEngine
 
     /// <summary>Lays out a table CAPTION as a block spanning the table width and returns its
     /// margin-box height. Sets caption.Box so it paints in the normal child pass.</summary>
+    private static string? RawDisplay(LayoutNode node) =>
+        (node.TryResolveStyle("display", out var d) ? d : node.Style.GetPropertyValueSafe("display"))?.Trim();
+
+    /// <summary>A column: the COL element or any 'display: table-column' box (GetDisplay maps
+    /// both column keywords to None since they generate no box of their own).</summary>
+    internal static bool IsColumn(LayoutNode node) => node.TagName == "COL" || RawDisplay(node) == "table-column";
+
+    /// <summary>A column group: the COLGROUP element or any 'display: table-column-group' box.</summary>
+    internal static bool IsColumnGroup(LayoutNode node) => node.TagName == "COLGROUP" || RawDisplay(node) == "table-column-group";
+
+    /// <summary>The table's caption: the HTML CAPTION element or any 'display: table-caption' box.</summary>
+    private static bool IsCaption(LayoutNode node) => node.TagName == "CAPTION" || RawDisplay(node) == "table-caption";
+
     private static float LayoutCaptionBlock(LayoutNode caption, float x, float y, float width,
         float viewportW, float viewportH)
     {
-        // A caption is a block-level box; mark it so the painter draws its background/borders
-        // (an empty inline caption would otherwise paint nothing).
-        caption.StyleOverrides["display"] = "block";
+        // A caption is a block-level box. The HTML CAPTION element needs that said explicitly
+        // (an empty inline caption would otherwise paint nothing); a CSS 'table-caption' box
+        // already lays out as a block and must keep its keyword, or the next layout would no
+        // longer recognise it as the caption.
+        if (caption.TagName == "CAPTION") caption.StyleOverrides["display"] = "block";
         var fs = caption.GetFontSize();
         var pad = caption.GetPadding(width, viewportH, fs);
         var bord = caption.GetBorderWidth();
         var marg = caption.GetMargin(width, viewportH, fs);
-        var cw = Math.Max(0f, width - marg.Left - marg.Right - bord.Left - bord.Right - pad.Left - pad.Right);
+        // Its containing block is the table wrapper (§17.4): an explicit width is its own,
+        // 'auto' fills the wrapper's width.
+        var cw = caption.IsAutoWidth()
+            ? Math.Max(0f, width - marg.Left - marg.Right - bord.Left - bord.Right - pad.Left - pad.Right)
+            : caption.GetWidth(width, fs);
         var cx = x + marg.Left + bord.Left + pad.Left;
         var cy = y + marg.Top + bord.Top + pad.Top;
 
@@ -346,13 +365,13 @@ internal static class TableEngine
         {
             foreach (var child in container.Children)
             {
-                if (child.TagName == "COL")
+                if (IsColumn(child))
                 {
                     var borders = NodeEdgeBorders(child);
                     for (var s = 0; s < SpanOf(child); s++)
                         columnByIndex[columnIndex++] = borders;
                 }
-                else if (child.TagName == "COLGROUP")
+                else if (IsColumnGroup(child))
                 {
                     var start = columnIndex;
                     if (child.Children.Count == 0)

@@ -41,7 +41,16 @@ internal static class TextMeasure
             }
         }
 
-        return new SKFont(typeface, size);
+        var font = new SKFont(typeface, size);
+        // Ahem is the CSS test font: every glyph is a box on the em square, and browsers
+        // grid-fit those edges to whole pixels. It carries no hinting instructions and the
+        // platform rasterizer does not autohint it, so at most sizes its 0.8em ascent lands on
+        // a fractional row and antialiases (font-family-applies-to-008's 16px square read
+        // rows 50.2-66.2 against the reference's 50-65). Aliased edging fills exactly the
+        // pixels whose centres the box covers — what grid-fitting produces.
+        if (typeface.FamilyName.Equals("Ahem", StringComparison.OrdinalIgnoreCase))
+            font.Edging = SKFontEdging.Alias;
+        return font;
     }
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<SKTypeface, float> s_xHeightRatios = new();
@@ -215,7 +224,7 @@ internal static class TextMeasure
             return lines;
         }
 
-        var words = text.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var words = text.TrimCss().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var sb = new System.Text.StringBuilder();
         // Each line is measured against ITS OWN width: beside a float the available width changes
         // from line to line, so a single maxWidth would wrap the whole paragraph to the narrow

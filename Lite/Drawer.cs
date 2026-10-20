@@ -577,7 +577,7 @@ internal static class Drawer
         {
             var propagated = node == _propagatedBackgroundNode;
             if (node.GetDisplay() is DisplayType.TableRow or DisplayType.TableRowGroup
-                || node.TagName is "COL" or "COLGROUP")
+                || TableEngine.IsColumn(node) || TableEngine.IsColumnGroup(node))
             {
                 for (var a = node.Parent; a is not null; a = a.Parent)
                 {

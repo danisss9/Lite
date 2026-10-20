@@ -1116,7 +1116,7 @@ internal static class Parser
         var preservesSpaces = ws is "pre" or "pre-wrap";
         var directText = hasMixedChildren
             ? ""   // text nodes become ordered #TEXT children below
-            : preservesSpaces || tag == "SCRIPT" ? directTextRaw : directTextRaw.Trim();
+            : preservesSpaces || tag == "SCRIPT" ? directTextRaw : directTextRaw.Trim(CssWhiteSpace);
 
         var href = tag == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, tag, directText, elementStyle, href);
@@ -3636,6 +3636,10 @@ internal static class Parser
     /// a break opportunity, and neither may U+2000..U+200A or U+3000
     /// (white-space-processing-054: three EN QUADs between "XX" and "XX").</summary>
     private static bool IsCollapsibleSpace(char ch) => ch is ' ' or '\t' or '\n' or '\r' or '\f';
+
+    /// <summary>The characters a line-edge trim may remove — never U+00A0, which a cell's
+    /// leading "&amp;nbsp;Text" relies on (color-applies-to-006 lost its space to string.Trim()).</summary>
+    private static readonly char[] CssWhiteSpace = [' ', '\t', '\n', '\r', '\f'];
 
     private static string CollapseWhitespace(string text)
     {
