@@ -37,7 +37,7 @@ public enum FloatType { None, Left, Right }
 public enum ClearType { None, Left, Right, Both }
 public enum TextTransform { None, Uppercase, Lowercase, Capitalize }
 public enum BorderStyle { None, Solid, Dotted, Dashed, Double, Groove, Ridge, Inset, Outset, Hidden }
-public enum ListStyleType { Disc, Circle, Square, Decimal, DecimalLeadingZero, LowerAlpha, UpperAlpha, LowerRoman, UpperRoman, None }
+public enum ListStyleType { Disc, Circle, Square, Decimal, DecimalLeadingZero, LowerAlpha, UpperAlpha, LowerRoman, UpperRoman, LowerGreek, Armenian, Georgian, Hebrew, Hiragana, HiraganaIroha, Katakana, KatakanaIroha, CjkIdeographic, None }
 public enum ListStylePosition { Outside, Inside }
 public enum VerticalAlignType { Baseline, Top, Middle, Bottom, TextTop, TextBottom, Sub, Super, Length, Percentage }
 
@@ -737,6 +737,15 @@ public static class StyleExtensions
             "upper-alpha" or "upper-latin" => ListStyleType.UpperAlpha,
             "lower-roman" => ListStyleType.LowerRoman,
             "upper-roman" => ListStyleType.UpperRoman,
+            "lower-greek" => ListStyleType.LowerGreek,
+            "armenian" => ListStyleType.Armenian,
+            "georgian" => ListStyleType.Georgian,
+            "hebrew" => ListStyleType.Hebrew,
+            "hiragana" => ListStyleType.Hiragana,
+            "hiragana-iroha" => ListStyleType.HiraganaIroha,
+            "katakana" => ListStyleType.Katakana,
+            "katakana-iroha" => ListStyleType.KatakanaIroha,
+            "cjk-ideographic" => ListStyleType.CjkIdeographic,
             "none" => ListStyleType.None,
             _ => ListStyleType.Disc,
         };
@@ -1093,16 +1102,90 @@ public static class StyleExtensions
         return (w, h);
     }
 
-    /// <summary>Applies text-transform to a string.</summary>
-    public static string ApplyTextTransform(string text, TextTransform transform)
+    /// <summary>Applies text-transform to a string. Uppercase/lowercase use the full Unicode
+    /// mappings (§16.5): ß capitalizes to SS and the ligatures unpack, and the language-sensitive
+    /// Turkish/Azerbaijani i-rules apply when the element's inherited lang declares them.</summary>
+    public static string ApplyTextTransform(string text, TextTransform transform, string? lang = null)
     {
         return transform switch
         {
-            TextTransform.Uppercase => text.ToUpperInvariant(),
-            TextTransform.Lowercase => text.ToLowerInvariant(),
+            TextTransform.Uppercase => FullUppercase(text, lang),
+            TextTransform.Lowercase => FullLowercase(text, lang),
             TextTransform.Capitalize => CapitalizeText(text),
             _ => text,
         };
+    }
+
+    private static string FullUppercase(string text, string? lang)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        var sb = new System.Text.StringBuilder(text.Length + 8);
+        foreach (var c in text)
+        {
+            // The Turkish/Azerbaijani i-rule: dotted/dotless i swap (Unicode SpecialCasing tr).
+            if (LangMatches(lang, "tr") || LangMatches(lang, "az"))
+            {
+                switch (c)
+                {
+                    case 'i': sb.Append('\u0130'); continue;           // i -> İ
+                    case '\u0131': sb.Append('I'); continue;           // ı -> I
+                }
+            }
+            sb.Append(c switch
+            {
+                'ß' => "SS",
+                'ﬀ' => "FF", 'ﬁ' => "FI", 'ﬂ' => "FL", 'ﬃ' => "FFI", 'ﬄ' => "FFL",
+                'ﬅ' or 'ﬆ' => "ST",
+                'ŉ' => "ʼN",
+                'ǰ' => "J\u030C",
+                'ẖ' => "H\u0331", 'ẗ' => "T\u0308", 'ẘ' => "W\u030A", 'ẙ' => "Y\u030A",
+                'ẚ' => "A\u02BE", 'ẞ' => "SS",
+                'ΐ' => "Ϊ\u0301", 'ΰ' => "Ϋ\u0301",
+                'ϝ' => "Ϝ", 'ϙ' => "Ϙ", 'ϛ' => "Ϛ",
+                _ => default(string?),
+            } ?? c.ToString().ToUpperInvariant());
+        }
+        return sb.ToString();
+    }
+
+    private static string FullLowercase(string text, string? lang)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        var sb = new System.Text.StringBuilder(text.Length);
+        foreach (var c in text)
+        {
+            if (LangMatches(lang, "tr") || LangMatches(lang, "az"))
+            {
+                switch (c)
+                {
+                    case 'I': sb.Append('\u0131'); continue;           // I -> ı
+                    case '\u0130': sb.Append('i'); continue;           // İ -> i
+                }
+            }
+            sb.Append(char.ToLowerInvariant(c));
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Whether an inherited lang tag names (or inherits from) the given primary
+    /// subtag — "tr-TR" matches "tr".</summary>
+    private static bool LangMatches(string? inherited, string primary)
+    {
+        if (string.IsNullOrEmpty(inherited)) return false;
+        var first = inherited.Split(['-', '_'], 2)[0];
+        return first.Equals(primary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>The element's inherited document language (§5.11.4): its own lang/xml:lang
+    /// attribute or the nearest ancestor's, empty when none declares one.</summary>
+    public static string GetLanguage(this LayoutNode node)
+    {
+        for (var n = node; n is not null; n = n.Parent)
+        {
+            var lang = n.Attributes.GetValueOrDefault("lang") ?? n.Attributes.GetValueOrDefault("xml:lang");
+            if (!string.IsNullOrEmpty(lang)) return lang.Trim();
+        }
+        return "";
     }
 
     private static string CapitalizeText(string text)
@@ -1359,11 +1442,14 @@ public static class StyleExtensions
 
     public static bool IsUnderline(this LayoutNode node)
     {
+        var dec = node.TryResolveStyle(PropertyNames.TextDecoration, out var ov2)
+            ? ov2 : node.Style.GetPropertyValueSafe(PropertyNames.TextDecoration);
+        // An explicit 'none' — the author override channel included — beats the UA sheet's
+        // computed 'text-decoration-line: underline' (§6.4: author origin outranks UA).
+        if (dec.Trim().Equals("none", StringComparison.OrdinalIgnoreCase)) return false;
         var line = node.TryResolveStyle(PropertyNames.TextDecorationLine, out var ov1)
             ? ov1 : node.Style.GetPropertyValueSafe(PropertyNames.TextDecorationLine);
         if (line.Contains("underline", StringComparison.OrdinalIgnoreCase)) return true;
-        var dec = node.TryResolveStyle(PropertyNames.TextDecoration, out var ov2)
-            ? ov2 : node.Style.GetPropertyValueSafe(PropertyNames.TextDecoration);
         return dec.Contains("underline", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -1510,7 +1596,12 @@ public static class StyleExtensions
         var value = node.TryResolveStyle(PropertyNames.FontFamily, out var ov)
             ? ov
             : node.Style.GetPropertyValueSafe(PropertyNames.FontFamily);
-        if (string.IsNullOrEmpty(value)) return "Arial";
+        // A css-wide keyword computed into the family (a `font: inherit` shorthand Lite's own
+        // cascade stored) is not a family name — resolve it as the inheritance it declares
+        // instead of letting it fall through the matcher to a fallback face.
+        if (value.Trim().Equals("inherit", StringComparison.OrdinalIgnoreCase) && node.Parent is { } parent)
+            return parent.GetFontFamily();
+        if (string.IsNullOrEmpty(value) || value.Trim() is "initial" or "unset" or "none") return "Arial";
         return s_fontFamilyCache.GetOrAdd(value, ResolveFontFamilyList);
     }
 

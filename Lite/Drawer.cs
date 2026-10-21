@@ -453,6 +453,15 @@ internal static class Drawer
                 return;
         }
 
+        // Generated 'content: url(...)' (§12.2): the pseudo box is a replaced element — its own
+        // background/border/outline paint under/around the bitmap, exactly like an IMG.
+        if (Layout.BoxEngine.IsReplacedImage(node) && node.TagName.StartsWith("#pseudo"))
+        {
+            PaintBlockDecorations(canvas, node);
+            PaintImage(canvas, node);
+            return;
+        }
+
         if (display == DisplayType.ListItem)
         {
             PaintListItem(canvas, node, viewportWidth);
@@ -1001,6 +1010,13 @@ internal static class Drawer
             if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
             else canvas.DrawRect(box.PaddingBox, bgPaint);
         }
+
+        // §14.2: a P/H/LABEL box paints its background layers like any block — without the
+        // image pass here, `p { background: url(...) }` painted only the colour half of the
+        // shorthand (case-sensitive-001).
+        var textGradient = node.GetLinearGradient();
+        if (textGradient != null) DrawLinearGradient(canvas, box, node, textGradient);
+        DrawBackgroundImage(canvas, node, box);
 
         DrawBorders(canvas, box, node);
         DrawOutline(canvas, box, node);
@@ -1825,16 +1841,28 @@ internal static class Drawer
     private static string? GetMarkerText(ListStyleType type, LayoutNode node)
     {
         var index = GetOrderedIndex(node);
-        return type switch
+        // All text marker styles take the "." suffix and share the §4.3.1 counter-style
+        // table with the content property; the bullets return null and draw as glyphs.
+        var style = type switch
         {
-            ListStyleType.Decimal => $"{index}.",
-            ListStyleType.DecimalLeadingZero => $"{index:D2}.",
-            ListStyleType.LowerAlpha => $"{(char)('a' + (index - 1) % 26)}.",
-            ListStyleType.UpperAlpha => $"{(char)('A' + (index - 1) % 26)}.",
-            ListStyleType.LowerRoman => $"{ToRoman(index).ToLowerInvariant()}.",
-            ListStyleType.UpperRoman => $"{ToRoman(index)}.",
-            _ => null, // bullet types return null
+            ListStyleType.Decimal => "decimal",
+            ListStyleType.DecimalLeadingZero => "decimal-leading-zero",
+            ListStyleType.LowerAlpha => "lower-alpha",
+            ListStyleType.UpperAlpha => "upper-alpha",
+            ListStyleType.LowerRoman => "lower-roman",
+            ListStyleType.UpperRoman => "upper-roman",
+            ListStyleType.LowerGreek => "lower-greek",
+            ListStyleType.Armenian => "armenian",
+            ListStyleType.Georgian => "georgian",
+            ListStyleType.Hebrew => "hebrew",
+            ListStyleType.Hiragana => "hiragana",
+            ListStyleType.HiraganaIroha => "hiragana-iroha",
+            ListStyleType.Katakana => "katakana",
+            ListStyleType.KatakanaIroha => "katakana-iroha",
+            ListStyleType.CjkIdeographic => "cjk-ideographic",
+            _ => null,
         };
+        return style is null ? null : Layout.CssCounterStyles.Format(index, style) + ".";
     }
 
     private static void DrawBulletMarker(SKCanvas canvas, ListStyleType type, float cx, float cy, float fontSize, SKPaint paint)
@@ -1855,18 +1883,6 @@ internal static class Drawer
         }
     }
 
-    private static string ToRoman(int number)
-    {
-        if (number <= 0 || number > 3999) return number.ToString();
-        var sb = new System.Text.StringBuilder();
-        int[] values = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
-        string[] syms = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"];
-        for (int i = 0; i < values.Length; i++)
-        {
-            while (number >= values[i]) { sb.Append(syms[i]); number -= values[i]; }
-        }
-        return sb.ToString();
-    }
 
     private static bool IsInsideOrderedList(LayoutNode node)
     {
@@ -2505,8 +2521,8 @@ internal static class Drawer
         var firstLineStyles = node.FirstLineStyles ?? node.Parent?.FirstLineStyles;
         if (firstLineStyles is not null && DescendsFromFloat(node)) firstLineStyles = null;
 
-        // Apply text-transform
-        text = StyleExtensions.ApplyTextTransform(text, textTransform);
+        // Apply text-transform (§16.5; language-sensitive rules read the inherited lang)
+        text = StyleExtensions.ApplyTextTransform(text, textTransform, node.GetLanguage());
 
         // Layout may have wrapped this text against a per-line band (text beside a float, CSS 2.1
         // §9.5). Painting has to use exactly the same bands or the lines break in different places

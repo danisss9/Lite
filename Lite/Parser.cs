@@ -280,6 +280,18 @@ internal static class Parser
     private static readonly Regex StyleBlockRegex =
         new("<style\\b[^>]*>.*?</style>", RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly Regex ImportantBang = new("!\\s+important", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    /// <summary>The dynamic pseudo-classes Lite intercepts (hover/focus/active/link/visited),
+    /// matched case-insensitively per §4.1.3.</summary>
+    private static readonly Regex DynamicPseudoRegex =
+        new(":(hover|focus|active|link|visited|lang)\\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    /// <summary>The pseudo-elements Lite lifts out of the cascade, matched case-insensitively
+    /// per §4.1.3.</summary>
+    private static readonly Regex PseudoElementRegex =
+        new("::?(before|after|first-letter|first-line)\\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    /// <summary>The :lang() pseudo-class (any argument), matched case-insensitively — both the
+    /// name and the matched document language are ASCII case-insensitive (§5.11.4).</summary>
+    private static readonly Regex LangPseudoRegex =
+        new(":lang\\s*\\(\\s*[^)]*\\)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex MetaContentTypeRegex =
         new("<meta\\b[^>]*http-equiv\\s*=\\s*[\"']?content-type[\"']?[^>]*>",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -1721,6 +1733,9 @@ internal static class Parser
         {
             var text = ContentWith(beforeCounters, node.BeforeStyles!["content"]);
             var pseudoNode = new LayoutNode(null, "#pseudo-before", text!, node.Style);
+            // 'content: url(...)': the box is the image (§12.2) — empty text, fetched bitmap.
+            if (TryParseContentUrl(node.BeforeStyles!["content"]) is { } beforeUrl)
+                pseudoNode.Image = ResourceLoader.FetchImage(beforeUrl, _documentBaseUrl ?? _baseUrl, Session);
             pseudoNode.StyleOverrides["display"] = ResolvePseudoDisplay(node, node.BeforeStyles!);
             foreach (var (p, v) in node.BeforeStyles!)
             {
@@ -1736,6 +1751,8 @@ internal static class Parser
         {
             var text = ContentWith(afterCounters, node.AfterStyles!["content"]);
             var pseudoNode = new LayoutNode(null, "#pseudo-after", text!, node.Style);
+            if (TryParseContentUrl(node.AfterStyles!["content"]) is { } afterUrl)
+                pseudoNode.Image = ResourceLoader.FetchImage(afterUrl, _documentBaseUrl ?? _baseUrl, Session);
             pseudoNode.StyleOverrides["display"] = ResolvePseudoDisplay(node, node.AfterStyles!);
             foreach (var (p, v) in node.AfterStyles!)
             {
@@ -2553,12 +2570,30 @@ internal static class Parser
             : hostDisplay;
     }
 
+    /// <summary>The image URL when a content value is a single url(...) token (§12.2), else
+    /// null. The pseudo-element box carries the fetched bitmap instead of text.</summary>
+    private static string? TryParseContentUrl(string value)
+    {
+        value = value.Trim();
+        if (value.Length < 5 || !value.StartsWith("url(", StringComparison.OrdinalIgnoreCase) || !value.EndsWith(")"))
+            return null;
+        var inner = value[4..^1].Trim();
+        if ((inner.StartsWith('"') && inner.EndsWith('"') && inner.Length >= 2) ||
+            (inner.StartsWith('\'') && inner.EndsWith('\'') && inner.Length >= 2))
+            inner = inner[1..^1];
+        return inner.Length > 0 ? inner : null;
+    }
+
     /// <summary>Parses a CSS content property value, stripping quotes and handling basic values.
     /// Supports concatenated tokens like: "Chapter " counter(section) ". "</summary>
     private static string? ParseContentValue(string value, LayoutNode? node = null)
     {
         value = value.Trim();
         if (value is "none" or "normal" or "") return null;
+
+        // 'content: url(...)': the generated box is the image, not text (TryParseContentUrl
+        // hands the URL to the pseudo-element creation, which fetches it into node.Image).
+        if (TryParseContentUrl(value) is not null) return "";
 
         // Check if this is a simple single-token value
         if (!value.Contains("counter(") && !value.Contains("counters(") && !value.Contains("attr("))
@@ -2686,26 +2721,7 @@ internal static class Parser
         return args;
     }
 
-    private static string FormatCounter(int value, string style) => style switch
-    {
-        "lower-alpha" or "lower-latin" => value >= 1 && value <= 26 ? ((char)('a' + value - 1)).ToString() : value.ToString(),
-        "upper-alpha" or "upper-latin" => value >= 1 && value <= 26 ? ((char)('A' + value - 1)).ToString() : value.ToString(),
-        "lower-roman" => ToRomanLower(value),
-        "upper-roman" => ToRomanUpper(value),
-        _ => value.ToString(),
-    };
-
-    private static string ToRomanLower(int num) => ToRomanUpper(num).ToLowerInvariant();
-
-    private static string ToRomanUpper(int num)
-    {
-        if (num <= 0 || num > 3999) return num.ToString();
-        string[] thousands = ["", "M", "MM", "MMM"];
-        string[] hundreds = ["", "C", "CC", "CCC", "CD", "D", "DC", "DCC", "DCCC", "CM"];
-        string[] tens = ["", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC"];
-        string[] ones = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
-        return thousands[num / 1000] + hundreds[num % 1000 / 100] + tens[num % 100 / 10] + ones[num % 10];
-    }
+    private static string FormatCounter(int value, string style) => Layout.CssCounterStyles.Content(value, style);
 
     /// <summary>Parses "counter-reset: name value name2 value2" or "counter-increment: name value" specs.</summary>
     /// <param name="defaultValue">The value an omitted integer means: 0 for counter-reset,
@@ -2977,6 +2993,9 @@ internal static class Parser
 
             var selectorText = styleRule.SelectorText;
             if (string.IsNullOrWhiteSpace(selectorText)) continue;
+            // In XML documents type selectors are case-sensitive (§5.2, via §4.1.3's
+            // document-language rule): 'DIV' does not match <div> (case-sensitive-007).
+            if (Current.IsXmlDocument && !XmlTypeSelectorMatches(element, selectorText)) continue;
             try { if (!element.Matches(selectorText)) continue; }
             catch { continue; } // malformed selector
 
@@ -3035,6 +3054,16 @@ internal static class Parser
                 if (!string.IsNullOrEmpty(val))
                     props.TryAdd(prop, val);
             }
+        }
+
+        // The paint reads background LONGHANDS, and MediaOverrides are stored as raw property
+        // keys — a shorthand inside a media block must decompose exactly like the plain path
+        // does (case-sensitive-001: 'BacKgrOUNd: UrL(...)' inside @MeDIa).
+        if (props.TryGetValue("background", out var bgShorthand) && SplitBackgroundShorthand(bgShorthand) is { } bgLonghands)
+        {
+            props.Remove("background");
+            foreach (var (prop, val) in bgLonghands)
+                if (val is not null) props[prop] = val;
         }
 
         if (props.Count == 0) return;
@@ -3175,9 +3204,7 @@ internal static class Parser
                 var lower = p.ToLowerInvariant();
                 if (lower is "inside" or "outside")
                     node.StyleOverrides["list-style-position"] = lower;
-                else if (lower is "none" or "disc" or "circle" or "square" or "decimal"
-                    or "decimal-leading-zero" or "lower-alpha" or "upper-alpha" or "lower-latin"
-                    or "upper-latin" or "lower-roman" or "upper-roman")
+                else if (Layout.CssCounterStyles.Known.Contains(lower))
                     node.StyleOverrides["list-style-type"] = lower;
             }
         }
@@ -3300,51 +3327,58 @@ internal static class Parser
     {
         if (selector is null) return false;
 
-        bool isBefore = selector.Contains("::before") || selector.Contains(":before");
-        bool isAfter = selector.Contains("::after") || selector.Contains(":after");
-        bool isFirstLetter = selector.Contains("::first-letter") || selector.Contains(":first-letter");
-        bool isFirstLine = selector.Contains("::first-line") || selector.Contains(":first-line");
-        if (!isBefore && !isAfter && !isFirstLetter && !isFirstLine) return false;
-
-        // Strip pseudo-element to get base selector
-        var baseSelector = selector
-            .Replace("::before", "").Replace(":before", "")
-            .Replace("::after", "").Replace(":after", "")
-            .Replace("::first-letter", "").Replace(":first-letter", "")
-            .Replace("::first-line", "").Replace(":first-line", "")
-            .Trim();
-        if (string.IsNullOrEmpty(baseSelector)) return true;
-
-        try { if (!element.Matches(baseSelector)) return true; }
-        catch { return true; }
-
-        var cssText = ruleStyle.CssText;
-        if (string.IsNullOrEmpty(cssText)) return true;
-
-        var props = ParseCssTextToDict(cssText);
-
-        if (isBefore)
+        // Pseudo-element names are ASCII case-insensitive (§4.1.3; case-sensitive-003's
+        // '.bef:BeFoRe'). A selector LIST names each part's own pseudo ('.bef:before, .af:after'
+        // puts content on ::before of .bef and ::after of .af — handling the list whole gave
+        // every matching element BOTH pseudos and doubled the sentences).
+        var handled = false;
+        foreach (var rawPart in selector.Split(','))
         {
-            node.BeforeStyles ??= new Dictionary<string, string>();
-            foreach (var (p, v) in props) node.BeforeStyles[p] = v;
-        }
-        if (isAfter)
-        {
-            node.AfterStyles ??= new Dictionary<string, string>();
-            foreach (var (p, v) in props) node.AfterStyles[p] = v;
-        }
-        if (isFirstLetter)
-        {
-            node.FirstLetterStyles ??= new Dictionary<string, string>();
-            foreach (var (p, v) in props) node.FirstLetterStyles[p] = v;
-        }
-        if (isFirstLine)
-        {
-            node.FirstLineStyles ??= new Dictionary<string, string>();
-            foreach (var (p, v) in props) node.FirstLineStyles[p] = v;
+            var part = rawPart.Trim();
+            var lower = part.ToLowerInvariant();
+            bool isBefore = lower.Contains("::before") || lower.Contains(":before");
+            bool isAfter = lower.Contains("::after") || lower.Contains(":after");
+            bool isFirstLetter = lower.Contains("::first-letter") || lower.Contains(":first-letter");
+            bool isFirstLine = lower.Contains("::first-line") || lower.Contains(":first-line");
+            if (!isBefore && !isAfter && !isFirstLetter && !isFirstLine) continue;
+
+            // Strip the pseudo-element to get the part's base selector.
+            var baseSelector = PseudoElementRegex.Replace(part, "").Trim();
+            if (baseSelector.Length > 0)
+            {
+                try { if (!element.Matches(baseSelector)) { handled = true; continue; } }
+                catch { handled = true; continue; }
+            }
+
+            var cssText = ruleStyle.CssText;
+            if (string.IsNullOrEmpty(cssText)) return true;
+
+            var props = ParseCssTextToDict(cssText);
+
+            if (isBefore)
+            {
+                node.BeforeStyles ??= new Dictionary<string, string>();
+                foreach (var (p, v) in props) node.BeforeStyles[p] = v;
+            }
+            if (isAfter)
+            {
+                node.AfterStyles ??= new Dictionary<string, string>();
+                foreach (var (p, v) in props) node.AfterStyles[p] = v;
+            }
+            if (isFirstLetter)
+            {
+                node.FirstLetterStyles ??= new Dictionary<string, string>();
+                foreach (var (p, v) in props) node.FirstLetterStyles[p] = v;
+            }
+            if (isFirstLine)
+            {
+                node.FirstLineStyles ??= new Dictionary<string, string>();
+                foreach (var (p, v) in props) node.FirstLineStyles[p] = v;
+            }
+            handled = true;
         }
 
-        return true;
+        return handled;
     }
 
     /// <summary>
@@ -3361,32 +3395,65 @@ internal static class Parser
         if (selector is null)
             return false;
 
-        // Only intercept dynamic pseudo-classes (not structural ones)
-        if (!selector.Contains(":hover") && !selector.Contains(":focus") && !selector.Contains(":active")
-            && !selector.Contains(":link") && !selector.Contains(":visited"))
+        // Only intercept dynamic pseudo-classes (not structural ones). Pseudo-class names are
+        // ASCII case-insensitive (§4.1.3), so ':LinK, :viSiTed' is the same selector — the
+        // case-sensitive Contains check let it fall through to element.Matches, whose :link
+        // semantics the UA sheet then outranked (case-sensitive-003's anchors stayed blue).
+        var dynamicPseudo = DynamicPseudoRegex.Match(selector);
+        if (!dynamicPseudo.Success)
             return false;
 
-        // Skip if this contains structural pseudo-classes (handled by AngleSharp Matches)
-        // but no dynamic ones
-        var hasHover = selector.Contains(":hover");
-        var hasFocus = selector.Contains(":focus");
-        var hasActive = selector.Contains(":active");
-        var hasLink = selector.Contains(":link");
-        var hasVisited = selector.Contains(":visited");
-        if (!hasHover && !hasFocus && !hasActive && !hasLink && !hasVisited) return false;
+        // Strip pseudo-classes to get the base selector. The :lang(...) form goes whole and
+        // FIRST — stripping the bare name first would leave its argument behind as a base
+        // fragment that matches nothing.
+        var baseSelector = DynamicPseudoRegex.Replace(LangPseudoRegex.Replace(selector, ""), "").Trim();
 
-        // Strip pseudo-classes to get the base selector
-        var baseSelector = selector
-            .Replace(":hover", "")
-            .Replace(":focus", "")
-            .Replace(":active", "")
-            .Replace(":visited", "")
-            .Replace(":link", "")
-            .Trim();
-        if (string.IsNullOrEmpty(baseSelector)) return true;
+        // ':link' is Lite's own matching (all links unvisited): AngleSharp's cascade skips
+        // rules carrying dynamic pseudo-classes entirely and its Matches never reports the
+        // link state, so a rule like ':LinK, :viSiTed { color: green }' would vanish and the
+        // injected UA sheet's `a { color: blue }` would win the cascade (case-sensitive-003).
+        // An unvisited link is an a/area/link element with an href attribute; a rule naming
+        // only :visited stays unapplied (privacy, §5.11.3's specified-permission).
+        var hasLinkPseudo = selector.Contains(":link", StringComparison.OrdinalIgnoreCase);
+        if (hasLinkPseudo)
+        {
+            var isUnvisitedLink = element.LocalName is "a" or "area" or "link"
+                && element.GetAttribute("href") is not null; // an empty href is a same-document link
+            if (!isUnvisitedLink) return true;
+        }
+        else if (selector.Contains(":visited", StringComparison.OrdinalIgnoreCase) && baseSelector.Length == 0)
+        {
+            return true;
+        }
 
-        try { if (!element.Matches(baseSelector)) return true; }
-        catch { return true; }
+        // Every :lang(...) argument in the selector must match the element's inherited
+        // language — Lite's own reading (§5.11.4), because AngleSharp's Matches reports no
+        // language on XML-parsed documents and its cascade drops the whole rule anyway.
+        foreach (Match langArg in LangPseudoRegex.Matches(selector))
+            if (!ElementMatchesLang(element, langArg.Value)) return true;
+
+        if (baseSelector.Length > 0 && baseSelector.Any(c => c != ','))
+        {
+            // A selector list leaves commas behind the strip — match each part.
+            var matched = false;
+            var anyPart = false;
+            foreach (var part in baseSelector.Split(','))
+            {
+                var piece = part.Trim();
+                if (piece.Length == 0) continue;
+                anyPart = true;
+                try { if (element.Matches(piece)) { matched = true; break; } }
+                catch { return true; }
+            }
+            if (anyPart && !matched) return true;
+        }
+        else if (!hasLinkPseudo && baseSelector.Length == 0 && !LangPseudoRegex.IsMatch(selector))
+        {
+            // A bare dynamic pseudo-class rule ('X:link', ':lAnG(en)') that Lite does not
+            // evaluate itself: AngleSharp's matching decides.
+            try { if (!element.Matches(selector)) return true; }
+            catch { /* apply universally when the engine cannot evaluate it */ }
+        }
 
         // Extract all CSS properties from this rule
         var cssText = rule.Style.CssText;
@@ -3401,6 +3468,10 @@ internal static class Parser
             if (colon < 0) continue;
             var prop = decl[..colon].Trim().ToLowerInvariant();
             var val = decl[(colon + 1)..].Trim().Replace("!important", "").Trim();
+            // A css-wide keyword on the 'font' shorthand must not be stored as a literal —
+            // the value would resolve as a font-family list naming "inherit" and fall back
+            // to the wrong face (case-sensitive-003's :link anchors rendered box glyphs).
+            if (prop == "font" && val is "inherit" or "initial" or "unset") continue;
             if (!string.IsNullOrEmpty(val))
                 props[prop] = val;
         }
@@ -3416,25 +3487,88 @@ internal static class Parser
         if (mediaText is null)
         {
             // Regular pseudo-class rule
+            var hasHover = selector.Contains(":hover", StringComparison.OrdinalIgnoreCase);
+            var hasFocus = selector.Contains(":focus", StringComparison.OrdinalIgnoreCase);
+            var hasActive = selector.Contains(":active", StringComparison.OrdinalIgnoreCase);
+            var hasLink = selector.Contains(":link", StringComparison.OrdinalIgnoreCase);
             if (hasHover) foreach (var (p, v) in props) node.HoverStyles[p] = v;
             if (hasFocus) foreach (var (p, v) in props) node.FocusStyles[p] = v;
             if (hasActive) foreach (var (p, v) in props) node.ActiveStyles[p] = v;
-            // :link applies immediately to unvisited anchors (we treat all as unvisited)
-            if (hasLink) foreach (var (p, v) in props) node.StyleOverrides.TryAdd(p, v);
+            // :link applies immediately to unvisited anchors (we treat all as unvisited). It
+            // OVERWRITES like every other author declaration here — the injected UA sheet's
+            // plain `a { color: blue }` went through the same channel earlier, and the TryAdd
+            // form let UA styling beat the author's :link rule (§6.4.1 author beats UA:
+            // case-sensitive-003's anchors stayed blue).
+            if (hasLink) foreach (var (p, v) in props) node.StyleOverrides[p] = v;
             // :visited is ignored (privacy) — no styles applied
+            // A rule whose only dynamic pseudo is :lang matched above — its declarations
+            // apply as ordinary author values (AngleSharp's cascade drops the whole rule).
+            if (!hasHover && !hasFocus && !hasActive && !hasLink)
+                foreach (var (p, v) in props) node.StyleOverrides[p] = v;
         }
         else
         {
             // Media-conditional pseudo-class rule — store and apply if matching
-            if (hasHover)
+            if (selector.Contains(":hover", StringComparison.OrdinalIgnoreCase))
                 StoreMediaProps(node, mediaText, cssText, rule.Style, target: "hover");
-            if (hasFocus)
+            if (selector.Contains(":focus", StringComparison.OrdinalIgnoreCase))
                 StoreMediaProps(node, mediaText, cssText, rule.Style, target: "focus");
-            if (hasActive)
+            if (selector.Contains(":active", StringComparison.OrdinalIgnoreCase))
                 StoreMediaProps(node, mediaText, cssText, rule.Style, target: "active");
         }
 
         return true;
+    }
+
+    /// <summary>Whether every type selector in the selector list matches the element's
+    /// local name case-sensitively (XML documents only). Checks the rightmost compound of
+    /// each part — the subject the rule would apply to.</summary>
+    private static bool XmlTypeSelectorMatches(IElement element, string selector)
+    {
+        foreach (var rawPart in selector.Split(','))
+        {
+            var part = rawPart.Trim();
+            if (part.Length == 0) continue;
+            var compound = part.Split([' ', '>', '+', '~'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+            if (compound is null) continue;
+            var i = 0;
+            while (i < compound.Length && (char.IsAsciiLetterOrDigit(compound[i]) || compound[i] is '-' or '_')) i++;
+            var type = compound[..i];
+            if (type.Length == 0 || type == "*") continue;
+            if (!element.LocalName.Equals(type, StringComparison.Ordinal)) return false;
+        }
+        return true;
+    }
+
+    /// <summary>Whether <paramref name="element"/>'s inherited document language matches a
+    /// ':lang(...)' selector fragment (§5.11.4): the nearest lang/xml:lang attribute on the
+    /// element or an ancestor, compared case-insensitively with hyphen-prefix semantics
+    /// (':lang(en)' matches lang="en-US"). The argument may be a quoted string or a wildcard.</summary>
+    private static bool ElementMatchesLang(IElement element, string langFragment)
+    {
+        var open = langFragment.IndexOf('(');
+        var close = langFragment.LastIndexOf(')');
+        if (open < 0 || close <= open) return false;
+        var wanted = langFragment[(open + 1)..close].Trim().Trim('"', '\'');
+        if (wanted.Length == 0 || wanted == "*") return true;
+
+        string? inherited = null;
+        for (var node = element; node is not null; node = node.ParentElement)
+        {
+            // XML documents carry the namespaced spelling; HTML uses the bare attribute.
+            var lang = node.GetAttribute("lang");
+            if (string.IsNullOrEmpty(lang))
+            {
+                var xmlLang = node.Attributes.FirstOrDefault(a =>
+                    a.Name.Equals("xml:lang", StringComparison.OrdinalIgnoreCase) ||
+                    a.NamespaceUri == "http://www.w3.org/XML/1998/namespace" && a.Name == "lang");
+                lang = xmlLang?.Value;
+            }
+            if (!string.IsNullOrEmpty(lang)) { inherited = lang.Trim(); break; }
+        }
+        if (inherited is null) return false;
+        return inherited.Split(['-', '_'], 2)[0].Equals(wanted.Split(['-', '_'], 2)[0],
+            StringComparison.OrdinalIgnoreCase);
     }
 
     // ── Transition / Animation parsing ───────────────────────────────────────

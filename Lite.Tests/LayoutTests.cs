@@ -1791,4 +1791,23 @@ public static class LayoutTests
         True(Math.Abs(f.Box.ContentBox.Top - 60f) < 0.5f,
             $"the follower sits after the wrapper's margin box (60), got {f.Box.ContentBox.Top}");
     }
+
+    [Test]
+    public static void InlinePseudoBeforeBlock_KeepsLineBoxHeightAndFollowingMargin()
+    {
+        // content-043: body:before generates a line of text, then <p> follows. The line box
+        // keeps its full height (strut + inline box) and the paragraph's UA margin-top places
+        // it below that line — the margin neither collapses through the line box nor shrinks it.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body:before { content: 'X'; }</style></head><body><p>text</p></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var body = FindNode(page.Root, n => n.TagName == "BODY")!;
+        var p = FindNode(page.Root, n => n.TagName == "P")!;
+        var pseudo = FindNode(page.Root, n => n.TagName == "#pseudo-before");
+        var lineBottom = (pseudo?.Box.BorderBox.Bottom) ?? float.NaN;
+        var pMargin = p.GetMargin(body.Box.ContentBox.Width, 600, p.GetFontSize()).Top;
+        True(p.Box.BorderBox.Top >= lineBottom + pMargin - 0.5f,
+            $"the paragraph sits below the pseudo line box plus its own margin ({lineBottom} + {pMargin}), got top {p.Box.BorderBox.Top}");
+    }
 }

@@ -46,7 +46,7 @@ internal static class IntrinsicSizer
         }
 
         // Replaced element (image / object with a decoded bitmap): intrinsic pixel width.
-        if (node.TagName == "IMG" || (node.TagName == "OBJECT" && node.Image != null))
+        if (BoxEngine.IsReplacedImage(node))
         {
             var iw = node.IntrinsicWidth > 0 ? node.IntrinsicWidth : node.Image?.Width ?? 0;
             var explicitImg = node.GetWidth(0);
@@ -247,7 +247,7 @@ internal static class IntrinsicSizer
         // included), so recursing into it as plain inline text under-measures the run and
         // shrink-to-fit containers (floats, abs-pos overlays) wrap their content spuriously.
         if (display is DisplayType.InlineBlock or DisplayType.InlineFlex or DisplayType.InlineTable
-            || node.TagName == "IMG" || (node.TagName == "OBJECT" && node.Image != null)
+            || BoxEngine.IsReplacedImage(node)
             || node.GetWidth(0) > 0)
         {
             var (m, x) = OuterMinMax(node, viewportHeight);
