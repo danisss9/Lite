@@ -793,6 +793,24 @@ internal static class BoxEngine
         var bottom = node.GetOffsetBottom(cbRect.Height, fontSize);
         var left = node.GetOffsetLeft(cbRect.Width, fontSize);
 
+        // §10.3.7 / §10.6.4: an 'auto' margin resolves to zero unless its axis's constraint
+        // equation is over-determined (offsets AND size all given — then the leftover is
+        // shared out below). GetMargin's generic 'auto' (centre in the containing block) is
+        // the in-flow rule; applying it here put a top:auto abs-pos box 136px off (its auto
+        // top margin "centred" it, absolute-non-replaced-height-010).
+        if (float.IsNaN(top) || node.IsAutoHeight() || float.IsNaN(bottom))
+        {
+            if (node.IsAutoMarginTop()) margin.Top = 0f;
+            if (node.IsAutoMarginBottom()) margin.Bottom = 0f;
+        }
+        var explicitWEarly = TryResolveReplacedSize(node, cbRect.Width, cbRect.Height, viewportHeight)?.Width
+                             ?? node.GetWidth(cbRect.Width);
+        if (float.IsNaN(left) || float.IsNaN(right) || explicitWEarly <= 0)
+        {
+            if (node.IsAutoMarginLeft()) margin.Left = 0f;
+            if (node.IsAutoMarginRight()) margin.Right = 0f;
+        }
+
         // Resolve width. An absolutely positioned replaced box takes its size from the image
         // (§10.3.7's shrink-to-fit and the children-derived height below never see it).
         var replaced = TryResolveReplacedSize(node, cbRect.Width, cbRect.Height, viewportHeight);
