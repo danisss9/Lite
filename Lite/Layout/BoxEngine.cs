@@ -941,7 +941,13 @@ internal static class BoxEngine
         else if (!float.IsNaN(right))
             contentX = cbRect.Right - right - margin.Right - border.Right - padding.Right - contentW;
         else if (isRtl)
-            contentX = cbRect.Right - margin.Right - border.Right - padding.Right - contentW;
+            // StaticX records the hypothetical box's band RIGHT edge under rtl (the flow point
+            // where the box would have been) — the box hangs its right margin edge there, not at
+            // the containing block's edge (the static position lives inside the flow, e.g. inside
+            // BODY's margins when the containing block is the initial one).
+            contentX = node.StaticX is { } rtlBandRight
+                ? rtlBandRight - margin.Right - border.Right - padding.Right - contentW
+                : cbRect.Right - margin.Right - border.Right - padding.Right - contentW;
         else if (node.StaticX.HasValue)
             contentX = node.StaticX.Value + margin.Left + border.Left + padding.Left;
         else
@@ -1671,6 +1677,26 @@ internal static class BoxEngine
         }
         childContentW = Math.Max(0, childContentW);
 
+        // §10.4: the tentative used width — shrink-to-fit or explicit — is clamped to max-width,
+        // then min-width (min wins). The block and abs-pos paths applied this; the float path
+        // didn't, so a float's max-width-constrained width never reached its parent's
+        // shrink-to-fit (absolute-non-replaced-width-019..024) nor its own box.
+        var isBorderBoxW = child.Style.GetPropertyValueSafe("box-sizing") == "border-box";
+        var maxW = child.GetMaxWidth(contentW, fontSize);
+        if (maxW < float.PositiveInfinity && !(IsPercentValue(child, "max-width") && contentW <= 0f))
+        {
+            var maxContent = isBorderBoxW
+                ? Math.Max(0f, maxW - border.Left - border.Right - padding.Left - padding.Right) : maxW;
+            childContentW = Math.Min(childContentW, maxContent);
+        }
+        var minW = child.GetMinWidth(contentW, fontSize);
+        if (minW > 0f && !(IsPercentValue(child, "min-width") && contentW <= 0f))
+        {
+            var minContent = isBorderBoxW
+                ? Math.Max(0f, minW - border.Left - border.Right - padding.Left - padding.Right) : minW;
+            childContentW = Math.Max(childContentW, minContent);
+        }
+
         var outerW = margin.Left + border.Left + padding.Left + childContentW + padding.Right + border.Right + margin.Right;
 
         // Find placement Y — must not overlap existing floats on the same side
@@ -1863,8 +1889,14 @@ internal static class BoxEngine
             if (pos == PositionType.Absolute || pos == PositionType.Fixed)
             {
                 var staticY = runY + pending.Value - (chainSpentAbove ? chainEscapedAbove : 0f);
-                var (staticBandX, _) = AvailableBand(floats, staticY, 1, contentX, contentW);
-                child.StaticX = staticBandX;
+                var (staticBandX, staticBandW) = AvailableBand(floats, staticY, 1, contentX, contentW);
+                // Under 'direction: rtl' the hypothetical box sits flush with the band's RIGHT
+                // edge (§10.3.3 anchors blocks at their right edge under the containing block's
+                // rtl, and §10.3.7 rule 1's static position follows the hypothetical box) —
+                // record the edge the RTL consumer of StaticX resolves from.
+                var flowRtl = children.Count > 0 &&
+                              (children[0].Parent ?? children[0]).GetDirection() == "rtl";
+                child.StaticX = flowRtl ? staticBandX + staticBandW : staticBandX;
                 child.StaticY = staticY;
                 i++;
                 continue;
@@ -2140,8 +2172,11 @@ internal static class BoxEngine
                     var flowPointY = runY + pending.Value - (chainSpentAbove ? chainEscapedAbove : 0f);
                     foreach (var oof in run.Where(n => n.TagName != "#text"))
                     {
-                        var (staticBandX, _) = AvailableBand(floats, flowPointY, 1, contentX, contentW);
-                        oof.StaticX = staticBandX;
+                        var (staticBandX, staticBandW) = AvailableBand(floats, flowPointY, 1, contentX, contentW);
+                        // Same edge convention as the direct-child branch: the band's RIGHT edge
+                        // under rtl (absolute-non-replaced-width-002).
+                        oof.StaticX = (oof.Parent ?? oof).GetDirection() == "rtl"
+                            ? staticBandX + staticBandW : staticBandX;
                         oof.StaticY = flowPointY;
                     }
                     continue;
@@ -2948,8 +2983,12 @@ internal static class BoxEngine
                 // at its resolved position, so boxes written here are provisional. The inner
                 // layout is what makes an inline-block child's vertical margins count toward the
                 // line box: its own line encloses the child's margin box (§10.8.1,
-                // margin-collapse-015).
-                if (!isFormControl && explicitH <= 0 && node.Children.Count > 0)
+                // margin-collapse-015). LEAVES qualify too: their text lives in DisplayText with
+                // no children, and the form-control fallback height (20px) ignored the inherited
+                // line-height — a 32px/4 span must be 128px tall, not one default line
+                // (absolute-non-replaced-width-017).
+                if (!isFormControl && explicitH <= 0 &&
+                    (node.Children.Count > 0 || !string.IsNullOrEmpty(node.DisplayText)))
                 {
                     var marginBoxH = MeasureBlockHeight(node, Math.Max(w, 0f), viewportWidth, viewportHeight);
                     h = Math.Max(0f, marginBoxH - margin.Top - margin.Bottom

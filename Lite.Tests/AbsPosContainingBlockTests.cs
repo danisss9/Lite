@@ -76,6 +76,22 @@ public static class AbsPosContainingBlockTests
         }
     }
 
+    [Test]
+    public static void AbsPosRtl_StaticPositionHangsFromTheFlowRightEdge()
+    {
+        // absolute-non-replaced-width-002/012: left/right auto under rtl take the static
+        // position, which is the RIGHT edge of the flow band — the box hugs #c's right inner
+        // edge whether or not whitespace text surrounds it.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            "#c{direction:rtl;position:relative;width:200px;height:200px;border:5px solid black}" +
+            "#a{position:absolute;width:50px;height:50px}</style>" +
+            "<div id=\"c\">\n  <div id=\"a\"></div>\n</div>");
+        var a = Find(root, "DIV", "a");
+        True(a is not null, "node missing");
+        True(Math.Abs(a!.Box.ContentBox.Right - 205f) < 0.5f,
+            $"abs box must end at #c's inner right edge (205), got {a.Box.ContentBox.Right}");
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);
