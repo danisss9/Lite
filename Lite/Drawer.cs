@@ -41,6 +41,21 @@ internal static class Drawer
         return (_lastBitmap.GetPixels(), _hitRegions);
     }
 
+    /// <summary>The DOM body in layout order. The table normalizers can wrap BODY in anonymous
+    /// boxes (html display:table), so the propagation follows the DOM past layout wrappers —
+    /// §14.2 propagates the first HTML BODY child of the root element, whatever holds it.</summary>
+    private static LayoutNode? FindBody(LayoutNode root)
+    {
+        foreach (var child in root.Children)
+        {
+            if (child.TagName == "BODY") return child;
+            if (child.TagName == "HEAD") continue;
+            var found = FindBody(child);
+            if (found is not null) return found;
+        }
+        return null;
+    }
+
     /// <summary>Renders the page to a bitmap the caller owns. Used by the conformance
     /// harness for reftest pixel comparison.</summary>
     internal static SKBitmap DrawToBitmap(int width, int height, LayoutNode root, Viewport viewport)
@@ -57,7 +72,7 @@ internal static class Drawer
         // When the root is fully transparent, the BODY's background — color AND image — becomes
         // the canvas background, positioned relative to the ROOT's padding box, and the body
         // paints no background of its own (its own box would place the image wrong).
-        var body = root.Children.FirstOrDefault(c => c.TagName == "BODY") ?? root;
+        var body = FindBody(root) ?? root;
         _propagatedBackgroundNode = null;
         var clearColor = root.GetBackgroundColor();
         if (clearColor == SKColors.Transparent && root.GetBackgroundImage() == null)
@@ -164,6 +179,13 @@ internal static class Drawer
 
     private static void PaintFixedNodes(SKCanvas canvas, LayoutNode root, int viewportWidth)
     {
+        // The ROOT can itself be position:fixed (abspos-containing-block-initial-004b): the normal
+        // tree pass skipped it, so it must be painted here too.
+        if (root.GetPosition() == PositionType.Fixed)
+        {
+            PaintNodeInner(canvas, root, viewportWidth);
+            return;
+        }
         var stack = new Stack<LayoutNode>();
         var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
         for (int i = root.Children.Count - 1; i >= 0; i--)

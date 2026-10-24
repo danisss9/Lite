@@ -25,6 +25,11 @@ internal static class BoxEngine
         // With no positioned ancestor, an absolutely positioned box is contained by the initial
         // containing block (CSS 2.1 §10.1), which is the viewport, not the root element's box.
         var initialContainingBlock = new BoxDimensions { ContentBox = new SKRect(0, 0, viewportWidth, viewportHeight) };
+        // The ROOT element can itself be positioned (html style="position:absolute") — §10.1: its
+        // containing block is the initial containing block. The positioned pass below only
+        // re-resolves absolute/fixed DESCENDANTS, so the root resolves here.
+        if (root.GetPosition() is PositionType.Absolute or PositionType.Fixed)
+            ResolveAbsoluteBox(root, initialContainingBlock, viewportWidth, viewportHeight);
         LayoutPositioned(root, root.IsPositioned() ? root.Box : initialContainingBlock, viewportWidth, viewportHeight);
     }
 
@@ -55,11 +60,70 @@ internal static class BoxEngine
             }
             else
             {
-                // Pass down nearest positioned ancestor as containing block
-                var nextCb = child.IsPositioned() ? child.Box : containingBox;
+                // Pass down nearest positioned ancestor as containing block. For an INLINE
+                // positioned box the Box field is not its geometry (ApplyInlineItem leaves inline
+                // wrappers boxless — their painted geometry is their fragments), so §10.1's
+                // inline containing block is computed from those fragments instead.
+                var nextCb = child.IsPositioned() ? ContainingBlockOf(child) : containingBox;
                 LayoutPositioned(child, nextCb, viewportWidth, viewportHeight);
             }
         }
+    }
+
+    /// <summary>The containing block a positioned descendant sees through this box (§10.1). A
+    /// block-level positioned box is its own Box; an inline positioned box contributes the
+    /// bounding box of its padding boxes across every line it fragments over — collected from the
+    /// inline geometry its in-flow subtree recorded during layout.</summary>
+    private static BoxDimensions ContainingBlockOf(LayoutNode node)
+    {
+        if (node.GetDisplay() is not DisplayType.Inline) return node.Box;
+        var rect = InlineExtent(node);
+        if (rect.Width <= 0f && rect.Height <= 0f) return node.Box;
+        var pad = node.GetPadding(0, 0, node.GetFontSize());
+        var bord = node.GetBorderWidth();
+        return new BoxDimensions
+        {
+            // ContentBox carries the PADDING-box extent with zero Padding/Border edges so
+            // ResolveAbsoluteBox's cb.PaddingBox reads exactly §10.1's bounding box.
+            ContentBox = new SKRect(
+                rect.Left - pad.Left - bord.Left, rect.Top - pad.Top - bord.Top,
+                rect.Right + pad.Right + bord.Right, rect.Bottom + pad.Bottom + bord.Bottom),
+        };
+    }
+
+    /// <summary>Bounding box of an inline box's line fragments: the node's own fragments plus, in
+    /// flow, the fragments/atomic boxes of its inline descendants. Block-level and out-of-flow
+    /// descendants are not part of the inline box's extent.</summary>
+    private static SKRect InlineExtent(LayoutNode node)
+    {
+        var has = false;
+        var rect = SKRect.Empty;
+        void Add(SKRect r)
+        {
+            if (r.Width <= 0f && r.Height <= 0f) return;
+            rect = has ? SKRect.Union(rect, r) : r;
+            has = true;
+        }
+        foreach (var f in node.InlineFragments ?? [])
+            Add(f.Rect);
+        foreach (var c in node.Children)
+        {
+            if (c.GetDisplay() == DisplayType.None) continue;
+            var pos = c.GetPosition();
+            if (pos == PositionType.Absolute || pos == PositionType.Fixed) continue;
+            var d = c.GetDisplay();
+            if (d is DisplayType.Block or DisplayType.ListItem or DisplayType.Table
+                or DisplayType.TableRow or DisplayType.TableRowGroup or DisplayType.TableCell
+                or DisplayType.Flex) continue;
+            // An atomic inline (inline-block/table/flex or an image) owns a real Box; a plain
+            // inline wrapper's extent lives in its fragments.
+            if (d is DisplayType.InlineBlock or DisplayType.InlineTable or DisplayType.InlineFlex
+                || BoxEngine.IsReplacedImage(c))
+                Add(c.Box.ContentBox);
+            else
+                Add(InlineExtent(c));
+        }
+        return has ? rect : SKRect.Empty;
     }
 
     /// <summary>
