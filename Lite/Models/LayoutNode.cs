@@ -247,6 +247,10 @@ public class LayoutNode
     /// GetBorderWidth honours this flag because it deliberately does not honour StyleOverrides
     /// globally (Acid2 depends on shared-style border reads).</summary>
     public bool SharedBorderSuppressed { get; set; }
+    /// <summary>The inline box this node was broken out of (§9.2.1.1 block-in-inline): set on the
+    /// inline's pieces and on the blocks hoisted out of it. The original inline leaves the tree,
+    /// so the painter follows this to keep a broken link's hit region (href, node key).</summary>
+    public LayoutNode? SplitFrom { get; set; }
 
     /// <summary>The vertical shift already applied to this box by the self-collapse placement
     /// (BoxEngine's collapsed-margin-chain anchoring) in the CURRENT layout pass. LayoutBlock

@@ -361,15 +361,9 @@ public static class StyleExtensions
         return style is "italic" or "oblique";
     }
 
-    public static bool IsLineThrough(this LayoutNode node)
-    {
-        var line = node.TryResolveStyle(PropertyNames.TextDecorationLine, out var ov1)
-            ? ov1 : node.Style.GetPropertyValueSafe(PropertyNames.TextDecorationLine);
-        if (line.Contains("line-through", StringComparison.OrdinalIgnoreCase)) return true;
-        var dec = node.TryResolveStyle(PropertyNames.TextDecoration, out var ov2)
-            ? ov2 : node.Style.GetPropertyValueSafe(PropertyNames.TextDecoration);
-        return dec.Contains("line-through", StringComparison.OrdinalIgnoreCase);
-    }
+    public static bool IsLineThrough(this LayoutNode node) => HasDecoration(node, "line-through");
+
+    public static bool IsOverline(this LayoutNode node) => HasDecoration(node, "overline");
 
     public static TextAlign GetTextAlign(this LayoutNode node)
     {
@@ -1440,17 +1434,38 @@ public static class StyleExtensions
     public static SKColor GetBorderBottomColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderBottomColor, SKColors.Black);
     public static SKColor GetBorderLeftColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderLeftColor, SKColors.Black);
 
-    public static bool IsUnderline(this LayoutNode node)
+    public static bool IsUnderline(this LayoutNode node) => HasDecoration(node, "underline");
+
+    /// <summary>CSS 2.1 §16.3.1: a decoration declared on a box is propagated to its in-flow
+    /// content — through inline and block descendants alike, and into the blocks that split an
+    /// inline (§9.2.1.1, followed through <see cref="LayoutNode.SplitFrom"/>) — but not into
+    /// floats, absolutely positioned boxes or the contents of atomic inlines, and a descendant's
+    /// own 'none' cannot remove it. Each box only declared its own before, so the text of
+    /// &lt;a href&gt;&lt;span&gt;x&lt;/span&gt;&lt;/a&gt; was never underlined.</summary>
+    private static bool HasDecoration(LayoutNode node, string line)
+    {
+        for (var n = node; n is not null; n = n.SplitFrom ?? n.Parent)
+        {
+            if (OwnDecoration(n, line)) return true;
+            if (n.TagName != "#text" && (n.GetFloat() != FloatType.None
+                || n.GetPosition() is PositionType.Absolute or PositionType.Fixed
+                || n.GetDisplay() is DisplayType.InlineBlock or DisplayType.InlineTable or DisplayType.InlineFlex))
+                return false;
+        }
+        return false;
+    }
+
+    private static bool OwnDecoration(LayoutNode node, string line)
     {
         var dec = node.TryResolveStyle(PropertyNames.TextDecoration, out var ov2)
             ? ov2 : node.Style.GetPropertyValueSafe(PropertyNames.TextDecoration);
         // An explicit 'none' — the author override channel included — beats the UA sheet's
         // computed 'text-decoration-line: underline' (§6.4: author origin outranks UA).
         if (dec.Trim().Equals("none", StringComparison.OrdinalIgnoreCase)) return false;
-        var line = node.TryResolveStyle(PropertyNames.TextDecorationLine, out var ov1)
+        var lines = node.TryResolveStyle(PropertyNames.TextDecorationLine, out var ov1)
             ? ov1 : node.Style.GetPropertyValueSafe(PropertyNames.TextDecorationLine);
-        if (line.Contains("underline", StringComparison.OrdinalIgnoreCase)) return true;
-        return dec.Contains("underline", StringComparison.OrdinalIgnoreCase);
+        return lines.Contains(line, StringComparison.OrdinalIgnoreCase)
+            || dec.Contains(line, StringComparison.OrdinalIgnoreCase);
     }
 
     public static CursorType GetCursor(this LayoutNode node)

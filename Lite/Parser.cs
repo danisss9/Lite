@@ -139,6 +139,9 @@ internal static class Parser
         internal string? BaseUrl, DocumentBaseUrl;
         internal IDocument? Document;
         internal int ViewportWidth = 800, ViewportHeight = 600, InlineModuleCounter;
+        /// <summary>§12.3.2 quote nesting depth, advanced in document order by every
+        /// open-quote/no-open-quote and close-quote/no-close-quote.</summary>
+        internal int QuoteDepth;
         internal bool Verbose, IsFragment;
         /// <summary>True when the document was served as XML (application/xhtml+xml and
         /// friends): type selectors match case-sensitively per CSS 2.1 §5.1.</summary>
@@ -1326,12 +1329,10 @@ internal static class Parser
             node.StyleOverrides["display"] = "none";
         }
 
-        // Real DOM nodes that never render: scripts must be reachable (loader bootstraps walk
-        // document.getElementsByTagName('script') and read .parentNode) but produce no box.
-        // HEAD is hidden by the UA sheet instead, so an author 'head { display: block }' shows
-        // it like any other element (content-067: a displayed meta's ::before).
-        if (tag is "SCRIPT")
-            node.StyleOverrides["display"] = "none";
+        // HEAD and SCRIPT are real DOM nodes (loader bootstraps walk
+        // document.getElementsByTagName('script') and read .parentNode) hidden by the UA sheet
+        // alone, so an author 'display: block' shows them like any other element (content-067:
+        // a displayed meta's ::before; content-072: a displayed script's ::before).
 
         // <details>/<dialog> open state (drives layout collapse + the .open DOM property)
         if (tag is "DETAILS" or "DIALOG" && element.HasAttribute("open"))
@@ -1509,6 +1510,7 @@ internal static class Parser
         // ::before comes next in document order: its counter properties apply now, inside this
         // element's scope, and its content reads the counters as they stand at that point.
         var beforeCounters = PseudoCounters(node, node.BeforeStyles, pushedCounters);
+        var beforeQuoteDepth = AdvanceQuoteDepth(node, node.BeforeStyles);
 
         if (objectShowsImage || tag is "IFRAME" or "AUDIO" or "VIDEO")
         {
@@ -1585,6 +1587,7 @@ internal static class Parser
         // and a counter-reset it makes has no following siblings to scope over.
         var afterPushed = new List<string>();
         var afterCounters = PseudoCounters(node, node.AfterStyles, afterPushed);
+        var afterQuoteDepth = AdvanceQuoteDepth(node, node.AfterStyles);
         PopCounters(afterPushed);
 
         // Leaving this node's subtree: pop the counter instances it introduced (scope ends).
@@ -1592,7 +1595,7 @@ internal static class Parser
         PopCounters(pushedCounters);
 
         // Create ::before and ::after pseudo-element children, each reading its own snapshot.
-        CreatePseudoElementChildren(node, directTextRaw, beforeCounters, afterCounters);
+        CreatePseudoElementChildren(node, directTextRaw, beforeCounters, afterCounters, beforeQuoteDepth, afterQuoteDepth);
         // ::first-letter runs after them: the spec includes ::before content in the first letter,
         // and the split needs the final child list.
         CreateFirstLetterChild(node);
@@ -1716,13 +1719,15 @@ internal static class Parser
     /// and its own counter properties).</param>
     private static void CreatePseudoElementChildren(LayoutNode node, string directTextRaw,
         (Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) beforeCounters,
-        (Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) afterCounters)
+        (Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) afterCounters,
+        int beforeQuoteDepth = 0, int afterQuoteDepth = 0)
     {
-        string? ContentWith((Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) counters, string content)
+        string? ContentWith((Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) counters, string content,
+            Dictionary<string, string> pseudoStyles, int quoteDepth)
         {
             var (values, stacks) = (node.CounterValues, node.CounterStacks);
             (node.CounterValues, node.CounterStacks) = counters;
-            try { return ParseContentValue(content, node); }
+            try { return ParseContentValue(content, node, new QuoteState(QuotePairs(node, pseudoStyles), quoteDepth)); }
             finally { (node.CounterValues, node.CounterStacks) = (values, stacks); }
         }
 
@@ -1752,7 +1757,7 @@ internal static class Parser
 
         if (hasBefore)
         {
-            var text = ContentWith(beforeCounters, node.BeforeStyles!["content"]);
+            var text = ContentWith(beforeCounters, node.BeforeStyles!["content"], node.BeforeStyles!, beforeQuoteDepth);
             var pseudoNode = new LayoutNode(null, "#pseudo-before", text!, node.Style);
             // 'content: url(...)': the box is the image (§12.2) — empty text, fetched bitmap.
             if (TryParseContentUrl(node.BeforeStyles!["content"]) is { } beforeUrl)
@@ -1771,7 +1776,7 @@ internal static class Parser
 
         if (hasAfter)
         {
-            var text = ContentWith(afterCounters, node.AfterStyles!["content"]);
+            var text = ContentWith(afterCounters, node.AfterStyles!["content"], node.AfterStyles!, afterQuoteDepth);
             var pseudoNode = new LayoutNode(null, "#pseudo-after", text!, node.Style);
             if (TryParseContentUrl(node.AfterStyles!["content"]) is { } afterUrl)
                 pseudoNode.Image = ResourceLoader.FetchImage(afterUrl, _documentBaseUrl ?? _baseUrl, Session);
@@ -2609,8 +2614,9 @@ internal static class Parser
 
     /// <summary>Parses a CSS content property value, stripping quotes and handling basic values.
     /// Supports concatenated tokens like: "Chapter " counter(section) ". "</summary>
-    private static string? ParseContentValue(string value, LayoutNode? node = null)
+    private static string? ParseContentValue(string value, LayoutNode? node = null, QuoteState? quotes = null)
     {
+        quotes ??= new QuoteState(DefaultQuotes, 0);
         value = value.Trim();
         if (value is "none" or "normal" or "") return null;
 
@@ -2619,7 +2625,9 @@ internal static class Parser
         if (TryParseContentUrl(value) is not null) return "";
 
         // Check if this is a simple single-token value
-        if (!value.Contains("counter(") && !value.Contains("counters(") && !value.Contains("attr("))
+        // More than one token ('close-quote "x"', '"a" "b"') is a concatenation: tokenize it.
+        if (!value.Contains("counter(") && !value.Contains("counters(") && !value.Contains("attr(") &&
+            IsSingleContentToken(value))
         {
             // Simple single value. The length check matters: a lone quote character both starts
             // and ends with a quote, and stripping one off each end of it asks for a -1 slice.
@@ -2630,8 +2638,7 @@ internal static class Parser
                 var inner = value[1..^1];
                 return DecodeCssEscapes(inner);
             }
-            if (value == "open-quote") return "\u201C";
-            if (value == "close-quote") return "\u201D";
+            if (QuoteKeyword(value) is { } keyword) return quotes.Apply(keyword);
             return value;
         }
 
@@ -2707,9 +2714,10 @@ internal static class Parser
                 continue;
             }
 
-            // open-quote / close-quote
-            if (value[i..].StartsWith("open-quote")) { sb.Append('\u201C'); i += 10; continue; }
-            if (value[i..].StartsWith("close-quote")) { sb.Append('\u201D'); i += 11; continue; }
+            // open-quote / close-quote / no-open-quote / no-close-quote (§12.3.2)
+            var quoteWord = QuoteKeywords.FirstOrDefault(k => string.CompareOrdinal(value, i, k, 0, k.Length) == 0 &&
+                (i + k.Length == value.Length || char.IsWhiteSpace(value[i + k.Length])));
+            if (quoteWord is not null) { sb.Append(quotes.Apply(quoteWord)); i += quoteWord.Length; continue; }
 
             // Skip unknown token until whitespace
             while (i < value.Length && !char.IsWhiteSpace(value[i])) i++;
@@ -2774,6 +2782,124 @@ internal static class Parser
     }
 
     /// <summary>Decodes CSS unicode escape sequences like \201C into actual characters.</summary>
+    private static readonly string[] QuoteKeywords = ["no-open-quote", "no-close-quote", "open-quote", "close-quote"];
+    private static readonly List<(string Open, string Close)> DefaultQuotes = [("\u201C", "\u201D"), ("\u2018", "\u2019")];
+
+    private static string? QuoteKeyword(string token) => Array.IndexOf(QuoteKeywords, token) >= 0 ? token : null;
+
+    /// <summary>§12.3.2: open-quote emits the 'quotes' pair for the current depth (the last pair
+    /// beyond the list) and nests one level; close-quote un-nests and emits the matching close —
+    /// nothing at depth 0; the no- forms change the depth without emitting.</summary>
+    private sealed class QuoteState(List<(string Open, string Close)> pairs, int depth)
+    {
+        public int Depth { get; private set; } = depth;
+
+        public string Apply(string keyword)
+        {
+            switch (keyword)
+            {
+                case "open-quote":
+                    var open = pairs.Count == 0 ? "" : pairs[Math.Min(Depth, pairs.Count - 1)].Open;
+                    Depth++;
+                    return open;
+                case "no-open-quote":
+                    Depth++;
+                    return "";
+                case "close-quote":
+                    if (Depth == 0) return "";
+                    Depth--;
+                    return pairs.Count == 0 ? "" : pairs[Math.Min(Depth, pairs.Count - 1)].Close;
+                default: // no-close-quote
+                    if (Depth > 0) Depth--;
+                    return "";
+            }
+        }
+    }
+
+    /// <summary>Advances the document's quote depth by a pseudo-element's content (when it is
+    /// generated) and returns the depth the content starts at.</summary>
+    private static int AdvanceQuoteDepth(LayoutNode node, Dictionary<string, string>? pseudoStyles)
+    {
+        var start = Current.QuoteDepth;
+        if (pseudoStyles is null || !pseudoStyles.TryGetValue("content", out var content) ||
+            ResolvePseudoDisplay(node, pseudoStyles).Equals("none", StringComparison.OrdinalIgnoreCase))
+            return start;
+        var state = new QuoteState(DefaultQuotes, start);
+        foreach (var token in ContentTokens(content))
+            if (QuoteKeyword(token) is { } keyword) state.Apply(keyword);
+        Current.QuoteDepth = state.Depth;
+        return start;
+    }
+
+    /// <summary>True when a 'content' value is one string or one bare word (no whitespace
+    /// outside a string, at most one string).</summary>
+    private static bool IsSingleContentToken(string value)
+    {
+        if (value.Length > 0 && value[0] is '"' or '\'')
+        {
+            var j = 1;
+            while (j < value.Length && value[j] != value[0]) j += value[j] == '\\' ? 2 : 1;
+            return j >= value.Length - 1;
+        }
+        return !value.Any(char.IsWhiteSpace);
+    }
+
+    /// <summary>The bare (unquoted, non-function) words of a 'content' value, in order.</summary>
+    private static IEnumerable<string> ContentTokens(string value)
+    {
+        var i = 0;
+        while (i < value.Length)
+        {
+            var c = value[i];
+            if (char.IsWhiteSpace(c)) { i++; continue; }
+            if (c is '"' or '\'')
+            {
+                var j = i + 1;
+                while (j < value.Length && value[j] != c) j += value[j] == '\\' ? 2 : 1;
+                i = j + 1;
+                continue;
+            }
+            var start = i;
+            while (i < value.Length && !char.IsWhiteSpace(value[i]) && value[i] != '(') i++;
+            if (i < value.Length && value[i] == '(')
+            {
+                var close = value.IndexOf(')', i);
+                i = close < 0 ? value.Length : close + 1;
+                continue;
+            }
+            yield return value[start..i];
+        }
+    }
+
+    /// <summary>The 'quotes' pairs in effect for a pseudo-element: its own declaration, else the
+    /// value its element computes (inherited). 'none' is no pairs; unset uses the UA's curly quotes.</summary>
+    private static List<(string Open, string Close)> QuotePairs(LayoutNode node, Dictionary<string, string> pseudoStyles)
+    {
+        var raw = pseudoStyles.TryGetValue("quotes", out var own) ? own
+            : node.TryResolveStyle("quotes", out var ov) ? ov : node.Style.GetPropertyValueSafe("quotes");
+        raw = raw?.Trim() ?? "";
+        if (raw.Equals("none", StringComparison.OrdinalIgnoreCase)) return [];
+        var strings = new List<string>();
+        for (var i = 0; i < raw.Length; i++)
+        {
+            var q = raw[i];
+            if (q is not ('"' or '\'')) continue;
+            var j = i + 1;
+            var sb = new System.Text.StringBuilder();
+            while (j < raw.Length && raw[j] != q)
+            {
+                if (raw[j] == '\\' && j + 1 < raw.Length) { sb.Append(raw, j, 2); j += 2; continue; }
+                sb.Append(raw[j++]);
+            }
+            strings.Add(DecodeCssEscapes(sb.ToString()));
+            i = j;
+        }
+        if (strings.Count < 2) return DefaultQuotes;
+        var pairs = new List<(string, string)>();
+        for (var k = 0; k + 1 < strings.Count; k += 2) pairs.Add((strings[k], strings[k + 1]));
+        return pairs;
+    }
+
     private static string DecodeCssEscapes(string s)
     {
         if (!s.Contains('\\')) return s;

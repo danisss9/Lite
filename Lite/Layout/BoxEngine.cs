@@ -199,7 +199,7 @@ internal static class BoxEngine
     /// than breaking any ancestor inline (this is what keeps Acid2's floated
     /// <c>span&gt;em&gt;strong</c> smile intact).</summary>
     private static bool IsBreakableInline(LayoutNode n)
-        => n.TagName != "A" && IsSplittableInline(n) && IsInFlow(n) && InlineContainsInFlowBlock(n);
+        => IsSplittableInline(n) && IsInFlow(n) && InlineContainsInFlowBlock(n);
 
     /// <summary>True when <paramref name="n"/> is an in-flow block-level box (the trigger for a
     /// block-in-inline break). Floats and absolutely/fixed-positioned boxes are out of flow and do
@@ -252,6 +252,7 @@ internal static class BoxEngine
             // also translates the block-level box it was broken around.
             PropagateRelativePosition(inline, block);
             SuppressSharedStyleBorder(inline, block);
+            block.SplitFrom ??= inline;
             result.Add(block);
         }
 
@@ -340,6 +341,7 @@ internal static class BoxEngine
     private static LayoutNode CloneInlineShell(LayoutNode inline)
     {
         var clone = new LayoutNode(null, inline.TagName, "", inline.Style);
+        clone.SplitFrom = inline;
         CopyDict(inline.StyleOverrides, clone.StyleOverrides);
         CopyDict(inline.HoverStyles, clone.HoverStyles);
         CopyDict(inline.FocusStyles, clone.FocusStyles);

@@ -217,6 +217,10 @@ internal static class Drawer
         // Skip fixed nodes in the normal tree pass — painted separately after scroll restore
         if (node.GetPosition() == PositionType.Fixed) return;
 
+        // A block hoisted out of a link broken around it (§9.2.1.1) is still link content.
+        if (node.TagName != "A" && SplitLink(node) is { } link)
+            _hitRegions.Add(new HitRegion(node.Box.BorderBox, link.GetCursor(), link.Href, NodeKey: link.NodeKey));
+
         // position:relative — translate by offset, paint normally, then restore
         var pos = node.GetPosition();
         if (pos == PositionType.Relative)
@@ -1070,7 +1074,10 @@ internal static class Drawer
     private static void PaintAnchor(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
         var cursor = node.GetCursor();
-        _hitRegions.Add(new HitRegion(node.Box.BorderBox, cursor, node.Href, NodeKey: node.NodeKey));
+        // A piece of an anchor broken around a block (§9.2.1.1) is a clone without attributes:
+        // it links through the anchor it was split from.
+        var link = SplitLink(node) ?? node;
+        _hitRegions.Add(new HitRegion(node.Box.BorderBox, cursor, link.Href, NodeKey: link.NodeKey));
 
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
@@ -1090,6 +1097,15 @@ internal static class Drawer
 
         // Anchor wraps child nodes (e.g. #TEXT created by parser for mixed content)
         PaintChildrenSorted(canvas, node, viewportWidth);
+    }
+
+    /// <summary>The link a split piece or hoisted block belongs to: the nearest anchor with an
+    /// href among the inlines it was broken out of and their ancestors, or null.</summary>
+    private static LayoutNode? SplitLink(LayoutNode node)
+    {
+        for (var n = node.SplitFrom; n is not null; n = n.SplitFrom ?? n.Parent)
+            if (n.TagName == "A" && n.Href is not null) return n;
+        return null;
     }
 
     // -------------------------------------------------------------------------
@@ -2532,6 +2548,7 @@ internal static class Drawer
         var textAlign = node.GetTextAlign();
         var underline = node.IsUnderline();
         var lineThrough = node.IsLineThrough();
+        var overline = node.IsOverline();
         var textTransform = node.GetTextTransform();
         var letterSpacing = node.GetLetterSpacing(font.Size);
         var wordSpacing = node.GetWordSpacing(font.Size);
@@ -2683,6 +2700,15 @@ internal static class Drawer
                 var uThick = Math.Max(metrics.UnderlineThickness ?? 1f, 1f);
                 using var lp = new SKPaint { Color = linePaint.Color, StrokeWidth = uThick, IsAntialias = true };
                 canvas.DrawLine(drawX, uY, drawX + drawnWidth, uY, lp);
+            }
+
+            if (overline)
+            {
+                // §16.3.1 'overline': a line above the text, at the top of the font's ascent.
+                var oY = baseline + lineFont.Metrics.Ascent;
+                var uThick = Math.Max(lineFont.Metrics.UnderlineThickness ?? 1f, 1f);
+                using var lp = new SKPaint { Color = linePaint.Color, StrokeWidth = uThick, IsAntialias = true };
+                canvas.DrawLine(drawX, oY, drawX + drawnWidth, oY, lp);
             }
 
             if (lineThrough)

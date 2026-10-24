@@ -55,6 +55,20 @@ public static class CounterTests
         True(texts.SequenceEqual(["1", "1.49", "1.50", "1.389", "1.390"]), string.Join(",", texts));
     }
 
+    [Test]
+    public static void Quotes_NestInDocumentOrderAndHonourTheQuotesProperty()
+    {
+        // §12.3.2 (content-157): no-open-quote nests silently, so the close-quote after it emits
+        // the level-1 close; a close-quote at depth 0 emits nothing; open-quote takes the pair for
+        // its depth from 'quotes' (the last pair beyond the list).
+        var texts = Generated(
+            "div { quotes: '<' '>' '[' ']'; } #a:before { content: no-open-quote; } #a:after { content: close-quote; }" +
+            "#b:before { content: close-quote 'x'; } #c:before { content: open-quote; } #c:after { content: close-quote; }" +
+            "#d:before { content: open-quote; } #d:after { content: close-quote; }",
+            "<div id=\"a\"></div><div id=\"b\"></div><div id=\"c\"><div id=\"d\"></div></div>");
+        True(texts.SequenceEqual(["", ">", "x", "<", "[", "]", ">"]), string.Join(",", texts));
+    }
+
     private static List<string> Generated(string css, string body)
     {
         var page = Parser.ParseChildPage($"<!DOCTYPE html><html><head><style>{css}</style></head><body>{body}</body></html>",
