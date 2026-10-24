@@ -3503,6 +3503,12 @@ internal static class Parser
             if (string.IsNullOrEmpty(cssText)) return true;
 
             var props = ParseCssTextToDict(cssText);
+            // The raw text keeps shorthands as written; the getters read longhands, so add the
+            // longhands AngleSharp expanded ('background: green' → background-color — the
+            // content-171 ::before stripe never painted).
+            foreach (var longhand in ruleStyle)
+                if (!props.ContainsKey(longhand.Name) && !string.IsNullOrEmpty(longhand.Value))
+                    props[longhand.Name] = longhand.Value;
 
             if (isBefore)
             {
