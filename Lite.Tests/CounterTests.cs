@@ -43,6 +43,18 @@ public static class CounterTests
         True(texts.SequenceEqual(["0"]), string.Join(",", texts));
     }
 
+    [Test]
+    public static void SiblingReset_ScopesOverFollowingSiblingsAndIsReplacedByTheNext()
+    {
+        // content-counter-007 / §12.4.1: a reset on a span covers its following siblings; a later
+        // sibling's reset replaces that instance (counters() shows no extra nesting level).
+        var texts = Generated(
+            "#t { counter-reset: c; } #t span { counter-increment: c; } #t span:before { content: counters(c, '.'); }",
+            "<div id=\"t\"><span></span><span style=\"counter-reset: c 48\"></span><span></span>" +
+            "<span style=\"counter-reset: c 388\"></span><span></span></div>");
+        True(texts.SequenceEqual(["1", "1.49", "1.50", "1.389", "1.390"]), string.Join(",", texts));
+    }
+
     private static List<string> Generated(string css, string body)
     {
         var page = Parser.ParseChildPage($"<!DOCTYPE html><html><head><style>{css}</style></head><body>{body}</body></html>",

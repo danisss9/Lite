@@ -34,7 +34,7 @@ internal static class Parser
         h6 { display: block; font-size: 0.67em; margin-top: 2.33em; margin-bottom: 2.33em; margin-left: 0px; margin-right: 0px; font-weight: bold; }
         p { display: block; margin-top: 1em; margin-bottom: 1em; margin-left: 0px; margin-right: 0px; cursor: text; }
         h1, h2, h3, h4, h5, h6 { cursor: text; }
-        a { color: blue; text-decoration: underline; cursor: pointer; }
+        a[href] { color: blue; text-decoration: underline; cursor: pointer; }
         img { display: inline; }
         input { display: inline-block; cursor: text; }
         input[type="checkbox"] { cursor: default; }
@@ -55,8 +55,11 @@ internal static class Parser
         dl { display: block; margin-top: 1em; margin-bottom: 1em; }
         dt { display: block; font-weight: bold; }
         dd { display: block; margin-left: 40px; }
-        ul { list-style-type: disc; margin-top: 1em; margin-bottom: 1em; padding-left: 40px; }
-        ol { list-style-type: decimal; margin-top: 1em; margin-bottom: 1em; padding-left: 40px; }
+        ul, dir, menu { display: block; list-style-type: disc; margin-top: 1em; margin-bottom: 1em; margin-left: 0px; padding-left: 40px; }
+        ol { list-style-type: decimal; margin-top: 1em; margin-bottom: 1em; margin-left: 0px; padding-left: 40px; }
+        ul ul, ul ol, ol ul, ol ol { margin-top: 0px; margin-bottom: 0px; }
+        form { display: block; margin-top: 0px; margin-bottom: 1em; }
+        fieldset { margin-top: 0px; margin-bottom: 0px; margin-left: 2px; margin-right: 2px; }
         li { display: list-item; }
         table { display: table; border-collapse: separate; }
         thead { display: table-header-group; }
@@ -79,7 +82,7 @@ internal static class Parser
         address { display: block; font-style: italic; }
         q::before { content: open-quote; }
         q::after { content: close-quote; }
-        script, style, noscript, meta, link, title, base { display: none; }
+        head, script, style, noscript, meta, link, title, base { display: none; }
         """;
 
     // Tags that should not appear in the layout tree.
@@ -1325,7 +1328,9 @@ internal static class Parser
 
         // Real DOM nodes that never render: scripts must be reachable (loader bootstraps walk
         // document.getElementsByTagName('script') and read .parentNode) but produce no box.
-        if (tag is "HEAD" or "SCRIPT")
+        // HEAD is hidden by the UA sheet instead, so an author 'head { display: block }' shows
+        // it like any other element (content-067: a displayed meta's ::before).
+        if (tag is "SCRIPT")
             node.StyleOverrides["display"] = "none";
 
         // <details>/<dialog> open state (drives layout collapse + the .open DOM property)
@@ -1499,7 +1504,7 @@ internal static class Parser
         // Apply CSS counters (counter-reset/counter-increment) in document order BEFORE traversing
         // children, and snapshot the resulting state onto the node (for counter()/counters() and the
         // ::before/::after generated content). The pushed instances are popped after the subtree.
-        ApplyCounters(node, out var pushedCounters);
+        ApplyCounters(node, element, out var pushedCounters);
         Current.CounterScopes.Push(pushedCounters);
         // ::before comes next in document order: its counter properties apply now, inside this
         // element's scope, and its content reads the counters as they stand at that point.
@@ -1601,7 +1606,7 @@ internal static class Parser
     /// <summary>Applies counter-reset/counter-increment for <paramref name="node"/> in document order
     /// and snapshots the current counter state onto it. Returns the counter names this node pushed
     /// via counter-reset (to be popped after its subtree). Call BEFORE traversing children.</summary>
-    private static void ApplyCounters(LayoutNode node, out List<string> pushed)
+    private static void ApplyCounters(LayoutNode node, IElement element, out List<string> pushed)
     {
         pushed = new List<string>();
         // An implicit reset made by this element scopes over its following siblings, so it
@@ -1612,8 +1617,14 @@ internal static class Parser
         // elements are displayed and their counters apply (counter-increment-applies-to-005).
         var display = node.TryResolveStyle("display", out var ov) ? ov : node.Style.GetPropertyValueSafe("display");
         if (!display.Trim().Equals("none", StringComparison.OrdinalIgnoreCase))
-            ApplyCounterProperties(node.StyleOverrides.GetValueOrDefault("counter-reset"),
-                node.StyleOverrides.GetValueOrDefault("counter-increment"), pushed, enclosing);
+        {
+            // The rule channel only carries matched style rules; an inline declaration outranks
+            // every non-important rule (§6.4.3) and lives in the style attribute
+            // (content-counter-007's span style="counter-reset: c 48").
+            var inline = element.GetAttribute("style") is { Length: > 0 } css ? ParseDeclarations(css).Item1 : null;
+            string? Counter(string prop) => inline?.GetValueOrDefault(prop) ?? node.StyleOverrides.GetValueOrDefault(prop);
+            ApplyCounterProperties(Counter("counter-reset"), Counter("counter-increment"), enclosing);
+        }
         var (values, stacks) = SnapshotCounters();
         node.CounterValues = values;
         node.CounterStacks = stacks;
@@ -1629,22 +1640,32 @@ internal static class Parser
             ResolvePseudoDisplay(node, pseudoStyles).Equals("none", StringComparison.OrdinalIgnoreCase))
             return (node.CounterValues, node.CounterStacks);
         ApplyCounterProperties(pseudoStyles.GetValueOrDefault("counter-reset"),
-            pseudoStyles.GetValueOrDefault("counter-increment"), scope, scope);
+            pseudoStyles.GetValueOrDefault("counter-increment"), scope);
         return SnapshotCounters();
     }
 
-    /// <summary>counter-reset pushes a nested instance onto <paramref name="pushed"/>; an
-    /// increment of a counter in no scope behaves as an implicit reset to 0 on the same box
-    /// (§12.4.1), recorded on <paramref name="implicitScope"/> — or never popped when null.</summary>
-    private static void ApplyCounterProperties(string? reset, string? increment, List<string> pushed, List<string>? implicitScope)
+    /// <summary>§12.4.1: a counter-reset's scope is the element, its descendants AND its following
+    /// siblings with theirs, so the instance joins <paramref name="scope"/> — the enclosing
+    /// element's list, popped when the PARENT ends (never popped when null: the root). A reset of
+    /// a name this scope level already holds (a previous sibling's, or this element's own)
+    /// replaces that instance instead of nesting under it; popping it at the resetting element's
+    /// own end made the next sibling count on from the outer counter (content-counter-007: 49,
+    /// then 13 instead of 50). An increment of a counter in no scope is an implicit reset to 0
+    /// on the same box, scoped the same way.</summary>
+    private static void ApplyCounterProperties(string? reset, string? increment, List<string>? scope)
     {
         if (reset is not null && !reset.Equals("none", StringComparison.OrdinalIgnoreCase))
             foreach (var part in ParseCounterSpec(reset, 0))
             {
                 if (!_counters.TryGetValue(part.Name, out var stack))
                     _counters[part.Name] = stack = new List<int>();
-                stack.Add(part.Value);              // push a new nested instance
-                pushed.Add(part.Name);
+                if (scope is not null && scope.Contains(part.Name) && stack.Count > 0)
+                    stack[^1] = part.Value;         // a later sibling's reset replaces the instance
+                else
+                {
+                    stack.Add(part.Value);          // push a new nested instance
+                    scope?.Add(part.Name);
+                }
             }
 
         if (increment is not null && !increment.Equals("none", StringComparison.OrdinalIgnoreCase))
@@ -1655,7 +1676,7 @@ internal static class Parser
                 if (stack.Count == 0)
                 {
                     stack.Add(0);
-                    implicitScope?.Add(part.Name);
+                    scope?.Add(part.Name);
                 }
                 stack[^1] += part.Value;
             }
@@ -1743,6 +1764,7 @@ internal static class Parser
                 // copying the raw value here would overwrite that with e.g. the literal "inherit".
                 if (p != "content" && p != "display") pseudoNode.StyleOverrides[p] = v;
             }
+            NormalizeGeneratedWhitespace(pseudoNode);
             pseudoNode.Parent = node;
             node.Children.Insert(0, pseudoNode);
         }
@@ -1760,6 +1782,7 @@ internal static class Parser
                 // copying the raw value here would overwrite that with e.g. the literal "inherit".
                 if (p != "content" && p != "display") pseudoNode.StyleOverrides[p] = v;
             }
+            NormalizeGeneratedWhitespace(pseudoNode);
             pseudoNode.Parent = node;
             node.Children.Add(pseudoNode);
         }
@@ -3738,6 +3761,23 @@ internal static class Parser
     /// Collapses runs of whitespace to a single space but does NOT trim boundary spaces.
     /// Boundary spaces are significant in inline content (e.g. " and " between two inline elements).
     /// </summary>
+    /// <summary>Generated text goes through §16.6 white-space processing like any other text,
+    /// under the pseudo-element's own 'white-space' (content-white-space-001: a pre-line
+    /// string's runs of spaces collapse and its "\A" stays a forced break).</summary>
+    private static void NormalizeGeneratedWhitespace(LayoutNode pseudo)
+    {
+        var text = pseudo.DisplayText;
+        if (string.IsNullOrEmpty(text)) return;
+        var normalized = NormalizeTextWhitespace(text, pseudo.GetWhiteSpace() switch
+        {
+            WhiteSpace.Pre => "pre",
+            WhiteSpace.PreWrap => "pre-wrap",
+            WhiteSpace.PreLine => "pre-line",
+            _ => "normal",
+        });
+        if (normalized != text) pseudo.TextOverride = normalized;
+    }
+
     /// <summary>
     /// Applies CSS 2.1 §16.6 white-space processing to an element's own text.
     /// <c>pre</c>/<c>pre-wrap</c> preserve everything; <c>pre-line</c> collapses spaces and tabs
@@ -3753,7 +3793,15 @@ internal static class Parser
         var lastWasSpace = false;
         foreach (var ch in text)
         {
-            if (ch == '\n') { sb.Append('\n'); lastWasSpace = false; continue; }
+            if (ch == '\n')
+            {
+                // §16.6.1: a space immediately before or after a line feed is removed — drop the
+                // collapsed space already emitted, and let lastWasSpace swallow the ones after.
+                if (lastWasSpace && sb.Length > 0 && sb[^1] == ' ') sb.Length--;
+                sb.Append('\n');
+                lastWasSpace = true;
+                continue;
+            }
             if (ch == '\r') continue;
             if (IsCollapsibleSpace(ch))
             {
