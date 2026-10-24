@@ -1101,14 +1101,25 @@ internal static class TableEngine
             var (cMin, cMax) = d == DisplayType.InlineTable
                 ? IntrinsicSizer.ContentMinMax(ch, viewportH)
                 : MeasureIntrinsic(ch, viewportH);
+            // Anonymous nodes (#text, generated content, anonymous table parts) resolve their
+            // style from the element they came from, so they have no box edges of their own —
+            // exactly as InlineBoxEdges lays them out. Reading the host's border/padding here
+            // widened every cell holding text or ::before content by its own edges again
+            // (content-037/080: cell 2-4 border widths too wide). A #text never takes the host's
+            // display either: it is inline content.
+            var anonymous = ch.TagName.StartsWith('#');
             var fs = ch.GetFontSize();
-            var pad = ch.GetPadding(0f, viewportH, fs);
-            var bord = ch.GetBorderWidth();
-            var marg = ch.GetMargin(0f, viewportH, fs);
-            var boxExtra = pad.Left + pad.Right + bord.Left + bord.Right + marg.Left + marg.Right;
-            var w = ch.GetWidth(0f);  // explicit px/em width (0 for auto/percent)
+            var boxExtra = 0f;
+            if (!anonymous)
+            {
+                var pad = ch.GetPadding(0f, viewportH, fs);
+                var bord = ch.GetBorderWidth();
+                var marg = ch.GetMargin(0f, viewportH, fs);
+                boxExtra = pad.Left + pad.Right + bord.Left + bord.Right + marg.Left + marg.Right;
+            }
+            var w = ch.TagName == "#text" ? 0f : ch.GetWidth(0f);  // explicit px/em width (0 for auto/percent)
             if (w > 0f) { cMin = Math.Max(cMin, w); cMax = Math.Max(cMax, w); }
-            var inline = d is DisplayType.Inline or DisplayType.InlineBlock
+            var inline = ch.TagName == "#text" || d is DisplayType.Inline or DisplayType.InlineBlock
                 or DisplayType.InlineTable or DisplayType.InlineFlex;
             if (inline)
             {

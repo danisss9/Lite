@@ -36,6 +36,21 @@ public static class XhtmlTests
     }
 
     [Test]
+    public static void XhtmlInlineStyleAttribute_Cascades()
+    {
+        // XML parsing builds generic elements, but an element in the XHTML namespace is an HTML
+        // element: its style attribute cascades (only font-size used to, via Lite's own lookup —
+        // ~250 table-anonymous-objects reftests drew uncoloured, unpositioned text).
+        using var server = new XmlTestServer();
+        using var session = new BrowserSession();
+        var page = Parser.TraversePage(new NavigationRequest(server.BaseUrl + "/inline.xht"), 800, 600, session);
+        var p = Find(page.Root, "P");
+        True(p != null, "expected the p element in the layout tree");
+        Equal(new SKColor(0, 128, 0).ToString(), p!.GetColor().ToString());
+        True(p.GetPosition() == PositionType.Relative, "the inline position must cascade");
+    }
+
+    [Test]
     public static void XhtmlDoctype_ResolvesHtmlNamedCharacterReferences()
     {
         // HTML5 REC 9.2: an XHTML public identifier makes the XML parser act as if the DTD
@@ -107,6 +122,13 @@ public static class XhtmlTests
                         "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">" +
                         "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>x</title></head>" +
                         "<body><p>a&nbsp;b&times;c</p></body></html>");
+                    return;
+                }
+                if (ctx.Request.Path == "/inline.xht")
+                {
+                    await ctx.Response.WriteAsync(
+                        "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>x</title></head>" +
+                        "<body><p style=\"color: green; position: relative; left: 100px\">x</p></body></html>");
                     return;
                 }
                 if (ctx.Request.Path == "/malformed.xht")

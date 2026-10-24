@@ -882,6 +882,13 @@ internal static class BoxEngine
         float contentW;
         if (explicitW > 0)
             contentW = explicitW;
+        else if (!float.IsNaN(left) && !float.IsNaN(right) &&
+                 node.GetDisplay() is DisplayType.Table or DisplayType.InlineTable)
+            // Only the table WRAPPER takes the solved width (§17.4); the table box inside keeps
+            // its auto table width — content-sized, at most what the offsets leave
+            // (no_red_3x3_monospace_table-ref: columns stretched across the containing block).
+            contentW = IntrinsicSizer.ShrinkToFit(node, Math.Max(0, cbRect.Width - left - right - margin.Left
+                - margin.Right - border.Left - border.Right - padding.Left - padding.Right), viewportHeight);
         else if (!float.IsNaN(left) && !float.IsNaN(right))
             contentW = Math.Max(0, cbRect.Width - left - right - margin.Left - margin.Right - border.Left - border.Right - padding.Left - padding.Right);
         else

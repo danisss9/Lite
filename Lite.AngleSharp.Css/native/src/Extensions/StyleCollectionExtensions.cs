@@ -121,7 +121,10 @@ namespace AngleSharp.Css
                 computedStyle.SetDeclarations(inlineStyle);
             }
 
-            if (element is IHtmlElement || element is ISvgElement)
+            // Lite patch 003: an XML-parsed document builds generic elements, yet an element in
+            // the XHTML or SVG namespace is an HTML/SVG element and its style attribute cascades.
+            if (element is IHtmlElement || element is ISvgElement ||
+                element.NamespaceUri == NamespaceNames.HtmlUri || element.NamespaceUri == NamespaceNames.SvgUri)
             {
                 computedStyle.SetDeclarations(element.GetStyle());
             }
