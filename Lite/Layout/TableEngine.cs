@@ -65,7 +65,7 @@ internal static class TableEngine
 
         var colWidths = IsFixedLayout(table)
             ? ComputeFixedColumnWidths(table, placements, colCount, contentW - spacing * (colCount + 1), viewportH)
-            : ComputeColumnWidths(placements, colCount, contentW - spacing * (colCount + 1), viewportW, viewportH);
+            : ComputeColumnWidths(table, placements, colCount, contentW - spacing * (colCount + 1), viewportW, viewportH);
         var rowHeights = new float[rowCount];
 
         // Caption (CSS 2.1 §17.4): a block spanning the table width, placed above (default) or
@@ -1026,8 +1026,11 @@ internal static class TableEngine
         var explicitTableW = table.GetWidth(availW);
         if (explicitTableW > 0f) return explicitTableW;
         var (sumMin, sumMax, colCount) = MeasureTableContentWidths(table, availW, viewportH);
-        if (colCount == 0) return Math.Max(0f, explicitTableW);
-        return Math.Max(sumMin, Math.Min(sumMax, availW));
+        var width = colCount == 0 ? 0f : Math.Max(sumMin, Math.Min(sumMax, availW));
+        // §10.4 on the shrink-wrapped width: max-width caps it, min-width (which wins) floors it
+        // (min-width-applies-to-013: an empty-celled table with min-width 1in is 1in wide).
+        var fs = table.GetFontSize();
+        return Math.Max(Math.Min(width, table.GetMaxWidth(availW, fs)), table.GetMinWidth(availW, fs));
     }
 
     /// <summary>The table's intrinsic content width: the PER-COLUMN max across rows, summed
@@ -1063,6 +1066,12 @@ internal static class TableEngine
             colMin[p.Col] = Math.Max(colMin[p.Col], cMin);
             colMax[p.Col] = Math.Max(colMax[p.Col], cMax);
         }
+        var elementWidths = ColumnElementWidths(table, colCount, availW);
+        for (var c = 0; c < colCount; c++)
+        {
+            colMin[c] = Math.Max(colMin[c], elementWidths[c]);
+            colMax[c] = Math.Max(colMax[c], elementWidths[c]);
+        }
 
         var spacingTotal = spacing * (colCount + 1);
         return (colMin.Sum() + spacingTotal, colMax.Sum() + spacingTotal, colCount);
@@ -1075,6 +1084,36 @@ internal static class TableEngine
     /// (a column with short content stays narrow; one with long content takes more), falling
     /// back to an even split for columns whose content width can't be measured (e.g. empty cells).
     /// </summary>
+    /// <summary>The 'width' each column receives from a column element, or from a column
+    /// group with no column children (applied to every column it spans); 0 where none.
+    /// §17.5.2.2 makes it the column's minimum in automatic layout (width-applies-to-005's
+    /// 1in column group around an empty cell must still produce a 1in square).</summary>
+    private static float[] ColumnElementWidths(LayoutNode table, int colCount, float availableW)
+    {
+        var widths = new float[colCount];
+        var index = 0;
+        void Walk(LayoutNode container, float inherited)
+        {
+            foreach (var child in container.Children)
+            {
+                var group = IsColumnGroup(child);
+                if (!group && !IsColumn(child)) continue;
+                var own = child.IsAutoWidth() ? 0f : child.GetWidth(availableW);
+                // §10.4 applies to columns too: max-width caps the width, min-width floors it.
+                var fs = child.GetFontSize();
+                own = Math.Max(Math.Min(own, child.GetMaxWidth(availableW, fs)), child.GetMinWidth(availableW, fs));
+                if (group && child.Children.Any(IsColumn)) { Walk(child, own); continue; }
+                var span = 1;
+                if (child.Attributes.TryGetValue("span", out var raw) && int.TryParse(raw, out var n)) span = Math.Clamp(n, 1, 1000);
+                var w = own > 0f ? own : inherited;
+                for (var k = 0; k < span && index < colCount; k++, index++)
+                    widths[index] = Math.Max(widths[index], w);
+            }
+        }
+        Walk(table, 0f);
+        return widths;
+    }
+
     /// <summary>§17.5.2.1: 'table-layout: fixed' applies when the table's width is not auto.</summary>
     private static bool IsFixedLayout(LayoutNode table) =>
         !table.IsAutoWidth() &&
@@ -1129,6 +1168,7 @@ internal static class TableEngine
     }
 
     private static float[] ComputeColumnWidths(
+        LayoutNode table,
         List<CellPlacement> placements,
         int colCount,
         float availableW,
@@ -1169,6 +1209,15 @@ internal static class TableEngine
             colMax[p.Col] = Math.Max(colMax[p.Col], cMax);
             hasContent[p.Col] = true;
         }
+        // A column (group) 'width' is a minimum for its column in automatic layout.
+        var elementWidths = ColumnElementWidths(table, colCount, availableW);
+        foreach (var c in autoCols)
+            if (elementWidths[c] > 0f)
+            {
+                colMin[c] = Math.Max(colMin[c], elementWidths[c]);
+                colMax[c] = Math.Max(colMax[c], elementWidths[c]);
+                hasContent[c] = true;
+            }
 
         var remaining = Math.Max(0f, availableW - widths.Sum());
 
