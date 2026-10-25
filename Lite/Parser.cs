@@ -1399,8 +1399,11 @@ internal static class Parser
                 var svgH = element.GetAttribute("height");
                 if (string.IsNullOrEmpty(svgW)) svgW = "300";
                 if (string.IsNullOrEmpty(svgH)) svgH = "150";
-                if (!svgW.EndsWith("px")) svgW += "px";
-                if (!svgH.EndsWith("px")) svgH += "px";
+                // A bare number is px; a percentage or unit length stays as written ('50%px' was invalid).
+                static string Length(string v) => double.TryParse(v, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out _) ? v + "px" : v;
+                svgW = Length(svgW.Trim());
+                svgH = Length(svgH.Trim());
                 // The attributes are presentational hints: an author 'width'/'height' wins
                 // (absolute-replaced-width-003's svg { height: 100px } with no height attribute
                 // kept the 150px default).
