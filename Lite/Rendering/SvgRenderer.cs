@@ -11,7 +11,9 @@ internal static class SvgRenderer
     {
         var box = svgNode.Box;
         canvas.Save();
-        canvas.Translate(box.ContentBox.Left, box.ContentBox.Top);
+        // Replaced content is pixel-snapped: from a fractional origin (y = 70.75 under a text
+        // paragraph) the viewport clip's edge antialiased into a partial last row.
+        canvas.Translate(MathF.Round(box.ContentBox.Left), MathF.Round(box.ContentBox.Top));
         // An embedded SVG's viewport clips its content (the UA sheet's overflow: hidden on
         // svg:not(:root)): a 100px rect in a 50px-tall svg shows only its top 50px.
         canvas.ClipRect(new SKRect(0, 0, box.ContentBox.Width, box.ContentBox.Height));

@@ -1401,8 +1401,12 @@ internal static class Parser
                 if (string.IsNullOrEmpty(svgH)) svgH = "150";
                 if (!svgW.EndsWith("px")) svgW += "px";
                 if (!svgH.EndsWith("px")) svgH += "px";
-                node.StyleOverrides["width"] = svgW;
-                node.StyleOverrides["height"] = svgH;
+                // The attributes are presentational hints: an author 'width'/'height' wins
+                // (absolute-replaced-width-003's svg { height: 100px } with no height attribute
+                // kept the 150px default).
+                static bool Declared(string? v) => !string.IsNullOrWhiteSpace(v) && v.Trim() != "auto";
+                if (!Declared(elementStyle.GetPropertyValueSafe("width"))) node.StyleOverrides["width"] = svgW;
+                if (!Declared(elementStyle.GetPropertyValueSafe("height"))) node.StyleOverrides["height"] = svgH;
             }
         }
 
