@@ -91,6 +91,10 @@
         /// The element behaves like an inline element and lay out its content
         /// according to the grid model.
         /// </summary>
-        InlineGrid
+        InlineGrid,
+        /// <summary>
+        /// Lite patch 005: a block container that establishes a new block formatting context.
+        /// </summary>
+        FlowRoot
     }
 }

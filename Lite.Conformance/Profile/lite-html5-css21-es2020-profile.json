@@ -3265,6 +3265,25 @@
       ]
     },
     {
+      "id": "css21.9.5.bfc-negative-margin-beside-floats",
+      "specification": "css21",
+      "clause": "9.5 Floats (BFC border box beside floats)",
+      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#floats",
+      "title": "A BFC whose negative margins widen its border box beyond the space beside a float is placed below it",
+      "applicability": "included",
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "css21-curated",
+          "path": "css/CSS2/floats/floats-wrap-bfc-with-margin-001.html"
+        }
+      ],
+      "implementationAreas": [
+        "Lite/Layout/BoxEngine.cs"
+      ],
+      "notes": "Passed only while script-built boxes rendered unstyled on both test and reference sides (their computed style was taken at createElement). With styles applied, the §10.3.3 lower bound that negative inline margins put on an auto-width BFC's border box, and the rtl rows, are not implemented. Published as failing so the gap stays visible."
+    },
+    {
       "id": "css21.acid2",
       "specification": "css21",
       "clause": "Cross-clause visual regression",

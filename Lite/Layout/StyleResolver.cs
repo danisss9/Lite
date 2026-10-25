@@ -49,6 +49,27 @@ internal static class StyleResolver
         }
     }
 
+    /// <summary>Re-runs AngleSharp's computed cascade for a connected element. The node's
+    /// declaration was computed once — at parse, or at createElement while detached and
+    /// classless — and the getters that read it directly (border widths, shorthand-expanded
+    /// longhands) kept that stale answer after a class change or an insertion: script-built
+    /// boxes drew no border or background (floats-wrap-bfc-with-margin-001 passed only because
+    /// its reference was equally unstyled), and a restyled body kept its old background
+    /// (background-root-101). Anonymous children sharing the old declaration follow it.</summary>
+    private static void RefreshComputedStyle(LayoutNode node)
+    {
+        if (node.DomNode is not AngleSharp.Dom.IElement element) return;
+        var documentElement = element.Owner?.DocumentElement;
+        if (documentElement is null || !(ReferenceEquals(documentElement, element) || documentElement.Contains(element))) return;
+        AngleSharp.Css.Dom.ICssStyleDeclaration fresh;
+        try { fresh = Parser.ComputeCurrentStyleFor(element); }
+        catch (InvalidOperationException) { return; }
+        var old = node.Style;
+        node.Style = fresh;
+        foreach (var child in node.Children)
+            if (ReferenceEquals(child.Style, old)) child.Style = fresh;
+    }
+
     /// <summary>A parsed #text node shares its element's style object; a script-created one
     /// (createTextNode) carries the render root's, so it painted in the root's color — the
     /// inserted "bc" of table-anonymous-objects-009 came out black inside a red cell. Stamp
@@ -80,6 +101,7 @@ internal static class StyleResolver
     internal static void Apply(LayoutNode node, List<string>? alsoRetract, bool created = false)
     {
         if (node.TagName.StartsWith('#')) return; // text / fragment / document nodes
+        RefreshComputedStyle(node);
 
         var previouslyApplied = new List<string>(node.CascadeAppliedProps);
         if (alsoRetract is not null)

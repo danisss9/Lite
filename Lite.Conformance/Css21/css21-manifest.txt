@@ -99,7 +99,7 @@ css/CSS2/borders/border-top-width-001.xht
 
 # ---- §9.5 rule 7: a line box too narrow for its content shifts down past the float instead of
 #      overflowing it, and lines below the float get the full width back. ----
-css/CSS2/floats/floats-wrap-bfc-with-margin-001.html
+css/CSS2/floats/floats-wrap-bfc-with-margin-001.html [expected-fail: passed only while script-built boxes rendered unstyled on both sides; the BFC negative-margin push-below rule and the rtl rows are not implemented yet]
 
 # ---- §10.3.7 / §10.6.4: with left/top auto an absolutely positioned box takes its static
 #      position — where it would have been in normal flow — not its containing block's origin. ----
