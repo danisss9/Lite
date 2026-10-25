@@ -2944,7 +2944,12 @@ internal static class BoxEngine
                 var padding = node.GetPadding(0, viewportHeight, fontSize);
                 var border = node.GetBorderWidth();
                 var explicitW = node.IsAutoWidth() ? 0f : node.GetWidth(maxWidth);
-                var explicitH = node.GetHeight(viewportHeight);
+                // 'height: 0' is a used height like any other — testing explicitH > 0 handed a
+                // zero-height inline-block the 20px form-control fallback and lowered every box
+                // baseline-aligned against it by 20px (border-top-width-006: 'height: 0' with a
+                // 96px top border). Auto is the only "no explicit height".
+                var hasExplicitH = !node.IsAutoHeight();
+                var explicitH = hasExplicitH ? node.GetHeight(viewportHeight) : 0f;
 
                 node.Attributes.TryGetValue("type", out var iType);
                 var inputType = iType?.ToLowerInvariant() ?? "text";
@@ -2971,7 +2976,8 @@ internal static class BoxEngine
                 else
                 {
                     defaultW = IntrinsicSizer.ShrinkToFit(node, Math.Max(maxWidth, 0f), viewportHeight);
-                    defaultH = FormLayout.TextInputHeight;
+                    // An empty auto-height inline-block is 0 tall (§10.6.6); content measures below.
+                    defaultH = 0f;
                     isFormControl = false;
                 }
 
@@ -2979,7 +2985,7 @@ internal static class BoxEngine
                     ? FormLayout.IntrinsicWidth(node) ?? defaultW : defaultW;
                 w = Math.Max(node.GetMinWidth(maxWidth, fontSize),
                     Math.Min(w, node.GetMaxWidth(maxWidth, fontSize)));
-                var h = explicitH > 0 ? explicitH : defaultH;
+                var h = hasExplicitH && (explicitH > 0 || !isFormControl) ? explicitH : defaultH;
 
                 if (node.TagName == "BUTTON" && w <= 0)
                 {
@@ -3001,7 +3007,7 @@ internal static class BoxEngine
                 // no children, and the form-control fallback height (20px) ignored the inherited
                 // line-height — a 32px/4 span must be 128px tall, not one default line
                 // (absolute-non-replaced-width-017).
-                if (!isFormControl && explicitH <= 0 &&
+                if (!isFormControl && !hasExplicitH &&
                     (node.Children.Count > 0 || !string.IsNullOrEmpty(node.DisplayText)))
                 {
                     var marginBoxH = MeasureBlockHeight(node, Math.Max(w, 0f), viewportWidth, viewportHeight);

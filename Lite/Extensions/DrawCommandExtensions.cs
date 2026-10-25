@@ -1780,6 +1780,8 @@ public static class StyleExtensions
         // NOTE: this deliberately reads node.Style directly rather than going through
         // TryResolveStyle — making it honour StyleOverrides globally has been tried and breaks
         // Acid2, which relies on the current pseudo/anonymous-box border behaviour.
+        // 'ex' is the element's own font's x-height (Ahem: 0.8em, border-top-width-083's 6ex).
+        using var font = CssUnits.ForFont(node);
         var raw = node.Style.GetProperty(propertyName)?.RawValue;
         var computed = raw is CssLengthValue borderLength
             ? CssUnits.ToPx(borderLength, node.GetFontSize(), 0, 0, 0)
