@@ -3940,9 +3940,9 @@ internal static class Parser
         static bool StartsWithSpace(LayoutNode n) => n.TagName == "#text"
             ? n.DisplayText.Length > 0 && Array.IndexOf(CssWhiteSpace, n.DisplayText[0]) >= 0
             : n.TrimmedLeadingSpace;
-        static bool EndsWithSpace(LayoutNode n) => n.TagName == "#text"
-            ? n.DisplayText.Length > 0 && Array.IndexOf(CssWhiteSpace, n.DisplayText[^1]) >= 0
-            : n.TrimmedTrailingSpace;
+        // What the previous sibling RENDERS: a trailing space it deferred to this node is not there.
+        static bool EndsWithSpace(LayoutNode n) =>
+            n.DisplayText.Length > 0 && Array.IndexOf(CssWhiteSpace, n.DisplayText[^1]) >= 0;
         var kids = parent.Children;
         for (var i = 0; i < kids.Count; i++)
         {
@@ -3952,8 +3952,7 @@ internal static class Parser
                 continue;
             if (child.TrimmedTrailingSpace && i + 1 < kids.Count && InlineLevel(kids[i + 1]) && !StartsWithSpace(kids[i + 1]))
                 child.TextOverride = child.DisplayText + " ";
-            if (child.TrimmedLeadingSpace && i > 0 && InlineLevel(kids[i - 1]) && !EndsWithSpace(kids[i - 1]) &&
-                !(kids[i - 1].TextOverride?.EndsWith(' ') ?? false))
+            if (child.TrimmedLeadingSpace && i > 0 && InlineLevel(kids[i - 1]) && !EndsWithSpace(kids[i - 1]))
                 child.TextOverride = " " + child.DisplayText;
         }
     }
