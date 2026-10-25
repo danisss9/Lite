@@ -1609,6 +1609,7 @@ internal static class Parser
         // sat 3px lower and wider than the CSS-equivalent it is meant to match.
         if (tag == "TABLE")
             ApplyTableSpacingAttributes(element, node);
+        ApplyPresentationalHints(element, node, tag);
 
         // <picture>: now that the <img> and <source> children exist, pick the source the <img>
         // should display (media/type-based selection; falls back to the <img>'s own src).
@@ -2000,6 +2001,59 @@ internal static class Parser
     /// against the containing block. Presentational hints lose to any author declaration, so they
     /// are only applied where the element does not already carry one.
     /// </summary>
+    /// <summary>HTML's presentational hints (the 2014 rendering section, §10.3.x): legacy
+    /// attributes such as table width, bgcolor, align and valign map to CSS declarations with
+    /// the lowest author precedence — any author rule for the property wins. None were mapped,
+    /// so a &lt;table width="300"&gt; shrank to its content (floats-wrap-bfc-001-*).</summary>
+    private static void ApplyPresentationalHints(IElement element, LayoutNode node, string tag)
+    {
+        if (element.NamespaceUri is { } ns && ns != "http://www.w3.org/1999/xhtml") return;
+        ICssStyleDeclaration? computed = null;
+        void Hint(string property, string value)
+        {
+            computed ??= ComputeCurrentStyle(element);
+            var declared = computed.GetPropertyValueSafe(property)?.Trim();
+            if ((string.IsNullOrEmpty(declared) || declared == "auto") && !node.StyleOverrides.ContainsKey(property))
+                node.StyleOverrides[property] = value;
+        }
+        static string? Length(string? raw)
+        {
+            raw = raw?.Trim();
+            if (string.IsNullOrEmpty(raw)) return null;
+            var digits = raw.TrimEnd('%');
+            if (!double.TryParse(digits, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var n) || n < 0) return null;
+            return raw.EndsWith('%') ? $"{digits}%" : $"{digits}px";
+        }
+        string? Attr(string name) => element.GetAttribute(name);
+
+        if (tag is "TABLE" or "TD" or "TH" or "COL" or "COLGROUP" or "HR")
+            if (Length(Attr("width")) is { } width) Hint("width", width);
+        if (tag is "TABLE" or "TD" or "TH" or "TR")
+            if (Length(Attr("height")) is { } height) Hint("height", height);
+        if (tag is "BODY" or "TABLE" or "TR" or "TD" or "TH" && Attr("bgcolor") is { Length: > 0 } bgcolor)
+            Hint("background-color", bgcolor.Trim());
+        if (tag == "BODY" && Attr("text") is { Length: > 0 } text) Hint("color", text.Trim());
+        var align = Attr("align")?.Trim().ToLowerInvariant();
+        if (tag is "TD" or "TH" or "TR" or "DIV" or "P" or "H1" or "H2" or "H3" or "H4" or "H5" or "H6" or "CAPTION" or "THEAD" or "TBODY" or "TFOOT"
+            && align is "left" or "right" or "center" or "justify")
+            Hint("text-align", align);
+        var valign = Attr("valign")?.Trim().ToLowerInvariant();
+        if (tag is "TD" or "TH" or "TR" or "THEAD" or "TBODY" or "TFOOT" && valign is "top" or "middle" or "bottom" or "baseline")
+            Hint("vertical-align", valign);
+        if (tag is "TD" or "TH" && element.HasAttribute("nowrap")) Hint("white-space", "nowrap");
+        if (tag == "TABLE" && Attr("align")?.Trim().ToLowerInvariant() is { } tableAlign)
+        {
+            if (tableAlign is "left" or "right") Hint("float", tableAlign);
+            else if (tableAlign == "center") { Hint("margin-left", "auto"); Hint("margin-right", "auto"); }
+        }
+        if (tag == "FONT")
+        {
+            if (Attr("color") is { Length: > 0 } color) Hint("color", color.Trim());
+            if (Attr("face") is { Length: > 0 } face) Hint("font-family", face.Trim());
+        }
+    }
+
     private static void ApplyDimensionAttribute(IElement element, LayoutNode node, string attribute, string property)
     {
         var raw = element.GetAttribute(attribute)?.Trim();
