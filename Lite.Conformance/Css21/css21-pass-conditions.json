@@ -2488,7 +2488,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-003.xht",
@@ -2504,7 +2508,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-007.xht",
@@ -2512,7 +2520,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-009.xht",
@@ -2520,7 +2533,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-010.xht",
@@ -2528,7 +2546,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-011.xht",
@@ -2536,7 +2559,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-012.xht",
@@ -2544,7 +2572,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-013.xht",
@@ -2552,7 +2585,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-014.xht",
@@ -2560,7 +2598,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-015.xht",
@@ -2568,7 +2611,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-017.xht",
@@ -2616,7 +2664,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-004.xht",
@@ -2624,7 +2676,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-006.xht",
@@ -2672,7 +2728,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-001.xht",
@@ -2680,7 +2740,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-002.xht",
@@ -2688,7 +2752,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-003.xht",
@@ -2696,7 +2764,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-004.xht",
@@ -2704,7 +2776,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-005.xht",
@@ -2712,7 +2788,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-006.xht",
@@ -2720,7 +2800,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-007.xht",
@@ -2728,7 +2812,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-008.xht",
@@ -2736,7 +2824,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-009.xht",
@@ -2744,7 +2836,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-010.xht",
@@ -2760,7 +2856,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-013.xht",
@@ -2768,7 +2868,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-014.xht",
@@ -2776,7 +2880,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-style-applies-to-015.xht",
@@ -2784,7 +2892,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-bottom-width-014.xht",
@@ -2944,7 +3056,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-004.xht",
@@ -2952,7 +3068,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-007.xht",
@@ -2960,7 +3080,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-009.xht",
@@ -2968,7 +3093,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-010.xht",
@@ -2976,7 +3106,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-011.xht",
@@ -2984,7 +3119,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-012.xht",
@@ -2992,7 +3132,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-013.xht",
@@ -3000,7 +3145,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-014.xht",
@@ -3008,7 +3158,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-015.xht",
@@ -3016,7 +3171,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-016.xht",
@@ -3072,7 +3232,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-004.xht",
@@ -3080,7 +3244,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-006.xht",
@@ -3128,7 +3296,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-001.xht",
@@ -3136,7 +3308,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-002.xht",
@@ -3144,7 +3320,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-003.xht",
@@ -3152,7 +3332,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-004.xht",
@@ -3160,7 +3344,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-005.xht",
@@ -3168,7 +3356,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-006.xht",
@@ -3176,7 +3368,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-007.xht",
@@ -3184,7 +3380,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-008.xht",
@@ -3192,7 +3392,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-009.xht",
@@ -3200,7 +3404,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-010.xht",
@@ -3216,7 +3424,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-013.xht",
@@ -3224,7 +3436,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-014.xht",
@@ -3232,7 +3448,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-style-applies-to-015.xht",
@@ -3240,7 +3460,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-left-width-036.xht",
@@ -3304,7 +3528,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-004.xht",
@@ -3312,7 +3540,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-007.xht",
@@ -3320,7 +3552,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-009.xht",
@@ -3328,7 +3565,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-010.xht",
@@ -3336,7 +3578,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-011.xht",
@@ -3344,7 +3591,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-012.xht",
@@ -3352,7 +3604,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-013.xht",
@@ -3360,7 +3617,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-014.xht",
@@ -3368,7 +3630,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-015.xht",
@@ -3376,7 +3643,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-016.xht",
@@ -3432,7 +3704,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-004.xht",
@@ -3440,7 +3716,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-006.xht",
@@ -3488,7 +3768,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-001.xht",
@@ -3496,7 +3780,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-002.xht",
@@ -3504,7 +3793,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-003.xht",
@@ -3512,7 +3806,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-004.xht",
@@ -3520,7 +3819,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-005.xht",
@@ -3528,7 +3832,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-006.xht",
@@ -3536,7 +3845,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-007.xht",
@@ -3544,7 +3858,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-008.xht",
@@ -3552,7 +3871,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-009.xht",
@@ -3560,7 +3884,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-010.xht",
@@ -3576,7 +3905,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-013.xht",
@@ -3584,7 +3918,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-014.xht",
@@ -3592,7 +3931,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-style-applies-to-015.xht",
@@ -3600,7 +3944,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short vertical dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "vertical"
+   }
   },
   {
    "path": "css/CSS2/borders/border-right-width-036.xht",
@@ -3920,7 +4269,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-003.xht",
@@ -3936,7 +4289,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-007.xht",
@@ -3944,7 +4301,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-009.xht",
@@ -3952,7 +4314,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-010.xht",
@@ -3960,7 +4327,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-011.xht",
@@ -3968,7 +4340,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-012.xht",
@@ -3976,7 +4353,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-013.xht",
@@ -3984,7 +4366,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-014.xht",
@@ -3992,7 +4379,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-015.xht",
@@ -4000,7 +4392,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-016.xht",
@@ -4056,7 +4453,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-004.xht",
@@ -4064,7 +4465,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-006.xht",
@@ -4112,7 +4517,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-001.xht",
@@ -4120,7 +4529,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-002.xht",
@@ -4128,7 +4542,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-003.xht",
@@ -4136,7 +4555,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-004.xht",
@@ -4144,7 +4568,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-005.xht",
@@ -4152,7 +4581,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-006.xht",
@@ -4160,7 +4594,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-007.xht",
@@ -4168,7 +4607,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-008.xht",
@@ -4176,7 +4620,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-009.xht",
@@ -4184,7 +4633,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-010.xht",
@@ -4200,7 +4654,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-013.xht",
@@ -4208,7 +4667,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-014.xht",
@@ -4216,7 +4680,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-style-applies-to-015.xht",
@@ -4224,7 +4693,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a short horizontal dashed line.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "dimension": "horizontal"
+   }
   },
   {
    "path": "css/CSS2/borders/border-top-width-014.xht",
@@ -35147,7 +35621,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-003.htm",
@@ -35163,7 +35641,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-005.htm",
@@ -35196,7 +35678,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-008.htm",
@@ -35217,7 +35704,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-010.htm",
@@ -35225,7 +35717,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-011.htm",
@@ -35233,7 +35730,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-012.htm",
@@ -35241,7 +35743,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-013.htm",
@@ -35249,7 +35756,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-014.htm",
@@ -35257,7 +35769,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-015.htm",
@@ -35265,7 +35782,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-016.htm",
@@ -36767,7 +37289,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-004.htm",
@@ -36775,7 +37301,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-005.htm",
@@ -36831,7 +37361,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-001.htm",
@@ -36839,7 +37373,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-002.htm",
@@ -36847,7 +37385,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-003.htm",
@@ -36855,7 +37397,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-004.htm",
@@ -36863,7 +37409,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-005.htm",
@@ -36871,7 +37421,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-006.htm",
@@ -36879,7 +37433,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-007.htm",
@@ -36887,7 +37445,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-008.htm",
@@ -36895,7 +37457,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-009.htm",
@@ -36903,7 +37469,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-010.htm",
@@ -36919,7 +37489,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-013.htm",
@@ -36927,7 +37501,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-014.htm",
@@ -36935,7 +37513,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-style-applies-to-015.htm",
@@ -36943,7 +37525,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-bottom-width-001.htm",
@@ -41043,7 +41629,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-003.htm",
@@ -41059,7 +41649,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-005.htm",
@@ -41092,7 +41686,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-left-008.htm",
@@ -41113,7 +41712,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-left-010.htm",
@@ -41121,7 +41725,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-left-011.htm",
@@ -41129,7 +41738,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-left-012.htm",
@@ -41137,7 +41751,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-left-013.htm",
@@ -41145,7 +41764,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-left-014.htm",
@@ -41153,7 +41777,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-left-015.htm",
@@ -41161,7 +41790,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-left-016.htm",
@@ -42663,7 +43297,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-004.htm",
@@ -42671,7 +43309,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-005.htm",
@@ -42727,7 +43369,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-001.htm",
@@ -42735,7 +43381,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-002.htm",
@@ -42743,7 +43393,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-003.htm",
@@ -42751,7 +43405,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-004.htm",
@@ -42759,7 +43417,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-005.htm",
@@ -42767,7 +43429,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-006.htm",
@@ -42775,7 +43441,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-007.htm",
@@ -42783,7 +43453,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-008.htm",
@@ -42791,7 +43465,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-009.htm",
@@ -42799,7 +43477,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-010.htm",
@@ -42815,7 +43497,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-013.htm",
@@ -42823,7 +43509,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-014.htm",
@@ -42831,7 +43521,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-style-applies-to-015.htm",
@@ -42839,7 +43533,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-left-width-001.htm",
@@ -43619,7 +44317,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-003.htm",
@@ -43635,7 +44337,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-005.htm",
@@ -43668,7 +44374,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-right-008.htm",
@@ -43689,7 +44400,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-right-010.htm",
@@ -43697,7 +44413,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-right-011.htm",
@@ -43705,7 +44426,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-right-012.htm",
@@ -43713,7 +44439,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-right-013.htm",
@@ -43721,7 +44452,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-right-014.htm",
@@ -43729,7 +44465,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-right-015.htm",
@@ -43737,7 +44478,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-right-016.htm",
@@ -45239,7 +45985,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-004.htm",
@@ -45247,7 +45997,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-005.htm",
@@ -45303,7 +46057,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-001.htm",
@@ -45311,7 +46069,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-002.htm",
@@ -45319,7 +46081,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-003.htm",
@@ -45327,7 +46093,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-004.htm",
@@ -45335,7 +46105,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-005.htm",
@@ -45343,7 +46117,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-006.htm",
@@ -45351,7 +46129,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-007.htm",
@@ -45359,7 +46141,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-008.htm",
@@ -45367,7 +46153,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-009.htm",
@@ -45375,7 +46165,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-010.htm",
@@ -45391,7 +46185,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-013.htm",
@@ -45399,7 +46197,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-014.htm",
@@ -45407,7 +46209,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-style-applies-to-015.htm",
@@ -45415,7 +46221,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-right-width-001.htm",
@@ -47453,7 +48263,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-003.htm",
@@ -47469,7 +48283,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-005.htm",
@@ -47502,7 +48320,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-top-008.htm",
@@ -47523,7 +48346,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-top-010.htm",
@@ -47531,7 +48359,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-top-011.htm",
@@ -47539,7 +48372,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-top-012.htm",
@@ -47547,7 +48385,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-top-013.htm",
@@ -47555,7 +48398,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-top-014.htm",
@@ -47563,7 +48411,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-top-015.htm",
@@ -47571,7 +48424,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed blue line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/border-top-016.htm",
@@ -49073,7 +49931,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-004.htm",
@@ -49081,7 +49943,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dashed line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-005.htm",
@@ -49137,7 +50003,11 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted line below.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dotted"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-001.htm",
@@ -49145,7 +50015,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-002.htm",
@@ -49153,7 +50027,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-003.htm",
@@ -49161,7 +50039,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-004.htm",
@@ -49169,7 +50051,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-005.htm",
@@ -49177,7 +50063,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-006.htm",
@@ -49185,7 +50075,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-007.htm",
@@ -49193,7 +50087,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-008.htm",
@@ -49201,7 +50099,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-009.htm",
@@ -49209,7 +50111,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-010.htm",
@@ -49225,7 +50131,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-013.htm",
@@ -49233,7 +50143,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-014.htm",
@@ -49241,7 +50155,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-style-applies-to-015.htm",
@@ -49249,7 +50167,11 @@
    "condition": "visual",
    "sentence": "Test passes if the line below is dashed.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "line-style",
+    "shape": "dashed"
+   }
   },
   {
    "path": "css21-official/html4/border-top-width-001.htm",

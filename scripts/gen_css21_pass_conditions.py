@@ -19,7 +19,7 @@ the runner's twin oracle uses when one exists:
 
 A "check" is attached where the whole visual sentence matches a template that
 Css21/VisualChecks.cs evaluates against the render (one-shape, same-dimension,
-bar-gap); unmatched sentences stay unchecked.
+bar-gap, line-style); unmatched sentences stay unchecked.
 
 Cases covered: official html4 selftests (no reftest.list entry) and WPT
 css/CSS2 visual/manual cases. Entries are generated proposals with
@@ -94,6 +94,9 @@ ONE_SHAPE = re.compile(
 SAME_DIMENSION = re.compile(
     rf'^(?:the|both)\s+(two\s+)?(?:{COLOR}\s+(?:and\s+{COLOR}\s+)?)?(?:boxes|bars|squares)\s+below\s+are\s+the\s+same\s+'
     r'(size|width|height)$')
+LINE_STYLE = re.compile(
+    rf'^(?:the\s+line\s+below\s+is\s+(dashed|dotted)'
+    rf'|there\s+is\s+an?\s+(?:short\s+)?(?:(horizontal|vertical)\s+)?(?:{COLOR}\s+)?(dashed|dotted)\s+(?:{COLOR}\s+)?line(?:\s+below)?)$')
 BAR_GAP = re.compile(r'^the\s+middle\s+bar\s+is\s+as\s+wide\s+as\s+the\s+space\s+between\s+the\s+first\s+and\s+last\s+bars$')
 
 
@@ -113,6 +116,11 @@ def visual_check(sentence: str | None) -> dict | None:
     if m := SAME_DIMENSION.match(clause):
         count = 2 if m.group(1) or clause.startswith('both') else None
         return {k: v for k, v in {'kind': 'same-dimension', 'dimension': m.group(4), 'count': count}.items() if v}
+    if m := LINE_STYLE.match(clause):
+        style = m.group(1) or m.group(4)
+        color = m.group(3) or m.group(5)
+        return {k: v for k, v in {'kind': 'line-style', 'shape': style, 'color': color,
+                                  'dimension': m.group(2)}.items() if v}
     if BAR_GAP.match(clause):
         return {'kind': 'bar-gap'}
     return None

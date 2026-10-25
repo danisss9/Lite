@@ -706,6 +706,9 @@ public static class StyleExtensions
             raw = node.TryResolveStyle("border-style", out var ov2)
                 ? ov2 : node.Style.GetPropertyValueSafe("border-style");
         }
+        // 'inherit' takes the parent's used style for the side (border-top-style-011).
+        if (raw?.Trim() == "inherit")
+            return node.Parent is { } parent ? GetBorderStyleSide(parent, prop) : BorderStyle.None;
         return raw?.Trim() switch
         {
             "dotted" => BorderStyle.Dotted,
@@ -718,6 +721,8 @@ public static class StyleExtensions
             "hidden" => BorderStyle.Hidden,
             "none" => BorderStyle.None,
             "solid" => BorderStyle.Solid,
+            // The initial border style is 'none' (§8.5.3): an unset side draws nothing.
+            null or "" => BorderStyle.None,
             _ => BorderStyle.Solid,
         };
     }
@@ -1444,12 +1449,16 @@ public static class StyleExtensions
     public static EdgeSizes GetOwnBorderWidth(this LayoutNode node)
     {
         if (node.SharedBorderSuppressed) return default;
+        // §8.5.3: a side whose style is 'none' or 'hidden' has a used width of 0, whatever its
+        // 'border-width' says ('border-left: dashed; border-width: 5px' is a left border only).
+        static float Used(LayoutNode n, string widthProperty, BorderStyle style) =>
+            style is BorderStyle.None or BorderStyle.Hidden ? 0f : GetBorderSideWidth(n, widthProperty);
         return new()
         {
-            Top = GetBorderSideWidth(node, PropertyNames.BorderTopWidth),
-            Right = GetBorderSideWidth(node, PropertyNames.BorderRightWidth),
-            Bottom = GetBorderSideWidth(node, PropertyNames.BorderBottomWidth),
-            Left = GetBorderSideWidth(node, PropertyNames.BorderLeftWidth),
+            Top = Used(node, PropertyNames.BorderTopWidth, node.GetBorderStyleTop()),
+            Right = Used(node, PropertyNames.BorderRightWidth, node.GetBorderStyleRight()),
+            Bottom = Used(node, PropertyNames.BorderBottomWidth, node.GetBorderStyleBottom()),
+            Left = Used(node, PropertyNames.BorderLeftWidth, node.GetBorderStyleLeft()),
         };
     }
 

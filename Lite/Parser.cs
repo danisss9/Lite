@@ -38,7 +38,7 @@ internal static class Parser
         img { display: inline; }
         input { display: inline-block; cursor: text; }
         input[type="checkbox"] { cursor: default; }
-        button { display: inline-block; cursor: pointer; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-color: #a0a0a0; border-right-color: #a0a0a0; border-bottom-color: #a0a0a0; border-left-color: #a0a0a0; }
+        button { display: inline-block; cursor: pointer; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-color: #a0a0a0; border-right-color: #a0a0a0; border-bottom-color: #a0a0a0; border-left-color: #a0a0a0; border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; }
         strong, b { font-weight: bold; }
         em, i, cite, dfn { font-style: italic; }
         u, ins { text-decoration: underline; }

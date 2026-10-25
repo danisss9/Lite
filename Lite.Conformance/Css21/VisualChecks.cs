@@ -13,6 +13,10 @@ namespace Lite.Conformance.Css21;
 /// stated) whose <c>dimension</c> — width, height, or size — is equal.</item>
 /// <item><c>bar-gap</c>: three bars; the middle one is as wide as the gap between the
 /// outer two.</item>
+/// <item><c>line-style</c>: one dashed or dotted line (<c>Shape</c>) — at least three
+/// collinear segments in one row (horizontal) or column (vertical, when <c>Dimension</c>
+/// says so), each dash longer than it is thick and each dot about as long as thick, in the
+/// stated <c>color</c>.</item>
 /// </list></summary>
 internal sealed record VisualCheck(string Kind, string? Shape = null, string? Color = null,
     string? Dimension = null, int? Count = null);
@@ -76,6 +80,7 @@ internal static class VisualChecks
             "one-shape" => OneShape(check, shapes),
             "same-dimension" => SameDimension(check, shapes),
             "bar-gap" => BarGap(shapes),
+            "line-style" => LineStyle(check, shapes),
             _ => throw new InvalidDataException($"Unknown visual check kind: {check.Kind}"),
         };
         return failure is null
@@ -87,6 +92,7 @@ internal static class VisualChecks
     {
         "one-shape" => $"one {(check.Color is null ? "" : check.Color + " ")}{check.Shape ?? "box"}",
         "same-dimension" => $"{(check.Count is { } n ? n.ToString() : "all")} shapes share {check.Dimension}",
+        "line-style" => $"one {check.Dimension ?? ""} {(check.Color is null ? "" : check.Color + " ")}{check.Shape} line".Replace("  ", " "),
         _ => check.Kind,
     };
 
@@ -119,6 +125,36 @@ internal static class VisualChecks
             return "widths " + string.Join(", ", shapes.Select(s => s.Width));
         if (height && shapes.Max(s => s.Height) - shapes.Min(s => s.Height) > EdgeTolerance)
             return "heights " + string.Join(", ", shapes.Select(s => s.Height));
+        return null;
+    }
+
+    private static string? LineStyle(VisualCheck check, IReadOnlyList<Component> shapes)
+    {
+        if (shapes.Count < 3) return $"{shapes.Count} segments below the instructions (a {check.Shape} line has at least 3)";
+        int top = shapes.Min(s => s.Top), bottom = shapes.Max(s => s.Bottom);
+        int left = shapes.Min(s => s.Left), right = shapes.Max(s => s.Right);
+        // One row of segments sharing the line's thickness, or one column of them.
+        var horizontal = shapes.All(s => Math.Abs(s.Top - top) <= EdgeTolerance && Math.Abs(s.Bottom - bottom) <= EdgeTolerance);
+        var vertical = shapes.All(s => Math.Abs(s.Left - left) <= EdgeTolerance && Math.Abs(s.Right - right) <= EdgeTolerance);
+        if (check.Dimension == "vertical" ? !vertical : check.Dimension == "horizontal" ? !horizontal : !(horizontal || vertical))
+            return $"the {shapes.Count} shapes do not form one {check.Dimension ?? "straight"} line";
+        var along = horizontal && check.Dimension != "vertical";
+        // The pattern is clipped where the line ends, so the first and last segments may be
+        // shorter than a full dash; only the interior ones show the pattern's shape.
+        var ordered = shapes.OrderBy(s => along ? s.Left : s.Top).ToList();
+        for (var k = 0; k < ordered.Count; k++)
+        {
+            var s = ordered[k];
+            var interior = k > 0 && k < ordered.Count - 1;
+            if (check.Color is { } want && !Matches(want, s.Color)) return $"segment color {s.Color}, not {want}";
+            if (!interior) continue;
+            var length = along ? s.Width : s.Height;
+            var thickness = along ? s.Height : s.Width;
+            if (check.Shape == "dashed" && length < 1.5 * thickness)
+                return $"segment at ({s.Left},{s.Top}) {s.Width}x{s.Height} is a dot, not a dash";
+            if (check.Shape == "dotted" && length > 1.5 * thickness + EdgeTolerance)
+                return $"segment at ({s.Left},{s.Top}) {s.Width}x{s.Height} is a dash, not a dot";
+        }
         return null;
     }
 
