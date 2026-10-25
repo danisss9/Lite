@@ -818,6 +818,8 @@ public static class StyleExtensions
         // Initial value is 'medium' (§18.4); the painter draws nothing while the style is none.
         if (string.IsNullOrWhiteSpace(raw)) return 3f;
         raw = raw.Trim();
+        // 'ex' against the element's own font, as border widths resolve it (outline-width-084).
+        using var font = CssUnits.ForFont(node);
         return raw switch
         {
             "thin" => 1f,
