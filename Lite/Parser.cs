@@ -503,6 +503,17 @@ internal static class Parser
     /// caller must have already set the parse statics (base URL, viewport, cleared script lists)
     /// and opened <paramref name="document"/>. Inlines stylesheets, traverses to a LayoutNode tree,
     /// creates the JS engine, runs scripts, and returns the resulting <see cref="Page"/>.</summary>
+    /// <summary>Tells AngleSharp's cascade which origin a UA or user style element's sheet has
+    /// (§6.4.1): without it the UA sheet's rules competed on specificity with author rules, so
+    /// 'body { margin: 8px }' beat an author '* { margin: 1em }' (background-root-009).</summary>
+    private static void MarkCascadeOrigin(IElement styleElement)
+    {
+        if (ReferenceEquals(styleElement, Current.UaStyleElement))
+            AngleSharp.Css.Dom.CascadeOrigin.Mark(styleElement, AngleSharp.Css.Dom.CascadeOrigin.UserAgent);
+        else if (Current.UserStyleElements.Contains(styleElement))
+            AngleSharp.Css.Dom.CascadeOrigin.Mark(styleElement, AngleSharp.Css.Dom.CascadeOrigin.User);
+    }
+
     private static Page ParseOpenedDocument(IDocument document, string address, int viewportWidth, int viewportHeight,
         JsEngine? parentEngine = null, LayoutNode? frameNode = null)
     {
@@ -525,6 +536,7 @@ internal static class Parser
             var origin = el.GetAttribute("data-lite-origin");
             if (origin == "ua") Current.UaStyleElement = el;
             else if (origin == "user") Current.UserStyleElements.Add(el);
+            MarkCascadeOrigin(el);
             el.RemoveAttribute("data-lite-origin");
         }
 
@@ -619,6 +631,7 @@ internal static class Parser
                 if (Current.UaStyleElement == styleEl) Current.UaStyleElement = replacement;
                 for (var u = 0; u < Current.UserStyleElements.Count; u++)
                     if (Current.UserStyleElements[u] == styleEl) Current.UserStyleElements[u] = replacement;
+                MarkCascadeOrigin(replacement);
             }
         }
 

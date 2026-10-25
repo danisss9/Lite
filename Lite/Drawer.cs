@@ -67,6 +67,9 @@ internal static class Drawer
         var bitmap = new SKBitmap(imageInfo);
         var canvas = new SKCanvas(bitmap);
 
+        // Transparency is alpha 0 whatever the RGB: "transparent" computes to rgba(0, 0, 0, 0),
+        // which never equalled SKColors.Transparent (#00FFFFFF) — so a transparent root never
+        // propagated the body background and the canvas was cleared to nothing (background-root-*).
         // Propagate the root/body background to the viewport canvas (CSS 2.1 §14.2). When neither
         // sets a background the canvas is the UA default — white, as in browsers (not a grey wash).
         // When the root is fully transparent, the BODY's background — color AND image — becomes
@@ -75,12 +78,12 @@ internal static class Drawer
         var body = FindBody(root) ?? root;
         _propagatedBackgroundNode = null;
         var clearColor = root.GetBackgroundColor();
-        if (clearColor == SKColors.Transparent && root.GetBackgroundImage() == null)
+        if (clearColor.Alpha == 0 && root.GetBackgroundImage() == null)
         {
             clearColor = body.GetBackgroundColor();
             _propagatedBackgroundNode = body != root ? body : null;
         }
-        if (clearColor == SKColors.Transparent) clearColor = SKColors.White;
+        if (clearColor.Alpha == 0) clearColor = SKColors.White;
         canvas.Clear(clearColor);
         _hitRegions = [];
         SelectOptionMap.Clear();
@@ -1742,7 +1745,7 @@ internal static class Drawer
         var hasAuthorBackground = node.TryResolveStyle("background-color", out var authoredBackground)
             ? !string.IsNullOrWhiteSpace(authoredBackground)
             : !string.IsNullOrWhiteSpace(node.Style.GetPropertyValueSafe("background-color"));
-        if (bgColor == SKColors.Transparent && !hasAuthorBackground)
+        if (bgColor.Alpha == 0 && !hasAuthorBackground)
             bgColor = new SKColor(225, 225, 225);
         using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = true };
         var (brx, bry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
@@ -2025,9 +2028,24 @@ internal static class Drawer
             cw is { } && cw.TryGetValue("left", out var l) ? (l.Width, l.Style, l.Color) : (bw.Left, node.GetBorderStyleLeft(), node.GetBorderLeftColor());
         var topE = Top(); var rightE = Right(); var bottomE = Bottom(); var leftE = Left();
 
-        // Outer edges of a collapsed table paint their winning border in the TABLE's outer
-        // band: the cell's box sits inside the table's border, and the shared edge is the
-        // table's boundary (border-conflict-element-018/024/032/039).
+        // §17.6.2: collapsed borders are centred on the grid lines. A collapsed cell's border box
+        // holds half of each winning border, so its edges ARE the grid lines: paint each winner
+        // centred there (the half outside is the neighbour's or the table's half), running past
+        // the corners far enough to meet the crossing borders.
+        if (cw is not null)
+        {
+            var g = box.BorderBox;
+            DrawBorderSide(canvas, g.Left - leftE.width / 2, g.Top, g.Right + rightE.width / 2, g.Top,
+                            topE.width, topE.color, topE.style);
+            DrawBorderSide(canvas, g.Right, g.Top - topE.width / 2, g.Right, g.Bottom + bottomE.width / 2,
+                            rightE.width, rightE.color, rightE.style);
+            DrawBorderSide(canvas, g.Left - leftE.width / 2, g.Bottom, g.Right + rightE.width / 2, g.Bottom,
+                            bottomE.width, bottomE.color, bottomE.style);
+            DrawBorderSide(canvas, g.Left, g.Top - topE.width / 2, g.Left, g.Bottom + bottomE.width / 2,
+                            leftE.width, leftE.color, leftE.style);
+            return;
+        }
+
         var outer = node.CollapsedOuterEdges;
         LayoutNode? tableNode = null;
         if (outer is not null)

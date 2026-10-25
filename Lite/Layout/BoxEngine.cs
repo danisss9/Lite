@@ -10,8 +10,13 @@ namespace Lite.Layout;
 /// </summary>
 internal static class BoxEngine
 {
+    /// <summary>Bumped once per layout pass: per-pass caches (the collapsed table borders)
+    /// recompute after the tree or its styles may have changed.</summary>
+    internal static int Generation { get; private set; }
+
     public static void Layout(LayoutNode root, float viewportWidth, float viewportHeight)
     {
+        Generation++;
         // Establish the root (html) font-size so `rem` units resolve correctly this pass.
         var html = root.TagName == "HTML" ? root : root.Children.FirstOrDefault(c => c.TagName == "HTML") ?? root;
         CssUnits.RootFontSize = html.GetFontSize();

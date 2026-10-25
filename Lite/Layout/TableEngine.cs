@@ -316,6 +316,67 @@ internal static class TableEngine
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
+    private sealed record CollapsedGeometry(int Generation, Dictionary<LayoutNode, EdgeSizes> Cells, EdgeSizes Table);
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<LayoutNode, CollapsedGeometry> s_collapsed = new();
+
+    /// <summary>§17.6.2 border widths that box geometry uses in the collapsing model, or null
+    /// when <paramref name="node"/> is not part of a collapsed table. A cell gets half of each
+    /// resolved (dominant) edge — borders are centred on the grid lines; the table gets half of
+    /// its first row's outer left/right cells' borders and half of the widest top/bottom outer
+    /// border; rows, row groups and columns get none (their borders take part only in the
+    /// conflict). Using the cells' own full widths put a row's 3px collapsed bottom border on a
+    /// 0px row — painted above the table (the border-*-applies-to-00x row/group family).</summary>
+    internal static EdgeSizes? CollapsedBorderWidth(LayoutNode node)
+    {
+        if (node.TagName.StartsWith('#') && node.TagName is not ("#anon-cell" or "#anon-row" or "#anon-table")) return null;
+        var display = node.GetDisplay();
+        if (display is DisplayType.Table or DisplayType.InlineTable)
+            return IsBorderCollapse(node) ? Collapsed(node).Table : null;
+        if (display is not (DisplayType.TableCell or DisplayType.TableRow or DisplayType.TableRowGroup)
+            && !IsColumn(node) && !IsColumnGroup(node))
+            return null;
+        LayoutNode? table = null;
+        for (var a = node.Parent; a is not null; a = a.Parent)
+            if (a.GetDisplay() is DisplayType.Table or DisplayType.InlineTable) { table = a; break; }
+        if (table is null || !IsBorderCollapse(table)) return null;
+        if (display != DisplayType.TableCell) return default(EdgeSizes);
+        return Collapsed(table).Cells.TryGetValue(node, out var half) ? half : null;
+    }
+
+    private static CollapsedGeometry Collapsed(LayoutNode table)
+    {
+        if (s_collapsed.TryGetValue(table, out var cached) && cached.Generation == BoxEngine.Generation)
+            return cached;
+        var cells = new Dictionary<LayoutNode, EdgeSizes>(ReferenceEqualityComparer.Instance);
+        var tableEdges = default(EdgeSizes);
+        var rows = CollectRows(table);
+        if (rows.Count > 0)
+        {
+            var placements = BuildGrid(rows, out var colCount, out var rowCount);
+            ResolveCollapsedBorders(table, placements);
+            static float W(Dictionary<string, EdgeBorder>? e, string side) =>
+                e is not null && e.TryGetValue(side, out var b) && b.Style is not (BorderStyle.None or BorderStyle.Hidden)
+                    ? b.Width : 0f;
+            foreach (var p in placements)
+            {
+                var e = p.Cell.CollapsedEdgeBorders;
+                cells[p.Cell] = new EdgeSizes
+                {
+                    Top = W(e, "top") / 2f, Right = W(e, "right") / 2f,
+                    Bottom = W(e, "bottom") / 2f, Left = W(e, "left") / 2f,
+                };
+                if (p.Row == 0) tableEdges.Top = Math.Max(tableEdges.Top, W(e, "top") / 2f);
+                if (p.Row + p.RowSpan >= rowCount) tableEdges.Bottom = Math.Max(tableEdges.Bottom, W(e, "bottom") / 2f);
+                if (p.Row == 0 && p.Col == 0) tableEdges.Left = W(e, "left") / 2f;
+                if (p.Row == 0 && p.Col + p.ColSpan >= colCount) tableEdges.Right = W(e, "right") / 2f;
+            }
+        }
+        var geometry = new CollapsedGeometry(BoxEngine.Generation, cells, tableEdges);
+        s_collapsed.AddOrUpdate(table, geometry);
+        return geometry;
+    }
+
     private class CellPlacement
     {
         public required LayoutNode Cell;
@@ -586,7 +647,9 @@ internal static class TableEngine
 
     private static Dictionary<string, EdgeBorder> NodeEdgeBorders(LayoutNode node)
     {
-        var widths = node.GetBorderWidth();
+        // The DECLARED widths: the conflict is resolved between the boxes' own borders
+        // (GetBorderWidth answers with the collapsed result this resolution produces).
+        var widths = node.GetOwnBorderWidth();
         return new Dictionary<string, EdgeBorder>(4, StringComparer.Ordinal)
         {
             ["top"] = new(widths.Top, node.GetBorderStyleTop(), node.GetBorderTopColor()),

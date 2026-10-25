@@ -129,6 +129,16 @@ namespace AngleSharp.Css
                 computedStyle.SetDeclarations(element.GetStyle());
             }
 
+            // Lite patch 004: user !important outranks author !important (CSS 2.1 §6.4.1 item 5),
+            // inline style included — re-apply the user origin's important declarations last.
+            for (var i = 0; i < matches.Count; i++)
+            {
+                if (matches[i].Origin == CascadeOrigin.User)
+                {
+                    computedStyle.SetDeclarations(matches[i].Rule.Style.Where(m => m.IsImportant));
+                }
+            }
+
             return computedStyle;
         }
 
@@ -195,7 +205,7 @@ namespace AngleSharp.Css
         {
             if (rule.TryMatch(element, scope, out var specificity))
             {
-                matches.Add(new RuleMatch(rule, specificity, matches.Count));
+                matches.Add(new RuleMatch(rule, specificity, matches.Count, CascadeOrigin.Of(rule)));
             }
 
             var subRules = rule.Rules;
@@ -211,12 +221,15 @@ namespace AngleSharp.Css
 
         private readonly struct RuleMatch
         {
-            public RuleMatch(ICssStyleRule rule, Priority priority, Int32 index)
+            public RuleMatch(ICssStyleRule rule, Priority priority, Int32 index, Int32 origin)
             {
                 Rule = rule;
                 Priority = priority;
                 Index = index;
+                Origin = origin;
             }
+
+            public Int32 Origin { get; }
 
             public ICssStyleRule Rule { get; }
 
@@ -231,7 +244,10 @@ namespace AngleSharp.Css
 
             public Int32 Compare(RuleMatch x, RuleMatch y)
             {
-                var result = Comparer<Priority>.Default.Compare(x.Priority, y.Priority);
+                // Lite patch 004: origin before specificity (CSS 2.1 §6.4.1).
+                var result = x.Origin.CompareTo(y.Origin);
+                if (result != 0) return result;
+                result = Comparer<Priority>.Default.Compare(x.Priority, y.Priority);
                 return result != 0 ? result : x.Index.CompareTo(y.Index);
             }
         }

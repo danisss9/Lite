@@ -1420,6 +1420,17 @@ public static class StyleExtensions
         // StyleOverrides (honouring them globally broke Acid2's pseudo/anonymous boxes), so the
         // suppression must be readable here through the explicit flag.
         if (node.SharedBorderSuppressed) return default;
+        // §17.6.2: in the collapsing model a cell's box holds half of each resolved (winning)
+        // border, the table's border is half its outer borders, and rows/row groups/columns take
+        // no border width of their own — geometry everywhere follows the collapsed widths.
+        if (Lite.Layout.TableEngine.CollapsedBorderWidth(node) is { } collapsed) return collapsed;
+        return node.GetOwnBorderWidth();
+    }
+
+    /// <summary>The border widths the element's own style declares (no collapsing model).</summary>
+    public static EdgeSizes GetOwnBorderWidth(this LayoutNode node)
+    {
+        if (node.SharedBorderSuppressed) return default;
         return new()
         {
             Top = GetBorderSideWidth(node, PropertyNames.BorderTopWidth),

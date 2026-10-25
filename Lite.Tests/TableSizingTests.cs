@@ -58,6 +58,21 @@ public static class TableSizingTests
         True(Math.Abs(t.Box.ContentBox.Left - 9f) < 0.5f, $"the table must sit at left:1px (9), got {t.Box.ContentBox.Left}");
     }
 
+    [Test]
+    public static void CollapsedRowBorder_GivesTheRowHalfItsWidth()
+    {
+        // border-bottom-applies-to-004: an empty row whose collapsed bottom border is 4px is 2px
+        // tall (half the border lies in the cells), and the table holds the other half.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0} #t{display:table;border-collapse:collapse;width:100px}" +
+            "#r{display:table-row;border-bottom:4px solid green} .c{display:table-cell}</style>" +
+            "<div id=\"t\"><div id=\"r\"><div class=\"c\"></div><div class=\"c\"></div></div></div>");
+        var row = Find(root, "DIV", "r");
+        var table = Find(root, "DIV", "t");
+        True(row is not null && table is not null, "nodes missing");
+        True(Math.Abs(row!.Box.BorderBox.Height - 2f) < 0.01f, $"row must be 2px tall, got {row.Box.BorderBox.Height}");
+        True(Math.Abs(table!.Box.BorderBox.Height - 4f) < 0.01f, $"table must be 4px tall, got {table.Box.BorderBox.Height}");
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);
