@@ -1004,7 +1004,7 @@ internal static class BoxEngine
         {
             using var font = TextMeasure.CreateFont(node);
             var lh = node.GetLineHeight(node.GetFontSize());
-            var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentW, 1f), font, node.GetWhiteSpace(), lh);
+            var lines = TextMeasure.WrapText(node.RenderedText(), Math.Max(contentW, 1f), font, node.GetWhiteSpace(), lh);
             contentH = lines.Sum(l => l.Height);
         }
 
@@ -1237,7 +1237,7 @@ internal static class BoxEngine
             using var font = TextMeasure.CreateFont(node);
             var ws = node.GetWhiteSpace();
             var lh = node.GetLineHeight(node.GetFontSize());
-            var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(contentW, 1f), font, ws, lh);
+            var lines = TextMeasure.WrapText(node.RenderedText(), Math.Max(contentW, 1f), font, ws, lh);
             contentH = lines.Sum(l => l.Height);
         }
 
@@ -1772,7 +1772,7 @@ internal static class BoxEngine
         {
             using var font = TextMeasure.CreateFont(child);
             var lh = child.GetLineHeight(child.GetFontSize());
-            var lines = TextMeasure.WrapText(child.DisplayText, Math.Max(childContentW, 1f), font, child.GetWhiteSpace(), lh);
+            var lines = TextMeasure.WrapText(child.RenderedText(), Math.Max(childContentW, 1f), font, child.GetWhiteSpace(), lh);
             childContentH = lines.Sum(l => l.Height);
         }
         if (explicitH > 0)
@@ -3093,10 +3093,11 @@ internal static class BoxEngine
                 // inline run measured the whole string as one unbroken item, so a preformatted
                 // <span> holding two lines drew them on top of each other.
                 var ws = node.GetWhiteSpace();
+                var rendered = node.RenderedText();
                 var segments = ws is WhiteSpace.Pre or WhiteSpace.PreWrap or WhiteSpace.PreLine
-                               && node.DisplayText.Contains('\n')
-                    ? node.DisplayText.Split('\n')
-                    : [node.DisplayText];
+                               && rendered.Contains('\n')
+                    ? rendered.Split('\n')
+                    : [rendered];
 
                 var (leading, trailing) = InlineBoxEdges(node, maxWidth, viewportHeight);
                 if (leading != 0f) items.Add(EdgeItem(node, leading));

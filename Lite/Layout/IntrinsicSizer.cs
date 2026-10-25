@@ -306,7 +306,7 @@ internal static class IntrinsicSizer
     private static void AppendTextToken(LayoutNode node, List<InlineTok> toks, float min, float max,
         ref bool pendingBoundarySpace, ref bool atLineStart)
     {
-        var raw = node.DisplayText;
+        var raw = node.RenderedText();
         var ws = node.GetWhiteSpace();
         var collapses = ws is not (WhiteSpace.Pre or WhiteSpace.PreWrap);
         if (collapses && !string.IsNullOrEmpty(raw))
@@ -366,7 +366,7 @@ internal static class IntrinsicSizer
     /// </summary>
     private static (float Min, float Max) TextMinMax(LayoutNode node)
     {
-        var text = node.DisplayText;
+        var text = node.RenderedText();
         if (string.IsNullOrEmpty(text)) return (0f, 0f);
 
         using var font = TextMeasure.CreateFont(node);

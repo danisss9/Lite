@@ -643,6 +643,17 @@ public static class StyleExtensions
         };
     }
 
+    /// <summary>The node's text as it renders, after 'text-transform' (§16.5). Layout must
+    /// measure this, not the source text: an uppercased "a" measured as lowercase left every
+    /// centred line half a glyph-width off (text-transform-bicameral-*).</summary>
+    public static string RenderedText(this LayoutNode node)
+    {
+        var text = node.DisplayText;
+        if (string.IsNullOrEmpty(text)) return text;
+        var transform = node.GetTextTransform();
+        return transform == TextTransform.None ? text : StyleExtensions.ApplyTextTransform(text, transform, node.GetLanguage());
+    }
+
     public static TextTransform GetTextTransform(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("text-transform", out var ov)

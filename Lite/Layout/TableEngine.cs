@@ -105,7 +105,7 @@ internal static class TableEngine
             {
                 using var font = TextMeasure.CreateFont(cell);
                 var lh = cell.GetLineHeight(cell.GetFontSize());
-                var lines = TextMeasure.WrapText(cell.DisplayText, Math.Max(cw, 1f), font, cell.GetWhiteSpace(), lh);
+                var lines = TextMeasure.WrapText(cell.RenderedText(), Math.Max(cw, 1f), font, cell.GetWhiteSpace(), lh);
                 contentH = lines.Sum(l => l.Height);
             }
             // A cell's explicit height acts as a minimum for its content height.
@@ -292,7 +292,7 @@ internal static class TableEngine
         {
             using var font = TextMeasure.CreateFont(caption);
             var lh = caption.GetLineHeight(fs);
-            var lines = TextMeasure.WrapText(caption.DisplayText, Math.Max(cw, 1f), font, caption.GetWhiteSpace(), lh);
+            var lines = TextMeasure.WrapText(caption.RenderedText(), Math.Max(cw, 1f), font, caption.GetWhiteSpace(), lh);
             contentH = lines.Sum(l => l.Height);
         }
         // Honour an explicit height on the caption.
@@ -1118,7 +1118,7 @@ internal static class TableEngine
             using var font = TextMeasure.CreateFont(node);
             var ws = node.GetWhiteSpace();
             var preserves = ws is WhiteSpace.Pre or WhiteSpace.PreWrap;
-            var raw = node.DisplayText;
+            var raw = node.RenderedText();
             if (string.IsNullOrWhiteSpace(raw) && !preserves)
             {
                 pendingBoundarySpace = true;
