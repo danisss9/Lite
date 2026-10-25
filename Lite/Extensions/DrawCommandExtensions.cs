@@ -1734,7 +1734,7 @@ public static class StyleExtensions
         return defaultColor;
     }
 
-    private static SKColor? ParseCssColor(string value)
+    internal static SKColor? ParseCssColor(string value)
     {
         value = value.Trim();
         if (string.IsNullOrEmpty(value)) return null;

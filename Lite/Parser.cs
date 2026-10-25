@@ -1104,10 +1104,16 @@ internal static class Parser
         ex is ArgumentException &&
             ex.Message.StartsWith("A non null render device", StringComparison.Ordinal);
 
+    /// <summary>The element's upper-case local tag name. An XML parse keeps a namespace prefix in
+    /// TagName ("svg:svg" in XHTML), which no element-specific code recognised — prefixed inline
+    /// SVG never rendered (absolute-replaced-width-*).</summary>
+    internal static string TagOf(IElement element) =>
+        (element.Prefix is null ? element.TagName : element.LocalName).ToUpperInvariant();
+
     private static LayoutNode Traverse(IElement element, int indent, float parentFontPx = DefaultFontSizePx, LayoutNode? parentNode = null)
     {
         // Normalize tag name to uppercase — AngleSharp returns lowercase for SVG namespace elements
-        var tag = element.TagName.ToUpperInvariant();
+        var tag = TagOf(element);
         if (_verbose)
         {
             var indentSpace = new string(' ', indent * 2);
@@ -1119,7 +1125,7 @@ internal static class Parser
         // are preserved as synthetic #TEXT children rather than being collapsed onto the parent.
         var hasMixedChildren = element.Children.Any(c =>
         {
-            var ct = c.TagName.ToUpperInvariant();
+            var ct = TagOf(c);
             return ct != "SCRIPT" && !SkipTags.Contains(ct);
         });
 
@@ -1563,7 +1569,7 @@ internal static class Parser
                 }
                 else if (childNode is IElement childEl)
                 {
-                    var childTag = childEl.TagName.ToUpperInvariant();
+                    var childTag = TagOf(childEl);
                     if (childTag == "SCRIPT")
                     {
                         CollectScript(childEl);
@@ -1579,7 +1585,7 @@ internal static class Parser
         {
             foreach (var child in element.Children)
             {
-                var childTag = child.TagName.ToUpperInvariant();
+                var childTag = TagOf(child);
                 if (childTag == "SCRIPT")
                 {
                     CollectScript(child);
@@ -4176,7 +4182,7 @@ internal static class Parser
     /// representation — its own text carries the content, and no #text children exist.</summary>
     private static bool CountsAsMixedChild(IElement element)
     {
-        var tag = element.TagName.ToUpperInvariant();
+        var tag = TagOf(element);
         return tag != "SCRIPT" && !SkipTags.Contains(tag);
     }
 
@@ -4230,7 +4236,7 @@ internal static class Parser
                 }
                 case IElement element:
                 {
-                    var tag = element.TagName.ToUpperInvariant();
+                    var tag = TagOf(element);
                     if (SkipTags.Contains(tag))
                     {
                         // Projected but never rendered (style/link/…): keep the parse-time box.
@@ -4508,7 +4514,7 @@ internal static class Parser
                 }
                 else if (childNode is IElement childEl)
                 {
-                    var ct = childEl.TagName.ToUpperInvariant();
+                    var ct = TagOf(childEl);
                     if (ct == "SCRIPT") continue;          // innerHTML never runs scripts
                     result.Add(Traverse(childEl, 0));
                 }

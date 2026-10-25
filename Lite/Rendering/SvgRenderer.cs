@@ -12,6 +12,9 @@ internal static class SvgRenderer
         var box = svgNode.Box;
         canvas.Save();
         canvas.Translate(box.ContentBox.Left, box.ContentBox.Top);
+        // An embedded SVG's viewport clips its content (the UA sheet's overflow: hidden on
+        // svg:not(:root)): a 100px rect in a 50px-tall svg shows only its top 50px.
+        canvas.ClipRect(new SKRect(0, 0, box.ContentBox.Width, box.ContentBox.Height));
 
         // Parse viewBox if present
         if (svgNode.Attributes.TryGetValue("viewBox", out var viewBox))
@@ -180,7 +183,9 @@ internal static class SvgRenderer
             draw(paint);
         }
 
-        if (strokeStr != null && strokeStr != "none")
+        // A missing stroke attribute reads back as "" — which used to paint a stroke of
+        // Transparent.WithAlpha(255), i.e. opaque WHITE, round every shape.
+        if (!string.IsNullOrEmpty(strokeStr) && strokeStr != "none")
         {
             using var paint = CreateStrokePaint(node);
             paint.Color = ParseColor(strokeStr).WithAlpha((byte)(strokeOpacity * opacity * 255));
@@ -286,8 +291,9 @@ internal static class SvgRenderer
     {
         if (string.IsNullOrEmpty(color) || color == "none") return SKColors.Transparent;
 
-        // Named colors
         if (SKColor.TryParse(color, out var parsed)) return parsed;
+        // Named colours: SKColor.TryParse only reads hex, so fill="blue" painted black.
+        if (Lite.Extensions.StyleExtensions.ParseCssColor(color) is { } named) return named;
 
         // rgb(r, g, b) / rgba(r, g, b, a)
         if (color.StartsWith("rgb", StringComparison.OrdinalIgnoreCase))
