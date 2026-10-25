@@ -600,6 +600,32 @@ internal static class Drawer
         return !hasContent;
     }
 
+    /// <summary>§17.5.1 layers 2 and 3: column-group, then column backgrounds, over the
+    /// table's background and under the row groups, rows and cells (which paint as children).
+    /// Columns generate no box of their own (display maps to none), so they paint from here.</summary>
+    private static void PaintColumnBackgrounds(SKCanvas canvas, LayoutNode table)
+    {
+        void Paint(LayoutNode n)
+        {
+            if (n.Box.ContentBox.Width <= 0 || n.Box.ContentBox.Height <= 0) return;
+            if (n.GetVisibility() != Visibility.Visible) return;
+            var color = n.GetBackgroundColor();
+            if (color.Alpha > 0)
+            {
+                using var paint = new SKPaint { Color = color };
+                canvas.DrawRect(n.Box.ContentBox, paint);
+            }
+            DrawBackgroundImage(canvas, n, n.Box);
+        }
+        foreach (var group in table.Children.Where(TableEngine.IsColumnGroup)) Paint(group);
+        foreach (var child in table.Children)
+        {
+            if (TableEngine.IsColumn(child)) Paint(child);
+            else if (TableEngine.IsColumnGroup(child))
+                foreach (var col in child.Children.Where(TableEngine.IsColumn)) Paint(col);
+        }
+    }
+
     private static void PaintBlock(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
         var box = node.Box;
@@ -648,6 +674,9 @@ internal static class Drawer
 
                     // Background image
                     DrawBackgroundImage(canvas, node, box);
+
+                    if (node.GetDisplay() is DisplayType.Table or DisplayType.InlineTable)
+                        PaintColumnBackgrounds(canvas, node);
                 }
 
                 // In a collapsed table the TABLE's own border does not paint either: its

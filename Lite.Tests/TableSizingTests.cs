@@ -89,6 +89,24 @@ public static class TableSizingTests
         True(span!.Box.BorderBox.Bottom > 190f, $"bottom-aligned content must sit at the cell bottom, got {span.Box.BorderBox.Bottom}");
     }
 
+    [Test]
+    public static void FixedLayout_SplitsLeftoverEquallyAndColumnsPaintBackgrounds()
+    {
+        // fixed-table-layout-003a01/017: the first-row cell's width fixes its column, the other
+        // columns share the rest equally whatever their padding, and a col background paints.
+        var page = Parser.ParseChildPage("<!DOCTYPE html><style>body{margin:0} table{table-layout:fixed;width:400px;border-spacing:0}" +
+            " td{padding:0 60px;height:20px} #t{width:80px} col.o{background:orange}</style>" +
+            "<table><col class=\"o\"/><col/><col/><tr><td></td><td id=\"t\"></td><td></td></tr></table>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var t = Find(page.Root, "TD", "t");
+        True(t is not null, "cell missing");
+        True(Math.Abs(t!.Box.BorderBox.Left - 100f) < 0.01f && Math.Abs(t.Box.BorderBox.Width - 200f) < 0.01f,
+            $"tested cell must span 100..300, got {t.Box.BorderBox}");
+        using var bitmap = Drawer.DrawToBitmap(400, 100, page.Root, new Viewport { ViewportHeight = 100 });
+        True(bitmap.GetPixel(50, 10) == new SkiaSharp.SKColor(255, 165, 0), $"the first column must paint orange, got {bitmap.GetPixel(50, 10)}");
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);

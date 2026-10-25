@@ -63,7 +63,9 @@ internal static class TableEngine
         var placements = BuildGrid(rows, out var colCount, out var rowCount);
         if (colCount == 0) return 0f;
 
-        var colWidths = ComputeColumnWidths(placements, colCount, contentW - spacing * (colCount + 1), viewportW, viewportH);
+        var colWidths = IsFixedLayout(table)
+            ? ComputeFixedColumnWidths(table, placements, colCount, contentW - spacing * (colCount + 1), viewportH)
+            : ComputeColumnWidths(placements, colCount, contentW - spacing * (colCount + 1), viewportW, viewportH);
         var rowHeights = new float[rowCount];
 
         // Caption (CSS 2.1 §17.4): a block spanning the table width, placed above (default) or
@@ -252,6 +254,39 @@ internal static class TableEngine
                 Border = rowBord,
                 Margin = rowMarg,
             };
+        }
+
+        // ── Column / column-group boxes (§17.5.1 layers 2 and 3) ──────────────
+        // A column spans the rows top to bottom; a group spans its columns. The painter draws
+        // their backgrounds above the table's and below the rows' (they had no box at all, so a
+        // col { background: orange } painted nothing — fixed-table-layout-017).
+        if (rowCount > 0)
+        {
+            var gridTop = rowYs[0];
+            var gridBottom = rowYs[rowCount - 1] + rowHeights[rowCount - 1];
+            var col = 0;
+            void ColumnBoxes(LayoutNode container)
+            {
+                foreach (var child in container.Children)
+                {
+                    var group = IsColumnGroup(child);
+                    if (!group && !IsColumn(child)) continue;
+                    var first = col;
+                    if (group && child.Children.Any(IsColumn)) ColumnBoxes(child);
+                    else
+                    {
+                        var span = 1;
+                        if (child.Attributes.TryGetValue("span", out var raw) && int.TryParse(raw, out var n)) span = Math.Clamp(n, 1, 1000);
+                        col += span;
+                    }
+                    var last = Math.Min(col, colCount) - 1;
+                    if (last < first) continue;
+                    var left = CellX(contentX, colWidths, first, spacing);
+                    var right = CellX(contentX, colWidths, last, spacing) + colWidths[last];
+                    child.Box = new BoxDimensions { ContentBox = new SKRect(left, gridTop, right, gridBottom) };
+                }
+            }
+            ColumnBoxes(table);
         }
 
         // ── Row-group boxes (§17.5.1: a group spans its rows) ─────────────────
@@ -1040,6 +1075,59 @@ internal static class TableEngine
     /// (a column with short content stays narrow; one with long content takes more), falling
     /// back to an even split for columns whose content width can't be measured (e.g. empty cells).
     /// </summary>
+    /// <summary>§17.5.2.1: 'table-layout: fixed' applies when the table's width is not auto.</summary>
+    private static bool IsFixedLayout(LayoutNode table) =>
+        !table.IsAutoWidth() &&
+        (table.TryResolveStyle("table-layout", out var v) ? v : table.Style.GetPropertyValueSafe("table-layout"))?.Trim() == "fixed";
+
+    /// <summary>§17.5.2.1 fixed table layout: a column element's width sets its column; otherwise
+    /// a first-row cell's width does (a spanning cell's is shared over its columns); the columns
+    /// left over divide the remaining space equally whatever their content, and space the
+    /// columns do not use is spread over all of them. Only auto layout existed, so content
+    /// minimums sized fixed tables (fixed-table-layout-003*: a 120px-padded empty cell took
+    /// 120px instead of its equal share).</summary>
+    private static float[] ComputeFixedColumnWidths(LayoutNode table, List<CellPlacement> placements, int colCount,
+        float availableW, float viewportH)
+    {
+        var widths = new float[colCount];
+        var known = new bool[colCount];
+
+        var columnIndex = 0;
+        void Columns(LayoutNode container)
+        {
+            foreach (var child in container.Children)
+            {
+                if (IsColumnGroup(child) && child.Children.Count > 0) { Columns(child); continue; }
+                if (!IsColumn(child) && !IsColumnGroup(child)) continue;
+                var span = 1;
+                if (child.Attributes.TryGetValue("span", out var raw) && int.TryParse(raw, out var n)) span = Math.Clamp(n, 1, 1000);
+                var w = child.IsAutoWidth() ? 0f : child.GetWidth(availableW);
+                for (var k = 0; k < span && columnIndex < colCount; k++, columnIndex++)
+                    if (w > 0f) { widths[columnIndex] = w; known[columnIndex] = true; }
+            }
+        }
+        Columns(table);
+
+        foreach (var p in placements.Where(p => p.Row == 0))
+        {
+            if (p.Cell.IsAutoWidth()) continue;
+            var cols = Enumerable.Range(p.Col, Math.Min(p.ColSpan, colCount - p.Col)).Where(c => !known[c]).ToList();
+            if (cols.Count == 0) continue;
+            var pad = p.Cell.GetPadding(availableW, viewportH, p.Cell.GetFontSize());
+            var bord = p.Cell.GetBorderWidth();
+            var total = p.Cell.GetWidth(availableW) + pad.Left + pad.Right + bord.Left + bord.Right;
+            foreach (var c in cols) { widths[c] = total / cols.Count; known[c] = true; }
+        }
+
+        var rest = Enumerable.Range(0, colCount).Where(c => !known[c]).ToList();
+        var remaining = Math.Max(0f, availableW - widths.Sum());
+        if (rest.Count > 0)
+            foreach (var c in rest) widths[c] = remaining / rest.Count;
+        else if (remaining > 0f && colCount > 0)
+            for (var c = 0; c < colCount; c++) widths[c] += remaining / colCount;
+        return widths;
+    }
+
     private static float[] ComputeColumnWidths(
         List<CellPlacement> placements,
         int colCount,
