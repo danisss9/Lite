@@ -2760,7 +2760,7 @@ internal static class Drawer
             var s = ch.ToString();
             canvas.DrawText(s, curX, y, SKTextAlign.Left, font, paint);
             curX += font.MeasureText(s) + letterSpacing;
-            if (ch == ' ') curX += wordSpacing;
+            if (ch is ' ' or '\u00A0') curX += wordSpacing;
         }
     }
 

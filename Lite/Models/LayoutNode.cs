@@ -241,6 +241,11 @@ public class LayoutNode
     }
 
     public string? TextOverride { get; set; }
+    /// <summary>The parser trimmed collapsible white space off the start / end of this leaf's
+    /// own text (§16.6.1 assumes a line edge); the parent restores one space where an inline
+    /// neighbour continues the line instead.</summary>
+    public bool TrimmedLeadingSpace { get; set; }
+    public bool TrimmedTrailingSpace { get; set; }
     public string DisplayText => TextOverride ?? Text;
     /// <summary>Set when block-in-inline suppression (BoxEngine.SuppressSharedStyleBorder)
     /// removed a border this box would otherwise inherit from a SHARED style object.

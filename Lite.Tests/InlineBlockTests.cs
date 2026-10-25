@@ -34,6 +34,18 @@ public static class InlineBlockTests
             $"tops must align, got {a.Box.BorderBox.Top} vs {b.Box.BorderBox.Top}");
     }
 
+    [Test]
+    public static void InlineLeafKeepsItsTrailingSpaceBeforeAnInlineNeighbour()
+    {
+        // word-spacing-007: "<span>x </span><span>y</span>" — the space is mid-line, not at a
+        // line edge, so §16.6.1 keeps it.
+        var page = Parser.ParseChildPage("<!DOCTYPE html><div><span id=\"a\">x </span><span>y</span></div>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var a = FindId(page.Root, "a");
+        True(a is not null, "span missing");
+        True(a!.DisplayText == "x ", $"the boundary space must survive, got '{a.DisplayText}'");
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);

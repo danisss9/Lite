@@ -1151,6 +1151,11 @@ internal static class Parser
 
         var href = tag == "A" ? element.GetAttribute("href") : null;
         var node = new LayoutNode(element.Id, tag, directText, elementStyle, href);
+        if (directText.Length > 0 && directText.Length != directTextRaw.Length && !preservesSpaces && tag != "SCRIPT")
+        {
+            node.TrimmedLeadingSpace = Array.IndexOf(CssWhiteSpace, directTextRaw[0]) >= 0;
+            node.TrimmedTrailingSpace = Array.IndexOf(CssWhiteSpace, directTextRaw[^1]) >= 0;
+        }
         if (Current.IsXmlDocument)
             node.SourceTagName = element.TagName;
         // NOTE: node.DomNode is deliberately bound at the END of Traverse, not here. Attribute
@@ -1568,6 +1573,7 @@ internal static class Parser
                     node.AddChild(Traverse(childEl, indent + 1, fontPx, node));
                 }
             }
+            RestoreInlineBoundarySpaces(node);
         }
         else
         {
@@ -3921,6 +3927,35 @@ internal static class Parser
             _ => "normal",
         });
         if (normalized != text) pseudo.TextOverride = normalized;
+    }
+
+    /// <summary>§16.6.1 removes collapsible spaces only at the start and end of a LINE. A leaf's
+    /// own text was trimmed as if it stood at a line edge, so "&lt;span&gt;x &lt;/span&gt;&lt;span&gt;y&lt;/span&gt;"
+    /// lost the space between the words (word-spacing-007's first line came out 16px short).
+    /// Put one back where an inline neighbour continues the line and brings no space itself.</summary>
+    private static void RestoreInlineBoundarySpaces(LayoutNode parent)
+    {
+        static bool InlineLevel(LayoutNode n) => n.TagName == "#text" ||
+            n.GetDisplay() is DisplayType.Inline or DisplayType.InlineBlock or DisplayType.InlineTable or DisplayType.InlineFlex;
+        static bool StartsWithSpace(LayoutNode n) => n.TagName == "#text"
+            ? n.DisplayText.Length > 0 && Array.IndexOf(CssWhiteSpace, n.DisplayText[0]) >= 0
+            : n.TrimmedLeadingSpace;
+        static bool EndsWithSpace(LayoutNode n) => n.TagName == "#text"
+            ? n.DisplayText.Length > 0 && Array.IndexOf(CssWhiteSpace, n.DisplayText[^1]) >= 0
+            : n.TrimmedTrailingSpace;
+        var kids = parent.Children;
+        for (var i = 0; i < kids.Count; i++)
+        {
+            var child = kids[i];
+            if (child.TagName.StartsWith('#') || child.Children.Count > 0 || child.DisplayText.Length == 0 ||
+                child.GetDisplay() != DisplayType.Inline)
+                continue;
+            if (child.TrimmedTrailingSpace && i + 1 < kids.Count && InlineLevel(kids[i + 1]) && !StartsWithSpace(kids[i + 1]))
+                child.TextOverride = child.DisplayText + " ";
+            if (child.TrimmedLeadingSpace && i > 0 && InlineLevel(kids[i - 1]) && !EndsWithSpace(kids[i - 1]) &&
+                !(kids[i - 1].TextOverride?.EndsWith(' ') ?? false))
+                child.TextOverride = " " + child.DisplayText;
+        }
     }
 
     /// <summary>

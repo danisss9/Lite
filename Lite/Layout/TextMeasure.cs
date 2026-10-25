@@ -141,7 +141,8 @@ internal static class TextMeasure
         foreach (var ch in text)
         {
             w += font.MeasureText(ch.ToString()) + letterSpacing;
-            if (ch == ' ') w += wordSpacing;
+            // §16.4: word spacing applies to every space and no-break space.
+            if (ch is ' ' or '\u00A0') w += wordSpacing;
         }
         return Math.Max(0f, w - letterSpacing);
     }
