@@ -154,6 +154,28 @@ internal static class TableEngine
             }
         }
 
+        // §17.5.3: a specified table height is a minimum; the extra goes to the rows in
+        // proportion to their heights (evenly when they are all empty). Ignoring it collapsed a
+        // 206px table to its content (background-043-ref's bottom-aligned stripe sat at the top).
+        // Like browsers, the height covers the table's border box. Percentages need a definite
+        // containing block and are left alone.
+        if (rowCount > 0 && !table.IsAutoHeight() &&
+            !(table.TryResolveStyle("height", out var tableHeightRaw) ? tableHeightRaw : table.Style.GetPropertyValueSafe("height")).Contains('%'))
+        {
+            var tableBorder = table.GetBorderWidth();
+            var tablePadding = table.GetPadding(contentW, viewportH, table.GetFontSize());
+            var target = table.GetHeight(0f, 0f, viewportH) - tableBorder.Top - tableBorder.Bottom
+                         - tablePadding.Top - tablePadding.Bottom - captionTopH;
+            var used = rowHeights.Sum() + verticalSpacing * (rowCount + 1);
+            if (target > used + 0.01f)
+            {
+                var extra = target - used;
+                var total = rowHeights.Sum();
+                for (int r = 0; r < rowCount; r++)
+                    rowHeights[r] += total > 0f ? extra * rowHeights[r] / total : extra / rowCount;
+            }
+        }
+
         // ── Compute row Y positions ──────────────────────────────────────
         var rowYs = new float[rowCount];
         var ry = cursorY;
@@ -831,13 +853,11 @@ internal static class TableEngine
                         break;
                 }
             }
-            if (rowBaseline is null) continue;
-
             var growth = 0f;
             var shifts = new List<(CellPlacement P, float Delta)>();
             foreach (var (p, b, contentH) in baselineCells)
             {
-                var delta = rowBaseline.Value - b;
+                var delta = rowBaseline!.Value - b;
                 if (delta > 0f) shifts.Add((p, delta));
                 // The shifted content must fit inside the row: content top + shift + height
                 // (plus the cell's bottom padding/border) may exceed the committed row height.
@@ -864,8 +884,12 @@ internal static class TableEngine
             {
                 var va = p.Cell.GetVerticalAlign();
                 if (va is not (VerticalAlignType.Middle or VerticalAlignType.Bottom)) continue;
-                var contentH = p.Cell.Box.ContentBox.Height;
-                var rowH = rowHeights[r] - p.Pad.Top - p.Bord.Top - p.Pad.Bottom - p.Bord.Bottom;
+                // The content's NATURAL height: the committed content box already fills the row,
+                // which made every shift zero (background-043-ref's bottom-aligned stripe).
+                var contentH = p.MeasuredOuterH - p.Marg.Top - p.Bord.Top - p.Pad.Top
+                               - p.Pad.Bottom - p.Bord.Bottom - p.Marg.Bottom;
+                var rowH = rowHeights[r] - p.Pad.Top - p.Bord.Top - p.Pad.Bottom - p.Bord.Bottom
+                           - p.Marg.Top - p.Marg.Bottom;
                 var delta = va == VerticalAlignType.Middle ? (rowH - contentH) / 2f : rowH - contentH;
                 if (delta <= 0.5f) continue;
                 ShiftCellContent(p, delta, viewportW, viewportH);
@@ -880,11 +904,15 @@ internal static class TableEngine
         var cy = p.Cell.Box.ContentBox.Top + delta;
         BoxEngine.LayoutChildrenPublic(p.Cell.Children, p.Cell.Box.ContentBox.Left, cy,
             p.Cell.Box.ContentBox.Width, viewportW, viewportH, p.Cell.Box.ContentBox.Height);
+        // The shift becomes used top padding: the cell box still fills its row and only the
+        // content moves (moving the content box alone dragged the cell's border down with it).
+        var padding = p.Cell.Box.Padding;
+        padding.Top += delta;
         p.Cell.Box = new BoxDimensions
         {
             ContentBox = new SKRect(p.Cell.Box.ContentBox.Left, cy,
                 p.Cell.Box.ContentBox.Right, p.Cell.Box.ContentBox.Bottom),
-            Padding = p.Cell.Box.Padding,
+            Padding = padding,
             Border = p.Cell.Box.Border,
             Margin = p.Cell.Box.Margin,
         };
@@ -1026,8 +1054,15 @@ internal static class TableEngine
             if (p.ColSpan != 1) continue;
             if (widths[p.Col] == 0f)
             {
+                // A cell's 'width' is its content width: the column also holds the cell's
+                // padding and borders (§17.5.2.2) — a td { width: 200px; border: 3px } is 206px.
                 var w = p.Cell.GetWidth(availableW);
-                if (w > 0f) widths[p.Col] = w;
+                if (w > 0f)
+                {
+                    var pad = p.Cell.GetPadding(availableW, viewportH, p.Cell.GetFontSize());
+                    var bord = p.Cell.GetBorderWidth();
+                    widths[p.Col] = w + pad.Left + pad.Right + bord.Left + bord.Right;
+                }
             }
         }
 

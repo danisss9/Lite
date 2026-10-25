@@ -73,6 +73,22 @@ public static class TableSizingTests
         True(Math.Abs(table!.Box.BorderBox.Height - 4f) < 0.01f, $"table must be 4px tall, got {table.Box.BorderBox.Height}");
     }
 
+    [Test]
+    public static void TableHeight_StretchesRows_CellWidthExcludesEdges_BottomAlignMovesContent()
+    {
+        // background-043-ref: table { height: 206px } with td { width: 200px; border: 3px;
+        // vertical-align: bottom } — a 206x206 cell whose 15px content sits at its bottom.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0} table{border-spacing:0;height:206px}" +
+            " td{border:3px solid black;padding:0;vertical-align:bottom;width:200px} span{display:inline-block;height:15px;width:10px}</style>" +
+            "<table><tr><td id=\"c\"><span id=\"s\"></span></td></tr></table>");
+        var cell = Find(root, "TD", "c");
+        var span = Find(root, "SPAN", "s");
+        True(cell is not null && span is not null, "nodes missing");
+        True(Math.Abs(cell!.Box.BorderBox.Width - 206f) < 0.01f, $"cell must be 206px wide, got {cell.Box.BorderBox.Width}");
+        True(Math.Abs(cell.Box.BorderBox.Height - 206f) < 0.01f, $"cell must fill the 206px table, got {cell.Box.BorderBox.Height}");
+        True(span!.Box.BorderBox.Bottom > 190f, $"bottom-aligned content must sit at the cell bottom, got {span.Box.BorderBox.Bottom}");
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);
