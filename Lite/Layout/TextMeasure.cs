@@ -277,24 +277,29 @@ internal static class TextMeasure
             }
             else
             {
-                // Break at character level when a single line overflows
-                var sb = new System.Text.StringBuilder();
-                foreach (var ch in raw)
+                // pre-wrap breaks only after spaces (§16.6), never inside a word, and the spaces
+                // at the break hang off the line end: they never push the next word down. Breaking
+                // per character split "XX  XX" mid-word (white-space-processing-052).
+                var line = new System.Text.StringBuilder();
+                var i = 0;
+                while (i < raw.Length)
                 {
-                    var candidate = sb.ToString() + ch;
-                    if (font.MeasureText(candidate) > maxWidth && sb.Length > 0)
+                    var wordEnd = i;
+                    while (wordEnd < raw.Length && raw[wordEnd] != ' ') wordEnd++;
+                    var spaceEnd = wordEnd;
+                    while (spaceEnd < raw.Length && raw[spaceEnd] == ' ') spaceEnd++;
+                    var word = raw[i..wordEnd];
+                    if (line.Length > 0 && word.Length > 0 && font.MeasureText(line + word) > maxWidth)
                     {
-                        var seg = sb.ToString();
-                        lines.Add(new TextLine(seg, font.MeasureText(seg), lineHeight, ascent));
-                        sb.Clear();
+                        var seg = line.ToString();
+                        lines.Add(new TextLine(seg, font.MeasureText(seg.TrimEnd(' ')), lineHeight, ascent));
+                        line.Clear();
                     }
-                    sb.Append(ch);
+                    line.Append(raw, i, spaceEnd - i);
+                    i = spaceEnd;
                 }
-                if (sb.Length > 0)
-                {
-                    var seg = sb.ToString();
-                    lines.Add(new TextLine(seg, font.MeasureText(seg), lineHeight, ascent));
-                }
+                var last = line.ToString();
+                lines.Add(new TextLine(last, font.MeasureText(last.TrimEnd(' ')), lineHeight, ascent));
             }
         }
 
