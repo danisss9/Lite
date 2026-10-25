@@ -46,6 +46,16 @@ public static class InlineBlockTests
         True(a!.DisplayText == "x ", $"the boundary space must survive, got '{a.DisplayText}'");
     }
 
+    [Test]
+    public static void FirstLetter_DoesNotReachIntoAnInlineBlockChild()
+    {
+        // first-letter-selector-017: §5.12.2 — an atomic inline ends the first-letter search.
+        var page = Parser.ParseChildPage("<!DOCTYPE html><style>div:first-letter{color:red} div p{display:inline-block}</style>" +
+            "<div><p>Filler</p></div>", isSrcdoc: true, "http://test/", 800, 600);
+        bool HasFirstLetter(LayoutNode n) => n.TagName == "#pseudo-first-letter" || n.Children.Any(HasFirstLetter);
+        True(!HasFirstLetter(page.Root), "no ::first-letter box may be created inside the inline-block");
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);

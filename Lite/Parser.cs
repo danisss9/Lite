@@ -2480,7 +2480,13 @@ internal static class Parser
         if (!string.IsNullOrEmpty(node.DisplayText)) return node;
         foreach (var child in node.Children)
         {
-            if (child.StyleOverrides.TryGetValue("display", out var cd) && cd is not ("inline" or "inline-block"))
+            // Floats and absolutely positioned boxes are not on the first line; an atomic inline
+            // (inline-block/-table) or a block ends the search — ::first-letter never reaches into
+            // them (§5.12.2; first-letter-selector-017's red inline-block p).
+            if (child.TagName != "#text" && (child.GetFloat() != FloatType.None ||
+                child.GetPosition() is PositionType.Absolute or PositionType.Fixed))
+                continue;
+            if (child.TagName != "#text" && child.GetDisplay() != DisplayType.Inline)
                 return null;
             if (!string.IsNullOrWhiteSpace(child.DisplayText)) return child;
             if (child.Children.Count > 0 && FindFirstTextHost(child) is { } inner) return inner;
