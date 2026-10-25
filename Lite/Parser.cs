@@ -2016,18 +2016,6 @@ internal static class Parser
     /// reset the components it does not mention, which is what makes `background: green` clear an
     /// inherited-looking image. Tokens are classified by shape, so their order does not matter.
     /// </summary>
-    /// <summary>A rule's declarations plus the background-color its 'background' shorthand
-    /// sets, competing with the rule's own precedence: the parse-time expansion left a stale
-    /// background-color override that a restyled shorthand never replaced
-    /// (background-root-101: the body stayed red after 'head.after + body' matched).</summary>
-    internal static IEnumerable<KeyValuePair<string, string>> WithBackgroundColorLonghand(IReadOnlyDictionary<string, string> props)
-    {
-        foreach (var kv in props) yield return kv;
-        if (props.TryGetValue("background", out var shorthand) && !props.ContainsKey("background-color") &&
-            SplitBackgroundShorthand(shorthand)?.FirstOrDefault(l => l.Prop == "background-color") is { Val: { } color })
-            yield return new("background-color", color);
-    }
-
     private static void ExpandBackgroundShorthand(LayoutNode node, string value)
     {
         var longhands = SplitBackgroundShorthand(value);
