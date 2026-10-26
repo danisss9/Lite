@@ -199,6 +199,15 @@ public static class ConformanceTests
         foreach (var requirement in requirements)
         {
             var clause = requirement["clause"]!.GetValue<string>().Split(' ')[0];
+            if (requirement["id"]!.GetValue<string>().StartsWith("html5.dependency.", StringComparison.Ordinal))
+            {
+                // An external pinned dependency (for example the HTML Editing APIs draft) is not a REC
+                // section: its clause names the dependency and its URL is the pinned draft, not the REC
+                // anchor. The namespace is explicit, and readiness requires these ids through
+                // coverage.html5RequiredDependencies, so nothing here can smuggle an extension in.
+                Equal("Dependency:", clause);
+                continue;
+            }
             True(sections.ContainsKey(clause), $"Unmapped HTML5 clause: {clause}");
             Equal(sections[clause]["url"]!.GetValue<string>(), requirement["url"]!.GetValue<string>());
         }

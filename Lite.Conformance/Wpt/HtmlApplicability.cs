@@ -7,7 +7,8 @@ internal static class HtmlApplicability
 {
     internal const string FileName = "Wpt/html5-applicability.json";
     internal static readonly string[] CandidateRoots = ["html", "dom", "custom-elements", "shadow-dom", "selection",
-        "uievents", "url", "encoding", "mimesniff", "fetch", "cors", "cookies", "webstorage", "webmessaging", "FileAPI"];
+        "uievents", "url", "encoding", "editing", "mimesniff", "fetch", "cors", "cookies", "webstorage", "webmessaging",
+        "FileAPI"];
     internal static readonly HashSet<string> Classifications = new(StringComparer.Ordinal)
         { "included", "mixed", "unreviewed", "post-target", "regression-only", "profile-excluded" };
 

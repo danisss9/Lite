@@ -27,6 +27,7 @@ internal static class Program
         string? suite = null;
         string? filter = null;
         string? survey = null;
+        string? surveyList = null;
         int surveyLimit = 0;
         bool updateBaselines = false;
         string? reportPath = null;
@@ -56,6 +57,9 @@ internal static class Program
                     break;
                 case "--survey" when i + 1 < args.Length:
                     survey = args[++i];
+                    break;
+                case "--survey-list" when i + 1 < args.Length:
+                    surveyList = args[++i];
                     break;
                 case "--compare" when i + 2 < args.Length:
                     return WptRefTestRunner.CompareDocuments(args[i + 1], args[i + 2]);
@@ -150,12 +154,15 @@ internal static class Program
         { Console.WriteLine("--report is supported by profile, wpt, html5, html5-inventory, css21, and test262."); return 2; }
         if (survey is not null && suite.Equals("css21", StringComparison.OrdinalIgnoreCase) && reportPath is not null)
         { Console.WriteLine("CSS surveys do not produce readiness evidence; use the curated CSS gate with --report."); return 2; }
+        if (survey is not null && surveyList is not null)
+        { Console.WriteLine("--survey and --survey-list are mutually exclusive."); return 2; }
 
         try
         {
             return suite.ToLowerInvariant() switch
             {
                 "wpt" when survey is not null => WptRunner.Survey(survey, surveyLimit, reportPath, shard),
+                "wpt" when surveyList is not null => WptRunner.SurveyList(surveyList, surveyLimit, reportPath, shard),
                 "wpt" => WptRunner.Run(filter, shard, reportPath),
                 "html5" => WptRunner.RunHtml(filter, shard, reportPath),
                 "html5-inventory" => HtmlInventoryRunner.Run(reportPath),
@@ -229,6 +236,9 @@ internal static class Program
               --require-css-ready    (profile) Require CSS 2.1 screen and print completion
               --media <screen|print> (css21-full) Select medium; defaults to screen
               --catalog <all|wpt|official> (css21-full) Select candidate catalogs; defaults to all
+              --survey <dir>         (wpt) Survey every vendored test under the directory
+              --survey-list <file>   (wpt) Survey exactly the catalog paths listed one per line
+              --survey-limit <n>     Cap either survey at the first n tests
               --require-html-ready   (profile) Require completion of the HTML 5.0 profile
               --evidence <path>      (profile) Consume executed evidence; may be repeated
               --wpt-base-url <url>   Use an upstream wpt serve instance for vendored WPT tests

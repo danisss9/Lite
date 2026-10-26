@@ -106,14 +106,6 @@ internal static class WptRunner
             return 2;
         }
 
-        ConformanceServer.Start(cssRegressionMode: false);
-
-        var skip = LoadSurveySkips();
-        var selectedShard = shard ?? ShardSpec.All;
-        var identity = ExecutionEvidence.CaptureIdentity();
-        var started = DateTime.UtcNow;
-        var outcomes = new List<TestEvidence>();
-
         var discovered = File.Exists(WptCatalog.ManifestPath)
             ? Catalog().Where(c => c.Source.StartsWith(relDir.TrimEnd('/') + "/", StringComparison.Ordinal)).Select(c => c.Path)
             : Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories).Where(IsCandidateTest)
@@ -121,8 +113,51 @@ internal static class WptRunner
         var tests = discovered.Distinct(StringComparer.Ordinal)
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
+        return RunSurveyQueue(tests, $"survey {relDir}", limit, reportPath, shard);
+    }
+
+    /// <summary>
+    /// Surveys an explicit list of catalog test paths (one per line; blank lines and
+    /// <c>#</c> comments ignored) — the Workstream 0 full-catalog baseline queue, whose
+    /// files span many roots and whose unclassified set no single directory names. Same
+    /// skip, tracing, and exit-code rules as the directory survey; the evidence report is
+    /// rewritten every 100 outcomes so an interrupted multi-hour run keeps its results.
+    /// </summary>
+    public static int SurveyList(string listPath, int limit = 0, string? reportPath = null, ShardSpec? shard = null)
+    {
+        if (!File.Exists(listPath))
+        {
+            Console.WriteLine($"survey: list not found: {listPath}");
+            return 2;
+        }
+        var tests = File.ReadAllLines(listPath)
+            .Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(f => f, StringComparer.Ordinal)
+            .ToList();
+        return RunSurveyQueue(tests, $"survey-list {Path.GetFileName(listPath)}", limit, reportPath, shard);
+    }
+
+    private static int RunSurveyQueue(List<string> discovered, string label, int limit,
+        string? reportPath, ShardSpec? shard)
+    {
+        ConformanceServer.Start(cssRegressionMode: false);
+
+        var skip = LoadSurveySkips();
+        var selectedShard = shard ?? ShardSpec.All;
+        var identity = ExecutionEvidence.CaptureIdentity();
+        var started = DateTime.UtcNow;
+        var outcomes = new List<TestEvidence>();
+        var destination = reportPath ?? DefaultReport("survey", selectedShard);
+
+        var tests = discovered.ToList();
         if (limit > 0) tests = tests.Take(limit).ToList();
         tests = selectedShard.Apply(tests).ToList();
+        if (tests.Count == 0)
+        {
+            Console.WriteLine($"{label}: no tests match.");
+            return 2;
+        }
 
         int pass = 0, fail = 0, crash = 0, timeout = 0, empty = 0, skipped = 0, unsupported = 0;
 
@@ -158,15 +193,16 @@ internal static class WptRunner
                 case Cat.Unsupported: unsupported++; Console.WriteLine($"  UNSUPPORTED {urlPath} — {r.Detail}"); break;
             }
             Console.Out.Flush();
+            if (outcomes.Count % 100 == 0) ExecutionEvidence.Write(destination, identity, started, outcomes);
         }
 
         int total = tests.Count;
         Console.WriteLine();
-        Console.WriteLine($"=== survey {relDir}: {pass}/{total} fully passed " +
+        Console.WriteLine($"=== {label}: {pass}/{total} fully passed " +
                           $"({(total == 0 ? 0 : 100.0 * pass / total):F1}%) — " +
                           $"{fail} partial-fail, {crash} crash, {timeout} timeout, {empty} no-subtests, {skipped} skipped, {unsupported} unsupported ===");
         Console.WriteLine("  (grep '  PASS    ' for the fully-passing tests to promote into wpt-manifest.txt)");
-        ExecutionEvidence.Write(reportPath ?? DefaultReport("survey", selectedShard), identity, started, outcomes);
+        ExecutionEvidence.Write(destination, identity, started, outcomes);
         return total == 0 ? 2 : fail + crash + timeout + empty + skipped + unsupported > 0 ? 1 : 0;
     }
 

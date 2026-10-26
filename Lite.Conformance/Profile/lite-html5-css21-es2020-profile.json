@@ -34,7 +34,9 @@
     "statusResolution": "most-specific-entry-wins; otherwise unmappedApplicableClauseStatus",
     "html5ClauseInventoryComplete": false,
     "html5TestInventoryComplete": false,
-    "html5RequiredDependencies": []
+    "html5RequiredDependencies": [
+      "html5.dependency.html-editing-apis"
+    ]
   },
   "requirements": [
     {
@@ -3109,6 +3111,79 @@
         "Lite/Network"
       ],
       "exclusionReason": "Transport is injected by the host. HTML-visible origin, CORS, redirect, referrer, MIME, and resource metadata behavior remains included."
+    },
+    {
+      "id": "html5.profile.dependency.canvas-2d-context",
+      "specification": "html5",
+      "clause": "Profile dependency boundary: Canvas 2D Context (referenced from §4.11.4)",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/scripting-1.html#the-canvas-element",
+      "title": "Canvas 2D Context specification",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom/JsCanvasContext2D.cs"
+      ],
+      "exclusionReason": "Scope decision 2026-10-24: the Canvas 2D Context specification that §4.11.4 references for its rendering context is outside this profile's dependency scope. The existing JsCanvasContext2D stays as an extension and never counts as HTML 5.0 coverage. The §4.11.4 canvas element clause itself (getContext rules, toDataURL, the origin-clean flag, fallback content, width/height sizing) remains included."
+    },
+    {
+      "id": "html5.profile.dependency.web-storage",
+      "specification": "html5",
+      "clause": "Profile dependency boundary: Web Storage ([WEBSTORAGE])",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/references.html#refsWEBSTORAGE",
+      "title": "Web Storage specification",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom/JsStorage.cs"
+      ],
+      "exclusionReason": "Scope decision 2026-10-24: the Web Storage specification ([WEBSTORAGE], localStorage/sessionStorage) is outside this profile's dependency scope. The existing JsStorage stays as an extension and never counts as HTML 5.0 coverage."
+    },
+    {
+      "id": "html5.profile.dependency.web-messaging",
+      "specification": "html5",
+      "clause": "Profile dependency boundary: Web Messaging ([WEBMSG])",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/references.html#refsWEBMSG",
+      "title": "Web Messaging specification",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom/JsMessageChannel.cs",
+        "Lite/Scripting/Dom/JsWindowProxy.cs"
+      ],
+      "exclusionReason": "Scope decision 2026-10-24: the Web Messaging specification ([WEBMSG], cross-document, channel and broadcast messaging) is outside this profile's dependency scope. The existing postMessage and JsMessageChannel implementations stay as extensions and never count as HTML 5.0 coverage."
+    },
+    {
+      "id": "html5.profile.dependency.workers",
+      "specification": "html5",
+      "clause": "Profile dependency boundary: Web Workers ([WEBWORKERS])",
+      "url": "https://www.w3.org/TR/2014/REC-html5-20141028/references.html#refsWEBWORKERS",
+      "title": "Web Workers specification",
+      "applicability": "excluded",
+      "status": "profile-excluded",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Scripting/Dom/JsWorker.cs"
+      ],
+      "exclusionReason": "Scope decision 2026-10-24: the Web Workers specification ([WEBWORKERS]) and the worker global contexts it defines are outside this profile's dependency scope. The existing JsWorker stays as an extension and never counts as HTML 5.0 coverage; web-facing behavior it would otherwise cover stays reviewed in the window context."
+    },
+    {
+      "id": "html5.dependency.html-editing-apis",
+      "specification": "html5",
+      "clause": "Dependency: HTML Editing APIs ([EDITING]; execCommand and queryCommand*)",
+      "url": "https://w3c.github.io/editing/execCommand.html",
+      "title": "HTML Editing APIs, pinned draft revision",
+      "applicability": "included",
+      "status": "untested",
+      "tests": [],
+      "implementationAreas": [
+        "Lite/Editing",
+        "Lite/Interaction",
+        "Lite/Scripting/Dom"
+      ],
+      "notes": "Scope decision 2026-10-24: required in addition to the §7.6 contenteditable/designMode obligations (html5.7.6). Pinned to the draft's last revision of execCommand.html, commit ecef1e05e9cb5eacda896adf0f4116d0348802d3 (17 June 2020); the WPT editing/ root vendored at the suite lock revision is its test corpus. The pinned REC cites this draft as [EDITING] (references.html#refsEDITING)."
     },
     {
       "id": "css21.4-7",
