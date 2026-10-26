@@ -26061,6 +26061,2601 @@
       "path": "webstorage/symbol-props.window.js",
       "classification": "profile-excluded",
       "reason": "Reviewed 2026-10-24 (profile-excluded): Web Storage ([WEBSTORAGE], localStorage/sessionStorage) is outside this profile's dependency scope per the 2026-10-24 scope decision; the existing JsStorage stays as an extension and never counts as HTML 5.0 coverage."
+    },
+    {
+      "path": "dom/nodes/attributes.html",
+      "classification": "post-target",
+      "reason": "Element.toggleAttribute was specified in whatwg/dom in 2016+; the 2014 REC's DOM dependency (§2.6, §5) defines no such method. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/name-validation.html",
+      "classification": "post-target",
+      "reason": "Element.toggleAttribute was specified in whatwg/dom in 2016+; the 2014 REC's DOM dependency (§2.6, §5) defines no such method. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/processing-instruction-attributes.html",
+      "classification": "post-target",
+      "reason": "Element.toggleAttribute was specified in whatwg/dom in 2016+; the 2014 REC's DOM dependency (§2.6, §5) defines no such method. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/error-conditions.tentative.html",
+      "classification": "post-target",
+      "reason": "Element.toggleAttribute was specified in whatwg/dom in 2016+; the 2014 REC's DOM dependency (§2.6, §5) defines no such method. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/ParentNode-replaceChildren.html",
+      "classification": "post-target",
+      "reason": "ParentNode.replaceChildren was specified in whatwg/dom in 2019+; the 2014 REC's DOM dependency has no such method. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/insertion-removing-steps/insertion-removing-steps-iframe.window.js",
+      "classification": "post-target",
+      "reason": "ParentNode.replaceChildren was specified in whatwg/dom in 2019+; the 2014 REC's DOM dependency has no such method. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/iframe-document-preserve.window.js",
+      "classification": "post-target",
+      "reason": "ParentNode.replaceChildren was specified in whatwg/dom in 2019+; the 2014 REC's DOM dependency has no such method. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "editing/crashtests/replace-document-root-with-object-and-mo.html",
+      "classification": "post-target",
+      "reason": "ParentNode.replaceChildren was specified in whatwg/dom in 2019+; the 2014 REC's DOM dependency has no such method. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "html/interaction/focus/sequential-focus-navigation-starting-point.html",
+      "classification": "post-target",
+      "reason": "ParentNode.replaceChildren was specified in whatwg/dom in 2019+; the 2014 REC's DOM dependency has no such method. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "html/semantics/forms/constraints/form-validation-validity-textarea-defaultValue.html",
+      "classification": "post-target",
+      "reason": "ParentNode.replaceChildren was specified in whatwg/dom in 2019+; the 2014 REC's DOM dependency has no such method. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/Node-moveBefore.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/child-style-preserve.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/chrome-338071841-crash.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/chrome-433696404-crash.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/continue-css-animation-left.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/continue-css-animation-transform.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/continue-css-transition-left-pseudo.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/continue-css-transition-left.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/continue-css-transition-transform-pseudo.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/continue-css-transition-transform.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/css-animation-commit-styles.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/css-transition-cross-document.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/css-transition-cross-shadow.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/css-transition-to-disconnected-document.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/css-transition-trigger.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/custom-element-move-reactions.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/fieldset-child-blur-event.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/fieldset-child-date-input-blur-event.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/fire-focusin-focusout.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/focus-preserve-render.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/focus-preserve.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/focus-within.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/fullscreen-preserve.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/hover-style-update.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/input-moveBefore-crash.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/listed-form-element-reset.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/live-range-updates.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/modal-dialog.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-as-flex-item.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-dir.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-from-light-to-shadow.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-id-map.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-iframe-crash.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-lang.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-legend-input-crash.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-name-map.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-nodeiterator.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-option-recalc-style.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-range-iframe-crash.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-selector-matching.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-shadow-inside.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-shadow-root.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-size-query.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/moveBefore-subframe-count-crash.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/mutation-observer.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/nonce.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/object-crash-regression.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/pointer-events.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/popover-preserve.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/preserve-render-blocking-style.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/relevant-mutations.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/script-move-before.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/select-option-optgroup.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/selection-preserve.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/slotchange-events.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/style-applies.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/nodes/moveBefore/throws-exception.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/selectedcontent-movebefore.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-open-movebefore-setup.html",
+      "classification": "post-target",
+      "reason": "ParentNode.moveBefore was specified in 2024+; the 2014 REC moves nodes through insertBefore/appendChild with reparenting at adoption. Accepted 2026-10-26 under REC clause REC section 2.7."
+    },
+    {
+      "path": "dom/abort/AbortSignal.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/abort/abort-signal-any.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/abort/event.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/abort/timeout.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/events/AddEventListenerOptions-signal.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/idlharness.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/idlharness.window.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/interface-objects.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-catch.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-constructor.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-drop.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-event-target.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-every.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-finally.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-find.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-first.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-flatMap.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-forEach.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-from.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-inspect.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-last.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-map.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-reduce.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-some.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-switchMap.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-takeUntil.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "dom/observable/tentative/observable-toArray.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/api/abort/cache.https.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/api/abort/destroyed-context.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/api/abort/general.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/api/abort/keepalive.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/api/abort/request.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/api/abort/serviceworker-intercepted.https.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/api/basic/request-upload.h2.any.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/api/crashtests/aborted-fetch-response.https.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/fetch-later/basic.https.window.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/fetch-later/quota/accumulated-oversized-payload.https.window.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/fetch-later/quota/cross-origin-iframe/accumulated-oversized-payload.https.window.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/fetch-later/quota/cross-origin-iframe/multiple-iframes.https.window.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/fetch-later/quota/cross-origin-iframe/sandboxed-iframe.https.window.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/fetch-later/quota/multiple-origins.https.window.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/fetch-later/quota/same-origin-iframe/accumulated-oversized-payload.https.window.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/fetch-later/quota/same-origin-iframe/sandboxed-iframe.https.window.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/fetch-later/send-on-deactivate.https.window.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "fetch/fetch-later/send-on-discard/not-send-after-abort.https.window.js",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/hit-test/low-dpi-hit-test.tentative.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "html/semantics/disabled-elements/event-propagate-disabled-keyboard.tentative.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "html/semantics/disabled-elements/event-propagate-disabled.tentative.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-closedby-start-open.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/toggle-events.html",
+      "classification": "post-target",
+      "reason": "AbortController/AbortSignal were specified in 2016+ (whatwg/dom); the 2014 REC defines no abort signal and no fetch dependency step consumes one. Accepted 2026-10-26 under REC clause REC sections 2.6 and 2.7."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/imagebitmap-replication-exif-orientation.html",
+      "classification": "post-target",
+      "reason": "the structuredClone() global was specified in 2022+; the 2014 REC §2.7.5 defines internal structured clone for postMessage/history.state only, with no exposed global. Accepted 2026-10-26 under REC clause REC section 2.8."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/messagechannel.any.js",
+      "classification": "post-target",
+      "reason": "the structuredClone() global was specified in 2022+; the 2014 REC §2.7.5 defines internal structured clone for postMessage/history.state only, with no exposed global. Accepted 2026-10-26 under REC clause REC section 2.8."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/structured-cloning-error-stack-optional.sub.window.js",
+      "classification": "post-target",
+      "reason": "the structuredClone() global was specified in 2022+; the 2014 REC §2.7.5 defines internal structured clone for postMessage/history.state only, with no exposed global. Accepted 2026-10-26 under REC clause REC section 2.8."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/structured-cloning-error-stack.window.js",
+      "classification": "post-target",
+      "reason": "the structuredClone() global was specified in 2022+; the 2014 REC §2.7.5 defines internal structured clone for postMessage/history.state only, with no exposed global. Accepted 2026-10-26 under REC clause REC section 2.8."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/window-postmessage.window.js",
+      "classification": "post-target",
+      "reason": "the structuredClone() global was specified in 2022+; the 2014 REC §2.7.5 defines internal structured clone for postMessage/history.state only, with no exposed global. Accepted 2026-10-26 under REC clause REC section 2.8."
+    },
+    {
+      "path": "html/webappapis/structured-clone/structured-clone-cross-realm-method.html",
+      "classification": "post-target",
+      "reason": "the structuredClone() global was specified in 2022+; the 2014 REC §2.7.5 defines internal structured clone for postMessage/history.state only, with no exposed global. Accepted 2026-10-26 under REC clause REC section 2.8."
+    },
+    {
+      "path": "html/webappapis/structured-clone/structured-clone-detached-window-crash.html",
+      "classification": "post-target",
+      "reason": "the structuredClone() global was specified in 2022+; the 2014 REC §2.7.5 defines internal structured clone for postMessage/history.state only, with no exposed global. Accepted 2026-10-26 under REC clause REC section 2.8."
+    },
+    {
+      "path": "html/webappapis/structured-clone/structured-clone.any.js",
+      "classification": "post-target",
+      "reason": "the structuredClone() global was specified in 2022+; the 2014 REC §2.7.5 defines internal structured clone for postMessage/history.state only, with no exposed global. Accepted 2026-10-26 under REC clause REC section 2.8."
+    },
+    {
+      "path": "url/historical.any.js",
+      "classification": "post-target",
+      "reason": "the structuredClone() global was specified in 2022+; the 2014 REC §2.7.5 defines internal structured clone for postMessage/history.state only, with no exposed global. Accepted 2026-10-26 under REC clause REC section 2.8."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-ImageBitmap-video.html",
+      "classification": "post-target",
+      "reason": "HTMLMediaElement.play() returned void in the 2014 REC (§4.8.10 media elements); the promise-returning play() was specified in 2016+. Accepted 2026-10-26 under REC clause REC section 4.8.10."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-video.html",
+      "classification": "post-target",
+      "reason": "HTMLMediaElement.play() returned void in the 2014 REC (§4.8.10 media elements); the promise-returning play() was specified in 2016+. Accepted 2026-10-26 under REC clause REC section 4.8.10."
+    },
+    {
+      "path": "html/semantics/embedded-content/media-elements/audio_loop_seek_to_eos.html",
+      "classification": "post-target",
+      "reason": "HTMLMediaElement.play() returned void in the 2014 REC (§4.8.10 media elements); the promise-returning play() was specified in 2016+. Accepted 2026-10-26 under REC clause REC section 4.8.10."
+    },
+    {
+      "path": "html/semantics/embedded-content/media-elements/error-sequence.html",
+      "classification": "post-target",
+      "reason": "HTMLMediaElement.play() returned void in the 2014 REC (§4.8.10 media elements); the promise-returning play() was specified in 2016+. Accepted 2026-10-26 under REC clause REC section 4.8.10."
+    },
+    {
+      "path": "html/semantics/embedded-content/media-elements/loading-the-media-resource/resource-selection-invoke-set-src-networkState.html",
+      "classification": "post-target",
+      "reason": "HTMLMediaElement.play() returned void in the 2014 REC (§4.8.10 media elements); the promise-returning play() was specified in 2016+. Accepted 2026-10-26 under REC clause REC section 4.8.10."
+    },
+    {
+      "path": "html/semantics/embedded-content/media-elements/paused_true_during_pause.html",
+      "classification": "post-target",
+      "reason": "HTMLMediaElement.play() returned void in the 2014 REC (§4.8.10 media elements); the promise-returning play() was specified in 2016+. Accepted 2026-10-26 under REC clause REC section 4.8.10."
+    },
+    {
+      "path": "html/semantics/embedded-content/media-elements/playing-the-media-resource/play-in-detached-document.html",
+      "classification": "post-target",
+      "reason": "HTMLMediaElement.play() returned void in the 2014 REC (§4.8.10 media elements); the promise-returning play() was specified in 2016+. Accepted 2026-10-26 under REC clause REC section 4.8.10."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-with-replaced-after-pseudo-crash.html",
+      "classification": "post-target",
+      "reason": "HTMLMediaElement.play() returned void in the 2014 REC (§4.8.10 media elements); the promise-returning play() was specified in 2016+. Accepted 2026-10-26 under REC clause REC section 4.8.10."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video_timeupdate_on_seek.html",
+      "classification": "post-target",
+      "reason": "HTMLMediaElement.play() returned void in the 2014 REC (§4.8.10 media elements); the promise-returning play() was specified in 2016+. Accepted 2026-10-26 under REC clause REC section 4.8.10."
+    },
+    {
+      "path": "editing/crashtests/designMode-on-of-lazy-loading-iframe.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/browsers/browsing-the-web/navigating-across-documents/navigate_too_many_calls.optional.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/img-aspect-ratio-lazy.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-autoplay-deferred.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-eager.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-lazy-autoplay-when-visible.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-lazy-disconnected.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-lazy-in-scroller.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-lazy-in-viewport.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-lazy-not-rendered.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-lazy-source-deferred.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-lazy-to-eager.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-lazy-window-onload.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-load-deferred.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-load-preload-auto-deferred.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-audio-element/audio-loading-load-preload-metadata-deferred.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-adopt-lazy-iframe-from-script-disabled-document.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-base-url-2.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-base-url-3.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-base-url.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-history-pushState.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-history-replaceState.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-script-disabled-iframe.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-scroller-far.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-in-viewport-001.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-load-event.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-multiple-queued-navigations.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-multiple-times.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-nav-form-submit.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-nav-link-click-fragment.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-nav-link-click.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-nav-location-assign.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-nav-location-replace-cross-origin.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-nav-location-replace-set-src.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-nav-location-replace.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-nav-meta-refresh.optional.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-nav-navigation-navigate.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-nav-window-open.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-referrerpolicy-change.sub.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-reload-location-reload.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-reload-navigation-reload.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-simple-crash.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-to-eager-srcdoc.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-to-eager.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-iframe-element/iframe_javascript_url_loading_lazy.htm",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/below-viewport-image-loading-lazy-load-event.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/disconnected-image-loading-lazy.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/empty-src-no-current-request.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-available.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-base-url-2.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-base-url.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-below-viewport-dynamic.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-clip-path.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-crossorigin-change.sub.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-data-url-to-https.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-different-crossorigin.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-empty-src.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-in-script-disabled-iframe.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-in-scroller-far.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-in-scroller-horizontal-far.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-in-scroller-horizontal.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-in-scroller-nested-2.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-in-scroller-nested-3.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-in-scroller-nested-4.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-in-scroller-nested-5.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-in-scroller-nested.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-in-scroller.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-in-viewport-dynamic.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-move-document.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-move-into-script-disabled-iframe.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-multicol.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-multiple-times.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-negative-margin.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-referrerpolicy-change.sub.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-relevant-mutations.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-slow-aspect-ratio.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-slow.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-srcset.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-subframe-detached-crash.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-to-eager.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-use-list-of-available-images.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy-zero-intersection-area.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-lazy.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/image-loading-subpixel-clip.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/move-element-and-scroll.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/not-rendered-below-viewport-image-loading-lazy.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/not-rendered-image-loading-lazy.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/picture-loading-lazy.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/relevant-mutations-lazy.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/remove-element-and-scroll.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/scrolling-below-viewport-image-lazy-loading-in-iframe.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/sizes/sizes-auto-rendering-2.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/sizes/sizes-auto-rendering-3.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/sizes/sizes-auto-rendering-dynamic.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/sizes/sizes-auto-rendering.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/sizes/sizes-auto-resize-observer-removes-auto.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/update-the-image-data/lazy-out-of-band-load.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/update-the-image-data/src-then-lazy-load.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-autoplay-deferred.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-eager.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-lazy-autoplay-when-visible.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-lazy-disconnected.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-lazy-in-scroller.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-lazy-in-viewport.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-lazy-load-when-visible.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-lazy-not-rendered.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-lazy-poster-when-visible.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-lazy-source-poster-deferred.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-lazy-to-eager.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-lazy-window-onload.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-load-deferred.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-load-preload-auto-deferred.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-load-preload-metadata-deferred.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-video-element/video-loading-poster-deferred.html",
+      "classification": "post-target",
+      "reason": "the loading=\"lazy\" attribute was specified in 2019+; the 2014 REC loads every img/iframe as it is traversed (§4.8, §4.11). Accepted 2026-10-26 under REC clause REC section 4.8."
+    },
+    {
+      "path": "editing/crashtests/delete-after-justifyleft-in-closed-editable-dialog.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "editing/crashtests/inserthtml-selecting-across-dialog.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "editing/crashtests/inserttext-after-selectall-from-area-in-dialog.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "editing/crashtests/move-focused-editing-host-and-add-selection-range-to-another-editing-host-behind-dialog.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/dialog-paints-in-top-layer.tentative.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/interaction/focus/focusgroup/tentative/top-layer-dialog-excluded.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/interaction/focus/the-autofocus-attribute/autofocus-dialog.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/flow-content-0/dialog-display.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/abspos-dialog-layout.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/backdrop-descendant-selector.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/backdrop-dynamic-display-none.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/backdrop-dynamic-style-change.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/backdrop-in-flow.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/backdrop-inherits.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/backdrop-receives-element-events.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/backdrop-stacking-order.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/child-sequential-focus.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/closed-dialog-does-not-block-mouse-events.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/default-color.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-active-document.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-audio-video-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-autofocus-just-once.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-autofocus-multiple-times.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-autofocus.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-cancel-events.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-cancel-preventDefault.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-cancel-with-input.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-cancel-with-select.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-canceling.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-close-event-async.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-close-event.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-close-via-attribute.tentative.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-close.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-closedby-bounds-clicking.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-closedby-corner-cases.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-closedby-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-closedby-show-stacked.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-closedby.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-closewatcher-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-enabled.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-focus-previous-outside.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-focus-shadow-double-nested.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-focus-shadow.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-focusability.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-focusing-steps-disconnected.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-focusing-steps-inert.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-focusing-steps-prevent-autofocus.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-form-submission-unusual.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-form-submission.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-inert.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-insert-disconnected-node-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-keydown-preventDefault.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-light-dismiss-drag.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-light-dismiss-pointer-capture.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-light-dismiss-touch.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-no-throw-requested-state.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-open-add-closedby-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-open-pseudo-invalidation.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-overlay-re-add-during-transition.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-overlay.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-popover-closedby-complex.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-popover-closedby-simple.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-popover-overlay.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-remove-open-attr-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-requestclose-5-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-requestclose-6-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-requestclose-closedby.tentative.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-requestclose-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-requestclose-recurse.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-requestclose.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-return-value.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-showModal-inert-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-showModal.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-synthetic-keydown.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialog-toggle-source.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dialogs-with-no-backdrop.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/dont-share-style-to-top-layer.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/element-removed-from-top-layer-has-original-position.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/fixed-position-child-with-contain-ancestor.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/fixed-position-child-with-fo-ancestor.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/fixed-position-child-with-transformed-ancestor.tentative.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/fixed-position-child-with-will-change-ancestor.tentative.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/focus-after-close.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/focus-previous-iframe.tentative.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/form-submit-dialog-shadow.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/inert-does-not-match-disabled-selector.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/inert-focus-in-frames.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/inert-inlines.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/inert-label-focus.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/inert-node-is-not-highlighted.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/inert-node-is-uneditable.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/inert-node-is-unfocusable.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/inert-node-is-unselectable.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/inert-svg-hittest.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/inertness-with-modal-dialogs-and-iframes.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-ancestor-is-inert.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-backdrop-opacity.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-backdrop.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-blocks-mouse-events.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-display-contents.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-generated-content.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-in-iframe.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-in-object.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-in-replaced-renderer.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-in-table-column.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-in-visibility-hidden.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-scroll-height.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-selection.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/modal-dialog-sibling.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/multiple-centered-dialogs.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/non-modal-canceling.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/non-modal-dialog-does-not-block-mouse-events.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/non-modal-dialog-layout.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/popover-dialog-does-not-block-mouse-events.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/remove-dialog-should-unblock-document.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/removed-element-is-removed-from-top-layer.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/show-modal-focusing-steps.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/showmodal-in-shadow-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/showmodal-shadow-sibling-frame-crash.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/simulated-click-inert.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/submit-dialog-close-event.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-backdrop-remove-add-ordering.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-containing-block.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-display-none.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-nesting.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-parent-clip.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-parent-filter.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-parent-mask.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-parent-opacity.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-parent-overflow-clip.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-parent-overflow-hidden.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-parent-overflow-scroll.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-parent-transform.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-position-relative.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-position-static.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-position.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-remove-popover-attribute.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-stacking-correct-order-remove-readd.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-stacking-dynamic.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/interactive-elements/the-dialog-element/top-layer-stacking.tentative.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/on-dialog-behavior.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/on-dialog-disconnect.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/on-dialog-invalid-behavior.html",
+      "classification": "post-target",
+      "reason": "the <dialog> element and showModal() were specified in 2022+; the 2014 REC has no dialog element (Lite keeps it as an extension). Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "selection/onselectstart-on-key-in-contenteditable.html",
+      "classification": "post-target",
+      "reason": "the inert attribute and HTMLElement.inert were specified in 2022+, absent from the 2014 REC's §7 disabled-elements model. Accepted 2026-10-26 under REC clause REC section 7."
+    },
+    {
+      "path": "dom/events/Event-dispatch-click.html",
+      "classification": "post-target",
+      "reason": "queueMicrotask() was specified in 2018+; the 2014 REC exposes microtask checkpointing (§6.1.4) through no global. Accepted 2026-10-26 under REC clause REC section 6.1."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/img-picture-ancestor.html",
+      "classification": "post-target",
+      "reason": "queueMicrotask() was specified in 2018+; the 2014 REC exposes microtask checkpointing (§6.1.4) through no global. Accepted 2026-10-26 under REC clause REC section 6.1."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/source-media-outside-doc.html",
+      "classification": "post-target",
+      "reason": "queueMicrotask() was specified in 2018+; the 2014 REC exposes microtask checkpointing (§6.1.4) through no global. Accepted 2026-10-26 under REC clause REC section 6.1."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/update-the-image-data/current-request-microtask-002.html",
+      "classification": "post-target",
+      "reason": "queueMicrotask() was specified in 2018+; the 2014 REC exposes microtask checkpointing (§6.1.4) through no global. Accepted 2026-10-26 under REC clause REC section 6.1."
+    },
+    {
+      "path": "html/semantics/embedded-content/the-img-element/update-the-image-data/current-request-microtask.html",
+      "classification": "post-target",
+      "reason": "queueMicrotask() was specified in 2018+; the 2014 REC exposes microtask checkpointing (§6.1.4) through no global. Accepted 2026-10-26 under REC clause REC section 6.1."
+    },
+    {
+      "path": "html/semantics/scripting-1/the-script-element/module/inline-async-inserted-execorder.html",
+      "classification": "post-target",
+      "reason": "queueMicrotask() was specified in 2018+; the 2014 REC exposes microtask checkpointing (§6.1.4) through no global. Accepted 2026-10-26 under REC clause REC section 6.1."
+    },
+    {
+      "path": "html/webappapis/microtask-queuing/queue-microtask-cross-realm-callback-report-exception.html",
+      "classification": "post-target",
+      "reason": "queueMicrotask() was specified in 2018+; the 2014 REC exposes microtask checkpointing (§6.1.4) through no global. Accepted 2026-10-26 under REC clause REC section 6.1."
+    },
+    {
+      "path": "html/webappapis/microtask-queuing/queue-microtask-exceptions.any.js",
+      "classification": "post-target",
+      "reason": "queueMicrotask() was specified in 2018+; the 2014 REC exposes microtask checkpointing (§6.1.4) through no global. Accepted 2026-10-26 under REC clause REC section 6.1."
+    },
+    {
+      "path": "html/webappapis/microtask-queuing/queue-microtask.any.js",
+      "classification": "post-target",
+      "reason": "queueMicrotask() was specified in 2018+; the 2014 REC exposes microtask checkpointing (§6.1.4) through no global. Accepted 2026-10-26 under REC clause REC section 6.1."
+    },
+    {
+      "path": "html/webappapis/microtask-queuing/queue-microtask.window.js",
+      "classification": "post-target",
+      "reason": "queueMicrotask() was specified in 2018+; the 2014 REC exposes microtask checkpointing (§6.1.4) through no global. Accepted 2026-10-26 under REC clause REC section 6.1."
+    },
+    {
+      "path": "html/webappapis/timers/timer-nesting-not-inherited-in-microtask.html",
+      "classification": "post-target",
+      "reason": "queueMicrotask() was specified in 2018+; the 2014 REC exposes microtask checkpointing (§6.1.4) through no global. Accepted 2026-10-26 under REC clause REC section 6.1."
+    },
+    {
+      "path": "dom/nodes/Element-classlist.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "dom/nodes/MutationObserver-callback-arguments.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "dom/nodes/MutationObserver-cross-realm-callback-report-exception.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "dom/nodes/MutationObserver-disconnect.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "dom/nodes/MutationObserver-document.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "dom/nodes/MutationObserver-nested-crash.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "dom/nodes/MutationObserver-sanity.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "dom/nodes/MutationObserver-takeRecords.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "dom/nodes/MutationObserver-textContent.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "dom/nodes/insertion-removing-steps/Node-appendChild-script-with-mutation-observer-takeRecords.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "editing/other/inserttext-last-mutation.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/fullscreen-canvas.tentative.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/intersection-observer-visibility.tentative.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/onpaint-fires-post-intersection-observation-steps.tentative.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/onpaint-fires-post-resize-observer.tentative.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/dom/partial-updates/tentative/template-for-mutation-records.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/interaction/focus/processing-model/focus-fixup-rule-one-no-dialogs.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/rendering/replaced-elements/images/img-represents-image-size-before-partially-available.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/selectedcontent-mutations.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/webappapis/dynamic-markup-insertion/opening-the-input-stream/mutation-observer.window.js",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/webappapis/scripting/event-loops/microtask_before_prepare_the_script_element-01.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/webappapis/scripting/event-loops/microtask_before_prepare_the_script_element-02.xhtml",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/webappapis/scripting/event-loops/task_microtask_ordering-manual.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "html/webappapis/scripting/event-loops/task_microtask_ordering.html",
+      "classification": "post-target",
+      "reason": "the observer APIs were specified after the 2014 REC (MutationObserver 2013+ in the separate DOM spec the REC predates, the rest 2015+); the 2014 REC defines none of them. Accepted 2026-10-26 under REC clause REC section 6."
+    },
+    {
+      "path": "FileAPI/blob/Blob-array-buffer.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "FileAPI/blob/Blob-bytes.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "FileAPI/blob/Blob-text.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "FileAPI/blob/Blob-textStream.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/api-basics.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/api-invalid-label.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/api-replacement-encodings.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/api-surrogates-utf8.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/encodeInto.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/idlharness.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/iso-2022-jp-decoder.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/legacy-mb-schinese/gb18030/gb18030-decoder.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/legacy-mb-schinese/gbk/gbk-decoder.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/sharedarraybuffer.https.html",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/single-byte-decoder.window.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-arguments.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-byte-order-marks.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-copy.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-eof.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-fatal-single-byte.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-fatal-streaming.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-fatal.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-ignorebom.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-labels.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-mistakes.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-streaming.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textdecoder-utf16-surrogates.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textencoder-constructor-non-utf.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "encoding/textencoder-utf16-surrogates.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "fetch/api/body/textstream.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "fetch/api/redirect/redirect-upload.h2.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "fetch/api/request/request-clone-readable-stream-body.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "fetch/api/response/response-stream-with-broken-then.any.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "url/percent-encoding.window.js",
+      "classification": "post-target",
+      "reason": "the Encoding Standard's TextDecoder/TextEncoder JS API is not part of the 2014 REC's encoding dependency, which covers document decoding, legacy encodings and form encoding (§8.2.2) only. Accepted 2026-10-26 under REC clause REC section 8.2.2."
+    },
+    {
+      "path": "html/dom/idlharness.https.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/interaction/focus/focusgroup/tentative/ax-role-inference-top-layer.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/interaction/focus/focusgroup/tentative/focusgroupstart-scope-owners.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/interaction/focus/focusgroup/tentative/top-layer-dynamic-exclusion.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/interaction/focus/focusgroup/tentative/top-layer-inner-focusgroup.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/interaction/focus/focusgroup/tentative/top-layer-popover-excluded.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/interaction/focus/focusgroup/tentative/top-layer-popover-invoker.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/customizable-combobox/customizable-combobox-beforefilter.tentative.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/customizable-combobox/customizable-combobox-keyboard-behavior.tentative.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/customizable-combobox/customizable-combobox-option-attributes.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/customizable-combobox/customizable-combobox-pointer-behavior.tentative.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/customizable-combobox/customizable-combobox-popover-exception.tentative.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/customizable-combobox/datalist-popover.tentative.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/button-in-popover.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/select-events.optional.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/select-inside-top-layer.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/select-keyboard-behavior.optional.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/select-mouse-behavior.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/select-picker-exit-animation.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/select-picker-popover-open-invalid.tentative.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/select-picker-starting-style.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/select-popover-exit-animation.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/customizable-select/switch-picker-appearance.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/select-many-options.tentative.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/forms/the-select-element/select-popover-position-with-zoom.tentative.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/button-invoke-menulist.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/focus-enters-menulist.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/focus-menu-elements-arrowoperations.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/focus-menu-elements-nested-arrowoperations.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/long-menulist-appearance.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/menu-elements-default-style.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/menu-elements-pseudo-ordering.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/menu-elements-tab-focus.optional.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/menu-elements-typeahead.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/menu-safe-triangle.optional.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/menubar-invoke-menulist.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/menuitem-activate.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/menuitem-interest-invoker.tentative.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/menulist-popover-attribute.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/menu/tentative/uncheck-menuitem-dismiss-popover.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/button-event-dispatch-content-attribute.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/button-event-dispatch.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/button-type-behavior.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/button-type-reflection.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/command-reflection.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/event-interface.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/invalid-element-types.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/on-audio-invalid-behavior.tentative.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/on-details-invalid-behavior.tentative.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/on-popover-behavior.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/on-popover-disconnect.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/on-popover-invalid-behavior.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/source-attribute-retargeting.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/semantics/the-button-element/command-and-commandfor/toggleevent-source-attribute-retargeting.html",
+      "classification": "post-target",
+      "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
     }
   ]
 }
