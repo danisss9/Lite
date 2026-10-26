@@ -41,8 +41,16 @@ def derive_queue(inventory) -> list[dict]:
     queue = [t for t in inventory['tests']
              if t['classification'] == 'unreviewed' and t['context'] == 'window'
              and t['kind'] == 'testharness']
-    queue.sort(key=lambda t: t['source'])
+    queue.sort(key=queue_order)
     return queue
+
+
+def queue_order(item: dict):
+    # The editing/run corpus runs >1,200 subtests per file through the engine and
+    # can consume minutes each; measured 2026-10-26, it blocked every root behind
+    # it for hours. It still runs in full — just after the representative majority.
+    path = item['source']
+    return (path.startswith('editing/run/'), path)
 
 
 def run_survey(paths: list[str], label: str) -> int:
