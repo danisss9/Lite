@@ -28741,6 +28741,736 @@
       "path": "html/infrastructure/safe-passing-of-structured-data/shared-array-buffers/nested-sharedworker-success.html",
       "classification": "profile-excluded",
       "reason": "Reviewed 2026-10-26 (profile-excluded): nested SharedWorker assertions bind Web Workers ([WEBWORKERS]), excluded from dependency scope by the 2026-10-24 decision."
+    },
+    {
+      "path": "html/canvas/element/canvas-context/2d.canvas.context.shared.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - getContext(2d) returns a distinct context object per canvas element. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-context/2d.canvas.context.type.extend.html",
+      "classification": "profile-excluded",
+      "reason": "Reviewed 2026-10-26 (profile-excluded): the assertions bind the CanvasRenderingContext2D interface object (extend/replace/prototype), which belongs to the Canvas 2D Context specification excluded from dependency scope by the 2026-10-24 decision; the element clause keeps only the getContext rules. measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/canvas-context/2d.canvas.context.type.prototype.html",
+      "classification": "profile-excluded",
+      "reason": "Reviewed 2026-10-26 (profile-excluded): the assertions bind the CanvasRenderingContext2D interface object (extend/replace/prototype), which belongs to the Canvas 2D Context specification excluded from dependency scope by the 2026-10-24 decision; the element clause keeps only the getContext rules. measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/canvas-context/2d.canvas.context.type.replace.html",
+      "classification": "profile-excluded",
+      "reason": "Reviewed 2026-10-26 (profile-excluded): the assertions bind the CanvasRenderingContext2D interface object (extend/replace/prototype), which belongs to the Canvas 2D Context specification excluded from dependency scope by the 2026-10-24 decision; the element clause keeps only the getContext rules. measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.initial.color.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - the bitmap starts transparent black and resizing the canvas resets it, clearing the drawing state. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.initial.reset.2dstate.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - the bitmap starts transparent black and resizing the canvas resets it, clearing the drawing state. measured 0/15 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.initial.reset.clip.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - the bitmap starts transparent black and resizing the canvas resets it, clearing the drawing state. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.initial.reset.different.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - the bitmap starts transparent black and resizing the canvas resets it, clearing the drawing state. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.initial.reset.gradient.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - the bitmap starts transparent black and resizing the canvas resets it, clearing the drawing state. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.initial.reset.path.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - the bitmap starts transparent black and resizing the canvas resets it, clearing the drawing state. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.initial.reset.pattern.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - the bitmap starts transparent black and resizing the canvas resets it, clearing the drawing state. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.initial.reset.same.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - the bitmap starts transparent black and resizing the canvas resets it, clearing the drawing state. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.initial.reset.transform.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - the bitmap starts transparent black and resizing the canvas resets it, clearing the drawing state. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.readonly.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - the bitmap starts transparent black and resizing the canvas resets it, clearing the drawing state. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.reference.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) - the bitmap starts transparent black and resizing the canvas resets it, clearing the drawing state. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.default.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.idl.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.decimal.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.em.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.empty.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.exp.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.hex.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.junk.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.minus.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.octal.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.onlyspace.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.percent.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.plus.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.space.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.trailingjunk.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.whitespace.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.parse.zero.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.reflect.setcontent.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.reflect.setidl.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.reflect.setidlzero.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.removed.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.decimal.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.em.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.empty.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.exp.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.hex.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.junk.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.minus.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.octal.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.onlyspace.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.percent.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.plus.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.space.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.trailingjunk.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.whitespace.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.attributes.setAttribute.zero.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/canvas-host/2d.canvas.host.size.invalid.attributes.idl.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) with section 2.4.4 parsing of non-negative integers - canvas width/height dimension parsing, reflection, and the presentational width the attribute carries into getComputedStyle. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: canvas dimension attribute handling, Workstream 4g (with the UA presentational hint adjacent to the CSS track UA stylesheet)."
+    },
+    {
+      "path": "html/canvas/element/manual/context-attributes/canvas-with-padding.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) element-clause obligations exercised through the manual harness. measured 0/1 subtests passing in the WS0.5 baseline. engine gap: canvas element handling, Workstream 4g (embedded content; canvas element clause)."
+    },
+    {
+      "path": "html/canvas/element/manual/context-attributes/getContextAttributes.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/11 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/animated-gif-pinned-to-element-image.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/animated-gif.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/backdrop-filter-bounds-expansion.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/captureElementImage.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/4 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/containment.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/draw-element-different-canvas.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/draw-element-image-detached.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/draw-element-image-different-canvas.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/2 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/draw-element-image-display-none.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/draw-element-image-empty.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/draw-element-image-get-image-data.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/draw-element-image-returned-matrix.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/10 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/drawElementImage-zero-size.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/drawing-display-none-fails.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/element-image-fractional-size.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/get-element-transform.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/12 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/hit-test/elementsFromPoint-no-layoutsubtree.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/hit-test/elementsFromPoint.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/2 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/hit-test/selection.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/0 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/hit-test/z-index.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/2 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/layout-canvas-children.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/layoutsubtree-no-hit-test.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/0 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/moved-nested-layoutsubtree-canvas.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/nested-div-layoutsubtree-canvas.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/nested-layoutsubtree-canvas.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/onpaint-after-scroll-2.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/0 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/onpaint-after-scroll.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/0 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/onpaint-changedElements.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/onpaint-css-animation.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/onpaint-iframe.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/onpaint-zindex.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/onpaint.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/11 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/requestPaint.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/3 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/draw-element-image/video.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/drawing-images-to-the-canvas/drawimage_crossorigin.sub.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) origin-clean flag - drawing or patterning from cross-origin content must taint the canvas. measured 0/4 subtests passing in the WS0.5 baseline. Engine gap: origin-clean tracking, Workstream 4g."
+    },
+    {
+      "path": "html/canvas/element/manual/drawing-images-to-the-canvas/drawimage_svg_image_with_foreign_object_does_not_taint.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) origin-clean flag - drawing or patterning from cross-origin content must taint the canvas. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: origin-clean tracking, Workstream 4g."
+    },
+    {
+      "path": "html/canvas/element/manual/fill-and-stroke-styles/pattern-from-canvas-cross-origin-taint.https.sub.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) origin-clean flag - drawing or patterning from cross-origin content must taint the canvas. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: origin-clean tracking, Workstream 4g."
+    },
+    {
+      "path": "html/canvas/element/manual/fill-and-stroke-styles/pattern-from-image-cross-origin-taint.https.sub.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) origin-clean flag - drawing or patterning from cross-origin content must taint the canvas. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: origin-clean tracking, Workstream 4g."
+    },
+    {
+      "path": "html/canvas/element/manual/fill-and-stroke-styles/pattern-from-img-cross-origin-taint.https.sub.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) origin-clean flag - drawing or patterning from cross-origin content must taint the canvas. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: origin-clean tracking, Workstream 4g."
+    },
+    {
+      "path": "html/canvas/element/manual/fill-and-stroke-styles/pattern-from-video-cross-origin-taint.https.sub.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 4.11.4 (the canvas element) origin-clean flag - drawing or patterning from cross-origin content must taint the canvas. measured 0/1 subtests passing in the WS0.5 baseline. Engine gap: origin-clean tracking, Workstream 4g."
+    },
+    {
+      "path": "html/canvas/element/manual/filters/svg-diffuse-filter-visited-color-taints.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/filters/svg-drop-shadow-filter-visited-color-taints.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/filters/svg-filter-feImage-cross-origin-taint.https.sub.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/filters/svg-flood-filter-visited-color-taints.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/filters/svg-specular-filter-visited-color-taints.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/filters/tentative/idl-conversions/canvas-filter-sequence-conversion.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/canvas-ImageBitmap-close.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/canvas-createImageBitmap-resize.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/6 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/canvas-createImageBitmap-video-resize.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-blob-invalidtype.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-bounds.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/4 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-colorSpaceConversion.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/3 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-drawImage-closed.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-drawImage.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/55 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-exif-orientation.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/7 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-exif-orientation_none.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/8 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-flipY.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/22 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-in-worker-transfer.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-invalid-args.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/93 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-origin.sub.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/21 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-premultiplyAlpha.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/12 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-resolves-in-task.any.js",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/34 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-serializable.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/12 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-sizeOverflow.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/7 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/imagebitmap/createImageBitmap-transfer.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/12 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/ImageData-fidelity.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/4 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-ImageBitmap-Blob.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/208 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-ImageBitmap-ImageBitmap.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/208 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-ImageBitmap-ImageData.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/16 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-ImageBitmap-canvas.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/16 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-ImageBitmap-cloned.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/208 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage-ImageBitmap-image.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/208 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-drawImage.https.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/240 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-pattern-canvas.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/8 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-pattern-image.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/104 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/manual/wide-gamut-canvas/canvas-display-p3-settings.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/9 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.fillTextCluster-options.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.fillTextCluster-range.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.getActualBoundingBox-exceptions.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.getActualBoundingBox-full-text.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/4 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.getActualBoundingBox.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/6 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.index-from-offset-edge-cases.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.index-from-offset-edges.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/10 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.index-from-offset.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/40 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.selection-rects-baselines.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.selection-rects-exceptions.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.selection-rects.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/24 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.strokeTextCluster-options.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.strokeTextCluster-range.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.text-clusters-exceptions.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.text-clusters-position.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
+    },
+    {
+      "path": "html/canvas/element/text/2d.text.measure.text-clusters-split.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the assertions bind an API the 2014 REC predates (createImageBitmap/ImageBitmap, canvas filter, wide-gamut colorSpace, getContextAttributes, or the html-in-canvas draw-element-image proposal marked tentative upstream). measured 0/1 subtests passing in the WS0.5 baseline."
     }
   ]
 }
