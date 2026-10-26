@@ -19,3 +19,8 @@ Lite.AngleSharp/native/** -text
 
 # Shell scripts run under bash on Linux, which rejects CRLF line endings.
 *.sh text eol=lf
+
+# The suite lock's bytes are hashed into the WPT manifest provenance
+# (suiteLockSha256) and the evidence identity, so a checkout must reproduce
+# them byte for byte; an autocrlf rewrite breaks every provenance check.
+Lite.Conformance/test-suites.lock.json -text
