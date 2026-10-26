@@ -68,6 +68,7 @@ def run_survey(paths: list[str], label: str) -> int:
         assert process.stdout is not None
         for line in process.stdout:
             log.write(line)
+            log.flush()
             if line.startswith('  ') or line.startswith('==='):
                 print(line, end='', flush=True)
         process.wait()

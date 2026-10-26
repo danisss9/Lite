@@ -119,9 +119,11 @@ internal static class WptRunner
     /// <summary>
     /// Surveys an explicit list of catalog test paths (one per line; blank lines and
     /// <c>#</c> comments ignored) — the Workstream 0 full-catalog baseline queue, whose
-    /// files span many roots and whose unclassified set no single directory names. Same
-    /// skip, tracing, and exit-code rules as the directory survey; the evidence report is
-    /// rewritten every 100 outcomes so an interrupted multi-hour run keeps its results.
+    /// files span many roots and whose unclassified set no single directory names. Paths
+    /// run in the order the file lists them, so the queue author controls the schedule.
+    /// Same skip, tracing, and exit-code rules as the directory survey; the evidence
+    /// report is rewritten every 100 outcomes so an interrupted multi-hour run keeps its
+    /// results.
     /// </summary>
     public static int SurveyList(string listPath, int limit = 0, string? reportPath = null, ShardSpec? shard = null)
     {
@@ -133,7 +135,6 @@ internal static class WptRunner
         var tests = File.ReadAllLines(listPath)
             .Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))
             .Distinct(StringComparer.Ordinal)
-            .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
         return RunSurveyQueue(tests, $"survey-list {Path.GetFileName(listPath)}", limit, reportPath, shard);
     }
