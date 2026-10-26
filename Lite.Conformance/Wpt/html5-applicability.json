@@ -28656,6 +28656,91 @@
       "path": "html/semantics/the-button-element/command-and-commandfor/toggleevent-source-attribute-retargeting.html",
       "classification": "post-target",
       "reason": "The popover attribute and popover methods were specified in 2022+, absent from the 2014 REC. Accepted 2026-10-26 under REC clause REC section 4."
+    },
+    {
+      "path": "html/infrastructure/common-dom-interfaces/collections/domstringlist.html",
+      "classification": "profile-excluded",
+      "reason": "Reviewed 2026-10-26 (profile-excluded): the file drives DOMStringList through IndexedDB (indexedDB.open, objectStoreNames); the pinned REC references no IndexedDB specification and uses DOMStringList in no HTML interface, so its assertions bind another specification, outside this profile."
+    },
+    {
+      "path": "html/infrastructure/common-dom-interfaces/collections/historical.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): the file asserts the REMOVAL of the HTMLFormControlsCollection/HTMLOptionsCollection legacy callers; the 2014 REC section 2.7 requires those legacy callers, so the assertions bind the post-2014 whatwg/dom removals, not the REC. measured 2/3 subtests passing."
+    },
+    {
+      "path": "html/infrastructure/common-dom-interfaces/collections/htmlallcollection.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 2.7 common DOM interfaces - HTMLAllCollection (length, item, namedItem, named-property enumeration, legacy caller). measured 20/41 subtests passing. engine gap: legacy platform objects (named-property enumeration, [[Set]]/[[DefineOwnProperty]]), Workstream 4a (DOM authority and Web IDL)."
+    },
+    {
+      "path": "html/infrastructure/common-dom-interfaces/collections/htmlformcontrolscollection.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 2.7 common DOM interfaces - HTMLFormControlsCollection (length, item, [index], namedItem, [name]; the legacy-caller subtest is a post-target removal assertion reviewed separately in historical.html). measured 1/16 subtests passing. engine gap: legacy platform objects (named-property enumeration, [[Set]]/[[DefineOwnProperty]]), Workstream 4a (DOM authority and Web IDL)."
+    },
+    {
+      "path": "html/infrastructure/common-dom-interfaces/collections/htmloptionscollection.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 2.7 common DOM interfaces - HTMLOptionsCollection (length, item, namedItem, add/remove interplay). measured 4/24 subtests passing. engine gap: legacy platform objects (named-property enumeration, [[Set]]/[[DefineOwnProperty]]), Workstream 4a (DOM authority and Web IDL)."
+    },
+    {
+      "path": "html/infrastructure/common-dom-interfaces/collections/radionodelist.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 2.7 common DOM interfaces - RadioNodeList.value and checkState over a form control collection. measured 0/0 subtests passing - the file reports no subtests (engine fails before the harness runs). engine gap: legacy platform objects (named-property enumeration, [[Set]]/[[DefineOwnProperty]]), Workstream 4a (DOM authority and Web IDL)."
+    },
+    {
+      "path": "html/infrastructure/conformance-requirements/extensibility/foreign.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 2.2.3 Extensibility - unrecognized author attributes (foo=bar on every element) must not break the DOM. measured 0/1 subtests passing. Engine gap: getElementsByTagName(*) plus unknown-attribute propagation; add a Lite.Tests reproducer."
+    },
+    {
+      "path": "html/infrastructure/fetching-resources/crossorigin-enumerated-ascii-case-insensitive.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 2.6.6 CORS settings attributes with section 2.7.1 reflection - the crossOrigin IDL attribute must match keywords ASCII case-insensitively (non-ASCII long s is invalid). measured 0/2 subtests passing. Engine gap: enumerated-attribute reflection, Workstream 4l (fetch/CORS clauses)."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/structuredclone_0.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 2.7.5 Safe passing of structured data - primitive/Boolean/String/Date/RegExp/typed-array clone round-trips. measured 14/18 subtests passing. Engine gap: the structured clone algorithm (Workstream 4d needs it for history.state)."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/structured-cloning-error-extra.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): REC section 2.7.5 Safe passing of structured data - Error object serialization (throwing name getter, cross-realm type preservation). measured 0/2 subtests passing. Engine gap: the structured clone algorithm (Workstream 4d)."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/cross-origin-transfer-resizable-arraybuffer.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): resizable/growable ArrayBuffer transfer was specified in ES2024; REC section 2.7.5 predates resizable buffers entirely."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/shared-array-buffers/identity-not-preserved.https.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): SharedArrayBuffer was specified in ES2017 with HTML integration after the REC; REC section 2.7.5 has no shared buffer notion."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/shared-array-buffers/blob-data.https.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-26 (post-target): SharedArrayBuffer was specified in ES2017 with HTML integration after the REC; REC section 2.7.5 has no shared buffer notion."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/shared-array-buffers/broadcastchannel-success.html",
+      "classification": "profile-excluded",
+      "reason": "Reviewed 2026-10-26 (profile-excluded): BroadcastChannel assertions bind Web Messaging ([WEBMSG]), excluded from dependency scope by the 2026-10-24 decision."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/shared-array-buffers/broadcastchannel-success-and-failure.html",
+      "classification": "profile-excluded",
+      "reason": "Reviewed 2026-10-26 (profile-excluded): BroadcastChannel assertions bind Web Messaging ([WEBMSG]), excluded from dependency scope by the 2026-10-24 decision."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/shared-array-buffers/nested-worker-success.html",
+      "classification": "profile-excluded",
+      "reason": "Reviewed 2026-10-26 (profile-excluded): nested worker assertions bind Web Workers ([WEBWORKERS]), excluded from dependency scope by the 2026-10-24 decision."
+    },
+    {
+      "path": "html/infrastructure/safe-passing-of-structured-data/shared-array-buffers/nested-sharedworker-success.html",
+      "classification": "profile-excluded",
+      "reason": "Reviewed 2026-10-26 (profile-excluded): nested SharedWorker assertions bind Web Workers ([WEBWORKERS]), excluded from dependency scope by the 2026-10-24 decision."
     }
   ]
 }
