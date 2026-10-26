@@ -46,11 +46,13 @@ def derive_queue(inventory) -> list[dict]:
 
 
 def queue_order(item: dict):
-    # The editing/run corpus runs >1,200 subtests per file through the engine and
-    # can consume minutes each; measured 2026-10-26, it blocked every root behind
-    # it for hours. It still runs in full — just after the representative majority.
+    # Slow clusters run last: measured on the 2026-10-26 baseline run, each
+    # editing/run page executes >1,200 subtests (minutes per file) and the
+    # encoding legacy-mb cluster averages ~44s per file on timeout-bound async
+    # failures. The html root is the Workstream 1 review frontier, so it goes
+    # first; every path still runs exactly once.
     path = item['source']
-    return (path.startswith('editing/run/'), path)
+    return (path.startswith('editing/run/'), not path.startswith('html/'), path)
 
 
 def run_survey(paths: list[str], label: str) -> int:
