@@ -133,7 +133,7 @@ def merge(queue: list[dict], runs: list[dict]) -> dict:
         'identity': last.get('identity'),
         'startedUtc': min((r.get('startedUtc', '') for r in runs), default=''),
         'finishedUtc': last.get('finishedUtc', ''),
-        'completed': all(r.get('completed') for r in runs) and counts['missing'] == 0,
+        'completed': counts['missing'] == 0 and last.get('completed') is True,
         'results': results,
     }
 
@@ -167,12 +167,26 @@ def main() -> int:
 
     runs = []
     queue_paths = [t['source'] for t in queue]
-    if args.resume and RUN.exists():
-        prior = read_json(RUN)
-        recorded = {t['path'] for t in prior.get('tests', [])}
-        runs = [prior]
+    if args.resume:
+        # Seed from EVERY evidence source on disk: the run file is a single slot
+        # the runner overwrites, so seeding from it alone re-queues and re-runs
+        # outcomes a previous run already recorded (measured 2026-10-27: that
+        # rescheduled 5,000 measured files and degraded the merged artifact).
+        recorded: dict[str, dict] = {}
+        for source in (SURVEY, RUN):
+            if not source.exists():
+                continue
+            try:
+                report = read_json(source)
+            except (json.JSONDecodeError, OSError):
+                continue
+            for test in report.get('tests', []):
+                recorded.setdefault(test['path'], test)
+        if recorded:
+            runs = [{'tests': list(recorded.values()), 'identity': None,
+                     'startedUtc': '', 'finishedUtc': '', 'completed': False}]
         queue_paths = [p for p in queue_paths if p not in recorded]
-        print(f'Resume: {len(recorded)} paths already recorded; {len(queue_paths)} remain.')
+        print(f'Resume: {len(recorded)} paths already recorded on disk; {len(queue_paths)} remain.')
         if not queue_paths:
             print('Nothing left to run.')
             write_merged(runs, queue)
