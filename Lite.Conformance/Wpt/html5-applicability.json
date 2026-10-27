@@ -30386,6 +30386,2236 @@
       "path": "html/interaction/focus/the-autofocus-attribute/update-the-rendering.html",
       "classification": "unreviewed",
       "reason": "Section 7.4 Focus; awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "html/rendering/bidi-rendering/slot-direction.window.js",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.5 Bidirectional text. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/6 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/bidi-rendering/slot-no-isolate-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.5 Bidirectional text; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/bidi-rendering/unicode-bidi-ua-rules.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.5 Bidirectional text. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/130 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/bindings/the-button-element/button-type-menu-historical.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/bindings/the-input-element-as-a-text-entry-widget/unrecognized-type-should-fallback-as-text-type.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/bindings/the-select-element-0/option-label.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/bindings/the-textarea-element-0/cols-default.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/bindings/the-textarea-element-0/cols-zero.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/bindings/the-textarea-element-0/rows-default.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/bindings/the-textarea-element-0/rows-zero.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/cdata-001.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/cdata-002.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/dimension-attributes.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (timeout): REC section 10 Rendering. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/flow-content-0/dialog.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.3 Flow content. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/6 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/flow-content-0/div-align.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.3 Flow content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/flow-content-0/figure.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.3 Flow content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/flow-content-0/form-margin-quirk.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.3 Flow content. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/flow-content-0/search-styles-iso-8859-8.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.3 Flow content. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 10/11 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/flow-content-0/slot-element-default-display.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.3 Flow content. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/flow-content-0/slot-element-focusable.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.3 Flow content. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/flow-content-0/slot-element-tabbable.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): requires the Workstream 2 testdriver backend; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/form-controls/datetime-dynamic-type-change.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings for form controls; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/form-controls/input-line-height-computed.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings for form controls. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/12 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/form-controls/input-line-height.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings for form controls; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/form-controls/input-placeholder-line-height.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings for form controls; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/form-controls/placeholder-opacity-default.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings for form controls. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/form-controls/resets.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (empty): REC section 10.5 Bindings for form controls. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/form-controls/select-fixedpos-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings for form controls; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/form-controls/select-sizing-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings for form controls; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/form-controls/text-transform.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings for form controls; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/form-controls/toggle-display.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings for form controls; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/hidden-elements.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10 Rendering. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 8/20 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/input-type-hidden-important.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10 Rendering. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 4/5 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/dir-type.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/li-text-align.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.8 Lists. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/li-type-supported-xhtml.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/li-type-supported.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/li-type-unsupported-lower-alpha.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/li-type-unsupported-lower-roman.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/li-type-unsupported-upper-alpha.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/li-type-unsupported-upper-roman.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/list-style-position-quirks-mode.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/lists-presentational-hints-ascii-case-insensitive.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.8 Lists. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/lists-styles-quirks.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (empty): REC section 10.3.8 Lists. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/lists-styles.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (empty): REC section 10.3.8 Lists. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-supported-xhtml.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-supported.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-unsupported-circle.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-unsupported-disc.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-unsupported-invalid.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-unsupported-lower-alpha.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-unsupported-lower-roman.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-unsupported-none.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-unsupported-round.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-unsupported-square.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-unsupported-upper-alpha.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ol-type-unsupported-upper-roman.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ul-type-supported-xhtml.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ul-type-supported.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ul-type-unsupported-decimal.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ul-type-unsupported-invalid.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ul-type-unsupported-lower-alpha.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ul-type-unsupported-lower-roman.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ul-type-unsupported-upper-alpha.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/lists/ul-type-unsupported-upper-roman.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.8 Lists; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/margin-collapsing-quirks/multicol-quirks-mode.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.10 Margin collapsing quirks. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/margin-collapsing-quirks/multicol-standards-mode.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.10 Margin collapsing quirks. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/phrasing-content-0/b-strong-styles.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.4 Phrasing content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/phrasing-content-0/br-wbr-content/content-property.tentative.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.4 Phrasing content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/phrasing-content-0/font-element-text-decoration-color/001-a.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.4 Phrasing content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/phrasing-content-0/font-element-text-decoration-color/001-q.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.4 Phrasing content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/phrasing-content-0/font-element-text-decoration-color/001-s.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.4 Phrasing content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/phrasing-content-0/font-element-text-decoration-color/001-x.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.4 Phrasing content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/phrasing-content-0/font-element-text-decoration-color/font-face.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.4 Phrasing content. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/5 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/phrasing-content-0/font-element-text-decoration-color/font-size.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.4 Phrasing content. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 21/28 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/sections-and-headings/headings-styles.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (empty): REC section 10 Rendering. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/colgroup_valign_bottom.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/colgroup_valign_top.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/form-in-tables.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (empty): REC section 10.3.9 Tables. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/hidden-attr.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.9 Tables. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/10 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-align-float.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-attribute.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.9 Tables. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 3/58 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-background-print.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-border-1.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-border-2.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-border-3q.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-border-3s.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-border-presentational-hints-ascii-case-insensitive.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-bordercolor-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-bordercolor-default.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.9 Tables. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-cell-nowrap-with-fixed-width.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-cell-width-s.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-cell-width.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-column-width.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-direction.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-layout.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-row-direction.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-row-group-direction.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-row-group-height.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-row-height.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-row-pagination-001-print.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-row-pagination-002-print.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-ua-stylesheet.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.9 Tables. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/5 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-valign-baseline-ascii-case-insensitive.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.9 Tables. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-width-150percent.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-width-s.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/table-width.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/tr-transform-and-will-change.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/tables/transformed-tbody-tr-collapsed-border.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.9 Tables; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-br-element/br-clear-presentational-hints.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/absolute-fixed-in-legend.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/crashtests/fieldset-middleclick.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/empty-scrollable.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-baseline.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-block-formatting-context.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-block-size.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-border-gap-negative-margin.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-border-gap-position-relative.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-border-radius-hittest.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-border-radius-with-alpha.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-calculating-min-max-content.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-containing-block.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-content-box-column-rule.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-content-box-gap.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-content-box-rule-break.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-content-box-rule-inset.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-content-box-rule-overlap.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-content-box-rule-visibility-items.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-content-box-rule.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-content-rtl.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-display-ruby.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 5/6 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-display.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 6/15 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-dynamic-baseline.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-dynamic-oof-container-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-dynamic-pseudo.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-list-item.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-max-block-size.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-overflow-cssomview.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-overflow-hidden.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-overflow.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-painting-order.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-percentage-block-size.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 1/10 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-percentage-padding.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 1/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-resize.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-transform-translatez.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-vertical.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/flex-legend-float-abspos.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/4 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/grid-template-propagation.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/insert-legend-in-multicol-fieldset-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-align-justify-self.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/13 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-align-text-align.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/5 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-align.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 6/10 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-auto-margins.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-block-formatting-context.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/4 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-block-margins-2.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-block-margins.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-block-position-centering.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-display-none-rendering.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-display-rendering.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-display.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 40/80 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-float-abspos.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/4 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-float.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-grid-flex-multicol.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 2/5 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-hover.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): requires the Workstream 2 testdriver backend; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-in-slot.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-inline-position-with-fieldset-padding.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-list-item-numbering.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-list-item.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-margin-inline.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 2/4 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-painting-order.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-position-relative-2.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-position-relative.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-sans-fieldset-display.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 7/9 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-sticky-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend-tall.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/legend.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 41/56 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/min-inline-size.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.13 The fieldset and legend elements. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/6 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/multicol-legend-becomes-floated-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/second-legend-becomes-rendered-legend-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/sticky-content-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/sticky-content.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.13 The fieldset and legend elements; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-frameset-and-frame-elements/different-writing-modes.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.6 Frames and framesets; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-frameset-and-frame-elements/frame-no-frameset-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.6 Frames and framesets; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-frameset-and-frame-elements/frameset-visibility-hidden.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.6 Frames and framesets; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-frameset-and-frame-elements/large-cols-abssize.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.6 Frames and framesets; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-frameset-and-frame-elements/large-cols-percentage.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.6 Frames and framesets; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-frameset-and-frame-elements/large-cols-relsize.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.6 Frames and framesets. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-frameset-and-frame-elements/large-rows-abssize.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.6 Frames and framesets; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-frameset-and-frame-elements/large-rows-percentage.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.6 Frames and framesets; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-frameset-and-frame-elements/large-rows-relsize.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.6 Frames and framesets. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-frameset-and-frame-elements/multicol-table-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.6 Frames and framesets; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-hr-element-0/align.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.12 The hr element; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-hr-element-0/color.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.12 The hr element; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-hr-element-0/hr.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.12 The hr element. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 16/18 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-hr-element-0/setting-overflow-visible.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.12 The hr element. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-hr-element-0/size-with-color-or-noshade.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.12 The hr element; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-hr-element-0/size.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.12 The hr element; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-hr-element-0/width.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.12 The hr element; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/Document-documentElement-remove-clears-content.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1a.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1b.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1c.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1d.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1e.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1f.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1g.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1h.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1i.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1j.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1k.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-1l.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2a.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2b.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2c.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2d.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2e.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2f.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2g.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2h.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2i.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2j.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2k.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body-margin-2l.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/body_text_00ffff.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/crashtests/body-huge-attr-value-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/iframe-body-margin-attributes.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.2 The page. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/3 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/iframe-marginwidth-marginheight.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.3.2 The page. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/iframe-scrolling-attribute-values.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/non-replaced-elements/the-page/iframe-scrolling-attribute.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.3.2 The page; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/pixel-length-attributes.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (empty): REC section 10 Rendering. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/align.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 3/23 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/canvas-aspect-ratio.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/13 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/canvas-dimension-attributes.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/embedded-and-images-presentational-hints-ascii-case-insensitive.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/3 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/img-alt-crash-001.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/img-aspect-ratio.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 1/41 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/img-dim.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/img-empty-alt-replaced.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/img-replaced-box-while-loading.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/img-title-only-w-sizing.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/img_border_percent.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/input-align-right-1.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/input-align-right-2.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/input-border-radius.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/input-image-content-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/input-image-inline-alt.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/input-min-bsize-centered.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/input-text-indent.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/input-type-change-from-image-1.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/number-placeholder-right-aligned.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/object_border_perc.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/object_border_pixel.xhtml",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/picture-aspect-ratio.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 1/15 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/textarea-placeholder-scroll.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/textarea-scrollheight-empty.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/video-aspect-ratio.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/14 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/video-default-object-height-constrained-by-max-width.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/video-default-object-width-constrained-by-max-height.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/video-inline-size-containment-no-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.3 Attributes for embedded content and images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/attributes-for-embedded-content-and-images/video-intrinsic-width-height.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.3 Attributes for embedded content and images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 4/6 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content-rendering-rules/audio-controls-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content-rendering-rules/audio-controls-002.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content-rendering-rules/audio-without-controls.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content-rendering-rules/canvas-fallback.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content-rendering-rules/canvas-update-with-border-object-fit.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content-rendering-rules/canvas_scale.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content-rendering-rules/canvas_without_context_a.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content/change-src-while-not-displayed.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content/cross-domain-iframe-in-multicol.sub.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content/cross-domain-iframe.sub.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content/iframe-frameborder.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.1 Embedded content. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/13 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content/object-fallback-text-decoration.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content/tall-cross-domain-iframe-in-scrolled.sub.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content/video-controls-stacking-hit-test.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.1 Embedded content. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content/video-controls-stacking.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content/video-controls-vertical-writing-mode.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.1 Embedded content; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/embedded-content/video-stacking-hit-test.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.1 Embedded content. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/images/abs-pos-transferred-max-width-from-percentage-max-height-in-auto-height-containing-block.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.2 Images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/images/blocked-by-csp.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.2 Images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/images/image-fallback-respect-max-width.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.2 Images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/images/img-fallback-baseline-alignment.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.2 Images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/images/img-represents-nothing-style-mutation.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.4.2 Images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/images/img-sizes-auto.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (empty): REC section 10.4.2 Images. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/images/input-image-content.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.2 Images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/images/revoked-blob-print.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.2 Images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/images/space.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.4.2 Images; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/svg-embedded-sizing/svg-in-iframe-auto.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): sizing of inline SVG roots binds the SVG-in-HTML and CSS intrinsic-sizing integration that postdates the 2014 REC; the REC renders SVG through the foreign-content rules of section 8.5 and defines no svg rendering clause."
+    },
+    {
+      "path": "html/rendering/replaced-elements/svg-embedded-sizing/svg-in-iframe-fixed.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): sizing of inline SVG roots binds the SVG-in-HTML and CSS intrinsic-sizing integration that postdates the 2014 REC; the REC renders SVG through the foreign-content rules of section 8.5 and defines no svg rendering clause."
+    },
+    {
+      "path": "html/rendering/replaced-elements/svg-embedded-sizing/svg-in-iframe-percentage.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): sizing of inline SVG roots binds the SVG-in-HTML and CSS intrinsic-sizing integration that postdates the 2014 REC; the REC renders SVG through the foreign-content rules of section 8.5 and defines no svg rendering clause."
+    },
+    {
+      "path": "html/rendering/replaced-elements/svg-embedded-sizing/svg-in-img-auto.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): sizing of inline SVG roots binds the SVG-in-HTML and CSS intrinsic-sizing integration that postdates the 2014 REC; the REC renders SVG through the foreign-content rules of section 8.5 and defines no svg rendering clause."
+    },
+    {
+      "path": "html/rendering/replaced-elements/svg-embedded-sizing/svg-in-img-fixed.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): sizing of inline SVG roots binds the SVG-in-HTML and CSS intrinsic-sizing integration that postdates the 2014 REC; the REC renders SVG through the foreign-content rules of section 8.5 and defines no svg rendering clause."
+    },
+    {
+      "path": "html/rendering/replaced-elements/svg-embedded-sizing/svg-in-img-percentage.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): sizing of inline SVG roots binds the SVG-in-HTML and CSS intrinsic-sizing integration that postdates the 2014 REC; the REC renders SVG through the foreign-content rules of section 8.5 and defines no svg rendering clause."
+    },
+    {
+      "path": "html/rendering/replaced-elements/svg-embedded-sizing/svg-in-object-auto.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): sizing of inline SVG roots binds the SVG-in-HTML and CSS intrinsic-sizing integration that postdates the 2014 REC; the REC renders SVG through the foreign-content rules of section 8.5 and defines no svg rendering clause."
+    },
+    {
+      "path": "html/rendering/replaced-elements/svg-embedded-sizing/svg-in-object-fixed.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): sizing of inline SVG roots binds the SVG-in-HTML and CSS intrinsic-sizing integration that postdates the 2014 REC; the REC renders SVG through the foreign-content rules of section 8.5 and defines no svg rendering clause."
+    },
+    {
+      "path": "html/rendering/replaced-elements/svg-embedded-sizing/svg-in-object-percentage.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): sizing of inline SVG roots binds the SVG-in-HTML and CSS intrinsic-sizing integration that postdates the 2014 REC; the REC renders SVG through the foreign-content rules of section 8.5 and defines no svg rendering clause."
+    },
+    {
+      "path": "html/rendering/replaced-elements/svg-inline-sizing/svg-inline.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10 Rendering. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/648 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-option-element/option-label-whitespace-2.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-option-element/option-label-whitespace.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-option-element/option-with-br.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-option-element/select-multiple-covered-by-abspos.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/customizable-select/min-height-in-flex.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/customizable-select/min-size-empty-001-ref.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/customizable-select/min-size-empty-001-ref2.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/customizable-select/min-size-empty-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/customizable-select/min-size-empty-002-ref.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/customizable-select/min-size-empty-002-ref2.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/customizable-select/min-size-empty-002.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/customizable-select/min-width-in-flex.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-1-block-size-001-ref.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-1-block-size-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-1-block-size.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-1-line-height.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-adopted.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-button-min-height-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-display-inline.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-empty.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-intrinsic-option-font-size.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-intrinsic-text-transform.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-multiple-re-add-option-via-document-fragment.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-select-element/select-text-decoration.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-textarea-element/caret-visibility-after-creation-in-script.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-textarea-element/textarea-defaults-to-zero-margin.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10 Rendering. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-textarea-element/textarea-padding-bend-overlaps-content-001.tentative.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-textarea-element/textarea-padding-bstart-moves-content-001.tentative.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-textarea-element/textarea-padding-iend-overlaps-content-001.tentative.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/replaced-elements/the-textarea-element/textarea-padding-istart-moves-content-001.tentative.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/sections/headingoffset-and-headingreset.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10 Rendering; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-css-user-agent-style-sheet-and-presentational-hints/body-bgcolor-attribute-change.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet and presentational hints; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-css-user-agent-style-sheet-and-presentational-hints/mouse-cursor-imagemap.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.2 The CSS user agent style sheet and presentational hints. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/the-css-user-agent-style-sheet-and-presentational-hints/no-help-cursor-on-links-wrapped-in-svg.historical.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.2 The CSS user agent style sheet and presentational hints. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 1/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/the-css-user-agent-style-sheet-and-presentational-hints/no-help-cursor-on-links.historical.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.2 The CSS user agent style sheet and presentational hints. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 1/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/the-css-user-agent-style-sheet-and-presentational-hints/pre-margin-block.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet and presentational hints; awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/auto-expand-details-text-fragment.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): requires the Workstream 2 testdriver backend; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-after.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-autofocus-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-before.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-blockification.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.2 The CSS user agent style sheet (the details and summary rules). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-content-pseudo-attr.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-display-list-item-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-display-type-001-ref.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-display-type-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-display-type-002.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-display.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.2 The CSS user agent style sheet (the details and summary rules). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 2/8 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-focus-steps.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): requires the Workstream 2 testdriver backend; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-page-break-after-1-print.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-page-break-after-2-print.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-page-break-before-1-print.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-page-break-before-2-print.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-pseudo-elements-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-pseudo-elements-002.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-pseudo-elements-003.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-pseudo-elements-004.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-pseudo-elements-005.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-pseudo-elements-006.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): requires the Workstream 2 testdriver backend; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-revert.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-summary-display-inline-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/details-summary-display-inline-002.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/empty-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/firefox-bug-1928736-1-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/firefox-bug-1928736-2-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/summary-display-flex.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/summary-display-grid.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/summary-display-inline-flex.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/summary-display-inline-grid.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/summary-display-list-item-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/summary-display-list-item-002.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/summary-in-ol.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/summary-text-decoration.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/the-details-element/two-summaries-removal-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.2 The CSS user agent style sheet (the details and summary rules); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/unmapped-attributes.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10 Rendering. Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 31/62 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/appearance/appearance-animation-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/appearance/appearance-animation-002.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/appearance/appearance-transition-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/appearance/appearance-transition-002.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/appearance/appearance-transition-003.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/appearance/default-styles.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/45 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/baseline-alignment-and-overflow.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (empty): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/anonymous-button-content-box.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/block-in-inline.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/button-dynamic-content.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/computed-style.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 151/167 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/display-none-or-contents.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/display-other.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/18 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/flex.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 3/5 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/grid.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/inline-level.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/input-fragmentation-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/input-type-button-clip.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/input-type-button-newline-2.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/input-type-button-newline.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/propagate-text-decoration.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/scrollable-button-centering.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/scrollbars.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/button-layout/shrink-wrap.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/24 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/field-sizing-input-number-relayout.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/field-sizing-input-number.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 3/9 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/field-sizing-input-text-relayout.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/field-sizing-input-text.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 12/54 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/field-sizing-placeholder-stretch.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/field-sizing-select.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/field-sizing-textarea-relayout.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/field-sizing-textarea.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 2/10 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/input-checkbox-appearance-none-dynamic-crash.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-checkbox-disabled-checked.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-checkbox-no-centering.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-checkbox-switch-indeterminate.tentative.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-checkbox-switch-rtl.tentative.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-checkbox-switch.tentative.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-checkbox-switch.tentative.window.js",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 1/4 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/input-checkbox-zero-size.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-date-baseline-min-height.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-date-baseline-print.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-date-baseline.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-date-content-size.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-date-no-resize-on-hover.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): requires the Workstream 2 testdriver backend; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "html/rendering/widgets/input-date-whitespace-pre-1.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-date-whitespace-pre-2.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-number-text-size.tentative.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-password-background-suppresses-appearance.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-radio-disabled-checked.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-radio-no-centering.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/input-text-size.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/5 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/input-time-content-size.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/placeholder-scroll.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/placeholder-text-overflow-ellipsis.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/shadow-dom.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/9 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/text-control-client-width.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/2 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/text-control-flow-root.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/textarea-cols-rows.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (fail): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/6 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/textarea-scrollbar-sizing-001.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (empty): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/textarea-scrollbar-sizing-002.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (empty): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/option-add-label-quirks.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/option-add-label.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/option-checked-styling.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/option-empty-label-to-empty-string.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/option-empty-label.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/option-label-and-text.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/option-only-label.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/option-rm-label.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/select-as-listbox-default-styles.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (crash): REC section 10.5 Bindings (the native widget bindings for buttons and input controls). Engine gap: user-agent rendering, Workstream 4j. Rendering work is Workstream 4j and shares the UA stylesheet with the CSS 2.1 track (the declared hot spot; no edits without that handshake). measured 0/0 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/select-invalidation.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/select-label-appearance.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/select-size-001.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
+    },
+    {
+      "path": "html/rendering/widgets/the-select-element/select-size-002.html",
+      "classification": "unreviewed",
+      "reason": "REC section 10.5 Bindings (the native widget bindings for buttons and input controls); awaiting review through the reftest runner (reftest-kind cases are outside the WS0.5 testharness survey queue by design, so no engine verdict exists yet)."
     }
   ]
 }
