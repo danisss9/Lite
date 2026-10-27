@@ -35606,6 +35606,1606 @@
       "path": "html/browsers/windows/targeting-with-embedded-null-in-target.html",
       "classification": "unreviewed",
       "reason": "Reviewed (fail): REC section 5.1 Browsing contexts. Engine gap: Engine gap: cross-document history and navigation (one Page per navigation, session-history entries holding Documents), Workstream 4d. measured 0/1 subtests in the WS0.5 baseline."
+    },
+    {
+      "path": "editing/crashtests/blur-from-rtl-editing-host-containing-big-video.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/bold-in-output.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/caret-display-list-002.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/caret-display-list.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/change-input-type-of-focused-text-control-and-make-it-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/collapse-selection-into-textarea-and-createLink.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/contenteditable-will-be-blurred-by-focus-event-listener.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/crash-test.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-after-empty-script-element.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-after-input-setRangeText.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-after-insertparagraph-in-preformatted-paragraph.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-after-removing-first-child.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-around-orphan-rb.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-at-next-to-svg-display-table-cell.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-at-start-of-first-li-in-ol-in-video.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-at-text-following-svg.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-content-in-no-data-object.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-from-after-empty-table-header-grouped-element.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-from-ruby-at-start-of-button.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-immediately-after-changing-input-type-from-time.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-in-block-in-progress.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-in-designMode-without-explicitly-setting-focus.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-in-empty-editable-document-element.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-in-empty-editable-list-followed-by-non-editable-listitem.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-in-xml-space-preserve.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-selection-with-null-range.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/delete-to-join-inline-blocks.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/deleteforward-from-before-meta-pre-line-container-containing-audio.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/design-mode-textarea.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/designMode-after-deleting-parent-of-contenteditable.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/designMode-caret-change.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/designMode-document-will-be-blurred-by-focus-event-listener.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/editing-on-newline-should-not-crash.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/empty-editable.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/enableInlineTableEditing-after-updating-selection-range-cross-shadow-dom-boundary.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the assertions exercise editing hosts inside shadow trees; the shadow-tree concept postdates the 2014 REC (no shadow DOM in its dependencies)."
+    },
+    {
+      "path": "editing/crashtests/execCommand-at-load-with-changing-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/execCommand-backcolor-and-hilitecolor-in-empty-iframe-in-designMode.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/execCommand-fontsize-when-size-attr-invalid.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/execCommand-without-selection-ranges.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/first-letter-crossing-engine-boundary.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/format-block-selection-containing-non-editable-list.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/formatblock-when-root-is-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/forwarddelete-after-editable-slot-element-outside-body.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/forwarddelete-at-empty-text-node-in-body.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/forwarddelete-delete-after-justifyleft-indent.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/forwarddelete-in-editable-h1-starts-with-hidden-select.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/forwarddelete-in-text-in-span-in-editable-documentElement.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/indent-in-inline-editing-host-outside-body.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/indent-in-textarea-in-designMode-during-outdent.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insert-image-with-joining-header-element-and-body.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insert-nodes-into-meta-element.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertAdjacentElement-beforeBegin-first-br-in-video.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertAdjacentElement-with-DOMSubtreeModified.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertHTML-after-subscript-canvas-containing-textarea.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertHTML-before-comment-at-end-of-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertText-at-end-of-text-in-body.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthorizontalrule-in-fieldset-and-everything-styled-white-space-pre.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthorizontalrule-in-textarea-in-editor-and-undo-on-error-events.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthorizontalrule-to-replace-li.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthorizontalrule-to-replace-selection-containing-comment.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthorizontalrule-with-2-selection-ranges-and-one-is-outside-body.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthorizontalrule-with-range-ending-in-collapsible-spaces-before-comment.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthorizontalrule-with-selecting-from-mphantom-to-end-of-line.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthorizontalrule-with-selecting-text-in-document-element.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthtml-after-temporarily-removing-document-element.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthtml-in-inline-editing-host-at-load-event.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthtml-in-li-in-option.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthtml-in-text-adopted-to-other-document.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthtml-indent-delete-when-input-element-in-editing-host-has-focus.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthtml-only-non-editable-nodes.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserthtml-to-replace-root-list-element-in-designMode.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertimage-with-replacing-selection-in-picture-element.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertlinebreak-around-comment-node.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertlinebreak-in-map-element-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertorderedlist-in-focused-inline-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertorderedlist-in-text-adopted-to-other-document.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertparagraph-in-editable-dl-outside-body.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertparagraph-in-listitem-in-svg-followed-by-collapsible-spaces.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertparagraph-in-map-element-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserttext-at-start-with-different-style.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserttext-to-delete-flex-item-boundary-whose-display-contents.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserttext-with-clearing-subscript.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/inserttext-with-empty-string-to-replace-selection.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertunorderedlist-in-empty-inline-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/insertunorderedlist-in-empty-table-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/join-first-li-containing-preformatted-linefeed-and-last-li.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/justifycenter-around-textarea.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/justifyfull-before-textarea-and-non-editable-invisible-br.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/justifyfull-selection-containing-non-editable-div-and-everything-styled-white-space-break-space.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/loading-different-page-in-iframe-while-iframe-sets-spellcheck-attr-from-load.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/make-editable-div-inline-and-set-contenteditable-of-input-to-false.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/make-parent-element-editable-after-making-focused-editing-host-non-editable.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/move-editing-host-to-subdocument-when-textarea-has-focus.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/move-first-element-from-editinghost-to-outside-on-input-of-embolden.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/move-legend-followed-by-textarea-into-orphan-div.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/mozilla-bug-1851730.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/multiple-execCommand-calls-after-interting-long-text.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/non-root-editable-html-element.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/outdent-across-svg-boundary.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/outdent-editing-host-containing-combining-diacritical-mark.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/outdent-in-empty-body-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/outdent-in-meter-indented-by-legend-in-css-mode.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/outdent-indent-inserthorizontalrule-on-selectionchange.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/outdent-with-concurrent-dom-modification.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/queryCommandIndeterm-backcolor-and-hilitecolor-in-empty-iframe-in-designMode.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/queryCommandIndeterm-backcolor-in-empty-iframe-in-designMode-from-load.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/queryCommandState-backcolor-after-removing-html-element-in-designMode-from-load.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/queryCommandValue-backcolor-after-replacing-html-element-with-new-one-in-designMode-from-load.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/remove-all-children-of-documentElement-in-designMode-when-no-body.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/remove-document-element-of-iframe-having-style-content.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/remove-editing-host-which-is-selected.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/remove-iframe-for-designMode.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/remove_body_in_design_mode_during_focus_move.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/removeformat-in-number-input-immediately-after-type-change-and-stepUp.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/remve-documentElement-after-inserthtml-svg-and-td.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/replace-body-after-designMode-off-and-making-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/replace-document-root-and-refocus-window.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/selectall-after-enableobjectresizing.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/selectall-and-inerthtml-in-textarea-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/selectall-and-move-editable-br-onselectstart.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/selectall-during-setting-innerHTML-of-documentElement.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/selectall-in-contenteditable-replaced-by-shadowroot.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the assertions exercise editing hosts inside shadow trees; the shadow-tree concept postdates the 2014 REC (no shadow DOM in its dependencies)."
+    },
+    {
+      "path": "editing/crashtests/selectall-in-head-editing-host-after-body-removed.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/selectall-selection-modify-move-forward-lineboundary-selectall-around-editable-canvas.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/selection-modify-after-body-removed-in-design-mode.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/selection-modify-around-input-in-contenteditable.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/selection-modify-extend-backward-character-to-outside-body-in-designMode.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/set-input-value-of-editing-host-after-changing-type.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/set-selection-range-after-updating-textarea-default-value.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/textarea-will-be-blurred-by-focus-event-listener.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/unloading-editor-in-subdocument-containing-misspelled-word.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/update-dom-during-undoing-in-textarea.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/crashtests/white-space-nowrap-to-pre-line.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/edit-context/edit-context-basics.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the EditContext API (geometry and text update events for custom editing UIs) was specified in 2020+; the 2014 REC and its [EDITING] reference define no EditContext."
+    },
+    {
+      "path": "editing/edit-context/edit-context-bidi-caret-association.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the EditContext API (geometry and text update events for custom editing UIs) was specified in 2020+; the 2014 REC and its [EDITING] reference define no EditContext."
+    },
+    {
+      "path": "editing/edit-context/edit-context-execCommand.tentative.https.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the EditContext API (geometry and text update events for custom editing UIs) was specified in 2020+; the 2014 REC and its [EDITING] reference define no EditContext."
+    },
+    {
+      "path": "editing/edit-context/edit-context-focus.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the EditContext API (geometry and text update events for custom editing UIs) was specified in 2020+; the 2014 REC and its [EDITING] reference define no EditContext."
+    },
+    {
+      "path": "editing/edit-context/edit-context-inheritability.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the EditContext API (geometry and text update events for custom editing UIs) was specified in 2020+; the 2014 REC and its [EDITING] reference define no EditContext."
+    },
+    {
+      "path": "editing/edit-context/edit-context-input.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the EditContext API (geometry and text update events for custom editing UIs) was specified in 2020+; the 2014 REC and its [EDITING] reference define no EditContext."
+    },
+    {
+      "path": "editing/edit-context/edit-context-property.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the EditContext API (geometry and text update events for custom editing UIs) was specified in 2020+; the 2014 REC and its [EDITING] reference define no EditContext."
+    },
+    {
+      "path": "editing/edit-context/edit-context-textformat.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the EditContext API (geometry and text update events for custom editing UIs) was specified in 2020+; the 2014 REC and its [EDITING] reference define no EditContext."
+    },
+    {
+      "path": "editing/event.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): beforeinput and the Input Events integration were specified in 2015+; the 2014 REC defines no beforeinput."
+    },
+    {
+      "path": "editing/manual/contenteditable-insertfromdrop-type-inputevent-data-manual.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/manual/delete-manual.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/manual/forwarddelete-manual.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/manual/insertlinebreak-manual.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/manual/insertparagraph-manual.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/manual/inserttext-manual.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/manual/inserttext2-manual.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/manual/textarea-insertfromdrop-type-inputevent-data-manual.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/manual/textarea-insertfromdrop-type-inputevent-data-withnewline-manual.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/other/body-should-not-deleted-even-if-empty.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/2 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/br-tag-not-added-with-inline-root-editable-element.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/1 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/cefalse-boundaries-deletion.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/3 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/cloning-attributes-at-splitting-element.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/copy-elements-with-css-vars.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/copy-paste-before-non-editable.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/copy-paste-in-styled-inline-editing-host.https.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/data_transfer_on_input_event_with_insertfrompaste_type.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/delete-at-end-boundary-of-div-followed-by-inline-element-containing-hidden-select-element-with-non-editable-node.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/delete-at-start-boundary-of-div-containing-hidden-select-element-with-non-editable-node.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/delete-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/2 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/delete-in-child-of-head.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/17 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/delete-in-child-of-html.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/11 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/delete-in-inline-editing-host-under-shadow-root.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the assertions exercise editing hosts inside shadow trees; the shadow-tree concept postdates the 2014 REC (no shadow DOM in its dependencies)."
+    },
+    {
+      "path": "editing/other/delete-in-last-definition-list-item-when-parent-list-is-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/8 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/delete-in-last-list-item-when-parent-list-is-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/7 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/delete-in-shadow-hosted-in-body.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the assertions exercise editing hosts inside shadow trees; the shadow-tree concept postdates the 2014 REC (no shadow DOM in its dependencies)."
+    },
+    {
+      "path": "editing/other/delete-without-unwrapping-first-line-of-child-block.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/25 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/delete.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/16 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/double-click-range-selection-in-floating-list-item.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/double-click-range-selection-in-list-item.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/edit-in-textcontrol-immediately-after-hidden.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 1/6 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/editable-state-and-focus-in-assigned-slot-dom.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/1 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/editable-state-and-focus-in-shadow-dom-in-designMode.tentative.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the assertions exercise editing hosts inside shadow trees; the shadow-tree concept postdates the 2014 REC (no shadow DOM in its dependencies)."
+    },
+    {
+      "path": "editing/other/editing-around-select-element.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/0 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/editing-div-outside-body.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 1/11 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/editing-style-of-range-around-void-element-child.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 1/8 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/empty-elements-insertion-padding.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/empty-elements-insertion.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/end-key-with-wbr.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/exec-command-never-throw-exceptions.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/6 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/exec-command-with-text-editor.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/exec-command-without-editable-element.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/extra-text-nodes.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/2 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/fire-selection-change-on-deleting-empty-element.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/formatblock-preserving-selection.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/html-text-copy-paste-of-anchor-with-href-in-content-editable.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/indent-preserving-selection.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/inline-editing-host-has-placeholder-with-after-pseudo-element.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/2 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/inline-editing-host-has-placeholder-with-before-pseudo-element.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/2 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/input-in-text-control-which-is-also-editing-host.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/6 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/insert-br-tag-on-text-node-removal-with-non-editable-elements.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/3 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/insert-list-preserving-selection.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/insert-paragraph-in-void-element.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/72 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/insert-space-at-beginning-of-wrapped-line.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/insert-text-in-void-element.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/48 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/inserthtml-do-not-preserve-inline-styles.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/insertlinebreak-with-white-space-style.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/insertparagraph-in-child-of-head.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/9 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/insertparagraph-in-child-of-html.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/9 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/insertparagraph-in-editing-host-cannot-have-div.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/insertparagraph-in-inline-editing-host.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/insertparagraph-in-non-splittable-element.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/insertparagraph-with-white-space-style.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/inserttext-after-bold-in-font-face-monospace.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/1 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/join-different-white-space-style-left-line-and-right-paragraph.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/11 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/join-different-white-space-style-left-paragraph-and-right-line.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/6 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/join-different-white-space-style-paragraphs.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/22 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/join-pre-and-other-block.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/52 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/justify-preserving-selection.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/keeping-attributes-at-joining-elements.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/legacy-edit-command.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/0 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/link-boundaries-insertion.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/2 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/mathml-html-serializtion-on-copy.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/merge-span-with-style-after-backspace-having-contenteditable.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/merge-span-with-style-after-forwarddelete-having-contenteditable.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/merge-span-with-style-after-pressing-enter-followed-by-backspace-in-contenteditable-div.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/no-beforeinput-when-no-selection.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/non-html-document.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/1 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/outdent-preserving-selection.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/password-bidi-dblclick.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/paste-clipboard-change.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/paste-in-list-with-inline-style.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/paste-multiline-text-as-plaintext.tentative.https.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/1 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/paste-text-after-collapsible-white-space-whose-container-remove-non-first-children.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/paste-with-newline-three-times.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/paste_text_with_text_transform.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the engine fails before the harness reports subtests (measured empty). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/plain-text-copy-paste-of-paragraph-ending-with-non-layed-out-content.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/recursive-exec-command-calls.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/1 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/removeformat_background_color.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/6 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/removing-inline-style-specified-by-parent-block.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 1/4 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/restoration.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/34 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/restyle-textcontrol-during-beforeinput.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/select-all-and-delete-in-html-element-having-contenteditable.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/selectall-in-editinghost.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/4 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/selectall-without-focus.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/3 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/selection-change-not-fired-if-selection-set-to-root.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/setting-value-of-textcontrol-immediately-after-hidden.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 1/7 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/shadow_root_iteration_in_block_style.html",
+      "classification": "post-target",
+      "reason": "Reviewed 2026-10-27 (post-target): the assertions exercise editing hosts inside shadow trees; the shadow-tree concept postdates the 2014 REC (no shadow DOM in its dependencies)."
+    },
+    {
+      "path": "editing/other/typing-around-link-element-after-joining-paragraphs.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 0/24 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/typing-around-link-element-at-collapsed-selection.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 1/33 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/typing-around-link-element-at-non-collapsed-selection.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (failing): the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]) - the execCommand editing operation under test (measured 1/31 subtests in the WS0.5 baseline). Engine gap: contenteditable caret, selection and command execution, Workstream 4i."
+    },
+    {
+      "path": "editing/other/typing-space-in-editable-button.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/typing-space-in-editable-summary.tentative.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/other/undo-insertparagraph-after-moving-split-nodes.html",
+      "classification": "unreviewed",
+      "reason": "Reviewed (harness-blocked): copy/paste, selection and beforeinput editing operations need the Workstream 2 testdriver and native clipboard/manual evidence paths; no engine verdict exists yet (measured unsupported)."
+    },
+    {
+      "path": "editing/plaintext-only/delete-around-linebreak-or-block-boundary.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/delete-part-of-white-spaces.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/forwardDelete-around-linebreak-or-block-boundary.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/forwardDelete-part-of-white-spaces.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/insertHTML.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/insertLineBreak.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/insertParagraph.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/insertText.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/nested-with-contenteditable-true.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/paste-when-nested-with-contenteditable-true.https.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/paste.https.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/plaintext-only-in-designMode.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/plaintext-only/styling-commands.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/backcolor.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/bold.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/caret-navigation-after-removing-line-break.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/caret-navigation-around-line-break.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/caretnavigation.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/createlink-with-selecting-img.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/createlink.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/delete-list-items-in-table-cell.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/delete-to-make-editing-host-empty.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/delete.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/fontname.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/fontsize.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/forecolor.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/formatblock.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/forwarddelete.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/hilitecolor.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/indent.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/insert-list-items-in-table-cell.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/inserthorizontalrule.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/inserthtml.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/insertimage.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/insertlinebreak.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/insertorderedlist.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/insertparagraph.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/inserttext.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/insertunorderedlist.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/italic.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/justifycenter.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/justifyfull.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/justifyleft.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/justifyright.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/misc.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/multitest.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/outdent.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/removeformat.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/strikethrough.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/subscript.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/superscript.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/typing-text-in-direct-child-of-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/underline.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/undo-redo-after-mutation.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/undo-redo.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/run/unlink.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/chrome-compat/delete-img.tentative.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/chrome-compat/delete-to-join-blocks.tentative.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/chrome-compat/delete.tentative.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/chrome-compat/forwarddelete-img.tentative.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/chrome-compat/forwarddelete-to-join-blocks.tentative.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/chrome-compat/forwarddelete.tentative.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/chrome-compat/insert-or-paste-image.tentative.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/chrome-compat/insertlinebreak.tentative.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/chrome-compat/insertparagraph.tentative.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/chrome-compat/inserttext.tentative.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/delete-chars-following-collapsible-white-space.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/delete-last-word-in-inline-block-editing-host.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/delete-word-around-span.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/forwarddelete-chars-following-collapsible-white-space.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/forwarddelete-word-around-span.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/inserttext-at-end-of-block-when-br-always-block.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/keep-collapsible-white-space-after-web-app-delete-padding-br.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
+    },
+    {
+      "path": "editing/whitespaces/keep-typed-collapsible-white-space-visible-after-muation.html",
+      "classification": "unreviewed",
+      "reason": "the pinned HTML Editing APIs dependency (html5.dependency.html-editing-apis, REC reference [EDITING]); awaiting measurement in the WS0.5 baseline before the failing review can be recorded."
     }
   ]
 }
