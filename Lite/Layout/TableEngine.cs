@@ -73,6 +73,7 @@ internal static class TableEngine
         var caption = table.Children.FirstOrDefault(c => IsCaption(c) && c.GetDisplay() != DisplayType.None);
         bool captionBottom = false;
         float captionTopH = 0f;
+        float captionBottomH = 0f;
         if (caption is not null)
         {
             var side = caption.TryResolveStyle("caption-side", out var cs)
@@ -304,7 +305,11 @@ internal static class TableEngine
         }
 
         if (caption is not null && captionBottom)
-            ry += LayoutCaptionBlock(caption, contentX, ry, contentW, viewportW, viewportH);
+            captionBottomH = LayoutCaptionBlock(caption, contentX, ry, contentW, viewportW, viewportH);
+        ry += captionBottomH;
+
+        s_captionInsets.AddOrUpdate(table,
+            new CaptionInsets(captionTopH, captionBottomH, BoxEngine.Generation));
 
         return ry - contentY;
     }
@@ -1118,6 +1123,28 @@ internal static class TableEngine
     private static bool IsFixedLayout(LayoutNode table) =>
         !table.IsAutoWidth() &&
         (table.TryResolveStyle("table-layout", out var v) ? v : table.Style.GetPropertyValueSafe("table-layout"))?.Trim() == "fixed";
+
+    private sealed record CaptionInsets(float Top, float Bottom, int Generation);
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<LayoutNode, CaptionInsets> s_captionInsets = new();
+
+    /// <summary>§17.4: a caption sits in the anonymous table wrapper, OUTSIDE the table box —
+    /// the table's own background, borders and outline paint only on the band between the
+    /// captions. The layout Box keeps the full wrapper extent (the caption takes part in the
+    /// flow height ancestors see), so the painter shrinks its copy by the caption bands this
+    /// layout recorded. Without this the table's background covered a top caption and its text
+    /// rendered on top of it (caption-side-applies-to-009's "Filler Text" on blue).</summary>
+    internal static BoxDimensions ExcludeCaptionBands(LayoutNode table, BoxDimensions box)
+    {
+        if (!s_captionInsets.TryGetValue(table, out var insets) || insets.Generation != BoxEngine.Generation)
+            return box;
+        if (insets.Top <= 0f && insets.Bottom <= 0f) return box;
+        var content = box.ContentBox;
+        var top = Math.Min(content.Top + insets.Top, content.Bottom);
+        var bottom = Math.Max(content.Bottom - insets.Bottom, top);
+        var adjusted = box;
+        adjusted.ContentBox = new SKRect(content.Left, top, content.Right, bottom);
+        return adjusted;
+    }
 
     /// <summary>§17.5.2.1 fixed table layout: a column element's width sets its column; otherwise
     /// a first-row cell's width does (a spanning cell's is shared over its columns); the columns

@@ -74,6 +74,26 @@ public static class TableSizingTests
     }
 
     [Test]
+    public static void TableBackground_DoesNotCoverTheTopCaption()
+    {
+        // caption-side-applies-to-009: §17.4 puts the caption in the table wrapper, OUTSIDE the
+        // table box — the table's background paints only on the band below the caption, or the
+        // caption's text renders on top of it.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            "#t{display:table;background:blue} #c{display:table-caption}" +
+            ".r{display:table-row} .cell{display:table-cell;width:100px;height:50px;background:blue}</style>" +
+            "<div id=\"t\"><div id=\"c\">cap</div><div class=\"r\"><div class=\"cell\"></div></div></div>");
+        var bitmap = Drawer.DrawToBitmap(200, 200, root, new Viewport { ViewportHeight = 200 });
+        using (bitmap)
+        {
+            True(bitmap.GetPixel(60, 10) == SkiaSharp.SKColors.White,
+                $"the caption band must not take the table's blue, got {bitmap.GetPixel(60, 10)}");
+            True(bitmap.GetPixel(60, 40) == SkiaSharp.SKColors.Blue,
+                $"the table box below the caption must be blue, got {bitmap.GetPixel(60, 40)}");
+        }
+    }
+
+    [Test]
     public static void TableHeight_StretchesRows_CellWidthExcludesEdges_BottomAlignMovesContent()
     {
         // background-043-ref: table { height: 206px } with td { width: 200px; border: 3px;

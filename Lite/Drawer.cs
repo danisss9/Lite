@@ -564,7 +564,9 @@ internal static class Drawer
 
     private static void PaintBlockDecorations(SKCanvas canvas, LayoutNode node)
     {
-        var box = node.Box;
+        var box = node.GetDisplay() is DisplayType.Table or DisplayType.InlineTable
+            ? TableEngine.ExcludeCaptionBands(node, node.Box)
+            : node.Box;
         DrawBoxShadows(canvas, box, node);
         // §14.2: a body whose background propagated to the canvas paints no background here.
         var bgColor = node != _propagatedBackgroundNode ? node.GetBackgroundColor() : SKColors.Transparent;
@@ -628,7 +630,9 @@ internal static class Drawer
 
     private static void PaintBlock(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
-        var box = node.Box;
+        var box = node.GetDisplay() is DisplayType.Table or DisplayType.InlineTable
+            ? TableEngine.ExcludeCaptionBands(node, node.Box)
+            : node.Box;
 
         // Decorations are drawn before the scroll translate for scrollable elements;
         // skip them here to avoid painting them twice. empty-cells:hide also suppresses them.
