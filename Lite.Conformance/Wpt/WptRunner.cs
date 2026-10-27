@@ -284,6 +284,14 @@ internal static class WptRunner
         return RunIsolated(testPath, ConformanceServer.TestUrl(WptMetadata.UrlPath(testPath)), 300_000);
     }
 
+    private static readonly TimeSpan DrainGrace = TimeSpan.FromSeconds(30);
+
+    /// <summary>Drain results only when the task finished inside its grace; an orphaned
+    /// grandchild can hold a redirected pipe open forever (measured: a worker died and
+    /// the unbounded wait blocked the whole survey for hours).</summary>
+    private static string TailOrNote(Task<string> drain) =>
+        drain.IsCompleted ? drain.Result : "<worker output pipe left open by a child process>";
+
     internal static RunResult RunIsolated(string path, string url, int timeoutMs)
     {
         var output = Path.Combine(ConformancePaths.EnsureArtifacts(), $"worker-{Guid.NewGuid():N}.json");
@@ -304,14 +312,14 @@ internal static class WptRunner
             {
                 process.Kill(entireProcessTree: true);
                 process.WaitForExit();
-                Task.WaitAll(stdout, stderr);
-                return WithLogs(new(Cat.Timeout, $"Loading/execution exceeded {timeoutMs} ms", 0, 0), stdout.Result, stderr.Result);
+                Task.WaitAll(new Task[] { stdout, stderr }, DrainGrace);
+                return WithLogs(new(Cat.Timeout, $"Loading/execution exceeded {timeoutMs} ms", 0, 0), TailOrNote(stdout), TailOrNote(stderr));
             }
-            Task.WaitAll(stdout, stderr);
+            Task.WaitAll(new Task[] { stdout, stderr }, DrainGrace);
             if (process.ExitCode != 0 || !File.Exists(output))
-                return WithLogs(new(Cat.Crash, $"Worker exited {process.ExitCode}: {stderr.Result}", 0, 0), stdout.Result, stderr.Result);
+                return WithLogs(new(Cat.Crash, $"Worker exited {process.ExitCode}: {TailOrNote(stderr)}", 0, 0), TailOrNote(stdout), TailOrNote(stderr));
             var result = JsonSerializer.Deserialize<RunResult>(File.ReadAllText(output), ExecutionEvidence.JsonOptions);
-            return result.Passed ? result : WithLogs(result, stdout.Result, stderr.Result);
+            return result.Passed ? result : WithLogs(result, TailOrNote(stdout), TailOrNote(stderr));
         }
         catch (Exception ex) when (ex is IOException or JsonException or System.ComponentModel.Win32Exception)
         { return new(Cat.Crash, ex.Message, 0, 0); }
