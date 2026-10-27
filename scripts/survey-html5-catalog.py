@@ -55,7 +55,7 @@ def queue_order(item: dict):
     return (path.startswith('editing/run/'), not path.startswith('html/'), path)
 
 
-def run_survey(paths: list[str], label: str) -> int:
+def run_survey(paths: list[str], label: str, prior_runs: list[dict], queue: list[dict]) -> int:
     with tempfile.NamedTemporaryFile('w', suffix='.txt', delete=False, encoding='utf-8') as handle:
         handle.write('\n'.join(paths) + '\n')
         list_path = handle.name
@@ -65,9 +65,30 @@ def run_survey(paths: list[str], label: str) -> int:
     print(f'[{label}] running {len(paths)} paths; log: {LOG.name}', flush=True)
     with LOG.open('a', encoding='utf-8') as log:
         log.write(f'\n===== {label}: {len(paths)} paths =====\n')
+        log.flush()
         process = subprocess.Popen(arguments, cwd=str(ROOT), stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace')
         assert process.stdout is not None
+        # Merge to the final artifact on every 100-outcome checkpoint the runner
+        # writes, so an interrupted run always leaves a complete, valid artifact
+        # (measured 2026-10-27: a resume overwrote the prior evidence file and
+        # kept 5,000 outcomes hostage in memory until completion).
+        last_seen = -1
+        import threading, time
+        def watch():
+            nonlocal last_seen
+            while process.poll() is None:
+                try:
+                    if RUN.exists():
+                        count = len(json.loads(RUN.read_text(encoding='utf-8')).get('tests', []))
+                        if count != last_seen and count > 0:
+                            last_seen = count
+                            write_merged(prior_runs + [read_json(RUN)], queue)
+                except (json.JSONDecodeError, OSError):
+                    pass
+                time.sleep(20)
+        watcher = threading.Thread(target=watch, daemon=True)
+        watcher.start()
         for line in process.stdout:
             log.write(line)
             log.flush()
@@ -117,6 +138,12 @@ def merge(queue: list[dict], runs: list[dict]) -> dict:
     }
 
 
+def write_merged(runs: list[dict], queue: list[dict]) -> None:
+    """Merge every run report so far into the final artifact (crash safety)."""
+    survey = merge(queue, runs)
+    SURVEY.write_text(json.dumps(survey), encoding='utf-8')
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--warmup', type=int, default=25,
@@ -148,6 +175,12 @@ def main() -> int:
         print(f'Resume: {len(recorded)} paths already recorded; {len(queue_paths)} remain.')
         if not queue_paths:
             print('Nothing left to run.')
+            write_merged(runs, queue)
+            survey = merge(queue, runs)
+            print(f"Survey artifact: {SURVEY}")
+            print(f"Outcomes: {survey['outcomeCounts']}")
+            print(f"Completed: {survey['completed']}")
+            return 0
     else:
         RUN.unlink(missing_ok=True)
 
@@ -155,18 +188,20 @@ def main() -> int:
         if not args.skip_warmup and args.warmup > 0:
             warm = queue_paths[:args.warmup]
             print(f'Warm-up: {len(warm)} files (results are discarded; the full run re-executes them).')
-            run_survey(warm, 'warm-up')
-        code = run_survey(queue_paths, 'full')
+            run_survey(warm, 'warm-up', runs, queue)
+        code = run_survey(queue_paths, 'full', runs, queue)
         if code == 2:
             print('Runner reported a configuration error; survey artifact not written.')
             return 2
         if not RUN.exists():
             print(f'Missing run report {RUN}; the run may have crashed before the first checkpoint.')
+            write_merged(runs, queue)
+            print('Prior evidence merged into the survey artifact.')
             return 2
         runs.append(read_json(RUN))
 
+    write_merged(runs, queue)
     survey = merge(queue, runs)
-    SURVEY.write_text(json.dumps(survey), encoding='utf-8')
     print(f"Survey artifact: {SURVEY}")
     print(f"Outcomes: {survey['outcomeCounts']}")
     print(f"Completed: {survey['completed']}")
