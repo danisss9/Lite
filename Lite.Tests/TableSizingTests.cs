@@ -127,6 +127,72 @@ public static class TableSizingTests
         True(bitmap.GetPixel(50, 10) == new SkiaSharp.SKColor(255, 165, 0), $"the first column must paint orange, got {bitmap.GetPixel(50, 10)}");
     }
 
+    [Test]
+    public static void EmptyCellsInherit_OnTheCell_ResolvesTheKeyword()
+    {
+        // empty-cells-003: tr { empty-cells: hide } with .empty { empty-cells: inherit } — the
+        // raw keyword sat in the override channel and read back as not-hide, so the cell painted.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            "#t{display:table;background:green;border-spacing:0}" +
+            ".r{display:table-row;empty-cells:hide}" +
+            ".e{display:table-cell;background:red;empty-cells:inherit;width:40px;height:20px}" +
+            ".ok{display:table-cell;width:40px;height:20px}</style>" +
+            "<div id=\"t\"><div class=\"r\"><div class=\"e\"></div><div class=\"ok\"></div></div></div>");
+        var bitmap = Drawer.DrawToBitmap(200, 100, root, new Viewport { ViewportHeight = 100 });
+        using (bitmap)
+            True(bitmap.GetPixel(10, 10) == SkiaSharp.SKColors.Green,
+                $"the inherited hide must suppress the empty cell, got {bitmap.GetPixel(10, 10)}");
+    }
+
+    [Test]
+    public static void EmptyCellsHide_KeepsNbspAndPreWhitespaceCells()
+    {
+        // empty-cells-005: an NBSP run is content (CSS white space is only space/tab/LF/CR/FF);
+        // empty-cells-006: under pre, even a white-space-only run renders — both cells paint.
+        var nbsp = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            "#t{display:table;background:green;border-spacing:0}" +
+            ".c{display:table-cell;empty-cells:hide;background:red;width:40px;height:20px}</style>" +
+            "<div id=\"t\"><div class=\"r\"><div class=\"c\">&nbsp;&nbsp;</div></div></div>");
+        using (var bitmap = Drawer.DrawToBitmap(200, 100, nbsp, new Viewport { ViewportHeight = 100 }))
+            True(bitmap.GetPixel(10, 10) == SkiaSharp.SKColors.Red,
+                $"an NBSP-only cell is not empty, got {bitmap.GetPixel(10, 10)}");
+        var pre = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            "#t{display:table;background:green;border-spacing:0}" +
+            ".c{display:table-cell;empty-cells:hide;background:red;width:40px;height:20px;white-space:pre}</style>" +
+            "<div id=\"t\"><div class=\"r\"><div class=\"c\">  </div></div></div>");
+        using (var bitmap = Drawer.DrawToBitmap(200, 100, pre, new Viewport { ViewportHeight = 100 }))
+            True(bitmap.GetPixel(10, 10) == SkiaSharp.SKColors.Red,
+                $"a pre white-space-only cell is not empty, got {bitmap.GetPixel(10, 10)}");
+    }
+
+    [Test]
+    public static void EmptyCellsHide_DoesNotApplyInTheCollapsingModel()
+    {
+        // empty-cells-in-collapsed-border-model-001: §17.6.1.1 scopes empty-cells to the
+        // separated-borders model; a collapsed table's empty cell still paints.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            "#t{display:table;background:green;border-collapse:collapse;empty-cells:hide}" +
+            ".c{display:table-cell;background:red;width:40px;height:20px}</style>" +
+            "<div id=\"t\"><div class=\"r\"><div class=\"c\"></div></div></div>");
+        var bitmap = Drawer.DrawToBitmap(200, 100, root, new Viewport { ViewportHeight = 100 });
+        using (bitmap)
+            True(bitmap.GetPixel(10, 10) == SkiaSharp.SKColors.Red,
+                $"a collapsed table ignores empty-cells: hide, got {bitmap.GetPixel(10, 10)}");
+    }
+
+    [Test]
+    public static void ReplacedSize_UsesSpecifiedZeroNotTheIntrinsicFallback()
+    {
+        // empty-cells-007/008: img { height: 0; width: 0 } inside a hidden-empty check — the
+        // specified 0 read back as 'auto' and the 1x1 intrinsic fell in.
+        var root = Layout("<!DOCTYPE html><img src=\"missing.png\" width=\"1\" height=\"1\" " +
+                          "style=\"width:0;height:0\">");
+        var img = Find(root, "IMG");
+        True(img is not null, "img missing");
+        True(img!.Box.ContentBox.Width == 0f && img.Box.ContentBox.Height == 0f,
+            $"a specified 0x0 must be used as-is, got {img.Box.ContentBox.Width}x{img.Box.ContentBox.Height}");
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);

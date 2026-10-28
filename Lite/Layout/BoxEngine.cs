@@ -21,6 +21,7 @@ internal static class BoxEngine
         var html = root.TagName == "HTML" ? root : root.Children.FirstOrDefault(c => c.TagName == "HTML") ?? root;
         CssUnits.RootFontSize = html.GetFontSize();
 
+        StyleResolver.ResolvePendingCssWideKeywords(root);
         NormalizeBlockInInline(root);
         NormalizeInteractive(root);
         NormalizeTableBoxes(root);
@@ -734,9 +735,11 @@ internal static class BoxEngine
             // trailing whitespace after the last proper child must not fabricate an empty one.
             // Nor does an empty TABLE-ish element ("anonymous table objects only exist if the
             // table has content" — tables-001): a display:table with no rows inside a run must
-            // not become a cell for the surrounding spacing to hang on.
+            // not become a cell for the surrounding spacing to hang on. An empty box that would
+            // still PAINT (background, border, height — empty-cells-applies-to-006/007/015's
+            // 1em black table inside a row) is not empty for this purpose.
             if (run.All(c => (c.TagName == "#text" && string.IsNullOrWhiteSpace(c.DisplayText))
-                || (!c.TagName.StartsWith('#') && IsEmptyTableBox(c))))
+                || (!c.TagName.StartsWith('#') && IsEmptyTableBox(c) && RendersNoBoxOfItsOwn(c))))
             { run.Clear(); newChildren.AddRange(deferred); deferred.Clear(); return; }
             var anon = new LayoutNode(null, wrapAsRow ? "#anon-row" : "#anon-cell", "", parent.Style);
             anon.ResetNonInheritedStyles();
@@ -1366,13 +1369,40 @@ internal static class BoxEngine
         float iw = node.IntrinsicWidth > 0 ? node.IntrinsicWidth : node.Image?.Width ?? 0f;
         float ih = node.IntrinsicHeight > 0 ? node.IntrinsicHeight : node.Image?.Height ?? 0f;
 
-        var specW = node.GetWidth(cbWidth);
-        var specH = node.IsAutoHeight() ? 0f : node.GetHeight(cbHeight, 0, viewportHeight);
+        // A SPECIFIED length is used as-is, 0 included: reading width:0/height:0 back as 0 conflated
+        // it with 'auto' and fell through to the intrinsic size, so a 1x1 image sized to nothing
+        // still painted its pixel (empty-cells-007/008). A percentage with no containing-block
+        // width to resolve against computes to 'auto' (§10.3.2).
+        var rawW = RawStyle(node, "width")?.Trim();
+        var hasSpecW = !node.IsAutoWidth() && !(rawW?.EndsWith('%') == true && cbWidth <= 0f);
+        var specW = hasSpecW ? Math.Max(0f, node.GetWidth(cbWidth)) : 0f;
+        var rawH = RawStyle(node, "height")?.Trim();
+        var hasSpecH = !node.IsAutoHeight() && !(rawH?.EndsWith('%') == true && cbHeight <= 0f);
+        var specH = hasSpecH ? Math.Max(0f, node.GetHeight(cbHeight, 0, viewportHeight)) : 0f;
 
-        if (specW > 0 && specH > 0) return (specW, specH);
-        if (specW > 0) return (specW, iw > 0 && ih > 0 ? specW * ih / iw : ih);
-        if (specH > 0) return (iw > 0 && ih > 0 ? specH * iw / ih : iw, specH);
+        if (hasSpecW && hasSpecH) return (specW, specH);
+        if (hasSpecW) return (specW, iw > 0 && ih > 0 ? specW * ih / iw : ih);
+        if (hasSpecH) return (iw > 0 && ih > 0 ? specH * iw / ih : iw, specH);
         return (iw, ih);
+    }
+
+    /// <summary>The size an INLINE replaced item reserves: <see cref="TryResolveReplacedSize"/>'s
+    /// answer is final whenever a dimension was specified (a specified 0 is a size, not 'auto' —
+    /// empty-cells-007's 0x0 image); the intrinsic fallbacks only cover the auto case where
+    /// nothing is known yet (an unloaded image without width/height attributes).</summary>
+    private static (float Width, float Height) InlineReplacedSize(
+        LayoutNode node, float maxWidth, float viewportHeight)
+    {
+        var sized = TryResolveReplacedSize(node, maxWidth, viewportHeight, viewportHeight) ?? default;
+        var specW = !node.IsAutoWidth() && RawStyle(node, "width")?.Trim().EndsWith('%') != true;
+        var specH = !node.IsAutoHeight() && RawStyle(node, "height")?.Trim().EndsWith('%') != true;
+        var w = sized.Width > 0 ? sized.Width
+            : specW ? 0f
+            : node.IntrinsicWidth > 0 ? (float)node.IntrinsicWidth : node.Image?.Width ?? 100f;
+        var h = sized.Height > 0 ? sized.Height
+            : specH ? Math.Max(0f, sized.Height)
+            : node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight : node.Image?.Height ?? 100f;
+        return (w, h);
     }
 
     /// <summary>Exposed for FlexEngine to lay out flex item children.</summary>
@@ -3046,11 +3076,7 @@ internal static class BoxEngine
                 // intrinsic size, and one specified dimension derives the other from the intrinsic
                 // ratio. The inline path used to read the intrinsic size alone, so `width: 100%`
                 // (or the HTML width="100%" hint) left the image at its natural pixel width.
-                var sized = TryResolveReplacedSize(node, maxWidth, viewportHeight, viewportHeight);
-                var w = sized is { Width: > 0 } ? sized.Value.Width
-                        : node.IntrinsicWidth > 0 ? (float)node.IntrinsicWidth : node.Image?.Width ?? 100f;
-                var h = sized is { Height: > 0 } ? sized.Value.Height
-                        : node.IntrinsicHeight > 0 ? (float)node.IntrinsicHeight : node.Image?.Height ?? 100f;
+                var (w, h) = InlineReplacedSize(node, maxWidth, viewportHeight);
                 // §8.4: an inline REPLACED box's margins, borders and padding all take part in
                 // layout horizontally *and* vertically — unlike a non-replaced inline box, whose
                 // vertical edges do not affect line height. Reserving only the content size here

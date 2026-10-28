@@ -214,6 +214,27 @@ internal static class StyleResolver
         else node.StyleOverrides.Remove(prop); // unknown property → drop the unusable keyword
     }
 
+    /// <summary>Resolves every css-wide keyword still raw in the override channel, parents
+    /// before children so <c>inherit</c> reads its parent's resolved value. The parse-time
+    /// cascade stores rule declarations per element in document order, which can cascade a
+    /// child's keyword before its parent's value lands — resolving on the spot stamped the
+    /// INITIAL value over the inherited one (empty-cells-003's cell under
+    /// <c>tr { empty-cells: hide }</c> stayed painted). Idempotent: once resolved, a value is
+    /// no longer a keyword, so re-walks do nothing.</summary>
+    internal static void ResolvePendingCssWideKeywords(LayoutNode root)
+    {
+        var stack = new Stack<LayoutNode>();
+        stack.Push(root);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            foreach (var prop in node.StyleOverrides.Keys.ToList())
+                ResolveCssWideKeyword(node, prop);
+            foreach (var child in node.Children)
+                stack.Push(child);
+        }
+    }
+
     private static string? OverrideValue(LayoutNode node, string prop) =>
         node.TryResolveStyle(prop, out var value) && !string.IsNullOrEmpty(value) ? value : null;
 

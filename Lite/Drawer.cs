@@ -591,15 +591,34 @@ internal static class Drawer
     }
 
     /// <summary>CSS 2.1 §17.6.1.1: with <c>empty-cells: hide</c>, a table cell with no in-flow
-    /// content paints neither background nor borders.</summary>
+    /// content paints neither background nor borders. Only the separated-borders model honours
+    /// the property; in the collapsing model every cell paints.</summary>
     private static bool IsEmptyCellHidden(LayoutNode node)
     {
         if (node.GetDisplay() != DisplayType.TableCell) return false;
         var ec = node.TryResolveStyle("empty-cells", out var v) ? v : node.Style.GetPropertyValueSafe("empty-cells");
         if (ec?.Trim() != "hide") return false;
-        bool hasContent = !string.IsNullOrWhiteSpace(node.DisplayText)
-            || node.Children.Any(c => c.TagName != "#text" || !string.IsNullOrWhiteSpace(c.DisplayText));
-        return !hasContent;
+        var collapse = false;
+        for (var a = node.Parent; a is not null; a = a.Parent)
+            if (a.GetDisplay() is DisplayType.Table or DisplayType.InlineTable)
+                { collapse = TableEngine.IsBorderCollapse(a); break; }
+        if (collapse) return false;
+        bool content = TextRenders(node.DisplayText, node)
+            || node.Children.Any(c => c.TagName != "#text" || TextRenders(c.DisplayText, c));
+        return !content;
+    }
+
+    /// <summary>Whether a text run renders anything under <paramref name="node"/>'s collapsing:
+    /// CSS white space is only space/tab/LF/CR/FF (§4.1.1), so an NBSP run is content even
+    /// though string.IsNullOrWhiteSpace answers yes (empty-cells-005); under pre/pre-wrap even
+    /// white-space-only runs render (empty-cells-006, empty-cells-exceptions-004).</summary>
+    internal static bool TextRenders(string? text, LayoutNode node)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+        if (node.GetWhiteSpace() is WhiteSpace.Pre or WhiteSpace.PreWrap) return true;
+        foreach (var ch in text)
+            if (ch is not (' ' or '\t' or '\n' or '\r' or '\f')) return true;
+        return false;
     }
 
     /// <summary>§17.5.1 layers 2 and 3: column-group, then column backgrounds, over the

@@ -3451,6 +3451,9 @@ internal static class Parser
         }
         else
         {
+            // A css-wide keyword stays RAW here: rules cascade per element in document order,
+            // so a child's 'inherit' can be stored before its parent's value lands. BoxEngine
+            // resolves the pending keywords in tree order at the start of every layout.
             node.StyleOverrides[prop] = val;
         }
     }
