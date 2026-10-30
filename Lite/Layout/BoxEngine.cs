@@ -891,7 +891,14 @@ internal static class BoxEngine
         var explicitW = replaced?.Width ?? node.GetWidth(cbRect.Width);
         float contentW;
         if (explicitW > 0)
-            contentW = explicitW;
+        {
+            // §17.5.2: a HTML TABLE's specified width spans its borders and spacing (border-box) —
+            // the same rule the in-flow path applies (fixed-table-layout-002a). A generic
+            // display:table box stays content-box.
+            contentW = node.TagName == "TABLE"
+                ? Math.Max(0f, explicitW - border.Left - border.Right - padding.Left - padding.Right)
+                : explicitW;
+        }
         else if (!float.IsNaN(left) && !float.IsNaN(right) &&
                  node.GetDisplay() is DisplayType.Table or DisplayType.InlineTable)
             // Only the table WRAPPER takes the solved width (§17.4); the table box inside keeps
@@ -1012,8 +1019,10 @@ internal static class BoxEngine
         }
 
         var explicitH = autoHeight ? 0f : node.GetHeight(cbRect.Height, 0, viewportHeight);
-        if (explicitH > 0)
+        if (explicitH > 0 && node.GetDisplay() is not (DisplayType.Table or DisplayType.InlineTable))
         {
+            // A table's specified height is a minimum (§17.5.3) applied by the row stretch, and
+            // its caption adds on top (§17.4) — the same rule as the in-flow path.
             var isBorderBox = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
             contentH = isBorderBox
                 ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
@@ -1130,7 +1139,14 @@ internal static class BoxEngine
         // box-sizing: with content-box (the default), an explicit `width` IS the content width —
         // padding/border are added outside it. Only border-box (and the auto/fill case) subtracts
         // padding+border from the box width. (Height already honors this below.)
-        var isBorderBoxW = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
+        // A HTML TABLE element is the exception (§17.5.2): its width spans its borders and cell
+        // spacing — "the sum of the column widths (plus cell spacing or borders)" — so an
+        // explicit width is a border-box one (fixed-table-layout-002a's 23+19+382+19+262+19+34
+        // = 758). Chromium's UA sheet gives exactly the table element box-sizing: border-box;
+        // a generic display:table box (background-position-applies-to-001's div) stays
+        // content-box, so the tag — not the display — decides.
+        var isHtmlTable = node.TagName == "TABLE";
+        var isBorderBoxW = node.Style.GetPropertyValueSafe("box-sizing") == "border-box" || isHtmlTable;
         var contentW = (hasUsedW && !isBorderBoxW)
             ? Math.Max(0f, usedW)
             : Math.Max(0f, boxWidth - border.Left - border.Right - padding.Left - padding.Right);
@@ -1259,8 +1275,12 @@ internal static class BoxEngine
         // border/padding the chain can neither escape nor extend the height: a bordered box
         // with only empty children renders its borders alone (margin-collapse-128).
 
-        // Explicit height overrides — respect box-sizing: border-box
-        if (hasExplicitH)
+        // Explicit height overrides — respect box-sizing: border-box.
+        // NOT for a CSS table box: §17.5.3 makes the specified height a MINIMUM the row stretch
+        // inside LayoutTable already applies, and the caption (§17.4, in the wrapper) adds on
+        // top — clamping to the explicit height cut the caption band out of the wrapper's flow
+        // height and pulled following content up over the table (fixed-table-layout-002a).
+        if (hasExplicitH && node.GetDisplay() is not (DisplayType.Table or DisplayType.InlineTable))
         {
             var clampedH = isBorderBox
                 ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)

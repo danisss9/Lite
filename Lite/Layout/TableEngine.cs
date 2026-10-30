@@ -160,15 +160,17 @@ internal static class TableEngine
         // §17.5.3: a specified table height is a minimum; the extra goes to the rows in
         // proportion to their heights (evenly when they are all empty). Ignoring it collapsed a
         // 206px table to its content (background-043-ref's bottom-aligned stripe sat at the top).
-        // Like browsers, the height covers the table's border box. Percentages need a definite
-        // containing block and are left alone.
+        // Like browsers, the height covers the table's border box — the CAPTION is not part of
+        // the table box (§17.4 it lives in the wrapper), so it does not consume the height
+        // (fixed-table-layout-002a's 100px table under a caption kept 100px of rows).
+        // Percentages need a definite containing block and are left alone.
         if (rowCount > 0 && !table.IsAutoHeight() &&
             !(table.TryResolveStyle("height", out var tableHeightRaw) ? tableHeightRaw : table.Style.GetPropertyValueSafe("height")).Contains('%'))
         {
             var tableBorder = table.GetBorderWidth();
             var tablePadding = table.GetPadding(contentW, viewportH, table.GetFontSize());
             var target = table.GetHeight(0f, 0f, viewportH) - tableBorder.Top - tableBorder.Bottom
-                         - tablePadding.Top - tablePadding.Bottom - captionTopH;
+                         - tablePadding.Top - tablePadding.Bottom;
             var used = rowHeights.Sum() + verticalSpacing * (rowCount + 1);
             if (target > used + 0.01f)
             {
@@ -311,6 +313,8 @@ internal static class TableEngine
         s_captionInsets.AddOrUpdate(table,
             new CaptionInsets(captionTopH, captionBottomH, BoxEngine.Generation));
 
+        if (Environment.GetEnvironmentVariable("LITE_TRACE_TABLE") == "1")
+            Console.WriteLine($"[TBL] {table.TagName}#{table.Attributes.GetValueOrDefault("id")} y={contentY} captionTopH={captionTopH} rows={rowCount} rowH0={(rowCount > 0 ? rowHeights[0] : 0)} ry={ry} ret={ry - contentY}");
         return ry - contentY;
     }
 

@@ -1703,6 +1703,10 @@ public static class StyleExtensions
             !name.Equals("fantasy", StringComparison.OrdinalIgnoreCase))
             return null;
         if (name.Equals("monospace", StringComparison.OrdinalIgnoreCase)) return Lite.Layout.PlatformFonts.Monospace;
+        // 'serif' asked directly returns Skia's DEFAULT face (Segoe UI on Windows — a sans face
+        // whose 1.33em ascent+descent overflows a 1.2 line-height); name the serif face the
+        // platform actually ships (PlatformFonts.Serif) as every browser does.
+        if (name.Equals("serif", StringComparison.OrdinalIgnoreCase)) return Lite.Layout.PlatformFonts.Serif;
         return s_genericFamilies.GetOrAdd(name, static generic =>
         {
             using var typeface = SKTypeface.FromFamilyName(generic.ToLowerInvariant());
