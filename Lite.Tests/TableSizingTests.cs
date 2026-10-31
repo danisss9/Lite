@@ -193,6 +193,27 @@ public static class TableSizingTests
             $"a specified 0x0 must be used as-is, got {img.Box.ContentBox.Width}x{img.Box.ContentBox.Height}");
     }
 
+    [Test]
+    public static void FloatedSpan_WithNoDisplayDeclaration_PaintsAsBlock()
+    {
+        // floats-027: two empty floated spans (no display rule anywhere → computed display "")
+        // must blockify and paint their backgrounds; the raw "" short-circuited the blockify and
+        // the painter's inline path (no fragments for a float) painted nothing.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            "#c{border:5px solid black;width:100px;height:100px}" +
+            "#b{background:blue;float:right;width:40px;height:40px}" +
+            "#o{background:orange;float:left;width:40px;height:40px}</style>" +
+            "<div id=\"c\"><span id=\"b\"></span><span id=\"o\"></span></div>");
+        var bitmap = Drawer.DrawToBitmap(200, 200, root, new Viewport { ViewportHeight = 200 });
+        using (bitmap)
+        {
+            True(bitmap.GetPixel(100, 30) == SkiaSharp.SKColors.Blue,
+                $"the right-floated span must paint blue, got {bitmap.GetPixel(100, 30)}");
+            True(bitmap.GetPixel(30, 30) == SkiaSharp.SKColors.Orange,
+                $"the left-floated span must paint orange, got {bitmap.GetPixel(30, 30)}");
+        }
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);

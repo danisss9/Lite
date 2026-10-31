@@ -69,7 +69,13 @@ public static class StyleExtensions
     private static string BlockifyForFloatOrPosition(LayoutNode node, string raw)
     {
         if (node.TagName.Length > 0 && node.TagName[0] == '#') return raw;
-        if (raw is "none" or "block" or "table" or "list-item" or "flex" or "") return raw;
+        // An element with no display declaration anywhere computes to "" (AngleSharp emits no
+        // value when not even the UA sheet supplies one): CSS's initial display value is
+        // 'inline', so normalize first or the blockify below never fires — a floated/abs-pos
+        // span stayed Inline and the painter's inline path, which has no box fragments for a
+        // float, painted nothing (floats-027's empty floated spans).
+        if (raw.Length == 0) raw = "inline";
+        if (raw is "none" or "block" or "table" or "list-item" or "flex") return raw;
 
         var pos = node.GetPosition();
         if (node.GetFloat() == FloatType.None &&
