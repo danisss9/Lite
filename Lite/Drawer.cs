@@ -1294,6 +1294,10 @@ internal static class Drawer
         var content = node.Box.ContentBox;
         int cw = Math.Max(1, (int)Math.Round(content.Width));
         int ch = Math.Max(1, (int)Math.Round(content.Height));
+        // The child page's viewport state must match the frame box it paints into: left at its
+        // default 0, DrawScrollbar saw ContentHeight (8px of collapsed body margins) exceed the
+        // "viewport" and painted a phantom thumb into every frame (absolute-replaced-height-*).
+        page.Viewport.ViewportHeight = ch;
 
         // Snapshot the parent's paint statics — the recursive DrawToBitmap clobbers them.
         var savedHit = _hitRegions;

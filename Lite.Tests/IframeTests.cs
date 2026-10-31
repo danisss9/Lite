@@ -13,6 +13,27 @@ namespace Lite.Tests;
 public static class IframeTests
 {
     [Test]
+    public static void EmptyAutoSizedIframe_PaintsNoPhantomScrollbar()
+    {
+        // absolute-replaced-height-004: an empty auto-sized 300x150 iframe paints no scrollbar —
+        // the child Page's viewport state used to stay at height 0, so its 8px of collapsed body
+        // margins exceeded the "viewport" and DrawScrollbar thumbed into every frame.
+        var page = Parser.ParseChildPage(
+            "<!doctype html><style>iframe{border:1px solid red}</style><iframe></iframe>", true,
+            "http://parent.test/page", 400, 300);
+        var bitmap = Drawer.DrawToBitmap(400, 300, page.Root, new Viewport { ViewportHeight = 300 });
+        using (bitmap)
+        {
+            // The frame's interior is the child page's white canvas; the semi-transparent
+            // scrollbar grey (0,0,0,80 over white = 175) must not appear inside it.
+            for (var x = 12; x < 300; x += 7)
+                for (var y = 12; y < 145; y += 7)
+                    True(bitmap.GetPixel(x, y).Red != 175 || bitmap.GetPixel(x, y).Green != 175,
+                        $"a phantom scrollbar thumb painted inside the frame at {x},{y}: {bitmap.GetPixel(x, y)}");
+        }
+    }
+
+    [Test]
     public static void ScriptInsertedIframe_LoadsItsChildDocument()
     {
         var page = Parser.ParseChildPage("<!doctype html><div id=host></div>", true,
