@@ -257,6 +257,13 @@ internal static class Parser
         // with UTF-8 and the parser's re-decode is a lossless no-op.
         if (!Current.IsXmlDocument)
             html = AlignMetaCharset(html, "utf-8");
+        else
+            // The XML parser mirrors the HTML one: it re-encodes the string content and honors
+            // the XML declaration's encoding pseudo-attribute over those bytes. The string was
+            // already decoded with the transport charset (§4.4: HTTP wins), so the declaration
+            // now describes OUR bytes — align it with UTF-8 or a non-UTF-8 transport charset
+            // double-decodes every non-ASCII attribute (character-encoding-003..016).
+            html = AlignXmlDeclarationCharset(html, "utf-8");
         var document = OpenDocument(config, response, address, html, mediaType);
         _baseUrl = address;
         _documentBaseUrl = address;
@@ -312,6 +319,18 @@ internal static class Parser
         return MetaContentTypeRegex.Replace(html, match =>
             MetaCharsetRegex.Replace(match.Value, m =>
                 m.Value[..(m.Value.IndexOf('=') + 1)] + appliedCharset));
+    }
+
+    private static readonly Regex XmlDeclarationRegex =
+        new(@"^(<\?xml\b[^>]*?)encoding\s*=\s*([""'])([^""']*)\2", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>Rewrites the encoding pseudo-attribute of the XML declaration to
+    /// <paramref name="appliedCharset"/> — same purpose as <see cref="AlignMetaCharset"/> for
+    /// the XML parser's re-decode of the already-transport-decoded string.</summary>
+    internal static string AlignXmlDeclarationCharset(string html, string appliedCharset)
+    {
+        return XmlDeclarationRegex.Replace(html, m =>
+            $"{m.Groups[1].Value}encoding={m.Groups[2].Value}{appliedCharset}{m.Groups[2].Value}");
     }
 
     /// <summary>AngleSharp's declaration parser drops "! important" (bang and keyword separated
