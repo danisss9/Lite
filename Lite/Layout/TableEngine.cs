@@ -313,8 +313,6 @@ internal static class TableEngine
         s_captionInsets.AddOrUpdate(table,
             new CaptionInsets(captionTopH, captionBottomH, BoxEngine.Generation));
 
-        if (Environment.GetEnvironmentVariable("LITE_TRACE_TABLE") == "1")
-            Console.WriteLine($"[TBL] {table.TagName}#{table.Attributes.GetValueOrDefault("id")} y={contentY} captionTopH={captionTopH} rows={rowCount} rowH0={(rowCount > 0 ? rowHeights[0] : 0)} ry={ry} ret={ry - contentY}");
         return ry - contentY;
     }
 
