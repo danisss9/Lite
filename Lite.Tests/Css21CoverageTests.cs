@@ -453,6 +453,14 @@ public static class Css21CoverageTests
         return VisualChecks.Judge(check, VisualChecks.TopLevel(components), render ?? bitmap, 0, components);
     }
 
+    /// <summary>Judge without the clipped assertion — for checks whose stated condition is
+    /// ink at the viewport edge itself (viewport-bottom).</summary>
+    private static WptRunner.RunResult JudgeLenient(SkiaSharp.SKBitmap bitmap, VisualCheck check)
+    {
+        var components = VisualChecks.Components(bitmap, 0, out _);
+        return VisualChecks.Judge(check, VisualChecks.TopLevel(components), bitmap, 0, components);
+    }
+
     private static TestEvidence Evidence() => new("css21-wpt", "css/CSS2/example.html", "pass", "ok", [new("assertion", 0, null)],
         0, "upstream-wpt", Css: new("screen", "html", "inventory", 800, 600, 0, 1, null));
 
@@ -488,5 +496,290 @@ public static class Css21CoverageTests
         try { action(); }
         catch (InvalidDataException) { return; }
         throw new Exception("Expected invalid CSS inventory to be rejected.");
+    }
+
+    // --- Probe batch 2 (2 November): judges for the next wave of formerly-unsupported cases. ---
+
+    [Test]
+    public static void VisualChecks_ShadeAndColouredSizeChecks()
+    {
+        // "the box below is a shade or shades of green": hue-preserving greens pass, blue fails.
+        var shades = Render(c => c.DrawRect(new SkiaSharp.SKRect(20, 30, 120, 130), Fill(new SkiaSharp.SKColor(0, 0x90, 0x20))));
+        True(Judge(shades, new VisualCheck("one-shape", "box", "green", Shades: true), shades).Passed);
+        True(!Judge(shades, new VisualCheck("one-shape", "box", "blue", Shades: true), shades).Passed);
+        True(!Judge(shades, new VisualCheck("one-shape", "box", "green"), shades).Passed);
+        // "the blue box is the same size as the orange box".
+        var sizes = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 30, 110, 100), Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(10, 130, 110, 200), Fill(SkiaSharp.SKColors.Orange));
+        });
+        True(Judge(sizes, new VisualCheck("same-dimension", Dimension: "size", Count: 2, ColorA: "blue", ColorB: "orange"), sizes).Passed);
+        var wrong = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 30, 120, 100), Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(10, 130, 110, 200), Fill(SkiaSharp.SKColors.Orange));
+        });
+        True(!Judge(wrong, new VisualCheck("same-dimension", Dimension: "size", Count: 2, ColorA: "blue", ColorB: "orange"), wrong).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_StackedPaintOrderReadsFromTheOverlap()
+    {
+        // Blue bottom-left, orange middle, yellow top-right: at each overlap the higher box wins.
+        var stacked = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(0, 0, 96, 96), Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(30, 30, 126, 126), Fill(SkiaSharp.SKColors.Orange));
+            c.DrawRect(new SkiaSharp.SKRect(60, 60, 156, 156), Fill(SkiaSharp.SKColors.Yellow));
+        });
+        True(Judge(stacked, new VisualCheck("stack-order", Colors: ["blue", "orange", "yellow"]), stacked).Passed);
+        True(!Judge(stacked, new VisualCheck("stack-order", Colors: ["yellow", "orange", "blue"]), stacked).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_RelationsForSpacingAndCorners()
+    {
+        var blue = SkiaSharp.SKColors.Blue;
+        var orange = SkiaSharp.SKColors.Orange;
+        var apart = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 20, 120, 80), Fill(blue));
+            c.DrawRect(new SkiaSharp.SKRect(20, 120, 120, 180), Fill(orange));
+        });
+        True(Judge(apart, new VisualCheck("shape-relation", Relation: "not-touching", ColorA: "blue", ColorB: "orange"), apart).Passed, "not-touching");
+        True(!Judge(apart, new VisualCheck("shape-relation", Relation: "touching", ColorA: "blue", ColorB: "orange"), apart).Passed, "touching-neg");
+        True(Judge(apart, new VisualCheck("shape-relation", Relation: "vertical-gap", ColorA: "blue", ColorB: "orange"), apart).Passed, "v-gap");
+        var adjacent = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 20, 120, 80), Fill(blue));
+            c.DrawRect(new SkiaSharp.SKRect(120, 20, 220, 80), Fill(orange));
+        });
+        True(Judge(adjacent, new VisualCheck("shape-relation", Relation: "touching", ColorA: "blue", ColorB: "orange"), adjacent).Passed, "touching");
+        True(!Judge(adjacent, new VisualCheck("shape-relation", Relation: "not-touching", ColorA: "blue", ColorB: "orange"), adjacent).Passed, "not-touching-neg");
+        True(Judge(adjacent, new VisualCheck("shape-relation", Relation: "right-of", ColorA: "orange", ColorB: "blue"), adjacent).Passed, "right-of");
+        True(!Judge(adjacent, new VisualCheck("shape-relation", Relation: "right-of", ColorA: "blue", ColorB: "orange"), adjacent).Passed, "right-of-neg");
+        // Half-height: the blue and purple boxes are half the black box's height.
+        var halves = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 210, 170), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(220, 10, 320, 90), Fill(blue));
+            c.DrawRect(new SkiaSharp.SKRect(330, 10, 395, 90), Fill(SkiaSharp.SKColors.Purple));
+        });
+        True(Judge(halves, new VisualCheck("shape-relation", Relation: "half-height", ColorA: "blue", ColorB: "purple", ColorC: "black"), halves).Passed, "half");
+        True(!Judge(halves, new VisualCheck("shape-relation", Relation: "half-height", ColorA: "blue", ColorB: "purple", ColorC: "blue"), halves).Passed, "half-neg");
+        // A filled square flush in the lower-right inner corner of a bordered box.
+        var corner = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 210, 160), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(180, 130, 210, 160), Fill(blue));
+        });
+        True(Judge(corner, new VisualCheck("shape-relation", Relation: "corner-lower-right", ColorA: "blue", ColorB: "black"), corner).Passed, "corner-lr");
+        True(!Judge(corner, new VisualCheck("shape-relation", Relation: "corner-upper-left", ColorA: "blue", ColorB: "black"), corner).Passed, "corner-ul-neg");
+    }
+
+    [Test]
+    public static void VisualChecks_BoxCountsAndThreeBars()
+    {
+        var black = SkiaSharp.SKColors.Black;
+        var two = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 110, 60), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(10, 80, 110, 130), Fill(black));
+        });
+        True(Judge(two, new VisualCheck("box-count", Count: 2), two).Passed);
+        True(!Judge(two, new VisualCheck("box-count", Count: 3), two).Passed);
+        var bars = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 110, 30), Fill(SkiaSharp.SKColors.Green));
+            c.DrawRect(new SkiaSharp.SKRect(10, 40, 110, 60), Fill(SkiaSharp.SKColors.Yellow));
+            c.DrawRect(new SkiaSharp.SKRect(10, 70, 110, 90), Fill(SkiaSharp.SKColors.Green));
+        });
+        True(Judge(bars, new VisualCheck("three-bars", ColorA: "green", ColorB: "yellow"), bars).Passed);
+        var uneven = Render(c => c.DrawRect(new SkiaSharp.SKRect(10, 40, 90, 60), Fill(SkiaSharp.SKColors.Yellow)));
+        True(!Judge(uneven, new VisualCheck("three-bars", ColorA: "green", ColorB: "yellow"), uneven).Passed);
+        var stack = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 110, 50), Fill(SkiaSharp.SKColors.Green));
+            c.DrawRect(new SkiaSharp.SKRect(10, 50, 110, 90), Fill(SkiaSharp.SKColors.Blue));
+        });
+        True(Judge(stack, new VisualCheck("bar-stack", ColorA: "green", ColorB: "blue"), stack).Passed);
+        True(!Judge(stack, new VisualCheck("bar-stack", ColorA: "blue", ColorB: "green"), stack).Passed);
+        var even = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 110, 40), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(10, 60, 110, 90), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(10, 110, 110, 140), Fill(black));
+        });
+        True(Judge(even, new VisualCheck("stack-three", Even: true), even).Passed);
+        var lopsided = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 110, 40), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(10, 45, 110, 75), Fill(black));
+            c.DrawRect(new SkiaSharp.SKRect(10, 110, 110, 140), Fill(black));
+        });
+        True(!Judge(lopsided, new VisualCheck("stack-three", Even: true), lopsided).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_BarsMatchBoxesByColourAndHeight()
+    {
+        var yellow = SkiaSharp.SKColors.Yellow;
+        var orange = SkiaSharp.SKColors.Orange;
+        var matched = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(2, 10, 12, 60), Fill(yellow));   // thin bar, 50 tall
+            c.DrawRect(new SkiaSharp.SKRect(40, 10, 190, 60), Fill(yellow)); // matching box
+            c.DrawRect(new SkiaSharp.SKRect(2, 110, 7, 160), Fill(orange));  // second bar
+            c.DrawRect(new SkiaSharp.SKRect(40, 110, 190, 160), Fill(orange));
+        });
+        True(Judge(matched, new VisualCheck("bars-match"), matched).Passed);
+        var unmatched = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(2, 10, 12, 60), Fill(yellow));
+            c.DrawRect(new SkiaSharp.SKRect(40, 10, 190, 80), Fill(yellow));
+        });
+        True(!Judge(unmatched, new VisualCheck("bars-match"), unmatched).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_BarGridAndLinesSpaced()
+    {
+        var black = SkiaSharp.SKColors.Black;
+        var grid = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 130, 30), Fill(black));
+            for (var r = 0; r < 3; r++)
+            for (var col = 0; col < 3; col++)
+                c.DrawRect(new SkiaSharp.SKRect(10 + col * 40, 40 + r * 40, 46 + col * 40, 76 + r * 40), Fill(black));
+        });
+        True(Judge(grid, new VisualCheck("bar-grid", Rows: 3, Cols: 3), grid).Passed, "bg-3x3");
+        True(!Judge(grid, new VisualCheck("bar-grid", Rows: 2, Cols: 2), grid).Passed, "bg-2x2");
+        var spaced = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 15, 100), Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(65, 10, 70, 100), Fill(SkiaSharp.SKColors.Orange));
+        });
+        True(Judge(spaced, new VisualCheck("lines-spaced", ColorA: "blue", ColorB: "orange"), spaced).Passed, "ls-pass");
+        True(!Judge(spaced, new VisualCheck("lines-spaced", ColorA: "blue", ColorB: "green"), spaced).Passed, "ls-color");
+        var adjacent = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 15, 100), Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(15, 10, 20, 100), Fill(SkiaSharp.SKColors.Orange));
+        });
+        True(!Judge(adjacent, new VisualCheck("lines-spaced", ColorA: "blue", ColorB: "orange"), adjacent).Passed, "ls-adjacent");
+    }
+
+    [Test]
+    public static void VisualChecks_LinesSameComparesInkBands()
+    {
+        var pair = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 80, 50), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(90, 30, 100, 50), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(20, 90, 80, 110), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(90, 90, 100, 110), Fill(SkiaSharp.SKColors.Black));
+        });
+        True(Judge(pair, new VisualCheck("lines-same", Count: 2), pair).Passed);
+        var different = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 80, 50), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(20, 90, 70, 110), Fill(SkiaSharp.SKColors.Black));
+        });
+        True(!Judge(different, new VisualCheck("lines-same", Count: 2), different).Passed);
+        var three = Render(c =>
+        {
+            foreach (var y in new[] { 30, 90, 150 })
+                c.DrawRect(new SkiaSharp.SKRect(20, y, 80, y + 20), Fill(SkiaSharp.SKColors.Black));
+        });
+        True(Judge(three, new VisualCheck("lines-same", Count: 3), three).Passed);
+        True(!Judge(three, new VisualCheck("lines-same", Count: 2), three).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_FirstLineColorJustifyAndViewportBottom()
+    {
+        var first = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 100, 50), Fill(SkiaSharp.SKColors.Green));
+            c.DrawRect(new SkiaSharp.SKRect(20, 90, 100, 110), Fill(SkiaSharp.SKColors.Black));
+        });
+        True(Judge(first, new VisualCheck("first-line-color", Color: "green"), first).Passed);
+        True(!Judge(first, new VisualCheck("first-line-color", Color: "black"), first).Passed);
+        var justified = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 180, 50), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(20, 90, 180, 110), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(20, 150, 100, 170), Fill(SkiaSharp.SKColors.Black));
+        });
+        True(Judge(justified, new VisualCheck("justify"), justified).Passed);
+        var ragged = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 170, 50), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(20, 90, 180, 110), Fill(SkiaSharp.SKColors.Black));
+        });
+        True(!Judge(ragged, new VisualCheck("justify"), ragged).Passed);
+        var bottom = Render(c => c.DrawRect(new SkiaSharp.SKRect(20, 240, 300, 300), Fill(SkiaSharp.SKColors.Blue)));
+        True(JudgeLenient(bottom, new VisualCheck("viewport-bottom", Color: "blue")).Passed);
+        True(!JudgeLenient(bottom, new VisualCheck("viewport-bottom", Color: "orange")).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_BorderSidesReadPerSideStylesAndColours()
+    {
+        // Four solid sides, each a different colour: the "distinct" mode passes.
+        var distinct = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 210, 18), Fill(SkiaSharp.SKColors.Blue));    // top
+            c.DrawRect(new SkiaSharp.SKRect(10, 162, 210, 170), Fill(SkiaSharp.SKColors.Orange)); // bottom
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 18, 170), Fill(SkiaSharp.SKColors.Green));   // left
+            c.DrawRect(new SkiaSharp.SKRect(202, 10, 210, 170), Fill(SkiaSharp.SKColors.Purple)); // right
+        });
+        True(Judge(distinct, new VisualCheck("border-sides", Mode: "distinct"), distinct).Passed);
+        var uniform = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 210, 18), Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(10, 162, 210, 170), Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 18, 170), Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(202, 10, 210, 170), Fill(SkiaSharp.SKColors.Blue));
+        });
+        True(!Judge(uniform, new VisualCheck("border-sides", Mode: "distinct"), uniform).Passed);
+        True(Judge(uniform, new VisualCheck("border-sides", Sides: new Dictionary<string, SideSpec>
+        {
+            ["top"] = new("solid", "blue"), ["bottom"] = new("solid", "blue"),
+            ["left"] = new("solid", "blue"), ["right"] = new("solid", "blue"),
+        }), uniform).Passed);
+        True(!Judge(uniform, new VisualCheck("border-sides", Sides: new Dictionary<string, SideSpec>
+        {
+            ["top"] = new("solid", "blue"), ["bottom"] = new("solid", "orange"),
+            ["left"] = new("solid", "blue"), ["right"] = new("solid", "blue"),
+        }), uniform).Passed);
+        // One side missing entirely: not readable as four different edges.
+        var threeSides = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 210, 18), Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(10, 162, 210, 170), Fill(SkiaSharp.SKColors.Orange));
+            c.DrawRect(new SkiaSharp.SKRect(10, 10, 18, 170), Fill(SkiaSharp.SKColors.Green));
+        });
+        True(!Judge(threeSides, new VisualCheck("border-sides", Mode: "distinct"), threeSides).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_CornersNeedFourSquaresOnAllCorners()
+    {
+        var corner = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(40, 40, 240, 240), Fill(SkiaSharp.SKColors.Yellow));
+            foreach (var (x, y) in new[] { (30, 30), (230, 30), (30, 230), (230, 230) })
+                c.DrawRect(new SkiaSharp.SKRect(x, y, x + 20, y + 20), Fill(SkiaSharp.SKColors.Blue));
+        });
+        True(Judge(corner, new VisualCheck("corners", Color: "blue", BoxColor: "yellow"), corner).Passed);
+        var missing = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(40, 40, 240, 240), Fill(SkiaSharp.SKColors.Yellow));
+            foreach (var (x, y) in new[] { (30, 30), (230, 30), (30, 230) })
+                c.DrawRect(new SkiaSharp.SKRect(x, y, x + 20, y + 20), Fill(SkiaSharp.SKColors.Blue));
+        });
+        True(!Judge(missing, new VisualCheck("corners", Color: "blue", BoxColor: "yellow"), missing).Passed);
     }
 }

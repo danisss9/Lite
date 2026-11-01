@@ -44,11 +44,18 @@ namespace Lite.Conformance.Css21;
 /// <item><c>stack-three</c>: three same-width rectangles stacked vertically.</item>
 /// <item><c>two-size</c>: two rectangles, one at least 1.5× the other's area.</item>
 /// </list></summary>
-internal sealed record VisualCheck(string Kind, string? Shape = null, string? Color = null,
+internal sealed record SideSpec(string? Style, string? Color);
+
+    internal sealed record VisualCheck(string Kind, string? Shape = null, string? Color = null,
     string? Dimension = null, int? Count = null, string? ColorA = null, string? ColorB = null,
     string? Relation = null, string? LineColor = null, bool? Over = null, bool? Under = null, bool? Through = null,
     string? Variant = null, string? FirstShape = null, string? FirstColor = null, string? SecondShape = null,
-    string? SecondColor = null, string? Arrangement = null, bool Approx = false, string? Anchor = null);
+    string? SecondColor = null, string? Arrangement = null, bool Approx = false, string? Anchor = null,
+    string? ColorC = null, string? BulletColor = null, string? Needle = null, string? Side = null,
+    string? Edge = null, string? Span = null, string? Mode = null, string? Scope = null, bool Even = false,
+    bool Shades = false, bool Marker = false, string? Bullet = null, int? Rows = null, int? Cols = null,
+    List<string>? Colors = null, List<string>? Needles = null, Dictionary<string, SideSpec>? Sides = null,
+    bool Ordered = false, string? BoxColor = null, string? Target = null);
 
 /// <summary>Evaluates a <see cref="VisualCheck"/> literally and strictly against the rendered
 /// page: the region below the instruction paragraph is segmented into connected components
@@ -104,6 +111,37 @@ internal static class VisualChecks
             "align-right" => AlignRight(check, bitmap, root, top, path),
             "letter-x" => LetterX(check, bitmap, root, top, path),
             "outline-text" => OutlineText(check, bitmap, root, top, path),
+            "text-baseline" => TextBaseline(check, bitmap, root, top, path),
+            "one-line" => OneLine(bitmap, root, top, path),
+            "first-line-marker" => FirstLineMarker(check, bitmap, root, top, path),
+            "line-marker" => LineMarker(check, bitmap, top, path),
+            "bullet-beside" => BulletBeside(check, bitmap, top, path),
+            "bar-stack" => BarStack(check, bitmap, top, path),
+            "text-marker" => TextMarker(check, bitmap, root, top, path),
+            "numbers-present" => NumbersPresent(check, root, top, path),
+            "text-ink" => TextInk(check, bitmap, root, top, path),
+            "words-and-box" => WordsAndBox(check, bitmap, root, top, path),
+            "align-center" => AlignCenter(check, bitmap, root, top, sentence, path),
+            "lines-spaced" => LinesSpaced(check, bitmap, top, path),
+            "lines-same" => LinesSame(check, bitmap, top, path),
+            "image-tiled" => ImageTiled(check, bitmap, root, top, path),
+            "bars-match" => BarsMatch(check, bitmap, top, path),
+            "bar-grid" => BarGrid(check, bitmap, top, path),
+            "viewport-bottom" => ViewportBottom(check, bitmap),
+            "cell-border" => CellBorder(check, bitmap, root, top, path),
+            "corners" => Corners(check, bitmap, top, path),
+            "box-count" => BoxCount(check, bitmap, top, path),
+            "three-bars" => ThreeBars(check, bitmap, top, path),
+            "first-letter-color" => FirstLetterColor(check, bitmap, root, top, sentence, path),
+            "first-line-color" => FirstLineColor(check, bitmap, top, path),
+            "justify" => Justify(bitmap, top, path),
+            "text-band" => TextBand(check, bitmap, root, top, sentence, path),
+            "edge-letter" => EdgeLetter(check, bitmap, root, top, path),
+            "stack-order" => StackOrder(check, bitmap, top, path),
+            "no-ring" => NoRing(check, bitmap, root, top, path),
+            "text-below-box" => TextBelowBox(check, root, top, path),
+            "text-marker-match" => TextMarkerMatch(bitmap, root, top, path),
+            "border-sides" => BorderSides(check, bitmap, top, path),
             _ => ComponentCheck(check, bitmap, top, path),
         };
         // Same switch as the reftest survey's failure dumps: read the render, not the numbers.
@@ -144,13 +182,28 @@ internal static class VisualChecks
                 "border-ring" => BorderRing(check, shapes),
                 "shape-relation" => ShapeRelation(check, shapes, nested, bitmap),
                 "space-between" => bitmap is null ? "no render" : SpaceBetween(check, shapes, bitmap),
-                "stack-three" => StackThree(shapes),
+                "stack-three" => StackThree(check, shapes),
                 "two-size" => TwoSize(shapes),
                 "line-pair" => LinePair(check, shapes),
                 "marker-bullet" => MarkerBullet(check, shapes),
                 "round-dot" => RoundDot(shapes),
                 "double-line" => DoubleLine(shapes),
                 "slanted-box" => SlantedBox(shapes),
+                "line-marker" => FromResult(bitmap is null ? null : LineMarker(check, bitmap, top, "")),
+                "bullet-beside" => FromResult(bitmap is null ? null : BulletBeside(check, bitmap, top, "")),
+                "bar-stack" => FromResult(bitmap is null ? null : BarStack(check, bitmap, top, "")),
+                "bars-match" => FromResult(bitmap is null ? null : BarsMatch(check, bitmap, top, "")),
+                "bar-grid" => FromResult(bitmap is null ? null : BarGrid(check, bitmap, top, "")),
+                "viewport-bottom" => FromResult(bitmap is null ? null : ViewportBottom(check, bitmap)),
+                "corners" => FromResult(bitmap is null ? null : Corners(check, bitmap, top, "")),
+                "box-count" => FromResult(bitmap is null ? null : BoxCount(check, bitmap, top, "")),
+                "three-bars" => FromResult(bitmap is null ? null : ThreeBars(check, bitmap, top, "")),
+                "lines-same" => FromResult(bitmap is null ? null : LinesSame(check, bitmap, top, "")),
+                "first-line-color" => FromResult(bitmap is null ? null : FirstLineColor(check, bitmap, top, "")),
+                "justify" => FromResult(bitmap is null ? null : Justify(bitmap, top, "")),
+                "stack-order" => FromResult(bitmap is null ? null : StackOrder(check, bitmap, top, "")),
+                "border-sides" => FromResult(bitmap is null ? null : BorderSides(check, bitmap, top, "")),
+                "lines-spaced" => FromResult(bitmap is null ? null : LinesSpaced(check, bitmap, top, "")),
                 _ => throw new InvalidDataException($"Unknown visual check kind: {check.Kind}"),
             };
         }
@@ -163,6 +216,11 @@ internal static class VisualChecks
             ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
             : new(WptRunner.Cat.Fail, $"{assertion}: {failure}", 1, 1, [new(assertion, 1, failure)], 0);
     }
+
+    /// <summary>Adapter for the render-only judges inside <see cref="Judge"/>'s failure
+    /// switch: a null result means "no render", a passing result is a null failure.</summary>
+    private static string? FromResult(WptRunner.RunResult? result) =>
+        result is not { } run ? "no render" : run.Passed ? null : run.Detail;
 
     private static string Describe(VisualCheck check) => check.Kind switch
     {
@@ -187,6 +245,37 @@ internal static class VisualChecks
         "slanted-box" => "one slanted box",
         "letter-x" => check.Variant == "box-above" ? "a box above the letter x" : "the letter x is rendered",
         "outline-text" => $"a {check.Shape} outline around the named text",
+        "text-baseline" => $"the filler texts' {check.Edge ?? "bottom"}s align",
+        "one-line" => "all the filler text sits on one line",
+        "first-line-marker" => $"a {(check.Color is null ? "" : check.Color + " ")}square bullet on the first line",
+        "line-marker" => $"a marker bullet to the left of the {(check.Color is null ? "" : check.Color + " ")}line".Replace("  ", " "),
+        "bullet-beside" => $"a bullet to the {check.Side} of the square",
+        "bar-stack" => $"a {check.ColorA} bar stacked on a {check.ColorB} bar",
+        "text-marker" => $"the number {check.Needle} with a marker bullet on its left",
+        "numbers-present" => $"the numbers {string.Join(", ", check.Needles ?? [])} are rendered",
+        "text-ink" => $"the text {check.Needle} is rendered",
+        "words-and-box" => $"the words {check.Needle} render as glyphs and a {check.Color} box sits below",
+        "align-center" => "the text is centered horizontally",
+        "lines-spaced" => $"space between the {check.ColorA} and {check.ColorB} lines",
+        "lines-same" => $"the {(check.Count == 3 ? "three" : "two")} lines render identically",
+        "image-tiled" => "the tiled image repeats as stated",
+        "bars-match" => "each coloured bar matches a same-coloured box",
+        "bar-grid" => $"a bar on top of a {check.Rows}-by-{check.Cols} grid",
+        "viewport-bottom" => $"the {check.Color} box is at the bottom of the viewport",
+        "cell-border" => $"the middle {check.Target}'s {(check.Edge == "top" ? "top edge is" : "border is")} {check.Color}",
+        "corners" => $"a {check.Color} square at each corner of the stated box",
+        "box-count" => $"{(check.Count is { } bc ? bc.ToString() : "the stated number of")} boxes below",
+        "three-bars" => $"{check.ColorA} bars with a {check.ColorB} one between",
+        "first-letter-color" => $"the first letter is {check.Color} and the rest is not",
+        "first-line-color" => $"the first line is {check.Color} and the others are not",
+        "justify" => "the justified lines share both edges",
+        "text-band" => $"{(check.Needle is null ? "the paragraph" : $"each \"{check.Needle}\"")} has the stated {check.Color} line(s) {check.Side}",
+        "edge-letter" => $"the {check.Side} ink is {check.Color}",
+        "stack-order" => $"the boxes stack bottom-to-top {string.Join(", ", check.Colors ?? [])}",
+        "no-ring" => "no border paints around the text",
+        "text-below-box" => $"the filler text paints {check.Side} the box",
+        "text-marker-match" => "the filler-text lines match and the bottom one has a marker",
+        "border-sides" => check.Mode == "distinct" ? "each edge reads different" : "the borders read as stated per side",
         _ => check.Kind,
     };
 
@@ -197,7 +286,9 @@ internal static class VisualChecks
         if (!shape.Rectangular) return $"the shape at ({shape.Left},{shape.Top}) {shape.Width}x{shape.Height} is not rectangular";
         if (check.Shape == "square" && Math.Abs(shape.Width - shape.Height) > EdgeTolerance)
             return $"not a square: {shape.Width}x{shape.Height}";
-        if (check.Color is { } name && !Matches(name, shape.Color)) return $"dominant color {shape.Color}, not {name}";
+        if (check.Color is { } name && !Matches(name, shape.Color) &&
+            !(check.Shades && HueDistance(shape.Color, Named[name]) <= 30))
+            return $"dominant color {shape.Color}, not {name}";
         return null;
     }
 
@@ -209,16 +300,20 @@ internal static class VisualChecks
 
     private static string? SameDimension(VisualCheck check, IReadOnlyList<Component> shapes)
     {
-        if (check.Count is { } count ? shapes.Count != count : shapes.Count < 2)
-            return $"{shapes.Count} top-level shapes below the instructions";
-        if (shapes.FirstOrDefault(s => !s.Rectangular) is { Width: > 0 } odd)
+        var pool = shapes;
+        if (check.ColorA is { } || check.ColorB is { })
+            pool = pool.Where(s => (check.ColorA is { } ca && Matches(ca, s.Color)) ||
+                                    (check.ColorB is { } cb && Matches(cb, s.Color))).ToList();
+        if (check.Count is { } count ? pool.Count != count : pool.Count < 2)
+            return $"{pool.Count} top-level shapes below the instructions";
+        if (pool.FirstOrDefault(s => !s.Rectangular) is { Width: > 0 } odd)
             return $"the shape at ({odd.Left},{odd.Top}) {odd.Width}x{odd.Height} is not rectangular";
         var width = check.Dimension is "width" or "size";
         var height = check.Dimension is "height" or "size";
-        if (width && shapes.Max(s => s.Width) - shapes.Min(s => s.Width) > EdgeTolerance)
-            return "widths " + string.Join(", ", shapes.Select(s => s.Width));
-        if (height && shapes.Max(s => s.Height) - shapes.Min(s => s.Height) > EdgeTolerance)
-            return "heights " + string.Join(", ", shapes.Select(s => s.Height));
+        if (width && pool.Max(s => s.Width) - pool.Min(s => s.Width) > EdgeTolerance)
+            return "widths " + string.Join(", ", pool.Select(s => s.Width));
+        if (height && pool.Max(s => s.Height) - pool.Min(s => s.Height) > EdgeTolerance)
+            return "heights " + string.Join(", ", pool.Select(s => s.Height));
         return null;
     }
 
@@ -335,8 +430,31 @@ internal static class VisualChecks
     }
 
     /// <summary>Every top-level shape lies on the perimeter of one rectangle; all four sides
-    /// covered; interior segments shaped per the stated style.</summary>
+    /// covered; interior segments shaped per the stated style. A stated <c>Count</c> of two
+    /// splits the segments into two vertically stacked rings and checks each.</summary>
     private static string? BorderRing(VisualCheck check, IReadOnlyList<Component> shapes)
+    {
+        if (check.Count == 2)
+        {
+            var ordered = shapes.OrderBy(s => s.Top).ToList();
+            var split = 0;
+            var widest = -1;
+            for (var k = 0; k < ordered.Count - 1; k++)
+            {
+                var gap = ordered[k + 1].Top - ordered[k].Bottom;
+                if (gap > widest) { widest = gap; split = k + 1; }
+            }
+            if (widest < 4 || split == 0 || split == ordered.Count)
+                return "the two boxes' segments do not split into two rings";
+            var first = RingFailures(check, ordered.Take(split).ToList());
+            if (first is not null) return $"first box: {first}";
+            var second = RingFailures(check, ordered.Skip(split).ToList());
+            return second is null ? null : $"second box: {second}";
+        }
+        return RingFailures(check, shapes.ToList());
+    }
+
+    private static string? RingFailures(VisualCheck check, List<Component> shapes)
     {
         if (shapes.Count < 4) return $"only {shapes.Count} segments below the instructions (a boxed border has at least 4)";
         int top = shapes.Min(s => s.Top), bottom = shapes.Max(s => s.Bottom);
@@ -393,11 +511,25 @@ internal static class VisualChecks
     private static string? ShapeRelation(VisualCheck check, IReadOnlyList<Component> shapes,
         IReadOnlyList<Component>? nested = null, SKBitmap? bitmap = null)
     {
-        // Containment relations (centered-right) read shapes nested inside another shape,
-        // which the top-level list alone does not carry.
+        // Containment relations (centered-right, corners) read shapes nested inside another
+        // shape, which the top-level list alone does not carry.
         var pool = nested is { Count: > 0 } ? shapes.Concat(nested).Distinct().ToList() : shapes.ToList();
         var a = OfColor(pool, check.ColorA);
         var b = OfColor(pool, check.ColorB);
+        if (check.Relation == "gaps-equal")
+        {
+            if (a.Count != 2 || b.Count != 2)
+                return $"{a.Count} {check.ColorA} and {b.Count} {check.ColorB} shapes below the instructions";
+            var orderedA = a.OrderBy(s => check.Dimension == "horizontal" ? s.Left : s.Top).ToList();
+            var orderedB = b.OrderBy(s => check.Dimension == "horizontal" ? s.Left : s.Top).ToList();
+            var gapA = check.Dimension == "horizontal"
+                ? orderedA[1].Left - orderedA[0].Right
+                : orderedA[1].Top - orderedA[0].Bottom;
+            var gapB = check.Dimension == "horizontal"
+                ? orderedB[1].Left - orderedB[0].Right
+                : orderedB[1].Top - orderedB[0].Bottom;
+            return Math.Abs(gapA - gapB) > 2 * EdgeTolerance ? $"gaps differ: {gapA}px vs {gapB}px" : null;
+        }
         // "The height of the <color> box is similar to the height of the <color> boxes"
         // compares one box against several; every other relation names exactly one of each.
         var singleFirst = check.Relation != "height-similar";
@@ -414,6 +546,59 @@ internal static class VisualChecks
                 if ((long)first.Width * first.Height >= (long)second.Width * second.Height)
                     return $"{check.ColorA} {first.Width}x{first.Height} is not smaller than {check.ColorB} {second.Width}x{second.Height}";
                 return null;
+            case "right-of":
+                if (first.Left < second.Right - 2 * EdgeTolerance)
+                    return $"the {check.ColorA} box is not to the right of the {check.ColorB} box";
+                if (Math.Min(first.Bottom, second.Bottom) - Math.Max(first.Top, second.Top) <= 0)
+                    return "the boxes do not line up vertically";
+                return null;
+            case "not-touching":
+                if (first.Intersects(second)) return "the boxes overlap";
+                if (Math.Max(first.Top - second.Bottom, second.Top - first.Bottom) <= 0 &&
+                    Math.Max(first.Left - second.Right, second.Left - first.Right) <= 0)
+                    return "the boxes touch";
+                return null;
+            case "touching":
+                if (Touching(first, second)) return null;
+                return "the boxes have space between them";
+            case "vertical-gap":
+                return Math.Max(first.Top - second.Bottom, second.Top - first.Bottom) >= 1
+                    ? null
+                    : "the squares have no vertical gap";
+            case "horizontal-gap":
+                return Math.Max(first.Left - second.Right, second.Left - first.Right) >= 1
+                    ? null
+                    : "the squares have no horizontal gap";
+            case "no-horizontal-gap":
+                return Math.Abs(first.Left - second.Right) <= EdgeTolerance || Math.Abs(second.Left - first.Right) <= EdgeTolerance
+                    ? null
+                    : "the squares have a horizontal gap";
+            case "half-height":
+            {
+                var outer = OfColor(pool, check.ColorC);
+                if (outer.Count != 1)
+                    return $"{outer.Count} {check.ColorC} shapes below the instructions";
+                var want = outer[0].Height / 2.0;
+                if (Math.Abs(first.Height - want) > 2 || Math.Abs(second.Height - want) > 2)
+                    return $"heights {first.Height} and {second.Height} are not half of {outer[0].Height}";
+                return null;
+            }
+            case "corner-lower-right":
+            case "corner-upper-left":
+            case "corner-upper-right":
+            case "corner-lower-left":
+            {
+                if (bitmap is null) return "no render";
+                if (!second.Contains(first) && !first.Contains(second))
+                    return $"the {check.ColorA} box is not inside the {check.ColorB} box";
+                var (wantRight, wantLeft, wantTop, wantBottom) = InnerEdges(second, bitmap, check.Relation);
+                var off = new List<string>();
+                if (check.Relation.Contains("right") && Math.Abs(first.Right - wantRight) > 2) off.Add($"right off by {first.Right - wantRight}");
+                if (check.Relation.Contains("left") && Math.Abs(first.Left - wantLeft) > 2) off.Add($"left off by {wantLeft - first.Left}");
+                if (check.Relation.Contains("bottom") && Math.Abs(first.Bottom - wantBottom) > 2) off.Add($"bottom off by {first.Bottom - wantBottom}");
+                if (check.Relation.Contains("top") && Math.Abs(first.Top - wantTop) > 2) off.Add($"top off by {wantTop - first.Top}");
+                return off.Count == 0 ? null : $"not in the stated corner: {string.Join(", ", off)}";
+            }
             case "beneath":
                 if (Math.Abs(first.Top - second.Bottom) > 2 * EdgeTolerance ||
                     Math.Min(first.Right, second.Right) - Math.Max(first.Left, second.Left) <
@@ -472,6 +657,50 @@ internal static class VisualChecks
     private static List<Component> OfColor(IReadOnlyList<Component> shapes, string? name) =>
         name is null ? [] : shapes.Where(s => Matches(name, s.Color)).ToList();
 
+    private static bool Touching(Component a, Component b) =>
+        a.Intersects(b) || Math.Abs(a.Bottom - b.Top) <= EdgeTolerance || Math.Abs(b.Bottom - a.Top) <= EdgeTolerance ||
+        Math.Abs(a.Right - b.Left) <= EdgeTolerance || Math.Abs(b.Right - a.Left) <= EdgeTolerance;
+
+    /// <summary>The inner edges of a box, measured through its own border band. The band is
+    /// scanned away from the stated corner (where the inner box would otherwise end the scan
+    /// itself); a band covering half the extent means the box is filled, not hollow, and its
+    /// own edge is then the inner edge.</summary>
+    private static (int Right, int Left, int Top, int Bottom) InnerEdges(Component box, SKBitmap bitmap, string relation)
+    {
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        int Band(int startX, int startY, int dx, int dy)
+        {
+            var band = 0;
+            var x = startX;
+            var y = startY;
+            while (x >= 0 && x < width && y >= 0 && y < bitmap.Height &&
+                   Distance(pixels[y * width + x], box.Color) <= 32)
+            {
+                band++;
+                x += dx;
+                y += dy;
+            }
+            return band;
+        }
+        var quarterH = Math.Max(1, box.Height / 4);
+        var quarterW = Math.Max(1, box.Width / 4);
+        // The stated corner's square sits at one end of each relevant edge; probe from the other.
+        var yTop = relation.Contains("bottom") ? box.Top + quarterH : box.Bottom - quarterH - 1;
+        var yBottom = yTop;
+        var xLeft = relation.Contains("right") ? box.Left + quarterW : box.Right - quarterW - 1;
+        var xRight = xLeft;
+        var rightBand = Band(box.Right - 1, yTop, -1, 0);
+        var leftBand = Band(box.Left, yTop, 1, 0);
+        var bottomBand = Band(xLeft, box.Bottom - 1, 0, -1);
+        var topBand = Band(xLeft, box.Top, 0, 1);
+        var innerRight = rightBand >= box.Width / 2 ? box.Right : box.Right - rightBand;
+        var innerLeft = leftBand >= box.Width / 2 ? box.Left : box.Left + leftBand;
+        var innerBottom = bottomBand >= box.Height / 2 ? box.Bottom : box.Bottom - bottomBand;
+        var innerTop = topBand >= box.Height / 2 ? box.Top : box.Top + topBand;
+        return (innerRight, innerLeft, innerTop, innerBottom);
+    }
+
     /// <summary>The region between consecutive boxes (by vertical order, over their
     /// horizontal overlap) is painted in the stated color.</summary>
     private static string? SpaceBetween(VisualCheck check, IReadOnlyList<Component> shapes, SKBitmap bitmap)
@@ -504,7 +733,7 @@ internal static class VisualChecks
         return null;
     }
 
-    private static string? StackThree(IReadOnlyList<Component> shapes)
+    private static string? StackThree(VisualCheck check, IReadOnlyList<Component> shapes)
     {
         if (shapes.Count != 3) return $"{shapes.Count} top-level shapes below the instructions";
         if (shapes.Any(s => !s.Rectangular)) return "a shape below the instructions is not rectangular";
@@ -514,6 +743,12 @@ internal static class VisualChecks
                 return $"rectangle {k + 1} overlaps rectangle {k}";
         if (ordered.Max(s => s.Width) - ordered.Min(s => s.Width) > EdgeTolerance)
             return "rectangle widths differ: " + string.Join(", ", ordered.Select(s => s.Width));
+        if (check.Even)
+        {
+            var gap0 = ordered[1].Top - ordered[0].Bottom;
+            var gap1 = ordered[2].Top - ordered[1].Bottom;
+            if (Math.Abs(gap0 - gap1) > 2 * EdgeTolerance) return $"the gaps differ: {gap0}px and {gap1}px";
+        }
         return null;
     }
 
@@ -590,13 +825,15 @@ internal static class VisualChecks
     /// overlapping it.</summary>
     private static string? MarkerBullet(VisualCheck check, IReadOnlyList<Component> shapes)
     {
-        var boxes = shapes.Where(s => s.Rectangular && Math.Min(s.Width, s.Height) >= 20 &&
+        var boxes = shapes.Where(s => s.Rectangular && Math.Min(s.Width, s.Height) >= 14 &&
             (check.Color is null || Matches(check.Color, s.Color))).ToList();
         if (boxes.Count != 1) return $"{boxes.Count} candidate boxes below the instructions";
         var box = boxes[0];
         var bullets = shapes.Where(s => !ReferenceEquals(s, box) &&
             Math.Max(s.Width, s.Height) <= 24 && s.Right <= box.Left + EdgeTolerance &&
             s.Top < box.Bottom && s.Bottom > box.Top).ToList();
+        if (check.BulletColor is { } bulletColor && bullets.Any(b => !Matches(bulletColor, b.Color)))
+            return $"the bullet is not {bulletColor}";
         return bullets.Count == 1
             ? null
             : $"{bullets.Count} marker bullets to the left of the box";
@@ -725,7 +962,10 @@ internal static class VisualChecks
     /// sub-lines across it decide solid / double / dashed / dotted / none.</summary>
     private static Ring RingSignature(SKBitmap bitmap, SKRectI crop, SKRect paddingBox, float declaredBorder)
     {
-        crop.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+        // Full-width boxes' rings legitimately touch the viewport edges (an outline spans
+        // the whole page width); reading stops 2px short so edge ink does not read as a
+        // clipped ring. A genuinely half-off-viewport ring still fails structurally.
+        crop.Intersect(new SKRectI(1, 1, bitmap.Width - 2, bitmap.Height - 2));
         if (crop.Width < 4 || crop.Height < 4) return new(null, 0, default, [], 0, 0, 0, false, "the border region is outside the viewport");
         var components = Components(bitmap, crop, out var clipped);
         if (clipped) return new(null, 0, default, [], 0, 0, 0, false, "content reaches the viewport edge inside the border region");
@@ -740,11 +980,6 @@ internal static class VisualChecks
         if (ring.Count == 0) return new("none", 0, default, [], 0, 0, 0);
         int left = ring.Min(c => c.Left), right = ring.Max(c => c.Right);
         int top = ring.Min(c => c.Top), bottom = ring.Max(c => c.Bottom);
-        if (Environment.GetEnvironmentVariable("LITE_RING_DEBUG") is not null)
-            File.WriteAllText(Path.Combine(Lite.Conformance.Harness.ConformancePaths.EnsureArtifacts(),
-                $"ring-debug-{Path.GetFileNameWithoutExtension(Environment.GetEnvironmentVariable("LITE_RING_DEBUG")!)}.txt"),
-                $"crop={crop} padding={padding} outer={outer} declared={declaredBorder} ringBBox=({left},{top},{right},{bottom}) components={ring.Count}\n" +
-                string.Join("\n", ring.Take(20).Select(c => $"  ({c.Left},{c.Top})-({c.Right},{c.Bottom}) {c.Color}")));
         if (right - left < 8 || bottom - top < 8) return new(null, 0, default, [], 0, 0, ring.Count, false, "the ring is too small to scan");
         var pixels = bitmap.Pixels;
         var width = bitmap.Width;
@@ -758,6 +993,7 @@ internal static class VisualChecks
         float thickness = 0;
         var color = ring[0].Color;
         int groups = 0, runs = 0;
+        var sideReads = new List<(string Name, string? Style, float Thickness, bool Truncated)>();
         foreach (var (name, horizontal, span) in new (string, bool, (int From, int To, int Band, int Depth))[]
         {
             ("top", true, (left, right, top, scanDepth)),
@@ -766,12 +1002,30 @@ internal static class VisualChecks
             ("right", false, (top, bottom, right - scanDepth, scanDepth)),
         })
         {
-            var read = ReadSideScan(horizontal, span);
+            var read = ReadSideScan(bitmap, background, horizontal, span);
             if (read.Unreadable) return new(null, 0, default, [], 0, 0, ring.Count, false, $"the {name} side's border band is not scannable");
-            if (style is null) { style = read.Style; groups = read.Groups; runs = read.Runs; }
-            else if (style != read.Style || read.Groups != groups || read.Runs != runs)
-                return new(null, 0, default, [], 0, 0, ring.Count, false, "the sides read different border structures");
+            // A band that reaches the crop boundary is cut off by the viewport (full-width
+            // boxes' outlines do) — its style word is unreliable and is excluded.
+            var truncated = name switch
+            {
+                "top" => top <= crop.Top + 1,
+                "bottom" => bottom >= crop.Bottom - 1,
+                "left" => left <= crop.Left + 1,
+                _ => right >= crop.Right - 1,
+            };
+            sideReads.Add((name, read.Style, read.Thickness, truncated));
+        }
+        if (Environment.GetEnvironmentVariable("LITE_RING_DEBUG") is not null)
+            File.AppendAllText(Path.Combine(Lite.Conformance.Harness.ConformancePaths.EnsureArtifacts(),
+                $"ring-debug-{Path.GetFileNameWithoutExtension(Environment.GetEnvironmentVariable("LITE_RING_DEBUG")!)}.txt"),
+                "sides: " + string.Join(", ", sideReads.Select(r => $"{r.Name}={r.Style ?? "null"}/{r.Thickness:F0}{(r.Truncated ? " TRUNC" : "")}")) + "\n");
+        foreach (var read in sideReads)
+        {
+            if (read.Truncated) continue;
             thickness = Math.Max(thickness, read.Thickness);
+            if (style is null) style = read.Style;
+            else if (style != read.Style)
+                return new(null, 0, default, [], 0, 0, ring.Count, false, "the sides read different border styles");
         }
         // Distinct ink tones with a meaningful share: solid and double bands are one color,
         // the shaded styles paint a light and a dark tone.
@@ -788,69 +1042,75 @@ internal static class VisualChecks
         var toneColors = toneCounts.Where(kv => kv.Value >= total / 5)
             .OrderByDescending(kv => kv.Value).Select(kv => new SKColor((uint)kv.Key)).ToList();
         return new(style, thickness, color, toneColors, groups, runs, ring.Count);
+    }
 
-        (string? Style, float Thickness, int Groups, int Runs, bool Unreadable) ReadSideScan(
-            bool horizontal, (int From, int To, int Band, int Depth) span)
+    /// <summary>How one side's border band reads by scanline: band rows (sub-lines), runs
+    /// along the outer sub-line's midline, and the style those two structures spell.</summary>
+    private static (string? Style, float Thickness, int Groups, int Runs, bool Unreadable) ReadSideScan(
+        SKBitmap bitmap, SKColor background, bool horizontal, (int From, int To, int Band, int Depth) span)
+    {
+        var (from, to, bandStart, depth) = span;
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        if (depth < 2) return (null, 0, 0, 0, true);
+        // Ink at offset d from the band's start, at along-coordinate p.
+        bool InkedAt(int p, int d)
         {
-            var (from, to, bandStart, depth) = span;
-            if (depth < 2) return (null, 0, 0, 0, true);
-            // Ink at offset d from the band's start, at along-coordinate p.
-            bool InkedAt(int p, int d)
-            {
-                var (x, y) = horizontal ? (p, bandStart + d) : (bandStart + d, p);
-                return Inked(x, y);
-            }
-            // Band rows: rows inked across at least half the side's extent.
-            var bandRows = new List<int>();
-            for (var d = 0; d < depth; d++)
-            {
-                long inked = 0;
-                for (var p = from; p < to; p++)
-                    if (InkedAt(p, d)) inked++;
-                if (inked >= (to - from) / 2) bandRows.Add(d);
-            }
-            if (bandRows.Count == 0) return ("none", 0, 0, 0, false);
-            // Groups of contiguous band rows: one group is a single sub-line, two separated
-            // groups are the two lines of a double border.
-            var sideGroups = new List<(int Start, int End)>();
-            var start = bandRows[0];
-            var prev = bandRows[0];
-            foreach (var d in bandRows.Skip(1))
-            {
-                if (d == prev + 1) { prev = d; continue; }
-                sideGroups.Add((start, prev));
-                start = prev = d;
-            }
-            sideGroups.Add((start, prev));
-            if (sideGroups.Count > 2) return (null, 0, 0, 0, true);
-            var thicknessPx = (float)(sideGroups[^1].End - sideGroups[0].Start + 1);
-            // Runs along the middle row of the first group (the midline of the outer sub-line).
-            var mid = (sideGroups[0].Start + sideGroups[0].End) / 2;
-            var sideRuns = new List<(int Start, int End)>();
-            int runStart = -1;
-            for (var p = from; p < to; p++)
-            {
-                var inked = InkedAt(p, mid);
-                if (inked && runStart < 0) runStart = p;
-                if (!inked && runStart >= 0) { sideRuns.Add((runStart, p - 1)); runStart = -1; }
-            }
-            if (runStart >= 0) sideRuns.Add((runStart, to - 1));
-            if (sideRuns.Count == 0) return (null, 0, 0, 0, true);
-            var extent = sideRuns[^1].End - sideRuns[0].Start + 1;
-            if (sideRuns.Count == 1)
-            {
-                if (sideRuns[0].End - sideRuns[0].Start + 1 < extent * 85 / 100) return (null, 0, 0, 0, true);
-                return (sideGroups.Count == 2 ? "double" : "solid", thicknessPx, sideGroups.Count, 1, false);
-            }
-            if (sideRuns.Count < 3) return (null, 0, sideGroups.Count, sideRuns.Count, false);
-            var interior = sideRuns.Skip(1).Take(sideRuns.Count - 2).ToList();
-            if (interior.Count == 0) return (null, 0, sideGroups.Count, sideRuns.Count, false);
-            var dashLike = interior.All(r => r.End - r.Start + 1 >= 1.5 * thicknessPx);
-            var dotLike = interior.All(r => r.End - r.Start + 1 <= 1.5 * thicknessPx + EdgeTolerance);
-            if (dashLike) return ("dashed", thicknessPx, sideGroups.Count, sideRuns.Count, false);
-            if (dotLike) return ("dotted", thicknessPx, sideGroups.Count, sideRuns.Count, false);
-            return (null, thicknessPx, sideGroups.Count, sideRuns.Count, false);
+            var (x, y) = horizontal ? (p, bandStart + d) : (bandStart + d, p);
+            return x >= 0 && x < width && y >= 0 && y < bitmap.Height &&
+                   Distance(pixels[y * width + x], background) > InkThreshold;
         }
+        // Band rows: rows inked across at least 40% of the side's extent — a dotted band
+        // hovers at 50%, while stray text below the box stays well under it.
+        var bandRows = new List<int>();
+        for (var d = 0; d < depth; d++)
+        {
+            long inked = 0;
+            for (var p = from; p < to; p++)
+                if (InkedAt(p, d)) inked++;
+            if (inked >= (to - from) * 2 / 5) bandRows.Add(d);
+        }
+        if (bandRows.Count == 0) return ("none", 0, 0, 0, false);
+        // Groups of contiguous band rows: one group is a single sub-line, two separated
+        // groups are the two lines of a double border.
+        var sideGroups = new List<(int Start, int End)>();
+        var start = bandRows[0];
+        var prev = bandRows[0];
+        foreach (var d in bandRows.Skip(1))
+        {
+            if (d == prev + 1) { prev = d; continue; }
+            sideGroups.Add((start, prev));
+            start = prev = d;
+        }
+        sideGroups.Add((start, prev));
+        if (sideGroups.Count > 2) return (null, 0, 0, 0, true);
+        var thicknessPx = (float)(sideGroups[^1].End - sideGroups[0].Start + 1);
+        // Runs along the middle row of the first group (the midline of the outer sub-line).
+        var mid = (sideGroups[0].Start + sideGroups[0].End) / 2;
+        var sideRuns = new List<(int Start, int End)>();
+        int runStart = -1;
+        for (var p = from; p < to; p++)
+        {
+            var inked = InkedAt(p, mid);
+            if (inked && runStart < 0) runStart = p;
+            if (!inked && runStart >= 0) { sideRuns.Add((runStart, p - 1)); runStart = -1; }
+        }
+        if (runStart >= 0) sideRuns.Add((runStart, to - 1));
+        if (sideRuns.Count == 0) return (null, 0, 0, 0, true);
+        var extent = sideRuns[^1].End - sideRuns[0].Start + 1;
+        if (sideRuns.Count == 1)
+        {
+            if (sideRuns[0].End - sideRuns[0].Start + 1 < extent * 85 / 100) return (null, 0, 0, 0, true);
+            return (sideGroups.Count == 2 ? "double" : "solid", thicknessPx, sideGroups.Count, 1, false);
+        }
+        if (sideRuns.Count < 3) return (null, 0, sideGroups.Count, sideRuns.Count, false);
+        var interior = sideRuns.Skip(1).Take(sideRuns.Count - 2).ToList();
+        if (interior.Count == 0) return (null, 0, sideGroups.Count, sideRuns.Count, false);
+        var dashLike = interior.All(r => r.End - r.Start + 1 >= 1.5 * thicknessPx);
+        var dotLike = interior.All(r => r.End - r.Start + 1 <= 1.5 * thicknessPx + EdgeTolerance);
+        if (dashLike) return ("dashed", thicknessPx, sideGroups.Count, sideRuns.Count, false);
+        if (dotLike) return ("dotted", thicknessPx, sideGroups.Count, sideRuns.Count, false);
+        return (null, thicknessPx, sideGroups.Count, sideRuns.Count, false);
     }
 
     private static float MaxEdge(this EdgeSizes edges) => Math.Max(edges.Top, Math.Max(edges.Right, Math.Max(edges.Bottom, edges.Left)));
@@ -919,20 +1179,52 @@ internal static class VisualChecks
     private static WptRunner.RunResult TextColor(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string sentence)
     {
         // "this line should be <color>" states the condition on the instruction paragraph
-        // itself; otherwise the filler-text element below it is the test.
-        var node = check.Anchor == "instruction" ? InstructionNode(root, sentence) : FindFiller(root, top);
-        if (node is null)
-            return new(WptRunner.Cat.Unsupported, "Visual check: no element to colour-check below the instructions", 0, 0);
-        var ink = ElementInk(bitmap, node, 1, out _);
-        if (ink.Count == 0)
+        // itself (some suites repeat it over several lines — every one is checked);
+        // "the following lines should all be green" covers every text element after it;
+        // otherwise the filler-text element below the instructions is the test.
+        List<LayoutNode> targets;
+        if (check.Scope == "following")
+        {
+            targets = TextElementsBelow(root, top);
+            if (targets.Count == 0)
+                return new(WptRunner.Cat.Unsupported, "Visual check: no text elements below the instructions", 0, 0);
+        }
+        else if (check.Anchor == "instruction")
+        {
+            targets = InstructionNodes(root, sentence);
+            if (targets.Count == 0)
+                return new(WptRunner.Cat.Unsupported, "Visual check: no element to colour-check below the instructions", 0, 0);
+        }
+        else
+        {
+            var node = check.Needle is { } needle ? FindNodeByText(root, top, needle) : FindFiller(root, top);
+            targets = node is null ? [] : [node];
+            if (targets.Count == 0)
+                return new(WptRunner.Cat.Unsupported, "Visual check: no element to colour-check below the instructions", 0, 0);
+        }
+        foreach (var node in targets)
+        {
+            if (TextColorOf(check, bitmap, node) is { } failure)
+                return failure;
+        }
+        var describe = Describe(check) + (targets.Count > 1 ? $" ({targets.Count} elements)" : "");
+        return new(WptRunner.Cat.Pass, describe, 1, 0, [new(describe, 0, null)], 0);
+    }
+
+    private static WptRunner.RunResult? TextColorOf(VisualCheck check, SKBitmap bitmap, LayoutNode node)
+    {
+        var ink = ElementInk(bitmap, node, 1, out var box);
+        // "This line should be green" is stated about the whole line: white-on-green lines
+        // state their background, ordinary coloured text states its ink — either layer may
+        // carry the named colour.
+        if (ink.Count == 0 && check.Anchor != "instruction")
             return new(WptRunner.Cat.Fail, $"{Describe(check)}: the text painted no ink", 1, 1,
                 [new(Describe(check), 1, "no ink")], 0);
-        // The dominant color across all ink pixels: glyph antialiasing shades must not
-        // outvote the fill color.
         var counts = new Dictionary<uint, long>();
+        var boxCounts = new Dictionary<uint, long>();
         var pixels = bitmap.Pixels;
         var width = bitmap.Width;
-        var background = BackgroundOf(bitmap, ink);
+        var background = ink.Count > 0 ? BackgroundOf(bitmap, ink) : CropBackground(bitmap, box);
         foreach (var c in ink)
             for (var y = c.Top; y < c.Bottom; y++)
             for (var x = c.Left; x < c.Right; x++)
@@ -941,14 +1233,21 @@ internal static class VisualChecks
                 if (Distance(p, background) > InkThreshold)
                     counts[(uint)p] = counts.GetValueOrDefault((uint)p) + 1;
             }
-        if (counts.Count == 0)
+        for (var y = box.Top; y < box.Bottom; y++)
+        for (var x = box.Left; x < box.Right; x++)
+        {
+            var p = pixels[y * width + x];
+            boxCounts[(uint)p] = boxCounts.GetValueOrDefault((uint)p) + 1;
+        }
+        if (counts.Count == 0 && check.Anchor != "instruction")
             return new(WptRunner.Cat.Fail, $"{Describe(check)}: the filler text painted no ink", 1, 1,
                 [new(Describe(check), 1, "no ink")], 0);
-        var dominant = new SKColor(counts.MaxBy(kv => kv.Value).Key);
-        return Matches(check.Color!, dominant)
-            ? new(WptRunner.Cat.Pass, Describe(check), 1, 0, [new(Describe(check), 0, null)], 0)
-            : new(WptRunner.Cat.Fail, $"{Describe(check)}: ink is {dominant}", 1, 1,
-                [new(Describe(check), 1, $"dominant ink {dominant}, not {check.Color}")], 0);
+        bool DominantMatches(Dictionary<uint, long> histogram) =>
+            histogram.Count > 0 && Matches(check.Color!, new SKColor(histogram.MaxBy(kv => kv.Value).Key));
+        if (DominantMatches(counts) || DominantMatches(boxCounts)) return null;
+        var dominant = counts.Count > 0 ? new SKColor(counts.MaxBy(kv => kv.Value).Key) : background;
+        return new(WptRunner.Cat.Fail, $"{Describe(check)}: ink is {dominant}", 1, 1,
+            [new(Describe(check), 1, $"dominant ink {dominant}, not {check.Color}")], 0);
     }
 
     private static SKColor BackgroundOf(SKBitmap bitmap, List<Component> region)
@@ -974,6 +1273,27 @@ internal static class VisualChecks
         return counts.Count == 0 ? SKColors.White : new SKColor(counts.MaxBy(kv => kv.Value).Key);
     }
 
+    /// <summary>A near solid ink row within 5px below the text's own ink — the underline
+    /// when it merges with the glyphs' bottom rows instead of painting as its own band.</summary>
+    private static bool RowNearlyInkBelow(SKBitmap bitmap, List<Component> ink, int textLeft, int textRight, int textBottom)
+    {
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        var background = BackgroundOf(bitmap, ink);
+        for (var y = textBottom - 1; y <= textBottom + 5; y++)
+        {
+            if (y < 0 || y >= bitmap.Height) continue;
+            long inked = 0, total = 0;
+            for (var x = textLeft; x < textRight; x++)
+            {
+                total++;
+                if (Distance(pixels[y * width + x], background) > InkThreshold) inked++;
+            }
+            if (total > 0 && inked >= total * 3 / 5) return true;
+        }
+        return false;
+    }
+
     /// <summary>The filler text's decoration lines read from the render: an over-line band
     /// just above the ink, an under-line band just below it, and a through-line as a
     /// mid-height row of the text inked nearly solid (glyph gaps filled by the line).</summary>
@@ -991,7 +1311,10 @@ internal static class VisualChecks
         bool IsBand(Component c) => c.Width >= (textRight - textLeft) * 3 / 5 && c.Height <= 5;
         var bands = ink.Where(IsBand).ToList();
         var over = bands.Any(c => c.Bottom > textTop - 6 && c.Bottom <= textTop + 2);
-        var under = bands.Any(c => c.Top >= textBottom - 2 && c.Top < textBottom + 6);
+        var under = bands.Any(c => c.Top >= textBottom - 2 && c.Top < textBottom + 6)
+            // At small font sizes the underline merges with the glyphs' bottom rows; a near
+            // solid row within a few pixels below the ink's bottom is still an under-line.
+            || RowNearlyInkBelow(bitmap, ink, textLeft, textRight, textBottom);
         // A through-line fills the glyph gaps: the inked fraction of the mid-height row
         // across the text's own span jumps to nearly solid.
         bool through = false;
@@ -1027,7 +1350,45 @@ internal static class VisualChecks
         if (missing.Count > 0)
             return new(WptRunner.Cat.Fail, $"{assertion}: no {string.Join(", ", missing)} line is visible", 1, 1,
                 [new(assertion, 1, $"missing {string.Join(", ", missing)}")], 0);
+        if (check.Span is { } span && !SpanHolds(span, check, ink, textTop, textBottom, textLeft, textRight, filler, bitmap))
+            return new(WptRunner.Cat.Fail, $"{assertion}: the decoration line does not {(
+                span == "text" ? "stop at the text" : "cover the spaces around the text")}", 1, 1,
+                [new(assertion, 1, $"the line's extent is wrong for span '{span}'")], 0);
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>The decoration line's extent: "text" — the band spans exactly the glyph ink
+    /// (it may not run over a border); "beyond" — the band runs past the glyphs into the
+    /// surrounding space (the line covers spaces as well as characters).</summary>
+    private static bool SpanHolds(string span, VisualCheck check, List<Component> ink,
+        int textTop, int textBottom, int textLeft, int textRight, LayoutNode filler, SKBitmap bitmap)
+    {
+        bool IsBand(Component c) => c.Width >= (textRight - textLeft) * 3 / 5 && c.Height <= 5;
+        if (check.Through == true && check.Over is not true && check.Under is not true)
+        {
+            // The through-line's extent reads from the mid-height row beyond the glyphs.
+            var pixels = bitmap.Pixels;
+            var width = bitmap.Width;
+            var midY = (textTop + textBottom) / 2;
+            var background = BackgroundOf(bitmap, ink);
+            long beyondLeft = 0, beyondRight = 0, total = 0;
+            for (var x = textLeft - 12; x < textRight + 12; x++)
+            {
+                if (x < 0 || x >= width) continue;
+                total++;
+                var inked = Distance(pixels[midY * width + x], background) > InkThreshold;
+                if (x < textLeft) beyondLeft += inked ? 1 : 0;
+                if (x >= textRight) beyondRight += inked ? 1 : 0;
+            }
+            var beyond = beyondLeft + beyondRight;
+            return span == "beyond" ? beyond >= total * 9 / 20 : beyond == 0;
+        }
+        var bands = ink.Where(IsBand).ToList();
+        if (bands.Count == 0) return false;
+        var band = bands.OrderBy(b => check.Under == true ? Math.Abs(b.Top - textBottom) : Math.Abs(b.Bottom - textTop)).First();
+        return span == "text"
+            ? band.Left >= textLeft - 3 && band.Right <= textRight + 3
+            : band.Width >= textRight - textLeft + 4;
     }
 
     private static WptRunner.RunResult AlignRight(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
@@ -1080,8 +1441,49 @@ internal static class VisualChecks
                 [new(assertion, 1, $"{above.Count} boxes above the x")], 0);
     }
 
+    /// <summary>Classifies one horizontal band's pattern from the runs along its densest
+    /// row: dots have runs no longer than 1.5× their gaps, dashes have runs at least that
+    /// long, a single unbroken run is solid. Returns null when the band is unclassifiable
+    /// (fewer than three runs of mixed character).</summary>
+    private static string? ClassifyBand(SKBitmap bitmap, SKColor background, int from, int to, int bandTop, int depth)
+    {
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        bool Inked(int x, int y) => x >= 0 && x < width && y >= 0 && y < bitmap.Height &&
+            Distance(pixels[y * width + x], background) > InkThreshold;
+        string? best = null;
+        for (var y = bandTop; y < bandTop + depth; y++)
+        {
+            var runs = new List<(int Start, int End)>();
+            int runStart = -1;
+            for (var x = from; x < to; x++)
+            {
+                if (Inked(x, y) && runStart < 0) runStart = x;
+                if (!Inked(x, y) && runStart >= 0) { runs.Add((runStart, x - 1)); runStart = -1; }
+            }
+            if (runStart >= 0) runs.Add((runStart, to - 1));
+            if (runs.Count == 1) { best ??= "solid"; continue; }
+            if (runs.Count < 3) continue;
+            var lengths = runs.Select(r => r.End - r.Start + 1).OrderBy(l => l).ToList();
+            // Skip the shortest runs: the first dot can merge with the neighbouring text's
+            // first glyph, which would otherwise drag the minimum gap to nothing.
+            var interior = lengths.Skip(Math.Max(1, lengths.Count / 4)).ToList();
+            var gaps = new List<int>();
+            for (var k = 0; k < runs.Count - 1; k++) gaps.Add(runs[k + 1].Start - runs[k].End - 1);
+            gaps.Sort();
+            var medianGap = Math.Max(1, gaps.Count > 0 ? gaps[gaps.Count / 2] : 1);
+            if (interior.All(l => l <= 1.5 * medianGap + 2)) return "dotted";
+            if (interior.All(l => l >= 1.5 * medianGap)) return "dashed";
+            best ??= null;
+        }
+        return best;
+    }
+
     /// <summary>The stated dashed/dotted outline is painted around each named text element
-    /// ('sample text', and 'filler text' where the sentence names it too).</summary>
+    /// ('sample text', and 'filler text' where the sentence names it too). The
+    /// "is overlapped by the outline" variants wait on the engine's layout-vs-paint offset
+    /// for these divs (the outline paints around the text, the box sits lower), so only the
+    /// plain template carries a check.</summary>
     private static WptRunner.RunResult OutlineText(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
     {
         var assertion = Describe(check);
@@ -1139,6 +1541,99 @@ internal static class VisualChecks
         return best;
     }
 
+    /// <summary>Every element whose text starts the stated sentence — some suites repeat the
+    /// same instruction line several times, and each repeat states the condition.</summary>
+    private static List<LayoutNode> InstructionNodes(LayoutNode root, string sentence)
+    {
+        var key = Normalize(sentence);
+        key = key[..Math.Min(key.Length, 40)];
+        var found = new List<LayoutNode>();
+        if (key.Length == 0) return found;
+        void Walk(LayoutNode node)
+        {
+            if (!node.TagName.StartsWith('#') && Normalize(Text(node)).StartsWith(key, StringComparison.Ordinal))
+                found.Add(node);
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        return found;
+    }
+
+    /// <summary>Every element strictly below <paramref name="top"/> that carries text and is
+    /// not an instruction note.</summary>
+    private static List<LayoutNode> TextElementsBelow(LayoutNode root, int top)
+    {
+        var found = new List<LayoutNode>();
+        void Walk(LayoutNode node)
+        {
+            if (!node.TagName.StartsWith('#') && node.Box.BorderBox.Top >= top &&
+                Normalize(Text(node)).Length > 0 &&
+                !node.Attributes.GetValueOrDefault("class", "").Contains("instruction", StringComparison.OrdinalIgnoreCase))
+                found.Add(node);
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        return found;
+    }
+
+    /// <summary>Every element whose text contains the needle, in document order.</summary>
+    private static List<LayoutNode> FindAllNodesByText(LayoutNode root, int top, string needle)
+    {
+        var found = new List<LayoutNode>();
+        void Walk(LayoutNode node)
+        {
+            if (!node.TagName.StartsWith('#') && node.Box.BorderBox.Top >= top &&
+                Normalize(Text(node)).Contains(needle, StringComparison.Ordinal))
+                found.Add(node);
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        return found;
+    }
+
+    /// <summary>Horizontal ink bands at or below <paramref name="top"/>: contiguous row
+    /// ranges that carry ink, with their combined ink components. Text lines, dashed lines
+    /// and image rows all read as bands.</summary>
+    internal static List<(int Top, int Bottom, List<Component> Members)> InkBands(SKBitmap bitmap, int top, out bool clipped)
+    {
+        var components = Components(bitmap, top, out clipped);
+        return InkBandsOf(components);
+    }
+
+    internal static List<(int Top, int Bottom, List<Component> Members)> InkBandsOf(IReadOnlyList<Component> components)
+    {
+        var ordered = components.OrderBy(c => c.Top).ToList();
+        var bands = new List<(int Top, int Bottom, List<Component> Members)>();
+        foreach (var c in ordered)
+        {
+            if (bands.Count > 0 && c.Top < bands[^1].Bottom - EdgeTolerance)
+                bands[^1] = (bands[^1].Top, Math.Max(bands[^1].Bottom, c.Bottom), bands[^1].Members.Concat([c]).ToList());
+            else
+                bands.Add((c.Top, c.Bottom, [c]));
+        }
+        return bands;
+    }
+
+    /// <summary>The first element strictly below the instructions that carries no text —
+    /// the suite's empty painted test box (background/tiling tests).</summary>
+    private static LayoutNode? FindEmptyBox(LayoutNode root, int top)
+    {
+        LayoutNode? best = null;
+        void Walk(LayoutNode node)
+        {
+            if (best is not null) return;
+            if (!node.TagName.StartsWith('#') && node.Box.BorderBox.Top >= top &&
+                Normalize(Text(node)).Length == 0 && node.Box.BorderBox.Width > 40 && node.Box.BorderBox.Height > 20)
+            {
+                best = node;
+                return;
+            }
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        return best;
+    }
+
     private static string Text(LayoutNode node)
     {
         var text = new System.Text.StringBuilder(node.DisplayText);
@@ -1149,12 +1644,1047 @@ internal static class VisualChecks
     private static string Normalize(string text) =>
         string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
 
-    /// <summary>Connected components of ink inside <paramref name="region"/>; the
-    /// background is the region's most frequent color. Pixels join through their four edge
-    /// neighbours only, and only when their colors are within <see cref="JoinThreshold"/> —
-    /// boxes that merely touch at a corner, or touch edge to edge in different colors (a
-    /// black bar stacked on a blue one), stay separate shapes. The antialiased seam between
-    /// such boxes is its own component at most one pixel thick and is dropped.</summary>
+    /// <summary>The bottom (or top) ink edge of every "Filler Text" element below the
+    /// instructions aligns — table cells' vertical-align and baseline checks.</summary>
+    private static WptRunner.RunResult TextBaseline(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
+    {
+        var fillers = FindAllNodesByText(root, top, "filler text");
+        if (fillers.Count < 2)
+            return new(WptRunner.Cat.Unsupported, $"Visual check: only {fillers.Count} filler-text elements below the instructions", 0, 0);
+        var edges = new List<int>();
+        foreach (var filler in fillers)
+        {
+            var ink = ElementInk(bitmap, filler, 1, out _);
+            if (ink.Count == 0)
+                return new(WptRunner.Cat.Fail, $"{Describe(check)}: a filler text painted no ink", 1, 1,
+                    [new(Describe(check), 1, "no ink")], 0);
+            edges.Add(check.Edge == "top" ? ink.Min(c => c.Top) : ink.Max(c => c.Bottom));
+        }
+        var spread = edges.Max() - edges.Min();
+        return spread <= 2
+            ? new(WptRunner.Cat.Pass, Describe(check), 1, 0, [new(Describe(check), 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{Describe(check)}: {check.Edge ?? "bottom"} edges span {spread}px", 1, 1,
+                [new(Describe(check), 1, string.Join(", ", edges.OrderBy(e => e).Distinct()))], 0);
+    }
+
+    /// <summary>Every "Filler Text" element's ink sits in one horizontal band — the elements
+    /// share a line.</summary>
+    private static WptRunner.RunResult OneLine(SKBitmap bitmap, LayoutNode root, int top, string path)
+    {
+        var fillers = FindAllNodesByText(root, top, "filler text");
+        if (fillers.Count < 2)
+            return new(WptRunner.Cat.Unsupported, $"Visual check: only {fillers.Count} filler-text elements below the instructions", 0, 0);
+        var tops = new List<int>();
+        var bottoms = new List<int>();
+        foreach (var filler in fillers)
+        {
+            var ink = ElementInk(bitmap, filler, 1, out _);
+            if (ink.Count == 0)
+                return new(WptRunner.Cat.Fail, "the filler text painted no ink", 1, 1, [new("one line", 1, "no ink")], 0);
+            tops.Add(ink.Min(c => c.Top));
+            bottoms.Add(ink.Max(c => c.Bottom));
+        }
+        var overlap = Math.Min(bottoms.Max(), bottoms.Min()) - Math.Max(tops.Max(), tops.Min());
+        return overlap > 0
+            ? new(WptRunner.Cat.Pass, Describe(new VisualCheck("one-line")), 1, 0, [new("one line", 0, null)], 0)
+            : new(WptRunner.Cat.Fail, "the filler texts sit on different lines", 1, 1,
+                [new("one line", 1, $"vertical overlap {overlap}px")], 0);
+    }
+
+    /// <summary>A small (square) bullet sits at the start of the first text line and the
+    /// second line flows below it (not indented past the bullet).</summary>
+    private static WptRunner.RunResult FirstLineMarker(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
+    {
+        var assertion = Describe(check);
+        var bands = InkBands(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var textBands = bands.Where(b => b.Members.Max(m => m.Height) > 5).ToList();
+        if (textBands.Count < 2)
+            return new(WptRunner.Cat.Unsupported, $"Visual check: only {textBands.Count} text bands below the instructions", 0, 0);
+        var first = textBands[0];
+        var marker = first.Members.FirstOrDefault(m => Math.Max(m.Width, m.Height) is > 4 and <= 26 &&
+            Math.Abs(m.Width - m.Height) <= 3 * EdgeTolerance &&
+            (check.Color is null || Matches(check.Color, m.Color)));
+        if (marker.Width == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: no {(check.Color is null ? "" : check.Color + " ")}square bullet on the first line", 1, 1,
+                [new(assertion, 1, "no bullet-sized square in the first line's band")], 0);
+        if (marker.Left > first.Members.Min(m => m.Left) + 2 * EdgeTolerance)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the bullet is not at the line's start", 1, 1,
+                [new(assertion, 1, $"bullet at x {marker.Left}")], 0);
+        var second = textBands[1];
+        var secondLeft = second.Members.Min(m => m.Left);
+        if (secondLeft > marker.Right + 2)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the second line does not flow below the bullet (starts at {secondLeft})", 1, 1,
+                [new(assertion, 1, $"second line starts {secondLeft - marker.Right}px right of the bullet")], 0);
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>A marker bullet sits to the left of the stated line, vertically anywhere.</summary>
+    private static WptRunner.RunResult LineMarker(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var shapes = TopLevel(components);
+        var line = shapes.FirstOrDefault(s => Math.Min(s.Width, s.Height) <= 30 &&
+            Math.Max(s.Width, s.Height) >= 8 * Math.Max(2, Math.Min(s.Width, s.Height)) &&
+            (check.Color is null || Matches(check.Color, s.Color)) &&
+            (check.Shape is null || check.Shape is "solid"));
+        if (line.Width == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: no {(check.Color is null ? "" : check.Color + " ")}line below the instructions", 1, 1,
+                [new(assertion, 1, "no line-shaped component")], 0);
+        var bullets = shapes.Where(s => !ReferenceEquals(s, line) && Math.Max(s.Width, s.Height) <= 24 &&
+            s.Right <= line.Left + EdgeTolerance && s.Top < line.Bottom && s.Bottom > line.Top).ToList();
+        if (bullets.Count == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: no marker bullet to the left of the line", 1, 1,
+                [new(assertion, 1, "no bullet beside the line")], 0);
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>A bullet sits on the stated side of (or above) a square/bar.</summary>
+    private static WptRunner.RunResult BulletBeside(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var shapes = TopLevel(components);
+        var box = shapes.FirstOrDefault(s => s.Rectangular && Math.Min(s.Width, s.Height) >= 20 &&
+            (check.Color is null || Matches(check.Color, s.Color)));
+        if (box.Width == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: no square below the instructions", 1, 1,
+                [new(assertion, 1, "no box")], 0);
+        var bullets = shapes.Where(s => !ReferenceEquals(s, box) && Math.Max(s.Width, s.Height) <= 24).ToList();
+        var found = check.Side switch
+        {
+            "left" => bullets.Where(s => s.Right <= box.Left + EdgeTolerance && s.Top < box.Bottom && s.Bottom > box.Top).ToList(),
+            "right" => bullets.Where(s => s.Left >= box.Right - EdgeTolerance && s.Top < box.Bottom && s.Bottom > box.Top).ToList(),
+            "above" => bullets.Where(s => s.Bottom <= box.Top + EdgeTolerance && s.Right > box.Left && s.Left < box.Right).ToList(),
+            _ => [],
+        };
+        return found.Count >= 1
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: no bullet {check.Side} the square", 1, 1,
+                [new(assertion, 1, $"{bullets.Count} bullet-sized shapes, none {check.Side}")], 0);
+    }
+
+    /// <summary>Two bars stacked: the stated top color sits directly on the stated bottom color.</summary>
+    private static WptRunner.RunResult BarStack(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var shapes = TopLevel(components);
+        var topBars = shapes.Where(s => Matches(check.ColorA, s.Color)).ToList();
+        var bottomBars = shapes.Where(s => Matches(check.ColorB, s.Color)).ToList();
+        if (topBars.Count != 1 || bottomBars.Count != 1)
+            return new(WptRunner.Cat.Fail, $"{assertion}: {topBars.Count} {check.ColorA} and {bottomBars.Count} {check.ColorB} bars", 1, 1,
+                [new(assertion, 1, "wrong bar count")], 0);
+        return Touching(topBars[0], bottomBars[0]) && topBars[0].Top < bottomBars[0].Top
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: the {check.ColorA} bar is not stacked on the {check.ColorB} bar", 1, 1,
+                [new(assertion, 1, "bars not stacked")], 0);
+    }
+
+    /// <summary>The element rendering the stated text sits with a marker bullet on its left.</summary>
+    private static WptRunner.RunResult TextMarker(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
+    {
+        var assertion = Describe(check);
+        var node = FindNodeByText(root, top, check.Needle!, exact: true);
+        if (node is null)
+            return new(WptRunner.Cat.Fail, $"{assertion}: no element renders the text '{check.Needle}'", 1, 1,
+                [new(assertion, 1, "text not in the layout tree")], 0);
+        var ink = ElementInk(bitmap, node, 1, out var box);
+        if (ink.Count == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the number painted no ink", 1, 1, [new(assertion, 1, "no ink")], 0);
+        var components = Components(bitmap, top, out _);
+        var bullets = components.Where(s => Math.Max(s.Width, s.Height) <= 24 &&
+            s.Right <= box.Left + EdgeTolerance && s.Top < box.Bottom && s.Bottom > box.Top).ToList();
+        return bullets.Count >= 1
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: no marker bullet to the left of the number", 1, 1,
+                [new(assertion, 1, "no bullet")], 0);
+    }
+
+    /// <summary>The stated numbers are rendered as layout text (content-generated counters);
+    /// each must paint ink, and ordered variants must stack top to bottom. Digits painted as
+    /// list markers never reach the layout tree — those report unsupported.</summary>
+    private static WptRunner.RunResult NumbersPresent(VisualCheck check, LayoutNode root, int top, string path)
+    {
+        var assertion = Describe(check);
+        var textNodes = TextElementsBelow(root, top);
+        if (textNodes.Count == 0)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no text below the instructions (digits painted as list markers are not layout text)", 0, 0);
+        int? lastY = null;
+        var needles = new List<string>(check.Needles ?? []);
+        foreach (var needle in needles)
+        {
+            var node = textNodes.FirstOrDefault(n => Normalize(Text(n)) == needle || Normalize(Text(n)) == $"{needle}." ||
+                                                     Normalize(Text(n)).Contains(needle, StringComparison.Ordinal));
+            if (node is null)
+                return new(WptRunner.Cat.Fail, $"{assertion}: no element renders '{needle}'", 1, 1,
+                    [new(assertion, 1, $"'{needle}' not in the layout tree")], 0);
+            if (check.Ordered && lastY is { } prev && node.Box.BorderBox.Top < prev - EdgeTolerance)
+                return new(WptRunner.Cat.Fail, $"{assertion}: '{needle}' is not below the previous number", 1, 1,
+                    [new(assertion, 1, "numbers out of order")], 0);
+            lastY = (int)node.Box.BorderBox.Top;
+        }
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>The stated text renders (its element paints ink); an optional stated bullet
+    /// must sit to its right. Generated content carries text in the layout tree, so this
+    /// checks quotes and counters too; absence of the text is a fail.</summary>
+    private static WptRunner.RunResult TextInk(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
+    {
+        var assertion = Describe(check);
+        var node = FindNodeByText(root, top, check.Needle!);
+        if (node is null)
+            return new(WptRunner.Cat.Fail, $"{assertion}: no element renders '{check.Needle}'", 1, 1,
+                [new(assertion, 1, "text not in the layout tree")], 0);
+        var ink = ElementInk(bitmap, node, 1, out var box);
+        if (ink.Count == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the words painted no ink", 1, 1, [new(assertion, 1, "no ink")], 0);
+        if (check.Bullet == "right")
+        {
+            var components = Components(bitmap, top, out _);
+            var bullets = components.Where(s => Math.Max(s.Width, s.Height) <= 24 &&
+                s.Left >= box.Right - EdgeTolerance && s.Top < box.Bottom && s.Bottom > box.Top).ToList();
+            if (bullets.Count == 0)
+                return new(WptRunner.Cat.Fail, $"{assertion}: no bullet to the right of the text", 1, 1,
+                    [new(assertion, 1, "no bullet")], 0);
+        }
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>The stated words render as glyphs (not one solid Ahem block) and a box of the
+    /// stated color sits below them.</summary>
+    private static WptRunner.RunResult WordsAndBox(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
+    {
+        var assertion = Describe(check);
+        var node = FindNodeByText(root, top, check.Needle!);
+        if (node is null)
+            return new(WptRunner.Cat.Fail, $"{assertion}: no element renders '{check.Needle}'", 1, 1,
+                [new(assertion, 1, "text not in the layout tree")], 0);
+        var ink = ElementInk(bitmap, node, 1, out var box);
+        if (ink.Count < 2)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the words render as {(ink.Count == 0 ? "no ink" : "one solid block")}, not glyphs", 1, 1,
+                [new(assertion, 1, $"{ink.Count} ink component(s) in the words' box")], 0);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var boxes = TopLevel(components).Where(s => Math.Min(s.Width, s.Height) >= 20 &&
+            Matches(check.Color!, s.Color) && !s.Contains(new Component(box.Left, box.Top, box.Right, box.Bottom, true, default)) &&
+            s.Top >= box.Bottom - 2).ToList();
+        return boxes.Count >= 1
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: no {check.Color} box below the words", 1, 1,
+                [new(assertion, 1, "no stated box below")], 0);
+    }
+
+    /// <summary>The stated element's ink is horizontally centered in its container's content
+    /// box (text-align: center).</summary>
+    private static WptRunner.RunResult AlignCenter(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string sentence, string path)
+    {
+        var node = check.Anchor == "instruction" ? InstructionNode(root, sentence) : FindFiller(root, top);
+        if (node is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no element to center-check below the instructions", 0, 0);
+        var ink = ElementInk(bitmap, node, 1, out _);
+        if (ink.Count == 0)
+            return new(WptRunner.Cat.Fail, $"{Describe(check)}: the text painted no ink", 1, 1,
+                [new(Describe(check), 1, "no ink")], 0);
+        var container = node.Parent;
+        while (container is { } parent && parent.Box.ContentBox.Width < node.Box.BorderBox.Width * 1.2 && parent.Parent is not null)
+            container = parent.Parent;
+        if (container is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no container around the text", 0, 0);
+        var inkLeft = ink.Min(c => c.Left);
+        var inkRight = ink.Max(c => c.Right);
+        var contentLeft = container.Box.ContentBox.Left;
+        var contentRight = container.Box.ContentBox.Right;
+        var leftGap = inkLeft - contentLeft;
+        var rightGap = contentRight - inkRight;
+        var assertion = Describe(check);
+        return Math.Abs(leftGap - rightGap) <= 2
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: gaps {leftGap}px and {rightGap}px", 1, 1,
+                [new(assertion, 1, "not centered")], 0);
+    }
+
+    private static readonly Dictionary<int, string> _sentences = new();
+
+    /// <summary>The stated-color vertical lines have space between them; an optional marker
+    /// bullet sits left of the lines.</summary>
+    private static WptRunner.RunResult LinesSpaced(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var shapes = TopLevel(components);
+        var a = shapes.Where(s => Matches(check.ColorA!, s.Color) && s.Height > 3 * s.Width).ToList();
+        var b = shapes.Where(s => Matches(check.ColorB!, s.Color) && s.Height > 3 * s.Width).ToList();
+        if (a.Count == 0 || b.Count == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: missing lines ({a.Count} {check.ColorA}, {b.Count} {check.ColorB})", 1, 1,
+                [new(assertion, 1, "a stated line color is missing")], 0);
+        var gap = Spacing(a, b);
+        if (gap <= 2 * EdgeTolerance)
+            return new(WptRunner.Cat.Fail, $"{assertion}: no space between the {check.ColorA} and {check.ColorB} lines ({gap}px)", 1, 1,
+                [new(assertion, 1, $"gap {gap}px")], 0);
+        if (check.Marker)
+        {
+            var leftmost = a.Concat(b).Min(s => s.Left);
+            var bullets = shapes.Where(s => Math.Max(s.Width, s.Height) <= 24 &&
+                s.Right <= leftmost + EdgeTolerance).ToList();
+            if (bullets.Count == 0)
+                return new(WptRunner.Cat.Fail, $"{assertion}: no marker bullet to the left of the lines", 1, 1,
+                    [new(assertion, 1, "no bullet")], 0);
+        }
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+
+        static int Spacing(List<Component> a, List<Component> b)
+        {
+            // The nearest horizontal distance between any stated-colour pair: a margin that
+            // failed to apply puts a pair flush together (gap 0); any overlap also reads 0.
+            var best = int.MaxValue;
+            foreach (var x in a)
+            foreach (var y in b)
+            {
+                var gap = Math.Max(Math.Max(y.Left - x.Right, x.Left - y.Right), 0);
+                if (gap < best) best = gap;
+            }
+            return best;
+        }
+    }
+
+    /// <summary>The stated number of ink bands below the instructions render identically —
+    /// band-by-band pixel comparison, so text lines in any font count.</summary>
+    private static WptRunner.RunResult LinesSame(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var bands = InkBands(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var want = check.Count ?? 2;
+        if (bands.Count != want)
+            return new(WptRunner.Cat.Fail, $"{assertion}: {bands.Count} ink bands below the instructions", 1, 1,
+                [new(assertion, 1, $"{bands.Count} bands, not {want}")], 0);
+        var left = bands[0].Members.Min(m => m.Left);
+        foreach (var band in bands.Skip(1))
+        {
+            var bandLeft = band.Members.Min(m => m.Left);
+            if (Math.Abs(bandLeft - left) > 2 * EdgeTolerance)
+                return new(WptRunner.Cat.Fail, $"{assertion}: a line starts at x {bandLeft}, the first at {left}", 1, 1,
+                    [new(assertion, 1, "lines do not start at the same x")], 0);
+            var diff = BandDiff(bands[0], band, bitmap, want: want);
+            if (diff is { } failure)
+                return new(WptRunner.Cat.Fail, $"{assertion}: {failure}", 1, 1, [new(assertion, 1, failure)], 0);
+        }
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>Pixel-compares two ink bands aligned at their left edges and tops.</summary>
+    private static string? BandDiff((int Top, int Bottom, List<Component> Members) a,
+        (int Top, int Bottom, List<Component> Members) b, SKBitmap bitmap, int want)
+    {
+        var aLeft = a.Members.Min(m => m.Left);
+        var bLeft = b.Members.Min(m => m.Left);
+        var height = Math.Min(a.Bottom - a.Top, b.Bottom - b.Top);
+        var width = Math.Min(a.Members.Max(m => m.Right) - aLeft, b.Members.Max(m => m.Right) - bLeft);
+        if (Math.Abs((a.Bottom - a.Top) - (b.Bottom - b.Top)) > 3 || Math.Abs(width - (a.Members.Max(m => m.Right) - aLeft)) > 3)
+            return "the lines differ in size";
+        var pixels = bitmap.Pixels;
+        var bitmapWidth = bitmap.Width;
+        for (var y = 0; y < height; y++)
+        for (var x = 0; x < width; x++)
+        {
+            var pa = pixels[(a.Top + y) * bitmapWidth + aLeft + x];
+            var pb = pixels[(b.Top + y) * bitmapWidth + bLeft + x];
+            if (Distance(pa, pb) > PixelTolerance)
+                return $"pixels differ at (+{x},+{y})";
+        }
+        return null;
+    }
+
+    /// <summary>The stated box's tiled image: the ink column/row profile is periodic, exactly
+    /// one row of tiles when the sentence says so, and the stated edge tile is complete.</summary>
+    private static WptRunner.RunResult ImageTiled(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
+    {
+        var assertion = Describe(check);
+        var box = FindEmptyBox(root, top);
+        if (box is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no empty test box below the instructions", 0, 0);
+        var region = SKRectI.Round(box.Box.BorderBox);
+        region.Inflate(-3, -3);
+        if (region.Width < 16 || region.Height < 16)
+            return new(WptRunner.Cat.Unsupported, "Visual check: the test box is too small to scan", 0, 0);
+        var columns = Profile(bitmap, region, horizontal: true);
+        if (columns.Max() == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the box paints no image", 1, 1, [new(assertion, 1, "no ink")], 0);
+        var period = BestPeriod(columns, 8, region.Width / 2);
+        if (period is null)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the ink is not periodically tiled", 1, 1,
+                [new(assertion, 1, "no tile period")], 0);
+        var p = period.Value;
+        if (check.Variant is "row-only" or "row-right")
+        {
+            var rows = Profile(bitmap, region, horizontal: false);
+            var inkRows = rows.Select((v, i) => (v, i)).Where(t => t.v > 0).ToList();
+            if (inkRows.Count == 0 || inkRows[^1].i - inkRows[0].i > Math.Max(p, 12) + 4)
+                return new(WptRunner.Cat.Fail, $"{assertion}: tiles repeat down the box too", 1, 1,
+                    [new(assertion, 1, "ink spans more than one tile row")], 0);
+        }
+        if (check.Variant is "row-right" or "grid-topright")
+        {
+            var right = WindowDiff(columns, region.Width - p, p, region.Width - 2 * p, p);
+            if (right > 3)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the right tile is cut off (profile diff {right:F1})", 1, 1,
+                    [new(assertion, 1, $"rightmost tile differs from the interior ({right:F1})")], 0);
+        }
+        if (check.Variant == "grid-bottom")
+        {
+            var rows = Profile(bitmap, region, horizontal: false);
+            var rowPeriod = BestPeriod(rows, 8, region.Height / 2);
+            if (rowPeriod is null)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the tiles do not repeat vertically", 1, 1,
+                    [new(assertion, 1, "no vertical period")], 0);
+            var rp = rowPeriod.Value;
+            var bottom = WindowDiff(rows, region.Height - rp, rp, region.Height - 2 * rp, rp);
+            if (bottom > 3)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the bottom tile row is cut off (profile diff {bottom:F1})", 1, 1,
+                    [new(assertion, 1, $"bottom row differs ({bottom:F1})")], 0);
+        }
+        if (check.Variant == "grid-topright")
+        {
+            var rows = Profile(bitmap, region, horizontal: false);
+            var topDiff = WindowDiff(rows, 0, p, p, p);
+            if (topDiff > 3)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the top tile row is cut off (profile diff {topDiff:F1})", 1, 1,
+                    [new(assertion, 1, $"top row differs ({topDiff:F1})")], 0);
+        }
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>Ink pixel counts per column (horizontal) or row (vertical) of the region.</summary>
+    private static int[] Profile(SKBitmap bitmap, SKRectI region, bool horizontal)
+    {
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        var background = CropBackground(bitmap, region);
+        var along = horizontal ? region.Width : region.Height;
+        var across = horizontal ? region.Height : region.Width;
+        var profile = new int[along];
+        for (var i = 0; i < along; i++)
+        for (var j = 0; j < across; j++)
+        {
+            var x = horizontal ? region.Left + i : region.Left + j;
+            var y = horizontal ? region.Top + j : region.Top + i;
+            if (Distance(pixels[y * width + x], background) > InkThreshold)
+                profile[i]++;
+        }
+        return profile;
+    }
+
+    /// <summary>The strongest period in the profile: the d in [min, max] whose shifted
+    /// profile best matches, requiring at least two periods' worth of ink.</summary>
+    private static int? BestPeriod(int[] profile, int min, int max)
+    {
+        double best = double.MaxValue;
+        int? bestD = null;
+        var ink = profile.Count(v => v > 0);
+        if (ink < 4) return null;
+        for (var d = min; d <= max; d++)
+        {
+            long diff = 0;
+            var n = 0;
+            for (var x = 0; x + d < profile.Length; x++)
+            {
+                diff += Math.Abs(profile[x] - profile[x + d]);
+                n++;
+            }
+            if (n == 0) continue;
+            var mean = (double)diff / n;
+            if (mean < best) { best = mean; bestD = d; }
+        }
+        if (bestD is not { } period) return null;
+        if (period * 2 > profile.Length) return null;
+        // A real period must actually repeat: compare two adjacent windows away from the edges.
+        var windowDiff = WindowDiff(profile, period, period, 2 * period, period);
+        return windowDiff <= 4 ? period : null;
+    }
+
+    /// <summary>Mean absolute difference of two profile windows.</summary>
+    private static double WindowDiff(int[] profile, int aStart, int aLen, int bStart, int bLen)
+    {
+        if (aStart < 0 || bStart < 0 || aStart + aLen > profile.Length || bStart + bLen > profile.Length)
+            return double.MaxValue;
+        double diff = 0;
+        for (var x = 0; x < aLen; x++)
+            diff += Math.Abs(profile[aStart + x] - profile[bStart + x]);
+        return diff / aLen;
+    }
+
+    /// <summary>Every thin bar on the left has a same-coloured box of the same height among
+    /// the boxes (margin-collapse-with-clearance targets).</summary>
+    private static WptRunner.RunResult BarsMatch(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var bars = components.Where(s => s.Width <= 14 && s.Height >= 20 && Named.ContainsValue(s.Color)).ToList();
+        if (bars.Count == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: no coloured bars below the instructions", 1, 1,
+                [new(assertion, 1, "no bars")], 0);
+        foreach (var bar in bars)
+        {
+            var match = components.Where(s => !ReferenceEquals(s, bar) && s.Width > 14 && MatchesColor(s.Color, bar.Color) &&
+                                              Math.Abs(s.Height - bar.Height) <= 2).ToList();
+            if (match.Count == 0)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the {bar.Color} bar ({bar.Width}x{bar.Height} at {bar.Left},{bar.Top}) has no matching box", 1, 1,
+                    [new(assertion, 1, $"no same-colour {bar.Height}px box")], 0);
+        }
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+
+        static bool MatchesColor(SKColor a, SKColor b) => Distance(a, b) <= 24;
+    }
+
+    /// <summary>One solid bar on top of a rows-by-cols grid of boxes.</summary>
+    private static WptRunner.RunResult BarGrid(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var shapes = TopLevel(components);
+        var want = check.Rows! * check.Cols! + 1;
+        if (shapes.Count != want)
+            return new(WptRunner.Cat.Fail, $"{assertion}: {shapes.Count} shapes below the instructions (want bar + {check.Rows}x{check.Cols})", 1, 1,
+                [new(assertion, 1, "wrong shape count")], 0);
+        var ordered = shapes.OrderBy(s => s.Top).ThenBy(s => s.Left).ToList();
+        var bar = ordered[0];
+        if (bar.Height > 3 * ordered[1].Height || bar.Width < ordered[1].Width * 2)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the first shape is not a wide bar", 1, 1,
+                [new(assertion, 1, "no bar on top")], 0);
+        var grid = ordered.Skip(1).ToList();
+        for (var r = 0; r < check.Rows; r++)
+        for (var c = 0; c < check.Cols; c++)
+        {
+            var cell = grid[r * check.Cols.Value + c];
+            var reference = grid[0];
+            if (Math.Abs(cell.Width - reference.Width) > 2 || Math.Abs(cell.Height - reference.Height) > 2)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the grid cells differ in size", 1, 1,
+                    [new(assertion, 1, "uneven grid")], 0);
+            if (c > 0 && Math.Abs(cell.Left - grid[r * check.Cols.Value + c - 1].Right) > 4)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the grid cells are not adjacent in row {r}", 1, 1,
+                    [new(assertion, 1, "grid gap")], 0);
+        }
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>The stated-color box's ink reaches the bottom of the rendered viewport.</summary>
+    private static WptRunner.RunResult ViewportBottom(VisualCheck check, SKBitmap bitmap)
+    {
+        var assertion = Describe(check);
+        var height = bitmap.Height;
+        var width = bitmap.Width;
+        var pixels = bitmap.Pixels;
+        // The box's ink is expected to touch the bottom edge — that is the stated condition,
+        // so the scan reads the last rows directly instead of flagging them clipped.
+        var inkAtBottom = 0;
+        var colors = new Dictionary<uint, long>();
+        for (var y = height - 3; y < height; y++)
+        for (var x = 0; x < width; x++)
+        {
+            var p = pixels[y * width + x];
+            if (p == 0 || (SKColor)p is { Red: 255, Green: 255, Blue: 255 }) continue;
+            inkAtBottom++;
+            colors[(uint)p] = colors.GetValueOrDefault((uint)p) + 1;
+        }
+        var dominant = colors.Count > 0 ? new SKColor(colors.MaxBy(kv => kv.Value).Key) : SKColors.White;
+        return inkAtBottom > 50 && Matches(check.Color!, dominant)
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: the {check.Color} box does not reach the bottom of the viewport", 1, 1,
+                [new(assertion, 1, $"bottom ink {inkAtBottom}px, dominant {dominant}")], 0);
+    }
+
+    /// <summary>The middle cell/row/column of a three-by-three table carries the stated
+    /// border color (collapsed-border winners read from the render).</summary>
+    private static WptRunner.RunResult CellBorder(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
+    {
+        var assertion = Describe(check);
+        var table = FindTable(root, top);
+        if (table is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no table below the instructions", 0, 0);
+        var cells = TableCells(table);
+        if (cells.Count < 9)
+            return new(WptRunner.Cat.Unsupported, $"Visual check: the table has {cells.Count} cells, not nine", 0, 0);
+        var targets = check.Target switch
+        {
+            "cell" => new List<LayoutNode> { cells[4] },
+            "row" => new List<LayoutNode> { cells[3], cells[4], cells[5] },
+            _ => new List<LayoutNode> { cells[1], cells[4], cells[7] },
+        };
+        foreach (var cell in targets)
+        {
+            var box = cell.Box.BorderBox;
+            var crop = SKRectI.Round(new SKRect(box.Left - 10, box.Top - 10, box.Right + 10, box.Bottom + 10));
+            var ring = RingSignature(bitmap, crop, box, 8);
+            if (!ring.Readable)
+                return new(WptRunner.Cat.Unsupported, $"Visual check: the cell's ring is not readable: {ring.Note}", 0, 0);
+            if (ring.Style == "none")
+                return new(WptRunner.Cat.Fail, $"{assertion}: the cell paints no border", 1, 1,
+                    [new(assertion, 1, "no border")], 0);
+            if (check.Color is { } want && !Matches(want, ring.Color) && ring.ToneColors.All(t => !Matches(want, t)))
+                return new(WptRunner.Cat.Fail, $"{assertion}: the {check.Target}'s border reads #{ring.Color.Red:X2}{ring.Color.Green:X2}{ring.Color.Blue:X2}, not {want}", 1, 1,
+                    [new(assertion, 1, $"border color #{ring.Color.Red:X2}{ring.Color.Green:X2}{ring.Color.Blue:X2}")], 0);
+        }
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+
+        static string ShowTone(SKColor c) => $"#{c.Red:X2}{c.Green:X2}{c.Blue:X2}";
+    }
+
+    private static LayoutNode? FindTable(LayoutNode root, int top)    {
+        LayoutNode? best = null;
+        void Walk(LayoutNode node)
+        {
+            if (best is not null) return;
+            if (!node.TagName.StartsWith('#') && node.Box.BorderBox.Top >= top)
+            {
+                var display = node.TryResolveStyle("display", out var d) ? d : node.Style?.GetPropertyValueSafe("display");
+                if (display is "table") { best = node; return; }
+            }
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        return best;
+    }
+
+    private static List<LayoutNode> TableCells(LayoutNode table)
+    {
+        var cells = new List<LayoutNode>();
+        void Walk(LayoutNode node)
+        {
+            var display = node.TryResolveStyle("display", out var d) ? d : node.Style?.GetPropertyValueSafe("display");
+            if (display is "table-cell") { cells.Add(node); return; }
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(table);
+        return cells;
+    }
+
+    /// <summary>A small square of the stated color sits at each corner of the stated box.</summary>
+    private static WptRunner.RunResult Corners(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var pool = components;
+        var box = pool.FirstOrDefault(s => s.Rectangular && Math.Min(s.Width, s.Height) >= 40 &&
+            (check.BoxColor is null || Matches(check.BoxColor, s.Color)));
+        if (box.Width == 0)
+            box = pool.FirstOrDefault(s => !s.Rectangular && (long)s.Width * s.Height >= 10000 &&
+                (check.BoxColor is null || Matches(check.BoxColor, s.Color)));
+        var squares = pool.Where(s => Math.Max(s.Width, s.Height) <= 40 && Matches(check.Color!, s.Color)).ToList();
+        if (box.Width == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: no box below the instructions", 1, 1, [new(assertion, 1, "no box")], 0);
+        if (squares.Count != 4)
+            return new(WptRunner.Cat.Fail, $"{assertion}: {squares.Count} {check.Color} squares (want 4)", 1, 1,
+                [new(assertion, 1, "wrong square count")], 0);
+        var covered = new List<string>();
+        foreach (var (name, x, y) in new[] { ("upper-left", box.Left, box.Top), ("upper-right", box.Right, box.Top),
+                                            ("lower-left", box.Left, box.Bottom), ("lower-right", box.Right, box.Bottom) })
+        {
+            if (squares.Any(s => Math.Abs((s.Left + s.Right) / 2 - x) <= 12 && Math.Abs((s.Top + s.Bottom) / 2 - y) <= 12))
+                covered.Add(name);
+        }
+        return covered.Count == 4
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: corners not covered: {string.Join(", ", new[] { "upper-left", "upper-right", "lower-left", "lower-right" }.Except(covered))}", 1, 1,
+                [new(assertion, 1, $"{covered.Count}/4 corners")], 0);
+    }
+
+    /// <summary>Exactly the stated count of top-level rectangles below the instructions.</summary>
+    private static WptRunner.RunResult BoxCount(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var shapes = TopLevel(components);
+        var rectangles = check.Color is { } color
+            ? shapes.Where(s => s.Rectangular && Matches(color, s.Color)).ToList()
+            : shapes.Where(s => s.Rectangular).ToList();
+        var want = check.Count ?? 1;
+        return rectangles.Count == want
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: {rectangles.Count} boxes below the instructions (want {want})", 1, 1,
+                [new(assertion, 1, $"{rectangles.Count} boxes")], 0);
+    }
+
+    /// <summary>Two bars of colorA with a colorB bar of the same width between them.</summary>
+    private static WptRunner.RunResult ThreeBars(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var shapes = TopLevel(components);
+        var outer = shapes.Where(s => Matches(check.ColorA!, s.Color)).ToList();
+        var middle = shapes.Where(s => Matches(check.ColorB!, s.Color)).ToList();
+        if (outer.Count != 2 || middle.Count != 1)
+            return new(WptRunner.Cat.Fail, $"{assertion}: {outer.Count} {check.ColorA} bars and {middle.Count} {check.ColorB} bar", 1, 1,
+                [new(assertion, 1, "wrong bar counts")], 0);
+        var widths = outer.Select(s => s.Width).Concat([middle[0].Width]).ToList();
+        if (widths.Max() - widths.Min() > 2 * EdgeTolerance)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the bars' widths differ ({string.Join(", ", widths)})", 1, 1,
+                [new(assertion, 1, "unequal bars")], 0);
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>The paragraph's first ink component is the stated colour and the rest of the
+    /// paragraph's ink is not (::first-letter).</summary>
+    private static WptRunner.RunResult FirstLetterColor(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string sentence, string path)
+    {
+        var assertion = Describe(check);
+        var node = InstructionNode(root, sentence);
+        if (node is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no paragraph below the instructions", 0, 0);
+        var ink = ElementInk(bitmap, node, 1, out _);
+        if (ink.Count < 2)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the paragraph painted {ink.Count} ink components", 1, 1,
+                [new(assertion, 1, "not enough ink to separate a first letter")], 0);
+        var ordered = ink.OrderBy(c => c.Top).ThenBy(c => c.Left).ToList();
+        var firstLine = ordered.Where(c => c.Top < ordered[0].Bottom).ToList();
+        var firstLetter = firstLine.MinBy(c => c.Left);
+        if (!Matches(check.Color!, firstLetter.Color))
+            return new(WptRunner.Cat.Fail, $"{assertion}: the first letter is {firstLetter.Color}", 1, 1,
+                [new(assertion, 1, $"first letter {firstLetter.Color}")], 0);
+        var rest = ink.Where(c => !ReferenceEquals(c, firstLetter)).ToList();
+        if (rest.All(c => Matches(check.Color!, c.Color)))
+            return new(WptRunner.Cat.Fail, $"{assertion}: the whole paragraph is {check.Color}", 1, 1,
+                [new(assertion, 1, "the rest of the paragraph is also coloured")], 0);
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>The first text band's ink is the stated colour and the next band's is not.</summary>
+    private static WptRunner.RunResult FirstLineColor(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var bands = InkBands(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        if (bands.Count < 2)
+            return new(WptRunner.Cat.Unsupported, $"Visual check: only {bands.Count} bands below the instructions", 0, 0);
+        var first = DominantOf(bands[0].Members, bitmap);
+        var second = DominantOf(bands[1].Members, bitmap);
+        if (!Matches(check.Color!, first))
+            return new(WptRunner.Cat.Fail, $"{assertion}: the first line is {first}", 1, 1,
+                [new(assertion, 1, $"first line {first}")], 0);
+        if (Matches(check.Color!, second))
+            return new(WptRunner.Cat.Fail, $"{assertion}: the other lines are {second} too", 1, 1,
+                [new(assertion, 1, "second line also coloured")], 0);
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    private static SKColor DominantOf(List<Component> members, SKBitmap bitmap)
+    {
+        // The members are already ink components: the largest one's own colour is the band's.
+        return members.MaxBy(c => (long)c.Width * c.Height) is { } biggest ? biggest.Color : SKColors.White;
+    }
+
+    /// <summary>All but the last text band share both edges, and the last shares the left —
+    /// text-align: justify.</summary>
+    private static WptRunner.RunResult Justify(SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(new VisualCheck("justify"));
+        var bands = InkBands(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        if (bands.Count < 2)
+            return new(WptRunner.Cat.Unsupported, $"Visual check: only {bands.Count} text bands below the instructions", 0, 0);
+        var lefts = bands.Select(b => b.Members.Min(m => m.Left)).ToList();
+        var rights = bands.Select(b => b.Members.Max(m => m.Right)).ToList();
+        for (var k = 0; k < bands.Count - 1; k++)
+        {
+            if (Math.Abs(lefts[k] - lefts[0]) > 2 || Math.Abs(rights[k] - rights[0]) > 2)
+                return new(WptRunner.Cat.Fail, $"{assertion}: line {k} does not line up on both edges (left {lefts[k]}, right {rights[k]})", 1, 1,
+                    [new(assertion, 1, "line not justified")], 0);
+        }
+        // The last line of a justified paragraph never extends past the justified lines' edge.
+        if (Math.Abs(lefts[^1] - lefts[0]) > 2 || rights[^1] > rights[0] + 2)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the last line does not sit inside the justified edges (left {lefts[^1]}, right {rights[^1]})", 1, 1,
+                [new(assertion, 1, "last line not left-aligned inside the block")], 0);
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>A thin line of the stated color sits directly above/below/left/right of the
+    /// instruction paragraph, or of every occurrence of the stated word.</summary>
+    private static WptRunner.RunResult TextBand(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string sentence, string path)
+    {
+        var assertion = Describe(check);
+        List<LayoutNode> targets;
+        if (check.Needle is { } needle)
+        {
+            targets = FindAllNodesByText(root, top, needle);
+            if (targets.Count == 0)
+                return new(WptRunner.Cat.Fail, $"{assertion}: no occurrence of '{needle}' below the instructions", 1, 1,
+                    [new(assertion, 1, "needle not found")], 0);
+        }
+        else
+        {
+            var node = InstructionNode(root, sentence);
+            if (node is null)
+                return new(WptRunner.Cat.Unsupported, "Visual check: no paragraph below the instructions", 0, 0);
+            targets = [node];
+        }
+        foreach (var target in targets)
+        {
+            var ink = ElementInk(bitmap, target, 10, out var box);
+            var text = ink.Where(c => c.Height > 5).ToList();
+            if (text.Count == 0)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the target painted no readable ink", 1, 1,
+                    [new(assertion, 1, "no ink")], 0);
+            int textTop = text.Min(c => c.Top), textBottom = text.Max(c => c.Bottom);
+            int textLeft = text.Min(c => c.Left), textRight = text.Max(c => c.Right);
+            bool IsBand(Component c) => c.Height <= 6 && c.Width >= (textRight - textLeft) / 3;
+            bool IsColumn(Component c) => c.Width <= 6 && c.Height >= (textBottom - textTop) / 3;
+            var bands = ink.Where(c => check.Side is "above" or "below" ? IsBand(c) : IsColumn(c)).Where(c =>
+                check.Side == "above" ? c.Bottom > textTop - 10 && c.Bottom <= textTop + 2 :
+                check.Side == "below" ? c.Top >= textBottom - 2 && c.Top < textBottom + 10 :
+                check.Side == "left" ? c.Right > textLeft - 10 && c.Right <= textLeft + 2 :
+                c.Left >= textRight - 2 && c.Left < textRight + 10).ToList();
+            if (check.Count is { } want && bands.Count < want)
+                return new(WptRunner.Cat.Fail, $"{assertion}: {bands.Count} {check.Color} line(s) {check.Side} the text (want {want})", 1, 1,
+                    [new(assertion, 1, $"{bands.Count}/{want} bands")], 0);
+            if (check.Count is null && bands.Count == 0)
+                return new(WptRunner.Cat.Fail, $"{assertion}: no {check.Color} line {check.Side} the text", 1, 1,
+                    [new(assertion, 1, "no band")], 0);
+            if (check.Color is { } color && bands.Any(b => !Matches(color, b.Color)))
+                return new(WptRunner.Cat.Fail, $"{assertion}: a line beside the text is not {color}", 1, 1,
+                    [new(assertion, 1, "band color")], 0);
+        }
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>The stated (rightmost/leftmost) ink of the line is the stated colour.</summary>
+    private static WptRunner.RunResult EdgeLetter(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
+    {
+        var assertion = Describe(check);
+        List<Component> ink;
+        if (check.Needle is { } needle)
+        {
+            var node = FindNodeByText(root, top, needle);
+            if (node is null)
+                return new(WptRunner.Cat.Fail, $"{assertion}: no element renders '{needle}'", 1, 1,
+                    [new(assertion, 1, "needle not found")], 0);
+            ink = ElementInk(bitmap, node, 1, out _);
+        }
+        else
+        {
+            var bands = InkBands(bitmap, top, out var clipped);
+            if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+            if (bands.Count == 0)
+                return new(WptRunner.Cat.Fail, $"{assertion}: no ink below the instructions", 1, 1,
+                    [new(assertion, 1, "no ink")], 0);
+            ink = bands[0].Members;
+        }
+        if (ink.Count == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the text painted no ink", 1, 1, [new(assertion, 1, "no ink")], 0);
+        var edge = check.Side == "leftmost" ? ink.MinBy(c => c.Left) : ink.MaxBy(c => c.Right);
+        return Matches(check.Color!, edge.Color)
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: the {check.Side} ink is {edge.Color}", 1, 1,
+                [new(assertion, 1, $"edge ink {edge.Color}")], 0);
+    }
+
+    /// <summary>Three overlapping boxes paint bottom-to-top in the stated colour order: each
+    /// overlap region shows the higher box's colour.</summary>
+    private static WptRunner.RunResult StackOrder(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var colors = check.Colors!;
+        var boxes = new List<Component>();
+        foreach (var name in colors)
+        {
+            var ofColor = components.Where(s => Matches(name, s.Color)).ToList();
+            if (ofColor.Count == 0)
+                return new(WptRunner.Cat.Fail, $"{assertion}: no {name} box below the instructions", 1, 1,
+                    [new(assertion, 1, $"{name} missing")], 0);
+            boxes.Add(ofColor.OrderBy(s => -(long)s.Width * s.Height).First());
+        }
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        for (var lower = 0; lower < boxes.Count - 1; lower++)
+        {
+            var topBox = boxes[lower + 1];
+            var iLeft = Math.Max(boxes[lower].Left, topBox.Left);
+            var iRight = Math.Min(boxes[lower].Right, topBox.Right);
+            var iTop = Math.Max(boxes[lower].Top, topBox.Top);
+            var iBottom = Math.Min(boxes[lower].Bottom, topBox.Bottom);
+            if (iRight - iLeft <= 2 || iBottom - iTop <= 2)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the {colors[lower]} and {colors[lower + 1]} boxes do not overlap", 1, 1,
+                    [new(assertion, 1, "no overlap")], 0);
+            // Where the boxes overlap, the lower box's colour must be gone — the higher box
+            // (or any even higher one) paints there. The overlap centre can be covered by a
+            // third box, so the whole region is counted, not sampled.
+            long lowerPixels = 0, total = 0;
+            for (var y = iTop; y < iBottom; y++)
+            for (var x = iLeft; x < iRight; x++)
+            {
+                total++;
+                if (Distance(new SKColor((uint)pixels[y * width + x]), boxes[lower].Color) <= 32)
+                    lowerPixels++;
+            }
+            if (lowerPixels > total / 50)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the {colors[lower]} box paints over the {colors[lower + 1]} box ({lowerPixels * 100 / total}% of the overlap)", 1, 1,
+                    [new(assertion, 1, "wrong paint order")], 0);
+        }
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>No border paints around the stated text: the ring region reads "none".</summary>
+    private static WptRunner.RunResult NoRing(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
+    {
+        var assertion = Describe(check);
+        var node = check.Needle is { } needle ? FindNodeByText(root, top, needle) : TextElementsBelow(root, top).FirstOrDefault();
+        if (node is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no text element below the instructions", 0, 0);
+        var box = node.Box.BorderBox;
+        var crop = SKRectI.Round(new SKRect(box.Left - 8, box.Top - 8, box.Right + 8, box.Bottom + 8));
+        var ring = RingSignature(bitmap, crop, box, 6);
+        if (!ring.Readable)
+            return new(WptRunner.Cat.Unsupported, $"Visual check: the ring region is not readable: {ring.Note}", 0, 0);
+        return ring.Style == "none"
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: a border paints around the text ({ring.Style ?? "unclassified"})", 1, 1,
+                [new(assertion, 1, "ring ink present")], 0);
+    }
+
+    /// <summary>The filler text paints below (or above) its sibling box.</summary>
+    private static WptRunner.RunResult TextBelowBox(VisualCheck check, LayoutNode root, int top, string path)
+    {
+        var assertion = Describe(check);
+        var filler = FindFiller(root, top);
+        if (filler is null || filler.Parent is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no filler-text element below the instructions", 0, 0);
+        var siblings = filler.Parent.Children.Where(c => !c.TagName.StartsWith('#')).ToList();
+        var index = siblings.IndexOf(filler);
+        var box = check.Side == "below" ? siblings.ElementAtOrDefault(index - 1) : siblings.ElementAtOrDefault(index + 1);
+        if (box is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no sibling box beside the filler text", 0, 0);
+        var ok = check.Side == "below"
+            ? filler.Box.BorderBox.Top >= box.Box.BorderBox.Bottom - EdgeTolerance
+            : filler.Box.BorderBox.Bottom <= box.Box.BorderBox.Top + EdgeTolerance;
+        return ok
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: the filler text does not sit {check.Side} the box", 1, 1,
+                [new(assertion, 1, $"filler top {filler.Box.BorderBox.Top}, box bottom {box.Box.BorderBox.Bottom}")], 0);
+    }
+
+    /// <summary>Two filler-text lines render identically and the bottom one carries a marker
+    /// bullet on its left.</summary>
+    private static WptRunner.RunResult TextMarkerMatch(SKBitmap bitmap, LayoutNode root, int top, string path)
+    {
+        var assertion = Describe(new VisualCheck("text-marker-match"));
+        var fillers = FindAllNodesByText(root, top, "filler text");
+        if (fillers.Count < 2)
+            return new(WptRunner.Cat.Unsupported, $"Visual check: only {fillers.Count} filler-text elements", 0, 0);
+        var firstInk = ElementInk(bitmap, fillers[0], 1, out var firstBox);
+        var secondInk = ElementInk(bitmap, fillers[^1], 1, out var secondBox);
+        if (firstInk.Count == 0 || secondInk.Count == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: a filler text painted no ink", 1, 1,
+                [new(assertion, 1, "no ink")], 0);
+        if (firstInk.Count != secondInk.Count ||
+            firstInk.Zip(secondInk, (a, b) => Math.Abs(a.Left - b.Left) <= 2 && Math.Abs(a.Width - b.Width) <= 2).Any(ok => !ok))
+            return new(WptRunner.Cat.Fail, $"{assertion}: the lines do not match styles", 1, 1,
+                [new(assertion, 1, $"{firstInk.Count} vs {secondInk.Count} ink components")], 0);
+        var components = Components(bitmap, top, out _);
+        var bullets = components.Where(s => Math.Max(s.Width, s.Height) <= 24 &&
+            s.Right <= secondBox.Left + EdgeTolerance && s.Top < secondBox.Bottom && s.Bottom > secondBox.Top).ToList();
+        return bullets.Count >= 1
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: no marker bullet beside the bottom line", 1, 1,
+                [new(assertion, 1, "no bullet")], 0);
+    }
+
+    /// <summary>The box's four sides read the stated per-side style and colour — or, in
+    /// "distinct" mode, every side reads different from the others.</summary>
+    private static WptRunner.RunResult BorderSides(VisualCheck check, SKBitmap bitmap, int top, string path)
+    {
+        var assertion = Describe(check);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var shapes = TopLevel(components);
+        if (shapes.Count == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: no ink below the instructions", 1, 1, [new(assertion, 1, "no ink")], 0);
+        int left = shapes.Min(s => s.Left), right = shapes.Max(s => s.Right);
+        int topEdge = shapes.Min(s => s.Top), bottomEdge = shapes.Max(s => s.Bottom);
+        // One ring only: every component lies on the perimeter of the union box.
+        foreach (var s in shapes)
+        {
+            var onVertical = Math.Abs(s.Left - left) <= 2 * EdgeTolerance || Math.Abs(s.Right - right) <= 2 * EdgeTolerance;
+            var onHorizontal = Math.Abs(s.Top - topEdge) <= 2 * EdgeTolerance || Math.Abs(s.Bottom - bottomEdge) <= 2 * EdgeTolerance;
+            if (!onVertical && !onHorizontal)
+                return new(WptRunner.Cat.Unsupported, $"Visual check: extra ink at ({s.Left},{s.Top}) is not on the box perimeter", 0, 0);
+        }
+        var crop = SKRectI.Round(new SKRect(left - 4, topEdge - 4, right + 4, bottomEdge + 4));
+        var background = CropBackground(bitmap, crop);
+        var reads = new Dictionary<string, (string? Style, SKColor Color)>();
+        foreach (var (name, horizontal, span) in new (string, bool, (int From, int To, int Band, int Depth))[]
+        {
+            ("top", true, (left, right, topEdge, 24)),
+            ("bottom", true, (left, right, bottomEdge - 24, 24)),
+            ("left", false, (topEdge, bottomEdge, left, 24)),
+            ("right", false, (topEdge, bottomEdge, right - 24, 24)),
+        })
+        {
+            var read = ReadSideScan(bitmap, background, horizontal, span);
+            if (read.Unreadable)
+                return new(WptRunner.Cat.Unsupported, $"Visual check: the {name} side's band is not scannable", 0, 0);
+            var color = SideColor(bitmap, background, horizontal, span);
+            reads[name] = (read.Style, color);
+        }
+        if (check.Mode == "distinct")
+        {
+            var tuples = reads.Select(kv => $"{kv.Value.Style}/{kv.Value.Color}").ToList();
+            if (reads.Values.Any(r => r.Style is null or "none"))
+                return new(WptRunner.Cat.Fail, $"{assertion}: a side has no readable border style", 1, 1,
+                    [new(assertion, 1, string.Join(", ", tuples))], 0);
+            if (tuples.Distinct().Count() < 4)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the sides do not all read different ({string.Join(", ", tuples)})", 1, 1,
+                    [new(assertion, 1, string.Join(", ", tuples))], 0);
+            return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+        }
+        var failures = new List<string>();
+        foreach (var (side, want) in check.Sides!)
+        {
+            var (style, color) = reads[side];
+            if (want.Style is { } wantStyle && style != wantStyle)
+                failures.Add($"{side} reads {style ?? "unclassified"}, not {wantStyle}");
+            if (want.Color is { } wantColor && !Matches(wantColor, color))
+                failures.Add($"{side} reads {Show(color)}, not {wantColor}");
+        }
+        if (failures.Count > 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: {string.Join("; ", failures)}", 1, 1,
+                [new(assertion, 1, string.Join("; ", failures))], 0);
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+
+        static string Show(SKColor c) => $"#{c.Red:X2}{c.Green:X2}{c.Blue:X2}";
+    }
+
+    /// <summary>The dominant ink colour within one side's border band.</summary>
+    private static SKColor SideColor(SKBitmap bitmap, SKColor background, bool horizontal, (int From, int To, int Band, int Depth) span)
+    {
+        var (from, to, bandStart, depth) = span;
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        var counts = new Dictionary<uint, long>();
+        for (var d = 0; d < depth; d++)
+        for (var p = from; p < to; p++)
+        {
+            var (x, y) = horizontal ? (p, bandStart + d) : (bandStart + d, p);
+            if (x < 0 || x >= bitmap.Width || y < 0 || y >= bitmap.Height) continue;
+            var pixel = pixels[y * width + x];
+            if (Distance(pixel, background) > InkThreshold)
+                counts[(uint)pixel] = counts.GetValueOrDefault((uint)pixel) + 1;
+        }
+        return counts.Count == 0 ? background : new SKColor(counts.MaxBy(kv => kv.Value).Key);
+    }
+
+
     internal static List<Component> Components(SKBitmap bitmap, SKRectI region, out bool clipped)
     {
         region.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));

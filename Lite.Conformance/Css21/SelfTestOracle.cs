@@ -70,5 +70,17 @@ internal static class SelfTestOracle
         check["over"]?.GetValue<bool>(), check["under"]?.GetValue<bool>(), check["through"]?.GetValue<bool>(),
         check["variant"]?.GetValue<string>(), check["firstShape"]?.GetValue<string>(), check["firstColor"]?.GetValue<string>(),
         check["secondShape"]?.GetValue<string>(), check["secondColor"]?.GetValue<string>(), check["arrangement"]?.GetValue<string>(),
-        check["approx"]?.GetValue<bool>() ?? false, check["anchor"]?.GetValue<string>());
+        check["approx"]?.GetValue<bool>() ?? false, check["anchor"]?.GetValue<string>(),
+        check["colorC"]?.GetValue<string>(), check["bulletColor"]?.GetValue<string>(), check["needle"]?.GetValue<string>(),
+        check["side"]?.GetValue<string>(), check["edge"]?.GetValue<string>(), check["span"]?.GetValue<string>(),
+        check["mode"]?.GetValue<string>(), check["scope"]?.GetValue<string>(),
+        check["even"]?.GetValue<bool>() ?? false, check["shades"]?.GetValue<bool>() ?? false,
+        check["marker"]?.GetValue<bool>() ?? false, check["bullet"]?.GetValue<string>(),
+        check["rows"]?.GetValue<int>(), check["cols"]?.GetValue<int>(),
+        check["colors"] is { } colors ? [.. colors.AsArray().Select(c => c!.GetValue<string>())] : null,
+        check["needles"] is { } needles ? [.. needles.AsArray().Select(n => n!.GetValue<string>())] : null,
+        check["sides"] is { } sides ? sides.AsObject().ToDictionary(
+            kv => kv.Key, kv => new SideSpec(kv.Value!["shape"]?.GetValue<string>(), kv.Value!["color"]?.GetValue<string>())) : null,
+        check["ordered"]?.GetValue<bool>() ?? false, check["boxColor"]?.GetValue<string>(),
+        check["target"]?.GetValue<string>());
 }
