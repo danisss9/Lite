@@ -210,8 +210,50 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/declaration-whitespace-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/ignored-rules-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/ignored-rules-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/ignored-rules-003.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/ignored-rules-004.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/ignored-rules-005.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/ignored-rules-006.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/ignored-rules-007.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 8/8 and WPT twins 8/8 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.4.1.9",
@@ -276,8 +318,25 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/c62-percent-000.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/numbers-units-016.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/numbers-units-017.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.4.3.4",
@@ -364,8 +423,15 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/selectors-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 1/1 and WPT twins 1/1 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.2",
@@ -386,8 +452,30 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/c12-grouping-000.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/grouping-000.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/grouping-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/grouping-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 4/4 and WPT twins 4/4 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.3",
@@ -397,8 +485,35 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/universal-selector-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/universal-selector-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/universal-selector-003.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/universal-selector-004.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/universal-selector-005.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 5/5 and WPT twins 5/5 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.4",
@@ -419,8 +534,90 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/c16-descendant-000.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/c16-descendant-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/c16-descendant-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendant-selector-000.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendant-selector-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendent-selector-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendent-selector-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendent-selector-003.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendent-selector-004.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendent-selector-005.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendent-selector-006.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendent-selector-007.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendent-selector-008.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendent-selector-009.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendent-selector-010.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/descendent-selector-011.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 16/16 and WPT twins 16/16 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.6",
@@ -430,8 +627,25 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/child-selector-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/child-selector-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/child-selector-003.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.7",
@@ -485,8 +699,90 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/c14-classes-000.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-000.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-003.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-004.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-005.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-006.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-007.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-008.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-009.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-010.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-011.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/class-selector-012.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 16/16 and WPT twins 16/16 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.9",
@@ -496,8 +792,55 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/c15-ids-000.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/c15-ids-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/id-000.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/id-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/id-selector-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/id-selector-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/id-selector-004.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/id-selector-005.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/id-selector-006.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 9/9 and WPT twins 9/9 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.10",
@@ -830,11 +1173,11 @@
       "tests": [
         {
           "suite": "css21-official",
-          "path": "html4/margin-collapse-001.htm",
+          "path": "css21-official/html4/margin-collapse-001.htm",
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The official margin-collapse family passes 110/110 (chains carried as (maxPositive, minNegative) pairs, clearance per 9.5.2/8.3.1, self-collapsing re-anchoring); flip recorded 18 October 2026 with the family run as evidence."
+      "notes": "The official margin-collapse family passes 110/110 (chains carried as (maxPositive, minNegative) pairs, clearance per 9.5.2/8.3.1, self-collapsing re-anchoring); flip recorded 18 October 2026 with the family run as evidence. Path corrected 31 October 2026 to the evidence-record form (css21-official/ prefix): the unprefixed path could never match executed evidence, which the profile reported as css21-missing-evidence."
     },
     {
       "id": "css21.8.4",
@@ -932,8 +1275,15 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/containing-block-026.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 1/1 and WPT twins 2/2 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.9.2",
@@ -1416,8 +1766,20 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/background-root-020.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/root-box-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 2/2 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.10.6.1",
@@ -1471,8 +1833,155 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-003.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-004.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-005.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-007.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-008.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-009.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-010.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-011.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-012.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-014.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-016.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-017.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-018.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-019.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-021.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-022.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-023.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-024.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-025.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-026.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-028.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-029.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-030.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-031.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-032.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-033.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/absolute-replaced-height-035.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 29/29 and WPT twins 34/34 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.10.6.6",
@@ -1493,8 +2002,25 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/block-formatting-context-height-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/block-formatting-context-height-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/block-formatting-context-height-003.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.10.7",
@@ -1603,8 +2129,20 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/quotes-035.htm",
+          "assertion": "Reference graph has a passing path"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/quotes-035a.htm",
+          "assertion": "Reference graph has a passing path"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 2/2 and WPT twins 2/2 (mapped here by their official paths; quotes-035/035a decide by their twin reftest alone, so their mappings cite the twin assertion; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.12.3.1",
@@ -1669,8 +2207,25 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/counters-hidden-000.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/counters-hidden-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/counters-hidden-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.12.5",

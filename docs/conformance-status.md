@@ -9,23 +9,26 @@ Each track's normative detail lives in its own document —
 [es2020-conformance.md](es2020-conformance.md) — and nothing here changes a
 completion contract or claims new passing coverage.
 
-Snapshot written 18 October 2026 and refreshed the same day after the first CSS 2.1
-implementation pass of the roadmap below (commits `18e883d` + `78f8be0`): the official
-margin-collapse family is closed at 110/110 (the `css21.8.3.1` obligation is now
-`implemented`), table-anonymous-objects recovered its six regressed white-space cases to
-198/204, border-conflict rose to 350/353 with the col/colgroup conflict package, and
-character-encoding closed at 37/37. Unit suite 360/360; curated gates css21 52/52, wpt
-86 pass / 2 published expected-fails, html5 46/46. The refreshed full-screen baseline on
-this build identity supersedes the Oct 12 numbers below once it aggregates into
-`Lite.Conformance/artifacts/css21-full-screen-baseline.md`.
+Snapshot written 31 October 2026 on build `825339f` after a fresh full-screen baseline
+and the first strict obligation-flip pass: the official suite reads 6,533/9,039 (72.3%,
+from 58.1% on 19 October) and WPT `css/CSS2` 5,973/8,904 (67.1%, from 51.2%) — the 0.2.2
+table, inline-text, absolute-positioning, cascade-origin and presentational-hint packages
+plus the floats/BFC work landed on top of the strengthened twin oracle. Fifteen
+obligations whose entire applicable family passes flipped to `implemented` (16/213
+total), and the `css21.8.3.1` mapping's path was corrected to the evidence-record form —
+the unprefixed path could never match executed evidence, which the profile reported as
+`css21-missing-evidence`. Unit suite 411/411; curated gates css21 51 pass / 1 published
+expected-fail, wpt 86 pass / 2 published expected-fails, html5 46/46, acid 3/3. All
+evidence for this snapshot was collected on this one build identity, and the root
+`compatibility-report.json` is regenerated from the profile run over it.
 
 ## Track status at a glance
 
 | Track | Readiness | Last recorded position |
 | --- | --- | --- |
 | ES2020 | **`es2020ProfileReady` true** — enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, zero failures and zero expected failures, no dependency exception; host suite 20/20; all 2,115 ECMA-262 clauses reviewed |
-| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 19 October, strengthened oracle (twin reftests + stated pass conditions): official 2011 suite 5,250/9,039 (58.1%; 95.8% under the old no-red scan alone), 1,637 fail, 2,150 unsupported pending references or manual evidence; WPT `css/CSS2` 4,563/8,904 (51.2%), 2,138 fail, 2,191 unsupported; applicability review complete (18,654 cases); obligations 1/202 screen `implemented` |
-| HTML5 | `html5ProfileReady` false | Reviewed gate 46/46, curated wpt 86 pass / 2 published expected-fails, unit 341/341; html5lib parse fidelity at 92.0% engine-pass (1,740/1,891 unique cases); applicability manifest 3,984 entries (51 `included`, 1 `mixed`, 3,885 `post-target`, 23 `regression-only`, 24 `unreviewed`); REC section review 0/762 |
+| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 31 October, fresh full-screen baseline on `825339f`: official 2011 suite 6,533/9,039 (72.3%), 773 fail, 1,733 unsupported pending references or manual evidence; WPT `css/CSS2` 5,973/8,904 (67.1%), 1,070 fail, 1,849 unsupported; applicability review complete (18,654 cases); obligations 16/213 `implemented` after the first strict full-family flip pass |
+| HTML5 | `html5ProfileReady` false | Reviewed gate 46/46, curated wpt 86 pass / 2 published expected-fails, unit 411/411; html5lib parse fidelity at 92.0% engine-pass (1,740/1,891 unique cases); applicability manifest 7,440 entries (51 `included`, 1 `mixed`, 4,717 `post-target`, 1,235 `profile-excluded`, 23 `regression-only`, 1,413 `unreviewed`); REC section review 0/762 |
 
 ## Roadmap
 
@@ -36,18 +39,26 @@ run the failing cluster, implement the behavior, add focused regression coverage
 rerun the cluster plus the curated 52-entry gate and the unit suite — never closing
 a package from a sample.
 
-1. **Work the official-suite queue cluster by cluster**, re-ranked against a fresh
-   full-screen baseline (the Oct 12 queue is stale by ~7 engine commits). Expected
-   heads from that baseline: the table-anonymous-objects remainder (053/054 — the
-   2px anonymous-inline-table baseline fringe; 134 — caption hoisting; 204), the
-   border-conflict-element/style families, character-encoding/at-charset (now real
-   encoding gaps since the support-subtree restore), background-intrinsic (SVG
-   intrinsic sizes), font-family-name, the margin-collapse negative-chain case 162,
-   floats, overflow-applies-to, and white-space-normal, then the long tail.
-2. **Keep the obligation inventory honest as clusters close**: flip the matching
-   `css21-requirements.json` records `untested` → `implemented` with their mapped
-   passing tests. These flips currently lag the engine work; Milestone 2's
-   bookkeeping must catch up before any readiness computation means anything.
+1. **Work the official-suite queue cluster by cluster**, re-ranked by the 31 October
+   full-screen baseline (worst clusters by real failure count, not pass rate, so
+   unsupported singletons do not crowd the queue). Expected heads: official
+   bidi-box-model (27 fails), text-transform-bicameral (18), bidi (16),
+   background-root (14), the floats remainder (13), at-charset (13),
+   font-variant-applies-to (12), first-letter-punctuation (12), content (12),
+   inline-formatting-context (10), clear-applies-to (10), font-family-name (9);
+   WPT normal-flow (141), tables (92), text (80), floats (74), css1 (65),
+   bidi-text (64), floats-clear (63), selectors (51), positioning (50). The
+   unsupported long tail (official background 223, border-conflict-style 99,
+   quotes 34, text-decoration 33; WPT tables 336, backgrounds 285, borders 151)
+   needs reviewed references or manual evidence — feed the oracle/reference work
+   alongside the engine queue.
+2. **Keep the obligation inventory honest as clusters close**: the 31 October pass
+   flipped 15 obligations under the strict rule — every applicable test mapped to
+   the obligation passes, official and WPT alike, mapped by their official paths in
+   the evidence-record form (`css21-official/` prefix) because `css21-wpt` evidence
+   requires the upstream-wpt serving environment. Four near-misses stayed `untested`
+   because their WPT twins still fail (`css21.9.2.2.1`, `css21.10.3.1`,
+   `css21.11.1`, `css21.5.11.1`). Flip only whole families; never from a sample.
 3. **Grow the WPT `css/CSS2` evidence**: `visual` tests now execute through the
    suite's self-describing no-failure-red route, so the parked 44.9% corpus can be
    re-run and the remaining real failures and crashes re-classified
@@ -68,7 +79,7 @@ In the delivery order of [html5-conformance-plan.md](html5-conformance-plan.md):
    level), then the dependency roots in batch order (`uievents`, `url`, `encoding`,
    `webstorage`, `webmessaging`, `cookies`, `fetch`/`cors`, `FileAPI`,
    `selection`, `mimesniff`), then the large `html` root by subdirectory. The
-   manifest's 3,885 `post-target` classifications show the catalog import ran; the
+   manifest's 4,717 `post-target` classifications show the catalog import ran; the
    review protocol has been demonstrated end to end on `dom` and must now scale.
 2. **Close Milestone 2's parse residuals**: the next AngleSharp fork patches
    (the math/svg tr-context stray-`<tr>` insertion trace, the menuitem formatting
@@ -110,9 +121,10 @@ remain separate workstreams outside the ES2020 contract.
   `html5.*` / `css21.*` / `es2020-*` profile prefixes per track; never touch
   another track's suites, expected-failure lists, or artifacts), rebuild before
   collecting evidence, and never mix build identities in one evidence set.
-- Hygiene: regenerate the committed root `compatibility-report.json` from a current
-  profile run — the checked-in copy still predates the 9 October print scope
-  decision and contradicts the docs.
+- Hygiene: the root `compatibility-report.json` (git-ignored, regenerated per
+  snapshot) was refreshed from the 31 October flip-identity profile run — the
+  on-disk copy had predated the 9 October print scope decision and contradicted
+  the docs.
 
 ## Refreshing the numbers
 
