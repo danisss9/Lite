@@ -9,26 +9,24 @@ Each track's normative detail lives in its own document —
 [es2020-conformance.md](es2020-conformance.md) — and nothing here changes a
 completion contract or claims new passing coverage.
 
-Snapshot written 31 October 2026 on build `825339f` after a fresh full-screen baseline
-and the first strict obligation-flip pass: the official suite reads 6,533/9,039 (72.3%,
-from 58.1% on 19 October) and WPT `css/CSS2` 5,973/8,904 (67.1%, from 51.2%) — the 0.2.2
-table, inline-text, absolute-positioning, cascade-origin and presentational-hint packages
-plus the floats/BFC work landed on top of the strengthened twin oracle. Fifteen
-obligations whose entire applicable family passes flipped to `implemented` (16/213
-total), and the `css21.8.3.1` mapping's path was corrected to the evidence-record form —
-the unprefixed path could never match executed evidence, which the profile reported as
-`css21-missing-evidence`. Unit suite 411/411; curated gates css21 51 pass / 1 published
-expected-fail, wpt 86 pass / 2 published expected-fails, html5 46/46, acid 3/3. All
-evidence for this snapshot was collected on this one build identity, and the root
-`compatibility-report.json` is regenerated from the profile run over it.
+Snapshot written 1 November 2026 on build `ceb12dc` after the probe-implementation
+pass: the stated pass condition of 2,576 self-describing CSS 2.1 cases is now
+machine-checked (twenty-seven sentence templates and their judges, up from four), and
+the fresh full-screen baseline reads the official suite at 6,806/9,039 (75.3%, from
+72.3% on 31 October) and WPT `css/CSS2` at 6,219/8,904 (69.8%, from 67.1%). The same
+775 formerly-unsupported cases that now carry verdicts account for the whole
+movement — 519 pass, 256 are real engine findings queued by cluster below. Unit
+suite 417/417; curated gates css21 51 pass / 1 published expected-fail, wpt 86 pass /
+2 published expected-fails, html5 46/46, acid 3/3. Obligations stand at 16/213
+`implemented` after the 31 October strict full-family flip pass.
 
 ## Track status at a glance
 
 | Track | Readiness | Last recorded position |
 | --- | --- | --- |
 | ES2020 | **`es2020ProfileReady` true** — enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, zero failures and zero expected failures, no dependency exception; host suite 20/20; all 2,115 ECMA-262 clauses reviewed |
-| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 31 October, fresh full-screen baseline on `825339f`: official 2011 suite 6,533/9,039 (72.3%), 773 fail, 1,733 unsupported pending references or manual evidence; WPT `css/CSS2` 5,973/8,904 (67.1%), 1,070 fail, 1,849 unsupported; applicability review complete (18,654 cases); obligations 16/213 `implemented` after the first strict full-family flip pass |
-| HTML5 | `html5ProfileReady` false | Reviewed gate 46/46, curated wpt 86 pass / 2 published expected-fails, unit 411/411; html5lib parse fidelity at 92.0% engine-pass (1,740/1,891 unique cases); applicability manifest 7,440 entries (51 `included`, 1 `mixed`, 4,717 `post-target`, 1,235 `profile-excluded`, 23 `regression-only`, 1,413 `unreviewed`); REC section review 0/762 |
+| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 1 November, probe-implementation pass (`ceb12dc`) with a fresh full-screen baseline: official 2011 suite 6,806/9,039 (75.3%), 916 fail, 1,317 unsupported pending references or manual evidence; WPT `css/CSS2` 6,219/8,904 (69.8%), 1,183 fail, 1,490 unsupported; the stated pass condition of 2,576 self-describing cases is machine-checked (775 formerly-unsupported cases decided in this baseline: 519 pass, 256 real engine findings); applicability review complete (18,654 cases); obligations 16/213 `implemented` |
+| HTML5 | `html5ProfileReady` false | Reviewed gate 46/46, curated wpt 86 pass / 2 published expected-fails, unit 417/417; html5lib parse fidelity at 92.0% engine-pass (1,740/1,891 unique cases); applicability manifest 7,440 entries (51 `included`, 1 `mixed`, 4,717 `post-target`, 1,235 `profile-excluded`, 23 `regression-only`, 1,413 `unreviewed`); REC section review 0/762 |
 
 ## Roadmap
 
@@ -39,19 +37,21 @@ run the failing cluster, implement the behavior, add focused regression coverage
 rerun the cluster plus the curated 52-entry gate and the unit suite — never closing
 a package from a sample.
 
-1. **Work the official-suite queue cluster by cluster**, re-ranked by the 31 October
+1. **Work the official-suite queue cluster by cluster**, re-ranked by the 1 November
    full-screen baseline (worst clusters by real failure count, not pass rate, so
    unsupported singletons do not crowd the queue). Expected heads: official
-   bidi-box-model (27 fails), text-transform-bicameral (18), bidi (16),
-   background-root (14), the floats remainder (13), at-charset (13),
-   font-variant-applies-to (12), first-letter-punctuation (12), content (12),
-   inline-formatting-context (10), clear-applies-to (10), font-family-name (9);
-   WPT normal-flow (141), tables (92), text (80), floats (74), css1 (65),
-   bidi-text (64), floats-clear (63), selectors (51), positioning (50). The
-   unsupported long tail (official background 223, border-conflict-style 99,
-   quotes 34, text-decoration 33; WPT tables 336, backgrounds 285, borders 151)
-   needs reviewed references or manual evidence — feed the oracle/reference work
-   alongside the engine queue.
+   bidi-box-model (27 fails), text-transform-bicameral (18), content-counters (18),
+   bidi (16), margin-collapse (14), background-root (14), font (13), the floats
+   remainder (13), at-charset (13), font-variant-applies-to (12); WPT normal-flow
+   (141), tables (99), text (92), floats (74), css1 (65), bidi-text (64),
+   floats-clear (63), selectors (57), generated-content (56), fonts (56). The
+   unsupported long tail (official background 223, quotes 34, direction-unicode-bidi
+   28, text-decoration 26, table-height-algorithm 24, cursor 23; WPT backgrounds 266,
+   tables 198, borders 106, css1 95, ui 94, text 86) needs reviewed references or
+   manual evidence — feed the oracle/reference work alongside the engine queue. The
+   1 November probe pass already machine-checks the stated pass condition of 2,576
+   self-describing cases; extend the templates only where the sentence has a strict
+   machine reading.
 2. **Keep the obligation inventory honest as clusters close**: the 31 October pass
    flipped 15 obligations under the strict rule — every applicable test mapped to
    the obligation passes, official and WPT alike, mapped by their official paths in
