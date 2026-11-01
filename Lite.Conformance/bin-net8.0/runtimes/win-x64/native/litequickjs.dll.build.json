@@ -1,0 +1,18 @@
+﻿{
+    "version":  "2026-06-04",
+    "archiveSha256":  "b376e839b322978313d929fd20663b11ba58b75df5a46c126dd19ea2fa70ad2a",
+    "inputSha256":  "325bf04535e5cde0c96d0bdda8182ba4c9f1e118ac20c4719866bf12890ac6be",
+    "nativeDllSha256":  "4C90010CBA36B78F586E52FDD30F12B832363CAD787D3DEE0842C86FE3B35893",
+    "compilerVersion":  "16.2.0",
+    "compilerTarget":  "x86_64-w64-mingw32",
+    "patches":  [
+                    "0001-strict-tail-call-trampoline.patch",
+                    "0002-strict-assignment-reference-order.patch",
+                    "0003-module-ns-tdz-define-reference-error.patch",
+                    "0004-module-ns-set-receiver-tdz.patch",
+                    "0005-annexb-call-assignment-targets.patch",
+                    "0006-eval-reference-capture.patch",
+                    "0007-module-ambiguous-reexports.patch",
+                    "0008-proper-tail-calls.patch"
+                ]
+}
