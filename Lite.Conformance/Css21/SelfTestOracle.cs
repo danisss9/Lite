@@ -64,5 +64,11 @@ internal static class SelfTestOracle
 
     private static VisualCheck? ReadCheck(JsonObject? check) => check is null ? null : new(
         check["kind"]!.GetValue<string>(), check["shape"]?.GetValue<string>(), check["color"]?.GetValue<string>(),
-        check["dimension"]?.GetValue<string>(), check["count"]?.GetValue<int>());
+        check["dimension"]?.GetValue<string>(), check["count"]?.GetValue<int>(),
+        check["colorA"]?.GetValue<string>(), check["colorB"]?.GetValue<string>(),
+        check["relation"]?.GetValue<string>(), check["lineColor"]?.GetValue<string>(),
+        check["over"]?.GetValue<bool>(), check["under"]?.GetValue<bool>(), check["through"]?.GetValue<bool>(),
+        check["variant"]?.GetValue<string>(), check["firstShape"]?.GetValue<string>(), check["firstColor"]?.GetValue<string>(),
+        check["secondShape"]?.GetValue<string>(), check["secondColor"]?.GetValue<string>(), check["arrangement"]?.GetValue<string>(),
+        check["approx"]?.GetValue<bool>() ?? false, check["anchor"]?.GetValue<string>());
 }
