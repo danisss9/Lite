@@ -6,7 +6,7 @@ on:
       - 'lite_*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   linux-native:
@@ -29,12 +29,14 @@ jobs:
             Lite.QuickJs/runtimes/linux-x64/native/liblitequickjs.so.build.json
           if-no-files-found: error
 
-  publish:
+  build:
     needs: linux-native
     runs-on: windows-latest
     # The official CSS 2.1 snapshot is committed to the repo; the fetch step only clones
     # WPT/test262 (or restores them from cache) and verifies hash pins.
     timeout-minutes: 180
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
 
     steps:
       - uses: actions/checkout@v4
@@ -163,16 +165,53 @@ jobs:
       - name: Pack Lite
         run: dotnet pack Lite/Lite.csproj --configuration Release --no-build /p:Version=${{ steps.version.outputs.VERSION }} --output nupkg
 
+      - name: Upload release packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: |
+            nupkg/*.nupkg
+            compatibility-report.json
+          if-no-files-found: error
+
+  publish:
+    # Kept apart from the build so only these few steps can mint a NuGet key, never the gates
+    # that execute vendored third-party tests, and so a failed push can be re-run on its own.
+    # The workflow file name and environment must match the nuget.org Trusted Publishing policy.
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Download release packages
+        uses: actions/download-artifact@v4
+        with:
+          name: release-packages
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: NuGet login (OIDC to short-lived API key)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: danisss9
+
       - name: Push QuickJS bridge to NuGet
-        run: dotnet nuget push nupkg/danisss9.Lite.QuickJs.${{ steps.version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push nupkg/danisss9.Lite.QuickJs.${{ needs.build.outputs.version }}.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Push Lite to NuGet
-        run: dotnet nuget push nupkg/danisss9.Lite.${{ steps.version.outputs.VERSION }}.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push nupkg/danisss9.Lite.${{ needs.build.outputs.version }}.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: v${{ steps.version.outputs.VERSION }}
+          name: v${{ needs.build.outputs.version }}
           files: |
             nupkg/*.nupkg
             compatibility-report.json
