@@ -253,7 +253,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 8/8 and WPT twins 8/8 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 8/8 and WPT twins 8/8 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.4.1.9",
@@ -336,7 +336,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.4.3.4",
@@ -431,7 +431,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 1/1 and WPT twins 1/1 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 1/1 and WPT twins 1/1 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.2",
@@ -475,7 +475,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 4/4 and WPT twins 4/4 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 4/4 and WPT twins 4/4 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.3",
@@ -513,7 +513,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 5/5 and WPT twins 5/5 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 5/5 and WPT twins 5/5 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.4",
@@ -617,7 +617,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 16/16 and WPT twins 16/16 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 16/16 and WPT twins 16/16 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.6",
@@ -645,7 +645,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.7",
@@ -782,7 +782,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 16/16 and WPT twins 16/16 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 16/16 and WPT twins 16/16 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.9",
@@ -840,7 +840,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 9/9 and WPT twins 9/9 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 9/9 and WPT twins 9/9 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.5.10",
@@ -1283,7 +1283,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 1/1 and WPT twins 2/2 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 1/1 and WPT twins 2/2 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.9.2",
@@ -1568,8 +1568,40 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/stack-floats-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/stack-floats-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/stack-floats-003.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/stack-floats-004.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/z-index-stack-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/z-index-stack-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 6/6 and WPT twins 6/6 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.9.9.1",
@@ -1779,7 +1811,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 2/2 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 2/2 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.10.6.1",
@@ -1981,7 +2013,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 29/29 and WPT twins 34/34 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 29/29 and WPT twins 34/34 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.10.6.6",
@@ -2020,7 +2052,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.10.7",
@@ -2134,15 +2166,15 @@
         {
           "suite": "css21-official",
           "path": "css21-official/html4/quotes-035.htm",
-          "assertion": "Reference graph has a passing path"
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
         },
         {
           "suite": "css21-official",
           "path": "css21-official/html4/quotes-035a.htm",
-          "assertion": "Reference graph has a passing path"
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 2/2 and WPT twins 2/2 (mapped here by their official paths; quotes-035/035a decide by their twin reftest alone, so their mappings cite the twin assertion; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 2/2 and WPT twins 2/2 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.12.3.1",
@@ -2225,7 +2257,7 @@
           "assertion": "Self-describing test shows no failure red (diagnostic)"
         }
       ],
-      "notes": "The complete applicable family passes on the 31 October 2026 full-screen baseline (source 825339f): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
+      "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 37f05dc): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
       "id": "css21.12.5",
