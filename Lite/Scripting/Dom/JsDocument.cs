@@ -260,6 +260,12 @@ public class JsDocument
             return;
         }
         if (string.IsNullOrEmpty(markup)) return;
+        // A mid-parse write cannot splice into the parser's input: the pipeline
+        // executes classic scripts after the tree parse by design (layout
+        // determinism), so there is no live insertion point — the tokenizer has
+        // consumed the stream. The write therefore parses as a fragment and
+        // appends; the streaming document.write semantics live on the
+        // frame-level write path (open/write/close) instead.
         var target = FindFirst(_root, n => n.TagName == "BODY") ?? _root;
         foreach (var node in Parser.ParseFragment(markup, target.TagName, JsEngine.For(_engine)?.DocumentState))
         {
