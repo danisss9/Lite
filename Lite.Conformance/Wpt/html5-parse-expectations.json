@@ -1,0 +1,1419 @@
+{
+  "schemaVersion": 1,
+  "kind": "html5-parse-expectations",
+  "generatedUtc": "2026-11-02T20:49:09.9604105Z",
+  "target": "https://www.w3.org/TR/2014/REC-html5-20141028/",
+  "description": "Reviewed corrections of html5lib tree-construction corpus expectations that contradict the pinned W3C HTML5 REC 2014-10-28 or record post-target behavior. A case counts as decided when the engine output equals correctedDocument for a reviewed entry; reviewed entries are never overwritten by regeneration.",
+  "cases": [
+    {
+      "file": "foreign-fragment.dat",
+      "index": 61,
+      "fragment": "svg svg",
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.5 (foreign content, any other end tag)",
+      "reason": "in a fragment whose context is a foreign element the stack holds only the synthetic html root, so the any-other-end-tag walk aborts at the topmost element (\"fragment case\") and the end token is dropped; the corpus inserts the element the end tag names",
+      "correctedDocument": "#document\n| <svg foo>",
+      "reviewed": true
+    },
+    {
+      "file": "foreign-fragment.dat",
+      "index": 62,
+      "fragment": "svg svg",
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.5 (foreign content, any other end tag)",
+      "reason": "in a fragment whose context is a foreign element the stack holds only the synthetic html root, so the any-other-end-tag walk aborts at the topmost element (\"fragment case\") and the end token is dropped; the corpus inserts the element the end tag names",
+      "correctedDocument": "#document\n| <svg foo>",
+      "reviewed": true
+    },
+    {
+      "file": "html5test-com.dat",
+      "index": 11,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <!-- ?import namespace=\"foo\" implementation=\"#bar\" -->\n| <html>\n|   <head>\n|   <body>",
+      "reviewed": true
+    },
+    {
+      "file": "isindex.dat",
+      "index": 0,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.6 (\"in body\", isindex start tag)",
+      "reason": "the 2014 in-body isindex rule expands to form > hr > label(prompt) > input(name=\"isindex\" plus promoted attributes) > hr, ignores the token entirely when a form element pointer is open, and pops the form afterwards; the corpus dumps the bare isindex element",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <form>\n|       <hr>\n|       <label>\n|         \"This is a searchable index. Enter search keywords: \"\n|         <input>\n|           name=\"isindex\"\n|       <hr>",
+      "reviewed": true
+    },
+    {
+      "file": "isindex.dat",
+      "index": 1,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.6 (\"in body\", isindex start tag)",
+      "reason": "the 2014 in-body isindex rule expands to form > hr > label(prompt) > input(name=\"isindex\" plus promoted attributes) > hr, ignores the token entirely when a form element pointer is open, and pops the form afterwards; the corpus dumps the bare isindex element",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <form>\n|       action=\"B\"\n|       <hr>\n|       <label>\n|         \"C\"\n|         <input>\n|           foo=\"D\"\n|           name=\"isindex\"\n|       <hr>",
+      "reviewed": true
+    },
+    {
+      "file": "isindex.dat",
+      "index": 2,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.6 (\"in body\", isindex start tag)",
+      "reason": "the 2014 in-body isindex rule expands to form > hr > label(prompt) > input(name=\"isindex\" plus promoted attributes) > hr, ignores the token entirely when a form element pointer is open, and pops the form afterwards; the corpus dumps the bare isindex element",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <form>",
+      "reviewed": true
+    },
+    {
+      "file": "isindex.dat",
+      "index": 3,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.6 (\"in body\", isindex start tag)",
+      "reason": "the 2014 in-body isindex rule expands to form > hr > label(prompt) > input(name=\"isindex\" plus promoted attributes) > hr, ignores the token entirely when a form element pointer is open, and pops the form afterwards; the corpus dumps the bare isindex element",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <form>\n|       <hr>\n|       <label>\n|         \"This is a searchable index. Enter search keywords: \"\n|         <input>\n|           name=\"isindex\"\n|       <hr>\n|     \"xx\"",
+      "reviewed": true
+    },
+    {
+      "file": "menuitem-element.dat",
+      "index": 13,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 (\"in select\")",
+      "reason": "the 2014 in-select anything-else rule ignores the menuitem start tag (the element is not in the 2014 element set); the corpus inserts it",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <select>",
+      "reviewed": true
+    },
+    {
+      "file": "plain-text-unsafe.dat",
+      "index": 1,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4 (NUL in before head / in head / in body)",
+      "reason": "a NUL character in before-head triggers the head, and the reprocessed NUL in body is ignored — head and body exist and any surrounding whitespace inserts; the corpus expectations predate the NUL rules and keep the frameset path",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>",
+      "reviewed": true
+    },
+    {
+      "file": "plain-text-unsafe.dat",
+      "index": 2,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4 (NUL in before head / in head / in body)",
+      "reason": "a NUL character in before-head triggers the head, and the reprocessed NUL in body is ignored — head and body exist and any surrounding whitespace inserts; the corpus expectations predate the NUL rules and keep the frameset path",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     \" \"",
+      "reviewed": true
+    },
+    {
+      "file": "plain-text-unsafe.dat",
+      "index": 4,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4 (NUL in before head / in head / in body)",
+      "reason": "a NUL character in before-head triggers the head, and the reprocessed NUL in body is ignored — head and body exist and any surrounding whitespace inserts; the corpus expectations predate the NUL rules and keep the frameset path",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>",
+      "reviewed": true
+    },
+    {
+      "file": "plain-text-unsafe.dat",
+      "index": 5,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4 (NUL in before head / in head / in body)",
+      "reason": "a NUL character in before-head triggers the head, and the reprocessed NUL in body is ignored — head and body exist and any surrounding whitespace inserts; the corpus expectations predate the NUL rules and keep the frameset path",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     \"\n\"",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 0,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?something -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 1,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?something -->\n|     <span>",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 2,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?something good -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 3,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?something else is good -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 4,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?one -->\n|     <!-- ?two -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 5,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?a$ -->\n|     <!-- ?b$ -->\n|     <!-- ?good? -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 6,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?hey there? -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 7,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?hey   there? -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 8,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?hey?there -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 9,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?hey\\tthere=1? -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 10,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?hey\\nthere=1? -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 11,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?hey\\rthere=1? -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 12,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?hey\\fthere=1? -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 13,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?something ?  -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 14,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?something x  -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 15,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?something ?\\t   ?? -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 16,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?t d  -->\n|     \" ?>\"",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 17,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?module-handler -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 18,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?module-handler data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 19,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?view-port -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 20,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?view-port data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 21,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?config-v2 -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 22,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?config-v2 data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 23,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?x -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 24,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?x data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 25,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?zz2op -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 26,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?zz2op data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 27,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?xla- -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 28,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?xla- data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 29,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?a-b-c -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 30,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?a-b-c data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 31,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?v-123 -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 32,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?v-123 data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 33,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?a0-b1-c2 -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 34,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?a0-b1-c2 data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 35,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?page-404 -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 36,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?page-404 data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 37,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?r2-d2 -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 38,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?r2-d2 data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 39,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?level-99 -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 40,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?level-99 data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 41,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?UPPERCASE -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 42,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?UPPERCASE data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 43,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?all-KINDS-of-CaSeS -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 44,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?all-KINDS-of-CaSeS data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 45,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?user_name -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 46,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?user_name data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 47,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?S_S-S_S -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 48,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?S_S-S_S data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 49,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?b_ -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 50,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?b_ data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 51,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?_prefix -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 52,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?_prefix data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 53,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?_x132 -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 54,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?_x132 data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 55,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?_-_ -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 56,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?_-_ data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 57,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?_ -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 58,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?_ data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 59,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?A---------------- -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 60,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?A---------------- data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 61,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?z0123456789 -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 62,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?z0123456789 data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 63,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?m-0 -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 64,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?m-0 data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 100,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?start -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 101,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?start? -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 102,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?start  -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 103,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?start data -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 104,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ?start ? ? -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 105,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <!-- ? -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 107,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <div>\n|       <!-- ?something -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 108,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <div>\n|       <!-- ?something good -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 109,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <table>\n|       <!-- ?something -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 110,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <table>\n|       <tbody>\n|         <tr>\n|           <!-- ?something -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 113,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <!-- ?something -->\n| <html>\n|   <head>\n|   <body>",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 114,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|     <!-- ?something -->\n|   <body>",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 115,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <!-- ?something -->\n|   <head>\n|   <body>",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 116,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <!-- ?something -->\n|   <body>",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 117,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|   <!-- ?something -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 118,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n| <!-- ?something -->",
+      "reviewed": true
+    },
+    {
+      "file": "processing-instructions.dat",
+      "index": 119,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <template>\n|       content\n|         <!-- ?something -->",
+      "reviewed": true
+    },
+    {
+      "file": "search-element.dat",
+      "index": 0,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.6 (\"in body\", any other start tag / any other end tag)",
+      "reason": "\"search\" is not a 2014 element: it takes the any-other-start rule (an ordinary element that nests inside the open p, closed by the next p via the p-in-button-scope rule) and the any-other-end-tag walk closes it when it is the current node; the corpus treats it as a block that closes p and ignores its end tag inside p",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <p>\n|       \"foo\"\n|       <search>\n|         \"bar\"\n|     <p>\n|       \"baz\"",
+      "reviewed": true
+    },
+    {
+      "file": "search-element.dat",
+      "index": 1,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.6 (\"in body\", any other start tag / any other end tag)",
+      "reason": "\"search\" is not a 2014 element: it takes the any-other-start rule (an ordinary element that nests inside the open p, closed by the next p via the p-in-button-scope rule) and the any-other-end-tag walk closes it when it is the current node; the corpus treats it as a block that closes p and ignores its end tag inside p",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <search>\n|       <p>\n|         \"foobar\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests1.dat",
+      "index": 29,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>\n|     <option>\n|       \"X\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests1.dat",
+      "index": 39,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <!-- ? -->\n| <html>\n|   <head>\n|   <body>",
+      "reviewed": true
+    },
+    {
+      "file": "tests1.dat",
+      "index": 40,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <!-- ?# -->\n| <html>\n|   <head>\n|   <body>",
+      "reviewed": true
+    },
+    {
+      "file": "tests1.dat",
+      "index": 43,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <!-- ?COMMENT? -->\n| <html>\n|   <head>\n|   <body>",
+      "reviewed": true
+    },
+    {
+      "file": "tests1.dat",
+      "index": 46,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (bogus comment state)",
+      "reason": "the 2014 tokenizer turns \"<?\" into a bogus comment spanning from the \"?\" to the first \">\" (or EOF); PI nodes are never created, so the corpus PI dump lines become HTML comment lines",
+      "correctedDocument": "#document\n| <!-- ?COM--MENT? -->\n| <html>\n|   <head>\n|   <body>",
+      "reviewed": true
+    },
+    {
+      "file": "tests1.dat",
+      "index": 99,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>\n|     <option>",
+      "reviewed": true
+    },
+    {
+      "file": "tests10.dat",
+      "index": 3,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <select>",
+      "reviewed": true
+    },
+    {
+      "file": "tests10.dat",
+      "index": 4,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>",
+      "reviewed": true
+    },
+    {
+      "file": "tests10.dat",
+      "index": 16,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <table>\n|       <tbody>\n|         <tr>\n|           <td>\n|             <select>\n|               \"foobarbaz\"\n|     <p>\n|       \"quux\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests10.dat",
+      "index": 17,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       \"foobarbaz\"\n|     <table>\n|     <p>\n|       \"quux\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests11.dat",
+      "index": 2,
+      "fragment": null,
+      "verdict": "post-target",
+      "clause": "8.5 (SVG attribute adjustment table)",
+      "reason": "the 2014 adjustment table renames filterres, contentscripttype, contentstyletype, externalresourcesrequired and viewtarget to their camelCase SVG forms; later SVG dropped the attributes, and the corpus expectations keep the lowercase unadjusted names",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <svg svg>\n|       attributeName=\"\"\n|       attributeType=\"\"\n|       baseFrequency=\"\"\n|       baseProfile=\"\"\n|       calcMode=\"\"\n|       clipPathUnits=\"\"\n|       diffuseConstant=\"\"\n|       edgeMode=\"\"\n|       filterRes=\"\"\n|       filterUnits=\"\"\n|       glyphRef=\"\"\n|       gradientTransform=\"\"\n|       gradientUnits=\"\"\n|       kernelMatrix=\"\"\n|       kernelUnitLength=\"\"\n|       keyPoints=\"\"\n|       keySplines=\"\"\n|       keyTimes=\"\"\n|       lengthAdjust=\"\"\n|       limitingConeAngle=\"\"\n|       markerHeight=\"\"\n|       markerUnits=\"\"\n|       markerWidth=\"\"\n|       maskContentUnits=\"\"\n|       maskUnits=\"\"\n|       numOctaves=\"\"\n|       pathLength=\"\"\n|       patternContentUnits=\"\"\n|       patternTransform=\"\"\n|       patternUnits=\"\"\n|       pointsAtX=\"\"\n|       pointsAtY=\"\"\n|       pointsAtZ=\"\"\n|       preserveAlpha=\"\"\n|       preserveAspectRatio=\"\"\n|       primitiveUnits=\"\"\n|       refX=\"\"\n|       refY=\"\"\n|       repeatCount=\"\"\n|       repeatDur=\"\"\n|       requiredExtensions=\"\"\n|       requiredFeatures=\"\"\n|       specularConstant=\"\"\n|       specularExponent=\"\"\n|       spreadMethod=\"\"\n|       startOffset=\"\"\n|       stdDeviation=\"\"\n|       stitchTiles=\"\"\n|       surfaceScale=\"\"\n|       systemLanguage=\"\"\n|       tableValues=\"\"\n|       targetX=\"\"\n|       targetY=\"\"\n|       textLength=\"\"\n|       viewBox=\"\"\n|       viewTarget=\"\"\n|       xChannelSelector=\"\"\n|       yChannelSelector=\"\"\n|       zoomAndPan=\"\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests11.dat",
+      "index": 4,
+      "fragment": null,
+      "verdict": "post-target",
+      "clause": "8.5 (SVG attribute adjustment table)",
+      "reason": "the 2014 adjustment table renames filterres, contentscripttype, contentstyletype, externalresourcesrequired and viewtarget to their camelCase SVG forms; later SVG dropped the attributes, and the corpus expectations keep the lowercase unadjusted names",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <svg svg>\n|       contentScriptType=\"\"\n|       contentStyleType=\"\"\n|       externalResourcesRequired=\"\"\n|       filterRes=\"\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests11.dat",
+      "index": 5,
+      "fragment": null,
+      "verdict": "post-target",
+      "clause": "8.5 (SVG attribute adjustment table)",
+      "reason": "the 2014 adjustment table renames filterres, contentscripttype, contentstyletype, externalresourcesrequired and viewtarget to their camelCase SVG forms; later SVG dropped the attributes, and the corpus expectations keep the lowercase unadjusted names",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <svg svg>\n|       contentScriptType=\"\"\n|       contentStyleType=\"\"\n|       externalResourcesRequired=\"\"\n|       filterRes=\"\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests11.dat",
+      "index": 6,
+      "fragment": null,
+      "verdict": "post-target",
+      "clause": "8.5 (SVG attribute adjustment table)",
+      "reason": "the 2014 adjustment table renames filterres, contentscripttype, contentstyletype, externalresourcesrequired and viewtarget to their camelCase SVG forms; later SVG dropped the attributes, and the corpus expectations keep the lowercase unadjusted names",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <svg svg>\n|       contentScriptType=\"\"\n|       contentStyleType=\"\"\n|       externalResourcesRequired=\"\"\n|       filterRes=\"\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests18.dat",
+      "index": 13,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 (\"in select\")",
+      "reason": "the 2014 in-select anything-else rule ignores the plaintext start tag; the corpus lets it swallow the rest of the input",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       \"X\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests18.dat",
+      "index": 14,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 (\"in select\")",
+      "reason": "the 2014 in-select anything-else rule ignores the plaintext start tag; the corpus lets it swallow the rest of the input",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       \"a\"\n|     <table>\n|       <caption>\n|         \"b\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests19.dat",
+      "index": 7,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.6 (\"in body\", isindex start tag)",
+      "reason": "the 2014 in-body isindex rule expands to form > hr > label(prompt) > input(name=\"isindex\" plus promoted attributes) > hr, ignores the token entirely when a form element pointer is open, and pops the form afterwards; the corpus dumps the bare isindex element",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <form>\n|       <hr>\n|       <label>\n|         \"This is a searchable index. Enter search keywords: \"\n|         <input>\n|           name=\"isindex\"\n|           type=\"hidden\"\n|       <hr>",
+      "reviewed": true
+    },
+    {
+      "file": "tests7.dat",
+      "index": 33,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 (\"in select\")",
+      "reason": "the 2014 in-select keygen rule acts as if an end tag \"select\" had been seen and reprocesses: the keygen becomes a sibling after the select (matching webkit02 #43); the corpus keeps it inside, contradicting its own sibling case",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|     <keygen>",
+      "reviewed": true
+    },
+    {
+      "file": "tests9.dat",
+      "index": 4,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <select>",
+      "reviewed": true
+    },
+    {
+      "file": "tests9.dat",
+      "index": 5,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>",
+      "reviewed": true
+    },
+    {
+      "file": "tests9.dat",
+      "index": 17,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <table>\n|       <tbody>\n|         <tr>\n|           <td>\n|             <select>\n|               \"foobarbaz\"\n|     <p>\n|       \"quux\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests9.dat",
+      "index": 18,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <!DOCTYPE html>\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       \"foobarbaz\"\n|     <table>\n|     <p>\n|       \"quux\"",
+      "reviewed": true
+    },
+    {
+      "file": "tests_innerHTML_1.dat",
+      "index": 75,
+      "fragment": "select",
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <input>\n| <option>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 18,
+      "fragment": "select",
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <option>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 25,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 26,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 27,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <optgroup>\n|         <option>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 28,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <optgroup>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 29,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>\n|       <optgroup>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 30,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <table>\n|       <tbody>\n|         <tr>\n|           <td>\n|             <select>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 31,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <table>\n|       <tbody>\n|         <tr>\n|           <td>\n|             <select>\n|               <option>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 32,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <table>\n|       <tbody>\n|         <tr>\n|           <td>\n|             <select>\n|               <optgroup>\n|                 <option>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 33,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <table>\n|       <tbody>\n|         <tr>\n|           <td>\n|             <select>\n|               <optgroup>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 34,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <table>\n|       <tbody>\n|         <tr>\n|           <td>\n|             <select>\n|               <option>\n|               <optgroup>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 35,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>\n|         \"option\"",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 37,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       \"div 1buttondiv 2\"\n|       <option>\n|         \"option\"\n|       \"div 3\"",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 38,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       \"button\"",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 39,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       \"datalist\"",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 40,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 41,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 42,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>\n|         \"option\"",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 44,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>\n|         \"X\"",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 45,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>\n|         \"xiibb\"",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 46,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>\n|         \"X\"\n|       <option>\n|         \"Y\"",
+      "reviewed": true
+    },
+    {
+      "file": "webkit02.dat",
+      "index": 47,
+      "fragment": null,
+      "verdict": "corpus-invalid",
+      "clause": "8.2.5.4.15 / 8.2.5.4.16 (\"in select\", \"in select in table\")",
+      "reason": "the 2014 in-select anything-else rules ignore every start and end tag outside {html, option, optgroup, select, input, keygen, textarea, script, template} (and the table tags at in-select-in-table); the corpus trees insert those elements (or, for the customizable-select button/selectedcontent cases and the select-context input fragment, follow post-target behavior the letter does not have)",
+      "correctedDocument": "#document\n| <html>\n|   <head>\n|   <body>\n|     <select>\n|       <option>\n|         \"X\"\n|       <option>\n|         selected=\"\"\n|         \"Y\"",
+      "reviewed": true
+    }
+  ]
+}

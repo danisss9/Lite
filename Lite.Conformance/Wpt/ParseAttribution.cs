@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using AngleSharp;
 using AngleSharp.Css;
@@ -55,7 +56,46 @@ internal static class ParseAttribution
     }
 
     private sealed record CaseOut(string File, int Index, string? Fragment, string Classification,
-        string Cluster, string Signature, string Expected, string Native, string Pipeline);
+        string Cluster, string Signature, string Expected, string Native, string Pipeline,
+        string? LedgerVerdict = null);
+
+    private sealed record LedgerEntry(string Verdict, string Clause, string CorrectedDocument, bool Reviewed);
+
+    internal const string LedgerFileName = "Wpt/html5-parse-expectations.json";
+
+    private static Dictionary<(string File, int Index, string? Fragment), LedgerEntry> LoadLedger(
+        out int unreviewed)
+    {
+        var ledger = new Dictionary<(string, int, string?), LedgerEntry>();
+        unreviewed = 0;
+        var path = ConformancePaths.Manifest(LedgerFileName);
+        if (!File.Exists(path))
+        {
+            return ledger;
+        }
+
+        var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        foreach (var caseNode in root["cases"]!.AsArray())
+        {
+            var obj = caseNode!.AsObject();
+            var reviewed = obj["reviewed"]!.GetValue<bool>();
+            var entry = new LedgerEntry(
+                obj["verdict"]!.GetValue<string>(),
+                obj["clause"]!.GetValue<string>(),
+                obj["correctedDocument"]!.GetValue<string>(),
+                reviewed);
+            if (!reviewed)
+            {
+                unreviewed++;
+                continue;
+            }
+
+            var fragment = obj["fragment"] is null ? null : obj["fragment"]!.GetValue<string>();
+            ledger[(obj["file"]!.GetValue<string>(), obj["index"]!.GetValue<int>(), fragment)] = entry;
+        }
+
+        return ledger;
+    }
 
     public static int Run(string? reportPath)
     {
@@ -66,6 +106,7 @@ internal static class ParseAttribution
             return 2;
         }
 
+        var ledger = LoadLedger(out var unreviewedLedger);
         ConformanceServer.Start(cssRegressionMode: false);
         var baseUrl = ConformanceServer.BaseUrl;
 
@@ -76,6 +117,8 @@ internal static class ParseAttribution
         var totals = new Dictionary<string, int>();
         var byFile = new List<(string File, Dictionary<string, int> Totals, int Cases)>();
         var failures = new List<CaseOut>();
+        var ledgerStale = new List<string>();
+        var ledgerMismatch = new List<string>();
 
         foreach (var file in files)
         {
@@ -99,10 +142,31 @@ internal static class ParseAttribution
                     RunCase(testCase, baseUrl);
                 Bump(totals, classification);
                 Bump(fileTotals, classification);
+                string? ledgerVerdict = null;
+                if (ledger.TryGetValue((testCase.File, testCase.Index, testCase.Fragment), out var entry))
+                {
+                    if (classification == "pass")
+                    {
+                        ledgerVerdict = "stale";
+                        ledgerStale.Add($"{testCase.File}#{testCase.Index}");
+                    }
+                    else if (pipeline == entry.CorrectedDocument)
+                    {
+                        ledgerVerdict = "pass";
+                        Bump(totals, "ledger-pass");
+                        Bump(fileTotals, "ledger-pass");
+                    }
+                    else
+                    {
+                        ledgerVerdict = "mismatch";
+                        ledgerMismatch.Add($"{testCase.File}#{testCase.Index}");
+                    }
+                }
                 if (classification is not "pass")
                     failures.Add(new CaseOut(testCase.File, testCase.Index, testCase.Fragment,
                         classification, cluster, signature,
-                        Truncate(expected), Truncate(native ?? ""), Truncate(pipeline ?? "")));
+                        Truncate(expected), Truncate(native ?? ""), Truncate(pipeline ?? ""),
+                        ledgerVerdict));
                 if ((++done & 0xFF) == 0) GC.Collect();
             }
             docCases += cases.Count(c => c.Fragment is null);
@@ -113,13 +177,22 @@ internal static class ParseAttribution
 
         var pass = totals.GetValueOrDefault("pass");
         var fixes = totals.GetValueOrDefault("pipeline-fixes");
-        var total = totals.Values.Sum();
+        var ledgerPass = totals.GetValueOrDefault("ledger-pass");
+        var total = totals.Where(kv => kv.Key != "ledger-pass").Sum(kv => kv.Value);
+        var decided = pass + fixes + ledgerPass;
         Console.WriteLine();
         Console.WriteLine($"=== html5 parse attribution: {total} unique cases " +
                           $"(survey-aligned subtests ≈ {docCases * 3 + fragmentCases}) ===");
         Console.WriteLine($"  engine-pass      {pass + fixes,5}  = pass + pipeline-fixes (pipeline output matches)");
-        foreach (var key in new[] { "pass", "anglesharp", "pipeline", "mixed", "pipeline-fixes", "error" })
+        Console.WriteLine($"  decided        {decided,5}  = engine-pass + ledger-pass (reviewed corrections)");
+        foreach (var key in new[] { "pass", "ledger-pass", "anglesharp", "pipeline", "mixed", "pipeline-fixes", "error" })
             Console.WriteLine($"  {key,-15} {totals.GetValueOrDefault(key),5}");
+        Console.WriteLine($"  ledger: {ledgerPass} accepted, {ledgerStale.Count} stale, " +
+                          $"{ledgerMismatch.Count} mismatched, {unreviewedLedger} unreviewed entries");
+        foreach (var stale in ledgerStale)
+            Console.Error.WriteLine($"ledger stale (case passes raw, entry must be regenerated): {stale}");
+        foreach (var mismatch in ledgerMismatch)
+            Console.Error.WriteLine($"ledger mismatch (engine != correctedDocument): {mismatch}");
         Console.WriteLine();
         Console.WriteLine("=== per-cluster attribution (effective cluster) ===");
         foreach (var group in failures.GroupBy(f => f.Cluster).OrderByDescending(g => g.Count()))
@@ -128,7 +201,7 @@ internal static class ParseAttribution
                     .Select(g => $"{g.Key}={g.Count()}")));
 
         var artifact = Path.GetFullPath(reportPath ?? Path.Combine(ConformancePaths.EnsureArtifacts(), "html5-parse-attribution.json"));
-        WriteArtifact(artifact, totals, byFile, failures);
+        WriteArtifact(artifact, totals, byFile, failures, ledgerStale.Count, ledgerMismatch.Count, unreviewedLedger);
         Console.WriteLine();
         Console.WriteLine($"attribution written: {artifact}");
         return 0;
@@ -427,11 +500,77 @@ internal static class ParseAttribution
         static string? SectionHeading(string line) =>
             line.StartsWith('#') && line[1..].Trim() is { Length: > 0 } heading ? heading : null;
 
+        // The html5lib .dat format decodes "\uXXXX" escapes in every section
+        // (processing-instructions.dat carries its non-ASCII inputs this way,
+        // while its document sections already hold the raw characters), so a
+        // case could never match while the input stayed escaped. Surrogate
+        // pairs decode together into the astral character; a lone surrogate
+        // escape becomes U+FFFD (a lone surrogate cannot exist in a string).
+        static string DecodeDatEscapes(string value)
+        {
+            if (!value.Contains("\\u", StringComparison.Ordinal))
+            {
+                return value;
+            }
+
+            var builder = new StringBuilder(value.Length);
+            var position = 0;
+            var pendingHigh = -1;
+            foreach (var match in Regex.Matches(value, @"\\u([0-9A-Fa-f]{4})").Cast<Match>())
+            {
+                builder.Append(value[position..match.Index]);
+                position = match.Index + match.Length;
+                var unit = Convert.ToInt32(match.Groups[1].Value, 16);
+
+                if (pendingHigh >= 0)
+                {
+                    if (unit is >= 0xDC00 and <= 0xDFFF)
+                    {
+                        builder.Append(char.ConvertFromUtf32(
+                            0x10000 + ((pendingHigh - 0xD800) << 10) + (unit - 0xDC00)));
+                    }
+                    else
+                    {
+                        builder.Append('\uFFFD');
+                        builder.Append(unit is >= 0xD800 and <= 0xDFFF
+                            ? "\uFFFD"
+                            : char.ConvertFromUtf32(unit));
+                    }
+
+                    pendingHigh = -1;
+                }
+                else if (unit is >= 0xD800 and <= 0xDBFF)
+                {
+                    pendingHigh = unit;
+                }
+                else if (unit is >= 0xDC00 and <= 0xDFFF)
+                {
+                    builder.Append('\uFFFD');
+                }
+                else
+                {
+                    builder.Append(char.ConvertFromUtf32(unit));
+                }
+            }
+
+            if (pendingHigh >= 0)
+            {
+                builder.Append('\uFFFD');
+            }
+
+            builder.Append(value[position..]);
+            return builder.ToString();
+        }
+
         static Dictionary<string, string> NormalizeSections(Dictionary<string, string> sections)
         {
             var normalized = new Dictionary<string, string>();
             foreach (var (section, value) in sections)
-                normalized[section] = value.EndsWith("\n") ? value[..^1] : value;
+            {
+                var decoded = DecodeDatEscapes(value);
+                normalized[section] = decoded.EndsWith("\n") ? decoded[..^1] : decoded;
+            }
+
             return normalized;
         }
     }
@@ -500,7 +639,8 @@ internal static class ParseAttribution
         value.Length <= MaxRecordedLength ? value : value[..MaxRecordedLength] + "…";
 
     private static void WriteArtifact(string path, Dictionary<string, int> totals,
-        List<(string File, Dictionary<string, int> Totals, int Cases)> byFile, List<CaseOut> failures)
+        List<(string File, Dictionary<string, int> Totals, int Cases)> byFile, List<CaseOut> failures,
+        int ledgerStale, int ledgerMismatch, int ledgerUnreviewed)
     {
         var payload = new
         {
@@ -509,6 +649,8 @@ internal static class ParseAttribution
             generatedUtc = DateTime.UtcNow.ToString("o"),
             diagnostic = true,
             totals,
+            ledger = new { accepted = totals.GetValueOrDefault("ledger-pass"), stale = ledgerStale,
+                           mismatched = ledgerMismatch, unreviewed = ledgerUnreviewed },
             files = byFile.Select(f => new { file = f.File, cases = f.Cases, totals = f.Totals }),
             failures,
         };
