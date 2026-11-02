@@ -2422,11 +2422,6 @@ namespace AngleSharp.Html.Parser
                         var optgroup = _elementFactory.Create(_document, TagNames.Optgroup);
                         AddElement(optgroup, ref token);
                     }
-                    else if (tagName.Is(TagNames.Button))
-                    {
-                        var button = _elementFactory.Create(_document, TagNames.Button);
-                        AddElement(button, ref token);
-                    }
                     else if (tagName.Is(TagNames.Select))
                     {
                         RaiseErrorOccurred(HtmlParseError.SelectNesting, ref token);
@@ -2462,17 +2457,17 @@ namespace AngleSharp.Html.Parser
                     {
                         InHead(ref token);
                     }
-                    else if (tagName.Is(TagNames.Xmp))
-                    {
-                        InBody(ref token);
-                    }
-                    else if (!CurrentNode.LocalName.Is(TagNames.Select))
-                    {
-                        var element = _elementFactory.CreateUnknown(_document, tagName);
-                        AddElement(element, ref token);
-                    }
                     else
                     {
+                        // Lite patch 012: the 2014 "in select" anything-else rule ignores
+                        // every remaining start tag unconditionally — no insert-on-anything,
+                        // no in-body fallback (button/xmp included), no current-node check
+                        // (html5lib-tests webkit02.dat #26-47, tests9 #5, tests10 #4).
+                        if (tagName.Memory.Span.Contains('<'))
+                        {
+                            System.Console.Error.WriteLine($"[xh] IN-SELECT ignore tag={tagName} mode={_currentMode}");
+                        }
+
                         RaiseErrorOccurred(HtmlParseError.IllegalElementInSelectDetected, ref token);
                     }
 
@@ -2502,19 +2497,10 @@ namespace AngleSharp.Html.Parser
                     {
                         RaiseErrorOccurred(HtmlParseError.SelectNotInScope, ref token);
                     }
-                    else if (!CurrentNode.LocalName.Is(TagNames.Select))
-                    {
-                        if (CurrentNode.LocalName.Is(tagName))
-                        {
-                            CloseCurrentNode();
-                        }
-                        else
-                        {
-                            RaiseErrorOccurred(HtmlParseError.TagDoesNotMatchCurrentNode, ref token);
-                        }
-                    }
                     else
                     {
+                        // Lite patch 012: the 2014 "in select" anything-else rule ignores
+                        // every other end tag unconditionally — no close-on-name-match.
                         RaiseErrorOccurred(HtmlParseError.TagCannotEndHere, ref token);
                     }
 
@@ -2915,15 +2901,25 @@ namespace AngleSharp.Html.Parser
             {
                 case HtmlTokenType.Character:
                 {
-                    var str = token.TrimStart();
-                    AddCharacters(str);
+                    // Lite patch 014: the after-frameset character rule inserts whitespace
+                    // and ignores everything else, per character — a mixed run like
+                    // " te st" keeps its inner space (tests2.dat #7). Upstream trimmed the
+                    // run's leading whitespace and dropped the remainder wholesale.
+                    var data = token.Data;
+                    var sb = new System.Text.StringBuilder(data.Length);
 
-                    if (token.IsEmpty)
+                    for (var i = 0; i < data.Length; i++)
                     {
-                        return;
+                        var c = data[i];
+
+                        if (c.IsSpaceCharacter())
+                        {
+                            sb.Append(c);
+                        }
                     }
 
-                    break;
+                    AddCharacters(sb.ToString());
+                    return;
                 }
                 case HtmlTokenType.Comment:
                 {
@@ -3740,8 +3736,23 @@ namespace AngleSharp.Html.Parser
                 RaiseErrorOccurred(HtmlParseError.TagDoesNotMatchCurrentNode, ref token);
             }
 
-            ClearStackBackTo(TagNames.AllTableCells);
-            CloseCurrentNode();
+            // Lite patch 013: the pop runs until an *HTML* element whose tag name is td
+            // or th has been popped (2014 §8.2.5.4.14, "in cell"). A name-only check
+            // stopped at the SVG <td> inside a foreignObject, leaving it open and
+            // sinking the following characters into the foreign subtree
+            // (namespace-sensitivity.dat #0). Foreign elements are never the target.
+            while (_openElements.Count > 0)
+            {
+                var popped = CurrentNode;
+                CloseCurrentNode();
+
+                if (popped.Flags.HasFlag(NodeFlags.HtmlMember) &&
+                    TagNames.AllTableCells.Contains(popped.LocalName))
+                {
+                    break;
+                }
+            }
+
             _formattingElements.ClearFormatting();
             _currentMode = HtmlTreeMode.InRow;
         }

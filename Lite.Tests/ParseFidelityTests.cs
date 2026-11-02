@@ -217,4 +217,82 @@ public static class ParseFidelityTests
         True(string.IsNullOrWhiteSpace(select.TextContent),
             "no stray text may leak into the select");
     }
+
+    [Test]
+    public static void InSelect_AnyOtherStartTag_IsIgnored()
+    {
+        // Lite patch 012 (2014 "in select" anything else): every start tag other than
+        // html/option/optgroup/select/input/keygen/textarea/script/template is ignored —
+        // no insert-on-anything, no in-body fallback, no current-node check. Characters
+        // still insert (webkit02.dat #26/#37/#42, tests9.dat #5, tests10.dat #4).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><body><select><option><hr><button>b</button><div>d</div></select>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var doc = page.Document!;
+        var select = doc.QuerySelector("select")!;
+        True(select != null, "no select");
+        var selectChildren = select.ChildNodes.OfType<AngleSharp.Dom.IElement>().ToList();
+        Equal(1, selectChildren.Count);
+        Equal("option", selectChildren[0].LocalName);
+        True(select.QuerySelector("hr, button, div") is null,
+            "no hr/button/div may be inserted into the select");
+        Equal("bd", select.TextContent);
+    }
+
+    [Test]
+    public static void InSelect_AnyOtherEndTag_IsIgnored()
+    {
+        // Lite patch 012 (2014 "in select" anything else): an end tag other than
+        // optgroup/option/select/template is ignored — no close-on-name-match.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><body><select><option></p></option></select>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var doc = page.Document!;
+        var select = doc.QuerySelector("select")!;
+        True(select != null, "no select");
+        var selectChildren = select.ChildNodes.OfType<AngleSharp.Dom.IElement>().ToList();
+        Equal(1, selectChildren.Count);
+        Equal("option", selectChildren[0].LocalName);
+    }
+
+    [Test]
+    public static void InCell_CellEndTag_PopsThroughForeignCells()
+    {
+        // Lite patch 013 (2014 "in cell"): the pop runs until an *HTML* td/th has been
+        // popped — the SVG <td> inside a foreignObject is not an HTML cell and must not
+        // stop the walk. The </td> closes span, foreignObject, the svg td, the svg and
+        // the HTML td; the following characters foster out of the table
+        // (namespace-sensitivity.dat #0).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><body><table><tr><td><svg><td><foreignObject><span></td>Foo",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var doc = page.Document!;
+        var body = doc.QuerySelector("body")!;
+        True(body != null, "no body");
+        Equal("Foo", body.ChildNodes.OfType<AngleSharp.Dom.IText>().First().Data);
+        var svg = doc.QuerySelector("svg");
+        True(svg != null, "no svg");
+        True(svg!.QuerySelector("foreignObject span") != null,
+            "the foreign subtree must stay intact");
+        True(svg.TextContent.Contains("Foo") is false,
+            "Foo must not sink into the foreign subtree");
+    }
+
+    [Test]
+    public static void AfterFrameset_MixedCharacterRun_KeepsInnerWhitespace()
+    {
+        // Lite patch 014 (2014 "after frameset"): the character rule inserts whitespace
+        // and ignores everything else, per character — a mixed run like " te st" keeps
+        // its inner space (tests2.dat #7).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><frameset></frameset> te st",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var doc = page.Document!;
+        var html = doc.QuerySelector("html")!;
+        True(html != null, "no html");
+        var texts = html.ChildNodes.OfType<AngleSharp.Dom.IText>()
+            .Select(t => t.Data).ToList();
+        Equal(1, texts.Count);
+        Equal("  ", texts[0]);
+    }
 }
