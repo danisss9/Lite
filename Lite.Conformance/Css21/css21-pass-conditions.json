@@ -25285,7 +25285,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-002.xht",
@@ -25293,7 +25298,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-003.xht",
@@ -25309,7 +25319,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-005.xht",
@@ -25317,7 +25332,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-006.xht",
@@ -25325,7 +25345,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-007.xht",
@@ -25333,7 +25358,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-008.xht",
@@ -25341,7 +25371,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-009.xht",
@@ -25349,7 +25384,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-010.xht",
@@ -25357,7 +25397,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-011.xht",
@@ -25365,7 +25410,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-012.xht",
@@ -25373,7 +25423,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-013.xht",
@@ -25381,7 +25436,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-014.xht",
@@ -25389,7 +25449,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-015.xht",
@@ -25397,7 +25462,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-016.xht",
@@ -93635,7 +93705,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-002.htm",
@@ -93643,7 +93718,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-003.htm",
@@ -93659,7 +93739,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-005.htm",
@@ -93667,7 +93752,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-006.htm",
@@ -93675,7 +93765,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-007.htm",
@@ -93683,7 +93778,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-008.htm",
@@ -93691,7 +93791,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-009.htm",
@@ -93699,7 +93804,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-010.htm",
@@ -93707,7 +93817,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-011.htm",
@@ -93715,7 +93830,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-012.htm",
@@ -93723,7 +93843,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-013.htm",
@@ -93731,7 +93856,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-014.htm",
@@ -93739,7 +93869,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-015.htm",
@@ -93747,7 +93882,12 @@
    "condition": "visual",
    "sentence": "Test passes if there is a dotted outline that goes around the following 'Sample Text' and the \"Filler Text\" below is overlapped by the outline.",
    "twin": null,
-   "reviewed": false
+   "reviewed": false,
+   "check": {
+    "kind": "outline-text",
+    "shape": "dotted",
+    "variant": "overlap"
+   }
   },
   {
    "path": "css21-official/html4/outline-016.htm",

@@ -519,6 +519,10 @@ def visual_check(sentence: str | None) -> dict | None:
         return {'kind': 'text-baseline', 'edge': 'top' if 'vertically aligned to the top' in clause else 'bottom'}
     if TEXT_ON_ONE_LINE.match(clause):
         return {'kind': 'one-line'}
+    if m := OUTLINE_OVERLAP.match(clause):
+        # The overlap variant outlines only the 'Sample Text'; the filler text below is
+        # named as the thing the outline overlaps, not as a second outlined element.
+        return {'kind': 'outline-text', 'shape': m.group(1), 'variant': 'overlap'}
     if BORDER_EDGES_DIFFERENT.match(clause):
         return {'kind': 'border-sides', 'mode': 'distinct'}
     if m := BORDER_RING_BOX.match(clause):

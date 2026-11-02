@@ -83,6 +83,7 @@ internal static class TableEngine
                 captionTopH = LayoutCaptionBlock(caption, contentX, contentY, contentW, viewportW, viewportH);
         }
 
+
         var cursorY = contentY + captionTopH + verticalSpacing;
 
         // ── Pass 1: measure each cell's natural content height ──────────────
@@ -880,6 +881,12 @@ internal static class TableEngine
             foreach (var p in rowCells)
             {
                 var va = p.Cell.GetVerticalAlign();
+                // §17.5.3: only baseline/top/middle/bottom are defined for cells — sub, super,
+                // text-top, text-bottom, <length> and <percentage> all read as 'baseline'
+                // (table-height-algorithm-019's 'sub' and -021's 'text-top' align baselines).
+                if (va is VerticalAlignType.Sub or VerticalAlignType.Super
+                    or VerticalAlignType.TextTop or VerticalAlignType.TextBottom)
+                    va = VerticalAlignType.Baseline;
                 var contentTop = p.Cell.Box.ContentBox.Top;
                 var contentH = p.Cell.Box.ContentBox.Height;
                 switch (va)
@@ -1058,7 +1065,6 @@ internal static class TableEngine
         var colMax = new float[colCount];
         foreach (var p in placements)
         {
-            if (p.ColSpan != 1) continue;
             var explicitCol = p.Cell.GetWidth(availW);
             float cMin, cMax;
             if (explicitCol > 0f)
@@ -1070,8 +1076,19 @@ internal static class TableEngine
             }
             else
                 (cMin, cMax) = MeasureCellIntrinsic(p.Cell, availW, viewportH);
-            colMin[p.Col] = Math.Max(colMin[p.Col], cMin);
-            colMax[p.Col] = Math.Max(colMax[p.Col], cMax);
+            // §17.5.2.1: a column-spanning cell's widths spread over the spanned columns —
+            // each gets at least its share of the cell's minimum and of its preferred width.
+            // Skipping spanning cells left tables whose only content spanned columns with
+            // zero-width columns (table-height-algorithm-012's rowspan=2 colspan=2 cell laid
+            // its text out at width 0 and painted nothing).
+            var spanShare = Math.Max(1, Math.Min(p.ColSpan, colCount - p.Col));
+            colMin[p.Col] = Math.Max(colMin[p.Col], cMin / spanShare);
+            colMax[p.Col] = Math.Max(colMax[p.Col], cMax / spanShare);
+            for (var k = 1; k < spanShare; k++)
+            {
+                colMin[p.Col + k] = Math.Max(colMin[p.Col + k], cMin / spanShare);
+                colMax[p.Col + k] = Math.Max(colMax[p.Col + k], cMax / spanShare);
+            }
         }
         var elementWidths = ColumnElementWidths(table, colCount, availW);
         for (var c = 0; c < colCount; c++)
@@ -1232,11 +1249,20 @@ internal static class TableEngine
         var hasContent = new bool[colCount];
         foreach (var p in placements)
         {
-            if (p.ColSpan != 1 || widths[p.Col] != 0f) continue;
+            if (widths[p.Col] != 0f) continue;
             var (cMin, cMax) = MeasureCellIntrinsic(p.Cell, availableW, viewportH);
-            colMin[p.Col] = Math.Max(colMin[p.Col], cMin);
-            colMax[p.Col] = Math.Max(colMax[p.Col], cMax);
-            hasContent[p.Col] = true;
+            // §17.5.2.1: a column-spanning cell's widths spread over the spanned columns —
+            // each gets at least its share of the cell's minimum and of its preferred width.
+            // Skipping spanning cells left tables whose only content spanned columns with
+            // zero-width columns (table-height-algorithm-012's rowspan=2 colspan=2 cell laid
+            // its text out at width 0 and painted nothing).
+            var spanShare = Math.Max(1, Math.Min(p.ColSpan, colCount - p.Col));
+            for (var k = 0; k < spanShare; k++)
+            {
+                colMin[p.Col + k] = Math.Max(colMin[p.Col + k], cMin / spanShare);
+                colMax[p.Col + k] = Math.Max(colMax[p.Col + k], cMax / spanShare);
+                hasContent[p.Col + k] = true;
+            }
         }
         // A column (group) 'width' is a minimum for its column in automatic layout.
         var elementWidths = ColumnElementWidths(table, colCount, availableW);

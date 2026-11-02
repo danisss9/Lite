@@ -1308,30 +1308,30 @@ internal static class VisualChecks
             return new(WptRunner.Cat.Unsupported, "Visual check: the filler text painted no readable ink", 0, 0);
         int textTop = text.Min(c => c.Top), textBottom = text.Max(c => c.Bottom);
         int textLeft = text.Min(c => c.Left), textRight = text.Max(c => c.Right);
-        bool IsBand(Component c) => c.Width >= (textRight - textLeft) * 3 / 5 && c.Height <= 5;
-        var bands = ink.Where(IsBand).ToList();
-        var over = bands.Any(c => c.Bottom > textTop - 6 && c.Bottom <= textTop + 2);
-        var under = bands.Any(c => c.Top >= textBottom - 2 && c.Top < textBottom + 6)
-            // At small font sizes the underline merges with the glyphs' bottom rows; a near
-            // solid row within a few pixels below the ink's bottom is still an under-line.
-            || RowNearlyInkBelow(bitmap, ink, textLeft, textRight, textBottom);
-        // A through-line fills the glyph gaps: the inked fraction of the mid-height row
-        // across the text's own span jumps to nearly solid.
-        bool through = false;
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        // The page background behind the text — the region's dominant colour, NOT the glyph
+        // components' own: serif strokes fragment into sliver components whose tight boxes
+        // are stroke-dominated, which would answer black and read every white pixel as ink.
+        var background = CropBackground(bitmap, box);
+        // The decoration lines read by row scan: a near-solid row within a few pixels of the
+        // glyph band's top/bottom edge. Band components alone misread at small font sizes,
+        // where the line merges with the glyphs' antialiasing instead of painting its own shape.
+        long RowInked(int y)
         {
-            var midY = (textTop + textBottom) / 2;
-            var pixels = bitmap.Pixels;
-            var width = bitmap.Width;
-            var background = BackgroundOf(bitmap, ink);
-            long inked = 0, total = 0;
+            if (y < 0 || y >= bitmap.Height) return 0;
+            long inked = 0;
             for (var x = textLeft; x < textRight; x++)
-            {
-                var p = pixels[midY * width + x];
-                total++;
-                if (Distance(p, background) > InkThreshold) inked++;
-            }
-            through = total > 0 && inked >= total * 17 / 20;
+                if (Distance(pixels[y * width + x], background) > InkThreshold) inked++;
+            return inked;
         }
+        var spanPx = textRight - textLeft;
+        bool RowNearlyInk(int y) => RowInked(y) * 5 >= spanPx * 3;
+        var over = Enumerable.Range(textTop - 6, 8).Any(RowNearlyInk);
+        var under = Enumerable.Range(textBottom - 1, 7).Any(RowNearlyInk);
+        // A through-line fills the glyph gaps: the best mid-height row approaches solid.
+        var through = Enumerable.Range(textTop, Math.Max(1, textBottom - textTop))
+            .Select(RowInked).Max() * 20 >= spanPx * 17;
         var assertion = Describe(check);
         if (check.Under is false)
             return !under
@@ -1350,45 +1350,50 @@ internal static class VisualChecks
         if (missing.Count > 0)
             return new(WptRunner.Cat.Fail, $"{assertion}: no {string.Join(", ", missing)} line is visible", 1, 1,
                 [new(assertion, 1, $"missing {string.Join(", ", missing)}")], 0);
-        if (check.Span is { } span && !SpanHolds(span, check, ink, textTop, textBottom, textLeft, textRight, filler, bitmap))
+        if (check.Span is { } span && !SpanHolds(span, check, ink, textTop, textBottom, textLeft, textRight, filler, bitmap, background))
             return new(WptRunner.Cat.Fail, $"{assertion}: the decoration line does not {(
                 span == "text" ? "stop at the text" : "cover the spaces around the text")}", 1, 1,
                 [new(assertion, 1, $"the line's extent is wrong for span '{span}'")], 0);
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
     }
 
-    /// <summary>The decoration line's extent: "text" — the band spans exactly the glyph ink
-    /// (it may not run over a border); "beyond" — the band runs past the glyphs into the
-    /// surrounding space (the line covers spaces as well as characters).</summary>
+    /// <summary>The decoration line's extent, read from the rows that carry it: "text" —
+    /// the line's own rows hold no ink beyond the glyph span (it may not run over a border);
+    /// "beyond" — the line also covers the surrounding space.</summary>
     private static bool SpanHolds(string span, VisualCheck check, List<Component> ink,
-        int textTop, int textBottom, int textLeft, int textRight, LayoutNode filler, SKBitmap bitmap)
+        int textTop, int textBottom, int textLeft, int textRight, LayoutNode filler, SKBitmap bitmap, SKColor background)
     {
-        bool IsBand(Component c) => c.Width >= (textRight - textLeft) * 3 / 5 && c.Height <= 5;
-        if (check.Through == true && check.Over is not true && check.Under is not true)
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        int LineEdge(int from, int to, bool fromRight)
         {
-            // The through-line's extent reads from the mid-height row beyond the glyphs.
-            var pixels = bitmap.Pixels;
-            var width = bitmap.Width;
-            var midY = (textTop + textBottom) / 2;
-            var background = BackgroundOf(bitmap, ink);
-            long beyondLeft = 0, beyondRight = 0, total = 0;
-            for (var x = textLeft - 12; x < textRight + 12; x++)
+            int? edge = null;
+            for (var y = from; y < to; y++)
             {
-                if (x < 0 || x >= width) continue;
-                total++;
-                var inked = Distance(pixels[midY * width + x], background) > InkThreshold;
-                if (x < textLeft) beyondLeft += inked ? 1 : 0;
-                if (x >= textRight) beyondRight += inked ? 1 : 0;
+                if (y < 0 || y >= bitmap.Height) continue;
+                var x = fromRight ? textRight - 1 : textLeft;
+                while (x != (fromRight ? textLeft - 1 : textRight))
+                {
+                    if (x >= 0 && x < width && Distance(pixels[y * width + x], background) > InkThreshold)
+                    {
+                        edge = fromRight ? Math.Min(edge ?? x, x) : Math.Max(edge ?? x, x);
+                        break;
+                    }
+                    x += fromRight ? -1 : 1;
+                }
             }
-            var beyond = beyondLeft + beyondRight;
-            return span == "beyond" ? beyond >= total * 9 / 20 : beyond == 0;
+            return edge ?? (fromRight ? textRight : textLeft);
         }
-        var bands = ink.Where(IsBand).ToList();
-        if (bands.Count == 0) return false;
-        var band = bands.OrderBy(b => check.Under == true ? Math.Abs(b.Top - textBottom) : Math.Abs(b.Bottom - textTop)).First();
-        return span == "text"
-            ? band.Left >= textLeft - 3 && band.Right <= textRight + 3
-            : band.Width >= textRight - textLeft + 4;
+        // The line's rows: over — above the glyphs; under — below them; through — the middle.
+        var (rowFrom, rowTo) = check.Over == true && check.Under is not true
+            ? (textTop - 6, textTop + 2)
+            : check.Under == true ? (textBottom - 1, textBottom + 6)
+            : ((textTop + textBottom) / 2, (textTop + textBottom) / 2 + 1);
+        var lineLeft = LineEdge(rowFrom, rowTo, fromRight: false);
+        var lineRight = LineEdge(rowFrom, rowTo, fromRight: true);
+        if (span == "text")
+            return lineLeft >= textLeft - 3 && lineRight <= textRight + 3;
+        return lineLeft <= textLeft - 2 || lineRight >= textRight + 2;
     }
 
     private static WptRunner.RunResult AlignRight(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
@@ -1480,10 +1485,10 @@ internal static class VisualChecks
     }
 
     /// <summary>The stated dashed/dotted outline is painted around each named text element
-    /// ('sample text', and 'filler text' where the sentence names it too). The
-    /// "is overlapped by the outline" variants wait on the engine's layout-vs-paint offset
-    /// for these divs (the outline paints around the text, the box sits lower), so only the
-    /// plain template carries a check.</summary>
+    /// ('sample text', and 'filler text' where the sentence names it as a second outlined
+    /// element). The "is overlapped by the outline" variant outlines only the 'Sample Text' —
+    /// the filler text is what the outline overlaps — so after the sample's ring reads the
+    /// stated style, the outline's lower band must reach into the filler text's own ink band.</summary>
     private static WptRunner.RunResult OutlineText(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
     {
         var assertion = Describe(check);
@@ -1493,14 +1498,51 @@ internal static class VisualChecks
             var node = FindNodeByText(root, top, needle);
             if (node is null) continue;
             checkedAny = true;
-            var box = node.Box.BorderBox;
-            var crop = SKRectI.Round(new SKRect(box.Left - 8, box.Top - 8, box.Right + 8, box.Bottom + 8));
-            var ring = RingSignature(bitmap, crop, box, 6);
-            if (!ring.Readable)
-                return new(WptRunner.Cat.Unsupported, $"Visual check: the {needle} outline is not readable: {ring.Note}", 0, 0);
-            if (ring.Style != check.Shape)
-                return new(WptRunner.Cat.Fail, $"{assertion}: the {needle} outline reads {ring.Style ?? "unclassified"}, not {check.Shape}", 1, 1,
-                    [new(assertion, 1, $"the {needle} outline reads {ring.Style ?? "unclassified"}")], 0);
+            var box = SKRectI.Round(node.Box.BorderBox);
+            if (check.Variant == "overlap" && needle != "sample text")
+            {
+                // The overlap clause: the outline's lower band and the filler text's own
+                // glyphs share ink rows (the outline-width extends past the border box into
+                // the following element's text).
+                var sample = FindNodeByText(root, top, "sample text");
+                if (sample is null)
+                    return new(WptRunner.Cat.Unsupported, "Visual check: no sample-text element for the overlap clause", 0, 0);
+                var sampleBox = SKRectI.Round(sample.Box.BorderBox);
+                var fillerBox = SKRectI.Round(node.Box.BorderBox);
+                var background = CropBackground(bitmap, SKRectI.Round(new SKRect(sampleBox.Left, sampleBox.Bottom, sampleBox.Right, sampleBox.Bottom + 34)));
+                // The outline's lower band: the last row below the sample text with the dot
+                // pattern's ink share (its sparse dots sit near a third of the row; the next
+                // element's own glyphs stay near an eighth). The band must reach a few pixels
+                // into the filler text's box — its glyphs begin right at the top.
+                var bandBottom = -1;
+                for (var d = 0; d < 34; d++)
+                {
+                    long inked = 0;
+                    var y = sampleBox.Bottom + d;
+                    if (y >= bitmap.Height) break;
+                    for (var x = sampleBox.Left; x < sampleBox.Right; x++)
+                        if (Distance(bitmap.Pixels[y * bitmap.Width + x], background) > InkThreshold) inked++;
+                    if (inked >= (sampleBox.Right - sampleBox.Left) / 4) bandBottom = y;
+                }
+                if (bandBottom < fillerBox.Top + 4)
+                    return new(WptRunner.Cat.Fail, $"{assertion}: the outline does not overlap the filler text (band ends {bandBottom}, filler box starts {fillerBox.Top})", 1, 1,
+                        [new(assertion, 1, $"outline band ends {bandBottom}, filler box starts {fillerBox.Top}")], 0);
+                continue;
+            }
+            // The engine's dotted/dashed rendering is sparse (dot runs well under half the
+            // row), which the border-ring reader's band-row threshold cannot see; the band
+            // classifier reads it. The band above and the band below the sample text must
+            // both read the stated pattern — an outline goes around.
+            var aboveBg = CropBackground(bitmap, SKRectI.Round(new SKRect(box.Left, box.Top - 26, box.Right, box.Top)));
+            var above = ClassifyBand(bitmap, aboveBg, box.Left, box.Right, box.Top - 26, 26);
+            if (above != check.Shape)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the outline above the text reads {above ?? "nothing"}, not {check.Shape}", 1, 1,
+                    [new(assertion, 1, $"the band above reads {above ?? "nothing"}")], 0);
+            var belowBg = CropBackground(bitmap, SKRectI.Round(new SKRect(box.Left, box.Bottom, box.Right, box.Bottom + 26)));
+            var below = ClassifyBand(bitmap, belowBg, box.Left, box.Right, box.Bottom, 26);
+            if (below != check.Shape)
+                return new(WptRunner.Cat.Fail, $"{assertion}: the outline below the text reads {below ?? "nothing"}, not {check.Shape}", 1, 1,
+                    [new(assertion, 1, $"the band below reads {below ?? "nothing"}")], 0);
         }
         return checkedAny
             ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
@@ -1644,8 +1686,11 @@ internal static class VisualChecks
     private static string Normalize(string text) =>
         string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
 
-    /// <summary>The bottom (or top) ink edge of every "Filler Text" element below the
-    /// instructions aligns — table cells' vertical-align and baseline checks.</summary>
+    /// <summary>The "Filler Text" elements' first lines align — table cells' vertical-align
+    /// and baseline checks. 'bottom' reads each element's FIRST ink band's bottom edge (the
+    /// first baseline): a wrapped cell's later lines sit lower and would mask the alignment
+    /// the sentence states. 'top' reads the element boxes' tops — the line box, not the ink
+    /// (different font sizes leave different leading above the glyphs).</summary>
     private static WptRunner.RunResult TextBaseline(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
     {
         var fillers = FindAllNodesByText(root, top, "filler text");
@@ -1654,11 +1699,18 @@ internal static class VisualChecks
         var edges = new List<int>();
         foreach (var filler in fillers)
         {
+            if (check.Edge == "top")
+            {
+                edges.Add((int)MathF.Round(filler.Box.BorderBox.Top));
+                continue;
+            }
             var ink = ElementInk(bitmap, filler, 1, out _);
             if (ink.Count == 0)
                 return new(WptRunner.Cat.Fail, $"{Describe(check)}: a filler text painted no ink", 1, 1,
                     [new(Describe(check), 1, "no ink")], 0);
-            edges.Add(check.Edge == "top" ? ink.Min(c => c.Top) : ink.Max(c => c.Bottom));
+            // The first band's bottom: the element's first baseline region.
+            var bands = InkBandsOf(ink);
+            edges.Add(bands[0].Bottom);
         }
         var spread = edges.Max() - edges.Min();
         return spread <= 2
@@ -1734,10 +1786,7 @@ internal static class VisualChecks
         var line2Edge = Math.Max(marker.Right, firstTextLeft);
         if (secondLeft > line2Edge + 6)
         {
-            if (Environment.GetEnvironmentVariable("LITE_FLM_DEBUG") is not null)
-                File.AppendAllText(Path.Combine(Lite.Conformance.Harness.ConformancePaths.EnsureArtifacts(), "flm-debug.txt"),
-                    $"{path}: FAIL second={secondLeft} edge={line2Edge} marker=({marker.Left}-{marker.Right})\n");
-            return new(WptRunner.Cat.Fail, $"{assertion}: the second line does not flow below the bullet (starts at {secondLeft})", 1, 1,
+                return new(WptRunner.Cat.Fail, $"{assertion}: the second line does not flow below the bullet (starts at {secondLeft})", 1, 1,
                 [new(assertion, 1, $"second line starts {secondLeft - line2Edge}px right of the first line's content")], 0);
         }
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
