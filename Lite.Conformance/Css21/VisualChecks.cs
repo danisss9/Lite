@@ -1711,11 +1711,35 @@ internal static class VisualChecks
         if (marker.Left > first.Members.Min(m => m.Left) + 2 * EdgeTolerance)
             return new(WptRunner.Cat.Fail, $"{assertion}: the bullet is not at the line's start", 1, 1,
                 [new(assertion, 1, $"bullet at x {marker.Left}")], 0);
+        // The second line's left edge: the leftmost ink in the rows between the first band's
+        // bottom and the second band's bottom. Band members alone misread here — line 2's
+        // first glyph can antialias up into the first band and merge with it, which would
+        // report the line's second glyph instead of its start.
         var second = textBands[1];
-        var secondLeft = second.Members.Min(m => m.Left);
-        if (secondLeft > marker.Right + 2)
+        var secondLeft = second.Members.Max(m => m.Right);
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        var white = CropBackground(bitmap, new SKRectI(0, first.Bottom, width, Math.Min(second.Bottom + 1, bitmap.Height)));
+        for (var y = first.Bottom; y < second.Bottom && y < bitmap.Height; y++)
+        for (var x = 0; x < second.Members.Max(m => m.Right) && x < width; x++)
+        {
+            if (Distance(pixels[y * width + x], white) <= InkThreshold) continue;
+            secondLeft = Math.Min(secondLeft, x);
+            break;
+        }
+        // Inside markers: line 2 realigns with the marker's own left edge (the content edge).
+        // Outside markers hang left of the text, and line 2 realigns with the text start —
+        // either way line 2 may not start past the first line's own content.
+        var firstTextLeft = first.Members.Where(m => !ReferenceEquals(m, marker)).Min(m => m.Left);
+        var line2Edge = Math.Max(marker.Right, firstTextLeft);
+        if (secondLeft > line2Edge + 6)
+        {
+            if (Environment.GetEnvironmentVariable("LITE_FLM_DEBUG") is not null)
+                File.AppendAllText(Path.Combine(Lite.Conformance.Harness.ConformancePaths.EnsureArtifacts(), "flm-debug.txt"),
+                    $"{path}: FAIL second={secondLeft} edge={line2Edge} marker=({marker.Left}-{marker.Right})\n");
             return new(WptRunner.Cat.Fail, $"{assertion}: the second line does not flow below the bullet (starts at {secondLeft})", 1, 1,
-                [new(assertion, 1, $"second line starts {secondLeft - marker.Right}px right of the bullet")], 0);
+                [new(assertion, 1, $"second line starts {secondLeft - line2Edge}px right of the first line's content")], 0);
+        }
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
     }
 

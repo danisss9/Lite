@@ -35,6 +35,25 @@ public static class InlineBlockTests
     }
 
     [Test]
+    public static void InsideListMarkerIndentsTheFirstLineOnly()
+    {
+        // §12.5.1 with list-style-position: inside — the marker box is the first inline box,
+        // so line 1 starts past it while line 2 realigns with the content edge. The marker
+        // had reserved no inline space at all: it painted over the first letter.
+        var page = Parser.ParseChildPage("<!DOCTYPE html><style>body{margin:0}" +
+            " div{display:list-item;list-style:square inside;font:16px/1.4 serif}" +
+            " span{font:16px/1.4 serif}</style>" +
+            "<div><span id=\"first\">XXXX</span><br><span id=\"second\">YYYY</span></div>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var first = FindId(page.Root, "first");
+        var second = FindId(page.Root, "second");
+        True(first is not null && second is not null, "nodes missing");
+        var indent = first!.Box.BorderBox.Left - second!.Box.BorderBox.Left;
+        True(indent > 8f, $"line 1 must start past the marker (indent {indent}px)");
+    }
+
+    [Test]
     public static void InlineLeafKeepsItsTrailingSpaceBeforeAnInlineNeighbour()
     {
         // word-spacing-007: "<span>x </span><span>y</span>" — the space is mid-line, not at a

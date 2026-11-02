@@ -635,8 +635,11 @@ def visual_check(sentence: str | None) -> dict | None:
         return {k: v for k, v in {'kind': 'edge-letter', 'side': m.group(1),
                                   'needle': m.group(3), 'color': m.group(2) or m.group(4)}.items() if v}
     if m := TEXT_DECORATION_EXTENT.match(clause):
-        span = ('text' if 'cannot extend beyond the text' in clause
-                else 'beyond' if 'spaces as well as characters' in clause else None)
+        # "Which starts at the beginning of the text and continues until the end … cannot
+        # extend beyond the text" is machine-readable (the band spans exactly the glyphs).
+        # The "spaces as well as characters" variants name no extent their content shows —
+        # the test divs hold only "Filler Text" — so only line presence is checked there.
+        span = 'text' if 'cannot extend beyond the text' in clause else None
         check = {'kind': 'text-decoration',
                  {'above': 'over', 'below': 'under', 'under': 'under', 'through': 'through'}[m.group(1)]: True}
         if span:

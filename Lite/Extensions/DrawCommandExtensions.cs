@@ -783,6 +783,58 @@ public static class StyleExtensions
         };
     }
 
+    /// <summary>The inline width an 'inside' list marker consumes on the first line
+    /// (§12.5.1: the marker box is the first inline box of the principal block). This is the
+    /// first-line indent the layout reserves and the width the marker painting consumes;
+    /// text markers measure their formatted text plus the trailing space the painter draws,
+    /// bullet glyphs the box the painter draws. A loadable list-style-image is not reserved
+    /// here (layout does not fetch).</summary>
+    public static float InsideMarkerIndent(this LayoutNode node)
+    {
+        if (node.GetListStylePosition() != ListStylePosition.Inside) return 0f;
+        if (node.GetListStyleImage() is { } listImage && listImage != "none")
+        {
+            // Same fetch the painter makes; the shared cache makes it once. An image that
+            // fails to load reserves nothing (the painter then draws the type's marker).
+            var bitmap = Lite.Network.ResourceLoader.FetchImage(listImage,
+                node.DocumentState?.BaseUrl, node.DocumentState?.Session);
+            return bitmap is null ? 0f : bitmap.Width + 4f;
+        }
+        var type = node.GetListStyleType();
+        if (type == ListStyleType.None) return 0f;
+        var fontSize = node.GetFontSize();
+        var style = type switch
+        {
+            ListStyleType.Decimal => "decimal",
+            ListStyleType.DecimalLeadingZero => "decimal-leading-zero",
+            ListStyleType.LowerAlpha => "lower-alpha",
+            ListStyleType.UpperAlpha => "upper-alpha",
+            ListStyleType.LowerRoman => "lower-roman",
+            ListStyleType.UpperRoman => "upper-roman",
+            ListStyleType.LowerGreek => "lower-greek",
+            ListStyleType.Armenian => "armenian",
+            ListStyleType.Georgian => "georgian",
+            ListStyleType.Hebrew => "hebrew",
+            ListStyleType.Hiragana => "hiragana",
+            ListStyleType.HiraganaIroha => "hiragana-iroha",
+            ListStyleType.Katakana => "katakana",
+            ListStyleType.KatakanaIroha => "katakana-iroha",
+            ListStyleType.CjkIdeographic => "cjk-ideographic",
+            _ => null,
+        };
+        if (style is null)
+            return fontSize * 0.2f * 2 + fontSize * 0.3f + 4f;
+        using var font = TextMeasure.CreateFont(node);
+        var index = 1;
+        if (node.Parent is { } parent)
+            foreach (var sibling in parent.Children)
+            {
+                if (sibling == node) break;
+                if (sibling.TagName == "LI") index++;
+            }
+        return font.MeasureText(Layout.CssCounterStyles.Format(index, style) + " ");
+    }
+
     public static VerticalAlignType GetVerticalAlign(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("vertical-align", out var ov)

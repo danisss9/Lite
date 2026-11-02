@@ -154,6 +154,7 @@ internal static class Parser
         internal readonly Stack<List<string>> CounterScopes = new();
         internal readonly List<CssRule> CssRules = [];
         internal readonly Dictionary<string, (string Value, int Count)> RawBackgrounds = new(StringComparer.Ordinal);
+        internal readonly Dictionary<string, (string Value, int Count)> RawListStyles = new(StringComparer.Ordinal);
         internal readonly List<(string Selector, ICssStyleDeclaration Style)> PseudoElementRules = [];
         /// <summary>The injected UA style sheet element and the host-provided user style sheet
         /// elements: they decide each collected rule's cascade origin (CSS 2.1 §6.4.1).</summary>
@@ -3270,10 +3271,16 @@ internal static class Parser
                         StoreProp(node, prop, val);
                 }
                 ParseCssTextForFlexProps(styleRule.Style.CssText, node);
+                // AngleSharp's list-style shorthand getter drops the position longhand when the
+                // source puts it first ('list-style: inside square' loses 'inside'), so the
+                // shorthand is re-decomposed from the rule's own text.
+                ParseCssTextForListStyle(styleRule.Style.CssText, node);
                 // Same rescue as the cascade path: re-apply the shorthand from the source when
                 // AngleSharp dropped it, after the CssText pass so the source wins.
                 if (RescuedBackgroundFor(styleRule) is { } rawBg)
                     ExpandBackgroundShorthand(node, rawBg);
+                if (RescuedListStyleFor(styleRule) is { } rawLs)
+                    DecomposeListStyle(node, rawLs);
                 ExtractTransitionAndAnimation(styleRule.Style.CssText, node);
             }
             else
@@ -3458,15 +3465,7 @@ internal static class Parser
         else if (prop == "list-style")
         {
             // list-style shorthand: [type] [position] [image]
-            var parts = val.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var p in parts)
-            {
-                var lower = p.ToLowerInvariant();
-                if (lower is "inside" or "outside")
-                    node.StyleOverrides["list-style-position"] = lower;
-                else if (Layout.CssCounterStyles.Known.Contains(lower))
-                    node.StyleOverrides["list-style-type"] = lower;
-            }
+            DecomposeListStyle(node, val);
         }
         else
         {
@@ -3474,6 +3473,40 @@ internal static class Parser
             // so a child's 'inherit' can be stored before its parent's value lands. BoxEngine
             // resolves the pending keywords in tree order at the start of every layout.
             node.StyleOverrides[prop] = val;
+        }
+    }
+
+    /// <summary>Decomposes a 'list-style' shorthand value into the longhands the list code
+    /// reads (§12.5): [type | position | image], in any order. The position and type tokens
+    /// are stored even when AngleSharp's own expansion of the shorthand dropped them.</summary>
+    private static void DecomposeListStyle(LayoutNode node, string val)
+    {
+        foreach (var p in SplitBackgroundTokens(val))
+        {
+            var lower = p.ToLowerInvariant();
+            if (lower is "inside" or "outside")
+                node.StyleOverrides["list-style-position"] = lower;
+            else if (lower.StartsWith("url(", StringComparison.Ordinal) || lower == "none")
+                node.StyleOverrides["list-style-image"] = lower;
+            else if (Layout.CssCounterStyles.Known.Contains(lower))
+                node.StyleOverrides["list-style-type"] = lower;
+        }
+    }
+
+    /// <summary>Re-applies 'list-style' declarations from the rule's own text: AngleSharp's
+    /// shorthand getter drops the position longhand when the source puts it first
+    /// ('list-style: inside square'), which left inside markers painting outside.</summary>
+    private static void ParseCssTextForListStyle(string cssText, LayoutNode node)
+    {
+        if (string.IsNullOrEmpty(cssText)) return;
+        foreach (var declaration in cssText.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var colonIdx = declaration.IndexOf(':');
+            if (colonIdx < 0) continue;
+            if (!declaration[..colonIdx].Trim().Equals("list-style", StringComparison.OrdinalIgnoreCase)) continue;
+            var val = declaration[(colonIdx + 1)..].Trim();
+            if (val.Length == 0 || val is "inherit" or "initial" or "unset") continue;
+            DecomposeListStyle(node, val);
         }
     }
 
@@ -4780,9 +4813,12 @@ internal static class Parser
 
     private static Dictionary<string, (string Value, int Count)> s_rawBackgrounds => Current.RawBackgrounds;
 
+    private static Dictionary<string, (string Value, int Count)> s_rawListStyles => Current.RawListStyles;
+
     private static void CollectRawBackgrounds(AngleSharp.Dom.IDocument document)
     {
         s_rawBackgrounds.Clear();
+        s_rawListStyles.Clear();
         foreach (var styleEl in document.QuerySelectorAll("style"))
             ScanRawBackgrounds(StripCssComments(styleEl.TextContent ?? string.Empty));
     }
@@ -4807,11 +4843,21 @@ internal static class Parser
                 if (name is "@media" or "@supports" or "@document" or "@layer")
                     ScanRawBackgrounds(body);
             }
-            else if (prelude.Length > 0 && LastBackgroundDeclaration(body) is { } bg)
+            else if (prelude.Length > 0)
             {
                 var key = CanonicalSelectorList(prelude);
-                var seen = s_rawBackgrounds.TryGetValue(key, out var prev) ? prev.Count : 0;
-                s_rawBackgrounds[key] = (bg, seen + 1);
+                if (LastBackgroundDeclaration(body) is { } bg)
+                {
+                    var seen = s_rawBackgrounds.TryGetValue(key, out var prev) ? prev.Count : 0;
+                    s_rawBackgrounds[key] = (bg, seen + 1);
+                }
+                // AngleSharp drops a whole 'list-style' declaration whose position token comes
+                // first ('list-style: inside square'), so the raw source is the only record.
+                if (LastRawDeclaration(body, "list-style") is { } ls)
+                {
+                    var seenLs = s_rawListStyles.TryGetValue(key, out var prevLs) ? prevLs.Count : 0;
+                    s_rawListStyles[key] = (ls, seenLs + 1);
+                }
             }
             i = close + 1;
         }
@@ -4958,6 +5004,66 @@ internal static class Parser
     /// declares a background more than once is left alone too: the source order that decides
     /// between them is not recoverable from the CSSOM rule alone, so abstaining keeps the engine
     /// no worse than it was.</summary>
+    /// <summary>The last 'list-style' declaration in a rule body — same tokenizer rules as
+    /// <see cref="LastBackgroundDeclaration"/> (no strings, no nested braces, !important
+    /// stripped).</summary>
+    private static string? LastRawDeclaration(string body, string prop)
+    {
+        string? found = null;
+        var depth = 0;
+        var braces = 0;
+        var sawBrace = false;
+        var quote = '\0';
+        var start = 0;
+        for (var i = 0; i <= body.Length; i++)
+        {
+            var c = i < body.Length ? body[i] : ';';
+            if (quote != '\0')
+            {
+                if (c == quote && (i == 0 || body[i - 1] != '\\')) quote = '\0';
+                continue;
+            }
+            if (c is '"' or '\'') { quote = c; continue; }
+            if (c == '(') depth++;
+            else if (c == ')') depth = Math.Max(0, depth - 1);
+            else if (c == '{') braces++;
+            else if (c == '}') { braces--; sawBrace = true; }
+            else if (c == ';' || i == body.Length)
+            {
+                var decl = body[start..Math.Min(i, body.Length)];
+                start = i + 1;
+                var hadBrace = sawBrace;
+                sawBrace = false;
+                if (hadBrace) continue;
+                if (depth > 0) continue;
+                var colon = IndexOfSignificant(decl, 0, ':');
+                if (colon < 0) continue;
+                if (!decl[..colon].Trim().Equals(prop, StringComparison.OrdinalIgnoreCase)) continue;
+                var value = decl[(colon + 1)..].Trim();
+                if (value.EndsWith("important", StringComparison.OrdinalIgnoreCase))
+                {
+                    var head = value[..^"important".Length].TrimEnd();
+                    if (head.EndsWith('!')) value = head[..^1].TrimEnd();
+                }
+                if (value.Length > 0 && AngleSharp.Css.Parser.CssComponentScan.IsWellFormedValue(value)) found = value;
+            }
+        }
+        return found;
+    }
+
+    /// <summary>The rule's raw 'list-style' declaration when AngleSharp's own view of the rule
+    /// no longer carries one — the whole declaration was dropped (position token first).</summary>
+    private static string? RescuedListStyleFor(ICssStyleRule styleRule)
+    {
+        if (string.IsNullOrEmpty(styleRule.SelectorText)) return null;
+        if (!s_rawListStyles.TryGetValue(CanonicalSelectorList(styleRule.SelectorText), out var raw)) return null;
+        if (raw.Count != 1) return null;
+        var cssText = styleRule.Style?.CssText;
+        if (!string.IsNullOrEmpty(cssText) &&
+            cssText.Contains("list-style", StringComparison.OrdinalIgnoreCase)) return null;
+        return raw.Value;
+    }
+
     private static string? RescuedBackgroundFor(ICssStyleRule styleRule)
     {
         if (string.IsNullOrEmpty(styleRule.SelectorText)) return null;

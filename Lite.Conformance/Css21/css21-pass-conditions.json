@@ -24796,8 +24796,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": true,
-    "span": "beyond"
+    "under": true
    }
   },
   {
@@ -24809,8 +24808,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "over": true,
-    "span": "beyond"
+    "over": true
    }
   },
   {
@@ -24822,8 +24820,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": true,
-    "span": "beyond"
+    "through": true
    }
   },
   {
@@ -24835,8 +24832,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": true,
-    "span": "beyond"
+    "under": true
    }
   },
   {
@@ -24848,8 +24844,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "over": true,
-    "span": "beyond"
+    "over": true
    }
   },
   {
@@ -24861,8 +24856,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": true,
-    "span": "beyond"
+    "through": true
    }
   },
   {
@@ -24874,8 +24868,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": true,
-    "span": "beyond"
+    "under": true
    }
   },
   {
@@ -24887,8 +24880,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "over": true,
-    "span": "beyond"
+    "over": true
    }
   },
   {
@@ -24900,8 +24892,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": true,
-    "span": "beyond"
+    "through": true
    }
   },
   {
@@ -107513,8 +107504,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": true,
-    "span": "beyond"
+    "under": true
    }
   },
   {
@@ -107526,8 +107516,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "over": true,
-    "span": "beyond"
+    "over": true
    }
   },
   {
@@ -107539,8 +107528,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": true,
-    "span": "beyond"
+    "through": true
    }
   },
   {
@@ -107552,8 +107540,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": true,
-    "span": "beyond"
+    "under": true
    }
   },
   {
@@ -107565,8 +107552,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "over": true,
-    "span": "beyond"
+    "over": true
    }
   },
   {
@@ -107578,8 +107564,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": true,
-    "span": "beyond"
+    "through": true
    }
   },
   {
@@ -107591,8 +107576,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": true,
-    "span": "beyond"
+    "under": true
    }
   },
   {
@@ -107604,8 +107588,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "over": true,
-    "span": "beyond"
+    "over": true
    }
   },
   {
@@ -107617,8 +107600,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": true,
-    "span": "beyond"
+    "through": true
    }
   },
   {

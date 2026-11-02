@@ -1247,7 +1247,8 @@ internal static class BoxEngine
             var childBfc = establishesBfc || node.TagName == "HTML";
             contentH = LayoutChildrenImpl(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight,
                 childContainingH, border.Top + padding.Top, childBfc, floatCtx, ownsFloatContext,
-                out trailingMargin, out trailingChain, out chainHasCommittedContent);
+                out trailingMargin, out trailingChain, out chainHasCommittedContent,
+                nodeDisplay == DisplayType.ListItem ? node.InsideMarkerIndent() : 0f);
         }
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
@@ -1256,7 +1257,10 @@ internal static class BoxEngine
             using var font = TextMeasure.CreateFont(node);
             var ws = node.GetWhiteSpace();
             var lh = node.GetLineHeight(node.GetFontSize());
-            var lines = TextMeasure.WrapText(node.RenderedText(), Math.Max(contentW, 1f), font, ws, lh);
+            // An 'inside' list marker consumes first-line width the wrap must respect, or the
+            // laid-out line count diverges from what the painter draws (§12.5.1).
+            var markerIndent = nodeDisplay == DisplayType.ListItem ? node.InsideMarkerIndent() : 0f;
+            var lines = TextMeasure.WrapText(node.RenderedText(), Math.Max(contentW - markerIndent, 1f), font, ws, lh);
             contentH = lines.Sum(l => l.Height);
         }
 
@@ -1896,7 +1900,8 @@ internal static class BoxEngine
         bool ownsFloatContext,
         out float trailingMargin,
         out MarginChain trailingChain,
-        out bool chainHasCommittedContent)
+        out bool chainHasCommittedContent,
+        float firstLineIndent = 0f)
     {
         // Running-margin model (CSS 2.1 §8.3.1): runY is the committed content bottom (the border
         // bottom of the last non-collapsing box) and pendingMargin is the collapsing margin still
@@ -2254,10 +2259,14 @@ internal static class BoxEngine
                 chainSeveredByClearance = false; // a line box ends the severed chain
                 chainSpentAbove = false;
                 chainEscapedAbove = 0f;
+                var opensFirstLine = !hasCommittedContent;
                 hasCommittedContent = true;
                 chainFloatStart = floats.Count; // a new chain starts after committed content
+                // §12.5.1: an 'inside' list marker is the first inline box of the first line —
+                // the run's first line starts past it (lines 2+ realign with the content edge).
                 var runH = LayoutInlineRun(run, contentX, runY, contentW, viewportWidth, viewportHeight,
-                                           floats, out var lastLineTop, out var lastLineWidth);
+                                           floats, out var lastLineTop, out var lastLineWidth,
+                                           opensFirstLine ? firstLineIndent : 0f);
                 // Remember where the run's last line box sits: a float that comes right after it
                 // belongs ON that line, not below it (§9.5.1).
                 openLineY = runY + lastLineTop;
@@ -2310,7 +2319,8 @@ internal static class BoxEngine
         float maxWidth,
         float viewportWidth, float viewportHeight,
         List<ActiveFloat> floats,
-        out float lastLineTop, out float lastLineWidth)
+        out float lastLineTop, out float lastLineWidth,
+        float firstLineIndent = 0f)
     {
         lastLineTop = 0f;
         lastLineWidth = 0f;
@@ -2338,7 +2348,7 @@ internal static class BoxEngine
         // downward until either it fits or there are no more floats present". Without this an
         // unbreakable word simply overflowed the narrow band beside the float.
         var firstContentW = FirstUnbreakableWidth(items);
-        while (firstContentW > firstW + 0.5f)
+        while (firstContentW + firstLineIndent > firstW + 0.5f)
         {
             var drop = NextFloatBottom(floats, originY + lineY);
             if (drop is not { } nextY) break;
@@ -2348,7 +2358,7 @@ internal static class BoxEngine
 
         var bandLeft = firstX - originX;
         var bandRight = bandLeft + firstW;
-        var lineX = bandLeft;
+        var lineX = bandLeft + firstLineIndent;
 
         // Running CSS 2.1 §10.8.1 baseline-alignment accumulators for the line under construction:
         // maxAbove/maxBelow track the tallest reach above/below the shared baseline among items
