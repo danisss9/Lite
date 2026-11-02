@@ -133,6 +133,9 @@ jobs:
       - name: HTML 5.0 reviewed assertion tests
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html5 --report Lite.Conformance/artifacts/html5-results.json
 
+      - name: HTML 5.0 parse-fidelity gate
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html5-parse --report Lite.Conformance/artifacts/html5-parse-gate.json
+
       # Publishes the contract and every readiness verdict (release, ES2020, HTML 5.0, CSS 2.1)
       # as release evidence without enforcing them, exactly like regular CI. The ES2020 normative
       # review is still open, and QuickJS still has a published document.all host failure
