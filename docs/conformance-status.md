@@ -9,26 +9,30 @@ Each track's normative detail lives in its own document —
 [es2020-conformance.md](es2020-conformance.md) — and nothing here changes a
 completion contract or claims new passing coverage.
 
-Snapshot written 2 November 2026 on build `37f05dc` after the second probe batch:
-the stated pass condition of 4,012 self-describing CSS 2.1 cases is now
-machine-checked (fifty-odd sentence templates and their judges, up from
-twenty-seven), and the fresh full-screen baseline reads the official suite at
-6,868/9,039 (76.0%, from 75.3% on 1 November) and WPT `css/CSS2` at 6,288/8,904
-(70.6%, from 69.8%). Of the batch's 1,978 formerly-unsupported, twin-less targets,
-590 now carry verdicts — 288 pass, 302 are real engine findings queued below — and
-the engine fixed what the judges surfaced: inside list markers consume first-line
-width (§12.5.1) and the position-first `list-style` shorthand survives AngleSharp's
-dropped declaration. Unit suite 428/428; curated gates css21 51 pass / 1 published
-expected-fail, wpt 86 pass / 2 published expected-fails, html5 46/46, acid 3/3.
-Obligations stand at 17/213 `implemented` after the 2 November strict flip pass
-(css21.9.9 newly clears its full family).
+Snapshot written 2 November 2026 on build `2b978d0` after the second probe batch
+and its same-day engine fixes: the stated pass condition of 4,012 self-describing
+CSS 2.1 cases is now machine-checked (fifty-odd sentence templates and their
+judges, up from twenty-seven), and the fresh full-screen baseline reads the
+official suite at 6,915/9,039 (76.5%, from 75.3% on 1 November) and WPT `css/CSS2`
+at 6,334/8,904 (71.1%, from 69.8%). Of the batch's 1,978 formerly-unsupported,
+twin-less targets, 618 now carry verdicts — 358 pass, 260 are real engine findings
+queued below — and the engine fixed what the judges surfaced: inside list markers
+consume first-line width (§12.5.1), the position-first `list-style` shorthand
+survives AngleSharp's dropped declaration, column-spanning cells size their
+columns (§17.5.2.1), cell sub/super/text-top/text-bottom read as baseline
+(§17.5.3), the 28-case outline-overlap family is decided by the corrected
+stated-condition judge, and the decoration reads no longer misread merged lines.
+Unit suite 428/428; curated gates css21 51 pass / 1 published expected-fail, wpt
+86 pass / 2 published expected-fails, html5 46/46, acid 3/3. Obligations stand at
+17/213 `implemented` after the 2 November strict flip pass (css21.9.9 newly
+clears its full family).
 
 ## Track status at a glance
 
 | Track | Readiness | Last recorded position |
 | --- | --- | --- |
 | ES2020 | **`es2020ProfileReady` true** — enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, zero failures and zero expected failures, no dependency exception; host suite 20/20; all 2,115 ECMA-262 clauses reviewed |
-| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 2 November, second probe batch (`745f8b6` + engine fixes `37f05dc`) with a fresh full-screen baseline: official 2011 suite 6,868/9,039 (76.0%), 1,130 fail, 1,041 unsupported pending references or manual evidence; WPT `css/CSS2` 6,288/8,904 (70.6%), 1,410 fail, 1,194 unsupported; the stated pass condition of 4,012 self-describing cases is machine-checked (590 formerly-unsupported targets decided in this baseline: 288 pass, 302 real engine findings); applicability review complete (18,654 cases); obligations 17/213 `implemented` |
+| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 2 November, second probe batch (`745f8b6`) plus two engine-fix batches (`37f05dc`, `2b978d0`) with a fresh full-screen baseline: official 2011 suite 6,915/9,039 (76.5%), 1,097 fail, 1,027 unsupported pending references or manual evidence; WPT `css/CSS2` 6,334/8,904 (71.1%), 1,377 fail, 1,180 unsupported; the stated pass condition of 4,012 self-describing cases is machine-checked (618 formerly-unsupported targets decided in this baseline: 358 pass, 260 real engine findings); applicability review complete (18,654 cases); obligations 17/213 `implemented` |
 | HTML5 | `html5ProfileReady` false | Reviewed gate 46/46, curated wpt 86 pass / 2 published expected-fails, unit 432/432; html5lib parse fidelity **decided 1889/1,891 unique tree-construction cases** (1,746 raw pass + 2 pipeline-fixes artifacts + 141 reviewed ledger-pass corrections, +2 runner-excluded scripted document.write cases) — enforced by the `--suite html5-parse` gate in CI since 2 November (`198c9fc`); applicability manifest 7,440 entries (51 `included`, 1 `mixed`, 4,717 `post-target`, 1,235 `profile-excluded`, 23 `regression-only`, 1,413 `unreviewed`); REC section review 0/762; tokenizer corpus not yet vendored |
 
 ## Roadmap
@@ -49,16 +53,16 @@ a package from a sample.
    (14), floats (14), table-height-algorithm (14 — the cell vertical-align reading);
    WPT tables (184), normal-flow (143), text (116), generated-content (78), borders
    (75), floats (74), css1 (67), fonts (66), bidi-text (65), floats-clear (64). The
-   probe batch's own engine findings head the fix queue: text-decoration lines stop
-   at the glyph run, table-cell vertical-align mispositions glyph bands, and the
-   full-width outline divs' layout boxes sit below their painted text (fixing that
-   unlocks the 28-case outline-overlap family). The unsupported long tail (official
-   background 213, direction-unicode-bidi 28, cursor 23, outline 20; WPT backgrounds
-   253, tables 145, ui 93, css1 92, borders 63) needs reviewed references or manual
-   evidence — feed the oracle/reference work alongside the engine queue. The
-   2 November probe pass already machine-checks the stated pass condition of 4,012
-   self-describing cases; extend the templates only where the sentence has a strict
-   machine reading.
+   probe batch's own engine findings were fixed same day (spanning-cell column
+   widths, cell sub/super/text values as baseline, the outline-overlap judge); the
+   still-queued heads are the row-height metric under a specified table height
+   (004/009/010), 4px vertical-align: top spans (012-014), two no-ink fillers
+   (031/032), and outside markers above bars. The unsupported long tail (official
+   background 213, direction-unicode-bidi 28, cursor 23; WPT backgrounds 253, tables
+   145, css1 92, ui 79, borders 63) needs reviewed references or manual evidence —
+   feed the oracle/reference work alongside the engine queue. The 2 November probe
+   pass already machine-checks the stated pass condition of 4,012 self-describing
+   cases; extend the templates only where the sentence has a strict machine reading.
 2. **Keep the obligation inventory honest as clusters close**: the 31 October pass
    flipped 15 obligations under the strict rule — every applicable test mapped to
    the obligation passes, official and WPT alike, mapped by their official paths in
