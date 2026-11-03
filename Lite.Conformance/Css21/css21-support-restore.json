@@ -2841,6 +2841,13 @@
    "sourceKind": "csswg-test-pre-snapshot",
    "sha256": "a486641908a47e47eb40818e293886461a73e927b5320d5b185bc2b043f9884f",
    "bytes": 958
+  },
+  {
+   "target": "support/user-stylesheet.css",
+   "source": "contributors/microsoft/submitted/support/user-stylesheet.css at csswg-test@fa448700877",
+   "sourceKind": "csswg-test-pre-snapshot",
+   "sha256": "f26f9b4bc34b7f8fde05499c6b38769c2c2216e881d9106b2896d686a204ce75",
+   "note": "the PREREQUISITE sheet of the 18 userstyle-flagged user-stylesheet-* cases; restored for the harness user-stylesheet route (the file is loaded as the session user sheet)"
   }
  ]
 }

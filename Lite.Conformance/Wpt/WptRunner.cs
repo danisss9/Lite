@@ -1,7 +1,10 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Diagnostics;
+using Lite;
 using Lite.Conformance.Css21;
 using Lite.Conformance.Harness;
+using Lite.Platform;
 using Lite.Scripting;
 
 namespace Lite.Conformance.Wpt;
@@ -53,7 +56,7 @@ internal static class WptRunner
     /// <summary>How a single test run turned out, independent of whether the manifest
     /// expected it. <see cref="Cat.Pass"/> means every subtest passed and there was at
     /// least one subtest.</summary>
-    internal enum Cat { Pass, Fail, Crash, Timeout, Empty, Unsupported }
+    internal enum Cat { Pass, Fail, Crash, Timeout, Empty, Unsupported, ManualPending }
 
     internal readonly record struct RunResult(Cat Cat, string Detail, int Total, int Failures,
         IReadOnlyList<SubtestEvidence>? Subtests = null, int? HarnessStatus = null,
@@ -160,7 +163,7 @@ internal static class WptRunner
             return 2;
         }
 
-        int pass = 0, fail = 0, crash = 0, timeout = 0, empty = 0, skipped = 0, unsupported = 0;
+        int pass = 0, fail = 0, crash = 0, timeout = 0, empty = 0, skipped = 0, unsupported = 0, manualPending = 0;
 
         foreach (var file in tests)
         {
@@ -192,6 +195,7 @@ internal static class WptRunner
                 case Cat.Timeout: timeout++; Console.WriteLine($"  TIMEOUT {urlPath}"); break;
                 case Cat.Empty: empty++; Console.WriteLine($"  EMPTY   {urlPath} — {r.Detail}"); break;
                 case Cat.Unsupported: unsupported++; Console.WriteLine($"  UNSUPPORTED {urlPath} — {r.Detail}"); break;
+                case Cat.ManualPending: manualPending++; Console.WriteLine($"  MANUAL-PENDING {urlPath} — {r.Detail}"); break;
             }
             Console.Out.Flush();
             if (outcomes.Count % 100 == 0) ExecutionEvidence.Write(destination, identity, started, outcomes);
@@ -201,7 +205,7 @@ internal static class WptRunner
         Console.WriteLine();
         Console.WriteLine($"=== {label}: {pass}/{total} fully passed " +
                           $"({(total == 0 ? 0 : 100.0 * pass / total):F1}%) — " +
-                          $"{fail} partial-fail, {crash} crash, {timeout} timeout, {empty} no-subtests, {skipped} skipped, {unsupported} unsupported ===");
+                          $"{fail} partial-fail, {crash} crash, {timeout} timeout, {empty} no-subtests, {skipped} skipped, {unsupported} unsupported, {manualPending} manual-pending ===");
         Console.WriteLine("  (grep '  PASS    ' for the fully-passing tests to promote into wpt-manifest.txt)");
         ExecutionEvidence.Write(destination, identity, started, outcomes);
         return total == 0 ? 2 : fail + crash + timeout + empty + skipped + unsupported > 0 ? 1 : 0;
@@ -273,7 +277,10 @@ internal static class WptRunner
     internal static RunResult RunOne(string testPath)
     {
         var test = CatalogCase(testPath);
-        if (WptCatalog.Context(testPath) != "window" || test?.TestDriver == true ||
+        // testdriver-based testharness pages execute headlessly through the real input
+        // pipeline (BrowserWindow + TestDriverBridge); testdriver reftest/crashtest/selftest
+        // kinds stay refused inside their own runners until those routes gain the capability.
+        if (WptCatalog.Context(testPath) != "window" ||
             test is { Kind: not ("testharness" or "reftest" or "crashtest" or "selftest") } && !IsSelfDescribingVisual(test))
             return new(Cat.Unsupported, $"Execution support required: {test?.Kind ?? "testharness"}/{WptCatalog.Context(testPath)}", 0, 0);
         // The kill budget must exceed the worker's own report pump (TestTimeoutMs * 6 = 60s),
@@ -381,21 +388,29 @@ internal static class WptRunner
             "reftest" => WptRefTestRunner.Run(test, CatalogCase),
             "crashtest" => WptVisualPage.RunCrash(test),
             "selftest" => SelfTestOracle.Run(test, Catalog(), CatalogCase),
+            // A manual-kind case whose stated pass condition is machine-checked (the scroll
+            // protocol performs the stated interaction mechanically) runs through the
+            // self-describing oracle; the rest stay unsupported below.
+            _ when test is { Kind: "manual" } && SelfTestOracle.Condition(path).Check is not null
+                => SelfTestOracle.Run(test!, Catalog(), CatalogCase),
             _ when IsSelfDescribingVisual(test) => SelfTestOracle.Run(test!, Catalog(), CatalogCase),
+            _ when NeedsInputBridge(test, path) => RunInProcess(url, testDriver: true),
             _ => RunInProcess(url),
         };
         File.WriteAllText(output, JsonSerializer.Serialize(result, ExecutionEvidence.JsonOptions));
         return 0;
     }
 
-    private static RunResult RunInProcess(string url)
+    private static RunResult RunInProcess(string url, bool testDriver = false)
     {
         string? reportJson = null;
         var reports = new Dictionary<JsEngine, string>();
         var reporter = File.ReadAllText(Path.Combine(ConformancePaths.Overrides, "resources", "testharnessreport.js"));
+        BrowserWindow? window = null;
         void Hook(JsEngine engine)
         {
             engine.RawEngine.SetValue("__lite_report", new Action<string>(json => reports.TryAdd(engine, json)));
+            if (window is not null) TestDriverBridge.Register(engine, window);
             void Attach(JsEngine owner)
             {
                 if (owner.RawEngine.Evaluate("typeof add_completion_callback === 'function'").AsBoolean())
@@ -410,7 +425,22 @@ internal static class WptRunner
         JsEngine.OnCreated += Hook;
         try
         {
-            var (_, engine) = HeadlessPage.Load(url);
+            JsEngine? engine;
+            if (testDriver)
+            {
+                // testdriver pages drive the engine's real input pipeline: the same
+                // BrowserWindow callbacks the native window hosts translate OS input into,
+                // against a headless host (no window, synchronous navigations).
+                window = new BrowserWindow(url);
+                engine = window.RunHeadless(new HeadlessHost());
+            }
+            else
+            {
+                var (_, loaded) = HeadlessPage.Load(url);
+                engine = loaded;
+            }
+            if (engine is null)
+                return new RunResult(Cat.Crash, "page load produced no JS engine", 0, 0);
             HeadlessPage.PumpUntil(engine, () => reports.ContainsKey(engine), TestTimeoutMs * 6);
             reports.TryGetValue(engine, out reportJson);
         }
@@ -472,6 +502,37 @@ internal static class WptRunner
         {
             return new RunResult(Cat.Crash, $"unparseable report: {ex.Message}", 0, 0);
         }
+    }
+
+    /// <summary>A page needs the testdriver input bridge when the WPT catalog flags testdriver
+    /// usage — or, when it does not (harness-local pages outside the catalog, or tests whose
+    /// usage is indirect through a same-tree helper script), when the page's own source tree
+    /// references test_driver.</summary>
+    private static bool NeedsInputBridge(WptCase? test, string path) =>
+        test is { TestDriver: true, Kind: "testharness" } || SourceUsesTestDriver(path);
+
+    private static bool SourceUsesTestDriver(string path)
+    {
+        var file = ResolveSource(path, UsesUpstream(path));
+        if (file is null) return false;
+        string text;
+        try { text = File.ReadAllText(file); }
+        catch (IOException) { return false; }
+        if (text.Contains("test_driver", StringComparison.Ordinal)) return true;
+        // Indirect usage through a same-tree helper script (editing/include/…): one level.
+        var vendorRoot = Path.GetFullPath(Path.Combine(ConformancePaths.Vendor, "wpt")) + Path.DirectorySeparatorChar;
+        var dir = Path.GetDirectoryName(file)!;
+        foreach (Match m in Regex.Matches(text, "src=[\"']([^\"']+\\.js)[\"']"))
+        {
+            var rel = m.Groups[1].Value.Replace('/', Path.DirectorySeparatorChar);
+            var helper = rel.StartsWith(Path.DirectorySeparatorChar)
+                ? Path.GetFullPath(vendorRoot + rel.TrimStart(Path.DirectorySeparatorChar))
+                : Path.GetFullPath(Path.Combine(dir, rel));
+            if (!helper.StartsWith(vendorRoot, StringComparison.OrdinalIgnoreCase)) continue;
+            try { if (File.ReadAllText(helper).Contains("test_driver", StringComparison.Ordinal)) return true; }
+            catch (IOException) { }
+        }
+        return false;
     }
 
     private static bool UsesUpstream(string path) => !path.StartsWith("lite/", StringComparison.Ordinal) &&

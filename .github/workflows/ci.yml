@@ -103,6 +103,9 @@ jobs:
       - name: HTML 5.0 parse-fidelity gate
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html5-parse --report Lite.Conformance/artifacts/html5-parse-gate.json
 
+      - name: HTML 5.0 tokenizer gate
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html5-tokenizer --report Lite.Conformance/artifacts/html5-tokenizer-gate.json
+
       # Publishes the contract and every readiness verdict (release, ES2020, HTML 5.0, CSS 2.1).
       # The ES2020 verdict now gates through run-es2020.py --require-ready above; the release,
       # HTML 5.0, and CSS 2.1 verdicts stay published-only while their normative reviews in

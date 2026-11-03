@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Lite harness testdriver input automation</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/resources/testdriver.js"></script>
+<script src="/resources/testdriver-vendor.js"></script>
+<script src="/resources/testdriver-actions.js"></script>
+</head>
+<body>
+<p>
+<button id="target">target</button>
+<input id="field" value="">
+</p>
+<script>
+// Harness capability fixture: every subtest asserts an observable effect of injected
+// input, so a silently no-op injection (missing host function, broken hit-testing,
+// dropped events) fails here instead of passing upstream tests vacuously.
+async_test(function (t) {
+  var button = document.getElementById("target");
+  var types = [];
+  ["pointerdown", "mousedown", "pointerup", "mouseup", "click"].forEach(function (type) {
+    button.addEventListener(type, t.step_func(function (e) {
+      types.push(e.type);
+      assert_true(e.isTrusted, e.type + " is user-agent-generated");
+      assert_equals(e.target.id, "target", e.type + " targets the element");
+    }));
+  });
+  button.addEventListener("click", t.step_func_done(function (e) {
+    assert_true(e.clientX > 0 && e.clientY > 0, "click carries client coordinates");
+    assert_array_equals(types, ["pointerdown", "mousedown", "pointerup", "mouseup", "click"],
+                        "each gesture phase fires its pointer event before the compatibility mouse event");
+  }));
+  test_driver.click(button).catch(t.unreached_func("click rejected"));
+}, "test_driver.click dispatches the full trusted pointer/click sequence at the element");
+
+async_test(function (t) {
+  var field = document.getElementById("field");
+  var keys = [];
+  field.addEventListener("keydown", function (e) {
+    keys.push(e.key);
+    assert_true(e.isTrusted, "keydown is user-agent-generated");
+  });
+  field.addEventListener("input", function () { keys.push("input"); });
+  test_driver.send_keys(field, "hi").then(t.step_func_done(function () {
+    assert_array_equals(keys, ["h", "input", "i", "input"], "one keydown and one input per character");
+    assert_equals(field.value, "hi", "typed text reaches the value");
+    assert_equals(document.activeElement.id, "field", "send_keys focuses the element");
+  })).catch(t.unreached_func("send_keys rejected"));
+}, "test_driver.send_keys focuses the element and types into its value");
+
+promise_test(function () {
+  var probe = document.createElement("input");
+  probe.id = "probe";
+  document.body.appendChild(probe);
+  var order = [];
+  ["keydown", "keyup", "pointerdown", "click"].forEach(function (type) {
+    probe.addEventListener(type, function () { order.push(type); });
+  });
+  var actions = new test_driver.Actions()
+    .keyDown("a")
+    .keyUp("a")
+    .addTick()
+    .pointerMove(0, 0, { origin: probe })
+    .pointerDown()
+    .pointerUp();
+  return new Promise(function (resolve) { setTimeout(resolve, 0); })
+    .then(function () { probe.focus(); return actions.send(); })
+    .then(function () {
+      assert_array_equals(order, ["keydown", "keyup", "pointerdown", "click"],
+                          "Actions executes key then pointer ticks in order");
+      assert_equals(probe.value, "a", "Actions keyDown types its key at the focused element");
+    });
+}, "test_driver.Actions runs key and pointer sequences through the input pipeline");
+</script>
+</body>
+</html>

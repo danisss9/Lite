@@ -782,4 +782,317 @@ public static class Css21CoverageTests
         });
         True(!Judge(missing, new VisualCheck("corners", Color: "blue", BoxColor: "yellow"), missing).Passed);
     }
+
+    // ------------------------------------------------------------------
+    // Probe batch 3: the scroll protocol, the paint-log judges and the new
+    // long-tail component judges.
+    // ------------------------------------------------------------------
+
+    private static Lite.Models.LayoutNode ScrollBoxNode()
+    {
+        var style = Parser.ParseFragment("<div></div>")[0].Style;
+        var root = new Lite.Models.LayoutNode(null, "HTML", "", style);
+        var body = new Lite.Models.LayoutNode(null, "BODY", "", style);
+        var box = new Lite.Models.LayoutNode(null, "DIV", "", style);
+        root.Children.Add(body);
+        body.Children.Add(box);
+        var dimensions = box.Box;
+        dimensions.ContentBox = new SkiaSharp.SKRect(100, 100, 300, 300);
+        box.Box = dimensions;
+        box.ScrollState = new ElementScrollState { ContentHeight = 400, ContainerHeight = 200 };
+        return root;
+    }
+
+    /// <summary>A cat line-art tile: black strokes on a white body — the corpus's image ink
+    /// (the tile's white body is part of what the two-tone detector reads against a colored
+    /// box background).</summary>
+    private static void DrawCatTiles(SkiaSharp.SKCanvas canvas, int fromY, int toY)
+    {
+        using var black = Fill(SkiaSharp.SKColors.Black);
+        using var white = Fill(SkiaSharp.SKColors.White);
+        for (var y = fromY; y < toY; y += 99)
+            for (var x = 20; x < 380; x += 98)
+            {
+                canvas.DrawRect(new SkiaSharp.SKRect(x, y, x + 98, y + 99), white);           // tile body
+                canvas.DrawRect(new SkiaSharp.SKRect(x, y, x + 98, y + 8), black);            // ears band
+                canvas.DrawRect(new SkiaSharp.SKRect(x, y + 40, x + 98, y + 44), black);      // whiskers band
+                canvas.DrawRect(new SkiaSharp.SKRect(x + 10, y + 80, x + 88, y + 84), black); // paws band
+            }
+    }
+
+    [Test]
+    public static void VisualChecks_ScrollJudgesDecideTheCatCorpus()
+    {
+        // scroll-cats-bottom: the bottom band must gain image ink after scrolling. The box's
+        // own background is green — the cat tile is black line art on white, which only reads
+        // as image ink against a non-white background (exactly the corpus's construction).
+        var root = ScrollBoxNode();
+        var before = Render(c => c.DrawRect(new SkiaSharp.SKRect(100, 100, 300, 300), Fill(SkiaSharp.SKColors.Green)));
+        var after = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(100, 100, 300, 300), Fill(SkiaSharp.SKColors.Green));
+            DrawCatTiles(c, 230, 300);
+        });
+        var scrolled = VisualChecks.ApplyScroll(new ScrollSpec("bottom"), root);
+        True(scrolled is not null && scrolled.ScrollState!.ScrollY == 200);
+        var bottom = VisualChecks.Evaluate(new VisualCheck("scroll-cats-bottom", Scroll: new ScrollSpec("bottom")),
+            new RenderSet(after, null, before), root, "x", "p");
+        True(bottom.Passed);
+        var beforeToo = VisualChecks.Evaluate(new VisualCheck("scroll-cats-bottom", Scroll: new ScrollSpec("bottom")),
+            new RenderSet(after, null, after), root, "x", "p");
+        True(!beforeToo.Passed);  // ink already present before scrolling fails the "appears" read
+
+        // scroll-cats-moved: ink before and after, and the renders differ.
+        var movedBefore = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(100, 100, 300, 300), Fill(SkiaSharp.SKColors.Green));
+            c.Save();
+            c.ClipRect(new SkiaSharp.SKRect(100, 100, 300, 300));
+            DrawCatTiles(c, 100, 300);
+            c.Restore();
+        });
+        var movedAfter = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(100, 100, 300, 300), Fill(SkiaSharp.SKColors.Green));
+            c.Save();
+            c.ClipRect(new SkiaSharp.SKRect(100, 100, 300, 300));
+            c.Translate(0, -50);
+            DrawCatTiles(c, 100, 350);
+            c.Restore();
+        });
+        var moved = VisualChecks.Evaluate(new VisualCheck("scroll-cats-moved", Scroll: new ScrollSpec("bottom")),
+            new RenderSet(movedAfter, null, movedBefore), root, "x", "p");
+        True(moved.Passed);
+        var unmoved = VisualChecks.Evaluate(new VisualCheck("scroll-cats-moved", Scroll: new ScrollSpec("bottom")),
+            new RenderSet(movedBefore, null, movedBefore), root, "x", "p");
+        True(!unmoved.Passed);
+
+        // scroll-cats-still: fixed attachment — ink present and the render unchanged.
+        var still = VisualChecks.Evaluate(new VisualCheck("scroll-cats-still", Scroll: new ScrollSpec("bottom")),
+            new RenderSet(movedBefore, null, movedBefore), root, "x", "p");
+        True(still.Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_PaintedLinesReadBandsTopToBottomFragmentsLeftToRight()
+    {
+        var paint = new List<Lite.Rendering.PaintLog.Entry>
+        {
+            new("world", 100, 100, "Ahem", 16, "Left", false, false),
+            new("hello ", 20, 100, "Ahem", 16, "Left", false, false),
+            new("second", 20, 200, "Ahem", 16, "Left", false, false),
+        };
+        var lines = VisualChecks.PaintedLines(paint);
+        True(lines.Count == 2);
+        True(lines[0] == "hello world");
+        True(lines[1] == "second");
+    }
+
+    [Test]
+    public static void VisualChecks_PaintedFontReadsSizeStyleAndPitch()
+    {
+        var paint = new List<Lite.Rendering.PaintLog.Entry>
+        {
+            new("dummy", 20, 100, "CSSTest", 18, "Left", true, true),
+            new("dummy", 20, 127, "CSSTest", 18, "Left", true, true),
+            new("dummy", 20, 154, "CSSTest", 18, "Left", true, true),
+        };
+        const string sentence = "This text should be 18px. dummy text dummy text dummy text";
+        var pass = VisualChecks.Evaluate(new VisualCheck("painted-font", Count: 18, Mode: "italic", Edge: "27"),
+            new RenderSet(Render(_ => { }), null, null, paint), ScrollRootWithInstructions(), sentence, "p");
+        True(pass.Passed);
+        var wrongSize = VisualChecks.Evaluate(new VisualCheck("painted-font", Count: 13),
+            new RenderSet(Render(_ => { }), null, null, paint), ScrollRootWithInstructions(), sentence, "p");
+        True(!wrongSize.Passed);
+        var wrongPitch = VisualChecks.Evaluate(new VisualCheck("painted-font", Edge: "36"),
+            new RenderSet(Render(_ => { }), null, null, paint), ScrollRootWithInstructions(), sentence, "p");
+        True(!wrongPitch.Passed);
+        var wrongStyle = VisualChecks.Evaluate(new VisualCheck("painted-font", Mode: "normal"),
+            new RenderSet(Render(_ => { }), null, null, paint), ScrollRootWithInstructions(), sentence, "p");
+        True(!wrongStyle.Passed);
+    }
+
+    /// <summary>A root whose first paragraph is the instruction text, so the layout-anchored
+    /// judges find the region top (the paint-log judges only read entries below it).</summary>
+    private static Lite.Models.LayoutNode ScrollRootWithInstructions()
+    {
+        var root = ScrollBoxNode();
+        var p = new Lite.Models.LayoutNode(null, "P", "This text should be 18px. dummy text dummy text dummy text", root.Style);
+        p.Box = new BoxDimensions { ContentBox = new SkiaSharp.SKRect(0, 0, 400, 20) };
+        root.Children[0].Children.Add(p);
+        return root;
+    }
+
+    [Test]
+    public static void VisualChecks_SlantPairAndLineBelowReadShapeGeometry()
+    {
+        var slant = Render(c =>
+        {
+            using var path = new SkiaSharp.SKPath();
+            path.MoveTo(20, 30); path.LineTo(120, 30); path.LineTo(110, 80); path.LineTo(10, 80); path.Close();
+            c.DrawPath(path, Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(140, 30, 240, 80), Fill(SkiaSharp.SKColors.Blue));
+        });
+        True(Judge(slant, new VisualCheck("slant-pair")).Passed);
+        True(!Judge(Render(c => c.DrawRect(new SkiaSharp.SKRect(20, 30, 120, 80), Fill(SkiaSharp.SKColors.Blue))),
+            new VisualCheck("slant-pair")).Passed);
+
+        var lineBelow = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(40, 40, 160, 140), Fill(SkiaSharp.SKColors.Orange));
+            c.DrawRect(new SkiaSharp.SKRect(40, 145, 160, 149), Fill(SkiaSharp.SKColors.Green));
+        });
+        True(Judge(lineBelow, new VisualCheck("line-below", ColorA: "orange", ColorB: "green")).Passed);
+        True(!Judge(lineBelow, new VisualCheck("line-below", ColorA: "orange", ColorB: "blue")).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_GradientLighterReadsIncreasingLightness()
+    {
+        var ramp = Render(c =>
+        {
+            byte[] tones = [40, 90, 140];
+            for (var i = 0; i < 3; i++)
+                c.DrawRect(new SkiaSharp.SKRect(20 + i * 60, 30, 70 + i * 60, 90), Fill(new SkiaSharp.SKColor(0, 0, tones[i])));
+        });
+        True(Judge(ramp, new VisualCheck("gradient-lighter", Color: "blue")).Passed);
+        var inverted = Render(c =>
+        {
+            byte[] tones = [140, 90, 40];
+            for (var i = 0; i < 3; i++)
+                c.DrawRect(new SkiaSharp.SKRect(20 + i * 60, 30, 70 + i * 60, 90), Fill(new SkiaSharp.SKColor(0, 0, tones[i])));
+        });
+        True(!Judge(inverted, new VisualCheck("gradient-lighter", Color: "blue")).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_SpansStackRequiresCoverageOfTheWholeStack()
+    {
+        var spans = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 40, 230), Fill(SkiaSharp.SKColors.Blue));
+            foreach (var y in new[] { 30, 110, 190 })
+                c.DrawRect(new SkiaSharp.SKRect(120, y, 180, y + 40), Fill(SkiaSharp.SKColors.Orange));
+        });
+        True(Judge(spans, new VisualCheck("spans-stack", ColorA: "blue", ColorB: "orange")).Passed);
+        var shortSpan = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 40, 120), Fill(SkiaSharp.SKColors.Blue));
+            foreach (var y in new[] { 30, 110, 190 })
+                c.DrawRect(new SkiaSharp.SKRect(120, y, 180, y + 40), Fill(SkiaSharp.SKColors.Orange));
+        });
+        True(!Judge(shortSpan, new VisualCheck("spans-stack", ColorA: "blue", ColorB: "orange")).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_InsetTopSidesReadsTheInsetFamily()
+    {
+        var inset = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 20, 300, 200), Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(24, 24, 150, 60), Fill(SkiaSharp.SKColors.Teal));
+            c.DrawRect(new SkiaSharp.SKRect(154, 24, 296, 60), Fill(SkiaSharp.SKColors.Teal));
+        });
+        True(Judge(inset, new VisualCheck("shape-relation", Relation: "inset-top-sides", ColorA: "teal", ColorB: "blue")).Passed);
+        var crossing = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 20, 300, 200), Fill(SkiaSharp.SKColors.Blue));
+            c.DrawRect(new SkiaSharp.SKRect(10, 24, 150, 60), Fill(SkiaSharp.SKColors.Teal));
+        });
+        True(!Judge(crossing, new VisualCheck("shape-relation", Relation: "inset-top-sides", ColorA: "teal", ColorB: "blue")).Passed);
+    }
+
+    [Test]
+    public static void VisualChecks_HeightBandRelaxesSimilarityToAFactorOfTwo()
+    {
+        var band = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 120, 80), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(140, 30, 200, 110), Fill(SkiaSharp.SKColors.Blue));
+        });
+        True(Judge(band, new VisualCheck("shape-relation", Relation: "height-band", ColorA: "blue", ColorB: "black")).Passed);
+        var far = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 120, 80), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(140, 30, 200, 200), Fill(SkiaSharp.SKColors.Blue));
+        });
+        True(!Judge(far, new VisualCheck("shape-relation", Relation: "height-band", ColorA: "blue", ColorB: "black")).Passed);
+    }
+
+    [Test]
+    public static void ScrollState_ClampsHorizontalScroll()
+    {
+        var ss = new ElementScrollState { ContentHeight = 400, ContainerHeight = 200, ContentWidth = 600, ContainerWidth = 200 };
+        ss.ScrollXTo(1000);
+        True(ss.ScrollX == 400);
+        ss.ScrollXTo(-5);
+        True(ss.ScrollX == 0);
+        True(ss.NeedsHorizontalScrollbar && !new ElementScrollState().NeedsHorizontalScrollbar);
+    }
+
+    [Test]
+    public static void SelfTestOracle_ManualPendingIsASupportedVerdictRoute()
+    {
+        const string path = "css21-official/html4/example.htm";
+        var scanned = new WptRunner.RunResult(WptRunner.Cat.Pass, "Self-describing test shows no failure red (diagnostic)", 1, 0,
+            [new("Self-describing test shows no failure red (diagnostic)", 0, null)], 0);
+        var manual = SelfTestOracle.Decide(path, "manual", scanned, null, _ => null, manualPending: true);
+        True(manual.Cat == WptRunner.Cat.ManualPending);
+        True(!manual.Passed);
+        // Unreviewed manual stays unsupported, never a silent pass.
+        True(SelfTestOracle.Decide(path, "manual", scanned, null, _ => null).Cat == WptRunner.Cat.Unsupported);
+    }
+
+    [Test]
+    public static void PassConditions_EveryCheckKindHasJudgeAndEveryCaseHasARoute()
+    {
+        var conditions = JsonNode.Parse(File.ReadAllText(ConformancePaths.Manifest("Css21/css21-pass-conditions.json")))!;
+        var applicability = Css21Inventory.Read(Css21Inventory.ApplicabilityFile);
+        var reviews = applicability["tests"]!.AsArray().OfType<JsonObject>()
+            .ToDictionary(t => Css21Inventory.Text(t, "path"));
+        bool ScreenRunnable(string path)
+        {
+            if (!reviews.TryGetValue(path, out var review)) return true;
+            var classification = Css21Inventory.Text(review, "classification");
+            return classification == "unreviewed" ||
+                classification == "applicable" && Css21Inventory.Strings(review, "media").Contains("screen");
+        }
+        var known = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var kind in new[] { "one-shape", "same-dimension", "bar-gap", "line-style", "look-same", "solid-line",
+                     "border-ring", "border-sample", "text-color", "text-color-pairs", "text-decoration", "align-right",
+                     "shape-relation", "space-between", "stack-three", "two-size", "line-pair", "marker-bullet",
+                     "round-dot", "double-line", "slanted-box", "line-marker", "bullet-beside", "bar-stack", "bars-match",
+                     "bar-grid", "viewport-bottom", "cell-border", "corners", "box-count", "three-bars", "lines-same",
+                     "first-line-color", "justify", "stack-order", "border-sides", "lines-spaced", "letter-x",
+                     "outline-text", "text-baseline", "one-line", "first-line-marker", "numbers-present", "text-ink",
+                     "words-and-box", "align-center", "image-tiled", "first-letter-color", "edge-letter", "text-band",
+                     "no-ring", "text-below-box", "text-marker-match", "text-marker", "painted-text", "painted-order",
+                     "painted-font", "painted-only", "painted-sequence", "striped-fill", "same-alignment", "page-background",
+                     "presence", "cats-on-bar", "middle-cell-color", "gradient-lighter", "spans-stack", "text-in-corner",
+                     "text-in-box", "box-beside-text", "hanging-indent", "no-scrollbar", "scrollbar-visible",
+                     "same-width-corner", "slant-pair", "line-below", "hollow-circle", "tiny-square", "first-letter-color",
+                     "scroll-cats-bottom", "scroll-cats-moved", "scroll-cats-bottom-moved", "scroll-cats-top-moved",
+                     "scroll-cats-still", "scroll-box-text", "scroll-box-edges-visible", "scroll-no-red",
+                     "scroll-page-text", "scroll-page-edges-visible", "scroll-page-always-visible",
+                     "scroll-page-stuck-top", "scroll-page-no-red" })
+            known.Add(kind);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var entry in conditions["cases"]!.AsArray())
+        {
+            var path = entry!["path"]!.GetValue<string>();
+            True(seen.Add(path), $"duplicate pass-conditions entry {path}");
+            var check = entry["check"] as JsonObject;
+            var condition = entry["condition"]!.GetValue<string>();
+            var reviewed = entry["reviewed"]?.GetValue<bool>() ?? false;
+            if (check is not null)
+                True(known.Contains(check["kind"]!.GetValue<string>()),
+                    $"unknown visual check kind '{check["kind"]}' on {path}");
+            // No red-scan-pass can stand without a decided route: a twin, a check, a
+            // sufficient scan condition, a reviewed verdict route, or a published
+            // applicability exclusion from screen execution (print-only, optional, …).
+            var routed = entry["twin"] is not null || check is not null || reviewed ||
+                         condition is "no-red" or "same-color" || !ScreenRunnable(path);
+            True(routed, $"case without a verdict route: {path} ({condition})");
+        }
+    }
 }

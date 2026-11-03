@@ -4,6 +4,7 @@ using Lite.Layout;
 using Lite.Models;
 using Lite.Rendering;
 using AngleSharp.Dom;
+using AngleSharp.Html.Dom;
 
 namespace Lite.Scripting.Dom;
 
@@ -240,7 +241,12 @@ public class JsElement
 
     public string innerHTML
     {
-        get => DomNode is IElement element ? element.InnerHtml : HtmlSerializer.SerializeChildren(Node);
+        get
+        {
+            if (DomNode is not IElement element) return HtmlSerializer.SerializeChildren(Node);
+            if (!SubtreeContainsOriginSheet(element)) return element.InnerHtml;
+            return CloneWithoutOriginSheets(element).InnerHtml;
+        }
         set
         {
             if (DomNode is IElement element) element.InnerHtml = value ?? string.Empty;
@@ -255,7 +261,12 @@ public class JsElement
 
     public string outerHTML
     {
-        get => DomNode is IElement element ? element.OuterHtml : HtmlSerializer.SerializeOuter(Node);
+        get
+        {
+            if (DomNode is not IElement element) return HtmlSerializer.SerializeOuter(Node);
+            if (!SubtreeContainsOriginSheet(element)) return element.OuterHtml;
+            return CloneWithoutOriginSheets(element).OuterHtml;
+        }
         set => ReplaceSelfWithFragment(value ?? string.Empty);
     }
 
@@ -978,9 +989,9 @@ public class JsElement
     /// sheets (the UA and user style elements the parser writes into the source to give the
     /// cascade its origins) are DOM members for rule collection but are not author content:
     /// a conforming UA keeps them out of script-visible child lists, and the html5lib tree
-    /// dumps read head.childNodes directly. The cascade is untouched — the elements stay in
-    /// the authoritative document. innerHTML/outerHTML and query paths still surface them
-    /// (a documented limitation, revisited with the DOM authority package).</summary>
+    /// dumps read head.childNodes directly. innerHTML/outerHTML apply the same filter while
+    /// serializing (CloneWithoutOriginSheets). Query paths still surface them (a documented
+    /// limitation, revisited with the DOM authority package).</summary>
     private IEnumerable<INode> VisibleDomChildren(INode dom)
     {
         var parse = JsEngine.For(_engine)?.DocumentState?.ParserContext;
@@ -988,6 +999,61 @@ public class JsElement
             return dom.ChildNodes;
         return dom.ChildNodes.Where(c => !ReferenceEquals(parse.UaStyleElement, c)
             && !parse.UserStyleElements.Any(e => ReferenceEquals(e, c)));
+    }
+
+    /// <summary>Whether an engine-injected origin sheet sits inside this element's subtree (or
+    /// is the element itself). Serialization must omit the sheets at every depth — not just the
+    /// direct children the child lists filter — because serializing <c>documentElement</c> or
+    /// <c>head</c> descends through them. The walk goes up from each sheet (there are at most a
+    /// handful), so it costs ancestor depth, not subtree size.</summary>
+    private bool SubtreeContainsOriginSheet(IElement element)
+    {
+        var parse = JsEngine.For(_engine)?.DocumentState?.ParserContext;
+        if (parse is null || (parse.UaStyleElement is null && parse.UserStyleElements.Count == 0))
+            return false;
+        return Contains(parse.UaStyleElement) || parse.UserStyleElements.Any(Contains);
+
+        bool Contains(IElement? sheet) =>
+            sheet is not null &&
+            (ReferenceEquals(sheet, element) || sheet.Ancestors().Contains(element));
+    }
+
+    /// <summary>A detached copy of the subtree with the origin sheets omitted at every level.
+    /// Detaching keeps AngleSharp's own formatter byte-exact for everything author-visible —
+    /// void elements, literal-text elements, attribute escaping — while the injected sheets
+    /// never surface. Template content is re-cloned deep: a shallow template clone copies its
+    /// content children shallowly, and no sheet can live inside template content anyway.</summary>
+    private IElement CloneWithoutOriginSheets(IElement element)
+    {
+        var clone = (IElement)element.Clone(deep: false);
+        AppendVisibleClones(clone, element);
+        return clone;
+    }
+
+    private void AppendVisibleClones(IElement clone, IElement source)
+    {
+        foreach (var child in VisibleDomChildren(source))
+        {
+            if (child is IElement childElement)
+            {
+                var childClone = (IElement)childElement.Clone(deep: false);
+                AppendVisibleClones(childClone, childElement);
+                clone.AppendChild(childClone);
+            }
+            else
+            {
+                clone.AppendChild(child.Clone(deep: true));
+            }
+        }
+
+        if (source is IHtmlTemplateElement { Content: { } content } &&
+            clone is IHtmlTemplateElement { Content: { } clonedContent })
+        {
+            while (clonedContent.HasChildNodes)
+                clonedContent.RemoveChild(clonedContent.FirstChild!);
+            foreach (var child in content.ChildNodes)
+                clonedContent.AppendChild(child.Clone(deep: true));
+        }
     }
 
     public JsElement? parentElement => DomNode is { } dom ?
@@ -1185,21 +1251,24 @@ public class JsElement
         set => setAttribute("tabindex", value.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 
-    public void focus()
+    /// <summary>HTMLElement.focus() — moves focus here per §3.2.2. The optional
+    /// FocusOptions dictionary is accepted; its preventScroll member is not honored yet
+    /// (this viewport model scrolls only when needed, which satisfies the common case).</summary>
+    public void focus(object? options = null)
     {
         if (!isConnected || JsEngine.For(_engine) is not { } engine) return;
         var state = engine.DocumentState;
         if (ReferenceEquals(state.ActiveElement, Node)) return;
         if (state.ActiveElement is { } previous)
         {
-            EventDispatcher.DispatchToNode(previous, "blur", engine);
-            EventDispatcher.DispatchToNode(previous, "focusout", engine, bubbles: true);
+            EventDispatcher.DispatchToNode(previous, "blur", engine, trusted: true);
+            EventDispatcher.DispatchToNode(previous, "focusout", engine, bubbles: true, trusted: true);
         }
         state.ActiveElement = Node;
         if (Node.TagName is "INPUT" or "TEXTAREA" or "SELECT")
             FormState.FocusedInput = Node.NodeKey;
-        EventDispatcher.DispatchToNode(Node, "focus", engine);
-        EventDispatcher.DispatchToNode(Node, "focusin", engine, bubbles: true);
+        EventDispatcher.DispatchToNode(Node, "focus", engine, trusted: true);
+        EventDispatcher.DispatchToNode(Node, "focusin", engine, bubbles: true, trusted: true);
     }
 
     public void blur()
@@ -1208,8 +1277,8 @@ public class JsElement
             !ReferenceEquals(engine.DocumentState.ActiveElement, Node)) return;
         engine.DocumentState.ActiveElement = null;
         if (FormState.FocusedInput == Node.NodeKey) FormState.FocusedInput = null;
-        EventDispatcher.DispatchToNode(Node, "blur", engine);
-        EventDispatcher.DispatchToNode(Node, "focusout", engine, bubbles: true);
+        EventDispatcher.DispatchToNode(Node, "blur", engine, trusted: true);
+        EventDispatcher.DispatchToNode(Node, "focusout", engine, bubbles: true, trusted: true);
     }
 
     /// <summary>Navigate an iframe inserted by script after the current JS call returns.</summary>
@@ -1966,16 +2035,41 @@ public class JsElement
 
     public JsBoundingClientRect getBoundingClientRect() { EnsureLayout(); return new(Node); }
 
+    /// <summary>Fragment list for getClientRects(): this box model has one border-box rect per
+    /// element (no inline fragmentation yet), which is what the length and [0] reads expect.</summary>
+    public JsBoundingClientRect[] getClientRects() { EnsureLayout(); return [new(Node)]; }
+
+    /// <summary>scrollIntoView (§3.4.3): scrolls the document viewport until the element is in
+    /// view. Alignment options are accepted and honored as "nearest" (the only mode this
+    /// viewport model implements).</summary>
+    public void scrollIntoView(object? options = null)
+    {
+        EnsureLayout();
+        JsEngine.For(_engine)?.ScrollIntoView(Node);
+    }
+
     public double offsetWidth { get { EnsureLayout(); return Node.Box.BorderBox.Width; } }
     public double offsetHeight { get { EnsureLayout(); return Node.Box.BorderBox.Height; } }
     public double offsetLeft { get { EnsureLayout(); return Node.Box.MarginBox.Left; } }
     public double offsetTop { get { EnsureLayout(); return Node.Box.MarginBox.Top; } }
     public double clientWidth { get { EnsureLayout(); return Node.Box.ContentBox.Width; } }
     public double clientHeight { get { EnsureLayout(); return Node.Box.ContentBox.Height; } }
-    public double scrollTop { get; set; }
-    public double scrollLeft { get; set; }
-    public double scrollWidth { get { EnsureLayout(); return Node.Box.ContentBox.Width; } }
-    public double scrollHeight { get { EnsureLayout(); return Node.Box.ContentBox.Height; } }
+    // Element scroll offsets (§11.1.1): reads/writes go through the layout's scroll state so
+    // script-initiated scrolling moves the paint (the live window repaints on its next frame;
+    // the headless harness draws after the script runs). A box without a scroll state has
+    // nothing to scroll — the offsets read 0, matching a non-scrollable element.
+    public double scrollTop
+    {
+        get { EnsureLayout(); return Node.ScrollState?.ScrollY ?? 0; }
+        set { EnsureLayout(); Node.ScrollState?.ScrollTo((float)value); }
+    }
+    public double scrollLeft
+    {
+        get { EnsureLayout(); return Node.ScrollState?.ScrollX ?? 0; }
+        set { EnsureLayout(); Node.ScrollState?.ScrollXTo((float)value); }
+    }
+    public double scrollWidth { get { EnsureLayout(); return Node.ScrollState?.ContentWidth ?? Node.Box.ContentBox.Width; } }
+    public double scrollHeight { get { EnsureLayout(); return Node.ScrollState?.ContentHeight ?? Node.Box.ContentBox.Height; } }
 
     // ---- helpers ----
     private static List<LayoutNode> FindAll(LayoutNode node, Func<LayoutNode, bool> predicate)

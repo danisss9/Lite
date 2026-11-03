@@ -1284,19 +1284,31 @@ internal static class BoxEngine
         // inside LayoutTable already applies, and the caption (§17.4, in the wrapper) adds on
         // top — clamping to the explicit height cut the caption band out of the wrapper's flow
         // height and pulled following content up over the table (fixed-table-layout-002a).
+        // Natural horizontal content extent (§11.1.1 overflow): the widest laid-out child box
+        // against the constrained width. A nowrap text line's own overflow is not tracked here —
+        // the corpus's scroll cases scroll laid-out block children.
+        var naturalW = 0f;
+        foreach (var child in node.Children)
+            naturalW = MathF.Max(naturalW, child.Box.MarginBox.Right - contentX);
+        if (naturalW <= 0f) naturalW = contentW;
+
         if (hasExplicitH && node.GetDisplay() is not (DisplayType.Table or DisplayType.InlineTable))
         {
             var clampedH = isBorderBox
                 ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
                 : explicitH;
 
-            // Per-element overflow scroll: track natural content vs. constrained height
+            // Per-element overflow scroll: track natural content vs. constrained extent on
+            // both axes (the vertical axis was the only one tracked; the background-attachment
+            // scroll corpus scrolls horizontally too).
             var overflow = node.GetOverflow();
-            if ((overflow == OverflowType.Scroll || overflow == OverflowType.Auto) && contentH > clampedH)
+            if ((overflow == OverflowType.Scroll || overflow == OverflowType.Auto) && (contentH > clampedH || naturalW > contentW))
             {
                 var ss = node.ScrollState ?? new ElementScrollState();
                 ss.ContentHeight = contentH;
                 ss.ContainerHeight = clampedH;
+                ss.ContentWidth = naturalW;
+                ss.ContainerWidth = contentW;
                 node.ScrollState = ss;
             }
             else
@@ -1313,7 +1325,20 @@ internal static class BoxEngine
             if (ar > 0)
                 contentH = contentW / ar;
 
-            node.ScrollState = null;
+            // Horizontal-only overflow with an auto height: the box's height grows to fit the
+            // content, so only the width axis can overflow.
+            var overflow = node.GetOverflow();
+            if ((overflow == OverflowType.Scroll || overflow == OverflowType.Auto) && naturalW > contentW)
+            {
+                var ss = node.ScrollState ?? new ElementScrollState();
+                ss.ContentWidth = naturalW;
+                ss.ContainerWidth = contentW;
+                node.ScrollState = ss;
+            }
+            else
+            {
+                node.ScrollState = null;
+            }
         }
 
         // A replaced box's height is the image's (or the ratio-derived) one — it has no in-flow
@@ -3024,8 +3049,12 @@ internal static class BoxEngine
                 else if (isRadio) { defaultW = FormLayout.RadioSize; defaultH = FormLayout.RadioSize; }
                 else if (isRange) { defaultW = FormLayout.RangeWidth; defaultH = FormLayout.RangeHeight; }
                 else if (node.TagName == "BUTTON") { defaultW = 0f; defaultH = FormLayout.TextInputHeight; }
-                else if (node.TagName == "INPUT" && inputType is "submit" or "reset" or "button")
+                else if (node.TagName == "INPUT")
                 {
+                    // Every remaining input type (text, password, number, search, file, date,
+                    // submit/reset/button/image, …) is a replaced control: IntrinsicWidth knows
+                    // each type's width, and the shared control height keeps an auto-height
+                    // input a visible, hittable box instead of a zero-tall sliver.
                     defaultW = FormLayout.IntrinsicWidth(node) ?? FormLayout.TextInputWidth;
                     defaultH = FormLayout.TextInputHeight;
                 }

@@ -577,6 +577,9 @@ namespace AngleSharp.Html.Parser
             {
                 if (c == Symbols.EndOfFile)
                 {
+                    // Lite patch 019: the CDATA-section rule raises a parse error at EOF
+                    // (the 2014 letter's CDATA section state; the text is still emitted).
+                    RaiseErrorOccurred(HtmlParseError.EOF);
                     Back();
                     break;
                 }
@@ -640,8 +643,8 @@ namespace AngleSharp.Html.Parser
         private String? GetNumericCharacterReference(Char c, Boolean isAttribute)
         {
             var exp = 10;
-            var basis = 1;
-            var num = 0;
+            var num = 0L;
+            var overflowed = false;
             var nums = new List<Int32>();
             var isHex = c == 'x' || c == 'X';
 
@@ -663,11 +666,21 @@ namespace AngleSharp.Html.Parser
                 }
             }
 
-            for (var i = nums.Count - 1; i >= 0; i--)
+            // Lite patch 015: the value accumulates most-significant-first with saturation.
+            // The 32-bit accumulation wrapped out-of-range references onto small code points
+            // (&#x100000041; became "A") instead of following the out-of-range rule (parse
+            // error, U+FFFD); saturating also keeps arbitrarily wide inputs (65-bit and
+            // beyond) from wrapping the long — or the radix — itself.
+            foreach (var digit in nums)
             {
-                num += nums[i] * basis;
-                basis *= exp;
+                if (!overflowed)
+                {
+                    num = num * exp + digit;
+                    overflowed = num > Symbols.MaximumCodepoint;
+                }
             }
+
+            var code = overflowed ? -1 : (Int32)num;
 
             if (nums.Count == 0)
             {
@@ -692,22 +705,27 @@ namespace AngleSharp.Html.Parser
                 Back();
             }
 
-            if (HtmlEntityProvider.IsInCharacterTable(num))
-            {
-                RaiseErrorOccurred(HtmlParseError.CharacterReferenceInvalidCode);
-                return HtmlEntityProvider.GetSymbolFromTable(num);
-            }
-            else if (HtmlEntityProvider.IsInvalidNumber(num))
+            if (overflowed)
             {
                 RaiseErrorOccurred(HtmlParseError.CharacterReferenceInvalidNumber);
                 return Symbols.Replacement.ToString();
             }
-            else if (HtmlEntityProvider.IsInInvalidRange(num))
+            else if (HtmlEntityProvider.IsInCharacterTable(code))
+            {
+                RaiseErrorOccurred(HtmlParseError.CharacterReferenceInvalidCode);
+                return HtmlEntityProvider.GetSymbolFromTable(code);
+            }
+            else if (HtmlEntityProvider.IsInvalidNumber(code))
+            {
+                RaiseErrorOccurred(HtmlParseError.CharacterReferenceInvalidNumber);
+                return Symbols.Replacement.ToString();
+            }
+            else if (HtmlEntityProvider.IsInInvalidRange(code))
             {
                 RaiseErrorOccurred(HtmlParseError.CharacterReferenceInvalidRange);
             }
 
-            return Char.ConvertFromUtf32(num);
+            return Char.ConvertFromUtf32(code);
         }
 
         private String? GetLookupCharacterReference(Char allowedCharacter, Boolean isAttribute)
@@ -731,6 +749,9 @@ namespace AngleSharp.Html.Parser
             }
             while (chr != Symbols.EndOfFile && index < 31);
 
+            // Lite patch 018 bookkeeping: whether the scan consumed any name characters.
+            var consumedAny = index > 0;
+
             if (chr == Symbols.Semicolon)
             {
                 _characterReferenceBuffer[index] = Symbols.Semicolon;
@@ -746,7 +767,20 @@ namespace AngleSharp.Html.Parser
                 }
             }
 
-            chr = Current;
+            // Lite patch 018: when the scan consumed nothing, the character that ended the
+            // reference was read without being consumed. If it is the semicolon the lookup
+            // tolerates, restore the read position so the data state reprocesses it ("&;"
+            // keeps its semicolon as text); any other terminator is rewound by the error
+            // check below (attributes additionally rewind through the allowed-character
+            // shortcut), so this must not Back twice.
+            if (!consumedAny && chr == Symbols.Semicolon)
+            {
+                Back();
+            }
+            else
+            {
+                chr = Current;
+            }
 
             if (chr != Symbols.Semicolon)
             {
@@ -1177,7 +1211,9 @@ namespace AngleSharp.Html.Parser
                         return true;
                     case Symbols.Null:
                         RaiseErrorOccurred(HtmlParseError.Null);
-                        Append(Symbols.Minus, Symbols.Replacement);
+                        // Lite patch 016: the comment-end rule appends two dashes and the
+                        // replacement character ("<!----\u0000" keeps both hyphens).
+                        Append(Symbols.Minus, Symbols.Minus, Symbols.Replacement);
                         return false;
                     case Symbols.ExclamationMark:
                         RaiseErrorOccurred(HtmlParseError.CommentEndedWithEM);
@@ -1673,7 +1709,8 @@ namespace AngleSharp.Html.Parser
             else if (c == Symbols.GreaterThan)
             {
                 RaiseErrorOccurred(HtmlParseError.TagClosedWrong);
-                doctype.SystemIdentifier = FlushBufferFast();
+                // Lite patch 017: the identifier stays missing (flushing the empty buffer
+                // here manufactured a SYSTEM "" where the spec wants no identifier).
                 doctype.IsQuirksForced = true;
             }
             else if (c == Symbols.EndOfFile)
@@ -1715,13 +1752,12 @@ namespace AngleSharp.Html.Parser
                 State = HtmlParseMode.PCData;
                 RaiseErrorOccurred(HtmlParseError.TagClosedWrong);
                 doctype.IsQuirksForced = true;
-                doctype.SystemIdentifier = FlushBufferFast();
+                // Lite patch 017: the identifier stays missing (see the after-keyword site).
             }
             else if (c == Symbols.EndOfFile)
             {
                 RaiseErrorOccurred(HtmlParseError.EOF);
                 doctype.IsQuirksForced = true;
-                doctype.SystemIdentifier = FlushBufferFast();
                 Back();
             }
             else

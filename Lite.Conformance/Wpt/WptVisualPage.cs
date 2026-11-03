@@ -1,6 +1,8 @@
+using Lite;
 using Lite.Conformance.Harness;
 using Lite.Extensions;
 using Lite.Layout;
+using Lite.Platform;
 using SkiaSharp;
 
 namespace Lite.Conformance.Wpt;
@@ -8,7 +10,37 @@ namespace Lite.Conformance.Wpt;
 /// <summary>Load/paint readiness shared by the pinned WPT reftest and crashtest protocols.</summary>
 internal static class WptVisualPage
 {
-    internal static (SKBitmap Bitmap, Lite.Models.LayoutNode Root) Render(string path, string? viewport = null, string waitClass = "reftest-wait")
+    /// <summary>A session carrying the case's user style sheet: a case whose flags declare
+    /// <c>userstyle</c> states as its PREREQUISITE that a named .css file is enabled as the
+    /// user agent's user style sheet — the suite's own per-case prerequisite sheet, loaded
+    /// through the same UserStyleSheet channel the UA conformance requirement (§conform.html)
+    /// provides. Any other case returns null (the engine's default session).</summary>
+    private static Lite.Network.BrowserSession? UserStyleSession(string path)
+    {
+        var file = ConformanceServer.ResolveFile(path);
+        if (file is null) return null;
+        string text;
+        try { text = File.ReadAllText(file); }
+        catch (IOException) { return null; }
+        var flags = System.Text.RegularExpressions.Regex.Match(
+            text, "<meta\\s+name=[\"']flags[\"']\\s+content=[\"']([^\"']*)[\"']",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!flags.Success || !flags.Groups[1].Value
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Contains("userstyle"))
+            return null;
+        var href = System.Text.RegularExpressions.Regex.Match(text, "<a href=[\"']([^\"']+\\.css)[\"']");
+        if (!href.Success) return null;
+        var sheetUrl = new Uri(new Uri("http://harness.invalid/" + path.Replace('\\', '/')), href.Groups[1].Value).AbsolutePath;
+        var sheetFile = ConformanceServer.ResolveFile(sheetUrl);
+        if (sheetFile is null) return null;
+        return new Lite.Network.BrowserSession { UserStyleSheet = File.ReadAllText(sheetFile) };
+    }
+
+    internal static (SKBitmap Bitmap, Lite.Models.LayoutNode Root, SKBitmap? Mid, SKBitmap? Before,
+        IReadOnlyList<Lite.Rendering.PaintLog.Entry> Paint) Render(string path, string? viewport = null,
+        string waitClass = "reftest-wait", Css21.ScrollSpec? elementScroll = null,
+        Func<Lite.Models.LayoutNode, (float ScrollX, float ScrollY)>? pageScroll = null,
+        bool testDriver = false)
     {
         var width = 800;
         var height = 600;
@@ -18,7 +50,24 @@ internal static class WptVisualPage
             if (size.Length != 2 || !int.TryParse(size[0], out width) || !int.TryParse(size[1], out height) || width <= 0 || height <= 0)
                 throw new InvalidDataException("Invalid WPT viewport.");
         }
-        var (root, engine) = HeadlessPage.Load(ConformanceServer.TestUrl(path), width, height);
+        var url = ConformanceServer.TestUrl(path);
+        Lite.Models.LayoutNode root;
+        Scripting.JsEngine engine;
+        if (testDriver)
+        {
+            // A testdriver visual page drives the real input pipeline before its snapshot:
+            // load through a headless BrowserWindow with the bridge registered, then run the
+            // same quiescence protocol below on the window's root.
+            var window = new BrowserWindow(url, width: width, height: height);
+            engine = window.RunHeadless(new HeadlessHost()) ??
+                throw new InvalidDataException($"WPT document failed to load: {path}.");
+            TestDriverBridge.Register(engine, window);
+            root = window.RootNode ?? throw new InvalidDataException($"WPT document has no root: {path}.");
+        }
+        else
+        {
+            (root, engine) = HeadlessPage.Load(url, width, height, UserStyleSession(path));
+        }
         var document = engine.DocumentState.Document;
         if (document is null || (int)document.StatusCode is < 200 or >= 300)
             throw new InvalidDataException($"WPT document failed to load: {path} ({document?.StatusCode}).");
@@ -36,16 +85,64 @@ internal static class WptVisualPage
             throw new TimeoutException($"WPT document did not clear {waitClass}.");
         HeadlessPage.PumpFrames(engine, 2);
         engine.FlushMicrotasksTree();
-        return (Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height }), root);
+        (SKBitmap, IReadOnlyList<Lite.Rendering.PaintLog.Entry>) Draw()
+        {
+            List<Lite.Rendering.PaintLog.Entry> paint;
+            Lite.Rendering.PaintLog.Begin();
+            try { var bmp = Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height }); paint = Lite.Rendering.PaintLog.End(); return (bmp, paint); }
+            catch { Lite.Rendering.PaintLog.End(); throw; }
+        }
+        if (elementScroll is null && pageScroll is null)
+        {
+            var (plain, plainPaint) = Draw();
+            return (plain, root, null, null, plainPaint);
+        }
+
+        // Two-render protocols (e.g. a stated condition about the scrolled state): capture
+        // the initial render, apply the scroll phase(s) to the layout, and render each state.
+        var scroll = elementScroll;
+        var (beforeBmp, beforePaint) = Draw();
+        var before = beforeBmp;
+        SKBitmap? mid = null;
+        if (scroll is not null)
+        {
+            Css21.VisualChecks.ApplyScroll(new Css21.ScrollSpec(scroll.To), root);
+            HeadlessPage.PumpFrames(engine, 2);
+            (mid, _) = Draw();
+            if (scroll.Then is { } then)
+            {
+                Css21.VisualChecks.ApplyScroll(new Css21.ScrollSpec(then), root);
+                HeadlessPage.PumpFrames(engine, 2);
+            }
+        }
+        var (pageX, pageY) = pageScroll is { } ps ? ps(root) : (0f, 0f);
+        var documentWidth = root.Box.BorderBox.Right;
+        var documentHeight = root.Box.BorderBox.Bottom;
+        var scrolledViewport = new Viewport { ViewportHeight = height, ContentHeight = documentHeight, ContentWidth = documentWidth };
+        if (pageY > 0 || pageX > 0)
+        {
+            scrolledViewport.ScrollTo(pageY);
+            scrolledViewport.ScrollXTo(pageX);
+        }
+        List<Lite.Rendering.PaintLog.Entry> paint;
+        Lite.Rendering.PaintLog.Begin();
+        try
+        {
+            var finalBmp = Lite.Drawer.DrawToBitmap(width, height, root, scrolledViewport);
+            paint = Lite.Rendering.PaintLog.End();
+            return (finalBmp, root, mid, before, paint);
+        }
+        catch { Lite.Rendering.PaintLog.End(); throw; }
     }
 
     internal static WptRunner.RunResult RunCrash(WptCase test)
     {
-        if (test.TestDriver || test.Options?.ContainsKey("dpi") == true)
-            return new(WptRunner.Cat.Unsupported, "Crashtest requires test-driver or DPI support", 0, 0);
+        if (test.Options?.ContainsKey("dpi") == true)
+            return new(WptRunner.Cat.Unsupported, "Crashtest requires DPI support", 0, 0);
         try
         {
-            var (bitmap, _) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(), "test-wait");
+            var (bitmap, _, _, _, _) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(), "test-wait",
+                testDriver: test.TestDriver);
             using (bitmap)
             {
                 const string assertion = "Document loaded and rendered without a crash";
@@ -68,15 +165,34 @@ internal static class WptVisualPage
     /// <paramref name="embeddedRequired"/> runs the embedded-reference check even without
     /// red, for cases whose stated condition is the swatch pair's colour match.
     /// <paramref name="statedCondition"/>, when set, decides a red-free render by the case's
-    /// machine-checked stated condition instead of the scan alone.</summary>
+    /// machine-checked stated condition instead of the scan alone. <paramref name="statedCheck"/>'s
+    /// scroll protocol, when present, renders the initial state, scrolls the overflow box, and
+    /// renders again — the stated condition then judges the scrolled render against the initial
+    /// one (before it is handed to the check as <c>before</c>).</summary>
     internal static WptRunner.RunResult RunSelfTest(WptCase test, bool embeddedRequired = false,
-        Func<SKBitmap, Lite.Models.LayoutNode, WptRunner.RunResult>? statedCondition = null)
+        Func<Css21.RenderSet, Lite.Models.LayoutNode, WptRunner.RunResult>? statedCondition = null,
+        Css21.VisualCheck? statedCheck = null)
     {
         if (test.TestDriver || test.Options?.ContainsKey("dpi") == true)
             return new(WptRunner.Cat.Unsupported, "Self-test requires test-driver or DPI support", 0, 0);
         try
         {
-            var (bitmap, root) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>());
+            var scroll = statedCheck?.Scroll;
+            var pageTarget = scroll?.To is { } to && to.StartsWith("page-", StringComparison.Ordinal) ? to : null;
+            var width = 800;
+            var height = 600;
+            if (test.Options?["viewport_size"]?.GetValue<string>() is { } vp)
+            {
+                var size = vp.Split('x');
+                if (size.Length == 2 && int.TryParse(size[0], out var w) && int.TryParse(size[1], out var h) && w > 0 && h > 0)
+                { width = w; height = h; }
+            }
+            var pageScroll = pageTarget is null
+                ? null
+                : (Func<Lite.Models.LayoutNode, (float, float)>)(root => Css21.VisualChecks.PageScrollExtent(pageTarget, root, width, height));
+            var (bitmap, root, mid, before, paint) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(),
+                elementScroll: pageTarget is null ? scroll : null, pageScroll: pageScroll);
+            var renders = new Css21.RenderSet(bitmap, mid, before, paint);
             using (bitmap)
             {
                 // The suite's Ahem font-requirement notice ("Ahem_font_required_for_this_test.")
@@ -105,7 +221,7 @@ internal static class WptVisualPage
                 const string assertion = "Self-describing test shows no failure red (diagnostic)";
                 if (red == 0 && statedCondition is not null)
                 {
-                    var stated = statedCondition(bitmap, root);
+                    var stated = statedCondition(renders, root);
                     var subtests = new List<SubtestEvidence> { new(assertion, 0, null) };
                     subtests.AddRange(stated.Subtests ?? []);
                     return stated with { Detail = $"{assertion}; {stated.Detail}", Total = subtests.Count, Subtests = subtests };

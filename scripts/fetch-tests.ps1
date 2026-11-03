@@ -139,6 +139,17 @@ $wptResolved = Fetch-SparseRepo $WptPin.repository $WptDestination $WptSha $WptD
 # ---- test262 ----
 $t262Resolved = Fetch-SparseRepo $Test262Pin.repository $Test262Destination $Test262Sha $Test262Dirs
 
+# ---- every other git-sourced suite in the lock (html5lib-tests today) ----
+$extraResolved = @{}
+foreach ($pin in ($SuiteLock.suites | Where-Object { $_.source -eq 'git' -and $_.id -notin @('wpt', 'test262') })) {
+    $dest = Resolve-VendorDestination $pin.destination
+    $resolved = Fetch-SparseRepo $pin.repository $dest $pin.revision @($pin.sparseCheckout)
+    if ($resolved -ne $pin.revision) {
+        throw "Suite '$($pin.id)' resolved $resolved, but the lock pins $($pin.revision)."
+    }
+    $extraResolved[$pin.id] = $resolved
+}
+
 # ---- Acid1 (W3C CSS1 test 5526c) ----
 $acid1Dir = Join-Path $Vendor 'acid\acid1'
 Fetch-File @(
@@ -161,6 +172,9 @@ Write-Host ''
 Write-Host 'Done. Resolved commits (must match Lite.Conformance\test-suites.lock.json):'
 Write-Host "  WPT:     $wptResolved"
 Write-Host "  test262: $t262Resolved"
+foreach ($entry in $extraResolved.GetEnumerator()) {
+    Write-Host "  $($entry.Key): $($entry.Value)"
+}
 
 # ---- Official CSS 2.1 suite (23 March 2011) via the Internet Archive ----
 # The canonical host (test.csswg.org) now redirects away, so the snapshot is vendored from

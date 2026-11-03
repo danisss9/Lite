@@ -3,14 +3,20 @@ namespace Lite.Layout;
 internal class Viewport
 {
     public float ScrollY { get; private set; }
+    public float ScrollX { get; private set; }
     public float ContentHeight { get; set; }
+    public float ContentWidth { get; set; }
     public float ViewportHeight { get; set; }
+    public float ViewportWidth { get; set; }
 
     private float MaxScroll => Math.Max(0, ContentHeight - ViewportHeight);
+    private float MaxScrollX => Math.Max(0, ContentWidth - ViewportWidth);
 
     public void ScrollBy(float delta) => ScrollTo(ScrollY + delta);
 
     public void ScrollTo(float y) => ScrollY = Math.Clamp(y, 0, MaxScroll);
+
+    public void ScrollXTo(float x) => ScrollX = Math.Clamp(x, 0, MaxScrollX);
 
     // ── Scrollbar geometry (must match Drawer.DrawScrollbar constants) ──
 

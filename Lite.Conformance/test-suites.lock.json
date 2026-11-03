@@ -57,6 +57,17 @@
    "upstreamCandidateTestsAtRevision": 53379
   },
   {
+   "id": "html5lib-tests",
+   "source": "git",
+   "repository": "https://github.com/html5lib/html5lib-tests.git",
+   "revision": "c777c408b61078ea2eb4acefc2535f54dbc8b28a",
+   "destination": "vendor/html5lib-tests",
+   "sparseCheckout": [
+    "tokenizer"
+   ],
+   "scope": "sparse"
+  },
+  {
    "id": "css21-official-20110323",
    "source": "snapshot",
    "repository": "https://www.w3.org/Style/CSS/Test/CSS2.1/20110323/",
@@ -75,7 +86,7 @@
     "other-formats-screen": "vendored",
     "xhtml1-screen": "unavailable"
    },
-   "treeSha256": "8f38c84abb9bb6a16b97cede7212b9bdc1297fee224abdc3c45d8208cc9a3927",
+   "treeSha256": "e231e67f2225a519b3d31534143147578b43ea21436a5e96a3de4c8ab555abf9",
    "vendored": true
   }
  ]

@@ -237,7 +237,12 @@ internal static class Parser
         }
         using var response = Session.Client.Send(message);
         var address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? request.Url;
-        var html = response.Content.ReadAsStringAsync().Result;
+        // REC §8.2.2.1: the document bytes are decoded by the encoding-sniffing algorithm
+        // (BOM, then the transport charset, then the 1024-byte meta prescan, then Lite's
+        // implementation-defined UTF-8 default, with the late-declaration restart).
+        var html = EncodingSniffer.DecodeDocument(
+            response.Content.ReadAsByteArrayAsync().Result,
+            response.Content.Headers.ContentType?.CharSet);
         if (!response.IsSuccessStatusCode)
         {
             // A browser renders the server's error body (search engines rate-limit with HTML
@@ -249,13 +254,12 @@ internal static class Parser
         }
         var mediaType = response.Content.Headers.ContentType?.MediaType;
         Current.IsXmlDocument = mediaType is "application/xhtml+xml" or "text/xml" or "application/xml";
-        // The body was decoded with the transport charset (CSS 2.1 §4.4: it wins; UTF-8 is the
-        // default when the response declares none). AngleSharp's parser re-encodes string
-        // content as UTF-8 bytes and honors <meta http-equiv=Content-Type> as an encoding
-        // change over those bytes — any other charset then MOJIBAKES every non-ASCII attribute
-        // (the class selectors of character-encoding-003..017 stop matching). The decode the
-        // meta once governed already happened, so the meta now describes OUR bytes: align it
-        // with UTF-8 and the parser's re-decode is a lossless no-op.
+        // AngleSharp re-encodes string content as UTF-8 bytes and honors <meta
+        // http-equiv=Content-Type> as an encoding change over those bytes — any other
+        // charset then MOJIBAKES every non-ASCII attribute (the class selectors of
+        // character-encoding-003..017 stop matching). The wire decode already happened in
+        // EncodingSniffer, so the declaration now describes OUR bytes: align it with UTF-8
+        // and the parser's re-decode is a lossless no-op.
         if (!Current.IsXmlDocument)
             html = AlignMetaCharset(html, "utf-8");
         else
@@ -860,7 +864,11 @@ internal static class Parser
                 using var response = Session.Client.GetAsync(content).Result;
                 // HTTP error responses still complete iframe navigation and fire load.
                 address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? content;
-                html = response.Content.ReadAsStringAsync().Result;
+                // Same REC §8.2.2.1 decode as the top-level load: an iframe's document
+                // carries its own encoding declarations.
+                html = EncodingSniffer.DecodeDocument(
+                    response.Content.ReadAsByteArrayAsync().Result,
+                    response.Content.Headers.ContentType?.CharSet);
             }
             var document = context.OpenAsync(req => req.Address(address)
                 .Content(NormalizeImportantBangs(html))).Result;

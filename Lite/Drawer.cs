@@ -93,7 +93,7 @@ internal static class Drawer
         _viewportWidth = width;
 
         canvas.Save();
-        canvas.Translate(0, -viewport.ScrollY);
+        canvas.Translate(-viewport.ScrollX, -viewport.ScrollY);
 
         // The propagated background image paints at the root's padding box (its positioning area
         // is the canvas's origin), scrolling with the document, under all content.
@@ -165,15 +165,27 @@ internal static class Drawer
 
     private static void DrawElementScrollbar(SKCanvas canvas, LayoutNode node, ElementScrollState ss)
     {
+        // Each axis draws its own bar only when it overflows (§11.1.1): a horizontal-only
+        // overflow box must not grow a phantom vertical bar.
         var box = node.Box.PaddingBox;
         var barW = ElementScrollState.BarWidth;
         var barM = ElementScrollState.BarMargin;
-        var x = box.Right - barW - barM;
-        var thumbH = ss.ThumbHeight;
-        var thumbTop = ss.ThumbTop(box.Top);
-
         using var paint = new SKPaint { Color = new SKColor(0, 0, 0, 80), IsAntialias = true };
-        canvas.DrawRoundRect(x, thumbTop + barM, barW, thumbH - barM * 2, 3, 3, paint);
+        if (ss.NeedsScrollbar)
+        {
+            var thumbH = ss.ThumbHeight;
+            var thumbTop = ss.ThumbTop(box.Top);
+            canvas.DrawRoundRect(box.Right - barW - barM, thumbTop + barM, barW, thumbH - barM * 2, 3, 3, paint);
+        }
+        if (ss.NeedsHorizontalScrollbar)
+        {
+            var thumbW = ss.ContentWidth > 0
+                ? Math.Max(20f, box.Width * (box.Width / ss.ContentWidth))
+                : 0f;
+            var trackW = Math.Max(0f, box.Width - thumbW);
+            var thumbLeft = ss.MaxScrollX > 0 ? box.Left + trackW * (ss.ScrollX / ss.MaxScrollX) : box.Left;
+            canvas.DrawRoundRect(thumbLeft, box.Bottom - barW - barM, Math.Max(thumbW - barM * 2, barW), barW, 3, 3, paint);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -365,20 +377,20 @@ internal static class Drawer
         // §11.2: an invisible box paints nothing of its own, but still scrolls/clips its
         // descendants (which may be visibility:visible). Keep the translate, drop the paint.
         var invisible = node.IsInvisible();
-        if (scrollState != null && scrollState.NeedsScrollbar)
+        if (scrollState != null && (scrollState.NeedsScrollbar || scrollState.NeedsHorizontalScrollbar))
         {
             // Draw background, borders, and shadows at their fixed layout position
             // before the scroll translate so they don't scroll away with the content.
             if (!invisible) PaintBlockDecorations(canvas, node);
-            canvas.Translate(0, -scrollState.ScrollY);
+            canvas.Translate(-scrollState.ScrollX, -scrollState.ScrollY);
         }
 
         PaintNodeContent(canvas, node, viewportWidth);
 
         // Draw per-element scrollbar (inside the clip, after restoring scroll translate)
-        if (scrollState != null && scrollState.NeedsScrollbar)
+        if (scrollState != null && (scrollState.NeedsScrollbar || scrollState.NeedsHorizontalScrollbar))
         {
-            canvas.Translate(0, scrollState.ScrollY); // Undo scroll offset for scrollbar
+            canvas.Translate(scrollState.ScrollX, scrollState.ScrollY); // Undo scroll offset for scrollbar
             if (!invisible) DrawElementScrollbar(canvas, node, scrollState);
         }
 
@@ -1894,6 +1906,7 @@ internal static class Drawer
                     insideMarkerWidth = markerFont.MeasureText(markerStr);
                     canvas.DrawText(markerStr, box.ContentBox.Left, box.ContentBox.Top + ascent,
                                     SKTextAlign.Left, markerFont, markerPaint);
+                    Rendering.PaintLog.Record(markerStr, box.ContentBox.Left, box.ContentBox.Top + ascent, markerFont, SKTextAlign.Left);
                 }
                 else
                 {
@@ -1913,6 +1926,7 @@ internal static class Drawer
                 {
                     canvas.DrawText(markerText, markerX, markerY + ascent,
                                     SKTextAlign.Right, markerFont, markerPaint);
+                    Rendering.PaintLog.Record(markerText, markerX, markerY + ascent, markerFont, SKTextAlign.Right);
                 }
                 else
                 {
@@ -2807,9 +2821,11 @@ internal static class Drawer
         if (letterSpacing == 0f && wordSpacing == 0f)
         {
             canvas.DrawText(text, x, y, SKTextAlign.Left, font, paint);
+            Rendering.PaintLog.Record(text, x, y, font, SKTextAlign.Left);
             return;
         }
 
+        Rendering.PaintLog.Record(text, x, y, font, SKTextAlign.Left);
         var curX = x;
         foreach (var ch in text)
         {

@@ -6,11 +6,16 @@ namespace Lite.Layout;
 public class ElementScrollState
 {
     public float ScrollY { get; private set; }
+    public float ScrollX { get; private set; }
     public float ContentHeight { get; set; }
     public float ContainerHeight { get; set; }
+    public float ContentWidth { get; set; }
+    public float ContainerWidth { get; set; }
 
     public float MaxScroll => Math.Max(0f, ContentHeight - ContainerHeight);
+    public float MaxScrollX => Math.Max(0f, ContentWidth - ContainerWidth);
     public bool NeedsScrollbar => ContentHeight > ContainerHeight;
+    public bool NeedsHorizontalScrollbar => ContentWidth > ContainerWidth;
 
     public const float BarWidth = 6f;
     public const float BarMargin = 2f;
@@ -23,6 +28,11 @@ public class ElementScrollState
     public void ScrollTo(float y)
     {
         ScrollY = Math.Clamp(y, 0f, MaxScroll);
+    }
+
+    public void ScrollXTo(float x)
+    {
+        ScrollX = Math.Clamp(x, 0f, MaxScrollX);
     }
 
     public float ThumbHeight

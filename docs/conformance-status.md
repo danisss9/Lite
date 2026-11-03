@@ -27,13 +27,24 @@ Unit suite 428/428; curated gates css21 51 pass / 1 published expected-fail, wpt
 17/213 `implemented` after the 2 November strict flip pass (css21.9.9 newly
 clears its full family).
 
+Snapshot updated 3 November 2026: the CSS 2.1 track's unsupported long tail is fully
+routed — every cataloged case has a verdict route (twin reftest, machine check of the stated
+pass condition, sufficient no-red scan/swatch, reviewed manual-pending, or a published
+screen exclusion), enforced by a static audit in the unit suite. No conformance run was
+executed for this checkpoint by decision; the 2 November baseline stands until the next
+full-screen run converts the routes into verdicts. The HTML5 track's encoding-sniffer and
+html5lib tokenizer work was in flight in the same checkout and has since landed — the
+HTML5 row and the plan's 3 November checkpoint record the closed position — and the
+track's remaining-work plan to 100% is now written (no run executed for it either);
+per-track file ownership was respected throughout.
+
 ## Track status at a glance
 
 | Track | Readiness | Last recorded position |
 | --- | --- | --- |
 | ES2020 | **`es2020ProfileReady` true** — enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, zero failures and zero expected failures, no dependency exception; host suite 20/20; all 2,115 ECMA-262 clauses reviewed |
-| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 2 November, second probe batch (`745f8b6`) plus two engine-fix batches (`37f05dc`, `2b978d0`) with a fresh full-screen baseline: official 2011 suite 6,915/9,039 (76.5%), 1,097 fail, 1,027 unsupported pending references or manual evidence; WPT `css/CSS2` 6,334/8,904 (71.1%), 1,377 fail, 1,180 unsupported; the stated pass condition of 4,012 self-describing cases is machine-checked (618 formerly-unsupported targets decided in this baseline: 358 pass, 260 real engine findings); applicability review complete (18,654 cases); obligations 17/213 `implemented` |
-| HTML5 | `html5ProfileReady` false | Reviewed gate now spans 1,392 tests (153 passing — the applicability review's newly-tracked obligations form the Milestone 4 engine queue), curated wpt 86 pass / 2 published expected-fails, unit 432/432; html5lib parse fidelity **decided 1889/1,891 unique tree-construction cases** (1,746 raw pass + 2 pipeline-fixes artifacts + 141 reviewed ledger-pass corrections, +2 runner-excluded scripted document.write cases) — enforced by the `--suite html5-parse` gate in CI since 2 November (`198c9fc`); applicability manifest 7,432 entries (1,235 `included`, 1 `mixed`, 4,773 `post-target`, 1,291 `profile-excluded`, 23 `regression-only`, 109 `unreviewed` — each naming its pending Milestone 3 capability); REC section review 0/762; tokenizer corpus vendored, harness pending |
+| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 3 November, the unsupported long tail closes as a routing matter (no conformance run executed; suite numbers stand at the 2 November baseline: official 6,915/9,039, WPT 6,334/8,904): every one of the 11,934 cataloged cases now carries exactly one verdict route — 5,223 twin reftest, 2,981 machine check (probe batch 3's ~90 sentence kinds incl. the scroll protocol and paint-log glyph-order reads), 1,707 sufficient scan/swatch, 1,450 reviewed manual-pending, 573 screen-excluded — enforced by a unit-suite audit; the bidi char-order family carries computed UBA glyph-order expectations; the missing user-stylesheet.css prerequisite sheet restored and loadable per case; unit 455/455 |
+| HTML5 | `html5ProfileReady` false | 3 November: the harness-blocked tail is **closed — 0 unreviewed** — and Milestone 1's remaining work is quantified. All 109 tail entries decided (101 executed under the landed testdriver capability and its visual-runner route — 2 pass, 99 reviewed-failing; 8 manual-kind files by static reviewed-failing classification: no applicationCache, fixed `navigator.onLine`, no `window.open`). The propose tool's `needs/testdriver` inventory batch (481 sources) was then surveyed and added with measured outcomes (35 pass, 446 reviewed-failing) plus 9 cited post-target entries — the manifest now holds 7,923 entries with 1,826 `included`, and the runner's guarded omission check reports the inventory-completion remainder precisely: **6,691 catalog cases across 11 roots with no manifest entry** (html/semantics dominating at 2,162; encoding 1,265; fetch 856; dom 378) — `inventoryComplete` stays false by the mechanical condition, and the unproposed sources find their classifications through the section review. Engine fixes landed with the testdriver capability: text inputs size 150×20, trusted form-control clicks, interaction focus mirroring `element.focus()`, `elementsFromPoint`/`getClientRects`/`scrollIntoView`/`document.contains`. Units 458/458; curated wpt 86/2 and css21 51/1 unchanged; parse fidelity 1,889/1,891, tokenizer 7,052/7,052; REC section review 0/762 |
 
 ## Roadmap
 
@@ -95,8 +106,19 @@ In the delivery order of [html5-conformance-plan.md](html5-conformance-plan.md):
    dependency roots the scope decision already covers (`uievents`, `url`,
    `encoding`, `webstorage`, `webmessaging`, `cookies`, `fetch`/`cors`,
    `FileAPI`, `selection`, `mimesniff`) were bulk-classified in earlier sweeps.
-   The tail closes when Milestone 3 lands and the files execute.
-2. **Close Milestone 2's parse residuals**: the tree-construction corpus is
+   **Closed 3 November: the 109-entry tail is 0.** The checkpoint in
+   [html5-conformance-plan.md](html5-conformance-plan.md) records the mechanism
+   and the batches: 101 entries executed under the landed capabilities (2 pass,
+   99 reviewed-failing on the Milestone 4 queue) and the 8 manual-kind files
+   classified by static reviewed-failing review (the manual-evidence recordings
+   remain the Milestone 6 evidence step). **Milestone 1's remaining work is
+   inventory completion**: the propose tool's testdriver inventory batch (481
+   sources, 35 pass / 446 reviewed-failing) and the cited post-target batches
+   are in the manifest, and the runner's guarded omission check quantifies the
+   remainder at **6,691 unclassified catalog cases across 11 roots** — worked to
+   zero through the propose batches and the section review before
+   `inventoryComplete` flips.
+2. **Milestone 2's measured corpus work is complete** (3 November): the tree-construction corpus is
    **closed under the contract** — every case is a raw pass, a pipeline-fixes
    artifact, a reviewed ledger-pass correction (`Wpt/html5-parse-expectations.json`,
    regenerated by `scripts/gen_html5_parse_expectations.py`, reviewed entries never
@@ -105,12 +127,15 @@ In the delivery order of [html5-conformance-plan.md](html5-conformance-plan.md):
    and the streaming semantics live on the frame-level write path). Fork patches
    012–014 (in-select anything-else, the in-cell HTML-cell pop, after-frameset
    whitespace) carried 20 cases to the letter; the .dat loader now decodes the
-   format's `\uXXXX` escapes. Remaining: the html5lib-tests **tokenizer corpus**
-   (15 `.test` JSON files upstream — expected token streams plus ~80 spec error
-   codes mapped onto the engine's `HtmlParseError` set, with initial-state dispatch;
-   needs a new `html5lib-tests` locked-suite entry), then encoding sniff/restart
-   and the serialization residuals (innerHTML/outerHTML still surfacing the
-   injected origin sheets).
+   format's `\uXXXX` escapes. The tokenizer corpus is vendored and gated —
+   `--suite html5-tokenizer` decides **7,052/7,052** case/state runs (+1 pinned
+   U+FFFF runner-exclusion) through fork patches 015–019 and a 30-entry reviewed
+   ledger; encoding determination (§8.2.2.1 — BOM, transport charset, prescan,
+   default, late restart) is wired into the load path; the serialization
+   residuals are closed (innerHTML/outerHTML omit the injected origin sheets at
+   every depth). What remains of Milestone 2 is the **serving integration** the
+   WPT encoding suite needs — Milestone 3 work, sequenced with the rest of the
+   remaining plan in [html5-conformance-plan.md](html5-conformance-plan.md).
 3. **Milestone 3 harness automation before the deep `html` root**: testdriver input
    automation over the native/headless hosts, `.any.js`/`.worker.js` worker
    contexts, upstream serving integration, reftest fuzzy/DPI metadata, recorded

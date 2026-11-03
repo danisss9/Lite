@@ -57,6 +57,50 @@ public class JsDocument
         JsEngine.For(_engine)?.DocumentState.ActiveElement is { } active
             ? JsElement.For(_engine, active) : body;
 
+    // ---- hit testing (CSSOM View §4) ----
+
+    /// <summary>Node.contains over the document: true when the node is connected to this
+    /// document's tree (its ancestor chain reaches the document root).</summary>
+    public bool contains(JsElement other)
+    {
+        for (var n = other.Node; n != null; n = n.Parent)
+            if (ReferenceEquals(n, _root)) return true;
+        return false;
+    }
+
+    /// <summary>elementsFromPoint: the elements whose boxes cover the client-space point,
+    /// paint order (deepest first). This box model resolves paint order by tree order (last
+    /// child on top) — the same approximation the visual hit regions hit-test with.</summary>
+    public JsElement[] elementsFromPoint(double x, double y)
+    {
+        var engine = JsEngine.For(_engine);
+        engine?.EnsureLayout();
+        var viewport = engine?.Viewport;
+        var cx = (float)x + (viewport?.ScrollX ?? 0);
+        var cy = (float)y + (viewport?.ScrollY ?? 0);
+        var target = NodeAtPoint(_root, cx, cy);
+        if (target is null) return [];
+        var chain = new List<JsElement>();
+        for (var n = target; n != null; n = n.Parent)
+            chain.Add(JsElement.For(_engine, n));
+        return chain.ToArray();
+    }
+
+    public JsElement? elementFromPoint(double x, double y)
+    {
+        var chain = elementsFromPoint(x, y);
+        return chain.Length > 0 ? chain[0] : null;
+    }
+
+    /// <summary>Deepest node whose border box contains the content-space point.</summary>
+    private static LayoutNode? NodeAtPoint(LayoutNode node, float x, float y)
+    {
+        for (var i = node.Children.Count - 1; i >= 0; i--)
+            if (NodeAtPoint(node.Children[i], x, y) is { } hit) return hit;
+        var box = node.Box.BorderBox;
+        return box.Width > 0 && box.Height > 0 && box.Contains(x, y) ? node : null;
+    }
+
     public JsElement? head => _document?.Head is { } head ? Wrap(head) :
         FindFirst(_root, n => n.TagName == "HEAD") is { } h ? JsElement.For(_engine, h) : null;
 

@@ -20,7 +20,10 @@ public static class ConformanceTests
             var result = WptVisualPage.RunCrash(test);
             True(result.Passed, result.Detail);
             True(!WptVisualPage.RunCrash(test with { Path = "lite/harness/missing-crash-test.html" }).Passed);
-            True(WptVisualPage.RunCrash(test with { TestDriver = true }).Cat == WptRunner.Cat.Unsupported);
+            // Testdriver crashtests execute through the headless input bridge (Milestone 3):
+            // the same load-and-deferred-paint protocol over the BrowserWindow path.
+            True(WptVisualPage.RunCrash(test with { TestDriver = true }).Passed,
+                 "testdriver crashtest loads and renders through the input bridge");
         }
         finally { ConformanceServer.Stop(); }
     }

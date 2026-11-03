@@ -99,6 +99,38 @@ public static class ParseFidelityTests
     }
 
     [Test]
+    public static void EngineOriginSheets_AreHiddenFromHeadSerialization()
+    {
+        // innerHTML/outerHTML serialize the script-visible tree: the injected sheets never
+        // surface, the author <style> and <template> round-trip exactly, and an empty head
+        // serializes as empty (the UA sheet is its only DOM child there).
+        Equal("|<head></head>", Probe("document.head.innerHTML + '|' + document.head.outerHTML"));
+    }
+
+    [Test]
+    public static void EngineOriginSheets_AreHiddenFromDocumentSerialization()
+    {
+        // documentElement.outerHTML filters at depth (the sheets sit inside head inside html):
+        // the head slice carries exactly one <style> opening — the author's — and the template
+        // keeps its content. (The whole-document count cannot be asserted directly: this
+        // test's own script text contains a '<style' literal that raw serialization keeps.)
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>a { color: red; }</style>" +
+            "<template><b>x</b></template></head><body><div id=\"host\"></div>" +
+            "<script>var d = document.documentElement, h = document.head;" +
+            "document.getElementById('host').textContent = " +
+            "h.innerHTML + '|' + h.outerHTML + '|' +" +
+            "(d.outerHTML.substring(d.outerHTML.indexOf('<head'), d.outerHTML.indexOf('</head>')).split('<style').length - 1) +" +
+            "'|' + h.querySelector('template').outerHTML;</script></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var host = Find(page.Root, n => n.Attributes.GetValueOrDefault("id") == "host");
+        True(host != null, "host div missing");
+        Equal("<style>a { color: red; }</style><template><b>x</b></template>|" +
+              "<head><style>a { color: red; }</style><template><b>x</b></template></head>|1|" +
+              "<template><b>x</b></template>", host!.DisplayText);
+    }
+
+    [Test]
     public static void Noscript_ParsesRawTextWithScriptingEnabled()
     {        // REC §8.2.5.4.3 (in head noscript): with the scripting flag on, noscript content
         // parses as raw text — one text child, no elements. The engine registers a scripting

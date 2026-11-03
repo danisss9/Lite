@@ -31,11 +31,14 @@ internal static class EventDispatcher
     }
 
     /// <summary>Dispatches a simple named event to a specific node through the given engine
-    /// (e.g. an iframe's <c>load</c>). Builds the JsEvent and runs the full propagation path.</summary>
-    internal static bool DispatchToNode(LayoutNode node, string eventType, JsEngine engine, bool bubbles = false)
+    /// (e.g. an iframe's <c>load</c>). Builds the JsEvent and runs the full propagation path.
+    /// <paramref name="trusted"/> marks user-agent-generated events — focus/blur fired by the
+    /// focus() API or by interaction report <c>isTrusted</c> true, like real browsers.</summary>
+    internal static bool DispatchToNode(LayoutNode node, string eventType, JsEngine engine, bool bubbles = false, bool trusted = false)
     {
         var evt = new JsEvent();
         evt.Init(eventType, bubbles, false);
+        evt.isTrusted = trusted;
         evt.target = JsElement.For(engine.RawEngine, node);
         return DispatchEvent(node, evt, engine);
     }

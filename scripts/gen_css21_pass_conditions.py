@@ -18,10 +18,33 @@ the runner's twin oracle uses when one exists:
 - unstated:  no pass sentence found; needs an individual review.
 
 A "check" is attached where the whole visual sentence matches a template that
-Css21/VisualChecks.cs evaluates against the render (one-shape, same-dimension,
-bar-gap, line-style, look-same, solid-line, border-ring, border-sample,
-text-color, text-decoration, align-right, shape-relation, space-between,
-stack-three, two-size); unmatched sentences stay unchecked.
+Css21/VisualChecks.cs evaluates against the render; unmatched sentences stay
+unchecked. Batch 3 (probe batch three, 3 November) added three check families:
+
+- scroll-*: the stated condition involves the scrolled state of an overflow box
+  or the page. The harness performs the stated scroll mechanically (a two-render
+  protocol: initial render, scroll, render again) and the judge reads the pair —
+  the background-attachment cat corpus (scroll-cats-*), scroll-to-text, and the
+  page-level scroll families. These attach even where the suite flags "interact":
+  the harness performs the interaction, so no human is needed.
+- painted-*: the stated condition names glyphs a bitmap cannot read. The engine's
+  paint log records the text, size, typeface and weight/slant of every run the
+  painter draws (Lite/Rendering/PaintLog.cs, collected only around harness
+  renders), and the judges read it — list-marker letters, the bidi char-order
+  family (the expected visual order comes from the reviewed ledger), the c527
+  font sentences' size/pitch/style, and quote-only pages.
+- the static tranche: ~30 further sentence templates with strict machine
+  readings (middle cell, gradient ramp, striped fill, text pairs, font faces,
+  inset blocks, ...).
+
+Every remaining case takes its reviewed verdict route through the ledger
+(Css21/css21-pass-condition-reviews.json, built by
+scripts/gen_css21_bidi_expectations.py and scripts/gen_css21_manual_reviews.py):
+a corrected check, a reclassification (the optional-blink decoration family), a
+computed bidi glyph-order expectation, or a reviewed manual-pending route — the
+suite authored those cases for a person to read the render against the stated
+sentence, and the runner reports them MANUAL-PENDING (awaiting recorded manual
+evidence), never unsupported and never a pass.
 
 Cases covered: official html4 selftests (no reftest.list entry) and WPT
 css/CSS2 visual/manual cases. Entries are generated proposals with
@@ -42,6 +65,7 @@ official_catalog = Path('Lite.Conformance/artifacts/css21-official-catalog.json'
 wpt_root = Path('Lite.Conformance/vendor/wpt')
 wpt_manifest = Path('Lite.Conformance/artifacts/wpt-manifest.json')
 output = Path('Lite.Conformance/Css21/css21-pass-conditions.json')
+reviews_file = Path('Lite.Conformance/Css21/css21-pass-condition-reviews.json')
 OFFICIAL_PREFIX = 'css21-official/'
 
 paragraph_re = re.compile(r'<p\b[^>]*>(.*?)</p>', re.I | re.S)
@@ -64,6 +88,9 @@ def pass_sentence(text: str) -> str | None:
     text = comment_re.sub('', text)
     for paragraph in paragraph_re.findall(text):
         plain = ' '.join(html.unescape(tag_re.sub(' ', paragraph)).split())
+        # The suite occasionally leaves a stray directional mark after the final word
+        # (e.g. the page-scroll sentences end "Bottom of page".\u200e).
+        plain = plain.replace('\u200e', '').replace('\u200f', '').replace('\u00A0', ' ')
         if passes_re.search(plain) or STATED.search(plain):
             return plain
     return None
@@ -112,9 +139,9 @@ LOOK_SAME = re.compile(
     r'|^the\s+two\s+(lines?|boxes|tables?|columns?)\s+below\s+(?:should\s+)?(?:look\s+the\s+same|are\s+identical|should\s+be\s+identical)[:.]?$'
     r'|^the\s+two\s+tables\s+should\s+be\s+identical[:]?$')
 SOLID_LINE = re.compile(
-    rf'^(?:the\s+line(?:\s+below)?\s+is\s+(?:solid\s+)?{COLOR}(?:\s+or\s+shades\s+of\s+{COLOR})?'
+    rf'^(?:the\s+line(?:\s+below)?\s+is\s+(?:solid\s+)?(?:bright\s+)?{COLOR}(?:\s+or\s+shades\s+of\s+{COLOR})?'
     rf'|there\s+is\s+a\s+(?:thin\s+|short\s+)?line(?:\s+below)?'
-    rf'|there\s+is\s+a\s+(?:thin\s+|short\s+|solid\s+)?(?:horizontal\s+|vertical\s+)?{COLOR}\s+line(?:\s+below)?)$')
+    rf'|there\s+is\s+a\s+(?:thin\s+|short\s+|solid\s+)?(?:horizontal\s+|vertical\s+)?(?:bright\s+)?{COLOR}\s+line(?:\s+below)?)$')
 BORDER_RING = re.compile(
     rf'^(?:the\s+box\s+below\s+has\s+a\s+(dashed|dotted)\s+border'
     rf'|there\s+is\s+a\s+box\s+below\s+with\s+a\s+(dashed|dotted)(?:\s+{COLOR})?\s+border'
@@ -124,7 +151,8 @@ BORDER_SAMPLE = re.compile(
 TEXT_COLOR = re.compile(rf"^the\s+[\"']filler\s+text[\"'](?:\s+below)?\s+is\s+{COLOR}$")
 TEXT_DECORATION = re.compile(
     r"^the\s+[\"']filler\s+text[\"'](?:\s+below)?\s+(does\s+not\s+have|has)\s+a\s+line\s+under\s+it$"
-    r"|^the\s+[\"']filler\s+text[\"'](?:\s+below)?\s+has\s+a\s+line\s+over\s+it,\s+a\s+line\s+under\s+it\s+and\s+a\s+line\s+through\s+it$")
+    r"|^the\s+[\"']filler\s+text[\"'](?:\s+below)?\s+has\s+a\s+line\s+over\s+it,\s+a\s+line\s+under\s+it\s+and\s+a\s+line\s+through\s+it"
+    r"(?:\.\s+user\s+agents\s+may\s+also\s+blink\s+the\s+text\s+on\s+and\s+off\s+the\s+screen\.?)?$")
 ALIGN_RIGHT = re.compile(r"^the\s+[\"']filler\s+text[\"'](?:\s+below)?\s+is\s+aligned\s+to\s+the\s+right\s+side\s+of\s+the\s+box$")
 CENTERED_RIGHT = re.compile(
     rf'^the\s+{COLOR}\s+square\s+below\s+is\s+vertically\s+cente ?red\s+and\s+on\s+the\s+right\s+inner\s+edge\s+of\s+the\s+{COLOR}\s+(?:box|square)$')
@@ -156,7 +184,9 @@ BOX_ABOVE_X = re.compile(r'^there\s+is\s+a\s+box\s+above\s+the\s+letter\s+[\""]x
 ROUND_DOT = re.compile(r'^there\s+is\s+a\s+single\s+round\s+dot\s+below$')
 DOUBLE_LINE = re.compile(r'^there\s+is\s+a\s+double\s+line\s+below$')
 NO_THROUGH = re.compile(r'^there\s+must\s+not\s+be\s+a\s+line\s+through\s+the\s+text\s+below$')
-THIS_LINE_COLOR = re.compile(rf'^this\s+(?:line|link)\s+should\s+be\s+{COLOR}(?:\.?\s*\([^)]*\))?$')
+THIS_LINE_COLOR = re.compile(
+    rf'^this\s+(?:line|link|text|sentence|paragraph)\s+should\s+be\s+{COLOR}(?:\.?\s*\([^)]*\))?$'
+    rf'|^this\s+(?:sentence|text)\s+should\s+(?:also\s+)?be\s+{COLOR}$')
 APPROX_SAME = re.compile(r'^the\s+following\s+two\s+lines\s+should\s+look\s+approximately\s+the\s+same:?')
 NOT_JAGGED = re.compile(r'^there\s+is\s+a\s+single\s+box\s+below\s+and\s+the\s+top\s+edge\s+is\s+not\s+jagged$')
 SLANTED = re.compile(r'^there\s+is\s+a\s+box\s+below\s+that\s+appears\s+to\s+be\s+slanted\s+to\s+one\s+side$')
@@ -189,9 +219,9 @@ MARKER_ITS = re.compile(
     rf'^there\s+is\s+(?:a\s+filled\s+{COLOR}\s+square|a\s+(?:box|square))(?:\s+below)?'
     r'\s+and\s+(?:there\s+is\s+a|a)\s+marker\s+bullet\s+on\s+its\s+left-hand\s+side$')
 LINE_MARKER = re.compile(
-    rf'^(?:there\s+is\s+(?:an?\s+)?(?:(dashed|dotted)\s+)?{COLOR}?\s*line\s+below'
+    rf'^(?:there\s+is\s+(?:an?\s+)?(?:(dashed|dotted)\s+)?(?:short\s+|thin\s+)?(?:horizontal\s+|vertical\s+)?{COLOR}?\s*line(?:\s+below)?'
     rf'|the\s+line\s+below\s+is(?:\s+(dashed|dotted))?(?:\s+{COLOR})?)'
-    r'\s+and\s+there\s+is\s+a\s+marker\s+bullet\s+on\s+the\s+left-hand\s+side\s+of\s+the\s+line'
+    r'\s+and\s+there\s+is\s+a\s+marker\s+bullet\s+on\s+(?:the\s+left-hand\s+side\s+of\s+the\s+line|its\s+left-hand\s+side)'
     r'(?:\s+\(note\s+the\s+marker\s+bullet\s+does\s+not\s+need\s+to\s+be\s+aligned\s+vertically\s+to\s+any\s+specific\s+position(?:\.?)\))?$')
 BULLET_BESIDE = re.compile(
     rf'^a\s+bullet\s+\(filled-in\s+circle\)\s+must\s+(?:appear\s+)?to\s+the\s+(left|right)\s+of\s+a\s+(?:{COLOR}\s+)?square'
@@ -274,7 +304,7 @@ SAME_SIZE = re.compile(
     r'|^the\s+following\s+four\s+boxes\s+are\s+the\s+same\s+size$')
 SHADE_BOX = re.compile(rf'^the\s+(?:box|line)\s+(?:below\s+)?is\s+a\s+shade\s+or\s+shades\s+of\s+{COLOR}$')
 STACK_EVEN = re.compile(
-    r'^there\s+are\s+three\s+evenly-spaced\s+(?:{COLOR}\s+)?boxes\s+stacked\s+on\s+the\s+page$')
+    rf'^there\s+are\s+three\s+evenly-spaced\s+(?:{COLOR}\s+)?boxes\s+stacked\s+on\s+the\s+page$')
 THREE_BARS = re.compile(
     rf'^there\s+should\s+be\s+two\s+{COLOR}\s+bars\s+below\s+\(with\s+a\s+{COLOR}\s+one\s+in\s+between\)$')
 FIRST_LETTER = re.compile(
@@ -287,7 +317,7 @@ JUSTIFY = re.compile(
     r'\s+on\s+both\s+the\s+left\s+and\s+right\s+sides$'
     r'|^the\s+text\s+below\s+should\s+be\s+justified\s+to\s+fit\s+in\s+the\s+box\s+\(straight\s+edges\s+on\s+all\s+sides\)$')
 TEXT_BAND_ABOVE = re.compile(
-    rf'^this\s+paragraph\s+should\s+have\s+(one|two|three)\s+{COLOR}\s+lines\s+directly\s+(above|below|on\s+its\s+left|on\s+its\s+right)[.]?$')
+    rf'^this\s+paragraph\s+should\s+have\s+(one|two|three)\s+{COLOR}\s+lines\s+directly\s+(above|below|on\s+its\s+left|on\s+its\s+right)(?:\s+it)?[.]?$')
 TEXT_BAND_WORD = re.compile(
     rf'^there\s+should\s+be\s+a\s+solid\s+{COLOR}\s+line\s+directly\s+(over|under|to\s+the\s+left\s+of|to\s+the\s+right\s+of)'
     r'\s+every\s+occur[a-z]+ce\s+of\s+the\s+word\s+["\']\s*(.+?)\s*["\'][.]?$')
@@ -300,7 +330,8 @@ TEXT_DECORATION_EXTENT = re.compile(
     r'(?:\.\s+the\s+line\s+also\s+cannot\s+extend\s+beyond\s+the\s+text)?)?'
     r'(?:,\s+spaces\s+as\s+well\s+as\s+characters)?$')
 TEXT_DECORATION_PAIR = re.compile(
-    r'^the\s+["\']filler\s+text["\']\s+below\s+has\s+a\s+line\s+(over|under|through)\s+it\s+and\s+a\s+line\s+(over|under|through)\s+it$')
+    r'^the\s+["\']filler\s+text["\']\s+below\s+has\s+a\s+line\s+(over|under|through)\s+it\s+and\s+a\s+line\s+(over|under|through)\s+it'
+    r'(?:,\s+and\s+user\s+agents\s+may\s+also\s+blink\s+the\s+text\s+on\s+and\s+off\s+the\s+screen\.?)?$')
 STACK_ORDER = re.compile(
     rf'^the\s+boxes\s+are\s+partially\s+stacked\s+on\s+top\s+of\s+each\s+other,\s+and\s+they\s+are\s+stacked\s+in\s+the\s+following\s+order\s+from\s+bottom\s+to\s+top:\s+{COLOR},\s+{COLOR},\s+{COLOR}$')
 HALF_HEIGHT = re.compile(
@@ -317,6 +348,69 @@ TEXT_MARKER_MATCH = re.compile(
 TEXT_ALL_COLOR = re.compile(
     rf'^the\s+following\s+lines\s+should\s+all\s+be\s+{COLOR}\s+\(assuming[^)]*\)?$'
     rf'|^all\s+the\s+characters\s+below\s+are\s+{COLOR}$')
+
+# --- Batch 3 (2 November, probe batch three). The scroll-protocol families: the stated
+# interaction — scrolling an overflow box or the page — is performed mechanically by the
+# harness's two-render protocol (initial render, scroll, render again), so these conditions
+# are machine-checked even where the suite flags them "interact". The cat corpus tiles the
+# Microsoft cat image (black line art on white) over or behind a colored box; the judges
+# read that two-tone ink inside the scroll box's crop.
+SCROLL_TEMPLATES = [
+    (re.compile(r'^there is a green box below, and when the box is scrolled down, there is a line of cat images at the bottom of the box$'),
+     {'kind': 'scroll-cats-bottom', 'scroll': {'to': 'bottom'}}),
+    (re.compile(r'^there is a picture of a cat repeated over a green box the box below\. the cat image also needs to move with the scrolling mechanism when scrolled to the right$'),
+     {'kind': 'scroll-cats-moved', 'scroll': {'to': 'bottom-right'}}),
+    (re.compile(r'^the box below is filled with cat images that move when the box is scrolled\. also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box \(there can be additional cat images\)$'),
+     {'kind': 'scroll-cats-moved', 'variant': 'center', 'scroll': {'to': 'bottom-right'}}),
+    (re.compile(r'^(?:in the box below, there is a picture of a cat repeated across the bottom of the box|there is a picture of a cat repeated across the bottom of the box below) that moves with the scrollbar when the box is scrolled to the right$'),
+     {'kind': 'scroll-cats-bottom-moved', 'scroll': {'to': 'bottom', 'then': 'right'}}),
+    (re.compile(r'^(?:scrolling on the box below does not cause the cat image to move|when the box below is scrolled, the cat images do not move)$'),
+     {'kind': 'scroll-cats-still', 'scroll': {'to': 'bottom-right'}}),
+    (re.compile(r'^there is a box below with cat images across the top\. also, the cat images move when the box is scrolled$'),
+     {'kind': 'scroll-cats-top-moved', 'scroll': {'to': 'bottom-right'}}),
+    (re.compile(r'^the box below is filled with cat images, and when the box is scrolled down, the cat images move\. also, the cat in the left bottom corner is not cut off$'),
+     {'kind': 'scroll-cats-moved', 'variant': 'left', 'scroll': {'to': 'bottom-right'}}),
+    (re.compile(r'^the box below has a cat image tiled throughout, and when scrolling the box the cat images scroll$'),
+     {'kind': 'scroll-cats-moved', 'scroll': {'to': 'bottom-right'}}),
+    (re.compile(r'^the box below has a cat image tiled throughout it, and scrolling the box moves the cats as well$'),
+     {'kind': 'scroll-cats-moved', 'scroll': {'to': 'bottom-right'}}),
+    (re.compile(r'^when the box below is scrolled, the cat images move$'),
+     {'kind': 'scroll-cats-moved', 'scroll': {'to': 'bottom-right'}}),
+    # Page-level scroll (the viewport scrollbars dragged to their end).
+    (re.compile(r'^this page can be scrolled to the words ["\']bottom of page["\']$'),
+     {'kind': 'scroll-page-text', 'needle': 'Bottom of page', 'scroll': {'to': 'page-bottom'}}),
+    (re.compile(r'^the box can be scrolled to the words ["\']filler text["\']$'),
+     {'kind': 'scroll-box-text', 'needle': 'Filler Text', 'scroll': {'to': 'bottom'}}),
+    (re.compile(r'^after scrolling down(?: and to the right)?, all four edges of (?:a blue square|the blue box) are visible$'),
+     {'kind': 'scroll-page-edges-visible', 'color': 'blue', 'scroll': {'to': 'page-bottom-right'}}),
+    (re.compile(r'^scroll this document\. a line of blue should remain stuck at the top of the viewport the whole time'
+                r'(?:, and there should be no red below, just a block of green)?$'),
+     {'kind': 'scroll-page-stuck-top', 'color': 'blue', 'scroll': {'to': 'page-bottom'}}),
+    (re.compile(r'^there should be a single purple square at the bottom right of the viewport\. the square should always be '
+                r'completely visible, regardless of where you scroll the viewport\. it should not be covered by the scrollbars, if any\.$'),
+     {'kind': 'scroll-page-always-visible', 'color': 'purple', 'scroll': {'to': 'page-bottom'}}),
+    (re.compile(r'^there should be no red below \(scroll all the way down if necessary\)$'),
+     {'kind': 'scroll-page-no-red', 'scroll': {'to': 'page-bottom'}}),
+]
+
+# Paint-log checks: the stated condition names glyphs a bitmap cannot read. The harness
+# records the text the painter draws (the paint log) and the judges read that: list-marker
+# letters ("lowercase letter 'a.'"), the bidi visual order (the expected sequence comes from
+# the reviewed expectation ledger, read off the case's reference image), and the c527 font
+# sentences' size/pitch/style. Field mapping for painted-font: Count=size(px), Edge=baseline
+# pitch(px), Mode=bold/italic, Shape=concrete family name.
+PAINTED_TEXT = re.compile(
+    r'^there\s+is\s+a\s+lowercase\s+letter\s+[\'"]a\.[\'"]\s+below$'
+    r'|^there\s+is\s+an\s+uppercase\s+letter\s+[\'"]a\.[\'"]\s+below$'
+    r'|^there\s+is\s+a\s+number\s+["\']1\.[\'"]\s+below$'
+    r'|^the\s+letters\s+["\']([a-z]+)["\']\s+appear,\s+in\s+the\s+same\s+order,\s+in\s+the\s+box\s+below$'
+    r'|^there\s+is\s+a\s+bullet\s+\((.)\)\s+below$'
+    r'|^there\s+is\s+a\s+bullet\s+\((.)\)\s+in\s+the\s+box\s+below$')
+PAINTED_ORDER = re.compile(r'^test\s+passes\s+if\s+characters\s+are\s+in\s+the\s+same\s+order\.?$')
+PAINTED_FONT = re.compile(
+    r'^this\s+text\s+should\s+be\s+(\d+)px\s+([a-z-]+)\s*(?:,\s*)?(.*?)(?:\.\s+there\s+should\s+be\s+(\d+)px\s+between\s+baselines.*)?$'
+    r'|^this\s+text\s+should\s+be\s+small\s+and\s+cursive,?\s+with\s+double\s+line\s+spacing')
+BULLET_GLYPH_SHAPES = {'•': 'round-dot', '◦': 'hollow-circle', '■': 'tiny-square', '▪': 'tiny-square'}
 
 # Per-side border templates (border-color-*, border-style-*, border-style-shorthand-*): each
 # pattern is whole-sentence and captures the side specs in stated order. A spec is a color, a
@@ -370,6 +464,9 @@ BORDER_SIDES_PATTERNS = [
 
 
 def border_sides_check(clause: str) -> dict | None:
+    # The suite prefixes several phrasings with "there is/are" or "to pass, there is" —
+    # the side specs themselves are what the patterns read.
+    clause = re.sub(r'^(?:to\s+pass,\s*)?there\s+(?:is|are)\s+', '', clause)
     for pattern, mapping in BORDER_SIDES_PATTERNS:
         if m := pattern.match(clause):
             sides = {}
@@ -402,6 +499,54 @@ def numbers_check(clause: str) -> dict | None:
 
 
 
+def scroll_check(clause: str) -> dict | None:
+    """Batch 3: the scroll-protocol families. The stated interaction — scrolling an overflow
+    box or the page — is performed mechanically by the harness's two-render protocol, so the
+    check attaches even where the suite flags the case "interact"."""
+    for pattern, check in SCROLL_TEMPLATES:
+        if pattern.match(clause):
+            return dict(check)
+    return None
+
+
+def painted_check(clause: str) -> dict | None:
+    """Batch 3: glyph-order evidence — the paint-log judges. List markers are painted, not
+    layout text; the bidi family's expected visual order comes from the reviewed expectation
+    ledger (check only attaches to reviewed entries, see apply_reviews)."""
+    if m := PAINTED_ORDER.match(clause):
+        return {'kind': 'painted-order'}  # needle (the reviewed expected sequence) is supplied by the ledger
+    if m := PAINTED_FONT.match(clause):
+        size = m.group(1)
+        family = m.group(2)
+        style_blob = m.group(3) or ''
+        pitch = m.group(4)
+        check = {'kind': 'painted-font'}
+        if size:
+            check['count'] = int(size)
+        if family and family not in ('small', 'cursive'):
+            check['shape'] = family
+        for word, mode in (('small-caps', 'small-caps'), ('italicized', 'italic'), ('italic', 'italic'),
+                           ('very bold', 'bold'), ('bold', 'bold')):
+            if word in style_blob:
+                check['mode'] = mode
+                break
+        if pitch:
+            check['edge'] = pitch
+        return check
+    if m := PAINTED_TEXT.match(clause):
+        if m.group(1):  # "the letters 'ABC' appear, in the same order, in the box below"
+            return {'kind': 'painted-text', 'needle': m.group(1)}
+        if m.group(2):  # "there is a bullet (GLYPH) below" — content glyphs paint as text;
+            # list-marker bullets paint as shapes and map to their ink judges.
+            glyph = m.group(2) or m.group(3)
+            if glyph in BULLET_GLYPH_SHAPES:
+                return {'kind': BULLET_GLYPH_SHAPES[glyph]}
+            return {'kind': 'painted-text', 'needle': glyph}
+        needle = 'a.' if 'lowercase' in clause or 'uppercase' in clause else '1.'
+        return {'kind': 'painted-text', 'needle': needle}
+    return None
+
+
 def visual_check(sentence: str | None) -> dict | None:
     """A machine check for the stated condition, when the whole sentence matches a known
     template (Css21/VisualChecks.cs evaluates it). Anything unmatched stays unchecked."""
@@ -419,9 +564,20 @@ def visual_check(sentence: str | None) -> dict | None:
         else:
             return None
     clause = NO_RED_CONJUNCT.sub('', clause)
-    # Trailing "(Note the marker bullet ...)" parentheticals are meta-commentary, not
-    # part of the stated condition.
-    clause = re.sub(r'\s*\(\s*note\b[^)]*\)\s*$', '', clause).rstrip('. ')
+    # Trailing parentheticals are meta-commentary ("(Note the marker bullet …)", "(so there
+    # should be 7 blue lines on this page)"), not part of the stated condition — except the
+    # ones that state a condition themselves ("(followed by a bullet on the right)").
+    if not re.search(r'\(followed\s+by\s+a\s+bullet', clause, re.I):
+        clause = re.sub(r'\s*\([^()]*\)\s*$', '', clause)
+    clause = clause.rstrip('. ').rstrip('.!')
+    # "words 2 and 4 from left should be blue :" — a stray trailing colon.
+    clause = clause.rstrip(' :')
+    # --- Batch 3: scroll protocols and paint-log checks come first (they cover sentence
+    # --- shapes the visual templates do not).
+    if check := scroll_check(clause):
+        return check
+    if check := painted_check(clause):
+        return check
     if m := ONE_SHAPE.match(clause):
         shape = 'box' if m.group(2) == 'block' else m.group(2)
         return {k: v for k, v in {'kind': 'one-shape', 'shape': shape, 'color': m.group(1)}.items() if v}
@@ -467,9 +623,10 @@ def visual_check(sentence: str | None) -> dict | None:
         return check
     if m := HEIGHT_SIMILAR.match(clause):
         # Some variants add "it is acceptable to have the blue box height be shorter or
-        # taller" — the clause cancels the comparison, so no machine check exists.
+        # taller" — the reviewed reading keeps the comparison as a factor-of-two band
+        # (VisualChecks 'height-band'); a plain "similar" stays an equality read.
         if re.search(r'acceptable', clause):
-            return None
+            return {'kind': 'shape-relation', 'relation': 'height-band', 'colorA': m.group(1), 'colorB': m.group(2)}
         return {'kind': 'shape-relation', 'relation': 'height-similar', 'colorA': m.group(1), 'colorB': m.group(2)}
     if m := NO_VERTICAL_GAP.match(clause):
         return {'kind': 'shape-relation', 'relation': 'no-vertical-gap', 'colorA': m.group(1), 'colorB': m.group(2)}
@@ -669,6 +826,109 @@ def visual_check(sentence: str | None) -> dict | None:
         return {'kind': 'text-marker-match'}
     if m := TEXT_ALL_COLOR.match(clause):
         return {'kind': 'text-color', 'color': m.group(1), 'scope': 'following'}
+    # --- Batch 3 static tranche: the remaining recurring sentences of the long tail. ---
+    # (Templates match the clause, i.e. the sentence with any "test passes if" prefix
+    # already stripped by visual_check.)
+    if m := re.match(rf'^the\s+middle\s+(column|row)\s+of\s+the\s+(?:three-by-three\s+)?table\s+below\s+is\s+{COLOR}$', clause):
+        return {'kind': 'middle-cell-color', 'dimension': m.group(1), 'color': m.group(2)}
+    if m := re.match(rf'^from\s+left-to-right,\s+each\s+square\s+is\s+a\s+lighter\s+{COLOR}\s+than\s+the\s+previous\s+one$', clause):
+        return {'kind': 'gradient-lighter', 'color': m.group(1)}
+    if m := re.match(rf'^the\s+box\s+below\s+has\s+{COLOR}\s+(horizontal|vertical)\s+lines\s+running\s+through\s+it\s+\(no\s+(?:vertical|horizontal)\s+lines\)$', clause):
+        return {'kind': 'striped-fill', 'color': m.group(1), 'dimension': m.group(2)}
+    if m := re.match(rf'^the\s+{COLOR}\s+box\s+below\s+spans\s+the\s+height\s+of\s+the\s+three\s+{COLOR}\s+squares$', clause):
+        return {'kind': 'spans-stack', 'colorA': m.group(1), 'colorB': m.group(2)}
+    if re.match(r'^there\s+are\s+two\s+separate\s+boxes\s+below\s+and\s+the\s+["\']filler\s+text["\']\s+inside\s+the\s+boxes\s+has\s+the\s+same\s+alignment$', clause):
+        return {'kind': 'same-alignment'}
+    if m := re.match(rf'^the\s+background\s+of\s+this\s+(?:entire\s+)?page\s+is\s+{COLOR}$', clause):
+        return {'kind': 'page-background', 'color': m.group(1)}
+    if re.match(r'^there\s+is\s+(?:anything\s+displayed|at\s+least\s+one\s+box)\s+below(?:\.\s*it\s+is\s+ok\s+to\s+have\s+one\s+letter\s+["\']x["\'])?\s*$', clause):
+        return {'kind': 'presence'}
+    if re.match(r'^there\s+is\s+a\s+tiny\s+box\s+below$', clause):
+        return {'kind': 'one-shape', 'shape': 'box', 'variant': 'tiny'}
+    if re.match(r'^there\s+are\s+only\s+quotes\s+below$', clause):
+        return {'kind': 'painted-only'}
+    if m := re.match(r'^only\s+the\s+words?\s+["\'](.+?)["\']\s+app(?:ear|ears)(?:\s+in\s+the\s+box\s+below)?$', clause):
+        return {'kind': 'painted-only', 'needles': m.group(1).split()}
+    if m := re.match(rf'^the\s+(?:words\s+)?["\']filler\s+text["\'](?:\s+words)?\s+below(?:\s+words)?\s+are\s+aligned\s+to\s+the\s+(left|right)(?:,\s*inside\s+the\s+{COLOR}\s+box)?$', clause):
+        return {'kind': 'align-right', 'side': m.group(1)}
+    if re.match(rf'^the\s+["\']filler\s+text["\']\s+below\s+is\s+aligned\s+to\s+the\s+left\s+side\s+of\s+the\s+box$', clause):
+        return {'kind': 'align-right', 'side': 'left'}
+    if re.match(r'^there\s+is\s+a\s+cat\s+sitting\s+on\s+a\s+green\s+bar\s+below(?:\s+and\s+no\s+red)?$', clause):
+        return {'kind': 'cats-on-bar', 'color': 'green'}
+    if m := re.match(rf'^there\s+is\s+a\s+(?:{COLOR}\s+)?(?:filled\s+)?(?:green\s+)?box\s+below\s+and\s+no\s+red\s*\.?$', clause):
+        return {'kind': 'one-shape', 'shape': 'box', 'color': m.group(1) or 'green'}
+    # --- text-anchor tranche: named text elements each carry their own stated colour. ---
+    if m := re.match(rf'^below,\s+the\s+left\s+["\'](.+?)["\']\s+is\s+{COLOR}\s+and\s+the\s+right\s+["\'](.+?)["\']\s+is\s+{COLOR}$', clause):
+        return {'kind': 'text-color-pairs', 'needles': [m.group(1), m.group(2)], 'colors': [m.group(3), m.group(4)]}
+    if m := re.match(rf'^below\s+the\s+upper\s+["\'](.+?)["\']\s+is\s+{COLOR}\s+and\s+the\s+lower\s+["\'](.+?)["\']\s+is\s+{COLOR}$', clause):
+        return {'kind': 'text-color-pairs', 'needles': [m.group(1), m.group(2)], 'colors': [m.group(3), m.group(4)], 'ordered': True}
+    if m := re.match(rf'^the\s+["\']filler\s+text["\']\s+below\s+is\s+{COLOR}\.\s+do\s+not\s+navigate\s+the\s+link(?:\.\s+note:.*)?$', clause):
+        # ":link must match" — the sentence's colour clause is the stated condition; the
+        # navigation warning is a precondition of the manual variant, not the condition.
+        return {'kind': 'text-color', 'color': m.group(1)}
+    if m := re.match(rf'^the\s+letter\s+["\']([a-z])["\']\s+below\s+is\s+{COLOR}$', clause):
+        return {'kind': 'first-letter-color', 'color': m.group(2)}
+    if m := re.match(rf'^the\s+letter\s+["\']([a-z])["\']\s+in\s+the\s+["\']filler\s+text["\']\s+below\s+is\s+{COLOR}$', clause):
+        return {'kind': 'first-letter-color', 'color': m.group(2)}
+    if re.match(r'^there\s+is\s+a\s+(?:green\s+or\s+yellow|yellow\s+or\s+green)\s+box\s+below$', clause):
+        # §14.2.1 background two-value fallback: either stated colour satisfies.
+        return {'kind': 'one-shape', 'shape': 'box', 'colors': ['green', 'yellow']}
+    # --- tranche 4: the recurring four-to-six-count sentence families. ---
+    if re.match(r'^the\s+box\s+below\s+slants\s+to\s+one\s+side$', clause):
+        return {'kind': 'slanted-box'}
+    if re.match(r'^there\s+are\s+two\s+boxes\s+on\s+the\s+page\s+and\s+they\s+are\s+the\s+same\s+height\.\s*one\s+box\s+needs\s+to\s+be\s+slanted\s+to\s+one\s+side$', clause):
+        return {'kind': 'slant-pair'}
+    if re.match(rf'^the\s+lines\s+of\s+["\']filler\s+text["\']\s+below\s+match$', clause):
+        return {'kind': 'lines-same', 'count': 2}
+    if m := re.match(rf'^there\s+is\s+no\s+space\s+between\s+the\s+{COLOR}\s+and\s+{COLOR}\s+boxes\s+below$', clause):
+        return {'kind': 'shape-relation', 'relation': 'touching', 'colorA': m.group(1), 'colorB': m.group(2)}
+    if m := re.match(rf'^there\s+are\s+only\s+two\s+boxes\s+below\s+and\s+there\s+is\s+space\s+between\s+the\s+{COLOR}\s+box\s+and\s+the\s+{COLOR}\s+box$', clause):
+        return {'kind': 'shape-relation', 'relation': 'not-touching', 'colorA': m.group(1), 'colorB': m.group(2)}
+    if m := re.match(rf'^there\s+must\s+be\s+no\s+red\s+\(and\s+no\s+underlines\)\s+on\s+this\s+page$', clause):
+        return {'kind': 'text-decoration', 'under': False}
+    if m := re.match(r'^there\s+is\s+a\s+filled\s+(black|green|blue|red)\s+rectangle$', clause):
+        return {'kind': 'one-shape', 'shape': 'box', 'color': m.group(1)}
+    if m := re.match(rf'^there\s+are\s+(\d+)\s+filled\s+{COLOR}\s+rectangles?\s*(?:and\s+no\s+red\s*)?$', clause):
+        return {'kind': 'box-count', 'count': int(m.group(1)), 'color': m.group(2)}
+    if m := re.match(rf'^there\s+are\s+(\d+)\s+{COLOR}\s+lines\s*(?:and\s+no\s+red\s*)?$', clause):
+        return {'kind': 'solid-line', 'color': m.group(2), 'count': int(m.group(1))}
+    if re.match(r'^there\s+is\s+a\s+double\s+line\s*$', clause):
+        return {'kind': 'double-line'}
+    if re.match(r'^there\s+is\s+a\s+short\s+vertical\s+line\s*$', clause):
+        return {'kind': 'solid-line'}
+    if m := re.match(rf'^there\s+is\s+a\s+box\s+with\s+(dashed|dotted|double)\s+borders\s*$', clause):
+        return {'kind': 'border-ring', 'shape': m.group(1)}
+    if m := re.match(rf'^there\s+should\s+be\s+a\s+(?:bright\s+)?{COLOR}\s+line\s+below\s+the\s+{COLOR}\s+square(?:\s+below)?$', clause):
+        return {'kind': 'line-below', 'colorA': m.group(2), 'colorB': m.group(1)}
+    if m := re.match(rf'^test\s+passes\s+if\s+this\s+text\s+is\s+within\s+the\s+{COLOR}\s+box$', clause):
+        return {'kind': 'text-in-box', 'color': m.group(1)}
+    if m := re.match(rf'^the\s+["\']filler\s+text["\']\s+appears\s+in\s+the\s+top\s+left\s+corner\s+of\s+the\s+{COLOR}\s+box$', clause):
+        return {'kind': 'text-in-corner', 'color': m.group(1)}
+    if m := re.match(rf'^there\s+is\s+a\s+{COLOR}\s+box\s+on\s+the\s+left\s+side\s+of\s+the\s+words\s+["\']filler\s+text["\']$', clause):
+        return {'kind': 'box-beside-text', 'color': m.group(1)}
+    if re.match(rf'^the\s+second\s+line\s+of\s+text\s+in\s+the\s+{COLOR}\s+box\s+is\s+shifted\s+to\s+the\s+left\s+and\s+is\s+underneath\s+the\s+bullet$', clause):
+        return {'kind': 'hanging-indent'}
+    if m := re.match(rf'^the\s+blue\s+and\s+{COLOR}\s+boxes\s+below\s+are\s+the\s+same\s+width,\s+and\s+the\s+blue\s+box\s+is\s+in\s+the\s+upper-left\s+corner\s+of\s+the\s+black\s+box$', clause):
+        return {'kind': 'same-width-corner', 'colorB': m.group(1)}
+    if m := re.match(r'^there\s+are\s+the\s+words\s+["\']one\s+through\s+six["\']|'
+                     r'^from\s+top-to-bottom,\s+the\s+boxes\s+are\s+labeled\s+(one|1)\s+through\s+(six|6)$', clause):
+        return {'kind': 'painted-sequence', 'needles': ['1', '2', '3', '4', '5', '6']}
+    if re.match(r'^the\s+horizontal\s+and\s+vertical\s+scrolling\s+mechanism\s+is\s+not\s+available\s+on\s+the\s+page$', clause):
+        return {'kind': 'no-scrollbar'}
+    if re.match(rf'^there\s+is\s+a\s+(?:{COLOR}\s+)?(?:square|rectangle)\s+and\s+no\s+red\s*\.?\s*such\s+(?:square|rectangle)\s+should\s+have\s+active\s+horizontal\s+and\s+vertical\s+scrollbars$', clause):
+        return {'kind': 'scrollbar-visible'}
+    if re.match(r'^there\s+is\s+no\s+red\s+visible\s+on\s+the\s+page\s+even\s+when\s+scrolling\s+the\s+box\s+below$', clause):
+        return {'kind': 'scroll-no-red', 'scroll': {'to': 'bottom-right'}}
+    if m := re.match(r'^the\s+box\s+below\s+can\s+be\s+scrolled\s+to\s+the\s+{COLOR}\s+square\s+in\s+the\s+bottom-right\s+corner$', clause):
+        return {'kind': 'scroll-box-edges-visible', 'color': m.group(1), 'scroll': {'to': 'bottom-right'}}
+    # --- tranche 5: font-face sentences through the paint log, and the inset family. ---
+    if re.match(r'^the\s+sentence\s+below\s+is\s+(?:bold|italic)$', clause):
+        return {'kind': 'painted-font', 'mode': clause.rsplit(' ', 1)[-1]}
+    if re.match(r'^this\s+(?:sentence|text|paragraph)\s+should\s+be\s+(?:in\s+)?(?:bold|italic|italics|normal)$', clause):
+        mode = clause.rsplit(' ', 1)[-1]
+        return {'kind': 'painted-font', 'mode': 'italic' if mode == 'italics' else mode}
+    if m := re.match(rf'^in\s+the\s+following\s+test,\s+the\s+{COLOR}\s+(?:blocks|squares)\s+must\s+be\s+just\s+inside\s+the\s+top\s+and\s+sides\s+of\s+the\s+{COLOR}\s+rectangle$', clause):
+        return {'kind': 'shape-relation', 'relation': 'inset-top-sides', 'colorA': m.group(1), 'colorB': m.group(2)}
     return None
 
 
@@ -702,9 +962,26 @@ def main() -> None:
     if output.exists():
         existing = {e['path']: e for e in json.loads(output.read_text(encoding='utf-8-sig'))['cases']}
 
+    # The reviewed ledger (Css21/css21-pass-condition-reviews.json) carries hand-reviewed
+    # verdict routes: a corrected check, a reclassification, or an explicit twin pin. The
+    # generator merges a review over its own proposal and marks the entry reviewed; a
+    # reviewed entry is never overwritten by regeneration.
+    reviews: dict = {}
+    if reviews_file.exists():
+        reviews = {e['path']: e for e in json.loads(reviews_file.read_text(encoding='utf-8-sig'))['entries']}
+
     entries = []
 
     def add(suite: str, path: str, file: Path, kind: str) -> None:
+        if path in reviews:
+            review = reviews[path]
+            entry = dict(existing.get(path) or {
+                'path': path, 'suite': suite, 'condition': 'unstated', 'sentence': None, 'twin': None,
+            })
+            entry.update({k: v for k, v in review.items() if k in ('condition', 'sentence', 'check', 'twin', 'note', 'manualPending')})
+            entry['reviewed'] = True
+            entries.append(entry)
+            return
         if existing.get(path, {}).get('reviewed'):
             entries.append(existing[path])
             return
@@ -723,6 +1000,15 @@ def main() -> None:
         }
         if condition in ('visual', 'compound-no-red') and (check := visual_check(sentence)):
             entry['check'] = check
+        elif condition == 'manual' and sentence and (check := visual_check(sentence)) is not None:
+            # Batch 3: the scroll protocol performs the stated interaction mechanically, so a
+            # scroll check decides a manual-flagged case without interaction. A userstyle-flagged
+            # case's prerequisite — a named .css file enabled as the user style sheet — is
+            # likewise harness-satisfiable (the UA's own user-stylesheet obligation), so its
+            # stated sentence decides mechanically too. Every other template leaves the suite's
+            # interaction flag standing (the ledger decides those).
+            if check.get('kind', '').startswith(('scroll-', 'painted-')) or 'userstyle' in flags:
+                entry['check'] = check
         entries.append(entry)
 
     catalog = json.loads(official_catalog.read_text(encoding='utf-8-sig'))

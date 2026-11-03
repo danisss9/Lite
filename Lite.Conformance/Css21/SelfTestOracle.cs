@@ -16,7 +16,7 @@ internal static class SelfTestOracle
 {
     internal const string ConditionsFile = "Css21/css21-pass-conditions.json";
 
-    internal sealed record Stated(string Condition, string? Sentence, VisualCheck? Check);
+    internal sealed record Stated(string Condition, string? Sentence, VisualCheck? Check, bool ManualPending = false);
 
     private static Dictionary<string, Stated>? _conditions;
 
@@ -26,19 +26,26 @@ internal static class SelfTestOracle
         var twin = OfficialTwinOracle.Find(test.Path, catalog);
         // A twin is the stronger oracle; the stated-condition check decides only without one.
         var check = twin is null && stated is { Check: { } c, Sentence: { } sentence }
-            ? (Func<SkiaSharp.SKBitmap, Lite.Models.LayoutNode, WptRunner.RunResult>)((bitmap, root) =>
-                VisualChecks.Evaluate(c, bitmap, root, sentence, test.Path))
+            ? (Func<RenderSet, Lite.Models.LayoutNode, WptRunner.RunResult>)((renders, root) =>
+                VisualChecks.Evaluate(c, renders, root, sentence, test.Path))
             : null;
-        var result = WptVisualPage.RunSelfTest(test, embeddedRequired: stated.Condition == "same-color", statedCondition: check);
-        return Decide(test.Path, stated.Condition, result, twin, lookup, checkedCondition: check is not null);
+        var result = WptVisualPage.RunSelfTest(test, embeddedRequired: stated.Condition == "same-color",
+            statedCondition: check, statedCheck: stated.Check);
+        return Decide(test.Path, stated.Condition, result, twin, lookup, checkedCondition: check is not null,
+            manualPending: stated.ManualPending);
     }
 
     internal static WptRunner.RunResult Decide(string path, string condition, WptRunner.RunResult selfTest,
-        OfficialTwinOracle.Twin? twin, Func<string, WptCase?> lookup, bool checkedCondition = false)
+        OfficialTwinOracle.Twin? twin, Func<string, WptCase?> lookup, bool checkedCondition = false,
+        bool manualPending = false)
     {
         if (!selfTest.Passed) return selfTest;
         if (twin is not null) return OfficialTwinOracle.Strengthen(twin, path, selfTest, lookup);
         if (checkedCondition || condition is "no-red" or "same-color") return selfTest;
+        if (manualPending)
+            return new(WptRunner.Cat.ManualPending,
+                "Reviewed: the stated condition needs native observation (cursor shape, hover/activate state, " +
+                "viewport resize or scrollbar interaction) — awaiting recorded manual evidence", 0, 0, Artifacts: selfTest.Artifacts);
         return new(WptRunner.Cat.Unsupported,
             $"Stated pass condition '{condition}' is not machine-checked by the no-red scan; needs a reviewed reference or manual evidence",
             0, 0, Artifacts: selfTest.Artifacts);
@@ -58,7 +65,8 @@ internal static class SelfTestOracle
         if (!File.Exists(file)) return new(StringComparer.Ordinal);
         return JsonNode.Parse(File.ReadAllText(file))!["cases"]!.AsArray().OfType<JsonObject>()
             .ToDictionary(c => c["path"]!.GetValue<string>(), c => new Stated(
-                c["condition"]!.GetValue<string>(), c["sentence"]?.GetValue<string>(), ReadCheck(c["check"] as JsonObject)),
+                c["condition"]!.GetValue<string>(), c["sentence"]?.GetValue<string>(), ReadCheck(c["check"] as JsonObject),
+                c["manualPending"]?.GetValue<bool>() ?? false),
                 StringComparer.Ordinal);
     }
 
@@ -82,5 +90,6 @@ internal static class SelfTestOracle
         check["sides"] is { } sides ? sides.AsObject().ToDictionary(
             kv => kv.Key, kv => new SideSpec(kv.Value!["shape"]?.GetValue<string>(), kv.Value!["color"]?.GetValue<string>())) : null,
         check["ordered"]?.GetValue<bool>() ?? false, check["boxColor"]?.GetValue<string>(),
-        check["target"]?.GetValue<string>());
+        check["target"]?.GetValue<string>(),
+        check["scroll"] is { } scroll ? new ScrollSpec(scroll["to"]?.GetValue<string>() ?? "bottom") : null);
 }

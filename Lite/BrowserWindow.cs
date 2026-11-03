@@ -21,10 +21,17 @@ public class BrowserWindow
     private int _width;
     private int _height;
     private LayoutNode? _rootNode;
+
+    /// <summary>The loaded document's layout root (null before the first load completes) —
+    /// headless callers (visual runners) render from it after driving input.</summary>
+    internal LayoutNode? RootNode => _rootNode;
     private IntPtr _pixels;
     private List<HitRegion> _hitRegions = [];
     private readonly Viewport _viewport = new();
     private IWindowHost _host = null!;
+    // Headless mode (conformance harness, unit tests, embedding): the host is a no-op and
+    // input-driven navigations complete synchronously — there is no UI thread to hand off to.
+    private bool _headless;
 
     // Scrollbar drag state
     private bool _draggingScrollbar;
@@ -121,6 +128,47 @@ public class BrowserWindow
         _host.Dispose();
         _rootNode?.DocumentState?.Engine?.Dispose();
         _session.Dispose();
+    }
+
+    /// <summary>
+    /// Headless initialization for the conformance harness and unit tests: loads the page and
+    /// binds the engine exactly like <see cref="Run"/> — viewport, navigation and title hooks,
+    /// autofocus, first frame — but against the supplied host and without entering a run loop;
+    /// the caller drives the event loop and the <c>On*</c> input callbacks. A pre-parsed
+    /// <paramref name="page"/> may be supplied instead of a URL (its engine becomes the active
+    /// instance). Returns the page's engine, or null when the page carries none.
+    /// </summary>
+    internal JsEngine? RunHeadless(IWindowHost host, Page? page = null)
+    {
+        _headless = true;
+        _host = host;
+        AnimationEngine.Reset();
+        var loaded = page ?? Parser.TraversePage(new NavigationRequest(_url), _initialWidth, _initialHeight, _session);
+        _rootNode = loaded.Root;
+        _url = loaded.Root.DocumentState?.Address ?? _url;
+        _width = _initialWidth;
+        _height = _initialHeight;
+        _viewport.ViewportHeight = _height;
+        AnimationEngine.StartAnimations(_rootNode);
+
+        var engine = loaded.Engine;
+        if (engine is null) return null;
+        JsEngine.Instance = engine;
+        engine.SetViewport(_viewport);
+        engine.UpdateViewportSize(_width, _height);
+        engine.TaskEnqueued += () => _host.PostTask();
+        engine.OnNavigate = request => Navigate(request);
+        engine.OnTitleChange = t => _host.SetTitle(t.Length == 0 ? _title : t);
+        if (loaded.Document?.Title is { Length: > 0 } docTitle)
+            _host.SetTitle(docTitle);
+
+        // autofocus: focus first element with the attribute (mirrors Run()).
+        var af = FindFirst(_rootNode, n => n.Attributes.ContainsKey("autofocus"));
+        if (af != null) FormState.FocusedInput = af.NodeKey;
+
+        AnimationEngine.Tick(_rootNode);
+        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+        return engine;
     }
 
     /// <summary>Picks the native windowing backend for the current OS.</summary>
@@ -257,6 +305,14 @@ public class BrowserWindow
             (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
             _host.Invalidate();
         }
+    }
+
+    /// <summary>Re-renders the frame and hit regions from the current tree. Headless input
+    /// injection refreshes before each gesture so hit-testing sees script-driven DOM changes.</summary>
+    internal void RefreshFrame()
+    {
+        if (_rootNode != null)
+            (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
     }
 
     /// <summary>Mouse wheel at client point (x, y); <paramref name="delta"/> is in WHEEL_DELTA units (120 per notch, positive away from the user).</summary>
@@ -499,6 +555,12 @@ public class BrowserWindow
             var region = _hitRegions[ri];
             if (!region.Bounds.Contains(x, contentY)) continue;
 
+            // Interaction focus (HTML §3.2.2): activating a form control focuses it, mirroring
+            // HTMLElement.focus() — the document's activeElement moves and focus/focusin fire
+            // (blur/focusout on the previous element), not just the layout focus state.
+            if (region.InputAction != InputAction.None && JsEngine.Instance is { } focusEngine)
+                FocusNode(FindNodeByKey(_rootNode!, region.NodeKey), focusEngine);
+
             if (region.Href != null)
             {
                 Navigate(region.Href);
@@ -509,6 +571,9 @@ public class BrowserWindow
             if (region.InputAction == InputAction.TextInput)
             {
                 FormState.FocusedInput = region.NodeKey;
+                // Activation dispatches click on form controls too (the §4.11.5.3 input
+                // event sequence ends in a click on the control), not only on buttons/links.
+                DispatchClickWithCoords(region.NodeKey, x, y, contentY);
                 handled = true;
                 break;
             }
@@ -517,6 +582,7 @@ public class BrowserWindow
             {
                 if (!FormState.CheckedBoxes.Remove(region.NodeKey))
                     FormState.CheckedBoxes.Add(region.NodeKey);
+                DispatchClickWithCoords(region.NodeKey, x, y, contentY);
                 handled = true;
                 break;
             }
@@ -524,6 +590,7 @@ public class BrowserWindow
             if (region.InputAction == InputAction.Radio)
             {
                 FormState.SelectRadio(region.NodeKey);
+                DispatchClickWithCoords(region.NodeKey, x, y, contentY);
                 handled = true;
                 break;
             }
@@ -557,13 +624,15 @@ public class BrowserWindow
                             : curVal.ToString(System.Globalization.CultureInfo.InvariantCulture);
                     EventDispatcher.Dispatch(node.NodeKey, "input", _rootNode);
                 }
+                DispatchClickWithCoords(region.NodeKey, x, y, contentY);
                 handled = true;
                 break;
             }
 
             if (region.InputAction == InputAction.Range)
             {
-                // Range click is handled in OnMouseDown; just consume
+                // Range click is handled in OnMouseDown; the click event still fires.
+                DispatchClickWithCoords(region.NodeKey, x, y, contentY);
                 handled = true;
                 break;
             }
@@ -597,6 +666,7 @@ public class BrowserWindow
                     // Open dropdown
                     FormState.OpenDropdown = region.NodeKey;
                 }
+                DispatchClickWithCoords(region.NodeKey, x, y, contentY);
                 handled = true;
                 break;
             }
@@ -614,6 +684,7 @@ public class BrowserWindow
             if (region.InputAction == InputAction.FileOpen)
             {
                 OpenFilePicker(region.NodeKey);
+                DispatchClickWithCoords(region.NodeKey, x, y, contentY);
                 handled = true;
                 break;
             }
@@ -633,7 +704,21 @@ public class BrowserWindow
         }
 
         var focusChanged = !handled && FormState.FocusedInput != null;
-        if (focusChanged) FormState.FocusedInput = null;
+        if (focusChanged)
+        {
+            FormState.FocusedInput = null;
+            // Clicking non-focusable content moves focus to the body: the active element
+            // blurs (focus leaves it), mirroring script-initiated blur().
+            if (_rootNode?.DocumentState is { } blurState && blurState.ActiveElement is { } blurred)
+            {
+                if (JsEngine.Instance is { } blurEngine)
+                {
+                    EventDispatcher.DispatchToNode(blurred, "blur", blurEngine, trusted: true);
+                    EventDispatcher.DispatchToNode(blurred, "focusout", blurEngine, bubbles: true, trusted: true);
+                }
+                blurState.ActiveElement = null;
+            }
+        }
 
         // Fire "change" event if value changed since focus
         if (prevFocus != null && prevFocus != FormState.FocusedInput && _rootNode != null)
@@ -671,31 +756,7 @@ public class BrowserWindow
     {
         if (_loading != null) return;
         if (_rootNode == null) return;
-        var keyName = MapVirtualKey(vk);
-        var eventType = down ? "keydown" : "keyup";
-
-        // Dispatch to focused element or body
-        var targetNode = FormState.FocusedInput != null
-            ? FindNodeByKey(_rootNode, FormState.FocusedInput.Value)
-            : FindFirst(_rootNode, n => n.TagName == "BODY");
-        if (targetNode != null)
-        {
-            var jsEngine = JsEngine.Instance;
-            if (jsEngine != null)
-            {
-                var evt = new Scripting.Dom.JsEvent();
-                evt.Init(eventType, true, true);
-                evt.key = keyName;
-                evt.keyCode = vk;
-                evt.code = MapVirtualKeyToCode(vk);
-                evt.ctrlKey = modifiers.Ctrl;
-                evt.shiftKey = modifiers.Shift;
-                evt.altKey = modifiers.Alt;
-                evt.metaKey = modifiers.Meta;
-                evt.target = new Scripting.Dom.JsElement(jsEngine.RawEngine, targetNode);
-                EventDispatcher.DispatchEvent(targetNode, evt, jsEngine);
-            }
-        }
+        DispatchKeyEvent(down, MapVirtualKey(vk), vk, MapVirtualKeyToCode(vk), modifiers);
 
         // Handle Enter in single-line input → submit
         if (down && vk == 0x0D && FormState.FocusedInput != null)
@@ -708,6 +769,59 @@ public class BrowserWindow
                     SubmitForm(formNode);
             }
         }
+    }
+
+    /// <summary>Key event from a DOM <c>key</c> value — the headless input bridge and hosts
+    /// that only know key names. Resolves the Win32 code so <c>keyCode</c>/<c>code</c> match
+    /// the native path; the key name is authoritative (unmapped printables keep theirs).</summary>
+    internal void SendKey(string key, bool down)
+    {
+        if (_loading != null) return;
+        if (_rootNode == null) return;
+        var vk = ResolveVirtualKey(key);
+        DispatchKeyEvent(down, vk != 0 ? MapVirtualKey(vk) : key, vk, vk != 0 ? MapVirtualKeyToCode(vk) : "", default);
+    }
+
+    /// <summary>Interaction focus: mirrors <c>HTMLElement.focus()</c> from the input pipeline —
+    /// the previous active element blurs (blur, focusout), the document's activeElement moves,
+    /// and the new element receives focus/focusin (HTML §3.2.2, DOM focus events).</summary>
+    private static void FocusNode(LayoutNode? node, JsEngine engine)
+    {
+        if (node?.DocumentState is not { } state || ReferenceEquals(state.ActiveElement, node)) return;
+        if (state.ActiveElement is { } previous)
+        {
+            EventDispatcher.DispatchToNode(previous, "blur", engine, trusted: true);
+            EventDispatcher.DispatchToNode(previous, "focusout", engine, bubbles: true, trusted: true);
+        }
+        state.ActiveElement = node;
+        EventDispatcher.DispatchToNode(node, "focus", engine, trusted: true);
+        EventDispatcher.DispatchToNode(node, "focusin", engine, bubbles: true, trusted: true);
+    }
+
+    private void DispatchKeyEvent(bool down, string keyName, int vk, string code, KeyModifiers modifiers)
+    {
+        // Key events go to the focused element: the focused form control when there is one,
+        // else the document's active element (tabindex, contenteditable), else the body.
+        var targetNode = FormState.FocusedInput is { } focused ? FindNodeByKey(_rootNode, focused) : null;
+        targetNode ??= _rootNode.DocumentState?.ActiveElement is { } active && FindNodeByKey(_rootNode, active.NodeKey) == active
+            ? active
+            : null;
+        targetNode ??= FindFirst(_rootNode, n => n.TagName == "BODY");
+        if (targetNode == null) return;
+        if (JsEngine.Instance is not { } jsEngine) return;
+
+        var evt = new Scripting.Dom.JsEvent();
+        evt.Init(down ? "keydown" : "keyup", true, true);
+        evt.key = keyName;
+        evt.keyCode = vk;
+        evt.code = code;
+        evt.ctrlKey = modifiers.Ctrl;
+        evt.shiftKey = modifiers.Shift;
+        evt.altKey = modifiers.Alt;
+        evt.metaKey = modifiers.Meta;
+        evt.isTrusted = true; // user-agent-generated: native hosts and injected input alike
+        evt.target = new Scripting.Dom.JsElement(jsEngine.RawEngine, targetNode);
+        EventDispatcher.DispatchEvent(targetNode, evt, jsEngine);
     }
 
     /// <summary>A character was typed ('\b' for Backspace, '\r' for Enter).</summary>
@@ -792,6 +906,24 @@ public class BrowserWindow
                 (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                 _host.Invalidate();
             }
+            return;
+        }
+
+        // Headless (conformance harness, embedding): no UI thread animates a loading handoff,
+        // so the navigation completes synchronously — load, commit, no loading screen or
+        // reveal fade. Non-http(s) targets have no OS handler here and are dropped.
+        if (_headless)
+        {
+            if (target.Scheme is not ("http" or "https")) return;
+            var headlessUrl = target.ToString();
+            _pendingUrl = headlessUrl;
+            _loadedPage = null;
+            _loadError = null;
+            _loadReady = false;
+            try { _loadedPage = Parser.TraversePage(request with { Url = headlessUrl }, _width, _height, _session); }
+            catch (Exception ex) { _loadError = ex; }
+            _loadReady = true;
+            FinalizeNavigation();
             return;
         }
 
@@ -902,20 +1034,30 @@ public class BrowserWindow
         AnimationEngine.Tick(_rootNode); // initial frame
         (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
 
-        // Reveal the rendered page by fading out of the loading screen.
-        var toImage = CaptureFrame();
-        _pageTransition?.Dispose();
-        _pageTransition = null;
-        if (fromImage != null && toImage != null)
+        // Reveal the rendered page by fading out of the loading screen — windowed hosts only;
+        // headless callers have no timer to drive the fade.
+        if (!_headless)
         {
-            _pageTransition = new PageTransition(fromImage, toImage);
-            _transitionFrame?.Dispose();
-            _pixels = _pageTransition.RenderFrame(_width, _height, out _transitionFrame);
+            var toImage = CaptureFrame();
+            _pageTransition?.Dispose();
+            _pageTransition = null;
+            if (fromImage != null && toImage != null)
+            {
+                _pageTransition = new PageTransition(fromImage, toImage);
+                _transitionFrame?.Dispose();
+                _pixels = _pageTransition.RenderFrame(_width, _height, out _transitionFrame);
+            }
+            else
+            {
+                fromImage?.Dispose();
+                toImage?.Dispose();
+            }
         }
         else
         {
             fromImage?.Dispose();
-            toImage?.Dispose();
+            _pageTransition?.Dispose();
+            _pageTransition = null;
         }
 
         // Run any tasks queued while scripts executed during the load (incl. iframe load events).
@@ -1156,9 +1298,54 @@ public class BrowserWindow
         evt.pageX = x;
         evt.pageY = (int)contentY;
         evt.button = 0;
+        evt.isTrusted = true; // user-agent-generated: the activation step of a real (or injected) click
         evt.target = new Scripting.Dom.JsElement(engine.RawEngine, node);
         return EventDispatcher.DispatchEvent(node, evt, engine);
     }
+
+    /// <summary>Resolves a DOM <c>key</c> value (or its left/right modifier variant) to the
+    /// Win32 virtual-key code the input callbacks take. Returns 0 for unmapped names; callers
+    /// keep the original key string as the event's authoritative <c>key</c>.</summary>
+    internal static int ResolveVirtualKey(string key) => key switch
+    {
+        "Backspace" => 0x08,
+        "Tab" => 0x09,
+        "Enter" or "Return" => 0x0D,
+        "Shift" or "ShiftLeft" or "ShiftRight" => 0x10,
+        "Control" or "ControlLeft" or "ControlRight" => 0x11,
+        "Alt" or "AltLeft" or "AltRight" => 0x12,
+        "Pause" => 0x13,
+        "CapsLock" => 0x14,
+        "Escape" or "Esc" => 0x1B,
+        " " or "Space" => 0x20,
+        "PageUp" => 0x21,
+        "PageDown" => 0x22,
+        "End" => 0x23,
+        "Home" => 0x24,
+        "ArrowLeft" => 0x25,
+        "ArrowUp" => 0x26,
+        "ArrowRight" => 0x27,
+        "ArrowDown" => 0x28,
+        "Insert" => 0x2D,
+        "Delete" => 0x2E,
+        "*" => 0x6A,
+        "+" => 0x6B,
+        ";" => 0xBA,
+        "=" => 0xBB,
+        "," => 0xBC,
+        "-" => 0xBD,
+        "." => 0xBE,
+        "/" => 0xBF,
+        "`" => 0xC0,
+        "[" => 0xDB,
+        "\\" => 0xDC,
+        "]" => 0xDD,
+        "'" => 0xDE,
+        _ when key.Length == 1 && char.IsAsciiDigit(key[0]) => key[0],
+        _ when key.Length == 1 && char.IsAsciiLetter(key[0]) => char.ToUpperInvariant(key[0]),
+        _ when key.Length >= 2 && key[0] == 'F' && int.TryParse(key[1..], out var fn) && fn is >= 1 and <= 12 => 0x70 + fn - 1,
+        _ => 0
+    };
 
     private static string MapVirtualKey(int vk) => vk switch
     {

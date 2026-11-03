@@ -1279,9 +1279,25 @@ internal class JsEngine : IDisposable
     /// <summary>Binds a viewport for window.scrollTo/scrollBy support.</summary>
     internal void SetViewport(Viewport viewport) => _viewport = viewport;
 
+    /// <summary>The bound viewport, if any (hit-testing and scrollIntoView read it).</summary>
+    internal Viewport? Viewport => _viewport;
+
     internal void ScrollTo(float y) => _viewport?.ScrollTo(y);
     internal void ScrollBy(float delta) => _viewport?.ScrollBy(delta);
     internal float GetScrollY() => _viewport?.ScrollY ?? 0f;
+
+    /// <summary>Scrolls the bound viewport until <paramref name="node"/>'s border box is in
+    /// view (scrollIntoView "nearest": only as far as needed; no-op when already visible).</summary>
+    internal void ScrollIntoView(Lite.Models.LayoutNode node)
+    {
+        if (_viewport is null) return;
+        var box = node.Box.BorderBox;
+        var viewBottom = _viewport.ScrollY + _viewport.ViewportHeight;
+        if (box.Bottom > viewBottom)
+            _viewport.ScrollTo(box.Bottom - _viewport.ViewportHeight);
+        else if (box.Top < _viewport.ScrollY)
+            _viewport.ScrollTo(box.Top);
+    }
 
     internal Engine RawEngine => _engine;
 

@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT / "Lite.Conformance" / "artifacts"
 
-OUTCOME_ORDER = ["pass", "fail", "crash", "timeout", "empty", "unsupported"]
+OUTCOME_ORDER = ["pass", "fail", "crash", "timeout", "empty", "unsupported", "manual-pending"]
 
 
 def official_cluster(path: str) -> str:

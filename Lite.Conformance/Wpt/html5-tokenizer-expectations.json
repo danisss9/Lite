@@ -1,0 +1,366 @@
+{
+  "schemaVersion": 1,
+  "target": "https://www.w3.org/TR/2014/REC-html5-20141028/",
+  "cases": [
+    {
+      "file": "test2.test",
+      "index": 31,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?namespace\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test2.test",
+      "index": 32,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?foo bar?\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test2.test",
+      "index": 33,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?foo bar??\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1158,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1159,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?a\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1160,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?b\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1161,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?y\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1162,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?z\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1163,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?A\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1164,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?B\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1165,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?Y\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1166,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?Z\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1167,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?a a\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1168,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?b b\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1169,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?y y\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1170,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?z z\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1171,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?A A\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1172,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?B B\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1173,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?Y Y\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1174,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?Z Z?\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1175,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?a a\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1176,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?b b\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1177,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?y y\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1178,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?z z\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1179,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?A A\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1180,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?B B\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1181,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?Y Y\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "test3.test",
+      "index": 1182,
+      "state": "Data state",
+      "verdict": "post-target",
+      "clause": "8.2.4.8 (tag open state) / 8.2.4.44 (bogus comment state)",
+      "reason": "the 2014 tokenizer treats \"<?\" through the tag-open any-other rule: parse error, switch to the bogus comment state, one comment spanning from the \"?\" to the first \">\" (or EOF); processing-instruction tokens are living-standard vocabulary the pinned letter never emits",
+      "correctedOutput": [
+        "Comment \"?Z Z\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "xmlViolation.test",
+      "index": 1,
+      "state": "Data state",
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (tokenization; input preprocessing normalizes CR only)",
+      "reason": "xmlViolation.test pins its expectations to the infoset-coercion tweaks its README names (U+000C rewritten to space, \"--\" inside comments rewritten to \"- -\"); the 2014 tokenizer letter emits both characters verbatim (the double hyphen still raises the nested-comment parse error), so the expectation, not the engine, is wrong for the pinned target",
+      "correctedOutput": [
+        "Character \"a\fb\""
+      ],
+      "reviewed": true
+    },
+    {
+      "file": "xmlViolation.test",
+      "index": 2,
+      "state": "Data state",
+      "verdict": "corpus-invalid",
+      "clause": "8.2.4 (tokenization; input preprocessing normalizes CR only)",
+      "reason": "xmlViolation.test pins its expectations to the infoset-coercion tweaks its README names (U+000C rewritten to space, \"--\" inside comments rewritten to \"- -\"); the 2014 tokenizer letter emits both characters verbatim (the double hyphen still raises the nested-comment parse error), so the expectation, not the engine, is wrong for the pinned target",
+      "correctedOutput": [
+        "Comment \" foo -- bar \""
+      ],
+      "reviewed": true
+    }
+  ]
+}
