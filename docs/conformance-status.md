@@ -33,7 +33,7 @@ clears its full family).
 | --- | --- | --- |
 | ES2020 | **`es2020ProfileReady` true** — enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, zero failures and zero expected failures, no dependency exception; host suite 20/20; all 2,115 ECMA-262 clauses reviewed |
 | CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 2 November, second probe batch (`745f8b6`) plus two engine-fix batches (`37f05dc`, `2b978d0`) with a fresh full-screen baseline: official 2011 suite 6,915/9,039 (76.5%), 1,097 fail, 1,027 unsupported pending references or manual evidence; WPT `css/CSS2` 6,334/8,904 (71.1%), 1,377 fail, 1,180 unsupported; the stated pass condition of 4,012 self-describing cases is machine-checked (618 formerly-unsupported targets decided in this baseline: 358 pass, 260 real engine findings); applicability review complete (18,654 cases); obligations 17/213 `implemented` |
-| HTML5 | `html5ProfileReady` false | Reviewed gate 46/46, curated wpt 86 pass / 2 published expected-fails, unit 432/432; html5lib parse fidelity **decided 1889/1,891 unique tree-construction cases** (1,746 raw pass + 2 pipeline-fixes artifacts + 141 reviewed ledger-pass corrections, +2 runner-excluded scripted document.write cases) — enforced by the `--suite html5-parse` gate in CI since 2 November (`198c9fc`); applicability manifest 7,440 entries (51 `included`, 1 `mixed`, 4,717 `post-target`, 1,235 `profile-excluded`, 23 `regression-only`, 1,413 `unreviewed`); REC section review 0/762; tokenizer corpus not yet vendored |
+| HTML5 | `html5ProfileReady` false | Reviewed gate now spans 1,392 tests (153 passing — the applicability review's newly-tracked obligations form the Milestone 4 engine queue), curated wpt 86 pass / 2 published expected-fails, unit 432/432; html5lib parse fidelity **decided 1889/1,891 unique tree-construction cases** (1,746 raw pass + 2 pipeline-fixes artifacts + 141 reviewed ledger-pass corrections, +2 runner-excluded scripted document.write cases) — enforced by the `--suite html5-parse` gate in CI since 2 November (`198c9fc`); applicability manifest 7,432 entries (1,235 `included`, 1 `mixed`, 4,773 `post-target`, 1,291 `profile-excluded`, 23 `regression-only`, 109 `unreviewed` — each naming its pending Milestone 3 capability); REC section review 0/762; tokenizer corpus vendored, harness pending |
 
 ## Roadmap
 
@@ -84,14 +84,18 @@ a package from a sample.
 
 In the delivery order of [html5-conformance-plan.md](html5-conformance-plan.md):
 
-1. **Finish the applicability review's small roots**: close the 24 `unreviewed` dom
-   stragglers (20 reviewed-failing entries feeding the Milestone 4 engine queue,
-   4 reviewed-deferred whose mixed-era member reads cannot be split at subtest
-   level), then the dependency roots in batch order (`uievents`, `url`, `encoding`,
-   `webstorage`, `webmessaging`, `cookies`, `fetch`/`cors`, `FileAPI`,
-   `selection`, `mimesniff`), then the large `html` root by subdirectory. The
-   manifest's 4,717 `post-target` classifications show the catalog import ran; the
-   review protocol has been demonstrated end to end on `dom` and must now scale.
+1. **Classify the harness-blocked applicability tail (109 entries)**: the 2026-11-02
+   root reviews closed the `dom` stragglers (20 reviewed-failing obligations now
+   feed the Milestone 4 engine queue as `included` entries with standing evidence
+   blockers) and classified the `editing` and `html` roots (directory-coherent
+   feature analysis with representative spot-checks). The remaining 109
+   `unreviewed` entries each carry a reason naming the Milestone 3 capability
+   their classification waits on — testdriver input automation (66 editing, 30
+   html), HTTPS upstream serving (13), or the manual-evidence flow — and the
+   dependency roots the scope decision already covers (`uievents`, `url`,
+   `encoding`, `webstorage`, `webmessaging`, `cookies`, `fetch`/`cors`,
+   `FileAPI`, `selection`, `mimesniff`) were bulk-classified in earlier sweeps.
+   The tail closes when Milestone 3 lands and the files execute.
 2. **Close Milestone 2's parse residuals**: the tree-construction corpus is
    **closed under the contract** — every case is a raw pass, a pipeline-fixes
    artifact, a reviewed ledger-pass correction (`Wpt/html5-parse-expectations.json`,
