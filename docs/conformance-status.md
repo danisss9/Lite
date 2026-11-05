@@ -50,12 +50,24 @@ scope reversed — six of the 28 `direction-unicode-bidi` cases now pass the pai
 judge on the same capability. Suite numbers still stand at the 2 November baseline until
 the next full-screen run; the 4 November checkpoint in the CSS plan carries the details.
 
+Same-day follow-up (commit `8c3c9307`): the border-conflict-style family's 65
+"unclassified" fails were a judge artifact — the ring verifier compared the center crop
+against a whole-grid component bbox (collapsed same-color borders form one connected
+component), excluding every side from the style vote while the engine's ring read the
+stated style on all four sides. The judge now reads the ring's own extent: the family
+converts 30 cases to real passes (71/106 official), the remainder carrying honest
+per-case verdicts (thin double/dotted sample-swatch reads under the 40% band-row
+threshold — queued oracle work — plus one real float-packing finding feeding the WPT
+tables cluster from border-conflict-style-107). The wider `bidi-` space is surveyed and
+measurable for the next session (full-UBA port from the char-order ledger's Python
+reference leading).
+
 ## Track status at a glance
 
 | Track | Readiness | Last recorded position |
 | --- | --- | --- |
 | ES2020 | **`es2020ProfileReady` true** — enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, zero failures and zero expected failures, no dependency exception; host suite 20/20; all 2,115 ECMA-262 clauses reviewed |
-| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 4 November, the bidi-box-model cluster closes (cluster-scoped run on work in progress over `3280b413`; full-suite numbers stand at the 2 November baseline: official 6,915/9,039, WPT 6,334/8,904): bidi-box-model 45/45 official and 45/45 WPT twins (from 18/45) — `css21.8.6` flipped under the strict rule, obligations 18/213 `implemented`; behind it the §8.6 physical-side edge reservation, the §8.6 mirrored split-box join sides, and the §16.2/UAX #9 subset for RTL `bidi-override` scopes (6 of 28 `direction-unicode-bidi` now pass the painted-order judge); the 3 November routing invariant stands (every one of the 11,934 cataloged cases carries exactly one verdict route, unit-audited); unit 464/464, curated css21 51 pass / 1 published expected-fail, wpt 86 pass / 2 published expected-fails |
+| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 4 November, the bidi-box-model cluster closes and the border-conflict-style judge artifact clears (cluster-scoped runs on work in progress over `3280b413` + `8c3c9307`; full-suite numbers stand at the 2 November baseline: official 6,915/9,039, WPT 6,334/8,904): bidi-box-model 45/45 official and 45/45 WPT twins (from 18/45) — `css21.8.6` flipped under the strict rule, obligations 18/213 `implemented`; border-conflict-style 65 → 35 official fails as the ring judge reads the ring's own extent (30 honest conversions; residue = thin double/dotted swatch reads under the 40% band threshold + one float-packing engine finding for the tables cluster); behind it the §8.6 physical-side edge reservation, the §8.6 mirrored split-box join sides, and the §16.2/UAX #9 subset for RTL `bidi-override` scopes (6 of 28 `direction-unicode-bidi` now pass the painted-order judge); the 3 November routing invariant stands (every one of the 11,934 cataloged cases carries exactly one verdict route, unit-audited); unit 465/465, curated css21 51 pass / 1 published expected-fail, wpt 86 pass / 2 published expected-fails, html5 gate green over the 2,440-case reviewed corpus |
 | HTML5 | `html5ProfileReady` false | 3 November: the harness-blocked tail is **closed — 0 unreviewed** — and Milestone 1's remaining work is quantified. All 109 tail entries decided (101 executed under the landed testdriver capability and its visual-runner route — 2 pass, 99 reviewed-failing; 8 manual-kind files by static reviewed-failing classification: no applicationCache, fixed `navigator.onLine`, no `window.open`). The propose tool's `needs/testdriver` inventory batch (481 sources) was then surveyed and added with measured outcomes (35 pass, 446 reviewed-failing) plus 9 cited post-target entries — the manifest now holds 7,923 entries with 1,826 `included`, and the runner's guarded omission check reports the inventory-completion remainder precisely: **6,691 catalog cases across 11 roots with no manifest entry** (html/semantics dominating at 2,162; encoding 1,265; fetch 856; dom 378) — `inventoryComplete` stays false by the mechanical condition, and the unproposed sources find their classifications through the section review. Engine fixes landed with the testdriver capability: text inputs size 150×20, trusted form-control clicks, interaction focus mirroring `element.focus()`, `elementsFromPoint`/`getClientRects`/`scrollIntoView`/`document.contains`. Units 458/458; curated wpt 86/2 and css21 51/1 unchanged; parse fidelity 1,889/1,891, tokenizer 7,052/7,052; REC section review 0/762 |
 
 ## Roadmap
