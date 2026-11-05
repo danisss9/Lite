@@ -63,8 +63,13 @@ internal static class WptRefTestRunner
                         : "") + scaleNote + superseded;
                     if (reference.Relation == "==" ? equal : !equal)
                     {
+                        // A self-reference is not a cycle that closes a passing path: comparing a
+                        // page with itself is vacuous (the M3 reviewed contract rejects vacuous
+                        // matches), so only a back-edge to a DIFFERENT node on the path — the
+                        // nosplit-ref ↔ ref two-cycle shape — terminates as a passing chain.
                         if (target is not { References.Count: > 0 } ||
-                            onPath.Contains(targetPath) || allMatched.Contains(targetPath))
+                            allMatched.Contains(targetPath) ||
+                            (targetPath != current.Path && onPath.Contains(targetPath)))
                             return Result(true, "Reference graph has a passing path" + note);
                         pending.Push(target);
                     }
