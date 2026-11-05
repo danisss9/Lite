@@ -34,6 +34,11 @@ internal static class Drawer
     /// until the next Draw call so the Win32 blit never reads freed memory.</summary>
     private static SKBitmap? _lastBitmap;
 
+    /// <summary>The device scale of the DrawToBitmap render in progress: nested iframes inherit
+    /// it so every browsing context rasterizes at the same device resolution. Saved/restored
+    /// around the recursive call like the other paint statics (see PaintIframe).</summary>
+    private static float _renderScale = 1f;
+
     public static (IntPtr Pixels, List<HitRegion> HitRegions) Draw(int width, int height, LayoutNode root, Viewport viewport)
     {
         _lastBitmap?.Dispose();
@@ -57,13 +62,20 @@ internal static class Drawer
     }
 
     /// <summary>Renders the page to a bitmap the caller owns. Used by the conformance
-    /// harness for reftest pixel comparison.</summary>
-    internal static SKBitmap DrawToBitmap(int width, int height, LayoutNode root, Viewport viewport)
+    /// harness for reftest pixel comparison. <paramref name="scale"/> is the device pixel
+    /// ratio: the layout runs in CSS pixels at <paramref name="width"/>×<paramref name="height"/>
+    /// and the bitmap rasterizes at scale× that size (a dpr option asks the harness for a
+    /// device-scaled render; 1 is the live-window default).</summary>
+    internal static SKBitmap DrawToBitmap(int width, int height, LayoutNode root, Viewport viewport, float scale = 1f)
     {
         // Layout pass — compute node.Box for every node
         BoxEngine.Layout(root, width, height);
+        // Nested iframes inherit the device scale (read by PaintIframe during PaintNode);
+        // every DrawToBitmap entry rewrites it, so no restore is needed on the way out.
+        _renderScale = scale;
 
-        var imageInfo = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        var imageInfo = new SKImageInfo(Math.Max(1, (int)MathF.Ceiling(width * scale)),
+            Math.Max(1, (int)MathF.Ceiling(height * scale)), SKColorType.Bgra8888, SKAlphaType.Premul);
         var bitmap = new SKBitmap(imageInfo);
         var canvas = new SKCanvas(bitmap);
 
@@ -85,6 +97,9 @@ internal static class Drawer
         }
         if (clearColor.Alpha == 0) clearColor = SKColors.White;
         canvas.Clear(clearColor);
+        // Device scale applies to every paint below — content, dropdown overlay, fixed nodes
+        // and the scrollbar all rasterize at the scaled resolution (CSS coordinates unchanged).
+        canvas.Scale(scale, scale);
         _hitRegions = [];
         SelectOptionMap.Clear();
         _pendingDropdown = null;
@@ -1339,7 +1354,7 @@ internal static class Drawer
         List<HitRegion> childRegions;
         try
         {
-            childBmp = DrawToBitmap(cw, ch, page.Root, page.Viewport);
+            childBmp = DrawToBitmap(cw, ch, page.Root, page.Viewport, _renderScale);
             childRegions = _hitRegions.ToList();
         }
         finally
@@ -1357,7 +1372,10 @@ internal static class Drawer
         {
             canvas.Save();
             canvas.ClipRect(content);
-            canvas.DrawBitmap(childBmp, content.Left, content.Top);
+            // The child rasterizes at the same device scale as this canvas, so its bitmap holds
+            // scale× cw×ch device pixels: draw it into the frame's CSS box and the scaled canvas
+            // maps it 1:1 onto device pixels (at scale 1 this is the natural-size draw).
+            canvas.DrawBitmap(childBmp, new SKRect(content.Left, content.Top, content.Left + cw, content.Top + ch));
             canvas.Restore();
         }
         foreach (var region in childRegions)

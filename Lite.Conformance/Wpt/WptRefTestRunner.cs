@@ -6,8 +6,10 @@ namespace Lite.Conformance.Wpt;
 
 /// <summary>Implements the locked wptrunner reference graph algorithm. Fuzzy limits are
 /// honored only from the pinned manifest's per-test metadata, never a global budget; DPI
-/// requirements remain unsupported execution blockers, while testdriver-flagged pages drive
-/// the headless input pipeline before their snapshot.</summary>
+/// options scale the render instead of refusing execution, and the root test's browser
+/// configuration (viewport, device scale) governs the entire graph, matching the pinned
+/// runner; testdriver-flagged pages drive the headless input pipeline before their
+/// snapshot.</summary>
 internal static class WptRefTestRunner
 {
     internal static WptRunner.RunResult Run(WptCase test, Func<string, WptCase?> lookup)
@@ -16,14 +18,13 @@ internal static class WptRefTestRunner
         var artifacts = new List<EvidenceArtifact>();
         var pending = new Stack<WptCase>();
         var visited = new HashSet<string>(StringComparer.Ordinal);
+        var (scale, scaleNote) = WptVisualPage.DeviceScale(test.Options);
         pending.Push(test);
         try
         {
             while (pending.TryPop(out var current))
             {
                 if (!visited.Add(current.Path)) continue;
-                if (current.Options?.ContainsKey("dpi") == true)
-                    return new(WptRunner.Cat.Unsupported, "Reference requires DPI support", 0, 0);
                 foreach (var reference in current.References)
                 {
                     var relative = new Uri(new Uri("http://wpt.invalid/" + current.Path), reference.Url);
@@ -31,10 +32,13 @@ internal static class WptRefTestRunner
                         return new(WptRunner.Cat.Unsupported, "External reference origin requires explicit serving configuration", 0, 0);
                     var targetPath = (relative.PathAndQuery + relative.Fragment).TrimStart('/');
                     var target = lookup(targetPath);
-                    if (target?.Options?.ContainsKey("dpi") == true)
-                        return new(WptRunner.Cat.Unsupported, "Reference target requires DPI support", 0, 0);
-                    // The pinned runner uses the root test's viewport for the entire graph; a
-                    // testdriver-flagged page (test or reference) drives the input pipeline
+                    // The root test's device scale applies to every page in the graph (as the
+                    // viewport_size does); a target carrying its own DPI option is superseded,
+                    // and the evidence note says so rather than silently dropping it.
+                    var targetScale = WptVisualPage.DeviceScale(target?.Options);
+                    var superseded = targetScale.Scale != scale
+                        ? "; reference DPI option superseded by the test's configuration" : "";
+                    // A testdriver-flagged page (test or reference) drives the input pipeline
                     // before its snapshot through the headless BrowserWindow path.
                     var left = Render(current.Path, testDriver: current.TestDriver);
                     var right = Render(targetPath, testDriver: target?.TestDriver == true);
@@ -43,7 +47,9 @@ internal static class WptRefTestRunner
                         tolerance: (byte)Math.Clamp(fuzzy?.MaxDifference ?? 0, 0, 255),
                         pixelBudget: fuzzy?.MaxPixels ?? 0);
                     var equal = comparison.Match;
-                    var note = fuzzy is { } limit ? $" (fuzzy maxDifference={limit.MaxDifference} pixels={limit.MaxPixels})" : "";
+                    var note = (fuzzy is { } limit
+                        ? $" (fuzzy maxDifference={limit.MaxDifference} pixels={limit.MaxPixels})"
+                        : "") + scaleNote + superseded;
                     if (reference.Relation == "==" ? equal : !equal)
                     {
                         if (target is { References.Count: > 0 }) pending.Push(target);
@@ -74,7 +80,7 @@ internal static class WptRefTestRunner
         {
             if (images.TryGetValue(path, out var bitmap)) return bitmap;
             (bitmap, _, _, _, _) = WptVisualPage.Render(path, test.Options?["viewport_size"]?.GetValue<string>(),
-                testDriver: testDriver);
+                testDriver: testDriver, scale: scale);
             images.Add(path, bitmap);
             return bitmap;
         }

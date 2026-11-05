@@ -191,12 +191,15 @@ In the delivery order of [html5-conformance-plan.md](html5-conformance-plan.md):
    every depth). What remains of Milestone 2 is the **serving integration** the
    WPT encoding suite needs — Milestone 3 work, sequenced with the rest of the
    remaining plan in [html5-conformance-plan.md](html5-conformance-plan.md).
-3. **Milestone 3 harness automation before the deep `html` root**: testdriver input
-   automation over the native/headless hosts, `.any.js`/`.worker.js` worker
-   contexts, upstream serving integration, reftest fuzzy/DPI metadata, recorded
-   manual evidence, and historical fixtures for removed 2014 features
-   (application cache, keygen). After this lands, every non-pass on a reviewed
-   applicable test is a genuine engine failure.
+3. **Milestone 3 harness automation — complete (5 November 2026)**: testdriver input
+   automation over the native/headless hosts, window-context `.any.js` variants,
+   upstream serving integration (the pinned wptserve now runs on this toolchain via the
+   Python 3.15 compat shim, and the `--wpt-base-url` route is verified outcome-for-outcome
+   against local serving), reftest fuzzy/DPI metadata honored with false-pass fixtures,
+   recorded manual evidence routed through static review, and the historical-feature
+   coverage the pinned tree still carries (application cache; `keygen` has no vendored
+   upstream test, so its obligations join the Milestone 4 forms package). Every non-pass
+   on a reviewed applicable test is a genuine engine failure.
 4. **Milestone 4 engine packages in dependency order**: DOM authority first (it
    unblocks live collections, serialization fidelity and the editing package),
    then events and messaging (postMessage targetOrigin/transfer, structured

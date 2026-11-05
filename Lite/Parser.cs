@@ -311,14 +311,18 @@ internal static class Parser
     private static readonly Regex LangPseudoRegex =
         new(":lang\\s*\\(\\s*[^)]*\\)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex MetaContentTypeRegex =
-        new("<meta\\b[^>]*http-equiv\\s*=\\s*[\"']?content-type[\"']?[^>]*>",
+        new("<meta\\b[^>]*(?:http-equiv\\s*=\\s*[\"']?content-type[\"']?|\\scharset\\s*=)[^>]*>",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex MetaCharsetRegex =
         new("charset\\s*=\\s*[\"']?[A-Za-z0-9_\\- :]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    /// <summary>Rewrites the charset a <c>&lt;meta http-equiv=Content-Type&gt;</c> declares to
-    /// <paramref name="appliedCharset"/> — the encoding the document string was actually decoded
-    /// with. The element stays in the DOM; only the now-true statement is kept.</summary>
+    /// <summary>Rewrites the charset a <c>&lt;meta http-equiv=Content-Type&gt;</c> or short-form
+    /// <c>&lt;meta charset&gt;</c> declaration states to <paramref name="appliedCharset"/> — the
+    /// encoding the document string was actually decoded with. Both spellings are encoding
+    /// changes the parser's own re-decode honors over the re-encoded bytes, so an unaligned
+    /// non-UTF-8 declaration mojibakes every non-ASCII character (measured end to end by the
+    /// transport-charset tests against real responses). The element stays in the DOM; only the
+    /// now-true statement is kept.</summary>
     internal static string AlignMetaCharset(string html, string appliedCharset)
     {
         return MetaContentTypeRegex.Replace(html, match =>

@@ -336,4 +336,107 @@ public static class ConformanceTests
         }
         finally { ConformanceServer.Stop(); }
     }
+
+    [Test]
+    public static void DpiOptions_ScaleTheRenderInsteadOfRefusing()
+    {
+        ConformanceServer.Start(cssRegressionMode: false);
+        try
+        {
+            // The seam: a scaled render rasterizes scale× the CSS viewport with layout
+            // unchanged — the 100px CSS box paints 200 device px at dpr 2.
+            var (scaled, _, _, _, _) = WptVisualPage.Render("lite/harness/dpi-scale.html", scale: 2f);
+            using (scaled)
+            {
+                Equal(1600, scaled.Width);
+                Equal(1200, scaled.Height);
+                Equal(200 * 200, CountRed(scaled));
+            }
+            var (unit, _, _, _, _) = WptVisualPage.Render("lite/harness/dpi-scale.html");
+            using (unit)
+            {
+                Equal(800, unit.Width);
+                Equal(100 * 100, CountRed(unit));
+            }
+
+            // Option parsing: dpr wins over dpi, strings parse, junk and absence are scale 1.
+            var (dprScale, dprNote) = WptVisualPage.DeviceScale(new JsonObject { ["dpr"] = 2, ["dpi"] = 96 });
+            True(dprScale == 2f && dprNote.Contains("dpr=2"), $"{dprScale} {dprNote}");
+            var (dpiScale, dpiNote) = WptVisualPage.DeviceScale(new JsonObject { ["dpi"] = "192" });
+            True(dpiScale == 2f && dpiNote.Contains("dpi=192"), $"{dpiScale} {dpiNote}");
+            True(WptVisualPage.DeviceScale(new JsonObject { ["dpi"] = "nonsense" }).Scale == 1f);
+            True(WptVisualPage.DeviceScale(new JsonObject { ["dpr"] = 0 }).Scale == 1f);
+            True(WptVisualPage.DeviceScale(null).Scale == 1f);
+
+            // The visual runners execute DPI-flagged cases instead of refusing them, and the
+            // evidence names what was honored.
+            const string path = "lite/harness/dpi-scale.html";
+            var crash = WptVisualPage.RunCrash(new WptCase(path, path, "crashtest", "window", false, false, [],
+                new JsonObject { ["dpr"] = 2 }));
+            True(crash.Passed, crash.Detail);
+            True(crash.Detail.Contains("dpr=2"), crash.Detail);
+            var self = WptVisualPage.RunSelfTest(new WptCase(path, path, "selftest", "window", false, false, [],
+                new JsonObject { ["dpi"] = "192" }));
+            True(self.Cat != WptRunner.Cat.Unsupported, self.Detail);
+
+            // The root test's device scale governs the whole reference graph; a target with its
+            // own DPI option is superseded, and the evidence note says so.
+            var reftest = new WptCase(path, path, "reftest", "window", false, false,
+                [new("/lite/harness/dpi-scale-ref.html", "==")], new JsonObject { ["dpr"] = 2 });
+            var result = WptRefTestRunner.Run(reftest, _ => null);
+            True(result.Passed && result.Detail.Contains("dpr=2"), result.Detail);
+            var superseded = WptRefTestRunner.Run(reftest with
+            {
+                Options = new JsonObject { ["dpi"] = 96 },
+                References = [new("/lite/harness/dpi-scale-ref.html", "==")],
+            }, p => p == "lite/harness/dpi-scale-ref.html"
+                ? new WptCase(p, p, "reftest", "window", false, false, [], new JsonObject { ["dpr"] = 2 })
+                : null);
+            True(superseded.Passed && superseded.Detail.Contains("superseded"), superseded.Detail);
+
+            // A scaled pair whose bitmaps cannot line up must fail, never pass: the diff
+            // rejects mismatched dimensions outright.
+            using var small = new SkiaSharp.SKBitmap(10, 10);
+            using var large = new SkiaSharp.SKBitmap(20, 20);
+            True(!PixelDiff.Compare(large, small, tolerance: 255, pixelBudget: 1000).Match);
+        }
+        finally { ConformanceServer.Stop(); }
+    }
+
+    [Test]
+    public static void FuzzyBudgets_DecideTheComparisonBothWays()
+    {
+        ConformanceServer.Start(cssRegressionMode: false);
+        try
+        {
+            const string path = "lite/harness/fuzzy-offset.html";
+            WptCase Test(JsonObject? options) => new(path, path, "reftest", "window", false, false,
+                [new("/lite/harness/fuzzy-offset-ref.html", "==")], options);
+
+            // The pair differs by exactly 200 device pixels (the two 1px columns of the
+            // 100px box), each by the full channel range — so maxDifference must sit below
+            // the channel range for the pixel budget to count anything (255 would swallow
+            // every difference and the budget would decide nothing).
+            True(WptRefTestRunner.Run(Test(Fuzzy(32, 200)), _ => null).Passed);
+            True(!WptRefTestRunner.Run(Test(Fuzzy(32, 199)), _ => null).Passed);
+            // Without metadata the budget is zero — a differing pair must fail even though
+            // one exists elsewhere; a default budget would let a broken harness pass it.
+            True(!WptRefTestRunner.Run(Test(null), _ => null).Passed);
+        }
+        finally { ConformanceServer.Stop(); }
+
+        static JsonObject Fuzzy(int maxDifference, int maxPixels) => new()
+        {
+            ["fuzzy"] = new JsonArray(new JsonArray(null,
+                new JsonArray(new JsonArray(0, maxDifference), new JsonArray(0, maxPixels))))
+        };
+    }
+
+    private static int CountRed(SkiaSharp.SKBitmap bitmap)
+    {
+        int red = 0;
+        foreach (var pixel in bitmap.Pixels)
+            if (pixel.Red == 255 && pixel.Green == 0 && pixel.Blue == 0) red++;
+        return red;
+    }
 }
