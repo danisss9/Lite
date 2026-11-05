@@ -293,7 +293,13 @@ internal static class RefTestRunner
     internal static SKBitmap Render(NavigationRequest request, int width = Width, int height = Height,
         float scrollY = 0, string? anchor = null)
     {
-        var (root, engine) = HeadlessPage.Load(request, width, height);
+        // The official userstyle family states its prerequisite sheet through the same
+        // flags/PREREQUISITE form the WPT twins use; without the session the renders read
+        // the author-less page and every user-stylesheet case failed on white ink.
+        var renderPath = Uri.TryCreate(request.Url, UriKind.Absolute, out var renderUrl)
+            ? renderUrl.AbsolutePath.TrimStart('/')
+            : request.Url;
+        var (root, engine) = HeadlessPage.Load(request, width, height, Wpt.WptVisualPage.UserStyleSession(renderPath));
         HeadlessPage.PumpUntilIdle(engine, 2_000);
         var viewport = new Viewport { ViewportHeight = height };
         if (anchor is not null)

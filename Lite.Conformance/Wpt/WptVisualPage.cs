@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Lite;
 using Lite.Conformance.Harness;
 using Lite.Extensions;
@@ -14,10 +15,15 @@ internal static class WptVisualPage
     /// <c>userstyle</c> states as its PREREQUISITE that a named .css file is enabled as the
     /// user agent's user style sheet — the suite's own per-case prerequisite sheet, loaded
     /// through the same UserStyleSheet channel the UA conformance requirement (§conform.html)
-    /// provides. Any other case returns null (the engine's default session).</summary>
-    private static Lite.Network.BrowserSession? UserStyleSession(string path)
+    /// provides. Any other case returns null (the engine's default session). Shared by the
+    /// WPT visual pages and the official-suite render path (the official html4 userstyle
+    /// family carries the same flags and PREREQUISITE link).</summary>
+    internal static Lite.Network.BrowserSession? UserStyleSession(string path)
     {
-        var file = ConformanceServer.ResolveFile(path);
+        // The official-suite prefix branch of ResolveFile matches "/css21-official/..." with a
+        // leading slash — catalog paths arrive without one (WPT paths resolve through the
+        // vendor/wpt root either way), so normalize before resolving.
+        var file = ConformanceServer.ResolveFile("/" + path.TrimStart('/'));
         if (file is null) return null;
         string text;
         try { text = File.ReadAllText(file); }
@@ -40,7 +46,7 @@ internal static class WptVisualPage
         IReadOnlyList<Lite.Rendering.PaintLog.Entry> Paint) Render(string path, string? viewport = null,
         string waitClass = "reftest-wait", Css21.ScrollSpec? elementScroll = null,
         Func<Lite.Models.LayoutNode, (float ScrollX, float ScrollY)>? pageScroll = null,
-        bool testDriver = false)
+        bool testDriver = false, float scale = 1f)
     {
         var width = 800;
         var height = 600;
@@ -76,7 +82,7 @@ internal static class WptVisualPage
 
         // Mirrors the two animation-frame waits in the pinned executors/test-wait.js.
         HeadlessPage.PumpFrames(engine, 2);
-        using (Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height })) { }
+        using (Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height }, scale)) { }
         bool Waiting() => root.Attributes.GetValueOrDefault("class", "")
             .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Contains(waitClass);
         if (Waiting())
@@ -89,7 +95,7 @@ internal static class WptVisualPage
         {
             List<Lite.Rendering.PaintLog.Entry> paint;
             Lite.Rendering.PaintLog.Begin();
-            try { var bmp = Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height }); paint = Lite.Rendering.PaintLog.End(); return (bmp, paint); }
+            try { var bmp = Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height }, scale); paint = Lite.Rendering.PaintLog.End(); return (bmp, paint); }
             catch { Lite.Rendering.PaintLog.End(); throw; }
         }
         if (elementScroll is null && pageScroll is null)
@@ -128,7 +134,7 @@ internal static class WptVisualPage
         Lite.Rendering.PaintLog.Begin();
         try
         {
-            var finalBmp = Lite.Drawer.DrawToBitmap(width, height, root, scrolledViewport);
+            var finalBmp = Lite.Drawer.DrawToBitmap(width, height, root, scrolledViewport, scale);
             paint = Lite.Rendering.PaintLog.End();
             return (finalBmp, root, mid, before, paint);
         }
@@ -137,15 +143,14 @@ internal static class WptVisualPage
 
     internal static WptRunner.RunResult RunCrash(WptCase test)
     {
-        if (test.Options?.ContainsKey("dpi") == true)
-            return new(WptRunner.Cat.Unsupported, "Crashtest requires DPI support", 0, 0);
+        var (scale, scaleNote) = DeviceScale(test.Options);
         try
         {
             var (bitmap, _, _, _, _) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(), "test-wait",
-                testDriver: test.TestDriver);
+                testDriver: test.TestDriver, scale: scale);
             using (bitmap)
             {
-                const string assertion = "Document loaded and rendered without a crash";
+                var assertion = "Document loaded and rendered without a crash" + scaleNote;
                 return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
             }
         }
@@ -173,8 +178,9 @@ internal static class WptVisualPage
         Func<Css21.RenderSet, Lite.Models.LayoutNode, WptRunner.RunResult>? statedCondition = null,
         Css21.VisualCheck? statedCheck = null)
     {
-        if (test.TestDriver || test.Options?.ContainsKey("dpi") == true)
-            return new(WptRunner.Cat.Unsupported, "Self-test requires test-driver or DPI support", 0, 0);
+        if (test.TestDriver)
+            return new(WptRunner.Cat.Unsupported, "Self-test requires test-driver support", 0, 0);
+        var (scale, _) = DeviceScale(test.Options);
         try
         {
             var scroll = statedCheck?.Scroll;
@@ -191,7 +197,7 @@ internal static class WptVisualPage
                 ? null
                 : (Func<Lite.Models.LayoutNode, (float, float)>)(root => Css21.VisualChecks.PageScrollExtent(pageTarget, root, width, height));
             var (bitmap, root, mid, before, paint) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(),
-                elementScroll: pageTarget is null ? scroll : null, pageScroll: pageScroll);
+                elementScroll: pageTarget is null ? scroll : null, pageScroll: pageScroll, scale: scale);
             var renders = new Css21.RenderSet(bitmap, mid, before, paint);
             using (bitmap)
             {
@@ -281,6 +287,40 @@ internal static class WptVisualPage
         }
         catch (TimeoutException ex) { return new(WptRunner.Cat.Timeout, ex.Message, 0, 0); }
         catch (Exception ex) { return new(WptRunner.Cat.Crash, WptVisualPage.CrashDetail(ex), 0, 0); }
+    }
+
+    /// <summary>The device scale a case's DPI options request plus the evidence note naming
+    /// what was honored: <c>dpr</c> (device pixel ratio) wins over <c>dpi</c> (dots per inch,
+    /// 96 = 1), and either accepts the manifest's number or string spelling. Honoring renders
+    /// at scale× the CSS viewport with layout unchanged — the replacement for the former DPI
+    /// execution refusal — and a pathological value clamps into a sane range rather than
+    /// producing a zero or absurd bitmap.</summary>
+    internal static (float Scale, string Note) DeviceScale(JsonObject? options)
+    {
+        if (options is null) return (1f, "");
+        if (TryPositiveNumber(options, "dpr", out var dpr)) return (Clamp(dpr), $" (dpr={Format(dpr)})");
+        if (TryPositiveNumber(options, "dpi", out var dpi)) return (Clamp(dpi / 96.0), $" (dpi={Format(dpi)})");
+        return (1f, "");
+
+        static float Clamp(double value) => (float)Math.Clamp(value, 0.1, 8.0);
+        static string Format(double value) => value == Math.Floor(value) ? ((int)value).ToString() : value.ToString("0.0#");
+    }
+
+    private static bool TryPositiveNumber(JsonObject options, string key, out double value)
+    {
+        value = 0;
+        if (options[key] is not JsonValue node) return false;
+        // A manifest-parsed option is JsonElement-backed; a synthetic case's is a boxed CLR
+        // primitive whose TryGetValue<double> fails — read both through the node's JSON text.
+        if (node.GetValueKind() == System.Text.Json.JsonValueKind.Number)
+            return double.TryParse(node.ToJsonString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out value) && Positive(value);
+        if (node.GetValueKind() == System.Text.Json.JsonValueKind.String)
+            return double.TryParse(node.GetValue<string>(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out value) && Positive(value);
+        return false;
+
+        static bool Positive(double v) => double.IsFinite(v) && v > 0;
     }
 
     /// <summary>Crash evidence names the innermost exception and where it was thrown: an
