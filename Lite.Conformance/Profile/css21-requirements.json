@@ -1253,8 +1253,235 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-001.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-002.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-003.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-004.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-005.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-006.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-007.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-008.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-009.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-010.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-011.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-012.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-013.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-014.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-015.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-016.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-017.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-018.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-019.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-020.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-021.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-022.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-023.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-024.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-025.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-026.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-027.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-028.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-029.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-030.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-031.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-032.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-033.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-034.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-035.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-036.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-037.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-038.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-039.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-040.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-041.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-042.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-043.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-044.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        },
+        {
+          "suite": "css21-official",
+          "path": "css21-official/html4/bidi-box-model-045.htm",
+          "assertion": "Self-describing test shows no failure red (diagnostic)"
+        }
+      ],
+      "notes": "The complete applicable family passes on the 4 November 2026 bidi-box-model cluster run (work in progress on top of source 3280b413): official suite 45/45 and WPT twins 45/45 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes. The engine work behind the family: the §8.6 unsplit-box physical sides (the rtl drop in the inline edge reservation removed), the §8.6 split-box mirrored join sides for direction-rtl boxes broken across lines, and the §16.2/UAX #9 subset that renders a bidi-override RTL scope reversed."
     },
     {
       "id": "css21.9.1.1",

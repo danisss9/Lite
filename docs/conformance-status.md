@@ -38,12 +38,24 @@ HTML5 row and the plan's 3 November checkpoint record the closed position — an
 track's remaining-work plan to 100% is now written (no run executed for it either);
 per-track file ownership was respected throughout.
 
+Snapshot updated 4 November 2026: the CSS 2.1 queue's #2 head is closed — the
+bidi-box-model cluster runs 45/45 official and 45/45 WPT twins (from 18/45) on a
+cluster-scoped run over work in progress on top of `3280b413`, and `css21.8.6` flipped
+`untested` → `implemented` under the strict whole-family rule (18/213 total). Behind the
+family: the §8.6 physical-side edge reservation for unsplit rtl inline boxes (the old drop
+vanished their margins/padding from the line), the §8.6 mirrored join sides for
+direction-rtl boxes split across lines (caught by the curated gate's rtl-span-only
+regression, green again), and the §16.2/UAX #9 subset rendering an RTL `bidi-override`
+scope reversed — six of the 28 `direction-unicode-bidi` cases now pass the painted-order
+judge on the same capability. Suite numbers still stand at the 2 November baseline until
+the next full-screen run; the 4 November checkpoint in the CSS plan carries the details.
+
 ## Track status at a glance
 
 | Track | Readiness | Last recorded position |
 | --- | --- | --- |
 | ES2020 | **`es2020ProfileReady` true** — enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, zero failures and zero expected failures, no dependency exception; host suite 20/20; all 2,115 ECMA-262 clauses reviewed |
-| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 3 November, the unsupported long tail closes as a routing matter (no conformance run executed; suite numbers stand at the 2 November baseline: official 6,915/9,039, WPT 6,334/8,904): every one of the 11,934 cataloged cases now carries exactly one verdict route — 5,223 twin reftest, 2,981 machine check (probe batch 3's ~90 sentence kinds incl. the scroll protocol and paint-log glyph-order reads), 1,707 sufficient scan/swatch, 1,450 reviewed manual-pending, 573 screen-excluded — enforced by a unit-suite audit; the bidi char-order family carries computed UBA glyph-order expectations; the missing user-stylesheet.css prerequisite sheet restored and loadable per case; unit 455/455 |
+| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 4 November, the bidi-box-model cluster closes (cluster-scoped run on work in progress over `3280b413`; full-suite numbers stand at the 2 November baseline: official 6,915/9,039, WPT 6,334/8,904): bidi-box-model 45/45 official and 45/45 WPT twins (from 18/45) — `css21.8.6` flipped under the strict rule, obligations 18/213 `implemented`; behind it the §8.6 physical-side edge reservation, the §8.6 mirrored split-box join sides, and the §16.2/UAX #9 subset for RTL `bidi-override` scopes (6 of 28 `direction-unicode-bidi` now pass the painted-order judge); the 3 November routing invariant stands (every one of the 11,934 cataloged cases carries exactly one verdict route, unit-audited); unit 464/464, curated css21 51 pass / 1 published expected-fail, wpt 86 pass / 2 published expected-fails |
 | HTML5 | `html5ProfileReady` false | 3 November: the harness-blocked tail is **closed — 0 unreviewed** — and Milestone 1's remaining work is quantified. All 109 tail entries decided (101 executed under the landed testdriver capability and its visual-runner route — 2 pass, 99 reviewed-failing; 8 manual-kind files by static reviewed-failing classification: no applicationCache, fixed `navigator.onLine`, no `window.open`). The propose tool's `needs/testdriver` inventory batch (481 sources) was then surveyed and added with measured outcomes (35 pass, 446 reviewed-failing) plus 9 cited post-target entries — the manifest now holds 7,923 entries with 1,826 `included`, and the runner's guarded omission check reports the inventory-completion remainder precisely: **6,691 catalog cases across 11 roots with no manifest entry** (html/semantics dominating at 2,162; encoding 1,265; fetch 856; dom 378) — `inventoryComplete` stays false by the mechanical condition, and the unproposed sources find their classifications through the section review. Engine fixes landed with the testdriver capability: text inputs size 150×20, trusted form-control clicks, interaction focus mirroring `element.focus()`, `elementsFromPoint`/`getClientRects`/`scrollIntoView`/`document.contains`. Units 458/458; curated wpt 86/2 and css21 51/1 unchanged; parse fidelity 1,889/1,891, tokenizer 7,052/7,052; REC section review 0/762 |
 
 ## Roadmap
