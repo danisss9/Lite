@@ -859,9 +859,9 @@ def visual_check(sentence: str | None) -> dict | None:
         return {'kind': 'one-shape', 'shape': 'box', 'color': m.group(1) or 'green'}
     # --- text-anchor tranche: named text elements each carry their own stated colour. ---
     if m := re.match(rf'^below,\s+the\s+left\s+["\'](.+?)["\']\s+is\s+{COLOR}\s+and\s+the\s+right\s+["\'](.+?)["\']\s+is\s+{COLOR}$', clause):
-        return {'kind': 'text-color-pairs', 'needles': [m.group(1), m.group(2)], 'colors': [m.group(3), m.group(4)]}
+        return {'kind': 'text-color-pairs', 'needles': [m.group(1), m.group(3)], 'colors': [m.group(2), m.group(4)]}
     if m := re.match(rf'^below\s+the\s+upper\s+["\'](.+?)["\']\s+is\s+{COLOR}\s+and\s+the\s+lower\s+["\'](.+?)["\']\s+is\s+{COLOR}$', clause):
-        return {'kind': 'text-color-pairs', 'needles': [m.group(1), m.group(2)], 'colors': [m.group(3), m.group(4)], 'ordered': True}
+        return {'kind': 'text-color-pairs', 'needles': [m.group(1), m.group(3)], 'colors': [m.group(2), m.group(4)], 'ordered': True}
     if m := re.match(rf'^the\s+["\']filler\s+text["\']\s+below\s+is\s+{COLOR}\.\s+do\s+not\s+navigate\s+the\s+link(?:\.\s+note:.*)?$', clause):
         # ":link must match" — the sentence's colour clause is the stated condition; the
         # navigation warning is a precondition of the manual variant, not the condition.

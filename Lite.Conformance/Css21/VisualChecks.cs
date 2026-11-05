@@ -120,6 +120,15 @@ internal static class VisualChecks
         var bitmap = renders.Final;
         if (InstructionBottom(root, sentence) is not { } top)
             return new(WptRunner.Cat.Unsupported, "Visual check: instruction paragraph not found in the layout tree", 0, 0);
+        // Fail-closed color names: every stated colour must be a CSS keyword the judges know.
+        // A template extraction that captured prose ("black text") used to crash the render
+        // worker on the Named lookup (user-stylesheet-005/006/010); an unreadable colour is an
+        // honest unsupported — the sentence needs a stricter template, never a crash.
+        var statedColors = (check.Color is { } c ? [c] : Array.Empty<string>())
+            .Concat(check.Colors ?? []).Concat(check.ColorA is { } a ? [a] : Array.Empty<string>())
+            .Concat(check.ColorB is { } b ? [b] : Array.Empty<string>());
+        if (statedColors.FirstOrDefault(name => !Named.ContainsKey(name)) is { } unknown)
+            return new(WptRunner.Cat.Unsupported, $"Visual check: stated colour '{unknown}' is not a keyword the judges read", 0, 0);
         // Glyph-order judges read the paint log (what the painter actually drew); the rest
         // read the render.
         WptRunner.RunResult result = check.Kind switch
@@ -1358,9 +1367,10 @@ internal static class VisualChecks
 
     /// <summary>A stated color names the CSS keyword, except that the suite's prose calls
     /// both <c>green</c> (#008000) and <c>lime</c> (#00ff00) "green" (the character-encoding
-    /// support sheets paint #00FF00 under "there is a green rectangle").</summary>
+    /// support sheets paint #00FF00 under "there is a green rectangle"). Unknown names never
+    /// match — the dispatcher has already routed them to unsupported.</summary>
     private static bool Matches(string name, SKColor color) =>
-        Named[name] == color || name == "green" && Named["lime"] == color;
+        Named.TryGetValue(name, out var want) && (want == color || name == "green" && Named["lime"] == color);
 
     private static string? SameDimension(VisualCheck check, IReadOnlyList<Component> shapes)
     {

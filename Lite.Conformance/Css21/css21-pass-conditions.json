@@ -8055,10 +8055,10 @@
     "kind": "text-color-pairs",
     "needles": [
      "green text",
-     "green"
+     "black text"
     ],
     "colors": [
-     "black text",
+     "green",
      "black"
     ]
    }
@@ -8074,10 +8074,10 @@
     "kind": "text-color-pairs",
     "needles": [
      "green text",
-     "green"
+     "black text"
     ],
     "colors": [
-     "black text",
+     "green",
      "black"
     ]
    }
@@ -8129,10 +8129,10 @@
     "kind": "text-color-pairs",
     "needles": [
      "filler text",
-     "green"
+     "filler text"
     ],
     "colors": [
-     "filler text",
+     "green",
      "black"
     ],
     "ordered": true
@@ -117947,10 +117947,10 @@
     "kind": "text-color-pairs",
     "needles": [
      "green text",
-     "green"
+     "black text"
     ],
     "colors": [
-     "black text",
+     "green",
      "black"
     ]
    }
@@ -117966,10 +117966,10 @@
     "kind": "text-color-pairs",
     "needles": [
      "green text",
-     "green"
+     "black text"
     ],
     "colors": [
-     "black text",
+     "green",
      "black"
     ]
    }
@@ -118021,10 +118021,10 @@
     "kind": "text-color-pairs",
     "needles": [
      "filler text",
-     "green"
+     "filler text"
     ],
     "colors": [
-     "filler text",
+     "green",
      "black"
     ],
     "ordered": true
