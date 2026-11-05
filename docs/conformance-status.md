@@ -79,6 +79,14 @@ run the failing cluster, implement the behavior, add focused regression coverage
 rerun the cluster plus the curated 52-entry gate and the unit suite — never closing
 a package from a sample.
 
+Campaign plan, 5 November 2026: the next stretch is organized as the four-wave
+campaign written at the end of [css21-conformance-plan.md](css21-conformance-plan.md)
+— a validating full-screen baseline opens it (banking the never-executed 3 November
+routing: the scroll two-render corpus and the user-stylesheet route), then the
+engine queue worst-by-real-failure-count, the full UBA port, and oracle-fidelity/
+reference conversion — 1,000 net new passes official + WPT combined, the queue
+re-ranked from the Wave 0 aggregate.
+
 1. **Work the official-suite queue cluster by cluster**, re-ranked by the 2 November
    full-screen baseline (worst clusters by real failure count, not pass rate, so
    unsupported singletons do not crowd the queue). Expected heads: official
