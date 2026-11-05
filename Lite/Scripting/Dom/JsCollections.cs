@@ -21,9 +21,15 @@ public class JsNodeList(Func<IReadOnlyList<JsElement>> items)
     }
 }
 
+/// <summary>A script-facing named collection (HTMLCollection, NamedNodeMap): the script proxy's
+/// named-property lookup and supported-property-name enumeration route through here, so the
+/// legacy-platform-object semantics live in one place (see Runtime.QuickJsInterop).</summary>
 internal interface IJsNamedCollection
 {
     object? Named(string name);
+
+    /// <summary>The supported property names in enumeration order, duplicates removed.</summary>
+    IReadOnlyList<string> SupportedNames();
 }
 
 /// <summary>ASCII whitespace per the DOM/HTML spec (U+0009, U+000A, U+000C, U+000D, U+0020) —
@@ -38,9 +44,19 @@ internal static class DomWhitespace
         value.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
 }
 
-/// <summary>HTMLCollection with live length, indexed access and named lookup.</summary>
-public class JsHtmlCollection(Func<IReadOnlyList<JsElement>> items) : JsNodeList(items), IJsNamedCollection
+/// <summary>HTMLCollection with live length, indexed access and named lookup. Deliberately not a
+/// JsNodeList subclass: HTMLCollection carries no forEach/values/entries (the iterable surface
+/// belongs to NodeList only — dom/collections/HTMLCollection-iterator).</summary>
+public class JsHtmlCollection(Func<IReadOnlyList<JsElement>> items) : IJsNamedCollection
 {
+    internal const string HtmlNamespace = "http://www.w3.org/1999/xhtml";
+
+    internal IReadOnlyList<JsElement> Snapshot() => items();
+
+    public int length => items().Count;
+    public JsElement? this[int index] => index >= 0 && index < items().Count ? items()[index] : null;
+    public JsElement? item(int index) => this[index];
+
     public JsElement? namedItem(string name) => Named(name) as JsElement;
 
     object? IJsNamedCollection.Named(string name) => Named(name);
@@ -48,8 +64,28 @@ public class JsHtmlCollection(Func<IReadOnlyList<JsElement>> items) : JsNodeList
     internal object? Named(string name)
     {
         if (string.IsNullOrEmpty(name)) return null;
-        var snapshot = Snapshot();
-        return snapshot.FirstOrDefault(element => element.id == name)
-            ?? snapshot.FirstOrDefault(element => element.getAttribute("name") == name);
+        // The named getter: the first element whose ID matches, or whose name content attribute
+        // matches for an HTML-namespace element (DOM §4.2.10.2) — a single tree-order pass.
+        return items().FirstOrDefault(element => element.id == name
+            || (element.namespaceURI == HtmlNamespace && element.getAttribute("name") == name));
+    }
+
+    /// <summary>Supported property names in tree order: every non-empty id, then the non-empty
+    /// name content attribute of HTML-namespace elements — so a foreign-namespace element's name
+    /// attribute is not a named property (dom/collections/HTMLCollection-supported-property-names).</summary>
+    IReadOnlyList<string> IJsNamedCollection.SupportedNames()
+    {
+        var names = new List<string>();
+        foreach (var element in items())
+        {
+            var id = element.id;
+            if (!string.IsNullOrEmpty(id) && !names.Contains(id)) names.Add(id);
+            if (element.namespaceURI == HtmlNamespace)
+            {
+                var name = element.getAttribute("name");
+                if (!string.IsNullOrEmpty(name) && !names.Contains(name)) names.Add(name);
+            }
+        }
+        return names;
     }
 }

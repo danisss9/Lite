@@ -119,13 +119,15 @@ public class JsDocument
     }
 
     public JsElement? querySelector(string selector) => _document is not null
-        ? _document.QuerySelector(selector) is { } element ? Wrap(element) : null
+        ? _document.QuerySelector(selector) is { } element && !JsElement.IsOriginSheet(_engine, element)
+            ? Wrap(element) : null
         : SelectorEngine.QuerySelector(_root, selector, _engine);
 
     public JsNodeList querySelectorAll(string selector)
     {
         var snapshot = _document is not null
-            ? _document.QuerySelectorAll(selector).Select(Wrap).ToArray()
+            ? _document.QuerySelectorAll(selector).Where(e => !JsElement.IsOriginSheet(_engine, e))
+                .Select(Wrap).ToArray()
             : SelectorEngine.QuerySelectorAll(_root, selector, _engine);
         return new JsNodeList(() => snapshot);
     }
@@ -134,9 +136,21 @@ public class JsDocument
     {
         var tag = tagName.ToUpperInvariant();
         return new JsHtmlCollection(() => _document is not null
-            ? _document.QuerySelectorAll("*").Where(e => tag == "*" || e.TagName.ToUpperInvariant() == tag)
+            ? _document.QuerySelectorAll("*").Where(e => (tag == "*" || e.TagName.ToUpperInvariant() == tag)
+                    && !JsElement.IsOriginSheet(_engine, e))
                 .Select(Wrap).ToArray()
             : FindAll(_root, n => tag == "*" || n.TagName == tag)
+                .Select(n => JsElement.For(_engine, n)).ToArray());
+    }
+
+    public JsHtmlCollection getElementsByTagNameNS(string? namespaceURI, string localName)
+    {
+        return new JsHtmlCollection(() => _document is not null
+            ? _document.QuerySelectorAll("*").Where(e => JsElement.MatchesNamespace(e, namespaceURI)
+                    && (localName == "*" || e.LocalName == localName)
+                    && !JsElement.IsOriginSheet(_engine, e)).Select(Wrap).ToArray()
+            : FindAll(_root, n => !n.TagName.StartsWith('#') && JsElement.MatchesNamespace(n.DomNode, namespaceURI)
+                    && (localName == "*" || JsElement.NodeLocalName(n) == localName))
                 .Select(n => JsElement.For(_engine, n)).ToArray());
     }
 
@@ -145,7 +159,8 @@ public class JsDocument
         var classes = DomWhitespace.Split(classNames);
         return new JsHtmlCollection(() => _document is not null
             ? _document.QuerySelectorAll("*").Where(e => classes.All(c =>
-                DomWhitespace.Split(e.GetAttribute("class") ?? "").Contains(c)))
+                DomWhitespace.Split(e.GetAttribute("class") ?? "").Contains(c))
+                && !JsElement.IsOriginSheet(_engine, e))
                 .Select(Wrap).ToArray()
             : FindAll(_root, n =>
         {
@@ -156,7 +171,8 @@ public class JsDocument
 
     /// <summary>Returns all elements with the given name attribute (Document.getElementsByName()).</summary>
     public JsNodeList getElementsByName(string name) => new(() => _document is not null
-        ? _document.QuerySelectorAll("*").Where(e => e.GetAttribute("name") == name)
+        ? _document.QuerySelectorAll("*").Where(e => e.GetAttribute("name") == name
+                && !JsElement.IsOriginSheet(_engine, e))
             .Select(Wrap).ToArray()
         : FindAll(_root, n => n.Attributes.GetValueOrDefault("name") == name)
             .Select(n => JsElement.For(_engine, n)).ToArray());
@@ -353,17 +369,41 @@ public class JsDocument
     }
 
     // ---- document metadata ----
+    // The title's authority is the engine tree (HTML §4.2.2: the child text content of the title
+    // element) — the getter reads the projected TITLE element, so mutations through the engine
+    // (write streams, textContent, re-projection) are visible immediately instead of going stale
+    // against a separate AngleSharp document. The AngleSharp write stays for serialization truth
+    // (head.innerHTML), and _title serves the synthetic-root facade path where no TITLE exists.
+
     public string title
     {
-        get => _document?.Title ?? _title ?? string.Empty;
+        get
+        {
+            if (FindFirst(_root, n => n.TagName == "TITLE") is not { } titleElement)
+                return _title ?? string.Empty;
+            return TitleText(titleElement);
+        }
         set
         {
             var title = value ?? string.Empty;
             _title = title;
+            if (FindFirst(_root, n => n.TagName == "TITLE") is { } titleElement)
+            {
+                // TITLE parses as RCDATA, so its content is its own folded text; a #text child
+                // can only exist through a synthetic path — fold it in on both sides.
+                titleElement.Children.Clear();
+                titleElement.SetOwnText(title);
+            }
             if (_document is { } doc) doc.Title = title;
             JsEngine.For(_engine)?.OnTitleChange?.Invoke(title);
         }
     }
+
+    private static string TitleText(LayoutNode titleElement) => titleElement.Text +
+        string.Concat(titleElement.Children.Where(c => c.TagName == "#text").Select(c => c.Text));
+
+    /// <summary>The engine tree's root node, for walkers rooted at the document itself.</summary>
+    internal LayoutNode RootNode => _root;
 
     /// <summary>document.location — same object as window.location.</summary>
     public JsLocation? location => JsEngine.For(_engine)?.Location;
@@ -395,15 +435,24 @@ public class JsDocument
     }
 
     // ---- DOM Traversal Level 2 (Phase 9) ----
-    public JsTreeWalker createTreeWalker(JsElement root, double whatToShow = 4294967295, JsValue? filter = null)
-    {
-        return new JsTreeWalker(_engine, root.Node, (uint)whatToShow, filter);
-    }
+    // The root may be any Node — including the document itself (dom/traversal/NodeIterator
+    // "createNodeIterator() parameter defaults"). A null/undefined filter normalizes to no-filter,
+    // so createTreeWalker(root, bitMask, null) never reads acceptNode off it.
 
-    public JsNodeIterator createNodeIterator(JsElement root, double whatToShow = 4294967295, JsValue? filter = null)
-    {
-        return new JsNodeIterator(_engine, root.Node, (uint)whatToShow, filter);
-    }
+    public JsTreeWalker createTreeWalker(JsElement root, double whatToShow = 4294967295, JsValue? filter = null) =>
+        new(_engine, root.Node, (uint)whatToShow, NormalizeTraversalFilter(filter), root);
+
+    public JsTreeWalker createTreeWalker(JsDocument root, double whatToShow = 4294967295, JsValue? filter = null) =>
+        new(_engine, root.RootNode, (uint)whatToShow, NormalizeTraversalFilter(filter), root);
+
+    public JsNodeIterator createNodeIterator(JsElement root, double whatToShow = 4294967295, JsValue? filter = null) =>
+        new(_engine, root.Node, (uint)whatToShow, NormalizeTraversalFilter(filter), root);
+
+    public JsNodeIterator createNodeIterator(JsDocument root, double whatToShow = 4294967295, JsValue? filter = null) =>
+        new(_engine, root.RootNode, (uint)whatToShow, NormalizeTraversalFilter(filter), root);
+
+    internal static JsValue? NormalizeTraversalFilter(JsValue? filter) =>
+        filter is null || filter.IsUndefined() || filter.IsNull() ? null : filter;
 
     // ---- tree helpers (iterative to avoid stack overflow from deep/cyclic trees) ----
     private static LayoutNode? FindById(LayoutNode root, string id)

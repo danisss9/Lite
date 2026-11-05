@@ -131,7 +131,9 @@ public sealed class Engine : IDisposable
             // DOMStringMap (HTML §2.7.3): camelCase named properties over data-* attributes with
             // has/delete/enumeration. The proxy target is a bare object carrying only the
             // toStringTag — DOMStringMap exposes no methods, and its ownKeys must enumerate
-            // exactly the named properties.
+            // exactly the named properties. Every string key is a candidate supported name —
+            // the empty data attribute ("data-") and trailing-hyphen forms ("data-id-") are
+            // supported names too, so no identifier gate may filter them out.
             if (_indexProxies.TryGetValue(value, out var cachedDataset)) return cachedDataset.Clone();
             using var datasetTarget = _realm.Object();
             using var defineTag = _realm.Eval("(o, tag) => Object.defineProperty(o, Symbol.toStringTag, { value: tag })");
@@ -148,7 +150,7 @@ public sealed class Engine : IDisposable
                 return _realm.Undefined();
             });
             using var dataHas = _realm.HostFunction("dataset has", 1, (_, args) =>
-                _realm.Bool(dataset.get(args[0].AsString()) is not null));
+                _realm.Bool(dataset.has(args[0].AsString())));
             using var dataDelete = _realm.HostFunction("dataset delete", 1, (_, args) =>
             {
                 dataset.remove(args[0].AsString());
@@ -159,25 +161,25 @@ public sealed class Engine : IDisposable
             using var makeDatasetProxy = _realm.Eval("""
                 (target, get, set, has, del, keys) => new Proxy(target, {
                   get(t, p, r) {
-                    if (typeof p === 'string' && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(p)) return get(p);
+                    if (typeof p === 'string' && has(p)) return get(p);
                     return Reflect.get(t, p, r);
                   },
                   set(t, p, v, r) {
-                    if (typeof p === 'string' && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(p)) { set(p, String(v)); return true; }
+                    if (typeof p === 'string') { set(p, String(v)); return true; }
                     return Reflect.set(t, p, v, r);
                   },
                   has(t, p) {
-                    return (typeof p === 'string' && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(p) && has(p)) || Reflect.has(t, p);
+                    return (typeof p === 'string' && has(p)) || Reflect.has(t, p);
                   },
                   deleteProperty(t, p) {
-                    if (typeof p === 'string' && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(p) && has(p)) { del(p); return true; }
+                    if (typeof p === 'string' && has(p)) { del(p); return true; }
                     return Reflect.deleteProperty(t, p);
                   },
                   ownKeys(t) {
                     return [...keys(), ...Reflect.ownKeys(t)];
                   },
                   getOwnPropertyDescriptor(t, p) {
-                    if (typeof p === 'string' && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(p) && has(p))
+                    if (typeof p === 'string' && has(p))
                       return { value: get(p), writable: true, enumerable: true, configurable: true };
                     return Reflect.getOwnPropertyDescriptor(t, p);
                   }
@@ -204,6 +206,103 @@ public sealed class Engine : IDisposable
             ConvertToNative(indexer.GetValue(value, [(int)args[0].AsNumber()])));
         using var named = _realm.HostFunction("namedItem", 1, (_, args) =>
             ConvertToNative((value as IJsNamedCollection)?.Named(args[0].AsString())));
+        // DOM collections (NodeList, HTMLCollection, NamedNodeMap) get the full WebIDL legacy
+        // platform-object semantics; other indexed host objects keep the simpler shape.
+        if (value is JsNodeList || value is IJsNamedCollection)
+        {
+            using var names = _realm.HostFunction("names", 0, (_, _) =>
+                ConvertToNative((value as IJsNamedCollection)?.SupportedNames() ?? Array.Empty<string>()));
+            using var memberNames = ConvertToNative(InterfaceMemberNames(hostType));
+            using var makeLegacyProxy = _realm.Eval("""
+                (target, item, named, names, members, hasNames) => {
+                  const INDEX = /^(0|[1-9][0-9]*)$/;
+                  // A canonical array-index property name (WebIDL §3.9): ToUint32 round-trip,
+                  // strictly below 2^32-1 — at and beyond, the name is a supported property
+                  // name, not an index (dom/collections/HTMLCollection-supported-property-indices).
+                  const isIndex = p => typeof p === 'string' && INDEX.test(p) && +p < 4294967295;
+                  // Anything that is not a canonical array index is a candidate named property —
+                  // including numeric names at and beyond 2^32-1.
+                  const isNamed = p => hasNames && typeof p === 'string' && !isIndex(p);
+                  const supported = p => named(p) != null;
+                  let proxy;
+                  proxy = new Proxy(target, {
+                    get(t, p, r) {
+                      if (typeof p === 'string') {
+                        if (isIndex(p)) return +p < t.length ? (item(+p) ?? undefined) : undefined;
+                        if (isNamed(p) && !Reflect.has(t, p)) return named(p) ?? undefined;
+                        // Interface members throw on a foreign receiver: a getter's this must be
+                        // the platform object itself (Object.create(collection).length).
+                        if (r !== proxy && members.includes(p)) throw new TypeError('Illegal invocation');
+                      } else if (p === Symbol.iterator) {
+                        return function* () { const n = t.length; for (let i = 0; i < n; i++) yield item(i); };
+                      }
+                      return Reflect.get(t, p, r);
+                    },
+                    set(t, p, v, r) {
+                      // A foreign receiver creates the own property there, exactly like ordinary
+                      // [[Set]] through a prototype (Object.create(collection).named = x).
+                      if (r !== proxy) return Reflect.set(t, p, v, r);
+                      if (typeof p === 'string' && (isIndex(p) || (isNamed(p) && !Reflect.has(t, p) && supported(p))))
+                        return false;
+                      return Reflect.set(t, p, v, r);
+                    },
+                    has(t, p) {
+                      if (p === Symbol.iterator) return true;
+                      if (typeof p === 'string') {
+                        if (isIndex(p)) return +p < t.length;
+                        if (isNamed(p) && !Reflect.has(t, p)) return supported(p);
+                      }
+                      return Reflect.has(t, p);
+                    },
+                    deleteProperty(t, p) {
+                      // Supported properties are protected even though their descriptor reads
+                      // configurable — the DOM spec's [[Delete]] guards them directly. Expandos
+                      // (including ones shadowing a named property) delete by ordinary rules.
+                      if (Reflect.has(t, p)) return Reflect.deleteProperty(t, p);
+                      if (typeof p === 'string') {
+                        if (isIndex(p)) return +p >= t.length;
+                        if (isNamed(p)) return !supported(p);
+                      }
+                      return true;
+                    },
+                    defineProperty(t, p, desc) {
+                      if (typeof p === 'string' && (isIndex(p) || (isNamed(p) && !Reflect.has(t, p) && supported(p))))
+                        return false;
+                      return Reflect.defineProperty(t, p, desc);
+                    },
+                    ownKeys(t) {
+                      const keys = [];
+                      for (let i = 0; i < t.length; i++) keys.push(String(i));
+                      if (hasNames) for (const n of names()) if (!keys.includes(n)) keys.push(n);
+                      // Expando own properties follow; the interface members do not — they are
+                      // prototype members, never own properties of the collection.
+                      for (const k of Reflect.ownKeys(t))
+                        if (!keys.includes(k) && !(typeof k === 'string' && members.includes(k))) keys.push(k);
+                      return keys;
+                    },
+                    getOwnPropertyDescriptor(t, p) {
+                      if (typeof p === 'string' && isIndex(p)) {
+                        if (+p >= t.length) return undefined;
+                        return { value: item(+p), writable: false, enumerable: true, configurable: true };
+                      }
+                      if (typeof p === 'string' && isNamed(p) && !Reflect.has(t, p)) {
+                        const found = named(p);
+                        if (found != null)
+                          return { value: found, writable: false, enumerable: false, configurable: true };
+                        return undefined;
+                      }
+                      return Reflect.getOwnPropertyDescriptor(t, p);
+                    }
+                  });
+                  return proxy;
+                }
+                """);
+            using var hasNamesLegacy = _realm.Bool(value is IJsNamedCollection);
+            var legacyProxy = makeLegacyProxy.Call(arguments: [target, index, named, names, memberNames,
+                hasNamesLegacy]);
+            _indexProxies.Add(value, legacyProxy);
+            return legacyProxy.Clone();
+        }
         using var makeProxy = _realm.Eval("""
             (target, item, named, hasNames) => new Proxy(target, {
               get(t,p,r) {
@@ -233,6 +332,18 @@ public sealed class Engine : IDisposable
         _indexProxies.Add(value, proxy);
         return proxy.Clone();
     }
+
+    /// <summary>The interface member names <see cref="BindMembers"/> exposes on a host wrapper.
+    /// The legacy-collection proxy's ownKeys excludes them (they are prototype members, not own
+    /// properties of the collection) and its get trap throws when they are reached through a
+    /// foreign receiver.</summary>
+    private static IReadOnlyCollection<string> InterfaceMemberNames(Type hostType) =>
+        hostType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.GetIndexParameters().Length == 0 && p.GetMethod is not null).Select(p => p.Name)
+            .Concat(hostType.GetFields(BindingFlags.Public | BindingFlags.Instance).Select(f => f.Name))
+            .Concat(hostType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Where(m => !m.IsSpecialName && m.DeclaringType != typeof(object)).Select(m => m.Name))
+            .Distinct().ToArray();
 
     private QuickJsValue? _brand;
 
@@ -294,12 +405,25 @@ public sealed class Engine : IDisposable
             binding.Property(property.Name,
                 target => ConvertToNative(property.GetValue(target)),
                 property.SetMethod is null ? null : (target, next) =>
-                    property.SetValue(target, ConvertArgument(property.PropertyType, next)));
+                {
+                    try { property.SetValue(target, ConvertArgument(property.PropertyType, next)); }
+                    // Reflection wraps the setter's own JavaScriptException in a
+                    // TargetInvocationException — unwrap it so the typed error object surfaces.
+                    catch (TargetInvocationException error) when (error.InnerException is JavaScriptException)
+                    { throw error.InnerException; }
+                    // A property setter has no overload fallthrough: a wrong-typed value (for
+                    // example TreeWalker.currentNode = nonNode) must raise a catchable TypeError.
+                    catch (InvalidCastException error) { throw JsErrors.Native(this, "TypeError", error.Message); }
+                });
         }
         foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
         {
             binding.Property(field.Name, target => ConvertToNative(field.GetValue(target)),
-                field.IsInitOnly ? null : (target, next) => field.SetValue(target, ConvertArgument(field.FieldType, next)));
+                field.IsInitOnly ? null : (target, next) =>
+                {
+                    try { field.SetValue(target, ConvertArgument(field.FieldType, next)); }
+                    catch (InvalidCastException error) { throw JsErrors.Native(this, "TypeError", error.Message); }
+                });
         }
         foreach (var group in type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => !m.IsSpecialName && m.DeclaringType != typeof(object))
@@ -398,7 +522,13 @@ public sealed class Engine : IDisposable
             }
             return array;
         }
-        if (host is not null) return host;
+        if (host is not null)
+            // A wrong-typed host wrapper must never reach reflection: the ArgumentException's
+            // CLR type names ("Object of type 'Lite.Scripting.Dom.JsDocument'...") used to
+            // surface verbatim as an InternalError. Fail the overload conversion instead, so
+            // BindMembers falls through and raises a catchable TypeError.
+            throw new InvalidCastException(
+                $"Failed to convert argument: the value is {WebIdlInterfaces.For(host) ?? "a host object"}, not of the expected interface");
         throw new InvalidCastException($"Cannot bind a JavaScript value to {type.Name}");
     }
 

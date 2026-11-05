@@ -13,20 +13,29 @@ public class JsTreeWalker
 
     private readonly Engine _engine;
     private readonly LayoutNode _root;
+    private readonly object _rootWrapper;
     private readonly uint _whatToShow;
     private readonly JsValue? _filter;
     private LayoutNode _current;
 
-    public JsTreeWalker(Engine engine, LayoutNode root, uint whatToShow, JsValue? filter)
+    public JsTreeWalker(Engine engine, LayoutNode root, uint whatToShow, JsValue? filter) :
+        this(engine, root, whatToShow, filter, JsElement.For(engine, root))
+    { }
+
+    /// <summary>A walker rooted at the document itself carries the document as its root node
+    /// (dom/traversal/NodeIterator "createNodeIterator() parameter defaults" applies the same
+    /// shape to walkers).</summary>
+    public JsTreeWalker(Engine engine, LayoutNode root, uint whatToShow, JsValue? filter, object rootWrapper)
     {
         _engine = engine;
         _root = root;
+        _rootWrapper = rootWrapper;
         _whatToShow = whatToShow;
         _filter = filter;
         _current = root;
     }
 
-    public JsElement root => JsElement.For(_engine, _root);
+    public object root => _rootWrapper;
     public double whatToShow => _whatToShow;
     public JsValue? filter => _filter;
     public bool expandEntityReferences => true;
@@ -37,11 +46,13 @@ public class JsTreeWalker
         set
         {
             // WebIDL Node-typed attribute: anything that is not a Node raises TypeError.
-            var element = value.ToObject() as JsElement;
-            if (element is null)
-                throw JsErrors.Native(_engine, "TypeError",
-                    "Failed to set the 'currentNode' property on 'TreeWalker': The provided value is not of type 'Node'.");
-            _current = element.Node;
+            _current = value.ToObject() switch
+            {
+                JsElement element => element.Node,
+                JsDocument document => document.RootNode,
+                _ => throw JsErrors.Native(_engine, "TypeError",
+                    "Failed to set the 'currentNode' property on 'TreeWalker': The provided value is not of type 'Node'."),
+            };
         }
     }
 
@@ -68,6 +79,14 @@ public class JsTreeWalker
 
     public JsElement? nextNode()
     {
+        // A currentNode detached from the root's subtree ends the walk: the traversal can never
+        // leave the root (dom/traversal/TreeWalker-nextNode-detached-currentNode).
+        if (!ReferenceEquals(_current, _root) && !IsWithin(_current, _root))
+        {
+            _current = _root;
+            return null;
+        }
+
         // Children of the current node first, then siblings of each ancestor. The upward
         // walk stops at the root: the root's own siblings are outside the walk.
         var start = ScanChildrenOf(_current, forward: true);
@@ -94,26 +113,61 @@ public class JsTreeWalker
 
     public JsElement? previousNode()
     {
+        // Strictly-before-the-current-node reverse document order: previous siblings first —
+        // each descended to its last descendant before its own filter check (a rejected last
+        // child cuts its whole subtree: previousNode from B2 over [B1[C1, C2[D1, D2]]] lands on
+        // C1, not B1 — dom/traversal/TreeWalker-previousNodeLastChildReject) — then accepted
+        // ancestors on the way up, bounded by the root.
         var node = _current;
         while (true)
         {
             if (ReferenceEquals(node, _root) || node.Parent is null) { _current = _root; return null; }
-            var sibling = SiblingOf(node, forward: false, within: node.Parent);
             var parent = node.Parent;
+            var sibling = SiblingOf(node, forward: false, within: parent);
             while (sibling is not null)
             {
-                var found = ScanSubtree(sibling, forward: false, boundary: sibling);
+                var found = ScanPreceding(sibling);
                 if (found is not null) { _current = found; return JsElement.For(_engine, found); }
                 sibling = SiblingOf(sibling, forward: false, within: parent);
             }
-            node = parent;
-            if (ReferenceEquals(node, _root)) { _current = _root; return null; }
-            if (FilteredNode(node) == FilterAccept)
+            if (ReferenceEquals(parent, _root)) { _current = _root; return null; }
+            if (FilteredNode(parent) == FilterAccept)
             {
-                _current = node;
-                return JsElement.For(_engine, node);
+                _current = parent;
+                return JsElement.For(_engine, parent);
             }
+            node = parent;
         }
+    }
+
+    /// <summary>Reverse document order over <paramref name="start"/>'s subtree: descendants
+    /// before the node itself, REJECT cutting the subtree. Bounded by the start node.</summary>
+    private LayoutNode? ScanPreceding(LayoutNode start)
+    {
+        var node = start;
+        while (node is not null)
+        {
+            var filtered = FilteredNode(node);
+            if (filtered != FilterReject && node.Children.Count > 0)
+            {
+                node = node.Children[^1];
+                continue;
+            }
+            if (filtered == FilterAccept) return node;
+            node = AdvanceWithin(node, forward: false, boundary: start, descendFirst: false);
+        }
+        return null;
+    }
+
+    private static bool IsWithin(LayoutNode node, LayoutNode root)
+    {
+        var current = node;
+        while (current.Parent is not null)
+        {
+            current = current.Parent;
+            if (ReferenceEquals(current, root)) return true;
+        }
+        return false;
     }
 
     private JsElement? TraverseChildren(bool forward)
@@ -254,25 +308,39 @@ public class JsNodeIterator
 
     private readonly Engine _engine;
     private readonly LayoutNode _root;
+    private readonly object _rootWrapper;
     private readonly uint _whatToShow;
     private readonly JsValue? _filter;
     private LayoutNode _reference;
     private bool _beforeReference = true;
 
-    public JsNodeIterator(Engine engine, LayoutNode root, uint whatToShow, JsValue? filter)
+    public JsNodeIterator(Engine engine, LayoutNode root, uint whatToShow, JsValue? filter) :
+        this(engine, root, whatToShow, filter, JsElement.For(engine, root))
+    { }
+
+    /// <summary>An iterator rooted at the document itself carries the document as its root node
+    /// (dom/traversal/NodeIterator "createNodeIterator() parameter defaults").</summary>
+    public JsNodeIterator(Engine engine, LayoutNode root, uint whatToShow, JsValue? filter, object rootWrapper)
     {
         _engine = engine;
         _root = root;
+        _rootWrapper = rootWrapper;
         _whatToShow = whatToShow;
         _filter = filter;
         _reference = root;
     }
 
-    public JsElement root => JsElement.For(_engine, _root);
+    public object root => _rootWrapper;
     public double whatToShow => _whatToShow;
     public JsValue? filter => _filter;
     public bool expandEntityReferences => true;
-    public JsElement referenceNode => JsElement.For(_engine, _reference);
+    public object referenceNode => ReferenceEquals(_reference, _root)
+        ? _rootWrapper
+        : JsElement.For(_engine, _reference);
+    public bool pointerBeforeReferenceNode => _beforeReference;
+
+    /// <summary>detach() is a no-op in modern DOM (the NodeIterator stays usable).</summary>
+    public void detach() { }
 
     public JsElement? nextNode()
     {

@@ -23,17 +23,22 @@ internal static class JsErrors
     };
 
     /// <summary>Builds (does not throw) a DOMException with the given <paramref name="name"/>.</summary>
-    internal static JavaScriptException Dom(string name, string message)
+    internal static JavaScriptException Dom(string name, string message) =>
+        JsEngine.Instance?.RawEngine is { } eng ? Dom(eng, name, message)
+        : new JavaScriptException((JsValue)message);
+
+    /// <summary>The engine-parameterized form for host objects that hold their page's engine —
+    /// the singleton's realm may not be the realm the exception must surface in (unit tests and
+    /// nested page engines both build multi-engine processes).</summary>
+    internal static JavaScriptException Dom(Engine engine, string name, string message)
     {
-        var eng = JsEngine.Instance?.RawEngine;
-        if (eng is null) return new JavaScriptException((JsValue)message);
-        var err = new JsObject(eng);
+        var err = new JsObject(engine);
         Set(err, "name", name);
         Set(err, "message", message);
         Set(err, "code", JsNumber.Create(DomCodes.GetValueOrDefault(name)));
-        var ctor = eng.GetValue("DOMException");
+        var ctor = engine.GetValue("DOMException");
         if (ctor.IsObject()) Set(err, "constructor", ctor);
-        return new JavaScriptException(JsValue.FromObject(eng, err));
+        return new JavaScriptException(JsValue.FromObject(engine, err));
     }
 
     /// <summary>Builds (does not throw) a native error, e.g. <c>Native("TypeError", msg)</c>.

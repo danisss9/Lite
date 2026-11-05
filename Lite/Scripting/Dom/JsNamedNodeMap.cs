@@ -51,8 +51,10 @@ public class JsAttr
     }
 }
 
-/// <summary>NamedNodeMap returned by element.attributes — a live view of the element's attributes.</summary>
-public class JsNamedNodeMap
+/// <summary>NamedNodeMap returned by element.attributes — a live view of the element's attributes.
+/// The script proxy reads named-property lookup and supported-property-name enumeration through
+/// IJsNamedCollection, so attribute names are own properties exactly as the DOM4 draft requires.</summary>
+public class JsNamedNodeMap : IJsNamedCollection
 {
     private readonly LayoutNode _node;
 
@@ -74,6 +76,10 @@ public class JsNamedNodeMap
 
     public JsAttr? getNamedItem(string name) =>
         _node.Attributes.ContainsKey(name) ? new JsAttr(_node, name) : null;
+
+    object? IJsNamedCollection.Named(string name) => getNamedItem(name);
+
+    IReadOnlyList<string> IJsNamedCollection.SupportedNames() => Names;
 
     /// <summary>NamedNodeMap.setNamedItem(attr) — adds/replaces the attribute the Attr describes.</summary>
     public JsAttr? setNamedItem(JsAttr attr)

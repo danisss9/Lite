@@ -320,7 +320,7 @@ public static class FormTests
         e.Execute(@"
             document.body.innerHTML = '<form><output for=""a b"">42</output></form>';
             var o = document.querySelector('output');
-            var v = o.value, t = o.type, f = o.htmlFor;
+            var v = o.value, t = o.type, f = String(o.htmlFor);
             o.value = 'hi';
             var v2 = o.value, txt = o.textContent;");
         Equal("42", (string?)Global(e, "v"));         // value mirrors text content

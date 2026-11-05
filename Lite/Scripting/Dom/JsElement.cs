@@ -175,7 +175,9 @@ public class JsElement
     /// JavaScriptException, which propagates intact now that CatchClrExceptions skips it.</summary>
     private void ThrowDom(string name, string message)
     {
-        throw JsErrors.Dom(name, message);
+        // The engine-scoped form: the process-wide singleton's realm may not be this page's
+        // realm (unit tests and nested page engines both build multi-engine processes).
+        throw JsErrors.Dom(_engine, name, message);
     }
 
     // ---- Node type constants (exposed on every element, like browsers do) ----
@@ -548,12 +550,25 @@ public class JsElement
         set => Node.Attributes["type"] = value;
     }
 
-    /// <summary>Reflects the <c>for</c> content attribute (HTMLLabelElement / HTMLOutputElement.htmlFor).
-    /// For &lt;output&gt; this is a space-separated list of IDs; we expose it as a single string.</summary>
-    public string htmlFor
+    /// <summary>Whether this element counts as HTML-namespace for interface gating: a bound
+    /// AngleSharp element carries its real namespace; the layout-only projections (no DomNode —
+    /// innerHTML fragment content among them) can only ever be HTML-namespace.</summary>
+    private bool IsHtmlNamespaced => DomNode is null || namespaceURI == JsHtmlCollection.HtmlNamespace;
+
+    /// <summary>Reflects the <c>for</c> content attribute. &lt;output&gt; exposes it as a
+    /// DOMTokenList (HTMLOutputElement.htmlFor) and &lt;label&gt; as a string
+    /// (HTMLLabelElement.htmlFor); the property does not exist on other elements
+    /// (dom/lists/DOMTokenList-coverage-for-attributes).</summary>
+    public object? htmlFor
     {
-        get => Node.Attributes.GetValueOrDefault("for", string.Empty);
-        set => Node.Attributes["for"] = value;
+        get
+        {
+            if (Node.TagName == "OUTPUT" && IsHtmlNamespaced)
+                return new JsClassList(Node, "for");
+            if (Node.TagName == "LABEL") return Node.Attributes.GetValueOrDefault("for", string.Empty);
+            return JsValue.UndefinedMarker;
+        }
+        set => Node.Attributes["for"] = value?.ToString() ?? string.Empty;
     }
 
     /// <summary>HTMLOutputElement.defaultValue — the value used on form reset (backed by an internal
@@ -990,8 +1005,8 @@ public class JsElement
     /// cascade its origins) are DOM members for rule collection but are not author content:
     /// a conforming UA keeps them out of script-visible child lists, and the html5lib tree
     /// dumps read head.childNodes directly. innerHTML/outerHTML apply the same filter while
-    /// serializing (CloneWithoutOriginSheets). Query paths still surface them (a documented
-    /// limitation, revisited with the DOM authority package).</summary>
+    /// serializing (CloneWithoutOriginSheets), and the collection/querySelector suppliers apply
+    /// the element-level predicate (IsOriginSheet) to their results.</summary>
     private IEnumerable<INode> VisibleDomChildren(INode dom)
     {
         var parse = JsEngine.For(_engine)?.DocumentState?.ParserContext;
@@ -999,6 +1014,17 @@ public class JsElement
             return dom.ChildNodes;
         return dom.ChildNodes.Where(c => !ReferenceEquals(parse.UaStyleElement, c)
             && !parse.UserStyleElements.Any(e => ReferenceEquals(e, c)));
+    }
+
+    /// <summary>Query-path visibility of an element: the engine-injected origin sheets (UA and
+    /// user) are not script-visible members anywhere. The child lists filtered them first; the
+    /// collection and querySelector suppliers apply this predicate to their results, closing the
+    /// documented query-path limitation of the origin-sheet visibility boundary.</summary>
+    internal static bool IsOriginSheet(Engine engine, IElement element)
+    {
+        var parse = JsEngine.For(engine)?.DocumentState?.ParserContext;
+        return parse is not null && (ReferenceEquals(parse.UaStyleElement, element)
+            || parse.UserStyleElements.Any(e => ReferenceEquals(e, element)));
     }
 
     /// <summary>Whether an engine-injected origin sheet sits inside this element's subtree (or
@@ -1351,6 +1377,9 @@ public class JsElement
         // CharacterData (Text/Comment/PI) and other leaf node types cannot contain children.
         if (IsCharacterData)
             ThrowDom("HierarchyRequestError", $"A {nodeName} node cannot have children.");
+        // DOM4 pre-insert validity: a document type node is never insertable.
+        if (child.Node.TagName == "#document-type")
+            ThrowDom("HierarchyRequestError", $"A {child.nodeName} node cannot be a child of a {nodeName}.");
         if (IsAncestor(child.Node, Node))
             throw new InvalidOperationException("The new child element contains the parent.");
         if (DomNode is { } parentDom && child.DomNode is { } childDom)
@@ -1408,6 +1437,8 @@ public class JsElement
     {
         if (IsCharacterData)
             ThrowDom("HierarchyRequestError", $"A {nodeName} node cannot have children.");
+        if (newNode.Node.TagName == "#document-type")
+            ThrowDom("HierarchyRequestError", $"A {newNode.nodeName} node cannot be a child of a {nodeName}.");
         if (IsAncestor(newNode.Node, Node))
             throw new InvalidOperationException("The new child element contains the parent.");
         if (DomNode is { } parentDom && newNode.DomNode is { } childDom)
@@ -1446,6 +1477,8 @@ public class JsElement
     {
         if (IsCharacterData)
             ThrowDom("HierarchyRequestError", $"A {nodeName} node cannot have children.");
+        if (newNode.Node.TagName == "#document-type")
+            ThrowDom("HierarchyRequestError", $"A {newNode.nodeName} node cannot be a child of a {nodeName}.");
         if (IsAncestor(newNode.Node, Node))
             throw new InvalidOperationException("The new child element contains the parent.");
         if (DomNode is { } parentDom && newNode.DomNode is { } newDom && oldNode.DomNode is { } oldDom)
@@ -1474,6 +1507,23 @@ public class JsElement
         newNode.LoadInsertedIframe();
         return oldNode;
     }
+
+    // ---- document arguments (DOM4 mutation validation) ----
+    // The document wrapper is not a JsElement, so the binding falls through to these overloads
+    // and script sees the spec's DOMException instead of a conversion error (the shape the
+    // TreeWalker-realm survey recorded as a raw-CLR-wrapper leak: s.removeChild(doc)).
+
+    public JsElement appendChild(JsDocument document) =>
+        throw JsErrors.Dom(_engine, "HierarchyRequestError", "A document cannot be appended to an element.");
+
+    public JsElement insertBefore(JsDocument document, JsElement? refNode) =>
+        throw JsErrors.Dom(_engine, "HierarchyRequestError", "A document cannot be inserted into an element.");
+
+    public JsElement replaceChild(JsDocument document, JsElement oldNode) =>
+        throw JsErrors.Dom(_engine, "HierarchyRequestError", "A document cannot replace a child of an element.");
+
+    public JsElement removeChild(JsDocument document) =>
+        throw JsErrors.Dom(_engine, "NotFoundError", "The node to be removed is not a child of this node.");
 
     // ---- modern mutation convenience methods (DOM Living Standard) ----
 
@@ -1850,6 +1900,29 @@ public class JsElement
     // ---- class list (minimal) ----
     public JsClassList classList => new(Node);
 
+    // ---- per-interface DOMTokenList attributes (dom/lists/DOMTokenList-coverage-for-attributes):
+    // the property exists — a DOMTokenList over its attribute — only where the element's interface
+    // and namespace declare it, and reads undefined everywhere else.
+    public object? relList
+    {
+        get
+        {
+            var local = localName;
+            var ns = namespaceURI;
+            var covered = local is "a" or "area" or "link" && (IsHtmlNamespaced
+                || (ns == "http://www.w3.org/2000/svg" && local == "a"));
+            return covered ? new JsClassList(Node, "rel") : JsValue.UndefinedMarker;
+        }
+    }
+
+    public object? sandbox =>
+        localName == "iframe" && IsHtmlNamespaced
+            ? new JsClassList(Node, "sandbox") : JsValue.UndefinedMarker;
+
+    public object? sizes =>
+        localName == "link" && IsHtmlNamespaced
+            ? new JsClassList(Node, "sizes") : JsValue.UndefinedMarker;
+
     // ---- dataset (data-* attributes) ----
     private JsDataset? _dataset;
     public JsDataset dataset => _dataset ??= new(Node);
@@ -1975,13 +2048,13 @@ public class JsElement
 
     // ---- querySelector on element ----
     public JsElement? querySelector(string selector) => DomNode is IElement element
-        ? element.QuerySelector(selector) is { } found ? Wrap(found) : null
+        ? element.QuerySelector(selector) is { } found && !IsOriginSheet(_engine, found) ? Wrap(found) : null
         : SelectorEngine.QuerySelector(Node, selector, _engine);
 
     public JsNodeList querySelectorAll(string selector)
     {
         var snapshot = DomNode is IElement element
-            ? element.QuerySelectorAll(selector).Select(Wrap).ToArray()
+            ? element.QuerySelectorAll(selector).Where(e => !IsOriginSheet(_engine, e)).Select(Wrap).ToArray()
             : SelectorEngine.QuerySelectorAll(Node, selector, _engine);
         return new JsNodeList(() => snapshot);
     }
@@ -1990,18 +2063,43 @@ public class JsElement
     {
         var tag = tagName.ToUpperInvariant();
         return new JsHtmlCollection(() => DomNode is IElement element
-            ? element.QuerySelectorAll("*").Where(e => tag == "*" || e.TagName.ToUpperInvariant() == tag)
+            ? element.QuerySelectorAll("*").Where(e => (tag == "*" || e.TagName.ToUpperInvariant() == tag)
+                    && !IsOriginSheet(_engine, e))
                 .Select(Wrap).ToArray()
             : FindAll(Node, n => tag == "*" || n.TagName == tag)
                 .Select(n => For(_engine, n)).ToArray());
     }
+
+    public JsHtmlCollection getElementsByTagNameNS(string? namespaceURI, string localName)
+    {
+        return new JsHtmlCollection(() => DomNode is IElement element
+            ? element.QuerySelectorAll("*").Where(e => MatchesNamespace(e, namespaceURI)
+                && (localName == "*" || e.LocalName == localName)
+                && !IsOriginSheet(_engine, e)).Select(Wrap).ToArray()
+            : FindAll(Node, n => !n.TagName.StartsWith('#')
+                && MatchesNamespace(n.DomNode, namespaceURI)
+                && (localName == "*" || NodeLocalName(n) == localName))
+                .Select(n => For(_engine, n)).ToArray());
+    }
+
+    /// <summary>getElementsByTagNameNS namespace match: "*" is any namespace; null (or empty, per
+    /// the DOM's DOMString→nullable conversion) matches only elements in no namespace. Note the
+    /// empty string is not the wildcard — an empty namespace never matches the XHTML elements.
+    /// Shared with the document-level collection (JsDocument.getElementsByTagNameNS).</summary>
+    internal static bool MatchesNamespace(INode? node, string? namespaceURI) => node as IElement is not { } element
+        ? namespaceURI is null or "*"
+        : namespaceURI == "*" || element.NamespaceUri == (namespaceURI.Length == 0 ? null : namespaceURI);
+
+    internal static string NodeLocalName(LayoutNode node) => (node.DomNode as IElement)?.LocalName
+        ?? node.TagName.ToLowerInvariant();
 
     public JsHtmlCollection getElementsByClassName(string classNames)
     {
         var classes = DomWhitespace.Split(classNames);
         return new JsHtmlCollection(() => DomNode is IElement element
             ? element.QuerySelectorAll("*").Where(e => classes.All(c =>
-                DomWhitespace.Split(e.GetAttribute("class") ?? "").Contains(c)))
+                DomWhitespace.Split(e.GetAttribute("class") ?? "").Contains(c))
+                && !IsOriginSheet(_engine, e))
                 .Select(Wrap).ToArray()
             : FindAll(Node, n =>
         {
@@ -2091,19 +2189,34 @@ public class JsElement
     }
 }
 
-/// <summary>classList API.</summary>
+/// <summary>DOMTokenList API over one attribute — classList (the "class" attribute) and the
+/// per-interface token lists (relList, htmlFor, sandbox, sizes). The stringifier and the value
+/// getter reflect the attribute verbatim; only a mutation rewrites it as the ordered-set
+/// serialization (dom/lists/DOMTokenList-stringifier).</summary>
 public class JsClassList
 {
     private readonly LayoutNode _node;
-    public JsClassList(LayoutNode node) => _node = node;
+    private readonly string _attribute;
 
-    private string[] GetClasses() => DomWhitespace.Split(_node.Attributes.GetValueOrDefault("class", ""));
+    public JsClassList(LayoutNode node) : this(node, "class") { }
+    public JsClassList(LayoutNode node, string attribute) => (_node, _attribute) = (node, attribute);
+
+    private string[] GetClasses() => DomWhitespace.Split(_node.Attributes.GetValueOrDefault(_attribute, ""))
+        .Distinct().ToArray();
     private void SetClasses(IEnumerable<string> classes)
     {
-        var old = _node.Attributes.GetValueOrDefault("class");
-        _node.Attributes["class"] = string.Join(" ", classes);
-        // Same path as setAttribute("class"): fallbacks, dependents and the MutationRecord.
-        JsElement.OnAttributeChanged(_node, "class", old);
+        var old = _node.Attributes.GetValueOrDefault(_attribute);
+        _node.Attributes[_attribute] = string.Join(" ", classes);
+        // Same path as setAttribute: fallbacks, dependents and the MutationRecord.
+        JsElement.OnAttributeChanged(_node, _attribute, old);
+    }
+
+    /// <summary>The stringifier and the value getter: the attribute verbatim, empty when absent.</summary>
+    public string toString() => _node.Attributes.GetValueOrDefault(_attribute, "");
+    public string value
+    {
+        get => toString();
+        set => SetClasses(DomWhitespace.Split(value));
     }
 
     public void add(string cls)
@@ -2125,6 +2238,17 @@ public class JsClassList
         return true;
     }
     public int length => GetClasses().Length;
+
+    /// <summary>Indexed token access so the collection proxy exposes the supported indices.</summary>
+    public string? this[int index]
+    {
+        get
+        {
+            var classes = GetClasses();
+            return index >= 0 && index < classes.Length ? classes[index] : null;
+        }
+    }
+    public string? item(int index) => this[index];
 }
 
 /// <summary>Proxy target for element.dataset — maps data-* attributes to camelCase properties
@@ -2152,9 +2276,14 @@ public class JsDataset
     /// <summary>Removes the data-* attribute for a camelCase key (delete dataset.key).</summary>
     public void remove(string key) => _node.Attributes.Remove("data-" + CamelToKebab(key));
 
-    /// <summary>CamelCase property names of every data-* attribute, in attribute order.</summary>
+    /// <summary>Whether a data-* attribute exists for the camelCase key — presence, not a
+    /// non-empty value: a valueless <c>data-date-of-birth</c> is still a supported name.</summary>
+    public bool has(string key) => _node.Attributes.ContainsKey("data-" + CamelToKebab(key));
+
+    /// <summary>CamelCase property names of every data-* attribute, in attribute order. The bare
+    /// "data-" attribute (empty name) and trailing-hyphen forms are supported names too.</summary>
     public string[] keys() => _node.Attributes.Keys
-        .Where(k => k.StartsWith("data-", StringComparison.Ordinal) && k.Length > 5)
+        .Where(k => k.StartsWith("data-", StringComparison.Ordinal))
         .Select(k => KebabToCamel(k[5..])).ToArray();
 
     private static string CamelToKebab(string s)
@@ -2170,13 +2299,16 @@ public class JsDataset
 
     internal static string KebabToCamel(string attribute)
     {
+        // HTML §2.7.3 named-access conversion: a '-' followed by a lowercase ASCII letter
+        // uppercases the letter; any other '-' (a trailing one, say, from data-id-) stays.
         var sb = new System.Text.StringBuilder();
-        var afterDash = false;
-        foreach (var c in attribute)
+        for (var i = 0; i < attribute.Length; i++)
         {
-            if (c == '-') { afterDash = true; continue; }
-            sb.Append(afterDash && char.IsAsciiLetterLower(c) ? char.ToUpperInvariant(c) : c);
-            afterDash = false;
+            var c = attribute[i];
+            if (c == '-' && i + 1 < attribute.Length && char.IsAsciiLetterLower(attribute[i + 1]))
+                sb.Append(char.ToUpperInvariant(attribute[++i]));
+            else
+                sb.Append(c);
         }
         return sb.ToString();
     }

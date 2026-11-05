@@ -1617,6 +1617,19 @@ internal static class Parser
                     }
                     node.AddChild(Traverse(childEl, indent + 1, fontPx, node));
                 }
+                else if (childNode is IComment comment)
+                {
+                    // Comments never render but must stay in the projected tree on the first
+                    // pass too — script's childNodes must see them after a plain parse, and the
+                    // CharacterData anchors resolve through the wrapper's bound node. The
+                    // re-projection path (ProjectChildren) carries the same shape.
+                    var commentChild = new LayoutNode(null, "#comment", comment.Data ?? string.Empty, parentStyle)
+                    {
+                        DomNode = comment
+                    };
+                    commentChild.ResetNonInheritedStyles();
+                    node.AddChild(commentChild);
+                }
             }
             RestoreInlineBoundarySpaces(node);
         }
