@@ -62,6 +62,25 @@ tables cluster from border-conflict-style-107). The wider `bidi-` space is surve
 measurable for the next session (full-UBA port from the char-order ledger's Python
 reference leading).
 
+Campaign update, 5 November (Wave 0 + four Wave 1 batches): the campaign's opening
+baseline ran in an isolated worktree at `3e5fd1af` and banked the never-executed
+3 November routing — **official 7,153/9,039 (79.1%), WPT `css/CSS2` 6,461/8,904
+(72.6%): start count 13,614, +365 over the 2 November baseline** (official
+unsupported 1,027 → 50; manual-pending now a real verdict class; four crashes
+enumerated P1). The re-ranked Wave 0 queue (2,589 real fails + 509 unsupported):
+WPT normal-flow 148, tables 147, generated-content 93, text 91, borders 86, fonts
+73, floats 71, css1 69; official background 63, quotes 33, bidi-text 31,
+border-conflict-style 27. Four engine/harness batches then landed cluster-verified
+(`da598c36` cleared-`<br>` line-box clearance — border-conflict-style-107 flips;
+`91c20484` the text-color-pairs zip bug + fail-closed stated colours — the
+user-stylesheet crashes become honest verdicts; `35d5398e` the official userstyle
+family's prerequisite sheet loads — official user-stylesheet 2/18 → 12/18;
+`716b928a` reference-graph cycles close passing paths — block-in-inline-insert
+3/41 → 38/41, normal-flow probe 696/842): roughly +90 verified conversions beyond
+the baseline, with per-case guards showing zero regressions. The details are in the
+two 5 November checkpoints in the CSS plan; the mid-campaign baseline re-ranks and
+banks all of it.
+
 Snapshot updated 5 November 2026 (second pass): **Milestone 1 of the HTML 5.0 track
 closes — the applicability inventory is complete and `inventoryComplete` flips true
 under the runner's guarded omission check.** The 4,641 unclassified catalog sources
