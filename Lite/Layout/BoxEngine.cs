@@ -2353,6 +2353,12 @@ internal static class BoxEngine
         // Items are measured against the first line's band; a line that turns out wider re-measures
         // its text below.
         var (firstX, firstW) = AvailableBand(floats, originY, 1, originX, maxWidth);
+        // CSS 2.1 §16.2 / UAX #9 subset: a block carrying an active RTL override renders its
+        // inline content in reverse visual order — the top-level child sequence reverses here
+        // (keyed on the container only: an inline override further down reverses its OWN
+        // content, not its siblings), and each text leaf reverses through RenderedText.
+        if (nodes.Count > 0 && nodes[0].Parent is { } runBlock && runBlock.BidiIsRtlOverride())
+            nodes = nodes.AsEnumerable().Reverse().ToList();
         CollectInlineItems(nodes, items, firstW, viewportWidth, viewportHeight);
 
         if (items.Count == 0) return 0f;
@@ -2558,6 +2564,21 @@ internal static class BoxEngine
                 lineX + item.Width > bandRight && WrapsLines(item.Node))
             {
                 if (lineX > bandLeft) CommitLine();
+                continue;
+            }
+
+            // §16.6.1: a collapsible space at the END of a line is removed. A whitespace-only
+            // item TRAILING the whole run (nothing but collapsible whitespace follows it) ends
+            // the last line with a space: placing it would stamp the anonymous box's geometry
+            // (and paint its background — shared with its source element) past the line's
+            // content, an artifact the HTML parser's whitespace folding hides but an XML-served
+            // document's raw text nodes expose (bidi-box-model-019's 20px navy tail). The gap a
+            // space renders MID-line comes from the surrounding items' own trailing spaces, so
+            // dropping this one loses nothing.
+            if (item.Kind == InlineItemKind.Text && item.Text != null && item.Text.IsCssWhiteSpaceOnly() &&
+                itemIndex == items.Count - 1 &&
+                item.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+            {
                 continue;
             }
 
@@ -2890,11 +2911,13 @@ internal static class BoxEngine
 
         if (node.IsBrokenAroundBlock()) return (0f, 0f);
 
-        // §9.4.2's bidi box model puts the box's edges on its START and END fragments, which under
-        // 'direction: rtl' are its right and left sides. Lines here are always laid out
-        // left-to-right, so there is nowhere correct to put them; reserving the LTR pair would
-        // move the content the wrong way rather than leave it where it already is.
-        if (node.GetDirection() == "rtl") return (0f, 0f);
+        // §8.6 (bidi box model): an inline box that is NOT split by bidi reordering keeps its
+        // physical sides — 'margin-left' reserves space on the left of the line whatever the
+        // element's direction is. The start/end-side placement §8.6 prescribes for boxes SPLIT
+        // across reordered fragments needs the full UBA (mixed-direction runs); until then the
+        // reversed scopes this engine produces keep every inline box contiguous, so the sides
+        // stay physical here too. (The bidi-box-model margins/padding families assert exactly
+        // this: side margins are unaffected by directionality.)
 
         var fontSize = node.GetFontSize();
         var margin = node.GetMargin(maxWidth, viewportHeight, fontSize);
@@ -2904,6 +2927,18 @@ internal static class BoxEngine
         var right = (node.IsAutoMarginRight() ? 0f : margin.Right) + padding.Right;
         return (left, right);
     }
+
+    // -------------------------------------------------------------------------
+    // CSS 2.1 §16.2 / UAX #9 subset
+    // -------------------------------------------------------------------------
+
+    // The bidi scope predicates (BidiIsRtlOverride / BidiReversesContent / ReverseText) live on
+    // DrawCommandExtensions beside the direction/unicode-bidi style readers, because the
+    // reversal has to agree between layout and painting through RenderedText. Layout's two
+    // additional obligations are the child-SEQUENCE reversals below: inside a reversed scope
+    // the character stream reverses as a whole, so the child order reverses at every level,
+    // while each inline box's own edge items stay at its physical boundaries (§8.6 — side
+    // margins are unaffected by directionality).
 
     /// <summary>
     /// Recursively extracts a flat list of InlineItems from inline nodes.
@@ -3178,6 +3213,9 @@ internal static class BoxEngine
                 // inline run measured the whole string as one unbroken item, so a preformatted
                 // <span> holding two lines drew them on top of each other.
                 var ws = node.GetWhiteSpace();
+                // RenderedText already returns the VISUAL string (text-transform plus the
+                // §16.2/UAX #9 subset reversal), so measuring it keeps width and fragments
+                // in agreement with what painting draws.
                 var rendered = node.RenderedText();
                 var segments = ws is WhiteSpace.Pre or WhiteSpace.PreWrap or WhiteSpace.PreLine
                                && rendered.Contains('\n')
@@ -3200,9 +3238,44 @@ internal static class BoxEngine
             else if (node.Children.Count > 0)
             {
                 var (leading, trailing) = InlineBoxEdges(node, maxWidth, viewportHeight);
-                if (leading != 0f) items.Add(EdgeItem(node, leading));
-                CollectInlineItems(node.Children, items, maxWidth, viewportWidth, viewportHeight);
-                if (trailing != 0f) items.Add(EdgeItem(node, trailing));
+                // §8.6 (bidi box model): when a 'direction: rtl' inline box is SPLIT across
+                // lines, its fragments join on the sides MIRRORED from LTR (rtl-span-only):
+                // the box's trailing decorations render at the FIRST line's end and the leading
+                // ones at the LAST line's start, with the join sides empty. An UNSPLIT box
+                // keeps its physical sides — side margins are unaffected by directionality on
+                // one line (the bidi-box-model margins/padding families assert exactly that).
+                var isRtlBox = node.GetDirection() == "rtl";
+                if (!isRtlBox && leading != 0f) items.Add(EdgeItem(node, leading));
+                var subtreeStart = items.Count;
+                // §16.2/UAX #9 subset: inside a reversed scope every level's child sequence
+                // reverses (the scope's character stream reverses as a whole), while the box's
+                // own edge items stay at its physical boundaries.
+                var children = node.BidiReversesContent() ? node.Children.AsEnumerable().Reverse() : node.Children;
+                CollectInlineItems(children, items, maxWidth, viewportWidth, viewportHeight);
+                if (!isRtlBox && trailing != 0f) items.Add(EdgeItem(node, trailing));
+                if (isRtlBox && (leading != 0f || trailing != 0f))
+                {
+                    var subtreeEnd = items.Count;
+                    var firstBreak = items.FindIndex(subtreeStart, subtreeEnd - subtreeStart,
+                        static i => i.Kind == InlineItemKind.LineBreak);
+                    if (firstBreak < 0)
+                    {
+                        // Unsplit: physical sides.
+                        if (leading != 0f) items.Insert(subtreeStart, EdgeItem(node, leading));
+                        if (trailing != 0f) items.Add(EdgeItem(node, trailing));
+                    }
+                    else
+                    {
+                        var lastBreak = items.FindLastIndex(subtreeEnd - 1, subtreeEnd - subtreeStart,
+                            static i => i.Kind == InlineItemKind.LineBreak);
+                        // Trailing decorations just before the first line's break...
+                        if (trailing != 0f) items.Insert(firstBreak, EdgeItem(node, trailing));
+                        // ...and leading decorations just after the last line's break (shifted
+                        // one further by the insert above).
+                        if (leading != 0f)
+                            items.Insert(lastBreak + 1 + (trailing != 0f ? 1 : 0), EdgeItem(node, leading));
+                    }
+                }
             }
         }
     }

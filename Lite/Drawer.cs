@@ -543,7 +543,7 @@ internal static class Drawer
                         using var fragBg = new SKPaint { Color = bgColor };
                         canvas.DrawRect(rect, fragBg);
                     }
-                    DrawWrappedText(canvas, node, text, rect.Left, rect.Top, rect.Width, font, paint);
+                    DrawWrappedText(canvas, node, text, rect.Left, rect.Top, rect.Width, font, paint, lineAligned: true);
                 }
                 return;
             }
@@ -560,9 +560,18 @@ internal static class Drawer
             // flat: it fixes the tests that expect a visible inline border, and breaks the same
             // number of block-in-inline ones, where an inline box broken around a block needs one
             // fragment box per piece before its edges can land in the right places.
-            DrawWrappedText(canvas, node, node.DisplayText,
+            // The fragment rect is LINE-POSITIONED: the line assembler already shifted the whole
+            // line for text-align over every item's width. Re-applying the alignment inside the
+            // rect would shift the ink again whenever the item's width (which counts a trailing
+            // collapsible space — it advances the pen, §16.6.1) differs from the wrapped ink
+            // width, landing right/center-aligned text one space off (bidi-box-model-019).
+            // The painted string is the FRAGMENT text — the laid-out visual slice, which also
+            // carries the §16.6.1 line-start strip the raw RenderedText has not been through
+            // (an XML-served document keeps " First " raw; layout laid out "First ").
+            var paintedText = node.InlineFragments is { Count: > 0 } fs ? fs[^1].Text : node.RenderedText();
+            DrawWrappedText(canvas, node, paintedText,
                 node.Box.ContentBox.Left, node.Box.ContentBox.Top,
-                node.Box.ContentBox.Width, font, paint);
+                node.Box.ContentBox.Width, font, paint, lineAligned: true);
             return;
         }
 
@@ -758,7 +767,7 @@ internal static class Drawer
             {
                 var ws = node.GetWhiteSpace();
                 var lh = node.GetLineHeight(node.GetFontSize());
-                var lines = TextMeasure.WrapText(node.DisplayText, Math.Max(box.ContentBox.Width, 1f), font, ws, lh);
+                var lines = TextMeasure.WrapText(node.RenderedText(), Math.Max(box.ContentBox.Width, 1f), font, ws, lh);
                 var textH = lines.Sum(l => l.Height);
                 var textW = lines.Count > 0 ? lines.Max(l => l.Width) : 0f;
 
@@ -805,7 +814,7 @@ internal static class Drawer
                 textMaxW = textW;
             }
 
-            DrawWrappedText(canvas, node, node.DisplayText,
+            DrawWrappedText(canvas, node, node.RenderedText(),
                             textX, textY, textMaxW, font, paint);
         }
 
@@ -1058,7 +1067,7 @@ internal static class Drawer
                     using var fragBg = new SKPaint { Color = bgColor };
                     canvas.DrawRect(rect, fragBg);
                 }
-                DrawWrappedText(canvas, node, text, rect.Left, rect.Top, rect.Width, font, paint);
+                DrawWrappedText(canvas, node, text, rect.Left, rect.Top, rect.Width, font, paint, lineAligned: true);
             }
             return true;
         }
@@ -1068,8 +1077,15 @@ internal static class Drawer
             canvas.DrawRect(node.Box.PaddingBox, bgPaint);
         }
         if (!string.IsNullOrEmpty(node.DisplayText))
-            DrawWrappedText(canvas, node, node.DisplayText,
-                node.Box.ContentBox.Left, node.Box.ContentBox.Top, node.Box.ContentBox.Width, font, paint);
+        {
+            // Line-positioned rect (see the generic inline path): no re-alignment, and the
+            // FRAGMENT text — the laid-out slice with the §16.6.1 line-start strip applied —
+            // not the raw RenderedText an XML-served document still carries.
+            var paintedText = node.InlineFragments is { Count: > 0 } fs ? fs[^1].Text : node.RenderedText();
+            DrawWrappedText(canvas, node, paintedText,
+                node.Box.ContentBox.Left, node.Box.ContentBox.Top, node.Box.ContentBox.Width, font, paint,
+                lineAligned: true);
+        }
         return false;
     }
 
@@ -1080,7 +1096,7 @@ internal static class Drawer
         if (string.IsNullOrEmpty(node.DisplayText)) return;
         using var font = TextMeasure.CreateFont(node);
         using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
-        DrawWrappedText(canvas, node, node.DisplayText,
+        DrawWrappedText(canvas, node, node.RenderedText(),
             node.Box.ContentBox.Left, node.Box.ContentBox.Top, node.Box.ContentBox.Width, font, paint);
     }
 
@@ -1130,7 +1146,7 @@ internal static class Drawer
         using var font = TextMeasure.CreateFont(node);
         using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
 
-        DrawWrappedText(canvas, node, node.DisplayText,
+        DrawWrappedText(canvas, node, node.RenderedText(),
                         box.ContentBox.Left, box.ContentBox.Top, box.ContentBox.Width, font, paint);
     }
 
@@ -1157,8 +1173,8 @@ internal static class Drawer
             var lineHeight = node.GetLineHeight(node.GetFontSize());
             var paintWidth = box.ContentBox.Height <= lineHeight + 0.5f
                 ? box.ContentBox.Width + 1f : box.ContentBox.Width;
-            DrawWrappedText(canvas, node, node.DisplayText, box.ContentBox.Left, box.ContentBox.Top,
-                            paintWidth, font, paint);
+            DrawWrappedText(canvas, node, node.RenderedText(), box.ContentBox.Left, box.ContentBox.Top,
+                            paintWidth, font, paint, lineAligned: true);
             return;
         }
 
@@ -1803,7 +1819,9 @@ internal static class Drawer
         var box = node.Box;
         var rect = box.ContentBox;
 
-        var btnLabel = node.DisplayText;
+        // RenderedText keeps the label consistent with layout (text-transform, and the §16.2
+        // subset reversal inside an RTL override scope); the value attribute falls through.
+        var btnLabel = node.RenderedText();
         if (string.IsNullOrEmpty(btnLabel)) node.Attributes.TryGetValue("value", out btnLabel);
         if (string.IsNullOrEmpty(btnLabel)) btnLabel = "Button";
 
@@ -1941,7 +1959,7 @@ internal static class Drawer
         {
             using var font = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
-            DrawWrappedText(canvas, node, node.DisplayText,
+            DrawWrappedText(canvas, node, node.RenderedText(),
                             box.ContentBox.Left + insideMarkerWidth, box.ContentBox.Top,
                             box.ContentBox.Width - insideMarkerWidth, font, paint);
         }
@@ -2628,9 +2646,14 @@ internal static class Drawer
         return false;
     }
 
+    /// <param name="lineAligned">True when <paramref name="x"/>/<paramref name="maxWidth"/>
+    /// describe a rect the line assembler already positioned — the §16.2 align shift was
+    /// applied there over the whole line box's items, so painting must not apply it again
+    /// inside the rect. Block own-text sites keep the painter-side alignment: their rect is
+    /// the block's raw content box and the painter is the only aligner.</param>
     private static void DrawWrappedText(SKCanvas canvas, LayoutNode node, string text,
                                         float x, float y, float maxWidth,
-                                        SKFont font, SKPaint paint)
+                                        SKFont font, SKPaint paint, bool lineAligned = false)
     {
         var whiteSpace = node.GetWhiteSpace();
         var textAlign = node.GetTextAlign();
@@ -2701,16 +2724,18 @@ internal static class Drawer
                 }
             }
 
-            // Compute x offset for text-align, within this line's own band when floats gave it one.
+            // Compute x offset for text-align, within this line's own band when floats gave it
+            // one. A line-positioned fragment skips both this shift and the band re-anchor: its
+            // rect IS the final line position (see the lineAligned parameter).
             var lineX0 = x;
             var lineMaxW = maxWidth;
-            if (bands is { Count: > 0 })
+            if (!lineAligned && bands is { Count: > 0 })
             {
                 var band = bands[Math.Min(lineIndex, bands.Count - 1)];
                 lineX0 = band.X;
                 lineMaxW = band.Width;
             }
-            var drawX = textAlign switch
+            var drawX = lineAligned ? lineX0 : textAlign switch
             {
                 TextAlign.Center => lineX0 + (lineMaxW - lineWidth) / 2f,
                 TextAlign.Right => lineX0 + lineMaxW - lineWidth,

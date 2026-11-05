@@ -399,6 +399,58 @@ public static class StyleExtensions
         return raw?.Trim().Equals("rtl", StringComparison.OrdinalIgnoreCase) == true ? "rtl" : "ltr";
     }
 
+    /// <summary>Returns the element's own 'unicode-bidi' keyword (CSS 2.1 §16.2, initial
+    /// "normal"). Unlike direction this is NOT inherited — only an element that declares
+    /// 'embed' or 'bidi-override' boxes a bidi scope, so only the element's own cascade
+    /// matters here.</summary>
+    public static string GetUnicodeBidi(this LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("unicode-bidi", out var ov)
+            ? ov : node.Style.GetPropertyValueSafe("unicode-bidi");
+        return raw?.Trim().ToLowerInvariant() is { Length: > 0 } keyword ? keyword : "normal";
+    }
+
+    /// <summary>Whether THIS element declares an active RTL bidi override (§16.2:
+    /// 'unicode-bidi: bidi-override' together with 'direction: rtl'), which renders the
+    /// content it boxes in reverse visual order. An override under 'ltr' forces level 0 —
+    /// strong-LTR content keeps its logical order — so only the rtl form reverses anything.</summary>
+    internal static bool BidiIsRtlOverride(this LayoutNode node) =>
+        node.GetUnicodeBidi() == "bidi-override" && node.GetDirection() == "rtl";
+
+    /// <summary>Whether a node's text content renders visually reversed: some ancestor-or-self
+    /// up to and including its block container carries an active RTL override (§16.2 puts a
+    /// block's own override over its inline content). This is the UAX #9 SUBSET the engine
+    /// implements: character bidi classes are not classified, so reordering is decided per
+    /// scope. Within a scope whose content is entirely strong-LTR or neutral — Latin script,
+    /// digits, spaces — 'embed'/'normal' leave the logical order intact (even embedding levels
+    /// never reverse), and 'bidi-override' + rtl reverses the scope's whole character stream,
+    /// which decomposes exactly into "reverse each leaf's text and reverse the child sequence
+    /// at every level inside the scope". The walk stops at the first box that is not inline
+    /// (checked inclusively): block containers and atomic inlines each establish their own
+    /// bidi paragraph (UAX #9 X8 resets at paragraph boundaries), so an outer block's override
+    /// never reverses an inner block's content. Mixed-direction content (Arabic/Hebrew runs,
+    /// nested embedding escapes) is not yet reordered; the css21 char-order ledger
+    /// (scripts/gen_css21_bidi_expectations.py) tracks the full UBA work.</summary>
+    internal static bool BidiReversesContent(this LayoutNode node)
+    {
+        for (var n = node; n is not null; n = n.Parent)
+        {
+            if (n.BidiIsRtlOverride()) return true;
+            if (n != node && n.GetDisplay() is not DisplayType.Inline) return false;
+        }
+        return false;
+    }
+
+    /// <summary>Reverses a string's characters for painting under an RTL override. The
+    /// reversal is character-wise: surrogate pairs (astral characters) are not re-composed —
+    /// out of scope for the strong-LTR subset.</summary>
+    internal static string ReverseText(string text)
+    {
+        var chars = text.ToCharArray();
+        Array.Reverse(chars);
+        return new string(chars);
+    }
+
     /// <summary>CSS 2.1 §11.2: true when this box generates a box that affects layout but is not
     /// painted. Callers must still descend into the subtree — an invisible box's descendant that
     /// sets visibility:visible IS painted, because visibility is inherited rather than structural.
@@ -649,15 +701,18 @@ public static class StyleExtensions
         };
     }
 
-    /// <summary>The node's text as it renders, after 'text-transform' (§16.5). Layout must
-    /// measure this, not the source text: an uppercased "a" measured as lowercase left every
-    /// centred line half a glyph-width off (text-transform-bicameral-*).</summary>
+    /// <summary>The node's text as it renders, after 'text-transform' (§16.5) and — inside an
+    /// RTL 'bidi-override' scope — reversed to the visual order (§16.2/UAX #9 subset; see
+    /// <see cref="BidiReversesContent"/>). Layout must measure and paint this, not the source
+    /// text: an uppercased "a" measured as lowercase left every centred line half a glyph-width
+    /// off (text-transform-bicameral-*), and an override's source "dnoceS" paints as "Second".</summary>
     public static string RenderedText(this LayoutNode node)
     {
         var text = node.DisplayText;
         if (string.IsNullOrEmpty(text)) return text;
         var transform = node.GetTextTransform();
-        return transform == TextTransform.None ? text : StyleExtensions.ApplyTextTransform(text, transform, node.GetLanguage());
+        text = transform == TextTransform.None ? text : StyleExtensions.ApplyTextTransform(text, transform, node.GetLanguage());
+        return node.BidiReversesContent() ? ReverseText(text) : text;
     }
 
     public static TextTransform GetTextTransform(this LayoutNode node)
