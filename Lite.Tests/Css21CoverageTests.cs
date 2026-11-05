@@ -788,6 +788,100 @@ public static class Css21CoverageTests
     // long-tail component judges.
     // ------------------------------------------------------------------
 
+    [Test]
+    public static void VisualChecks_BorderSampleRingSurvivesAConnectedGridComponent()
+    {
+        // border-conflict-style-001's shape: a 3x3 collapsed table whose cells all declare
+        // the same border (5px dashed lime). Every shared grid line paints the same winner,
+        // so the whole grid is ONE connected ink component whose bounding box spans the
+        // table — far beyond the #center crop. The border-sample judge must read the center
+        // ring's sides from the ink inside the crop (all four sides read dashed) instead of
+        // excluding every side as crop-truncated because the component's bbox exceeds it,
+        // which read the ring "unclassified" and failed the case regardless of the engine.
+        var bitmap = Render(c =>
+        {
+            using var p = new SkiaSharp.SKPaint
+            {
+                Color = SkiaSharp.SKColors.Lime,
+                StrokeWidth = 5,
+                IsAntialias = true,
+            };
+            p.PathEffect = SkiaSharp.SKPathEffect.CreateDash([15, 10], 0);
+            // The 3x3 grid: four vertical and four horizontal dashed lines, all touching.
+            foreach (var x in new[] { 40, 120, 200, 280 }) c.DrawLine(x, 60, x, 240, p);
+            foreach (var y in new[] { 60, 120, 180, 240 }) c.DrawLine(40, y, 280, y, p);
+            // The standalone sample box (#table1's cell): one dashed ring on its own.
+            c.DrawLine(315, 25, 385, 25, p);
+            c.DrawLine(315, 85, 385, 85, p);
+            c.DrawLine(315, 25, 315, 85, p);
+            c.DrawLine(385, 25, 385, 85, p);
+        });
+        var verdict = VisualChecks.Evaluate(new VisualCheck("border-sample"),
+            new RenderSet(bitmap, null, bitmap), RingNodeTree(), Sentence, "p");
+        True(verdict.Passed, $"the center ring should read dashed like the sample, got: {verdict.Detail}");
+
+        // The hidden variant: 'hidden' wins every conflict and paints nothing (§17.6.2.1),
+        // so the center's shared edges carry no ink while the rest of the grid still paints.
+        var hidden = Render(c =>
+        {
+            using var p = new SkiaSharp.SKPaint
+            {
+                Color = SkiaSharp.SKColors.Lime,
+                StrokeWidth = 5,
+                IsAntialias = true,
+            };
+            p.PathEffect = SkiaSharp.SKPathEffect.CreateDash([15, 10], 0);
+            foreach (var x in new[] { 40, 280 }) c.DrawLine(x, 60, x, 240, p);
+            foreach (var y in new[] { 60, 240 }) c.DrawLine(40, y, 280, y, p);
+            // The center's own grid lines are suppressed; the segments bounding the center
+            // cell stop short so their stroke half-width stays clear of the center ring band
+            // (the band reaches 6px out from the padding box; strokes end 8px out).
+            c.DrawLine(120, 60, 120, 112, p);
+            c.DrawLine(200, 60, 200, 112, p);
+            c.DrawLine(120, 188, 120, 240, p);
+            c.DrawLine(200, 188, 200, 240, p);
+            c.DrawLine(40, 120, 112, 120, p);
+            c.DrawLine(288, 120, 280, 120, p);
+            c.DrawLine(40, 180, 112, 180, p);
+            c.DrawLine(288, 180, 280, 180, p);
+        });
+        var hiddenVerdict = VisualChecks.Evaluate(new VisualCheck("border-sample", Variant: "none"),
+            new RenderSet(hidden, null, hidden), RingNodeTree(), Sentence, "p");
+        True(hiddenVerdict.Passed, $"a hidden-won center ring should read none, got: {hiddenVerdict.Detail}");
+    }
+
+    private const string Sentence = "Test passes if the center box has a dashed border.";
+
+    /// <summary>The border-sample judge's tree: #center between the middle grid lines and
+    /// #table1 as the standalone sample cell (FirstLeafCell reads its display).</summary>
+    private static Lite.Models.LayoutNode RingNodeTree()
+    {
+        var style = Parser.ParseFragment("<div></div>")[0].Style;
+        var root = new Lite.Models.LayoutNode(null, "DIV", "", style);
+        // The instruction paragraph the self-describing prelude anchors to.
+        var instructions = new Lite.Models.LayoutNode(null, "P", Sentence, style);
+        instructions.Box = new Lite.Layout.BoxDimensions { ContentBox = new SkiaSharp.SKRect(8, 4, 380, 20) };
+        var center = new Lite.Models.LayoutNode(null, "DIV", "", style);
+        center.Attributes["id"] = "center";
+        center.Box = new Lite.Layout.BoxDimensions
+        {
+            ContentBox = new SkiaSharp.SKRect(125, 125, 195, 175),
+            Border = new Lite.Layout.EdgeSizes { Top = 5, Right = 5, Bottom = 5, Left = 5 },
+        };
+        var sample = new Lite.Models.LayoutNode(null, "DIV", "", style);
+        sample.Attributes["id"] = "table1";
+        sample.StyleOverrides["display"] = "table-cell";
+        sample.Box = new Lite.Layout.BoxDimensions
+        {
+            ContentBox = new SkiaSharp.SKRect(320, 30, 380, 80),
+            Border = new Lite.Layout.EdgeSizes { Top = 5, Right = 5, Bottom = 5, Left = 5 },
+        };
+        root.AddChild(instructions);
+        root.AddChild(center);
+        root.AddChild(sample);
+        return root;
+    }
+
     private static Lite.Models.LayoutNode ScrollBoxNode()
     {
         var style = Parser.ParseFragment("<div></div>")[0].Style;

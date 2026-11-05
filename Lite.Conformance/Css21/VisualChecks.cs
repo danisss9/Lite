@@ -2080,8 +2080,13 @@ internal static class VisualChecks
                                          c.Right > outer.Left && c.Left < outer.Right &&
                                          c.Bottom > outer.Top && c.Top < outer.Bottom).ToList();
         if (ring.Count == 0) return new("none", 0, default, [], 0, 0, 0);
-        int left = ring.Min(c => c.Left), right = ring.Max(c => c.Right);
-        int top = ring.Min(c => c.Top), bottom = ring.Max(c => c.Bottom);
+        // The ring's own extent: the components clamped to the band. A raw component bbox
+        // lies here when the ring's ink connects to surrounding structure — a collapsed
+        // table's same-color borders all touch, so the #center ring's component spans the
+        // whole grid — and that oversized bbox both misread the truncation test below and
+        // skewed the side scan spans away from the ring's own bands.
+        int left = ring.Min(c => Math.Max(c.Left, outer.Left)), right = ring.Max(c => Math.Min(c.Right, outer.Right));
+        int top = ring.Min(c => Math.Max(c.Top, outer.Top)), bottom = ring.Max(c => Math.Min(c.Bottom, outer.Bottom));
         if (right - left < 8 || bottom - top < 8) return new(null, 0, default, [], 0, 0, ring.Count, false, "the ring is too small to scan");
         var pixels = bitmap.Pixels;
         var width = bitmap.Width;
@@ -2107,7 +2112,14 @@ internal static class VisualChecks
             var read = ReadSideScan(bitmap, background, horizontal, span);
             if (read.Unreadable) return new(null, 0, default, [], 0, 0, ring.Count, false, $"the {name} side's border band is not scannable");
             // A band that reaches the crop boundary is cut off by the viewport (full-width
-            // boxes' outlines do) — its style word is unreliable and is excluded.
+            // boxes' outlines do) — its style word is unreliable and is excluded. The bounding
+            // box compared against the crop is the RING's own extent — the components clamped
+            // to the ring band below — not a raw component bbox: a collapsed table's same-color
+            // borders all touch, so the center ring's components form one connected component
+            // spanning the whole grid whose bbox exceeds the crop even though the ring's ink
+            // sits well inside it (border-conflict-style-001), which excluded every side from
+            // the style vote and read the ring "unclassified". Rings genuinely cut by the
+            // viewport are reported by the `clipped` check above.
             var truncated = name switch
             {
                 "top" => top <= crop.Top + 1,
