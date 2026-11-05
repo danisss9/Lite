@@ -84,4 +84,49 @@ public static class DynamicTableTests
         foreach (var c in node.Children) { var f = Find(c, tag); if (f != null) return f; }
         return null;
     }
+
+    [Test]
+    public static void BorderColorMutation_ReresolvesCollapsedConflicts()
+    {
+        // border-collapse-dynamic-cell-002: onload sets t1.style.borderColor='yellow' on a
+        // cell of a collapsed table. The dynamic render must land exactly on the static
+        // equivalent (#t { border-color: yellow }) — every resolved edge identical, whatever
+        // the §17.6.2.1 tie rule yields per side.
+        var dynamic = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "td { border: 10px green solid; } table { margin: 0; border-collapse: collapse; }" +
+            "</style></head><body onload=\"document.getElementById('t').style.borderColor='yellow'\">" +
+            "<table><tr><td>c11</td></tr><tr><td style='border-width:11px' id='t'>c22</td></tr></table></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var staticPage = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "td { border: 10px green solid; } #t { border-width: 11px; border-color: yellow; } table { margin: 0; border-collapse: collapse; }" +
+            "</style></head><body>" +
+            "<table><tr><td>c11</td></tr><tr><td id='t'>c22</td></tr></table></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var t = Find(dynamic.Root, "TD", id: "t");
+        True(t != null, "target cell missing");
+        True(t!.StyleOverrides.ContainsKey("border-top-color"),
+            $"the shorthand mutation must expand into the longhands, got [{string.Join(", ", t.StyleOverrides.Keys)}]");
+        BoxEngine.Layout(dynamic.Root, 800, 600);
+        BoxEngine.Layout(staticPage.Root, 800, 600);
+        var tStatic = Find(staticPage.Root, "TD", id: "t")!;
+        True(tStatic.CollapsedEdgeBorders is { Count: > 0 }, "static equivalent resolved no edges");
+        foreach (var (side, border) in tStatic.CollapsedEdgeBorders!)
+        {
+            True(border.Color == new SkiaSharp.SKColor(255, 255, 0),
+                $"sanity: the static {side} edge should read yellow, got {border.Color}");
+            var dyn = t.CollapsedEdgeBorders!.GetValueOrDefault(side);
+            True(dyn.Color == border.Color && dyn.Width == border.Width && dyn.Style == border.Style,
+                $"the dynamically restyled {side} edge must match the static equivalent " +
+                $"({dyn.Color}/{dyn.Width}/{dyn.Style} vs {border.Color}/{border.Width}/{border.Style})");
+        }
+    }
+
+    private static LayoutNode? Find(LayoutNode node, string tag, string id)
+    {
+        if (node.TagName == tag && node.Id == id) return node;
+        foreach (var c in node.Children) { var f = Find(c, tag, id); if (f != null) return f; }
+        return null;
+    }
 }
