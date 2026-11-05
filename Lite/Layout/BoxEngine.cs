@@ -2540,6 +2540,16 @@ internal static class BoxEngine
                     maxBelow = item.Height - item.Ascent;
                     hasBaselineItem = true;
                 }
+                // HTML <br> with 'clear' (§9.5.2's forced-break form — the WPT floats-clear corpus
+                // and border-conflict-style-107's float rows): the line box the break terminates
+                // is positioned below the bottom edge of the floats it clears. CommitLine
+                // re-stamps every placed item from lineY and recomputes the band at the new top,
+                // so following floats (constrained not to sit higher than an earlier line box)
+                // start past them too. Line boxes carry no margins, so the straight max against
+                // the float bottoms is the whole rule.
+                var brClear = item.Node?.GetClear() ?? ClearType.None;
+                if (brClear != ClearType.None)
+                    lineY = Math.Max(lineY, ApplyClear(brClear, floats, originY + lineY) - originY);
                 // §9.4.2 exempts a line that ends with a forced break from the zero-height rule,
                 // so an empty <br> line still gets the strut.
                 lineEndsWithBreak = true;
