@@ -447,7 +447,10 @@ internal static class VisualChecks
         if (needle.Length == 0)
             return new(WptRunner.Cat.Unsupported, "Visual check: painted-text check names no needle", 0, 0);
         var assertion = Describe(check);
-        return painted.Contains(needle, StringComparison.Ordinal)
+        // The needle is the sentence's quoted literal, lowercased by the generator ("AZ" -> "az");
+        // the paint log carries the glyphs in their authored case. Case-word sentences ("a lowercase
+        // letter 'a.'") state the requirement in prose, not in the needle, so the fold is safe.
+        return painted.Contains(needle, StringComparison.OrdinalIgnoreCase)
             ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
             : new(WptRunner.Cat.Fail, $"{assertion}: the painted text does not contain '{needle}'", 1, 1,
                 [new(assertion, 1, $"painted: {Truncate(painted)}")], 0);

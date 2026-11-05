@@ -403,7 +403,7 @@ PAINTED_TEXT = re.compile(
     r'^there\s+is\s+a\s+lowercase\s+letter\s+[\'"]a\.[\'"]\s+below$'
     r'|^there\s+is\s+an\s+uppercase\s+letter\s+[\'"]a\.[\'"]\s+below$'
     r'|^there\s+is\s+a\s+number\s+["\']1\.[\'"]\s+below$'
-    r'|^the\s+letters\s+["\']([a-z]+)["\']\s+appear,\s+in\s+the\s+same\s+order,\s+in\s+the\s+box\s+below$'
+    r'|^the\s+letters\s+["\']([A-Za-z]+)["\']\s+appear,\s+in\s+the\s+same\s+order,\s+in\s+the\s+box\s+below$'
     r'|^there\s+is\s+a\s+bullet\s+\((.)\)\s+below$'
     r'|^there\s+is\s+a\s+bullet\s+\((.)\)\s+in\s+the\s+box\s+below$')
 PAINTED_ORDER = re.compile(r'^test\s+passes\s+if\s+characters\s+are\s+in\s+the\s+same\s+order\.?$')
@@ -545,6 +545,7 @@ def painted_check(clause: str) -> dict | None:
         needle = 'a.' if 'lowercase' in clause or 'uppercase' in clause else '1.'
         return {'kind': 'painted-text', 'needle': needle}
     return None
+
 
 
 def visual_check(sentence: str | None) -> dict | None:
