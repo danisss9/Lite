@@ -18,6 +18,15 @@ internal static class WptRefTestRunner
         var artifacts = new List<EvidenceArtifact>();
         var pending = new Stack<WptCase>();
         var visited = new HashSet<string>(StringComparer.Ordinal);
+        // A passing path may END at a node with no references (a leaf) or CLOSE a cycle: the
+        // block-in-inline-insert family's references chain in 2-cycles (nosplit-ref ↔ ref), so
+        // every edge comparison matches and the walk previously fell off the end into
+        // "No reference path passed" although all renders were identical. onPath holds the
+        // nodes whose references are being explored (a back-edge closes their cycle);
+        // allMatched holds nodes whose every comparison matched (a re-encounter replays a
+        // proven-equal chain).
+        var onPath = new HashSet<string>(StringComparer.Ordinal);
+        var allMatched = new HashSet<string>(StringComparer.Ordinal);
         var (scale, scaleNote) = WptVisualPage.DeviceScale(test.Options);
         pending.Push(test);
         try
@@ -25,6 +34,8 @@ internal static class WptRefTestRunner
             while (pending.TryPop(out var current))
             {
                 if (!visited.Add(current.Path)) continue;
+                onPath.Add(current.Path);
+                var anyMismatch = false;
                 foreach (var reference in current.References)
                 {
                     var relative = new Uri(new Uri("http://wpt.invalid/" + current.Path), reference.Url);
@@ -52,11 +63,14 @@ internal static class WptRefTestRunner
                         : "") + scaleNote + superseded;
                     if (reference.Relation == "==" ? equal : !equal)
                     {
-                        if (target is { References.Count: > 0 }) pending.Push(target);
-                        else return Result(true, "Reference graph has a passing path" + note);
+                        if (target is not { References.Count: > 0 } ||
+                            onPath.Contains(targetPath) || allMatched.Contains(targetPath))
+                            return Result(true, "Reference graph has a passing path" + note);
+                        pending.Push(target);
                     }
                     else
                     {
+                        anyMismatch = true;
                         var name = $"wpt-reference-{Path.GetFileNameWithoutExtension(test.Path)}-{Guid.NewGuid().ToString("N")[..8]}";
                         PixelDiff.WriteFailureArtifacts(name, right, left, tolerance: 0);
                         foreach (var suffix in new[] { "expected", "actual", "diff" })
@@ -66,6 +80,8 @@ internal static class WptRefTestRunner
                         }
                     }
                 }
+                if (!anyMismatch) allMatched.Add(current.Path);
+                onPath.Remove(current.Path);
             }
             return Result(false, "No reference path passed");
         }
