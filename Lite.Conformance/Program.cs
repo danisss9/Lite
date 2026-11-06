@@ -15,6 +15,8 @@ internal static class Program
         if (args.Length is 1 or 2 && args[0] == "--test262-worker") return Test262Runner.Worker(args.Length == 2 ? args[1] : null);
         if (args.Length == 4 && args[0] == "--wpt-worker")
             return WptRunner.Worker(args[1], args[2], args[3]);
+        if (args.Length == 2 && args[0] == "--wpt-worker-server")
+            return WptRunner.WorkerServer(args[1]);
         if (args.Length == 2 && args[0] == "--css21-tree-dump")
         {
             // Diagnostic: writes the canonical official-suite tree stream that the pinned
@@ -189,6 +191,8 @@ internal static class Program
         }
         finally
         {
+            // Take the persistent WPT worker down before the shared server it talks to stops.
+            WptRunner.StopWorker();
             ConformanceServer.Stop();
         }
     }

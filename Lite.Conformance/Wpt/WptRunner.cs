@@ -41,9 +41,10 @@ internal static class WptRunner
             var review = HtmlApplicability.FindReview(applicability["tests"]!.AsArray().OfType<System.Text.Json.Nodes.JsonObject>(), path,
                 CatalogCase(path)?.Source ?? path.Split(['?', '#'])[0]);
             if (evidence.HarnessStatus == 0 && review is not null && HtmlApplicability.HasPassingAssertions(evidence, review, null)) accepted++;
-            Console.WriteLine($"  {result.Cat.ToString().ToUpperInvariant(),-7} {path} ({result.Detail})");
+            Console.WriteLine($"  {result.Cat.ToString().ToUpperInvariant(),-7} {path} ({result.Detail}, {result.DurationMs} ms)");
         }
         ExecutionEvidence.Write(reportPath ?? DefaultReport("html5", shard), identity, started, outcomes);
+        PrintSlowest(outcomes);
         Console.WriteLine($"html5: {accepted}/{outcomes.Count} reviewed tests passed; this is not a profile-readiness claim.");
         return accepted == outcomes.Count ? 0 : 1;
     }
@@ -60,7 +61,7 @@ internal static class WptRunner
 
     internal readonly record struct RunResult(Cat Cat, string Detail, int Total, int Failures,
         IReadOnlyList<SubtestEvidence>? Subtests = null, int? HarnessStatus = null,
-        IReadOnlyList<EvidenceArtifact>? Artifacts = null)
+        IReadOnlyList<EvidenceArtifact>? Artifacts = null, long? DurationMs = null)
     {
         public bool Passed => Cat == Cat.Pass;
     }
@@ -90,6 +91,7 @@ internal static class WptRunner
         }
 
         ExecutionEvidence.Write(reportPath ?? DefaultReport("results", shard), identity, started, outcomes);
+        PrintSlowest(outcomes);
         return result.Report("wpt");
     }
 
@@ -198,7 +200,10 @@ internal static class WptRunner
                 case Cat.ManualPending: manualPending++; Console.WriteLine($"  MANUAL-PENDING {urlPath} — {r.Detail}"); break;
             }
             Console.Out.Flush();
-            if (outcomes.Count % 100 == 0) ExecutionEvidence.Write(destination, identity, started, outcomes);
+            // Checkpoints exist for crash recovery only: they skip the identity re-capture
+            // (a hash over every tracked repository file) and are recorded not-completed, so
+            // evidence reads keep rejecting them; the final write below does the real check.
+            if (outcomes.Count % 100 == 0) ExecutionEvidence.Write(destination, identity, started, outcomes, verifyIdentity: false);
         }
 
         int total = tests.Count;
@@ -287,8 +292,75 @@ internal static class WptRunner
         // and must fit the heaviest legitimate page: named-character-references carries
         // ~2,231 subtests and needs the better part of three minutes through the engine
         // (upstream browsers run it in well under a second — engine JS speed, not a spec
-        // obligation). One flat budget; re-tighten if engine perf closes the gap.
-        return RunIsolated(testPath, ConformanceServer.TestUrl(WptMetadata.UrlPath(testPath)), 300_000);
+        // obligation). Wpt\test-timeouts.txt lowers the budget for reviewed known-slow paths
+        // whose outcome is timeout under any budget (engine-perf queue findings); one default
+        // for everything else.
+        var budget = TimeoutBudgetFor(testPath);
+        var clock = Stopwatch.StartNew();
+        var result = Environment.GetEnvironmentVariable(IsolatedModeEnv) == "1"
+            ? RunIsolated(testPath, ConformanceServer.TestUrl(WptMetadata.UrlPath(testPath)), budget)
+            : RunBatched(testPath, budget);
+        return result with { DurationMs = clock.ElapsedMilliseconds };
+    }
+
+    private const int DefaultTestBudgetMs = 300_000;
+    private const string IsolatedModeEnv = "LITE_WPT_ISOLATED";
+
+    /// <summary>One test through the persistent worker. A worker-level failure (the process
+    /// died or hung) falls back to a fresh single-shot process, so crash and timeout verdicts
+    /// keep the attribution a per-test spawn gave them: captured stderr tails and the
+    /// exceeded-budget detail from an isolation the rest of the run never shared.</summary>
+    private static RunResult RunBatched(string testPath, int budgetMs)
+    {
+        _worker ??= new WorkerClient();
+        if (_worker.Run(testPath, ConformanceServer.TestUrl(WptMetadata.UrlPath(testPath)), budgetMs) is { } result) return result;
+        Console.Error.WriteLine($"[worker] recycled after failure on {testPath}");
+        return RunIsolated(testPath, ConformanceServer.TestUrl(WptMetadata.UrlPath(testPath)), budgetMs);
+    }
+
+    private static WorkerClient? _worker;
+    /// <summary>Takes down the persistent WPT worker, if one is running (called from the
+    /// harness entry point's finally, before the shared server stops).</summary>
+    internal static void StopWorker()
+    {
+        _worker?.Dispose();
+        _worker = null;
+    }
+
+    private static List<(string Prefix, int BudgetMs)>? _timeouts;
+
+    /// <summary>The kill budget for one test path: the longest matching prefix from
+    /// Wpt\test-timeouts.txt, else <see cref="DefaultTestBudgetMs"/>.</summary>
+    internal static int TimeoutBudgetFor(string path)
+    {
+        if (_timeouts is null) _timeouts = LoadTimeoutBudgets();
+        var best = 0;
+        var budget = DefaultTestBudgetMs;
+        foreach (var (prefix, ms) in _timeouts)
+            if (prefix.Length > best && path.StartsWith(prefix, StringComparison.Ordinal)) { best = prefix.Length; budget = ms; }
+        return budget;
+    }
+
+    /// <summary>Loads Wpt\test-timeouts.txt: reviewed per-path kill budgets for known-slow
+    /// executions whose outcome cannot change with more time — engine-perf queue findings
+    /// where the engine loops during load. Format: <c>path-prefix | budgetMs | reason</c>.
+    /// An entry must be removed once the tracked engine work lands, so a now-fast test is
+    /// never masked as a timeout by a stale budget.</summary>
+    private static List<(string Prefix, int BudgetMs)> LoadTimeoutBudgets()
+    {
+        var file = ConformancePaths.Manifest(Path.Combine("Wpt", "test-timeouts.txt"));
+        var budgets = new List<(string, int)>();
+        if (!File.Exists(file)) return budgets;
+        foreach (var raw in File.ReadAllLines(file))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0 || line.StartsWith('#')) continue;
+            var parts = line.Split('|');
+            if (parts.Length != 3 || !int.TryParse(parts[1].Trim(), out var budget) || budget is < 1000 or > DefaultTestBudgetMs)
+                throw new InvalidDataException($"Invalid test-timeouts.txt entry: {line}");
+            budgets.Add((parts[0].Trim(), budget));
+        }
+        return budgets;
     }
 
     private static readonly TimeSpan DrainGrace = TimeSpan.FromSeconds(30);
@@ -299,17 +371,20 @@ internal static class WptRunner
     private static string TailOrNote(Task<string> drain) =>
         drain.IsCompleted ? drain.Result : "<worker output pipe left open by a child process>";
 
+    /// <summary>A ProcessStartInfo for a Lite.Conformance worker entry point on the host
+    /// running THIS process (see Harness.WorkerHost).</summary>
+    private static ProcessStartInfo WorkerStart(string entryPoint, params string[] arguments)
+    {
+        var start = WorkerHost.Start(entryPoint, arguments);
+        start.RedirectStandardOutput = true;
+        start.RedirectStandardError = true;
+        return start;
+    }
+
     internal static RunResult RunIsolated(string path, string url, int timeoutMs)
     {
         var output = Path.Combine(ConformancePaths.EnsureArtifacts(), $"worker-{Guid.NewGuid():N}.json");
-        var start = new ProcessStartInfo("dotnet")
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-        foreach (var arg in new[] { typeof(WptRunner).Assembly.Location, "--wpt-worker", path, url, output }) start.ArgumentList.Add(arg);
+        var start = WorkerStart("--wpt-worker", path, url, output);
         try
         {
             using var process = Process.Start(start) ?? throw new IOException("Cannot start WPT worker.");
@@ -364,6 +439,47 @@ internal static class WptRunner
         // Workers reuse the parent's server and never run Start, so they must provision the
         // vendored test fonts (Ahem, CSSTest) themselves before rendering anything.
         ConformanceServer.EnsureTestFontsProvisioned();
+        File.WriteAllText(output, JsonSerializer.Serialize(ExecuteOne(path), ExecutionEvidence.JsonOptions));
+        return 0;
+    }
+
+    /// <summary>Persistent batch worker: one test per stdin request line, one RunResult JSON
+    /// line per reply (mirrors Test262Runner.Worker). Each request carries the test's own
+    /// URL so <c>SetWorkerBaseUrl</c> sees exactly what the single-shot worker saw, per test.
+    /// Console.Out is silenced so the reply stream stays parseable; engine diagnostics still
+    /// flow on stderr, and the parent drains that pipe for crash attribution.</summary>
+    internal static int WorkerServer(string url)
+    {
+        // Redirect BEFORE anything that can print: test-font provisioning (and anything else
+        // writing through Console) must not pollute the reply pipe the parent parses.
+        var output = Console.Out;
+        Console.SetOut(TextWriter.Null);
+        ConformanceServer.SetWorkerBaseUrl(url);
+        // Workers reuse the parent's server and never run Start, so they must provision the
+        // vendored test fonts (Ahem, CSSTest) themselves before rendering anything.
+        ConformanceServer.EnsureTestFontsProvisioned();
+        string? line;
+        while ((line = Console.ReadLine()) is not null)
+        {
+            RunResult result;
+            try
+            {
+                var request = JsonSerializer.Deserialize<Request>(line, Wire) ?? throw new InvalidDataException("Missing request");
+                ConformanceServer.SetWorkerBaseUrl(request.Url);
+                result = ExecuteOne(request.Path);
+            }
+            catch (Exception error) { result = new(Cat.Crash, $"Worker fault: {error.Message}", 0, 0); }
+            output.WriteLine(JsonSerializer.Serialize(result, Wire));
+            output.Flush();
+        }
+        return 0;
+    }
+
+    /// <summary>Executes one test in this process: missing-input gating followed by the
+    /// per-kind dispatch. Shared by the single-shot worker and the persistent batch worker,
+    /// so a test runs identically whichever isolation hosts it.</summary>
+    private static RunResult ExecuteOne(string path)
+    {
         var test = CatalogCase(path);
         // A page referencing a resource that never made it into the vendored tree cannot be
         // executed meaningfully; report it as an execution blocker instead of a failure.
@@ -376,14 +492,10 @@ internal static class WptRunner
                 { missingInput = $"{path} -> reference {reference.Url}"; break; }
             }
         if (missingInput is not null)
-        {
-            File.WriteAllText(output, JsonSerializer.Serialize(
-                new RunResult(Cat.Unsupported, $"Missing suite input: {missingInput}", 0, 0),
-                ExecutionEvidence.JsonOptions));
-            return 0;
-        }
-        // The parent owns the server. Child workers only need its address for reference URLs.
-        var result = test?.Kind switch
+            return new(Cat.Unsupported, $"Missing suite input: {missingInput}", 0, 0);
+        // The parent owns the server. Workers only need its address for reference URLs.
+        var url = ConformanceServer.TestUrl(WptMetadata.UrlPath(path));
+        return test?.Kind switch
         {
             "reftest" => WptRefTestRunner.Run(test, CatalogCase),
             "crashtest" => WptVisualPage.RunCrash(test),
@@ -397,8 +509,6 @@ internal static class WptRunner
             _ when NeedsInputBridge(test, path) => RunInProcess(url, testDriver: true),
             _ => RunInProcess(url),
         };
-        File.WriteAllText(output, JsonSerializer.Serialize(result, ExecutionEvidence.JsonOptions));
-        return 0;
     }
 
     private static RunResult RunInProcess(string url, bool testDriver = false)
@@ -568,19 +678,39 @@ internal static class WptRunner
         result.Cat.ToString().ToLowerInvariant(), result.Detail, result.Subtests ?? [], result.HarnessStatus,
         !path.StartsWith("lite/", StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LITE_WPT_BASE_URL"))
             ? "upstream-wpt" : "local", ConformanceServer.TestUrl(WptMetadata.UrlPath(path)),
-        WptCatalog.Context(path), CatalogCase(path)?.Kind ?? "testharness", result.Artifacts);
+        WptCatalog.Context(path), CatalogCase(path)?.Kind ?? "testharness", result.Artifacts)
+    { DurationMs = result.DurationMs };
 
-    private static (DateTime Modified, long Length, IReadOnlyList<WptCase> Tests)? _catalog;
-    private static IReadOnlyList<WptCase> Catalog()
+    /// <summary>Per-run wall-time tail: the ten slowest tests, so budget changes and engine
+    /// slowdowns surface without opening the evidence JSON.</summary>
+    internal static void PrintSlowest(IReadOnlyList<TestEvidence> outcomes)
+    {
+        foreach (var test in outcomes.Where(t => t.DurationMs is > 0).OrderByDescending(t => t.DurationMs).Take(10))
+            Console.WriteLine($"  slowest: {test.DurationMs} ms  {test.Path}");
+    }
+
+    private static (DateTime Modified, long Length, IReadOnlyList<WptCase> Tests, Dictionary<string, WptCase> Index)? _catalog;
+
+    private static (IReadOnlyList<WptCase> Tests, Dictionary<string, WptCase> Index) CatalogPair()
     {
         var file = new FileInfo(WptCatalog.ManifestPath);
-        if (!file.Exists) return [];
+        if (!file.Exists) return ([], new Dictionary<string, WptCase>(0, StringComparer.Ordinal));
         if (_catalog is not { } cached || cached.Modified != file.LastWriteTimeUtc || cached.Length != file.Length)
-            _catalog = (file.LastWriteTimeUtc, file.Length, WptCatalog.Read(file.FullName));
-        return _catalog.Value.Tests;
+        {
+            var tests = WptCatalog.Read(file.FullName);
+            // Path-keyed index for the per-test lookups: the catalog is ordered by path then
+            // kind, so first-wins reproduces the linear FirstOrDefault selection exactly.
+            var index = new Dictionary<string, WptCase>(tests.Count, StringComparer.Ordinal);
+            foreach (var candidate in tests)
+                if (!index.ContainsKey(candidate.Path)) index[candidate.Path] = candidate;
+            _catalog = (file.LastWriteTimeUtc, file.Length, tests, index);
+        }
+        return (_catalog.Value.Tests, _catalog.Value.Index);
     }
+
+    private static IReadOnlyList<WptCase> Catalog() => CatalogPair().Tests;
     internal static WptCase? CatalogCase(string path) => path.StartsWith("lite/", StringComparison.Ordinal) ? null :
-        Catalog().FirstOrDefault(c => c.Path == path) ?? OfficialCatalogCase(path);
+        CatalogPair().Index.TryGetValue(path, out var test) ? test : OfficialCatalogCase(path);
 
     private static WptCase? OfficialCatalogCase(string path) =>
         path.StartsWith(OfficialCatalog.UrlPrefix, StringComparison.Ordinal) &&
@@ -613,5 +743,74 @@ internal static class WptRunner
             result.Problems.Add($"{entry.Path}: {detail}");
             Console.WriteLine($"  FAIL  {entry.Path}: {detail}");
         }
+    }
+
+    internal sealed record Request(string Path, string Url);
+    private static readonly JsonSerializerOptions Wire = new() { PropertyNameCaseInsensitive = true };
+
+    /// <summary>Persistent worker process over a stdin/stdout line protocol — the WPT
+    /// counterpart of Test262's WorkerClient. One <see cref="RunResult"/> JSON line per
+    /// request; recycled after a bounded number of tests so per-page engine allocations
+    /// cannot accumulate, and killed (entire tree) on hang. A null result means the worker
+    /// died or hung: the caller owes the test a fresh-process re-run.</summary>
+    private sealed class WorkerClient : IDisposable
+    {
+        private const int RecycleAfterTests = 200;
+        private Process? _process;
+        private Task<string>? _stderr;
+        private int _count;
+
+        internal RunResult? Run(string path, string url, int timeoutMs)
+        {
+            var deadline = DateTime.UtcNow + TimeSpan.FromMilliseconds(timeoutMs);
+            try
+            {
+                if (_process is null || _process.HasExited || _count >= RecycleAfterTests) Start();
+                _count++;
+                _process!.StandardInput.WriteLine(JsonSerializer.Serialize(new Request(path, url), Wire));
+                _process.StandardInput.Flush();
+                while (true)
+                {
+                    var line = _process.StandardOutput.ReadLineAsync();
+                    var remaining = deadline - DateTime.UtcNow;
+                    if (remaining <= TimeSpan.Zero || !line.Wait((int)Math.Max(1, remaining.TotalMilliseconds)))
+                    { Stop(); return null; }
+                    if (line.Result is null)
+                    {
+                        _process.WaitForExit(1000);
+                        var detail = _stderr?.IsCompleted == true ? _stderr.Result : "Worker exited without an outcome";
+                        Console.Error.WriteLine(detail.Length > 4000 ? detail[..4000] : detail);
+                        Stop(); return null;
+                    }
+                    // Stray Console noise on the reply pipe (diagnostics from worker startup
+                    // paths) is skipped rather than recycled: only a JSON object is a reply.
+                    if (!line.Result.TrimStart().StartsWith('{'))
+                    {
+                        Console.Error.WriteLine($"wpt-worker: skipped non-reply output: {line.Result}");
+                        continue;
+                    }
+                    return JsonSerializer.Deserialize<RunResult>(line.Result, Wire);
+                }
+            }
+            catch (Exception ex) { Console.Error.WriteLine($"wpt-worker: {ex.Message}"); Stop(); return null; }
+        }
+
+        private void Start()
+        {
+            Stop();
+            var start = WorkerStart("--wpt-worker-server", ConformanceServer.BaseUrl);
+            start.RedirectStandardInput = true;
+            _process = Process.Start(start) ?? throw new IOException("Cannot start WPT worker");
+            _stderr = _process.StandardError.ReadToEndAsync(); _count = 0;
+        }
+
+        private void Stop()
+        {
+            if (_process is null) return;
+            if (!_process.HasExited) { _process.Kill(entireProcessTree: true); _process.WaitForExit(5000); }
+            _process.Dispose(); _process = null;
+        }
+
+        public void Dispose() => Stop();
     }
 }

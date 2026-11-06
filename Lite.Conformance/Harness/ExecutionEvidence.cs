@@ -23,7 +23,8 @@ internal sealed record CssEvidence(string Media, string DocumentMode, string Inv
 internal sealed record TestEvidence(string Suite, string Path, string Outcome, string Detail,
     IReadOnlyList<SubtestEvidence> Subtests, int? HarnessStatus = null, string Environment = "local", string? Url = null,
     string Context = "window", string Kind = "testharness", IReadOnlyList<EvidenceArtifact>? Artifacts = null,
-    ManualEvidence? Manual = null, JavaScriptEvidence? JavaScript = null, CssEvidence? Css = null);
+    ManualEvidence? Manual = null, JavaScriptEvidence? JavaScript = null, CssEvidence? Css = null,
+    long? DurationMs = null);
 internal sealed record EvidenceReport(int FormatVersion, EvidenceIdentity Identity,
     string StartedUtc, string FinishedUtc, bool Completed, IReadOnlyList<TestEvidence> Tests);
 
@@ -118,13 +119,15 @@ internal static class ExecutionEvidence
     }
 
     internal static void Write(string path, EvidenceIdentity identity, DateTime started,
-        IReadOnlyList<TestEvidence> tests)
+        IReadOnlyList<TestEvidence> tests, bool verifyIdentity = true)
     {
         var fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        // Changing sources during a run must not produce reusable evidence.
+        // Changing sources during a run must not produce reusable evidence. Checkpoint
+        // writes pass verifyIdentity: false — they skip the repository re-hash and are
+        // recorded not-completed, so only the final (verifying) write is ever readable.
         bool completed;
-        try { completed = identity == CaptureIdentity(); }
+        try { completed = verifyIdentity && identity == CaptureIdentity(); }
         catch (IOException) { completed = false; }
         var report = new EvidenceReport(FormatVersion, identity, started.ToUniversalTime().ToString("O"),
             DateTime.UtcNow.ToString("O"), completed, tests);
@@ -170,6 +173,8 @@ internal static class ExecutionEvidence
                          css.ShardCount <= 0 || css.ShardIndex < 0 || css.ShardIndex >= css.ShardCount ||
                          css.InventorySha256.Length != 64))
                         throw new InvalidDataException("CSS evidence needs media, document mode, inventory identity, geometry and shard identity.");
+                    if (test.DurationMs is < 0)
+                        throw new InvalidDataException("Invalid execution duration.");
                     if (string.IsNullOrWhiteSpace(test.Context) || string.IsNullOrWhiteSpace(test.Kind))
                         throw new InvalidDataException("Missing execution context or test kind.");
                     foreach (var artifact in test.Artifacts ?? [])

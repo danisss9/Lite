@@ -1,0 +1,8 @@
+# Reviewed per-path kill budgets, longest prefix wins: <path-prefix> | <budgetMs> | <reason>
+#
+# Entries exist for executions known to loop the engine (engine-perf queue findings, not
+# regressions): their outcome is timeout under any budget, so the default 300,000 ms is
+# pure burnout. Remove an entry the moment the tracked engine work lands — a stale budget
+# would mask a now-passing test as a timeout.
+
+dom/nodes/NodeList-static-length-getter-tampered | 15000 | engine-perf queue: tampered length getter loops the engine during page load; never completes under any budget

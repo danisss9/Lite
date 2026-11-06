@@ -90,13 +90,15 @@ internal static class Css21FullRunner
             outcomes.Add(new(test.Suite, test.Path, result.Cat.ToString().ToLowerInvariant(), result.Detail,
                 result.Subtests ?? [], result.HarnessStatus, environment, ConformanceServer.TestUrl(test.Path),
                 test.Context, test.Kind, result.Artifacts, Css: new(media, test.Xhtml ? "xhtml" : "html", inventoryHash,
-                test.ViewportWidth, test.ViewportHeight, shard.Index, shard.Count, filter)));
+                test.ViewportWidth, test.ViewportHeight, shard.Index, shard.Count, filter))
+            { DurationMs = result.DurationMs });
             Console.WriteLine($"  {result.Cat.ToString().ToUpperInvariant(),-11} [{media}] {test.Path} ({result.Detail})");
         }
         var suffix = catalog is null or "all" ? "" : "-" + catalog;
         var destination = reportPath ?? Path.Combine(ConformancePaths.EnsureArtifacts(),
             $"css21-full-{media}{suffix}-{shard.Index}-of-{shard.Count}.json");
         ExecutionEvidence.Write(destination, identity, started, outcomes);
+        WptRunner.PrintSlowest(outcomes);
         foreach (var group in outcomes.GroupBy(t => t.Suite).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             var passed = group.Count(t => t.Outcome == "pass");

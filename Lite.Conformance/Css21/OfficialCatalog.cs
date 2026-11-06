@@ -129,7 +129,25 @@ internal static class OfficialCatalog
         counts.OptionalTests <= counts.ExpectedTotalTests - counts.ExpectedRequiredBehaviorTests &&
         counts.TotalTests + counts.UnavailableTests == counts.ExpectedTotalTests;
 
-    internal static OfficialCase? Case(string path) => CachedRead()?.Cases.FirstOrDefault(c => c.Path == path);
+    internal static OfficialCase? Case(string path)
+    {
+        if (CachedRead()?.Cases is not { } cases) return null;
+        var index = _caseIndex ??= BuildCaseIndex(cases);
+        return index.TryGetValue(path, out var found) ? found : null;
+    }
+
+    /// <summary>Path-keyed index over the cached cases: the array is sorted by path, so
+    /// first-wins reproduces the linear FirstOrDefault selection exactly, without the
+    /// per-case scan over ~9k entries.</summary>
+    private static Dictionary<string, OfficialCase>? _caseIndex;
+
+    private static Dictionary<string, OfficialCase> BuildCaseIndex(OfficialCase[] cases)
+    {
+        var index = new Dictionary<string, OfficialCase>(cases.Length, StringComparer.Ordinal);
+        foreach (var candidate in cases)
+            if (!index.ContainsKey(candidate.Path)) index[candidate.Path] = candidate;
+        return index;
+    }
 
     /// <summary>Cheap memoized catalog read for per-case lookups: keyed on the catalog
     /// file's stamp and the suite-lock hash, so a rebuild invalidates it without ever
@@ -146,6 +164,8 @@ internal static class OfficialCatalog
         if (_cache is not null && _cacheStamp == (info.Exists ? info.LastWriteTimeUtc : DateTime.MinValue) &&
             _cacheLength == (info.Exists ? info.Length : -1) && _cacheLockSha == lockSha256) return _cache;
         _cache = TryRead() is { } read ? (read.Cases, read.Counts) : null;
+        // The case index derives from the cached cases; drop it with them.
+        _caseIndex = null;
         _cacheStamp = info.Exists ? info.LastWriteTimeUtc : DateTime.MinValue;
         _cacheLength = info.Exists ? info.Length : -1;
         _cacheLockSha = lockSha256;

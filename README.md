@@ -158,6 +158,8 @@ dotnet run --project Lite.Conformance -c Release -- --suite test262
 dotnet run --project Lite.Conformance -c Release -- --suite acid
 ```
 
+The WPT/HTML/CSS suites execute through one persistent worker process per run (recycled every 200 tests), so wall time tracks engine work rather than per-test process startup. Set `LITE_WPT_ISOLATED=1` to fall back to the per-test fresh process (used for crash attribution comparisons). `--shard i/N` splits a suite across concurrent processes; `scripts/run-css21-baseline.ps1` sizes its shard count to the machine by default, and `python scripts/run-es2020.py` already runs the JS suite in eight shards. Known-slow pages whose outcome is timeout under any budget get reviewed reduced kill budgets in `Lite.Conformance/Wpt/test-timeouts.txt`.
+
 Lite targets the [HTML 5.0 Recommendation of 28 October 2014](https://www.w3.org/TR/2014/REC-html5-20141028/), alongside the separate CSS 2.1 and ES2020 workstreams. The [active profile](Lite.Conformance/Profile/lite-html5-css21-es2020-profile.json) publishes its exclusions and incomplete coverage. Historical HTML 5.2 contracts remain in `Lite.Conformance/Profile/history/`.
 
 Curated green tests protect existing behavior; they do not establish complete standards conformance. `--suite html5` runs the small set of reviewed assertions. `html5ProfileReady` remains false until all applicable requirements and required dependencies have current passing evidence. See [HTML 5.0 implementation and evidence](docs/html5-conformance.md) for the remaining work, upstream WPT serving, and report commands.

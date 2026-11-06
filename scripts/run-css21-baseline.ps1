@@ -6,12 +6,15 @@
 # aggregator merges them, refusing to report if identities differ or runs are incomplete.
 
 param(
-    [int]$ShardCount = 4,
+    [int]$ShardCount = 0,
     [string]$Media = 'screen'
 )
 
 $ErrorActionPreference = 'Stop'
-if ($ShardCount -lt 1 -or $ShardCount -gt 16) { throw 'ShardCount must be 1..16.' }
+# 0 asks for the adaptive default: cores minus headroom for the shared server and OS,
+# clamped to the reviewed 1..16 range. An explicit value must still be within range.
+if ($ShardCount -eq 0) { $ShardCount = [Math]::Min(16, [Math]::Max(4, [Environment]::ProcessorCount - 2)) }
+if ($ShardCount -lt 1 -or $ShardCount -gt 16) { throw 'ShardCount must be 0 (adaptive default) or 1..16.' }
 $repo = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repo 'Lite.Conformance\Lite.Conformance.csproj'
 $artifacts = Join-Path $repo 'Lite.Conformance\artifacts'

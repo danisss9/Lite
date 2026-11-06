@@ -153,10 +153,13 @@ internal static class Test262Runner
         private void Start()
         {
             Stop();
-            var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, CreateNoWindow = true,
-                RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
-            start.ArgumentList.Add(typeof(Test262Runner).Assembly.Location);
-            start.ArgumentList.Add("--test262-worker");
+            // Spawn through the host running THIS process rather than a bare "dotnet": on a
+            // machine with several dotnet installs the PATH may resolve to an older runtime
+            // that cannot load the harness (measured: every execution then reports a crash).
+            var start = WorkerHost.Start("--test262-worker");
+            start.RedirectStandardInput = true;
+            start.RedirectStandardOutput = true;
+            start.RedirectStandardError = true;
             if (root is not null) start.ArgumentList.Add(root);
             _process = Process.Start(start) ?? throw new IOException("Cannot start Test262 worker");
             _stderr = _process.StandardError.ReadToEndAsync(); _count = 0;
