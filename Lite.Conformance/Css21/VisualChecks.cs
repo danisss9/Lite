@@ -2374,6 +2374,26 @@ internal static class VisualChecks
             c.Right > region.Left && c.Left < region.Right && c.Bottom > region.Top && c.Top < region.Bottom).ToList();
     }
 
+    /// <summary>Ink over the union of several elements' border boxes (the text-run read:
+    /// a word split across pseudo elements paints in each pseudo's own box).</summary>
+    private static List<Component> ElementInk(SKBitmap bitmap, IReadOnlyList<LayoutNode> nodes, int inflate, out SKRectI box)
+    {
+        box = default;
+        var first = true;
+        foreach (var n in nodes)
+        {
+            var border = n.Box.BorderBox;
+            var piece = SKRectI.Round(new SKRect(border.Left - inflate, border.Top - inflate,
+                                                 border.Right + inflate, border.Bottom + inflate));
+            box = first ? piece : SKRectI.Union(box, piece);
+            first = false;
+        }
+        box.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+        var region = box;
+        return Components(bitmap, box, out _).Where(c =>
+            c.Right > region.Left && c.Left < region.Right && c.Bottom > region.Top && c.Top < region.Bottom).ToList();
+    }
+
     private static WptRunner.RunResult TextColor(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string sentence)
     {
         // "this line should be <color>" states the condition on the instruction paragraph
@@ -3168,10 +3188,22 @@ internal static class VisualChecks
     {
         var assertion = Describe(check);
         var node = FindNodeByText(root, top, check.Needle!);
+        List<LayoutNode>? run = null;
         if (node is null)
-            return new(WptRunner.Cat.Fail, $"{assertion}: no element renders '{check.Needle}'", 1, 1,
-                [new(assertion, 1, "text not in the layout tree")], 0);
-        var ink = ElementInk(bitmap, node, 1, out var box);
+        {
+            // Generated content splits a word across :before/:after pseudo elements — the
+            // quotes family paints "PASS" as open/close-quote pairs producing "PA" | "SS"
+            // on two nodes, and the alphabet families split their string the same way — so
+            // no single element renders the needle. A run of consecutive text elements on
+            // one line whose concatenated text contains it is the same rendering.
+            run = FindTextRunByText(root, top, check.Needle!);
+            if (run is null)
+                return new(WptRunner.Cat.Fail, $"{assertion}: no element renders '{check.Needle}'", 1, 1,
+                    [new(assertion, 1, "text not in the layout tree")], 0);
+        }
+        var ink = run is null
+            ? ElementInk(bitmap, node!, 1, out var box)
+            : ElementInk(bitmap, run, 1, out box);
         if (ink.Count == 0)
             return new(WptRunner.Cat.Fail, $"{assertion}: the words painted no ink", 1, 1, [new(assertion, 1, "no ink")], 0);
         if (check.Bullet == "right")
@@ -3184,6 +3216,45 @@ internal static class VisualChecks
                     [new(assertion, 1, "no bullet")], 0);
         }
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>A run of consecutive text elements whose concatenated text contains the
+    /// needle (case-folded — the generator lowercases quoted needles while the tree carries
+    /// authored case). Consecutive members must overlap vertically so cross-line
+    /// concatenation cannot fabricate a match; document order is the paint order for the
+    /// pseudo-element splits this read exists for. Null when no run renders the needle.</summary>
+    private static List<LayoutNode>? FindTextRunByText(LayoutNode root, int top, string needle)
+    {
+        var texts = new List<LayoutNode>();
+        void Walk(LayoutNode node)
+        {
+            // Generated content lives on pseudo-element nodes named "#pseudo-before"/"#pseudo-after"
+            // — the '#' prefix otherwise marks text/fragment nodes, so admit the pseudo names.
+            var pseudo = node.TagName.StartsWith("#pseudo", StringComparison.Ordinal);
+            if ((!node.TagName.StartsWith('#') || pseudo) && node.Box.BorderBox.Top >= top &&
+                Normalize(Text(node)).Length > 0)
+                texts.Add(node);
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        for (var width = 2; width <= texts.Count; width++)
+        {
+            for (var start = 0; start + width <= texts.Count; start++)
+            {
+                var window = texts.GetRange(start, width);
+                var joined = string.Concat(window.Select(n => Normalize(Text(n))));
+                if (!joined.Contains(needle, StringComparison.OrdinalIgnoreCase)) continue;
+                var sameLine = true;
+                for (var k = 1; k < window.Count; k++)
+                {
+                    var a = window[k - 1].Box.BorderBox;
+                    var b = window[k].Box.BorderBox;
+                    if (b.Top >= a.Bottom || a.Top >= b.Bottom) { sameLine = false; break; }
+                }
+                if (sameLine) return window;
+            }
+        }
+        return null;
     }
 
     /// <summary>The stated words render as glyphs (not one solid Ahem block) and a box of the

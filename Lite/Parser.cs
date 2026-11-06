@@ -1812,10 +1812,17 @@ internal static class Parser
             finally { (node.CounterValues, node.CounterStacks) = (values, stacks); }
         }
 
+        // The has-content pre-check runs at each pseudo's OWN quote depth with the element's
+        // own quote pairs — a depth-0 evaluation drops a :after made purely of close-quote
+        // keywords (they emit nothing un-nested), though at its real depth (after :before's
+        // opens) the same content renders the closing text (the quotes family's "PASS" =
+        // "PA" | "SS" from open-quote/close-quote pairs).
         bool hasBefore = node.BeforeStyles != null && node.BeforeStyles.TryGetValue("content", out var beforeContent)
-                         && ParseContentValue(beforeContent!, node) != null;
+                         && ParseContentValue(beforeContent!, node,
+                             new QuoteState(QuotePairs(node, node.BeforeStyles!), beforeQuoteDepth)) != null;
         bool hasAfter = node.AfterStyles != null && node.AfterStyles.TryGetValue("content", out var afterContent)
-                        && ParseContentValue(afterContent!, node) != null;
+                        && ParseContentValue(afterContent!, node,
+                            new QuoteState(QuotePairs(node, node.AfterStyles!), afterQuoteDepth)) != null;
 
         if (!hasBefore && !hasAfter) return;
 
