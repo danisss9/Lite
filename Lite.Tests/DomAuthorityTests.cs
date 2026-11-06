@@ -91,13 +91,15 @@ public static class DomAuthorityTests
             out.push(c['4294967295'] === document.getElementById('4294967295'));
             out.push(c.namedItem('4294967293') === document.getElementById('4294967293'));
             out.push(c.namedItem(-2) === null);
-            out.push(c.item(4294967296) === document.getElementById('4294967293'));
-            out.push(c.item(4294967297) === document.getElementById('4294967295'));
+            var probe = c.item(4294967296);
+            out.push(probe === null || probe === undefined ? 'null' : probe.id);
+            var probe2 = c.item(4294967297);
+            out.push(probe2 === null || probe2 === undefined ? 'null' : probe2.id);
             out.push(c.item(-2) === null);
             globalThis.out = out.join('|');
             """);
         // item() takes an unsigned long: ToUint32 wraps 2^32 back to index 0 and -2 to 2^32-2.
-        Equal("true|true|true|true|true|true|true|true", Eval(engine, "out"));
+        Equal("true|true|true|true|true|4294967293|4294967295|true", Eval(engine, "out"));
     }
 
     [Test]

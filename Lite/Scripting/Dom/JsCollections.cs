@@ -2,6 +2,19 @@ using Lite.Scripting.Runtime;
 
 namespace Lite.Scripting.Dom;
 
+/// <summary>WebIDL numeric conversion for collection index operations: ToUint32 wraps
+/// (item(4294967296) reads index 0, item(-2) reads 2^32-2 — beyond any real length), so the
+/// conversion must happen before the value narrows to a signed int.</summary>
+internal static class DomCollections
+{
+    internal static uint ToUint32(double value)
+    {
+        if (!double.IsFinite(value)) return 0;
+        var u = (value % 4294967296.0 + 4294967296.0) % 4294967296.0;
+        return (uint)u;
+    }
+}
+
 /// <summary>A DOM NodeList. The supplier is evaluated on access for live lists; callers
 /// can pass a captured array for static query and mutation-record lists.</summary>
 public class JsNodeList(Func<IReadOnlyList<JsElement>> items)
@@ -9,7 +22,13 @@ public class JsNodeList(Func<IReadOnlyList<JsElement>> items)
     internal IReadOnlyList<JsElement> Snapshot() => items();
     public int length => items().Count;
     public JsElement? this[int index] => index >= 0 && index < items().Count ? items()[index] : null;
-    public JsElement? item(int index) => this[index];
+
+    public JsElement? item(double index)
+    {
+        var u = DomCollections.ToUint32(index);
+        var list = items();
+        return u < (uint)list.Count ? list[(int)u] : null;
+    }
 
     public void forEach(JsValue callback, JsValue? thisArg = null)
     {
@@ -55,7 +74,15 @@ public class JsHtmlCollection(Func<IReadOnlyList<JsElement>> items) : IJsNamedCo
 
     public int length => items().Count;
     public JsElement? this[int index] => index >= 0 && index < items().Count ? items()[index] : null;
-    public JsElement? item(int index) => this[index];
+
+    // The unsigned long wrap lives on DomCollections.ToUint32 — an int overload here would
+    // shadow it and narrow 2^32 to a negative index before the wrap could run.
+    public JsElement? item(double index)
+    {
+        var u = DomCollections.ToUint32(index);
+        var list = items();
+        return u < (uint)list.Count ? list[(int)u] : null;
+    }
 
     public JsElement? namedItem(string name) => Named(name) as JsElement;
 
