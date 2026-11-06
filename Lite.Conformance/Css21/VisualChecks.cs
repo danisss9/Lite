@@ -1242,7 +1242,7 @@ internal static class VisualChecks
                 "line-style" => LineStyle(check, shapes),
                 "look-same" => bitmap is null ? "no render" : LookSame(shapes, bitmap, check.Approx ? 3 * PixelTolerance : PixelTolerance),
                 "solid-line" => SolidLine(check, shapes),
-                "border-ring" => BorderRing(check, shapes),
+                "border-ring" => BorderRing(check, shapes, bitmap),
                 "shape-relation" => ShapeRelation(check, shapes, nested, bitmap),
                 "space-between" => bitmap is null ? "no render" : SpaceBetween(check, shapes, bitmap),
                 "stack-three" => StackThree(check, shapes),
@@ -1509,7 +1509,7 @@ internal static class VisualChecks
     /// <summary>Every top-level shape lies on the perimeter of one rectangle; all four sides
     /// covered; interior segments shaped per the stated style. A stated <c>Count</c> of two
     /// splits the segments into two vertically stacked rings and checks each.</summary>
-    private static string? BorderRing(VisualCheck check, IReadOnlyList<Component> shapes)
+    private static string? BorderRing(VisualCheck check, IReadOnlyList<Component> shapes, SKBitmap? bitmap = null)
     {
         if (check.Count == 2)
         {
@@ -1523,17 +1523,31 @@ internal static class VisualChecks
             }
             if (widest < 4 || split == 0 || split == ordered.Count)
                 return "the two boxes' segments do not split into two rings";
-            var first = RingFailures(check, ordered.Take(split).ToList());
+            var first = RingFailures(check, ordered.Take(split).ToList(), bitmap);
             if (first is not null) return $"first box: {first}";
-            var second = RingFailures(check, ordered.Skip(split).ToList());
+            var second = RingFailures(check, ordered.Skip(split).ToList(), bitmap);
             return second is null ? null : $"second box: {second}";
         }
-        return RingFailures(check, shapes.ToList());
+        return RingFailures(check, shapes.ToList(), bitmap);
     }
 
-    private static string? RingFailures(VisualCheck check, List<Component> shapes)
+    private static string? RingFailures(VisualCheck check, List<Component> shapes, SKBitmap? bitmap = null)
     {
-        if (shapes.Count < 4) return $"only {shapes.Count} segments below the instructions (a boxed border has at least 4)";
+        if (shapes.Count < 4)
+        {
+            // A SOLID uniform-color ring connects at its corners into ONE ink component —
+            // the segmentation is correct, not the render: demanding 4+ segments rejected
+            // every honestly-painted solid ring (border-width-applies-to-001..014's "a box
+            // with four sides that are the same width"). Dashed/dotted rings DO fragment,
+            // so they keep the segment rule. With the bitmap, the connected ring is read
+            // by scanline: the components' union extent is the ring's own outer extent
+            // (the same "ring's own extent" principle as the sample judge), and each
+            // side's thickness is the ink run inward from that edge at the midpoint —
+            // midpoints avoid the corner joins.
+            if (bitmap is null || check.Shape is "dashed" or "dotted")
+                return $"only {shapes.Count} segments below the instructions (a boxed border has at least 4)";
+            return ConnectedRingFailures(check, shapes, bitmap);
+        }
         int top = shapes.Min(s => s.Top), bottom = shapes.Max(s => s.Bottom);
         int left = shapes.Min(s => s.Left), right = shapes.Max(s => s.Right);
         foreach (var s in shapes)
@@ -1557,6 +1571,63 @@ internal static class VisualChecks
             var failure = SideStyle(check, segments, alongHorizontal: side is "top" or "bottom");
             if (failure is not null) return $"{side} side: {failure}";
         }
+        return null;
+    }
+
+    /// <summary>The connected-ring read: a solid uniform ring paints as one (or few) ink
+    /// components whose union is the ring's outer extent. Each side's thickness is the ink
+    /// run inward from that edge scanned at the extent's midpoint (corners join, midpoints
+    /// do not), against the crop's own background. The sentence "four sides that are the
+    /// same width" reads as four PRESENT sides of equal thickness; the stated color must
+    /// dominate every component as the segmented path requires.</summary>
+    private static string? ConnectedRingFailures(VisualCheck check, List<Component> shapes, SKBitmap bitmap)
+    {
+        int left = shapes.Min(s => s.Left), right = shapes.Max(s => s.Right);
+        int top = shapes.Min(s => s.Top), bottom = shapes.Max(s => s.Bottom);
+        if (right - left < 8 || bottom - top < 8) return "the ring is too small to scan";
+        var crop = new SKRectI(left, top, right + 1, bottom + 1);
+        crop.Intersect(new SKRectI(1, 1, bitmap.Width - 2, bitmap.Height - 2));
+        // The ink/background reference is the ring's HOLE, not a crop majority: a thick
+        // ring's own ink dominates its bounding box, so a majority read inverts (the ring
+        // reads as background, its interior as ink — every side then scans as zero). The
+        // extent's center sits in the hole for any ring; for a wrongly filled box it sits
+        // on ink and every side honestly reads zero.
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        var midX = Math.Min((left + right) / 2, bitmap.Width - 1);
+        var midY = Math.Min((top + bottom) / 2, bitmap.Height - 1);
+        var hole = pixels[midY * width + midX];
+        bool Inked(int x, int y) => Distance(pixels[y * width + x], hole) > InkThreshold;
+        int RunIn(int from, int to, int at, bool vertical)
+        {
+            var step = to >= from ? 1 : -1;
+            var count = 0;
+            for (var p = from; step > 0 ? p <= to : p >= to; p += step)
+            {
+                if (!vertical && !Inked(p, at)) break;
+                if (vertical && !Inked(at, p)) break;
+                count++;
+            }
+            return count;
+        }
+        var thicknesses = new (string Side, int Thickness)[]
+        {
+            ("top", RunIn(Math.Max(top, 1), bottom, midX, vertical: true)),
+            // Right/Bottom are EXCLUSIVE bounds (the ink's last row/column is one inside),
+            // so the bottom/right scans start there; the segmented path's bboxes match.
+            ("bottom", RunIn(Math.Min(bottom - 1, bitmap.Height - 2), top, midX, vertical: true)),
+            ("left", RunIn(Math.Max(left, 1), right, midY, vertical: false)),
+            ("right", RunIn(Math.Min(right - 1, bitmap.Width - 2), left, midY, vertical: false)),
+        };
+        foreach (var (side, thickness) in thicknesses)
+            if (thickness == 0) return $"the {side} side of the box has no border";
+        foreach (var shape in shapes)
+            if (check.Color is { } want && !Matches(want, shape.Color))
+                return $"segment color {shape.Color}, not {want}";
+        var max = thicknesses.Max(t => t.Thickness);
+        var min = thicknesses.Min(t => t.Thickness);
+        if (max - min > EdgeTolerance)
+            return "side widths " + string.Join(", ", thicknesses.Select(t => $"{t.Side}={t.Thickness}"));
         return null;
     }
 
