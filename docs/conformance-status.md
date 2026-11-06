@@ -81,6 +81,25 @@ the baseline, with per-case guards showing zero regressions. The details are in 
 two 5 November checkpoints in the CSS plan; the mid-campaign baseline re-ranks and
 banks all of it.
 
+Campaign update, 6 November (mid-campaign validating baseline at `8e433cab`):
+**official 7,084/9,039 (78.4%), WPT `css/CSS2` 6,416/8,904 (72.1%): combined
+13,500 — −114 net against the 13,614 start count**, with crashes 4 → 0 and
+1,216 manual-pending verdicts now recorded inside runs (the HTML5 track's M3
+static-review routing activating). The decline is fully attributed: the
+campaign's five engine/harness batches banked ~+100 verified conversions
+(reference-graph cycles +35 in block-in-inline-insert, the userstyle sheet
+route +10, the quotes case-fold +2, the tables dynamic conversions +6, the
+cleared-br ripple +7, the honest crash-route verdicts), and one cross-track
+regression took ~−215 gross — the HTML5 track's "initial-parse comment
+projection" (`6281ee0d`) renders HTML comments as text, and the official
+suite is comment-dense (quotes-035's author comment paints over the page;
+separated-border-model-007/008/009 the same shape). The owning track's
+Parser/BoxEngine fixes were in flight while this baseline ran. The CSS plan's
+6 November checkpoint carries the details and the re-ranked queue (tables
+163, normal-flow 110 — the insert family's bank visible — generated-content
+96, text 92, borders 86; the tables/character-encoding/quotes inflation is
+the comment regression, not new engine findings).
+
 Snapshot updated 5 November 2026 (second pass): **Milestone 1 of the HTML 5.0 track
 closes — the applicability inventory is complete and `inventoryComplete` flips true
 under the runner's guarded omission check.** The 4,641 unclassified catalog sources
