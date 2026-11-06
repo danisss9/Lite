@@ -91,9 +91,13 @@ public static class DomAuthorityTests
             out.push(c['4294967295'] === document.getElementById('4294967295'));
             out.push(c.namedItem('4294967293') === document.getElementById('4294967293'));
             out.push(c.namedItem(-2) === null);
+            out.push(c.item(4294967296) === document.getElementById('4294967293'));
+            out.push(c.item(4294967297) === document.getElementById('4294967295'));
+            out.push(c.item(-2) === null);
             globalThis.out = out.join('|');
             """);
-        Equal("true|true|true|true|true", Eval(engine, "out"));
+        // item() takes an unsigned long: ToUint32 wraps 2^32 back to index 0 and -2 to 2^32-2.
+        Equal("true|true|true|true|true|true|true|true", Eval(engine, "out"));
     }
 
     [Test]

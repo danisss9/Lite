@@ -1622,12 +1622,15 @@ internal static class Parser
                     // Comments never render but must stay in the projected tree on the first
                     // pass too — script's childNodes must see them after a plain parse, and the
                     // CharacterData anchors resolve through the wrapper's bound node. The
-                    // re-projection path (ProjectChildren) carries the same shape.
+                    // re-projection path (ProjectChildren) carries the same shape. display:none
+                    // takes the node out of every layout stage (the SkipTags mechanism): a
+                    // projected comment is tree-visible and render-invisible (line-height-127).
                     var commentChild = new LayoutNode(null, "#comment", comment.Data ?? string.Empty, parentStyle)
                     {
                         DomNode = comment
                     };
                     commentChild.ResetNonInheritedStyles();
+                    commentChild.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "none";
                     node.AddChild(commentChild);
                 }
             }
@@ -4424,6 +4427,7 @@ internal static class Parser
                             DomNode = comment
                         };
                         fresh.ResetNonInheritedStyles();
+                        fresh.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "none";
                         owner.Bind(fresh);
                         rebuilt.Add(fresh);
                     }
@@ -4446,6 +4450,7 @@ internal static class Parser
                         };
                         fresh.Attributes["_pi_target"] = instruction.Target;
                         fresh.ResetNonInheritedStyles();
+                        fresh.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "none";
                         owner.Bind(fresh);
                         rebuilt.Add(fresh);
                     }

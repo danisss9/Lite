@@ -2238,6 +2238,11 @@ internal static class BoxEngine
                 while (i < children.Count)
                 {
                     var d = children[i].GetDisplay();
+                    // A display:none box renders nothing and neither joins a run nor splits one
+                    // (§17.2.1's render-invisible rule, the same one the table normalizer parks
+                    // its children for): skipping it keeps the inline content around it one run,
+                    // so whitespace-only text beside it still builds no line box.
+                    if (d == DisplayType.None) { i++; continue; }
                     // An out-of-flow box mid-run neither ends the line nor takes part in it: it
                     // stays in the run so the line it sits on is its static position, and so the
                     // inline content around it is not split onto two lines. (§9.7 blockifies it,

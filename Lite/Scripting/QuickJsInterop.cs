@@ -203,7 +203,14 @@ public sealed class Engine : IDisposable
         using var target = _realm.HostObjects.Wrap(value, binding => BindMembers(hostType, binding));
         Brand(target, value);
         using var index = _realm.HostFunction("item", 1, (_, args) =>
-            ConvertToNative(indexer.GetValue(value, [(int)args[0].AsNumber()])));
+        {
+            // WebIDL unsigned long: ToUint32 wraps — item(4294967296) reads index 0, item(-2)
+            // reads 2^32-2 (beyond any real length, so null). The narrowing saturates so an
+            // index beyond any real length never overflows the int indexer.
+            var n = args[0].AsNumber();
+            var u = double.IsFinite(n) ? ((n % 4294967296.0) + 4294967296.0) % 4294967296.0 : 0d;
+            return ConvertToNative(indexer.GetValue(value, [(int)Math.Min(u, int.MaxValue)]));
+        });
         using var named = _realm.HostFunction("namedItem", 1, (_, args) =>
             ConvertToNative((value as IJsNamedCollection)?.Named(args[0].AsString())));
         // DOM collections (NodeList, HTMLCollection, NamedNodeMap) get the full WebIDL legacy

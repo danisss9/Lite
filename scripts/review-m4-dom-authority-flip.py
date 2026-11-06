@@ -41,6 +41,11 @@ def main():
     for entry in manifest['tests']:
         if entry['classification'] != 'included' or not cluster(entry['path']):
             continue
+        # The cluster's dom/nodes rows carry obligations owned by several Milestone 4 packages;
+        # only the entries the manifest's own reasons assign to the DOM authority package flip
+        # here — a passing row owned by another package stays that package's queue evidence.
+        if 'DOM authority' not in entry.get('reason', ''):
+            continue
         rows = outcomes.get(entry['path'])
         if not rows:
             unmatched.append(entry['path'])
