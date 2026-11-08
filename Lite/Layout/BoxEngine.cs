@@ -3167,13 +3167,32 @@ internal static class BoxEngine
                 // had them laid out at this point, so it keeps the bottom-edge fallback.
                 var ascent = totalH;
                 if (!isFormControl
-                    && node.Children.Count == 0
-                    && !string.IsNullOrEmpty(node.DisplayText)
                     && node.GetOverflow() == OverflowType.Visible)
                 {
-                    using var ibFont = TextMeasure.CreateFont(node);
-                    ascent = margin.Top + border.Top + padding.Top
-                             + TextMeasure.ComputeAscent(ibFont, node.GetLineHeight(fontSize));
+                    // §10.8.1: a box with in-flow line boxes bases on its LAST line's baseline.
+                    // The pre-measure above (MeasureBlockHeight) lays the children out
+                    // provisionally at this box's used width, so the baseline is READ from the
+                    // laid-out subtree: the first line's baseline minus the first line's top.
+                    // The bottom-edge fallback reserved the whole below-baseline part as
+                    // ascent, growing every row holding such a box by ~10px (the
+                    // text-transform-bicameral family's 42.45px rows against the reference's
+                    // 32); a box-font metric guess mis-measures boxes whose first line holds
+                    // a taller inline item. Boxes without a readable baseline (no laid-out
+                    // children) keep the fallback.
+                    if (node.Children.Count == 0
+                        && !string.IsNullOrEmpty(node.DisplayText))
+                    {
+                        using var ibFont = TextMeasure.CreateFont(node);
+                        ascent = margin.Top + border.Top + padding.Top
+                                 + TextMeasure.ComputeAscent(ibFont, node.GetLineHeight(fontSize));
+                    }
+                    else if (node.Children.All(c => c.TagName == "#text" || c.GetDisplay() == DisplayType.Inline)
+                             && FindFirstBaselineY(node) is { } baselineY)
+                    {
+                        var firstTop = node.Children
+                            .Select(c => c.Box.BorderBox.Top).DefaultIfEmpty(baselineY).Min();
+                        ascent = margin.Top + border.Top + padding.Top + (baselineY - firstTop);
+                    }
                 }
 
                 items.Add(new InlineItem(InlineItemKind.InlineBlock, node, null, totalW, totalH,

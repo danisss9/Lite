@@ -1245,8 +1245,18 @@ public static class StyleExtensions
     {
         if (string.IsNullOrEmpty(text)) return text;
         var sb = new System.Text.StringBuilder(text.Length + 8);
-        foreach (var c in text)
+        for (var i = 0; i < text.Length; )
         {
+            // Supplementary-plane letters (Deseret, the bicameral family's U+10400 block)
+            // uppercase per CODE POINT — a UTF-16 code-unit walk leaves each surrogate half
+            // unchanged and the whole script untransformed.
+            if (i + 1 < text.Length && char.IsSurrogatePair(text[i], text[i + 1]))
+            {
+                sb.Append(char.ConvertFromUtf32(char.ConvertToUtf32(text, i)).ToUpperInvariant());
+                i += 2;
+                continue;
+            }
+            var c = text[i++];
             // The Turkish/Azerbaijani i-rule: dotted/dotless i swap (Unicode SpecialCasing tr).
             if (LangMatches(lang, "tr") || LangMatches(lang, "az"))
             {
@@ -1267,6 +1277,11 @@ public static class StyleExtensions
                 'ẚ' => "A\u02BE", 'ẞ' => "SS",
                 'ΐ' => "Ϊ\u0301", 'ΰ' => "Ϋ\u0301",
                 'ϝ' => "Ϝ", 'ϙ' => "Ϙ", 'ϛ' => "Ϛ",
+                // SpecialCasing.txt maps the dotless i to I unconditionally (field 3) — the
+                // tr/az branch below only owns the i→İ side of the Turkish rule. .NET's
+                // simple ToUpperInvariant leaves U+0131 unchanged, which broke every
+                // text-transform-bicameral case containing it.
+                'ı' => "I",
                 _ => default(string?),
             } ?? c.ToString().ToUpperInvariant());
         }
@@ -1277,8 +1292,16 @@ public static class StyleExtensions
     {
         if (string.IsNullOrEmpty(text)) return text;
         var sb = new System.Text.StringBuilder(text.Length);
-        foreach (var c in text)
+        for (var i = 0; i < text.Length; )
         {
+            // Supplementary plane: per code point (see FullUppercase).
+            if (i + 1 < text.Length && char.IsSurrogatePair(text[i], text[i + 1]))
+            {
+                sb.Append(char.ConvertFromUtf32(char.ConvertToUtf32(text, i)).ToLowerInvariant());
+                i += 2;
+                continue;
+            }
+            var c = text[i++];
             if (LangMatches(lang, "tr") || LangMatches(lang, "az"))
             {
                 switch (c)
