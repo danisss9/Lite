@@ -46,6 +46,11 @@ public class LayoutNode
     /// (anonymous-table generation §17.2.1); Text is readonly, so the flag keeps the
     /// normalization pass idempotent.</summary>
     internal bool OwnTextMigratedToChild { get; set; }
+
+    /// <summary>A table cell whose every column is removed from the rendering by a collapsed
+    /// column/column-group (§17.5.1): the painter skips it entirely. Set by TableEngine's
+    /// grid build each pass, so a dynamic visibility change re-evaluates.</summary>
+    public bool CollapsedByColumn { get; internal set; }
     public string Text { get; private set; }
 
     /// <summary>Rewrites the node's own folded text after a DOM mutation (mutation

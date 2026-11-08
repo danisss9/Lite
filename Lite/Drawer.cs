@@ -419,6 +419,11 @@ internal static class Drawer
     {
         var display = node.GetDisplay();
 
+        // §17.5.1: a cell whose every column is collapsed ('visibility: collapse' on a
+        // column/column-group) is removed from the rendering — its background, borders, text
+        // and descendants paint nothing, while the grid keeps its place.
+        if (node.CollapsedByColumn) return;
+
         // CSS 2.1 §11.2: 'visibility: hidden' suppresses this box's own rendering — background,
         // borders, text, replaced content and list marker — while the box keeps its place in the
         // layout. Descendants are NOT skipped: visibility is inherited, so a child normally

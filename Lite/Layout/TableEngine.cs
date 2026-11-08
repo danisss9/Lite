@@ -63,6 +63,20 @@ internal static class TableEngine
         var placements = BuildGrid(rows, out var colCount, out var rowCount);
         if (colCount == 0) return 0f;
 
+        // §17.5.1: 'visibility: collapse' on a column/column-group removes that column from
+        // the rendering — the cells occupying it (all of whose columns are collapsed) paint
+        // nothing. The mapping is structural, not DOM-hierarchical: the cells live in rows,
+        // not under the collapsed group, so the flag is set from the grid here.
+        var collapsedColumns = CollapsedColumnIndices(table);
+        if (collapsedColumns.Count > 0)
+            foreach (var p in placements)
+            {
+                var allCollapsed = true;
+                for (var c = p.Col; c < p.Col + p.ColSpan; c++)
+                    if (!collapsedColumns.Contains(c)) { allCollapsed = false; break; }
+                p.Cell.CollapsedByColumn = allCollapsed;
+            }
+
         var colWidths = IsFixedLayout(table)
             ? ComputeFixedColumnWidths(table, placements, colCount, contentW - spacing * (colCount + 1), viewportH)
             : ComputeColumnWidths(table, placements, colCount, contentW - spacing * (colCount + 1), viewportW, viewportH);
@@ -328,6 +342,48 @@ internal static class TableEngine
 
     /// <summary>A column group: the COLGROUP element or any 'display: table-column-group' box.</summary>
     internal static bool IsColumnGroup(LayoutNode node) => node.TagName == "COLGROUP" || RawDisplay(node) == "table-column-group";
+
+    /// <summary>The indices of columns removed from the rendering by 'visibility: collapse'
+    /// (§17.5.1). visibility is inherited, so a collapsed group's own col children read
+    /// collapsed too; a childless group's span is covered by the group itself.</summary>
+    private static HashSet<int> CollapsedColumnIndices(LayoutNode table)
+    {
+        var collapsed = new HashSet<int>();
+        var index = 0;
+        int SpanOf(LayoutNode node)
+        {
+            var span = 1;
+            if (node.Attributes.TryGetValue("span", out var raw))
+                int.TryParse(raw, out span);
+            return Math.Clamp(span, 1, 1000);
+        }
+        void Walk(LayoutNode container)
+        {
+            foreach (var child in container.Children)
+            {
+                if (IsColumn(child))
+                {
+                    var isCollapsed = child.GetVisibility() != Visibility.Visible;
+                    if (isCollapsed)
+                        for (var s = 0; s < SpanOf(child); s++) collapsed.Add(index + s);
+                    index += SpanOf(child);
+                }
+                else if (IsColumnGroup(child))
+                {
+                    if (child.Children.Count == 0)
+                    {
+                        var isCollapsed = child.GetVisibility() != Visibility.Visible;
+                        if (isCollapsed)
+                            for (var s = 0; s < SpanOf(child); s++) collapsed.Add(index + s);
+                        index += SpanOf(child);
+                    }
+                    else Walk(child);
+                }
+            }
+        }
+        Walk(table);
+        return collapsed;
+    }
 
     /// <summary>The table's caption: the HTML CAPTION element or any 'display: table-caption' box.</summary>
     private static bool IsCaption(LayoutNode node) => node.TagName == "CAPTION" || RawDisplay(node) == "table-caption";
