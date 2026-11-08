@@ -1974,6 +1974,20 @@ public class JsElement
     public JsValue? onvolumechange { get => GetOnProperty("onvolumechange"); set => SetOnProperty("onvolumechange", value); }
     public JsValue? onwaiting { get => GetOnProperty("onwaiting"); set => SetOnProperty("onwaiting", value); }
     public JsValue? ontoggle { get => GetOnProperty("ontoggle"); set => SetOnProperty("ontoggle", value); }
+    public JsValue? onunload { get => GetOnProperty("onunload"); set => SetOnProperty("onunload", value); }
+    public JsValue? onhashchange { get => GetOnProperty("onhashchange"); set => SetOnProperty("onhashchange", value); }
+    public JsValue? onmessage { get => GetOnProperty("onmessage"); set => SetOnProperty("onmessage", value); }
+    public JsValue? ononline { get => GetOnProperty("ononline"); set => SetOnProperty("ononline", value); }
+    public JsValue? onoffline { get => GetOnProperty("onoffline"); set => SetOnProperty("onoffline", value); }
+    public JsValue? onpopstate { get => GetOnProperty("onpopstate"); set => SetOnProperty("onpopstate", value); }
+    public JsValue? onstorage { get => GetOnProperty("onstorage"); set => SetOnProperty("onstorage", value); }
+    public JsValue? onpagehide { get => GetOnProperty("onpagehide"); set => SetOnProperty("onpagehide", value); }
+    public JsValue? onpageshow { get => GetOnProperty("onpageshow"); set => SetOnProperty("onpageshow", value); }
+    public JsValue? onafterprint { get => GetOnProperty("onafterprint"); set => SetOnProperty("onafterprint", value); }
+    public JsValue? onbeforeprint { get => GetOnProperty("onbeforeprint"); set => SetOnProperty("onbeforeprint", value); }
+    public JsValue? onbeforeunload { get => GetOnProperty("onbeforeunload"); set => SetOnProperty("onbeforeunload", value); }
+    public JsValue? onundo { get => GetOnProperty("onundo"); set => SetOnProperty("onundo", value); }
+    public JsValue? onredo { get => GetOnProperty("onredo"); set => SetOnProperty("onredo", value); }
 
     internal JsValue? GetOnProperty(string name) =>
         Node.OnProperties?.TryGetValue(name, out var handler) == true ? handler : null;
@@ -1983,9 +1997,16 @@ public class JsElement
         Node.OnProperties ??= [];
         if (Node.OnProperties.Remove(name, out var previous) && previous is not null)
             Node.EventListeners.RemoveAll(e => ReferenceEquals(e.Handler, previous));
-        if (value is null || value.IsUndefined()) return;
-        Node.OnProperties[name] = value;
-        Node.EventListeners.Add(new EventListenerEntry(name[2..], value, null, Capture: false));
+        // A function stores as-is (the getter returns the same object); null, undefined and
+        // the empty string remove the handler; any other string compiles into a function
+        // taking the event (HTML §8.1.6 event handler processing).
+        if (value is null || value.IsUndefined() || value.IsNull()
+            || (value.IsString() && value.AsString().Length == 0)) return;
+        var handler = value;
+        if (value.IsString())
+            handler = _engine.Evaluate("(function (event) {\n" + value.AsString() + "\n})");
+        Node.OnProperties[name] = handler;
+        Node.EventListeners.Add(new EventListenerEntry(name[2..], handler, null, Capture: false));
     }
 
     public void addEventListener(string type, JsValue handler, JsValue? options = null)

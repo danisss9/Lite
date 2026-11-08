@@ -398,7 +398,15 @@ public sealed class Engine : IDisposable
             try { return ConvertToNative(constructor.Invoke(ConvertParameters(constructor.GetParameters(), args))); }
             catch (TargetInvocationException error) { throw error.InnerException ?? error; }
         });
-        using var makeConstructor = _realm.Eval("(factory => function(...args){ return factory(...args); })");
+        // WebIDL interface constructors throw when called without new (the [Constructor]
+        // shapes — Event, URL, MessageChannel, …) — only legacy constructors are callable.
+        using var makeConstructor = _realm.Eval("""
+            (factory => function (...args) {
+              if (!new.target)
+                throw new TypeError("Failed to construct: Please use the 'new' operator to call the constructor.");
+              return factory(...args);
+            })
+            """);
         // Ordinary JavaScript functions can be called and used with new; returning the host
         // object supplies the constructed value in either form.
         return makeConstructor.Call(arguments: [factory]);

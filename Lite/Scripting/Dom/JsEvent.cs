@@ -47,7 +47,10 @@ public class JsEvent
     /// <summary>CustomEvent payload.</summary>
     public object? detail { get; internal set; }
     public JsElement? target { get; internal set; }
-    public JsElement? currentTarget { get; internal set; }
+
+    /// <summary>The path entry the listener is running on — an element, the document facade,
+    /// or the window (DOM §2.9's virtual path head). The dispatcher sets it before each entry.</summary>
+    public object? currentTarget { get; internal set; }
     public int eventPhase { get; internal set; } // 0=NONE, 1=CAPTURING, 2=AT_TARGET, 3=BUBBLING
 
     // Constants
@@ -151,6 +154,15 @@ public class JsEvent
     {
         PropagationStopped = true;
         ImmediatePropagationStopped = true;
+    }
+
+    /// <summary>The dispatcher clears the propagation flags when the path completes: the flags
+    /// describe the DISPATCH, not the event object, so cancelBubble reads false afterwards
+    /// while defaultPrevented (the canceled flag) survives (dom/events/Event-cancelBubble).</summary>
+    internal void ResetPropagationFlags()
+    {
+        PropagationStopped = false;
+        ImmediatePropagationStopped = false;
     }
 
     /// <summary>Legacy Event.initEvent(type, bubbles?, cancelable?). Per DOM §2.9: the type arg is

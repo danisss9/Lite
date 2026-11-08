@@ -44,7 +44,10 @@ internal static class EventDispatcher
     }
 
     /// <summary>
-    /// Dispatches a JsEvent through the full capture → target → bubble path.
+    /// Dispatches a JsEvent through the full propagation path (DOM §2.9): window → document →
+    /// the node ancestors root-first → the target, capture then at-target then bubble. The
+    /// window and document are virtual path entries — they exist only when the target is
+    /// attached to the engine's document tree, and each carries its own listener store.
     /// </summary>
     internal static bool DispatchEvent(LayoutNode targetNode, JsEvent evt, JsEngine engine)
     {
@@ -56,14 +59,32 @@ internal static class EventDispatcher
         var eventType = evt.type;
         evt.Dispatching = true;
 
+        // The target is on the document's node tree only if the ancestor walk reaches the
+        // document's root; detached fragments dispatch without the window/document entries.
+        var document = engine.DocumentFacade;
+        var attached = document is not null &&
+            WalkToRoot(targetNode, document.RootNode);
+
         // Build ancestor chain (root → ... → parent)
         var ancestors = new List<LayoutNode>();
         for (var p = targetNode.Parent; p != null; p = p.Parent)
             ancestors.Add(p);
         ancestors.Reverse(); // root-first
 
-        // Phase 1: CAPTURING (root → parent)
+        // Phase 1: CAPTURING (window → document → root → parent)
         evt.eventPhase = 1;
+        if (attached && !evt.PropagationStopped)
+        {
+            evt.currentTarget = engine.RawEngine.GetValue("window");
+            if (engine.WindowPathListeners(eventType, evt, capture: true))
+                handled = true;
+        }
+        if (attached && !evt.PropagationStopped)
+        {
+            evt.currentTarget = engine.RawEngine.GetValue("document");
+            if (document!.InvokePathListeners(eventType, evt, capturePhase: true))
+                handled = true;
+        }
         foreach (var ancestor in ancestors)
         {
             if (evt.PropagationStopped) break;
@@ -72,12 +93,13 @@ internal static class EventDispatcher
                 handled = true;
         }
 
-        // Phase 2: AT_TARGET
+        // Phase 2: AT_TARGET — capture listeners first, then non-capture, each in registration
+        // order (the pinned DOM4-era dispatch contract: dom/events/EventTarget-dispatchEvent's
+        // [1, 3, 2] ordering).
         if (!evt.PropagationStopped)
         {
             evt.eventPhase = 2;
             evt.currentTarget = evt.target;
-            // Fire both capture and bubble listeners at target
             if (InvokeListeners(targetNode, eventType, evt, engine, capturePhase: true))
                 handled = true;
             if (!evt.ImmediatePropagationStopped && InvokeListeners(targetNode, eventType, evt, engine, capturePhase: false))
@@ -87,7 +109,7 @@ internal static class EventDispatcher
                 handled = true;
         }
 
-        // Phase 3: BUBBLING
+        // Phase 3: BUBBLING (parent → root → document → window)
         if (evt.bubbles && !evt.PropagationStopped)
         {
             evt.eventPhase = 3;
@@ -102,13 +124,35 @@ internal static class EventDispatcher
                 if (!evt.ImmediatePropagationStopped && InvokeHandlerAttribute(ancestor, eventType, evt, engine))
                     handled = true;
             }
+            if (attached && !evt.PropagationStopped)
+            {
+                evt.currentTarget = engine.RawEngine.GetValue("document");
+                if (document!.InvokePathListeners(eventType, evt, capturePhase: false))
+                    handled = true;
+            }
+            if (attached && !evt.PropagationStopped && !evt.ImmediatePropagationStopped)
+            {
+                evt.currentTarget = engine.RawEngine.GetValue("window");
+                if (engine.WindowPathListeners(eventType, evt, capture: false))
+                    handled = true;
+            }
         }
 
         evt.eventPhase = 0;
         evt.Dispatching = false;
+        // The propagation flags describe the dispatch, not the event object: cancelBubble and
+        // stop-immediate read false once the path completes (dom/events/Event-cancelBubble).
+        evt.ResetPropagationFlags();
         // Run Promise continuations scheduled by the handlers (microtask checkpoint).
         engine.FlushMicrotasks();
         return handled;
+    }
+
+    private static bool WalkToRoot(LayoutNode node, LayoutNode root)
+    {
+        for (var p = (LayoutNode?)node; p != null; p = p.Parent)
+            if (ReferenceEquals(p, root)) return true;
+        return false;
     }
 
     /// <summary>Runs <paramref name="node"/>'s <c>on&lt;type&gt;</c> content attribute, if it has one.

@@ -290,15 +290,78 @@ public class JsDocument
     }
 
     // ---- EventTarget ----
-    // The document shares the root node's listener list, so document-level listeners
-    // participate in the normal capture/bubble path of every dispatch.
-    public void addEventListener(string type, JsValue handler, JsValue? options = null) =>
-        JsElement.For(_engine, _root).addEventListener(type, handler, options);
+    // The document carries its own listener store: it is the second object of every node
+    // dispatch path (window → document → …, DOM §2.9), firing capture listeners during
+    // capture and bubble listeners during bubble.
+    private readonly List<EventListenerEntry> _listeners = [];
 
-    public void removeEventListener(string type, JsValue handler, JsValue? options = null) =>
-        JsElement.For(_engine, _root).removeEventListener(type, handler, options);
+    private static bool CaptureOf(JsValue? options) => options switch
+    {
+        null => false,
+        _ when options.IsBoolean() => options.AsBoolean(),
+        _ when options.IsObject() => options.AsObject().Get("capture") is { } c && c.IsBoolean() && c.AsBoolean(),
+        _ => false,
+    };
 
-    public bool dispatchEvent(JsEvent? evt = null) => JsElement.For(_engine, _root).dispatchEvent(evt);
+    public void addEventListener(string type, JsValue handler, JsValue? options = null)
+    {
+        if (handler is null || handler.IsUndefined()) return;
+        _listeners.Add(new EventListenerEntry(type, handler, null, CaptureOf(options)));
+    }
+
+    public void removeEventListener(string type, JsValue handler, JsValue? options = null)
+    {
+        var capture = CaptureOf(options);
+        _listeners.RemoveAll(l => l.EventType == type && Equals(l.Handler, handler) && l.Capture == capture);
+    }
+
+    public bool dispatchEvent(JsEvent? evt = null)
+    {
+        // dispatchEvent(null) raises TypeError (dom/events/EventTarget-dispatchEvent).
+        if (evt is null)
+            throw JsErrors.Native(_engine, "TypeError",
+                "Failed to execute 'dispatchEvent': parameter 1 is not of type 'Event'.");
+        // The document as target: the same dispatch contract as element dispatch — an
+        // uninitialized createEvent event throws InvalidStateError, an event already on a
+        // path cannot be re-dispatched (DOM §2.9).
+        if (!evt.Initialized)
+            throw JsErrors.Dom(_engine, "InvalidStateError",
+                "Failed to execute 'dispatchEvent': The event provided is not initialized.");
+        if (evt.Dispatching)
+            throw JsErrors.Dom(_engine, "InvalidStateError",
+                "Failed to execute 'dispatchEvent': The event is already being dispatched.");
+        var handled = false;
+        var report = JsEngine.For(_engine);
+        foreach (var listener in _listeners.ToList())
+        {
+            if (listener.EventType != evt.type) continue;
+            if (listener.Handler is null) continue;
+            try { _engine.Invoke(listener.Handler, JsValue.FromObject(_engine, evt)); }
+            catch (Exception ex) { report?.ReportListenerError(ex); }
+            handled = true;
+        }
+        evt.Dispatching = false;
+        evt.ResetPropagationFlags();
+        return handled;
+    }
+
+    /// <summary>The document's slice of a node-targeted dispatch path (DOM §2.9).</summary>
+    internal bool InvokePathListeners(string type, JsEvent evt, bool capturePhase)
+    {
+        var handled = false;
+        var report = JsEngine.For(_engine);
+        foreach (var listener in _listeners.ToList())
+        {
+            if (listener.EventType != type) continue;
+            if (listener.Capture != capturePhase) continue;
+            if (evt.ImmediatePropagationStopped) break;
+            if (!_listeners.Contains(listener)) continue;
+            try { _engine.Invoke(listener.Handler, JsValue.FromObject(_engine, evt)); }
+            catch (Exception ex) { report?.ReportListenerError(ex); }
+            handled = true;
+        }
+        return handled;
+    }
 
     // ---- document.write / open / close ----
     // A frame document's open()/write()/close() stream replaces the document: writes buffer,

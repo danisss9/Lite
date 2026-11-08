@@ -34,6 +34,10 @@ internal class JsEngine : IDisposable
     private readonly HashSet<JsValue> _reportedRejections = [];
     internal event Action<JsValue>? ScriptFailed;
     private readonly JsWindow _jsWindow;
+
+    /// <summary>The window's slice of a node dispatch path (DOM §2.9's first path entry).</summary>
+    internal bool WindowPathListeners(string type, Dom.JsEvent evt, bool capture) =>
+        _jsWindow.InvokePathListeners(type, evt, capture, this);
     private readonly Dictionary<JsEngine, Dom.JsWindowProxy> _windowProxies = new();
     private Dom.JsMessagePortContext? _messagePortContext;
     internal Dom.JsMessagePortContext MessagePortContext => _messagePortContext ??= new(this);
@@ -494,6 +498,11 @@ internal class JsEngine : IDisposable
           const hostProto = __run('probe', () => Object.getPrototypeOf(document));
           const parents = {
             EventTarget: null, Node: 'EventTarget', Document: 'Node', HTMLDocument: 'Document',
+            // The event interfaces chain under EventTarget (WebIDL hierarchy); each carries
+            // the eventPhase constants on both the interface object and the prototype.
+            Event: 'EventTarget', CustomEvent: 'Event', UIEvent: 'Event',
+            MouseEvent: 'UIEvent', WheelEvent: 'MouseEvent', PointerEvent: 'MouseEvent',
+            KeyboardEvent: 'UIEvent',
             DocumentFragment: 'Node', DocumentType: 'Node', CharacterData: 'Node',
             Text: 'CharacterData', Comment: 'CharacterData', ProcessingInstruction: 'CharacterData',
             Attr: 'Node', Element: 'Node', HTMLElement: 'Element', SVGElement: 'Element',
@@ -550,6 +559,9 @@ internal class JsEngine : IDisposable
             ResizeObserver: null,
           };
           const statics = {
+            Event: {
+              NONE: 0, CAPTURING_PHASE: 1, AT_TARGET: 2, BUBBLING_PHASE: 3,
+            },
             Node: {
               ELEMENT_NODE: 1, ATTRIBUTE_NODE: 2, TEXT_NODE: 3, CDATA_SECTION_NODE: 4,
               ENTITY_REFERENCE_NODE: 5, ENTITY_NODE: 6, PROCESSING_INSTRUCTION_NODE: 7,
@@ -612,8 +624,12 @@ internal class JsEngine : IDisposable
               Object.defineProperty(proto, 'constructor', { value: ctor, writable: true, enumerable: false, configurable: true });
               const constants = statics[name];
               if (constants) {
-                for (const k of Object.keys(constants))
+                for (const k of Object.keys(constants)) {
                   Object.defineProperty(ctor, k, { value: constants[k], writable: false, enumerable: true, configurable: true });
+                  // WebIDL puts interface constants on the prototype object as well as the
+                  // interface object (Event.NONE and Event.prototype.NONE both resolve).
+                  Object.defineProperty(proto, k, { value: constants[k], writable: false, enumerable: true, configurable: true });
+                }
               }
             }
           });

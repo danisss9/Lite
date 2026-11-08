@@ -23,8 +23,11 @@ internal class JsWindow
     private readonly List<(int Id, JsValue Fn)> _rafCallbacks = [];
     internal bool HasPendingRAF => _rafCallbacks.Count > 0;
 
-    // Window-level event listeners (load, hashchange, popstate, message, error, ...).
-    private readonly List<(string Type, JsValue Fn)> _listeners = [];
+    // Window-level event listeners (load, hashchange, popstate, message, error, ...). The
+    // capture flag participates in the dispatch path: the window is the first object of every
+    // node-targeted event path (DOM §2.9), firing capture listeners in capture and bubble
+    // listeners (plus the on{type} property) in bubble.
+    private readonly List<EventListenerEntry> _listeners = [];
 
     public JsWindow(JsEngine engine, int viewportWidth = 800, int viewportHeight = 600)
     {
@@ -36,14 +39,59 @@ internal class JsWindow
     public void alert(object? message) => Lite.Platform.PlatformDialogs.Alert(message?.ToString() ?? "");
 
     // ---- window-level events ----
+    private static bool CaptureOf(JsValue? options) => options switch
+    {
+        null => false,
+        _ when options.IsBoolean() => options.AsBoolean(),
+        _ when options.IsObject() => options.AsObject().Get("capture") is { } c && c.IsBoolean() && c.AsBoolean(),
+        _ => false,
+    };
+
     public void addEventListener(string type, JsValue fn, JsValue? options = null)
     {
-        if (fn is not null && !fn.IsUndefined()) _listeners.Add((type, fn));
+        if (fn is null || fn.IsUndefined()) return;
+        _listeners.Add(new EventListenerEntry(type, fn, null, CaptureOf(options)));
     }
 
     public void removeEventListener(string type, JsValue fn, JsValue? options = null)
     {
-        _listeners.RemoveAll(l => l.Type == type && Equals(l.Fn, fn));
+        var capture = CaptureOf(options);
+        _listeners.RemoveAll(l => l.EventType == type && Equals(l.Handler, fn) && l.Capture == capture);
+    }
+
+    /// <summary>The window's slice of a node-targeted dispatch path (DOM §2.9): capture
+    /// listeners during capture, bubble listeners plus the on{type} property during bubble.</summary>
+    internal bool InvokePathListeners(string type, JsEvent evt, bool capturePhase, JsEngine engine)
+    {
+        var handled = false;
+        foreach (var listener in _listeners.ToList())
+        {
+            if (listener.EventType != type) continue;
+            if (listener.Capture != capturePhase) continue;
+            if (evt.ImmediatePropagationStopped) break;
+            if (!_listeners.Contains(listener)) continue;
+            try { engine.RawEngine.Invoke(listener.Handler, evt); }
+            catch (Exception ex) { engine.ReportListenerError(ex); }
+            handled = true;
+        }
+        if (!capturePhase && !evt.ImmediatePropagationStopped)
+            handled |= InvokeWindowOnProperty(type, JsValue.FromObject(engine.RawEngine, evt));
+        return handled;
+    }
+
+    /// <summary>Invokes the window's on{type} property handler, if one is set and callable.
+    /// <paramref name="evt"/> is whatever the dispatch carries (a JsEvent for path dispatches,
+    /// an anonymous event object for the window's own named dispatches).</summary>
+    private bool InvokeWindowOnProperty(string type, JsValue evt)
+    {
+        var property = _engine.RawEngine.GetValue("on" + type);
+        if (property.IsUndefined() || property.IsNull() || !property.IsCallable()) return false;
+        try
+        {
+            _engine.RawEngine.Invoke(property, evt);
+            return true;
+        }
+        catch (Exception ex) { _engine.ReportListenerError(ex); return true; }
     }
 
     /// <summary>Dispatches a window-level event to registered listeners and to the
@@ -82,45 +130,42 @@ internal class JsWindow
 
     private void DispatchInternal(string type, JsValue evt)
     {
-        // "error" listener exceptions are not re-reported (the dispatch itself is the report),
-        // so an always-throwing error handler cannot recurse forever.
-        var reportExceptions = type != "error";
-        foreach (var (t, fn) in _listeners.ToList())
+        // The window AS TARGET (load, hashchange, popstate, direct dispatchEvent): every
+        // listener fires in registration order regardless of its capture flag (DOM §2.9
+        // at-target), then the on{type} property. "error" listener exceptions are not
+        // re-reported (the dispatch itself is the report), so an always-throwing error
+        // handler cannot recurse forever.
+        foreach (var listener in _listeners.ToList())
         {
-            if (t != type) continue;
-            try { _engine.RawEngine.Invoke(fn, evt); }
+            if (listener.EventType != type) continue;
+            try { _engine.RawEngine.Invoke(listener.Handler, evt); }
             catch (Exception ex)
             {
-                if (reportExceptions) _engine.ReportListenerError(ex);
+                if (type != "error") _engine.ReportListenerError(ex);
                 else Console.WriteLine($"[JS window {type}] {ex.Message}");
             }
         }
-        var property = _engine.RawEngine.GetValue("on" + type);
-        if (!property.IsUndefined() && !property.IsNull() && property.IsCallable())
+        if (type == "error" && evt.ToObject() is Dom.JsEvent errorEvent)
         {
-            try
+            // The legacy error handler may cancel the default report by returning true,
+            // exactly like preventDefault() on the event.
+            var property = _engine.RawEngine.GetValue("on" + type);
+            if (property.IsCallable())
             {
-                // The Window error handler is the legacy one: it receives
-                // (message, filename, lineno, colno, error) and cancels the default report
-                // by returning true, exactly like preventDefault() on the event.
-                JsValue result;
-                if (type == "error" && evt.ToObject() is Dom.JsEvent errorEvent)
+                try
                 {
-                    result = _engine.RawEngine.Invoke(property, evt.Get("message"), evt.Get("filename"),
+                    var result = _engine.RawEngine.Invoke(property, evt.Get("message"), evt.Get("filename"),
                         evt.Get("lineno"), evt.Get("colno"), evt.Get("error"));
                     if (result.IsBoolean() && result.AsBoolean()) errorEvent.preventDefault();
                 }
-                else result = _engine.RawEngine.Invoke(property, evt);
+                catch (Exception ex) { Console.WriteLine($"[JS window {type}] {ex.Message}"); }
             }
-            catch (Exception ex)
-            {
-                if (reportExceptions) _engine.ReportListenerError(ex);
-                else Console.WriteLine($"[JS window {type}] {ex.Message}");
-            }
+            return;
         }
+        InvokeWindowOnProperty(type, evt);
     }
 
-    internal bool HasListener(string type) => _listeners.Any(l => l.Type == type);
+    internal bool HasListener(string type) => _listeners.Any(l => l.EventType == type);
 
     public int setTimeout(JsValue fn, int delay = 0)
     {
