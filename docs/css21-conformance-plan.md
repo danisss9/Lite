@@ -359,6 +359,11 @@ Follow-up, 8 November evening (the 004 content-excision attempt — REVERTED, th
 - **Why reverted.** After all three, the re-flowed content still painted from the measurement pass's stale fragment geometry — the excision entangles with the table's multi-pass layout (measure → commit → vertical-align re-commit) at a depth that wants the cell's content laid out EAGERLY at collection (one authoritative internal layout, the line assembly consuming its results), not a per-pass mutation. Queued as the named finding with this design direction; the working tree reverted to the committed state (column-visibility 4/22 → 6/22, 001/002/003 passing — verified by re-probe after the revert).
 - Gates: units 498 pass (+2 pre-existing worker-bin fails), css21 curated 51/1; the wpt curated gate stays 85/1 on the HTML track's in-flight events work.
 
+Follow-up, 8 November night (source `d7e5e7eb`):
+
+- **`d7e5e7eb` — look-same compares text lines by vertical ink clustering.** The counters family's "the following two lines should look the same" renders two TEXT lines whose ink fragments into 60+ glyph-level components; the judge demanded exactly 2 top-level shapes ("66 top-level shapes below the instructions"). When the shape count is not 2, the two lines re-group by vertical clustering (a vertical gap between consecutive components' extents splits the bands — within a line every glyph shares the baseline) and the two bands' ink strips compare pixel-wise through the shared LookSamePair; the two-shape path is untouched. **content-counters 000-016 convert (13 of the family, 0 regressions per-case)**; the residue (003/004/009/015) holds other shapes for the next pass.
+- **The curated wpt gate is back to 86/2** — the HTML5 track's events landing (`ce50e562`, the dispatch path and DOM4-era contract) settled the transient 85/1. Units 498 pass (+2 pre-existing worker-bin fails), css21 curated 51/1.
+
 ### Standing constraints
 
 - Edit only the `css21.*` profile prefix and the `Lite.Conformance/Css21/*` plus `Profile/css21-*` artifacts; keep the html5 and es2020 gates green (coordination rules in `docs/html5-conformance-plan.md`).
