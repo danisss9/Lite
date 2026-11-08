@@ -400,7 +400,24 @@ internal static class Drawer
             canvas.Translate(-scrollState.ScrollX, -scrollState.ScrollY);
         }
 
+        // §17.5.1 dynamic effects: a cell spanning a collapsed column paints only the visible
+        // columns' slices — the intersecting slice is clipped out (the cell's own background
+        // included). The full-collapsed case skips the paint entirely.
+        var columnClip = node.CollapsedColumnClip;
+        if (columnClip is { Count: > 0 })
+        {
+            canvas.Save();
+            var borderLeft = node.Box.BorderBox.Left;
+            var top = node.Box.BorderBox.Top;
+            var bottom = node.Box.BorderBox.Bottom;
+            canvas.ClipRect(new SKRect(borderLeft, top, node.Box.BorderBox.Right, bottom));
+            foreach (var (start, end) in columnClip)
+                canvas.ClipRect(new SKRect(borderLeft + start, top, borderLeft + end, bottom), SKClipOperation.Difference);
+        }
+
         PaintNodeContent(canvas, node, viewportWidth);
+
+        if (columnClip is { Count: > 0 }) canvas.Restore();
 
         // Draw per-element scrollbar (inside the clip, after restoring scroll translate)
         if (scrollState != null && (scrollState.NeedsScrollbar || scrollState.NeedsHorizontalScrollbar))

@@ -225,6 +225,35 @@ internal static class TableEngine
 
                 BoxEngine.LayoutChildrenPublic(cell.Children, cx, cy, cw, viewportW, viewportH, finalH);
 
+                // §17.5.1 dynamic effects: a cell SPANNING a collapsed column paints only the
+                // visible columns' slices — the intersecting slice is clipped. The stored
+                // intervals are the COLLAPSED runs (contiguous collapsed columns' x-ranges),
+                // relative to the cell's border-box left (the paint origin); the painter
+                // clips the border box against them with Difference.
+                if (collapsedColumns.Count > 0)
+                {
+                    List<(float Start, float End)>? clip = null;
+                    var borderLeft = cx - p.Pad.Left - p.Bord.Left;
+                    var runStart = -1;
+                    for (var c = p.Col; c <= p.Col + p.ColSpan; c++)
+                    {
+                        var isCollapsed = c < p.Col + p.ColSpan && collapsedColumns.Contains(c);
+                        if (isCollapsed && runStart < 0) runStart = c;
+                        if (!isCollapsed && runStart >= 0)
+                        {
+                            // The run's edges take the flanking border-spacing too: a glyph
+                            // whose advance reaches a fraction into the collapsed column's
+                            // gap must clip with it (the bicameral-grade 1px encroach).
+                            var runLeft = Math.Max(0f, CellX(contentX, colWidths, runStart, spacing) - spacing - borderLeft);
+                            var runRight = CellX(contentX, colWidths, c, spacing) - spacing - borderLeft;
+                            clip ??= new List<(float Start, float End)>();
+                            clip.Add((runLeft, runRight));
+                            runStart = -1;
+                        }
+                    }
+                    cell.CollapsedColumnClip = clip;
+                }
+
                 cell.Box = new BoxDimensions
                 {
                     ContentBox = new SKRect(cx, cy, cx + cw, cy + finalH),

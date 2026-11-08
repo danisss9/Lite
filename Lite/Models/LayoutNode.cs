@@ -51,6 +51,12 @@ public class LayoutNode
     /// column/column-group (§17.5.1): the painter skips it entirely. Set by TableEngine's
     /// grid build each pass, so a dynamic visibility change re-evaluates.</summary>
     public bool CollapsedByColumn { get; internal set; }
+
+    /// <summary>A table cell SPANNING a collapsed column: the collapsed x-intervals
+    /// (relative to the cell's border-box left) its contents must NOT paint in — the
+    /// intersecting slice is clipped (§17.5.1's dynamic-effects rule). The painter clips
+    /// the border box against these with Difference. Null when no column collapsed.</summary>
+    public IReadOnlyList<(float Start, float End)>? CollapsedColumnClip { get; internal set; }
     public string Text { get; private set; }
 
     /// <summary>Rewrites the node's own folded text after a DOM mutation (mutation
