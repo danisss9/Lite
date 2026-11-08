@@ -1436,17 +1436,40 @@ internal static class VisualChecks
     /// (antialiasing by default; "approximately the same" admits three times that).</summary>
     private static string? LookSame(IReadOnlyList<Component> shapes, SKBitmap bitmap, int tolerance)
     {
-        if (shapes.Count != 2) return $"{shapes.Count} top-level shapes below the instructions";
-        var (a, b) = (shapes[0], shapes[1]);
-        if (Math.Abs(a.Width - b.Width) > EdgeTolerance || Math.Abs(a.Height - b.Height) > EdgeTolerance)
-            return $"different dimensions: {a.Width}x{a.Height} vs {b.Width}x{b.Height}";
+        if (shapes.Count == 2) return LookSamePair([shapes[0]], [shapes[1]], bitmap, tolerance);
+        // "The following two lines should look the same" over TEXT lines: the ink fragments
+        // into glyph-level components (the counters family renders 60+), so the two lines are
+        // re-grouped by vertical clustering — a vertical gap between consecutive components'
+        // extents splits the bands (within a line every glyph shares the baseline, so the
+        // extents overlap) — and the two bands' ink strips compare pixel-wise.
+        var ordered = shapes.OrderBy(s => s.Top).ThenBy(s => s.Left).ToList();
+        var bands = new List<List<Component>>();
+        foreach (var s in ordered)
+        {
+            if (bands.Count == 0) { bands.Add([s]); continue; }
+            var band = bands[^1];
+            if (s.Top - band.Max(x => x.Bottom) > 3) bands.Add([s]);
+            else band.Add(s);
+        }
+        if (bands.Count != 2)
+            return $"{bands.Count} ink lines below the instructions (the stated condition compares 2)";
+        return LookSamePair(bands[0], bands[1], bitmap, tolerance);
+    }
+
+    private static string? LookSamePair(IReadOnlyList<Component> a, IReadOnlyList<Component> b, SKBitmap bitmap, int tolerance)
+    {
+        SKRect BoxOf(IReadOnlyList<Component> band) => new(
+            band.Min(s => s.Left), band.Min(s => s.Top), band.Max(s => s.Right), band.Max(s => s.Bottom));
+        var (ba, bb) = (BoxOf(a), BoxOf(b));
+        if (Math.Abs(ba.Width - bb.Width) > EdgeTolerance || Math.Abs(ba.Height - bb.Height) > EdgeTolerance)
+            return $"different dimensions: {ba.Width}x{ba.Height} vs {bb.Width}x{bb.Height}";
         var pixels = bitmap.Pixels;
         var width = bitmap.Width;
-        for (var y = 0; y < Math.Min(a.Height, b.Height); y++)
-        for (var x = 0; x < Math.Min(a.Width, b.Width); x++)
+        for (var y = 0; y < Math.Min(ba.Height, bb.Height); y++)
+        for (var x = 0; x < Math.Min(ba.Width, bb.Width); x++)
         {
-            var pa = pixels[(a.Top + y) * width + a.Left + x];
-            var pb = pixels[(b.Top + y) * width + b.Left + x];
+            var pa = pixels[((int)ba.Top + y) * width + (int)ba.Left + x];
+            var pb = pixels[((int)bb.Top + y) * width + (int)bb.Left + x];
             if (Distance(pa, pb) > tolerance)
                 return $"pixels differ at (+{x},+{y}): {pa} vs {pb}";
         }
