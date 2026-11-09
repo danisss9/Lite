@@ -1523,6 +1523,17 @@ internal static class BoxEngine
         var border = node.GetBorderWidth();
         if (padding.Top != 0f || border.Top != 0f) return ownTop;
 
+        return ownTop + FirstInFlowSiblingChain(node, cbWidth);
+    }
+
+    /// <summary>The collapsed top-margin chain this element's first in-flow content opens: the
+    /// first in-flow child's chain — continued through consecutive SELF-COLLAPSING siblings
+    /// (§8.3.1: a box with no border/padding/in-flow content/height has its own top and bottom
+    /// margins adjoining, so the chain flows THROUGH it into the next sibling's top margin —
+    /// the empty div between a body and its first paragraph must not eat the paragraph's
+    /// margin-top: clear-applies-to-001's reference shape).</summary>
+    private static MarginChain FirstInFlowSiblingChain(LayoutNode node, float cbWidth)
+    {
         foreach (var child in node.Children)
         {
             var d = child.GetDisplay();
@@ -1534,23 +1545,95 @@ internal static class BoxEngine
                 // Whitespace-only text is skipped by the flow (inter-block artifact); real text is
                 // inline content that contains the margin.
                 if (string.IsNullOrWhiteSpace(child.DisplayText)) continue;
-                return ownTop;
+                return MarginChain.Empty;
             }
             if (child.GetFloat() != FloatType.None) continue; // floats don't collapse margins
             var isBlock = d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex or DisplayType.Table;
-            if (!isBlock) return ownTop; // inline-level first child contains the margin
+            if (!isBlock) return MarginChain.Empty; // inline-level first child contains the margin
             // A child with 'clear' set never joins the chain (§8.3.1: the top margin collapses
             // with the first child only when "the child has no clearance"): clearance severs the
             // margins above the child, so its top margin stays inside this block. When clearance
             // ends up not being introduced the child still applies its own effective top margin
             // as the gap below (see LayoutChildrenImpl), so the rendered geometry is unchanged.
-            if (child.TagName != "#text" && child.GetClear() != ClearType.None) return ownTop;
+            if (child.GetClear() != ClearType.None) return MarginChain.Empty;
             // First in-flow block child: its effective top margin chain collapses with this
             // block's. The (maxPositive, minNegative) pair form survives negatives across three
             // and more levels, which the old scalar nesting lost (margin-collapse-162).
-            return ownTop + GetEffectiveTopMarginChain(child, cbWidth);
+            var childChain = GetEffectiveTopMarginChain(child, cbWidth);
+            // A SELF-COLLAPSING child (no in-flow content, no border/padding, not a BFC) lets the
+            // chain flow through it: its own bottom margin is adjoining with the NEXT in-flow
+            // sibling's top margin, which joins the same chain instead of starting below it.
+            if (SelfCollapses(child, cbWidth))
+                return childChain + SelfCollapserBottomJoin(child, cbWidth);
+            return childChain;
         }
-        return ownTop; // no in-flow children
+        return MarginChain.Empty;
+    }
+
+    /// <summary>The chain a self-collapsing box's BOTTOM margin opens into its following
+    /// in-flow siblings: each empty sibling's own (collapsed-through) margins join until a
+    /// content-bearing sibling's top chain lands, which terminates the join (its own bottom
+    /// side is a different boundary).</summary>
+    private static MarginChain SelfCollapserBottomJoin(LayoutNode empty, float cbWidth)
+    {
+        var fontSize = empty.GetFontSize();
+        var bottom = MarginChain.Of(empty.GetMarginBottom(total: cbWidth, size: fontSize));
+        var parent = empty.Parent;
+        if (parent is null) return bottom;
+        var started = false;
+        foreach (var sibling in parent.Children)
+        {
+            if (!started)
+            {
+                if (ReferenceEquals(sibling, empty)) started = true;
+                continue;
+            }
+            var d = sibling.GetDisplay();
+            if (d == DisplayType.None) continue;
+            var pos = sibling.GetPosition();
+            if (pos == PositionType.Absolute || pos == PositionType.Fixed) continue;
+            if (sibling.TagName == "#text")
+            {
+                if (string.IsNullOrWhiteSpace(sibling.DisplayText)) continue;
+                return bottom; // inline content terminates the chain (and contains it)
+            }
+            if (sibling.GetFloat() != FloatType.None) return bottom;
+            var isBlock = d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex or DisplayType.Table;
+            if (!isBlock) return bottom;
+            if (sibling.GetClear() != ClearType.None) return bottom;
+            return bottom + GetEffectiveTopMarginChain(sibling, cbWidth);
+        }
+        return bottom;
+    }
+
+    /// <summary>Whether <paramref name="node"/> self-collapses: no in-flow content, no
+    /// border/padding on either side, auto-or-zero height, not a BFC (§8.3.1) — its own top
+    /// and bottom margins are adjoining and the chain flows through it.</summary>
+    private static bool SelfCollapses(LayoutNode node, float cbWidth)
+    {
+        if (node.GetDisplay() is not (DisplayType.Block or DisplayType.ListItem)) return false;
+        if (EstablishesBlockFormattingContext(node)) return false;
+        var fontSize = node.GetFontSize();
+        var padding = node.GetPadding(cbWidth, 0, fontSize);
+        var border = node.GetBorderWidth();
+        if (padding.Top != 0f || padding.Bottom != 0f || border.Top != 0f || border.Bottom != 0f) return false;
+        // A specified height (or min-height) that resolves positive keeps the box's sides apart.
+        if (!node.IsAutoHeight() && node.GetHeight(cbWidth, 0, fontSize) > 0f) return false;
+        // An element holding its OWN text contains line boxes — the chain stops inside it.
+        if (!string.IsNullOrEmpty(node.DisplayText)) return false;
+        foreach (var child in node.Children)
+        {
+            if (child.GetDisplay() == DisplayType.None) continue;
+            if (child.GetPosition() is PositionType.Absolute or PositionType.Fixed) continue;
+            if (child.TagName == "#text")
+            {
+                if (!string.IsNullOrWhiteSpace(child.DisplayText)) return false;
+                continue;
+            }
+            if (child.GetFloat() != FloatType.None) return false;
+            return false; // any in-flow element child is content
+        }
+        return true;
     }
 
     /// <summary>
@@ -2053,6 +2136,17 @@ internal static class BoxEngine
                 // not let the paragraph's UA top margin collapse through it and vanish.
                 var firstChildCollapse = !firstBlockSeen && !hasCommittedContent &&
                     parentBorderPaddingTop == 0f && !parentEstablishesBfc;
+                // A SELF-COLLAPSING FIRST child's chain stays open through it: the escaped part
+                // of the chain (spent with the parent's own top margin) includes the join to the
+                // NEXT in-flow sibling's top margin — the empty div between a body and its first
+                // paragraph must not eat the paragraph's margin-top (clear-applies-to-001's
+                // shape). Mid-flow self-collapsers keep the own-chain form: their bottom margin
+                // folds into the running chain and the next sibling's own top collapses with it
+                // there; opening the chain here too double-counted the join
+                // (margin-collapse-033/034/035 red-walled).
+                if (firstChildCollapse && clear == ClearType.None && SelfCollapses(child, contentW))
+                    childEffectiveTop = (MarginChain.Of(childEffectiveTop) +
+                        SelfCollapserBottomJoin(child, contentW)).Value;
                 // A cleared box's effective top margin never escapes its parent (the chain stops
                 // at it, see GetEffectiveTopMargin), so it applies as the gap below even when the
                 // box is its parent's first — the first-child escape shortcut would drop it.
