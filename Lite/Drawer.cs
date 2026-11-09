@@ -26,6 +26,12 @@ internal static class Drawer
     private static float _viewportHeight;
     /// <summary>Current viewport width — used for fixed background-attachment positioning.</summary>
     private static float _viewportWidth;
+    /// <summary>The accumulated SCROLLABLE-BOX scroll offsets of the paint context (the sum of
+    /// every enclosing overflow:scroll element's scroll translate). A fixed background attaches
+    /// to the VIEWPORT (§14.2.1) — its placement compensates this sum so scrolling an ancestor
+    /// box does not drag the image (background-027's cat moved with the box's scroll).</summary>
+    private static float _bgFixedScrollX;
+    private static float _bgFixedScrollY;
     /// <summary>The BODY whose background propagated to the canvas (§14.2) — it paints no
     /// background of its own this frame. Null when the root painted its own background.</summary>
     private static LayoutNode? _propagatedBackgroundNode;
@@ -398,32 +404,19 @@ internal static class Drawer
             // before the scroll translate so they don't scroll away with the content.
             if (!invisible) PaintBlockDecorations(canvas, node);
             canvas.Translate(-scrollState.ScrollX, -scrollState.ScrollY);
-        }
-
-        // §17.5.1 dynamic effects: a cell spanning a collapsed column paints only the visible
-        // columns' slices — the intersecting slice is clipped out (the cell's own background
-        // included). The full-collapsed case skips the paint entirely.
-        var columnClip = node.CollapsedColumnClip;
-        if (columnClip is { Count: > 0 })
-        {
-            canvas.Save();
-            var borderLeft = node.Box.BorderBox.Left;
-            var top = node.Box.BorderBox.Top;
-            var bottom = node.Box.BorderBox.Bottom;
-            canvas.ClipRect(new SKRect(borderLeft, top, node.Box.BorderBox.Right, bottom));
-            foreach (var (start, end) in columnClip)
-                canvas.ClipRect(new SKRect(borderLeft + start, top, borderLeft + end, bottom), SKClipOperation.Difference);
-        }
-
-        PaintNodeContent(canvas, node, viewportWidth);
-
-        if (columnClip is { Count: > 0 }) canvas.Restore();
-
-        // Draw per-element scrollbar (inside the clip, after restoring scroll translate)
-        if (scrollState != null && (scrollState.NeedsScrollbar || scrollState.NeedsHorizontalScrollbar))
-        {
+            // The content painted inside this translate (including fixed backgrounds of
+            // descendants) compensates the box's scroll in its own placement (§14.2.1).
+            _bgFixedScrollX += scrollState.ScrollX;
+            _bgFixedScrollY += scrollState.ScrollY;
+            PaintNodeContent(canvas, node, viewportWidth);
+            _bgFixedScrollX -= scrollState.ScrollX;
+            _bgFixedScrollY -= scrollState.ScrollY;
             canvas.Translate(scrollState.ScrollX, scrollState.ScrollY); // Undo scroll offset for scrollbar
             if (!invisible) DrawElementScrollbar(canvas, node, scrollState);
+        }
+        else
+        {
+            PaintNodeContent(canvas, node, viewportWidth);
         }
 
         if (cssClipped) canvas.Restore();
@@ -440,6 +433,37 @@ internal static class Drawer
         // column/column-group) is removed from the rendering — its background, borders, text
         // and descendants paint nothing, while the grid keeps its place.
         if (node.CollapsedByColumn) return;
+
+        // §17.5.1 dynamic effects: a cell spanning a collapsed column paints only the visible
+        // columns' slices — the intersecting slice is clipped out (the cell's own background
+        // included). The full-collapsed case skips the paint entirely.
+        var columnClip = node.CollapsedColumnClip;
+        if (columnClip is { Count: > 0 })
+        {
+            canvas.Save();
+            var borderLeft = node.Box.BorderBox.Left;
+            var top = node.Box.BorderBox.Top;
+            var bottom = node.Box.BorderBox.Bottom;
+            canvas.ClipRect(new SKRect(borderLeft, top, node.Box.BorderBox.Right, bottom));
+            foreach (var (start, end) in columnClip)
+                canvas.ClipRect(new SKRect(borderLeft + start, top, borderLeft + end, bottom), SKClipOperation.Difference);
+            try
+            {
+                PaintNodeContentBody(canvas, node, viewportWidth);
+            }
+            finally
+            {
+                canvas.Restore();
+            }
+            return;
+        }
+
+        PaintNodeContentBody(canvas, node, viewportWidth);
+    }
+
+    private static void PaintNodeContentBody(SKCanvas canvas, LayoutNode node, int viewportWidth)
+    {
+        var display = node.GetDisplay();
 
         // CSS 2.1 §11.2: 'visibility: hidden' suppresses this box's own rendering — background,
         // borders, text, replaced content and list marker — while the box keeps its place in the
@@ -2578,12 +2602,16 @@ internal static class Drawer
 
         // background-attachment: fixed — the positioning area is the viewport (in document
         // coordinates the canvas is translated by -scrollY, so the viewport's top-left sits at
-        // y = scrollY). The painted background is still clipped to the element's padding box, but
-        // its placement is independent of where the element scrolled to (CSS 2.1 §14.2.1).
+        // y = scrollY; the accumulated SCROLLABLE-BOX scroll offsets shift the viewport back
+        // down in local space, and a fixed background must compensate them — CSS 2.1 §14.2.1:
+        // scrolling any ancestor box does not move the image). The painted background is still
+        // clipped to the element's padding box, but its placement is independent of where the
+        // element scrolled to.
         bool fixedBg = node.IsBackgroundFixed();
         var clipArea = box.PaddingBox;
         var area = fixedBg
-            ? new SKRect(0, _viewportScrollY, _viewportWidth, _viewportScrollY + _viewportHeight)
+            ? new SKRect(_bgFixedScrollX, _viewportScrollY + _bgFixedScrollY,
+                         _bgFixedScrollX + _viewportWidth, _viewportScrollY + _bgFixedScrollY + _viewportHeight)
             : box.PaddingBox;
 
         // Resolve image draw size

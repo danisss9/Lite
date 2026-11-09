@@ -259,7 +259,16 @@ internal static class VisualChecks
         if (box?.ScrollState is not { } ss)
             return new(WptRunner.Cat.Unsupported, "Visual check: no scrollable box rendered", 0, 0);
         var pb = box.Box.PaddingBox;
-        var crop = SKRectI.Intersect(new SKRectI((int)pb.Left, (int)pb.Top, (int)pb.Right, (int)pb.Bottom),
+        // The scrollbar's thumb moves between renders (chrome, not content): a box with
+        // overflow:scroll paints its thumb INSIDE the padding box's right/bottom edges, and
+        // including that band in the crop reads the thumb's travel as content movement
+        // (background-027's cat stayed put while the thumb crossed 610 crop pixels). Shrink
+        // the crop past the bars on the axes that draw one.
+        var cropRight = pb.Right;
+        var cropBottom = pb.Bottom;
+        if (ss.NeedsScrollbar) cropRight -= ElementScrollState.BarWidth + ElementScrollState.BarMargin;
+        if (ss.NeedsHorizontalScrollbar) cropBottom -= ElementScrollState.BarWidth + ElementScrollState.BarMargin;
+        var crop = SKRectI.Intersect(new SKRectI((int)pb.Left, (int)pb.Top, (int)cropRight, (int)cropBottom),
             new SKRectI(0, 0, after.Width, after.Height));
         if (crop.Width < 20 || crop.Height < 20)
             return new(WptRunner.Cat.Unsupported, "Visual check: scroll box crop is empty or off-viewport", 0, 0);
@@ -1206,6 +1215,22 @@ internal static class VisualChecks
     private static WptRunner.RunResult CatsStill(VisualCheck check, SKBitmap after, SKBitmap before, SKRectI crop)
     {
         var ink = TwoToneCoverage(before, crop);
+        if (Environment.GetEnvironmentVariable("LITE_SCROLL_DEBUG") is { } scDbg)
+        {
+            var rows = new List<string> { $"crop={crop}" };
+            foreach (var (label, bmp) in new[] { ("before", before), ("after", after) })
+            {
+                rows.Add($"  {label}:");
+                for (var y = crop.Top; y < crop.Bottom; y += 10)
+                {
+                    int? lo = null; int? hi = null;
+                    for (var x = crop.Left; x < crop.Right; x++)
+                        if (ChannelDistance(bmp.GetPixel(x, y), SKColors.White) > 16) { lo ??= x; hi = x; }
+                    if (lo is not null) rows.Add($"    y{y}: x{lo}..{hi}");
+                }
+            }
+            try { File.WriteAllLines(scDbg, rows); } catch { }
+        }
         if (ink < 0.15)
             return Fail($"the box shows {Pct(ink)} image ink (needs 15%+)");
         var diff = DiffFraction(before, after, crop);

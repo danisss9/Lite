@@ -58,6 +58,8 @@ internal static class WptRefTestRunner
                         tolerance: (byte)Math.Clamp(fuzzy?.MaxDifference ?? 0, 0, 255),
                         pixelBudget: fuzzy?.MaxPixels ?? 0);
                     var equal = comparison.Match;
+                    if (Environment.GetEnvironmentVariable("LITE_WALK_DEBUG") is { } walkDbg)
+                        try { File.AppendAllText(walkDbg, $"[WALK] test={test.Path} current={current.Path} target={targetPath} rel={reference.Relation} diff={comparison.DiffPixels} tol={fuzzy?.MaxDifference ?? 0} budget={fuzzy?.MaxPixels ?? 0} match={equal}\n"); } catch { }
                     var note = (fuzzy is { } limit
                         ? $" (fuzzy maxDifference={limit.MaxDifference} pixels={limit.MaxPixels})"
                         : "") + scaleNote + superseded;
