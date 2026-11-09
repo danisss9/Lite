@@ -801,6 +801,109 @@ internal class JsEngine : IDisposable
               });
             });
           };
+          // Structured clone (HTML §8.3): the flat-descriptor serializer runs in the source
+          // realm, the materializer in the target realm; the table crosses as a JSON string.
+          // Anything outside the clonable set — functions, symbols, DOM wrappers, instances of
+          // page classes — throws the clone sentinel, which StructuredClone.Clone turns into
+          // DataCloneError (the JSON route dropped functions and leaked source-realm handles).
+          globalThis.__liteCloneSerialize = function (value) {
+            var table = [];
+            var seen = new Map();
+            function ser(v) {
+              if (v === null) return { t: 'null' };
+              var tv = typeof v;
+              if (tv === 'string' || tv === 'number' || tv === 'boolean') return { t: tv, v: v };
+              if (tv === 'undefined') return { t: 'undefined' };
+              if (tv === 'function' || tv === 'symbol') throw { __liteClone: true };
+              if (typeof BigInt !== 'undefined' && tv === 'bigint') return { t: 'bigint', v: String(v) };
+              if (seen.has(v)) return { t: 'ref', i: seen.get(v) };
+              var index = table.length;
+              seen.set(v, index);
+              if (v instanceof Date) { table.push({ t: 'date', v: v.getTime() }); return { t: 'node', i: index }; }
+              if (v instanceof RegExp) { table.push({ t: 'regexp', v: v.source, f: v.flags }); return { t: 'node', i: index }; }
+              if (v instanceof Error) { table.push({ t: 'error', n: v.name, m: v.message }); return { t: 'node', i: index }; }
+              if (v instanceof Map) {
+                table.push({ t: 'map', e: [] });
+                var node = table[index];
+                v.forEach(function (val, k) { node.e.push([ser(k), ser(val)]); });
+                return { t: 'node', i: index };
+              }
+              if (v instanceof Set) {
+                table.push({ t: 'set', e: [] });
+                var node = table[index];
+                v.forEach(function (val) { node.e.push(ser(val)); });
+                return { t: 'node', i: index };
+              }
+              if (typeof ArrayBuffer !== 'undefined' && v instanceof ArrayBuffer) {
+                table.push({ t: 'ab', v: Array.prototype.slice.call(new Uint8Array(v)) });
+                return { t: 'node', i: index };
+              }
+              if (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(v)) {
+                table.push({ t: 'typed', c: v.constructor.name, v: Array.prototype.slice.call(v) });
+                return { t: 'node', i: index };
+              }
+              if (Array.isArray(v)) {
+                table.push({ t: 'arr', p: {} });
+                var node = table[index];
+                for (var i = 0; i < v.length; i++) node.p[String(i)] = ser(v[i]);
+                return { t: 'node', i: index };
+              }
+              if (v.constructor === Object || v.constructor === undefined) {
+                table.push({ t: 'obj', p: {} });
+                var node = table[index];
+                var keys = Object.keys(v);
+                for (var i = 0; i < keys.length; i++) node.p[keys[i]] = ser(v[keys[i]]);
+                return { t: 'node', i: index };
+              }
+              throw { __liteClone: true };
+            }
+            var root = ser(value);
+            return JSON.stringify({ root: root, table: table });
+          };
+          globalThis.__liteCloneMaterialize = function (json) {
+            var data = JSON.parse(json);
+            var table = data.table, root = data.root;
+            var made = new Array(table.length);
+            function res(d) {
+              if (d.t === 'ref') return made[d.i];
+              if (d.t === 'node') return build(d.i);
+              if (d.t === 'null') return null;
+              if (d.t === 'undefined') return undefined;
+              if (d.t === 'bigint') return BigInt(d.v);
+              return d.v;
+            }
+            function build(i) {
+              if (made[i] !== undefined) return made[i];
+              var n = table[i];
+              var v;
+              if (n.t === 'date') v = new Date(n.v);
+              else if (n.t === 'regexp') v = new RegExp(n.v, n.f);
+              else if (n.t === 'error') { var E = globalThis[n.n] || Error; v = new E(n.m); }
+              else if (n.t === 'map') {
+                v = new Map(); made[i] = v;
+                for (var j = 0; j < n.e.length; j++) v.set(res(n.e[j][0]), res(n.e[j][1]));
+              }
+              else if (n.t === 'set') {
+                v = new Set(); made[i] = v;
+                for (var j = 0; j < n.e.length; j++) v.add(res(n.e[j]));
+              }
+              else if (n.t === 'ab') v = new Uint8Array(n.v).buffer;
+              else if (n.t === 'typed') v = new (globalThis[n.c])(n.v);
+              else if (n.t === 'arr') {
+                v = []; made[i] = v;
+                var ks = Object.keys(n.p);
+                for (var j = 0; j < ks.length; j++) v[+ks[j]] = res(n.p[ks[j]]);
+              }
+              else {
+                v = {}; made[i] = v;
+                var ks = Object.keys(n.p);
+                for (var j = 0; j < ks.length; j++) v[ks[j]] = res(n.p[ks[j]]);
+              }
+              made[i] = v;
+              return v;
+            }
+            return res(root);
+          };
         })();
         """;
 
@@ -1070,6 +1173,23 @@ internal class JsEngine : IDisposable
             }
             catch { return "null"; }
         }
+    }
+
+    /// <summary>HTML §9.3 targetOrigin validation for postMessage: the wildcard "*" and "/"
+    /// (and the omitted default) skip the check, an unparseable value raises SyntaxError, and a
+    /// parsed origin that differs from THIS engine's origin raises SecurityError.</summary>
+    internal void CheckPostMessageTargetOrigin(JsValue? targetOrigin)
+    {
+        var spec = targetOrigin is null || targetOrigin.IsUndefined() || targetOrigin.IsNull()
+            ? "/" : targetOrigin.ToString();
+        if (spec == "/" || spec == "*") return;
+        if (!Uri.TryCreate(spec, UriKind.Absolute, out var u) || u.Host.Length == 0)
+            throw JsErrors.Dom(RawEngine, "SyntaxError",
+                $"Failed to execute 'postMessage' on 'Window': Invalid target origin '{spec}'.");
+        var authority = u.GetLeftPart(UriPartial.Authority);
+        if (authority != Origin)
+            throw JsErrors.Dom(RawEngine, "SecurityError",
+                $"Failed to execute 'postMessage' on 'Window': The target origin provided ('{spec}') does not match the recipient window's origin ('{Origin}').");
     }
 
     /// <summary>Delivers a postMessage to this window: dispatches a <c>message</c> event carrying

@@ -121,10 +121,10 @@ internal class JsWindow
     public void postMessage(JsValue message, JsValue? targetOrigin = null,
         JsValue? transfer = null)
     {
-        var data = message.ToObject();   // structured clone via the CLR graph
-        var origin = _engine.Origin;
+        _engine.CheckPostMessageTargetOrigin(targetOrigin);
         var ports = JsMessagePort.TransferPorts(transfer, _engine.MessagePortContext);
-        _engine.EnqueueMacrotask(() => _engine.DeliverMessage(data, origin,
+        var cloned = StructuredClone.Clone(_engine.RawEngine, message, _engine.RawEngine);
+        _engine.EnqueueMacrotask(() => _engine.DeliverMessage(cloned, _engine.Origin,
             _engine.GetWindowProxy(_engine), ports));
     }
 

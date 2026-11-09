@@ -20,17 +20,19 @@ internal sealed class JsWindowProxy
     }
 
     /// <summary>
-    /// HTML postMessage: structured-clones <paramref name="message"/> (via the CLR object graph)
-    /// and queues a <c>message</c> event on the target window, carrying the sender's origin and a
+    /// HTML postMessage: validates <paramref name="targetOrigin"/> against the recipient's
+    /// origin, structured-clones the message into the target realm, and queues a
+    /// <c>message</c> event on the target window carrying the sender's origin and a
     /// WindowProxy back to the sender as <c>event.source</c>.
     /// </summary>
     public void postMessage(JsValue message, JsValue? targetOrigin = null, JsValue? transfer = null)
     {
-        var data = message.ToObject();   // structured clone across engines via the CLR graph
-        var origin = _source.Origin;
-        var replySource = _target.GetWindowProxy(_source);
+        _target.CheckPostMessageTargetOrigin(targetOrigin);
         var ports = JsMessagePort.TransferPorts(transfer, _target.MessagePortContext);
-        _target.EnqueueMacrotask(() => _target.DeliverMessage(data, origin, replySource, ports));
+        var cloned = StructuredClone.Clone(_source.RawEngine, message, _target.RawEngine);
+        var replySource = _target.GetWindowProxy(_source);
+        var origin = _source.Origin;
+        _target.EnqueueMacrotask(() => _target.DeliverMessage(cloned, origin, replySource, ports));
     }
 
     public JsWindowProxy self => this;
