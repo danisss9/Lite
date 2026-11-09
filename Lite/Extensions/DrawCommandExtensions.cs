@@ -1880,6 +1880,24 @@ public static class StyleExtensions
         {
             var parsed = ParseCssColor(str);
             if (parsed.HasValue) return parsed.Value;
+
+            // A css-wide keyword that leaked into the stored value (AngleSharp serializes the
+            // 'initial' of an omitted shorthand component literally) reads as the property's
+            // INITIAL value (CSS 2.1 §6.1); for the border colors that initial is 'currentColor'
+            // (css-color-3), resolved against this element's own color — border-color-012's
+            // 'border-color: inherit' whose parent's 'border' shorthand omitted the color.
+            var keyword = str.Trim().ToLowerInvariant();
+            if (keyword is "initial" or "unset")
+            {
+                var initial = PropertyTable.InitialValue(propertyName);
+                if (!string.IsNullOrEmpty(initial))
+                {
+                    if (initial.Trim().Equals("currentcolor", StringComparison.OrdinalIgnoreCase))
+                        return node.GetColor();
+                    var parsedInitial = ParseCssColor(initial);
+                    if (parsedInitial.HasValue) return parsedInitial.Value;
+                }
+            }
         }
 
         return defaultColor;
@@ -1952,6 +1970,11 @@ public static class StyleExtensions
                 "thin" => 1f,
                 "medium" => 3f,
                 "thick" => 5f,
+                // A css-wide keyword that leaked into the stored value (AngleSharp serializes
+                // the 'initial' of an omitted shorthand component literally) reads as the
+                // property's initial width (CSS 2.1 §6.1/§8.5.2): 'medium'. 'unset' is the
+                // initial too — border widths are not inherited.
+                "initial" or "unset" => 3f,
                 _ => 0f,
             };
         if (computed > 0f) return computed;

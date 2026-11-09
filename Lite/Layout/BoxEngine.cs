@@ -2429,6 +2429,10 @@ internal static class BoxEngine
         }
 
         var placed = new List<(InlineItem item, float relX, float relY)>();
+        // Which line each placed entry landed on — the §8.4/§8.6 wrapper-fragment assembly
+        // groups a wrapper's edges and content per line below.
+        var placedLine = new List<int>();
+        var currentLine = 0;
         var lineStart = 0;
 
         // Locals rather than the out parameters directly: C# forbids touching an 'out' parameter
@@ -2519,6 +2523,7 @@ internal static class BoxEngine
             maxAbove = maxBelow = maxTopH = maxBottomH = 0f;
             hasBaselineItem = false;
             lineEndsWithBreak = false;
+            currentLine++;
             // The next line sits lower, so it may clear a float the previous line was beside.
             var (nx, nw) = AvailableBand(floats, originY + lineY, 1, originX, maxWidth);
             bandLeft = nx - originX;
@@ -2567,6 +2572,7 @@ internal static class BoxEngine
             if (item.Kind == InlineItemKind.OutOfFlow)
             {
                 placed.Add((item, lineX, lineY));
+                placedLine.Add(currentLine);
                 continue;
             }
 
@@ -2592,6 +2598,18 @@ internal static class BoxEngine
             // dropping this one loses nothing.
             if (item.Kind == InlineItemKind.Text && item.Text != null && item.Text.IsCssWhiteSpaceOnly() &&
                 itemIndex == items.Count - 1 &&
+                item.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+            {
+                continue;
+            }
+
+            // §16.6.1: a collapsible space at the START of a line is removed — it neither paints
+            // nor holds a slot, so the content after it stays on the line it would have started.
+            // An XML-served document's raw inter-element whitespace node otherwise grew its own
+            // line box and pushed the run's paragraph one slot below the reference's (the HTML
+            // parser's folding hides the shape; border-color-012's test markup exposes it).
+            if (item.Kind == InlineItemKind.Text && item.Text != null && item.Text.IsCssWhiteSpaceOnly() &&
+                placed.Count == lineStart &&
                 item.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
             {
                 continue;
@@ -2703,6 +2721,7 @@ internal static class BoxEngine
             if (effectiveItem.Kind == InlineItemKind.InlineEdge)
             {
                 placed.Add((effectiveItem, lineX, lineY));
+                placedLine.Add(currentLine);
                 lineX += effectiveItem.Width;
                 continue;
             }
@@ -2724,22 +2743,149 @@ internal static class BoxEngine
             }
 
             placed.Add((effectiveItem, lineX, lineY));
+            placedLine.Add(currentLine);
             lineX += effectiveItem.Width;
         }
         if (placed.Count > lineStart) CommitLine();
 
         // A node can end up with several fragments (a forced break inside it, or a run that wrapped);
         // start each layout pass from a clean list so a re-layout does not accumulate stale ones.
-        foreach (var (item, _, _) in placed) item.Node.InlineFragments = null;
-
-        foreach (var (item, relX, relY) in placed)
+        foreach (var (item, _, _) in placed)
         {
-            ApplyInlineItem(item, originX + relX, originY + relY, viewportWidth, viewportHeight);
+            item.Node.InlineFragments = null;
+            for (var a = item.Node; a is not null; a = a.Parent)
+            {
+                if (a != item.Node && a.GetDisplay() != DisplayType.Inline) break;
+                a.InlineFragmentBoxes = null;
+            }
         }
+
+        // §8.4/§8.6: a boxless inline wrapper's borders paint PER LINE, so line layout assembles
+        // each wrapper's per-line border-box fragments from its edge items (which side landed on
+        // the line — mirrored for a rtl box split by reordering) and its content's rects.
+        var wrapperFragments = new Dictionary<LayoutNode, Dictionary<int, (SKRect? Rect, bool HasLeading, bool HasTrailing)>>();
+        for (var pi = 0; pi < placed.Count; pi++)
+        {
+            var (item, relX, relY) = placed[pi];
+            ApplyInlineItem(item, originX + relX, originY + relY, viewportWidth, viewportHeight);
+            AccumulateWrapperFragment(wrapperFragments, item, originX + relX, originY + relY, placedLine[pi]);
+        }
+        FlushWrapperFragments(wrapperFragments);
 
         lastLineTop = committedLineTop;
         lastLineWidth = committedLineWidth;
         return lineY;
+    }
+
+    /// <summary>§8.4/§8.6 wrapper-fragment assembly: folds one placed item into the per-line
+    /// fragment accumulators of every inline wrapper above it. A text item feeds its content
+    /// rect to its inline ancestors (the element carrying its own text paints from its Box); an
+    /// edge item feeds its span to its own wrapper and the wrappers above, with the side flag
+    /// saying WHICH of the box's edges landed on this line (mirrored for a rtl box split by
+    /// reordering, §8.6).</summary>
+    private static void AccumulateWrapperFragment(
+        Dictionary<LayoutNode, Dictionary<int, (SKRect? Rect, bool HasLeading, bool HasTrailing)>> acc,
+        InlineItem item, float absX, float absY, int lineIndex)
+    {
+        if (item.Kind is InlineItemKind.OutOfFlow or InlineItemKind.LineBreak) return;
+        // A whitespace-only text item paints no ink and (§16.6.1) holds no line slot — folding
+        // its rect gave the wrapper a border fragment around collapsed space (the XML-served
+        // border-color-012 markup's inter-span whitespace grew an inner border box).
+        if (item.Kind == InlineItemKind.Text && (item.Text ?? "").IsCssWhiteSpaceOnly()) return;
+        if (item.Kind == InlineItemKind.InlineEdge)
+        {
+            var span = new SKRect(absX, absY, absX + item.Width, absY);
+            var node = item.Node;
+            while (true)
+            {
+                Fold(acc, node, lineIndex, span, !item.TrailingEdge, item.TrailingEdge);
+                node = node.Parent;
+                if (node is null || node.GetDisplay() != DisplayType.Inline) break;
+            }
+            return;
+        }
+        var rect = new SKRect(absX, absY, absX + item.Width, absY + item.Height);
+        for (var node = item.Node.Parent; node is not null; node = node.Parent)
+        {
+            // Anonymous boxes (a :before/:after pseudo's inline box, synthesized text) resolve
+            // their styles from the element that produced them — folding the host's border onto
+            // their fragment painted the host's box INSIDE its own border (the :before of a
+            // bordered div grew an inner ring). They are transparent to the fold.
+            if (node.TagName.StartsWith('#') || node.GetDisplay() != DisplayType.Inline) break;
+            Fold(acc, node, lineIndex, rect, null, null);
+        }
+    }
+
+    private static void Fold(
+        Dictionary<LayoutNode, Dictionary<int, (SKRect? Rect, bool HasLeading, bool HasTrailing)>> acc,
+        LayoutNode node, int lineIndex, SKRect rect, bool? leading, bool? trailing)
+    {
+        if (!acc.TryGetValue(node, out var lines))
+            acc[node] = lines = [];
+        if (!lines.TryGetValue(lineIndex, out var entry))
+            lines[lineIndex] = (rect, leading ?? false, trailing ?? false);
+        else
+            lines[lineIndex] = (entry.Rect is { } r ? SKRect.Union(r, rect) : rect,
+                entry.HasLeading || (leading ?? false), entry.HasTrailing || (trailing ?? false));
+    }
+
+    /// <summary>§8.4/§8.6: turns a wrapper's per-line unions into border-box fragments for the
+    /// painter. A side's margin/padding/border zones exist only on lines where that side's edge
+    /// item landed — the join sides hug the content; the top/bottom borders paint outside the
+    /// content area on every line (nothing vertical is reserved in the line box).</summary>
+    private static void FlushWrapperFragments(
+        Dictionary<LayoutNode, Dictionary<int, (SKRect? Rect, bool HasLeading, bool HasTrailing)>> acc)
+    {
+        foreach (var (node, lines) in acc)
+        {
+            var boxes = new List<BoxDimensions>();
+            var margin = node.GetMargin(0, 0, node.GetFontSize());
+            var padding = node.GetPadding(0, 0, node.GetFontSize());
+            var border = node.GetBorderWidth();
+            // §8.6 split-vs-unsplit: content on ONE painted line means an unsplit box — all
+            // four sides paint, and a side whose edge item landed elsewhere (e.g. a whitespace
+            // line that §9.4.2 turns into no line box at all) hangs OUTWARD past the content,
+            // exactly like the element-text Box path. Content on SEVERAL lines is a split box:
+            // a side masks to the join unless its own edge landed on that line.
+            var painted = lines.Where(static l => l.Value.Rect is { } r && r.Height > 0f)
+                               .OrderBy(static l => l.Key).ToList();
+            var unsplit = painted.Count == 1;
+            foreach (var kv in lines.OrderBy(static l => l.Key))
+            {
+                if (kv.Value.Rect is not { } rect || rect.Height <= 0f) continue;
+                var (hasLeading, hasTrailing) = (kv.Value.HasLeading, kv.Value.HasTrailing);
+                var keepLeft = hasLeading || unsplit;
+                var keepRight = hasTrailing || unsplit;
+                boxes.Add(new BoxDimensions
+                {
+                    // Horizontally a reserved side's zones sit INSIDE the union (deflate this
+                    // box's own margin/padding/border); a join side hugs the content; an
+                    // unsplit box's unreserved side hangs OUTWARD. Vertically nothing is
+                    // reserved, so the border box always extends OUTWARD past the content
+                    // area (BorderBox.Top = rect.Top - pad - border).
+                    ContentBox = new SKRect(
+                        hasLeading ? rect.Left + margin.Left + padding.Left + border.Left : rect.Left,
+                        rect.Top,
+                        hasTrailing ? rect.Right - margin.Right - padding.Right - border.Right : rect.Right,
+                        rect.Bottom),
+                    Padding = new EdgeSizes
+                    {
+                        Top = padding.Top,
+                        Bottom = padding.Bottom,
+                        Left = keepLeft ? padding.Left : 0f,
+                        Right = keepRight ? padding.Right : 0f,
+                    },
+                    Border = new EdgeSizes
+                    {
+                        Top = border.Top,
+                        Bottom = border.Bottom,
+                        Left = keepLeft ? border.Left : 0f,
+                        Right = keepRight ? border.Right : 0f,
+                    },
+                });
+            }
+            node.InlineFragmentBoxes = boxes.Count > 0 ? boxes : null;
+        }
     }
 
     /// <summary>
@@ -2909,8 +3055,8 @@ internal static class BoxEngine
         return (above, below, topH, bottomH, hasBaseline);
     }
 
-    private static InlineItem EdgeItem(LayoutNode node, float width) =>
-        new(InlineItemKind.InlineEdge, node, null, width, 0, default, default, default, width, 0, 0);
+    private static InlineItem EdgeItem(LayoutNode node, float width, bool trailing = false) =>
+        new(InlineItemKind.InlineEdge, node, null, width, 0, default, default, default, width, 0, 0, trailing);
 
     /// <summary>
     /// CSS 2.1 §8.4: the HORIZONTAL margins and padding of a non-replaced inline box are laid out
@@ -2937,9 +3083,13 @@ internal static class BoxEngine
         var fontSize = node.GetFontSize();
         var margin = node.GetMargin(maxWidth, viewportHeight, fontSize);
         var padding = node.GetPadding(maxWidth, viewportHeight, fontSize);
+        // §8.4: the horizontal MARGIN, PADDING and BORDER of a non-replaced inline box are laid
+        // out — borders were omitted here, so a 90px inline border advanced the line by nothing
+        // and its ring painted (or clipped) 180px too far left (border-width-applies-to-008).
+        var border = node.GetBorderWidth();
         // 'auto' is 0 on an inline box (§10.3.1), not the block-level centring rule.
-        var left = (node.IsAutoMarginLeft() ? 0f : margin.Left) + padding.Left;
-        var right = (node.IsAutoMarginRight() ? 0f : margin.Right) + padding.Right;
+        var left = (node.IsAutoMarginLeft() ? 0f : margin.Left) + padding.Left + border.Left;
+        var right = (node.IsAutoMarginRight() ? 0f : margin.Right) + padding.Right + border.Right;
         return (left, right);
     }
 
@@ -3257,7 +3407,7 @@ internal static class BoxEngine
                     : [rendered];
 
                 var (leading, trailing) = InlineBoxEdges(node, maxWidth, viewportHeight);
-                if (leading != 0f) items.Add(EdgeItem(node, leading));
+                if (leading != 0f) items.Add(EdgeItem(node, leading, trailing: false));
                 for (var si = 0; si < segments.Length; si++)
                 {
                     if (si > 0)
@@ -3267,7 +3417,7 @@ internal static class BoxEngine
                     items.Add(new InlineItem(InlineItemKind.Text, node, segments[si], w, h,
                                default, default, default, w, h, ascent));
                 }
-                if (trailing != 0f) items.Add(EdgeItem(node, trailing));
+                if (trailing != 0f) items.Add(EdgeItem(node, trailing, trailing: true));
             }
             else if (node.Children.Count > 0)
             {
@@ -3279,14 +3429,14 @@ internal static class BoxEngine
                 // keeps its physical sides — side margins are unaffected by directionality on
                 // one line (the bidi-box-model margins/padding families assert exactly that).
                 var isRtlBox = node.GetDirection() == "rtl";
-                if (!isRtlBox && leading != 0f) items.Add(EdgeItem(node, leading));
+                if (!isRtlBox && leading != 0f) items.Add(EdgeItem(node, leading, trailing: false));
                 var subtreeStart = items.Count;
                 // §16.2/UAX #9 subset: inside a reversed scope every level's child sequence
                 // reverses (the scope's character stream reverses as a whole), while the box's
                 // own edge items stay at its physical boundaries.
                 var children = node.BidiReversesContent() ? node.Children.AsEnumerable().Reverse() : node.Children;
                 CollectInlineItems(children, items, maxWidth, viewportWidth, viewportHeight);
-                if (!isRtlBox && trailing != 0f) items.Add(EdgeItem(node, trailing));
+                if (!isRtlBox && trailing != 0f) items.Add(EdgeItem(node, trailing, trailing: true));
                 if (isRtlBox && (leading != 0f || trailing != 0f))
                 {
                     var subtreeEnd = items.Count;
@@ -3295,19 +3445,19 @@ internal static class BoxEngine
                     if (firstBreak < 0)
                     {
                         // Unsplit: physical sides.
-                        if (leading != 0f) items.Insert(subtreeStart, EdgeItem(node, leading));
-                        if (trailing != 0f) items.Add(EdgeItem(node, trailing));
+                        if (leading != 0f) items.Insert(subtreeStart, EdgeItem(node, leading, trailing: false));
+                        if (trailing != 0f) items.Add(EdgeItem(node, trailing, trailing: true));
                     }
                     else
                     {
                         var lastBreak = items.FindLastIndex(subtreeEnd - 1, subtreeEnd - subtreeStart,
                             static i => i.Kind == InlineItemKind.LineBreak);
                         // Trailing decorations just before the first line's break...
-                        if (trailing != 0f) items.Insert(firstBreak, EdgeItem(node, trailing));
+                        if (trailing != 0f) items.Insert(firstBreak, EdgeItem(node, trailing, trailing: true));
                         // ...and leading decorations just after the last line's break (shifted
                         // one further by the insert above).
                         if (leading != 0f)
-                            items.Insert(lastBreak + 1 + (trailing != 0f ? 1 : 0), EdgeItem(node, leading));
+                            items.Insert(lastBreak + 1 + (trailing != 0f ? 1 : 0), EdgeItem(node, leading, trailing: false));
                     }
                 }
             }
@@ -3460,16 +3610,18 @@ internal static class BoxEngine
                         (node.InlineFragments ??= []).Add((rect, item.Text ?? ""));
                         if (node.InlineFragments.Count > 1) rect = SKRect.Union(node.Box.ContentBox, rect);
                     }
-                    // The line already reserved this box's horizontal padding (§8.4), so record it
-                    // here too — the painter fills the PADDING box, and without it the background
-                    // would stop short of the space the line gave the box. Anonymous boxes (#text)
-                    // resolve their styles from the element that produced them, so taking padding
-                    // there would apply the parent's a second time.
+                    // The line already reserved this box's horizontal padding and border (§8.4),
+                    // so record them here too — the painter fills the PADDING box and draws the
+                    // border around the border box, and without the edges both would stop short
+                    // of the space the line gave the box. Anonymous boxes (#text) resolve their
+                    // styles from the element that produced them, so taking edges there would
+                    // apply the parent's a second time.
                     var noEdges = node.TagName.StartsWith('#') || node.IsBrokenAroundBlock();
                     node.Box = new BoxDimensions
                     {
                         ContentBox = rect,
                         Padding = noEdges ? default : node.GetPadding(0, 0, node.GetFontSize()),
+                        Border = noEdges ? default : node.GetBorderWidth(),
                     };
                     break;
                 }
@@ -3504,6 +3656,7 @@ internal static class BoxEngine
         EdgeSizes Border,
         float ContentW,
         float ContentH,
-        float Ascent
+        float Ascent,
+        bool TrailingEdge = false
     );
 }

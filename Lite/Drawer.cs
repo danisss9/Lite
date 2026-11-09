@@ -1095,15 +1095,44 @@ internal static class Drawer
         var bgColor = node.GetBackgroundColor();
         using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
         using var font = TextMeasure.CreateFont(node);
+        // Anonymous boxes (:before/:after pseudos, synthesized text) resolve their styles from
+        // the element that produced them — painting "their" borders would paint the HOST's
+        // border as an inner ring (content-white-space-001's bordered div around a :before).
+        var paintsOwnBorders = !node.TagName.StartsWith('#');
+        // §8.4/§8.6: a boxless inline wrapper's borders paint per line from the fragments line
+        // layout assembled (side masks included) — this is the only border geometry a wrapper
+        // has, since its painted geometry lives in its content rather than its own Box.
+        if (paintsOwnBorders)
+            foreach (var wrapperBox in node.InlineFragmentBoxes ?? [])
+                DrawBorders(canvas, wrapperBox, node);
         if (node.InlineFragments is { Count: > 1 } fragments)
         {
-            foreach (var (rect, text) in fragments)
+            // §8.4: an inline box split over lines paints its left border at the FIRST fragment's
+            // left, the right border at the LAST fragment's right, and the top/bottom borders on
+            // EVERY fragment (a fragment's join sides stay empty). Zero-width sides are skipped
+            // inside DrawBorderSide, so masking through the Border edges is the whole rule.
+            var fragPadding = node.GetPadding(0, 0, node.GetFontSize());
+            var fragBorder = paintsOwnBorders ? node.GetBorderWidth() : default;
+            for (var fi = 0; fi < fragments.Count; fi++)
             {
+                var (rect, text) = fragments[fi];
                 if (bgColor != SKColors.Transparent)
                 {
                     using var fragBg = new SKPaint { Color = bgColor };
                     canvas.DrawRect(rect, fragBg);
                 }
+                DrawBorders(canvas, new BoxDimensions
+                {
+                    ContentBox = rect,
+                    Padding = fragPadding,
+                    Border = new EdgeSizes
+                    {
+                        Top = fragBorder.Top,
+                        Bottom = fragBorder.Bottom,
+                        Left = fi == 0 ? fragBorder.Left : 0f,
+                        Right = fi == fragments.Count - 1 ? fragBorder.Right : 0f,
+                    },
+                }, node);
                 DrawWrappedText(canvas, node, text, rect.Left, rect.Top, rect.Width, font, paint, lineAligned: true);
             }
             return true;
@@ -1113,6 +1142,11 @@ internal static class Drawer
             using var bgPaint = new SKPaint { Color = bgColor };
             canvas.DrawRect(node.Box.PaddingBox, bgPaint);
         }
+        // §8.4: the borders of an unsplit inline box paint around its border box — the box the
+        // line layout recorded (borders were laid out but never painted: a 90px border on
+        // display:inline painted nothing, border-width-applies-to-008). A boxless inline wrapper
+        // (its geometry lives in its fragments) carries zero Border edges and paints nothing here.
+        DrawBorders(canvas, node.Box, node);
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
             // Line-positioned rect (see the generic inline path): no re-alignment, and the

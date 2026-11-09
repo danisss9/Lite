@@ -306,6 +306,10 @@ public class LayoutNode
     /// with a single Box only the last fragment was painted.
     /// </summary>
     public List<(SKRect Rect, string Text)>? InlineFragments { get; set; }
+    /// <summary>Per-line border-box fragments of a boxless inline wrapper (§8.4/§8.6): line
+    /// layout assembles them from the wrapper's edge items and content rects — with the side
+    /// masks §8.6 prescribes for a box split over lines — and the painter draws their borders.</summary>
+    public List<BoxDimensions>? InlineFragmentBoxes { get; set; }
 
     /// <summary>
     /// Per-line-box band for this text node when floats make the available width vary down the
