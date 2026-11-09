@@ -44,6 +44,29 @@ public static class BorderConflictProbeTests
         }
     }
 
+    [Test]
+    public static void StaticInlineBorderStyle_JoinsTheConflict()
+    {
+        // border-collapse-dynamic-cell-001's starting state: a static style="border-style:
+        // solid" on the target cell must reach the §17.6.2.1 resolution — at the 10px width
+        // tie solid outranks the sheet's outset, so every edge around the target reads solid
+        // (AngleSharp keeps an inline shorthand under its own key; the longhand keys carry
+        // the sheet's outset unless the parser stamps the inline declaration expanded).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>td { border: 10px green outset; }</style></head>" +
+            "<body style='margin:0'><table style='border-collapse:collapse'><tr>" +
+            "<td>c11</td><td style='border-style:solid' id='target'>c22</td></tr></table></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var td = All(page.Root).First(n => n.Attributes.GetValueOrDefault("id") == "target");
+        True(td.GetBorderStyleTop() == BorderStyle.Solid,
+            $"the inline solid reaches the border readers, got {td.GetBorderStyleTop()}");
+        True(td.CollapsedEdgeBorders is { Count: 4 }, "collapsed edges missing");
+        foreach (var kv in td.CollapsedEdgeBorders!)
+            True(kv.Value.Style == BorderStyle.Solid,
+                $"edge {kv.Key} resolves the inline solid at the width tie, got {kv.Value.Style}");
+    }
+
     private static IEnumerable<LayoutNode> All(LayoutNode node)
     {
         yield return node;

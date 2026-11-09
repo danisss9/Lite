@@ -202,7 +202,7 @@ public class JsStyle
     /// 'border' follows §8.5.3's reset: each unstated component resets (width medium,
     /// style none, colour currentcolor) — el.style.border='yellow' on a bordered box must
     /// drop the width and style like a browser, not stack a colour onto them.</summary>
-    private static IEnumerable<(string Property, string Value)> Expand(string property, string value)
+    internal static IEnumerable<(string Property, string Value)> Expand(string property, string value)
     {
         if (ShorthandLonghands.TryGetValue(property, out var longhands))
         {
