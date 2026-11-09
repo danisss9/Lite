@@ -144,6 +144,20 @@ internal class JsEngine : IDisposable
     /// <summary>Set by the host window to perform a page navigation (e.g. form submission).</summary>
     internal Action<NavigationRequest>? OnNavigate { get; set; }
 
+    private Dom.SessionHistory? _sessionHistory;
+    /// <summary>Whether the engine's native runtime is torn down (its session-history entry
+    /// reads as ownerless once disposed).</summary>
+    internal bool IsDisposed { get; private set; }
+
+    /// <summary>Binds the History facade onto the shared session history (the parse calls this
+    /// before any script runs; the session seeds/positions the current document's entry next).</summary>
+    internal void AdoptSessionHistoryRaw(Dom.SessionHistory shared)
+    {
+        _sessionHistory = shared;
+        History.Adopt(shared);
+        _sessionHistory = shared;
+    }
+
     /// <summary>Requests a navigation, deferred onto the event loop so it runs after the
     /// current JS call stack unwinds (and on the UI thread).</summary>
     internal void RequestNavigation(string url) => RequestNavigation(new NavigationRequest(url));
@@ -194,9 +208,15 @@ internal class JsEngine : IDisposable
             return;
         }
 
-        // Cross-document: record the entry, then ask the host to load.
-        if (replace) History.replaceState(JsValue.Null, null, resolved);
-        else History.pushState(JsValue.Null, null, resolved);
+        // Cross-document: record the entry as reloadable (the session reloads it on
+        // traversal), then ask the host to load.
+        if (replace)
+            _sessionHistory?.ReplaceCrossDocument(resolved);
+        else
+        {
+            History.pushState(JsValue.Null, null, resolved);
+            _sessionHistory?.MarkCurrentCrossDocument();
+        }
         RequestNavigation(resolved);
     }
 
@@ -300,6 +320,7 @@ internal class JsEngine : IDisposable
         CurrentUrl = baseUrl;
         History = new Dom.JsHistory(this, baseUrl);
         Location = new Dom.JsLocation(this);
+        _sessionHistory = History.Shared;
 
         _jsWindow = new JsWindow(this, viewportWidth, viewportHeight);
         var jsDocument = DocumentFacade = new JsDocument(_engine, root);
@@ -1128,6 +1149,7 @@ internal class JsEngine : IDisposable
 
     public void Dispose()
     {
+        IsDisposed = true;
         if (_disposed) return;
         _disposed = true;
         foreach (var child in NestedEngines().ToArray()) child.Dispose();

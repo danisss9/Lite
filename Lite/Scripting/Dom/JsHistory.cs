@@ -3,51 +3,57 @@ using Lite.Scripting.Runtime;
 namespace Lite.Scripting.Dom;
 
 /// <summary>
-/// History API. Maintains an in-memory session history of (url, state) entries. pushState /
-/// replaceState mutate the entry list and the current URL without a reload; back/forward/go
-/// traverse it and fire a <c>popstate</c> event. Cross-document traversal (entries that point
-/// at a different document) is treated as same-document for state purposes — a documented
-/// simplification; full reload-on-traversal can be layered on later.
+/// The History interface: a per-document facade over the browsing context's shared
+/// <see cref="SessionHistory"/>. pushState/replaceState mutate the shared list as
+/// same-document entries owned by this engine; back/forward/go traverse it — in place (popstate,
+/// and hashchange when only the fragment differs) while the target entry's owner is this live
+/// engine, otherwise by re-requesting the target URL through the navigation pipeline (the
+/// engine holds no bfcache; a dead same-document entry reloads too). An engine created without
+/// an injected session history owns a private one, preserving the standalone shape.
 /// </summary>
 public class JsHistory
 {
-    internal sealed record Entry(string Url, JsValue State);
-
     private readonly JsEngine _engine;
-    private readonly List<Entry> _entries = [];
-    private int _index;
+    private SessionHistory _shared;
 
     internal JsHistory(JsEngine engine, string initialUrl)
     {
         _engine = engine;
-        _entries.Add(new Entry(initialUrl, JsValue.Null));
-        _index = 0;
+        _shared = new SessionHistory();
+        _shared.Seed(initialUrl, engine);
     }
 
-    public int length => _entries.Count;
+    /// <summary>Adopts the browsing context's shared history: the engine's first read sees the
+    /// entry its navigation targeted (the session adopts it in <see cref="SessionHistory.AddDocument"/>).</summary>
+    internal void Adopt(SessionHistory shared)
+    {
+        // Re-seed the shared list onto this document if the navigation was not part of a
+        // traversal AddDocument already recorded (a fresh location.assign chain).
+        _shared = shared;
+    }
+
+    internal SessionHistory Shared => _shared;
+
+    public int length => _shared.Length;
 
     public string scrollRestoration { get; set; } = "auto";
 
-    public JsValue state => _entries[_index].State;
+    public JsValue state => _shared.CurrentState;
 
     /// <summary>Current entry URL (used by JsLocation/JsEngine to stay in sync).</summary>
-    internal string CurrentUrl => _entries[_index].Url;
+    internal string CurrentUrl => _shared.CurrentUrl;
 
     public void pushState(JsValue state, string? title, string? url = null)
     {
         var resolved = _engine.ResolveAgainstCurrent(url) ?? CurrentUrl;
-        // Drop any forward entries, then append and advance.
-        if (_index < _entries.Count - 1)
-            _entries.RemoveRange(_index + 1, _entries.Count - _index - 1);
-        _entries.Add(new Entry(resolved, state));
-        _index = _entries.Count - 1;
+        _shared.PushState(resolved, state, _engine);
         _engine.SetCurrentUrl(resolved);
     }
 
     public void replaceState(JsValue state, string? title, string? url = null)
     {
         var resolved = _engine.ResolveAgainstCurrent(url) ?? CurrentUrl;
-        _entries[_index] = new Entry(resolved, state);
+        _shared.ReplaceState(resolved, state, _engine);
         _engine.SetCurrentUrl(resolved);
     }
 
@@ -63,21 +69,26 @@ public class JsHistory
             return;
         }
 
-        var target = _index + delta;
-        if (target < 0 || target >= _entries.Count) return; // out of range: no-op
+        var target = _shared.Peek(delta);
+        if (target is null) return; // out of range: no-op
 
         var oldUrl = CurrentUrl;
-        _index = target;
-        var entry = _entries[_index];
-        _engine.SetCurrentUrl(entry.Url);
+        if (target.SameDocument && ReferenceEquals(target.LiveOwner(), _engine))
+        {
+            // In-place traversal: the target entry is this engine's own same-document state.
+            _shared.Position(target);
+            _engine.SetCurrentUrl(target.Url);
+            _engine.FirePopState(target.State);
+            if (DiffersOnlyByFragment(oldUrl, target.Url) && !string.Equals(oldUrl, target.Url, StringComparison.Ordinal))
+                _engine.FireHashChange(oldUrl, target.Url);
+            return;
+        }
 
-        // Fire popstate (and hashchange when only the fragment differs).
-        _engine.FirePopState(entry.State);
-        if (DiffersOnlyByFragment(oldUrl, entry.Url) && !UrlsEqual(oldUrl, entry.Url))
-            _engine.FireHashChange(oldUrl, entry.Url);
+        // Cross-document (or dead same-document): re-request the URL — the session repositions
+        // when the loaded document is adopted (AddDocument matches the entry by URL).
+        _shared.Position(target);
+        _engine.RequestNavigation(target.Url);
     }
-
-    private static bool UrlsEqual(string a, string b) => string.Equals(a, b, StringComparison.Ordinal);
 
     private static bool DiffersOnlyByFragment(string a, string b)
     {

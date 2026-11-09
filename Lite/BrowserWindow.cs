@@ -77,7 +77,7 @@ public class BrowserWindow
     public void Run()
     {
         AnimationEngine.Reset();
-        var initialPage = Parser.TraversePage(new NavigationRequest(_url), _initialWidth, _initialHeight, _session);
+        var initialPage = Parser.TraversePage(new NavigationRequest(_url), _initialWidth, _initialHeight, _session, _sessionHistory);
         _rootNode = initialPage.Root;
         _url = initialPage.Root.DocumentState?.Address ?? _url;
         AnimationEngine.StartAnimations(_rootNode);
@@ -143,7 +143,7 @@ public class BrowserWindow
         _headless = true;
         _host = host;
         AnimationEngine.Reset();
-        var loaded = page ?? Parser.TraversePage(new NavigationRequest(_url), _initialWidth, _initialHeight, _session);
+        var loaded = page ?? Parser.TraversePage(new NavigationRequest(_url), _initialWidth, _initialHeight, _session, _sessionHistory);
         _rootNode = loaded.Root;
         _url = loaded.Root.DocumentState?.Address ?? _url;
         _width = _initialWidth;
@@ -881,6 +881,10 @@ public class BrowserWindow
     /// </summary>
     private void Navigate(string href) => Navigate(new NavigationRequest(href));
 
+    /// <summary>The browsing context's shared session history: every document this window
+    /// loads reads and traverses the same list, so back/forward crosses documents.</summary>
+    private readonly Lite.Scripting.Dom.SessionHistory _sessionHistory = new();
+
     private void Navigate(NavigationRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Url)) return;
@@ -920,7 +924,7 @@ public class BrowserWindow
             _loadedPage = null;
             _loadError = null;
             _loadReady = false;
-            try { _loadedPage = Parser.TraversePage(request with { Url = headlessUrl }, _width, _height, _session); }
+            try { _loadedPage = Parser.TraversePage(request with { Url = headlessUrl }, _width, _height, _session, _sessionHistory); }
             catch (Exception ex) { _loadError = ex; }
             _loadReady = true;
             FinalizeNavigation();
@@ -961,7 +965,7 @@ public class BrowserWindow
 
         Task.Run(() =>
         {
-            try { _loadedPage = Parser.TraversePage(navigationRequest, w, h, _session); }
+            try { _loadedPage = Parser.TraversePage(navigationRequest, w, h, _session, _sessionHistory); }
             catch (Exception ex) { _loadError = ex; }
             finally { _loadReady = true; } // volatile write — publishes the fields above
         });
@@ -1000,7 +1004,9 @@ public class BrowserWindow
 
         // Commit the new document (mirrors the setup in Run()). The outgoing engine may have
         // been created on a previous navigation's background thread — adopt it onto this thread
-        // so its native runtime can be freed here.
+        // so its native runtime can be freed here. window.name persists across the navigation
+        // (HTML §7.3): capture it before the outgoing engine tears down.
+        var carriedName = _rootNode?.DocumentState?.Engine?.RawEngine.GetValue("name") is { } n && !n.IsUndefined() ? n.ToString() : null;
         _rootNode?.DocumentState?.Engine?.TransferTreeToCurrentThread();
         _rootNode?.DocumentState?.Engine?.Dispose();
         _url = newRoot.DocumentState?.Address ?? _pendingUrl!;
@@ -1023,6 +1029,7 @@ public class BrowserWindow
             engine.TaskEnqueued += () => _host.PostTask();
             engine.OnNavigate = request => Navigate(request);
             engine.OnTitleChange = t => _host.SetTitle(t.Length == 0 ? _title : t);
+            if (!string.IsNullOrEmpty(carriedName)) engine.RawEngine.SetValue("name", carriedName);
             engine.NotifyNavigated(_url);
             _host.SetTitle(newPage?.Document?.Title is { Length: > 0 } t2 ? t2 : _title);
         }

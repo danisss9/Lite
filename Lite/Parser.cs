@@ -215,7 +215,7 @@ internal static class Parser
 
     /// <summary>Loads a document through the window's HTTP session, preserving cookies on redirects.</summary>
     internal static Page TraversePage(NavigationRequest request, int viewportWidth = 800, int viewportHeight = 600,
-        BrowserSession? session = null)
+        BrowserSession? session = null, Lite.Scripting.Dom.SessionHistory? sessionHistory = null)
     {
         Current = new ParseState { Session = session ?? new BrowserSession() };
         _baseUrl = request.Url;
@@ -275,7 +275,7 @@ internal static class Parser
         var document = OpenDocument(config, response, address, html, mediaType);
         _baseUrl = address;
         _documentBaseUrl = address;
-        return ParseOpenedDocument(document, address, viewportWidth, viewportHeight);
+        return ParseOpenedDocument(document, address, viewportWidth, viewportHeight, sessionHistory: sessionHistory);
     }
 
     /// <summary>Opens the response body as a document, dispatching on the response's MIME
@@ -546,7 +546,8 @@ internal static class Parser
     }
 
     private static Page ParseOpenedDocument(IDocument document, string address, int viewportWidth, int viewportHeight,
-        JsEngine? parentEngine = null, LayoutNode? frameNode = null, HashSet<string>? sandboxFlags = null)
+        JsEngine? parentEngine = null, LayoutNode? frameNode = null, HashSet<string>? sandboxFlags = null,
+        Lite.Scripting.Dom.SessionHistory? sessionHistory = null)
     {
         Document = document;
 
@@ -723,6 +724,9 @@ internal static class Parser
         // The sandbox enforcement reads the flags mid-parse (the script pump gates on them),
         // so the engine carries the set before any script executes.
         jsEngine.SandboxFlags = sandboxFlags;
+        // The browsing context's shared session history adopts this document before any
+        // script runs, so history.length/state read the context's list from the start.
+        sessionHistory?.AdoptFor(jsEngine, address);
         var page = new Page
         {
             Root = root,
