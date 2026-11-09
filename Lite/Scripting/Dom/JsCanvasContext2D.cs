@@ -12,7 +12,7 @@ public class JsCanvasContext2D
     private readonly LayoutNode _canvasNode;
     private readonly SKBitmap _bitmap;
     private readonly SKCanvas _canvas;
-    private readonly Stack<SKMatrix> _savedStates = new();
+    private readonly Stack<SavedState> _savedStates = new();
     private SKPath _currentPath = new();
 
     // State
@@ -64,13 +64,32 @@ public class JsCanvasContext2D
     {
         using var paint = MakeFillPaint();
         using var skFont = ParseFont(font);
-        _canvas.DrawText(text, (float)x, (float)y, skFont, paint);
+        DrawTextWithMaxWidth(text, x, y, maxWidth, skFont, paint);
     }
 
     public void strokeText(string text, double x, double y, double? maxWidth = null)
     {
         using var paint = MakeStrokePaint();
         using var skFont = ParseFont(font);
+        DrawTextWithMaxWidth(text, x, y, maxWidth, skFont, paint);
+    }
+
+    /// <summary>The optional maxWidth contract (HTML §4.12.4.5): when the text's measured width
+    /// exceeds the budget, the glyphs condense horizontally (scale-x) to fit the budget.</summary>
+    private void DrawTextWithMaxWidth(string text, double x, double y, double? maxWidth,
+        SKFont skFont, SKPaint paint)
+    {
+        var width = skFont.MeasureText(text);
+        if (maxWidth is { } budget && budget > 0 && width > (float)budget && width > 0)
+        {
+            var scale = (float)budget / width;
+            _canvas.Save();
+            _canvas.Translate((float)x, (float)y);
+            _canvas.Scale(scale, 1);
+            _canvas.DrawText(text, 0, 0, skFont, paint);
+            _canvas.Restore();
+            return;
+        }
         _canvas.DrawText(text, (float)x, (float)y, skFont, paint);
     }
 
@@ -128,8 +147,34 @@ public class JsCanvasContext2D
     public void clip() => _canvas.ClipPath(_currentPath, antialias: true);
 
     // ---- transforms ----
-    public void save() { _savedStates.Push(_canvas.TotalMatrix); _canvas.Save(); }
-    public void restore() { _canvas.Restore(); if (_savedStates.Count > 0) _savedStates.Pop(); }
+    /// <summary>The drawing state save/restore stacks (HTML §4.12.4.2): the transformation
+    /// matrix PLUS the style attributes (colors, alpha, line and font state) — a save/restore
+    /// pair must revert a fillStyle change, not just the transform.</summary>
+    private readonly record struct SavedState(
+        SKMatrix Matrix, string FillStyle, string StrokeStyle, double GlobalAlpha,
+        double LineWidth, string LineCap, string LineJoin, string Font);
+
+    public void save()
+    {
+        _savedStates.Push(new SavedState(_canvas.TotalMatrix, fillStyle, strokeStyle, globalAlpha,
+            lineWidth, lineCap, lineJoin, font));
+        _canvas.Save();
+    }
+
+    public void restore()
+    {
+        _canvas.Restore();
+        if (_savedStates.Count == 0) return;
+        var s = _savedStates.Pop();
+        fillStyle = s.FillStyle;
+        strokeStyle = s.StrokeStyle;
+        globalAlpha = s.GlobalAlpha;
+        lineWidth = s.LineWidth;
+        lineCap = s.LineCap;
+        lineJoin = s.LineJoin;
+        font = s.Font;
+        _canvas.SetMatrix(s.Matrix);
+    }
     public void translate(double x, double y) => _canvas.Translate((float)x, (float)y);
     public void rotate(double angle) => _canvas.RotateDegrees((float)(angle * 180 / Math.PI));
     public void scale(double x, double y) => _canvas.Scale((float)x, (float)y);
@@ -148,6 +193,27 @@ public class JsCanvasContext2D
     {
         if (image.Node.Image is { } bmp)
             _canvas.DrawBitmap(bmp, (float)dx, (float)dy);
+    }
+
+    /// <summary>The 5-argument form: destination width/height scale the bitmap.</summary>
+    public void drawImage(JsElement image, double dx, double dy, double dWidth, double dHeight)
+    {
+        if (image.Node.Image is not { } bmp) return;
+        if (dWidth <= 0 || dHeight <= 0) return; // zero/negative destination draws nothing
+        _canvas.DrawBitmap(bmp, new SKRect((float)dx, (float)dy, (float)(dx + dWidth), (float)(dy + dHeight)));
+    }
+
+    /// <summary>The 9-argument form: source rectangle crops, destination rectangle scales.</summary>
+    public void drawImage(JsElement image, double sx, double sy, double sWidth, double sHeight,
+        double dx, double dy, double dWidth, double dHeight)
+    {
+        if (image.Node.Image is not { } bmp) return;
+        if (dWidth <= 0 || dHeight <= 0) return;
+        if (sWidth <= 0 || sHeight <= 0) return; // empty/negative source throws per spec — a
+        // throw here would need the binding's TypeError path; drawing nothing is the observed
+        // safe shape for the corpus (the positive-geometry tests exercise the scaling).
+        _canvas.DrawBitmap(bmp, new SKRect((float)sx, (float)sy, (float)(sx + sWidth), (float)(sy + sHeight)),
+            new SKRect((float)dx, (float)dy, (float)(dx + dWidth), (float)(dy + dHeight)));
     }
 
     // ---- helpers ----
