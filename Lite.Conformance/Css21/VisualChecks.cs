@@ -1451,6 +1451,24 @@ internal static class VisualChecks
             if (s.Top - band.Max(x => x.Bottom) > 3) bands.Add([s]);
             else band.Add(s);
         }
+        if (bands.Count == 1 && ordered.Count > 1)
+        {
+            // Tight leading: the two lines' extents overlap, so no positive gap splits them.
+            // Split at the LARGEST vertical gap between consecutive components — within a
+            // line the glyphs share the baseline (no gap at all), so the inter-line gap wins
+            // however small it is.
+            var bestSplit = -1;
+            var bestGap = 0f;
+            for (var k = 1; k < ordered.Count; k++)
+            {
+                var gap = ordered[k].Top - ordered[k - 1].Bottom;
+                if (gap > bestGap) { bestGap = gap; bestSplit = k; }
+            }
+            if (bestSplit > 0)
+            {
+                bands = [ordered.Take(bestSplit).ToList(), ordered.Skip(bestSplit).ToList()];
+            }
+        }
         if (bands.Count != 2)
             return $"{bands.Count} ink lines below the instructions (the stated condition compares 2)";
         return LookSamePair(bands[0], bands[1], bitmap, tolerance);
