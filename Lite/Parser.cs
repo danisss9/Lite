@@ -147,6 +147,9 @@ internal static class Parser
         /// friends): type selectors match case-sensitively per CSS 2.1 §5.1.</summary>
         internal bool IsXmlDocument;
         internal readonly List<ScriptRecord> PendingScripts = [], DeferredScripts = [], AsyncScripts = [];
+        /// <summary>The sandboxing flag set this page inherited from its hosting frame (empty
+        /// when unsandboxed) — nested iframes union it into their own parsed set.</summary>
+        internal HashSet<string> InheritedSandbox = new(StringComparer.Ordinal);
         internal readonly Dictionary<string, List<int>> Counters = new();
         /// <summary>The counter instances each open element pushed (innermost last); an implicit
         /// counter-reset (§12.4.1) joins the enclosing element's list, so it ends with the
@@ -543,7 +546,7 @@ internal static class Parser
     }
 
     private static Page ParseOpenedDocument(IDocument document, string address, int viewportWidth, int viewportHeight,
-        JsEngine? parentEngine = null, LayoutNode? frameNode = null)
+        JsEngine? parentEngine = null, LayoutNode? frameNode = null, HashSet<string>? sandboxFlags = null)
     {
         Document = document;
 
@@ -717,6 +720,9 @@ internal static class Parser
         { ParserContext = Current, Session = Session };
         Session?.Attach(state);
         var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight, state);
+        // The sandbox enforcement reads the flags mid-parse (the script pump gates on them),
+        // so the engine carries the set before any script executes.
+        jsEngine.SandboxFlags = sandboxFlags;
         var page = new Page
         {
             Root = root,
@@ -725,6 +731,7 @@ internal static class Parser
             BaseUrl = _documentBaseUrl,
             ViewportWidth = viewportWidth,
             ViewportHeight = viewportHeight,
+            SandboxFlags = sandboxFlags,
         };
         if (parentEngine is not null && frameNode is not null)
         {
@@ -745,8 +752,11 @@ internal static class Parser
 
         // 1) In-position classic scripts (inline + external without defer/async), in document order.
         //    document.write() during these appends to the body (see JsDocument.write).
+        //    A sandboxed page without the allow-scripts flag parses but never runs script
+        //    (HTML §6.5.3) — none of the load pipeline's executions happen.
+        var sandboxAllowsScripts = jsEngine.SandboxAllowsScripts;
         foreach (var script in _pendingScripts)
-            jsEngine.Execute(script.Code!, script.Url, script.RequestedUrl);
+            if (sandboxAllowsScripts) jsEngine.Execute(script.Code!, script.Url, script.RequestedUrl);
 
         jsEngine.MarkDocumentInteractive();
 
@@ -762,17 +772,24 @@ internal static class Parser
         {
             if (loaded || !deferredDone || remainingAsync != 0) return;
             loaded = true;
-            if (onloadCode is not null) jsEngine.Execute(onloadCode);
+            if (onloadCode is not null && sandboxAllowsScripts) jsEngine.Execute(onloadCode);
             jsEngine.DispatchLoad();
         }
         foreach (var script in asyncScripts)
-            jsEngine.EnqueueMacrotask(() => jsEngine.RunDeferredScripts([script], () => { remainingAsync--; FinishLoad(); }));
-        jsEngine.RunDeferredScripts(deferred, () =>
+            if (sandboxAllowsScripts)
+                jsEngine.EnqueueMacrotask(() => jsEngine.RunDeferredScripts([script], () => { remainingAsync--; FinishLoad(); }));
+        if (sandboxAllowsScripts)
+            jsEngine.RunDeferredScripts(deferred, () =>
+            {
+                deferredDone = true;
+                jsEngine.DispatchDomContentLoaded();
+                FinishLoad();
+            });
+        else
         {
             deferredDone = true;
-            jsEngine.DispatchDomContentLoaded();
-            FinishLoad();
-        });
+            jsEngine.DispatchLoad();
+        }
 
         return page;
     }
@@ -834,11 +851,14 @@ internal static class Parser
     /// </summary>
     /// <param name="content">A URL when <paramref name="isSrcdoc"/> is false, else inline HTML.</param>
     internal static Page ParseChildPage(string content, bool isSrcdoc, string baseUrl, int viewportWidth, int viewportHeight,
-        BrowserSession? session = null, JsEngine? parentEngine = null, LayoutNode? frameNode = null)
+        BrowserSession? session = null, JsEngine? parentEngine = null, LayoutNode? frameNode = null,
+        HashSet<string>? sandboxFlags = null)
     {
         var savedContext = Current;
         var savedInstance = JsEngine.Instance;
         Current = new ParseState { Session = session ?? savedContext.Session };
+        if (sandboxFlags is { Count: > 0 })
+            Current.InheritedSandbox = new HashSet<string>(sandboxFlags, StringComparer.Ordinal);
 
         try
         {
@@ -876,13 +896,29 @@ internal static class Parser
             }
             var document = context.OpenAsync(req => req.Address(address)
                 .Content(NormalizeImportantBangs(html))).Result;
-            return ParseOpenedDocument(document, address, viewportWidth, viewportHeight, parentEngine, frameNode);
+            return ParseOpenedDocument(document, address, viewportWidth, viewportHeight, parentEngine, frameNode, sandboxFlags);
         }
         finally
         {
             Current = savedContext;
             JsEngine.Instance = savedInstance;
         }
+    }
+
+    /// <summary>HTML §6.5: parse a sandbox attribute into its flag set — ASCII-whitespace
+    /// separated tokens matched case-sensitively against the flag names, unknown tokens ignored
+    /// — unioned with the set the frame inherited. Empty/absent with no inheritance is the
+    /// unsandboxed case (a null set on the Page).</summary>
+    internal static HashSet<string>? ParseSandboxFlags(string? attribute, HashSet<string> inherited)
+    {
+        // An ABSENT attribute leaves the frame unsandboxed (unless it inherited flags); a
+        // PRESENT but empty attribute is the strongest sandbox — every restriction applies
+        // (HTML §6.5: the empty value is not "no sandbox").
+        if (attribute is null)
+            return inherited.Count > 0 ? new HashSet<string>(inherited, StringComparer.Ordinal) : null;
+        var flags = new HashSet<string>(inherited, StringComparer.Ordinal);
+        foreach (var token in DomWhitespace.Split(attribute)) flags.Add(token);
+        return flags;
     }
 
     /// <summary>
@@ -1222,6 +1258,30 @@ internal static class Parser
         // Extract flex-related CSS properties that AngleSharp doesn't cascade
         ExtractMatchedCssProperties(element, node);
 
+        // §6.4.3: an inline declaration outranks every non-important rule — the override
+        // channel is the engine's inline channel (script mutations live there too, and
+        // StyleResolver.Apply's tiers overwrite overrides at the important tiers exactly as
+        // §6.4.3 orders). AngleSharp keeps an inline SHORTHAND under its own key while the
+        // longhand keys carry the stylesheet's values, so a static style="border-style:none|
+        // solid" attribute never reached the border readers or the table's §17.6.2.1 conflict
+        // resolution (border-collapse-dynamic-cell-001/004/005 resolved outset through a
+        // static inline solid). Stamp the BORDER declarations expanded, the same way JsStyle
+        // expands mutations. (A full all-properties stamp was tried and REVERTED: it regressed
+        // table-anonymous-objects-015 — the anonymous-table machinery reads some inline
+        // declarations differently through the override channel; the general design needs its
+        // own pass, the conflict family needs only the borders.)
+        if (element.GetAttribute("style") is { Length: > 0 } inlineCss)
+        {
+            var (inlineProps, _) = ParseDeclarations(inlineCss);
+            foreach (var (prop, value) in inlineProps)
+            {
+                if (!prop.StartsWith("border")) continue;
+                node.StyleOverrides[prop] = value;
+                foreach (var (longhand, longhandValue) in Scripting.Dom.JsStyle.Expand(prop, value))
+                    node.StyleOverrides[longhand] = longhandValue;
+            }
+        }
+
         if (tag == "IMG")
         {
             var src = element.GetAttribute("src");
@@ -1499,20 +1559,24 @@ internal static class Parser
                 var srcdoc = element.GetAttribute("srcdoc");
                 var src = element.GetAttribute("src");
                 var baseForChild = _documentBaseUrl ?? _baseUrl ?? "about://lite/";
+                // HTML §6.5: the frame's sandbox flag set is the parsed sandbox attribute unioned
+                // with the flags the frame itself inherited; the child page enforces the set.
+                var childSandbox = ParseSandboxFlags(element.GetAttribute("sandbox"), Current.InheritedSandbox);
                 if (srcdoc is not null)
-                    node.ChildPage = ParseChildPage(srcdoc, isSrcdoc: true, baseForChild, cw, ch);
+                    node.ChildPage = ParseChildPage(srcdoc, isSrcdoc: true, baseForChild, cw, ch, sandboxFlags: childSandbox);
                 else if (!string.IsNullOrEmpty(src) && !src.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
                 {
                     var childUrl = ResolveUrl(src) ?? src;
-                    node.ChildPage = ParseChildPage(childUrl, isSrcdoc: false, childUrl, cw, ch);
+                    node.ChildPage = ParseChildPage(childUrl, isSrcdoc: false, childUrl, cw, ch, sandboxFlags: childSandbox);
                 }
                 else
                 {
                     node.ChildPage = ParseChildPage("<!doctype html><html><head></head><body></body></html>",
-                        isSrcdoc: true, baseForChild, cw, ch);
+                        isSrcdoc: true, baseForChild, cw, ch, sandboxFlags: childSandbox);
                     node.ChildPage.IsInitialAboutBlank = true;
                     node.ChildPage.Engine.SetCurrentUrl("about:blank");
                 }
+                node.ChildPage.SandboxFlags = childSandbox;
             }
             catch (Exception ex) { Console.WriteLine($"[iframe load] {ex.Message}"); }
         }

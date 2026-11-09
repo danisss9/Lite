@@ -664,6 +664,7 @@ internal class JsEngine : IDisposable
           if (!('name' in globalThis)) globalThis.name = '';
           // Window event surface forwards to the CLR window (which owns listener state).
           globalThis.addEventListener = function (t, fn, o) { return __jsWindow.addEventListener(t, fn, o); };
+          globalThis.open = function (u, t, f) { return __jsWindow.open(u, t, f); };
           globalThis.removeEventListener = function (t, fn, o) { return __jsWindow.removeEventListener(t, fn, o); };
           globalThis.dispatchEvent = function (e) { return __jsWindow.dispatchEvent(e); };
           // DOMException: name + spec error code, so assert_throws_dom (and page code) can
@@ -1161,10 +1162,20 @@ internal class JsEngine : IDisposable
 
     /// <summary>The document's origin (scheme://host:port), or "null" for non-hierarchical
     /// schemes (about:, data:). Used as the <c>origin</c> on cross-context message events.</summary>
+    /// <summary>The sandboxing flag set this page was loaded with (HTML §6.5) — null when
+    /// unsandboxed. Enforcement reads these instead of re-parsing the iframe attribute.</summary>
+    internal HashSet<string>? SandboxFlags { get; set; }
+    internal bool SandboxAllowsScripts => SandboxFlags is null || SandboxFlags.Contains("allow-scripts");
+    internal bool SandboxAllowsSameOrigin => SandboxFlags is null || SandboxFlags.Contains("allow-same-origin");
+    internal bool SandboxAllowsPopups => SandboxFlags is null || SandboxFlags.Contains("allow-popups");
+
     internal string Origin
     {
         get
         {
+            // A sandboxed page without allow-same-origin carries an opaque origin: every
+            // same-origin comparison against it fails (HTML §6.5.2).
+            if (!SandboxAllowsSameOrigin) return "null";
             try
             {
                 return Uri.TryCreate(DocumentState.Address, UriKind.Absolute, out var u) && u.IsAbsoluteUri && !u.IsFile && u.Host.Length > 0
@@ -1173,6 +1184,16 @@ internal class JsEngine : IDisposable
             }
             catch { return "null"; }
         }
+    }
+
+    /// <summary>Whether THIS engine and <paramref name="other"/> are same-origin under the
+    /// sandboxing rules: two opaque origins are never same-origin, including two pages both
+    /// sandboxed without allow-same-origin (HTML §6.5.2).</summary>
+    internal bool IsSameOriginAs(JsEngine other)
+    {
+        if (other is null) return false;
+        if (!SandboxAllowsSameOrigin || !other.SandboxAllowsSameOrigin) return false;
+        return Origin == other.Origin;
     }
 
     /// <summary>HTML §9.3 targetOrigin validation for postMessage: the wildcard "*" and "/"

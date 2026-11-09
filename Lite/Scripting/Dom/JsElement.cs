@@ -591,9 +591,12 @@ public class JsElement
     public object? contentWindow =>
         Node.ChildPage is { } p && JsEngine.For(_engine) is { } eng ? eng.GetWindowProxy(p.Engine) : null;
 
-    /// <summary>HTMLIFrameElement.contentDocument — the child Page's document (same-origin).</summary>
+    /// <summary>HTMLIFrameElement.contentDocument — the child Page's document, exposed only
+    /// same-origin: a sandboxed frame without allow-same-origin (opaque child origin) or a
+    /// genuinely cross-origin frame reads null (HTML §6.5.2, §4.8.5).</summary>
     public JsDocument? contentDocument =>
-        Node.ChildPage is { } p ? p.Engine.DocumentFacade : null;
+        Node.ChildPage is { } p && JsEngine.For(_engine) is { } eng && eng.IsSameOriginAs(p.Engine)
+            ? p.Engine.DocumentFacade : null;
 
     /// <summary>HTMLImageElement.src / HTMLSourceElement.src — reflects the <c>src</c> attribute.</summary>
     public string src

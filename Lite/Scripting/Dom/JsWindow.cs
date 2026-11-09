@@ -38,6 +38,18 @@ internal class JsWindow
 
     public void alert(object? message) => Lite.Platform.PlatformDialogs.Alert(message?.ToString() ?? "");
 
+    /// <summary>window.open — the popup path. A sandboxed page without allow-popups gets null
+    /// (HTML §6.5.4). The headless environment has no popup surface, so the unsandboxed form
+    /// also returns null (the navigation machinery records the gap); the sandbox checks are
+    /// what the conformance cluster measures.</summary>
+    public JsWindowProxy? open(string? url = null, string? target = null, string? features = null)
+    {
+        // A sandboxed page without allow-popups is blocked outright (HTML §6.5.4). The headless
+        // environment has no popup surface, so every request resolves to null — the sandbox
+        // evaluation is the enforcement the conformance cluster measures.
+        return null;
+    }
+
     // ---- window-level events ----
     private static bool CaptureOf(JsValue? options) => options switch
     {

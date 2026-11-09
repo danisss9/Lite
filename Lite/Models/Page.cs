@@ -18,6 +18,11 @@ internal sealed class Page
     public required JsEngine Engine { get; init; }
     public IDocument? Document { get; init; }
     internal bool IsInitialAboutBlank { get; set; }
+
+    /// <summary>The sandboxing flag set this page was loaded with (HTML §6.5): parsed from the
+    /// hosting iframe's sandbox attribute unioned with the flags the frame itself inherited.
+    /// Null or empty means unsandboxed.</summary>
+    internal HashSet<string>? SandboxFlags { get; set; }
     public string? BaseUrl { get; init; }
     public int ViewportWidth { get; init; }
     public int ViewportHeight { get; init; }

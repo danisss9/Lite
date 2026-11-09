@@ -419,7 +419,7 @@ public class JsDocument
                 var width = int.TryParse(frameNode.Attributes.GetValueOrDefault("width"), out var w) && w > 0 ? w : 300;
                 var height = int.TryParse(frameNode.Attributes.GetValueOrDefault("height"), out var h) && h > 0 ? h : 150;
                 var child = Parser.ParseChildPage(markup, isSrcdoc: true, parent.DocumentBaseUrl,
-                    width, height, parent.DocumentState.Session, parent, frameNode);
+                    width, height, parent.DocumentState.Session, parent, frameNode, frameNode.ChildPage.SandboxFlags);
                 frameNode.ChildPage = child;
                 EventDispatcher.DispatchToNode(frameNode, "load", parent);
             }
@@ -478,6 +478,25 @@ public class JsDocument
         {
             try { return JsEngine.For(_engine)?.Origin is { } b && Uri.TryCreate(b, UriKind.Absolute, out var u) ? u.Host : ""; }
             catch { return ""; }
+        }
+        set
+        {
+            // HTML §6.4 document.domain setter: registering relaxes same-origin. A page with an
+            // opaque origin (sandboxed without allow-same-origin) cannot register — the setter
+            // raises SecurityError (dom: sandboxed-document_domain). A value that is not a
+            // suffix of the current host is rejected the same way.
+            var eng = JsEngine.For(_engine) ?? throw JsErrors.Dom(_engine, "SecurityError",
+                "Blocked a frame with an opaque origin from setting document.domain.");
+            if (!eng.SandboxAllowsSameOrigin || eng.Origin == "null")
+                throw JsErrors.Dom(_engine, "SecurityError",
+                    "Blocked a frame with an opaque origin from setting document.domain.");
+            if (!Uri.TryCreate(eng.Origin, UriKind.Absolute, out var current) ||
+                !Uri.TryCreate("http://" + value, UriKind.Absolute, out var target) ||
+                current.Host != target.Host && !current.Host.EndsWith("." + target.Host, StringComparison.OrdinalIgnoreCase))
+                throw JsErrors.Dom(_engine, "SecurityError",
+                    $"Cannot set document.domain to '{value}' from origin '{eng.Origin}'.");
+            // Same-host registration: the observable state stays the host; the relaxed-access
+            // table this target tracks is a no-op in the single-origin serving environment.
         }
     }
     public string compatMode => _document?.CompatMode ?? "CSS1Compat";
