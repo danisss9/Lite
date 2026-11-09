@@ -2516,6 +2516,19 @@ internal static class VisualChecks
                     return new(WptRunner.Cat.Fail, $"{assertion}: no element renders '{needles[i]}'", 1, 1,
                         [new(assertion, 1, "text not in the layout tree")], 0);
             }
+            // Read the needle's OWN fragment, not the container: a paragraph holding
+            // "<span>Green Text</span> Black Text" contains both needles, and reading its
+            // whole region let the nested span's green dominate the black needle's read
+            // (user-stylesheet-005/006/010). Descend while a single child's text contains
+            // the needle — the deepest text node is the fragment the sentence is about.
+            while (true)
+            {
+                var inner = node.Children.FirstOrDefault(c =>
+                    c.GetDisplay() != DisplayType.None &&
+                    Normalize(Text(c)).Contains(needles[i], StringComparison.Ordinal));
+                if (inner is null || ReferenceEquals(inner, node)) break;
+                node = inner;
+            }
             var perCheck = check with { Color = colors[i], Needle = needles[i] };
             if (TextColorOf(perCheck, bitmap, node) is { } failure)
                 return failure;
@@ -2523,7 +2536,10 @@ internal static class VisualChecks
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
     }
 
-    /// <summary>The (index+1)-th text element whose normalized text contains the needle.</summary>
+    /// <summary>The (index+1)-th text element whose normalized text contains the needle.
+    /// Only INNERMOST elements count: a container whose descendant also renders the needle
+    /// is not an occurrence of its own (a div holding two "Filler Text" paragraphs must not
+    /// consume an occurrence slot — user-stylesheet-010's second paragraph).</summary>
     private static LayoutNode? FindNodeByOccurrence(LayoutNode root, int top, string needle, int index)
     {
         var hits = new List<LayoutNode>();
@@ -2531,7 +2547,13 @@ internal static class VisualChecks
         {
             if (!node.TagName.StartsWith('#') && node.Box.BorderBox.Top >= top &&
                 Normalize(Text(node)).Contains(needle, StringComparison.Ordinal))
-                hits.Add(node);
+            {
+                var innermost = true;
+                foreach (var child in node.Children)
+                    if (Normalize(Text(child)).Contains(needle, StringComparison.Ordinal))
+                        { innermost = false; break; }
+                if (innermost) hits.Add(node);
+            }
             foreach (var child in node.Children) Walk(child);
         }
         Walk(root);
@@ -3014,8 +3036,22 @@ internal static class VisualChecks
 
     private static string Text(LayoutNode node)
     {
+        // A pseudo-element node (::first-letter, :before/:after content) is a FRAGMENT of the
+        // parent's rendered text, and the text that follows it continues the same word —
+        // joining children with a hard space turned "f" + "iller text" into "f iller text"
+        // and every filler-text needle missed the element the ::first-letter family anchors
+        // to (user-stylesheet-016's judge fell back to the instruction paragraph). Pseudo
+        // fragments and the sibling right after one join with no separator; real element
+        // boundaries keep the word-separating space.
         var text = new System.Text.StringBuilder(node.DisplayText);
-        foreach (var child in node.Children) text.Append(' ').Append(Text(child));
+        var afterPseudo = false;
+        foreach (var child in node.Children)
+        {
+            var isPseudo = child.TagName.StartsWith("#pseudo", StringComparison.Ordinal);
+            if (isPseudo || afterPseudo) text.Append(Text(child));
+            else text.Append(' ').Append(Text(child));
+            afterPseudo = isPseudo;
+        }
         return text.ToString();
     }
 
@@ -3794,8 +3830,16 @@ internal static class VisualChecks
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
     }
 
-    /// <summary>The paragraph's first ink component is the stated colour and the rest of the
-    /// paragraph's ink is not (::first-letter).</summary>
+    /// <summary>The paragraph's first GLYPH is the stated colour and the rest of the
+    /// paragraph's ink is not (::first-letter). The read is geometric, not component-based:
+    /// at body sizes the component pass shatters a glyph into 1px slivers (black pixels
+    /// separated by antialiased gray exceed the join threshold) and the degenerate-size
+    /// filter discards them, so the first letter is frequently absent from the ink and a
+    /// component read lands on a neighbouring fragment's blend (user-stylesheet-016's "F"
+    /// read the quote after "letter" at #6e6e6e). The first glyph is the ink columns from
+    /// the paragraph's left edge to the first 3px white gap on its first ink row band, and
+    /// its colour is the CORE pixel farthest from the white page — the deepest ink, never
+    /// the blend majority.</summary>
     private static WptRunner.RunResult FirstLetterColor(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string sentence, string path)
     {
         var assertion = Describe(check);
@@ -3806,21 +3850,87 @@ internal static class VisualChecks
         var node = FindFiller(root, top) ?? InstructionNode(root, sentence);
         if (node is null)
             return new(WptRunner.Cat.Unsupported, "Visual check: no paragraph below the instructions", 0, 0);
-        var ink = ElementInk(bitmap, node, 1, out _);
-        if (ink.Count < 2)
-            return new(WptRunner.Cat.Fail, $"{assertion}: the paragraph painted {ink.Count} ink components", 1, 1,
-                [new(assertion, 1, "not enough ink to separate a first letter")], 0);
-        var ordered = ink.OrderBy(c => c.Top).ThenBy(c => c.Left).ToList();
-        var firstLine = ordered.Where(c => c.Top < ordered[0].Bottom).ToList();
-        var firstLetter = firstLine.MinBy(c => c.Left);
-        if (!Matches(check.Color!, firstLetter.Color))
-            return new(WptRunner.Cat.Fail, $"{assertion}: the first letter is {firstLetter.Color}", 1, 1,
-                [new(assertion, 1, $"first letter {firstLetter.Color}")], 0);
-        var rest = ink.Where(c => !ReferenceEquals(c, firstLetter)).ToList();
-        if (rest.All(c => Matches(check.Color!, c.Color)))
-            return new(WptRunner.Cat.Fail, $"{assertion}: the whole paragraph is {check.Color}", 1, 1,
+        var border = node.Box.BorderBox;
+        var crop = SKRectI.Round(new SKRect(border.Left - 1, border.Top - 1, border.Right + 1, border.Bottom + 1));
+        crop.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        bool Inked(int x, int y) => Distance(pixels[y * width + x], SKColors.White) > InkThreshold;
+        // The first ink row band: rows from the crop's top until a fully-white row (a glyph's
+        // ink is contiguous vertically; the band ends at the paragraph's line gap).
+        var bandTop = -1;
+        var bandBottom = -1;
+        for (var y = crop.Top; y < crop.Bottom; y++)
+        {
+            var any = false;
+            for (var x = crop.Left; x < crop.Right && !any; x++) any = Inked(x, y);
+            if (any) { if (bandTop < 0) bandTop = y; bandBottom = y + 1; }
+            else if (bandTop >= 0) break;
+        }
+        if (bandTop < 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the paragraph painted no ink", 1, 1,
+                [new(assertion, 1, "no ink")], 0);
+        // The first glyph's column run: from the first inked column to the first 3px white gap.
+        var glyphLeft = -1;
+        var glyphRight = -1;
+        var gap = 0;
+        for (var x = crop.Left; x < crop.Right; x++)
+        {
+            var any = false;
+            for (var y = bandTop; y < bandBottom && !any; y++) any = Inked(x, y);
+            if (any)
+            {
+                if (glyphLeft < 0) glyphLeft = x;
+                glyphRight = x + 1;
+                gap = 0;
+            }
+            else if (glyphLeft >= 0 && ++gap >= 3) break;
+        }
+        if (glyphLeft < 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the paragraph painted no ink", 1, 1,
+                [new(assertion, 1, "no ink")], 0);
+        // The first glyph's core colour, then the rest of the paragraph's ink core.
+        var firstColor = CoreColor(bitmap, new Component(glyphLeft, bandTop, glyphRight, bandBottom, true, default));
+        if (!Matches(check.Color!, firstColor))
+            return new(WptRunner.Cat.Fail, $"{assertion}: the first letter is {firstColor}", 1, 1,
+                [new(assertion, 1, $"first letter {firstColor}")], 0);
+        var restColor = SKColors.White;
+        var restSeen = false;
+        for (var y = crop.Top; y < crop.Bottom; y++)
+        for (var x = glyphRight; x < crop.Right; x++)
+        {
+            var p = pixels[y * width + x];
+            var d = Distance(p, SKColors.White);
+            if (d > InkThreshold && (!restSeen || d > Distance(restColor, SKColors.White)))
+            {
+                restColor = p;
+                restSeen = true;
+            }
+        }
+        if (restSeen && Matches(check.Color!, restColor))
+            return new(WptRunner.Cat.Fail, $"{assertion}: the rest of the paragraph is {check.Color} too", 1, 1,
                 [new(assertion, 1, "the rest of the paragraph is also coloured")], 0);
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>The CORE ink in a rect: the pixel farthest from the white page. Antialiasing
+    /// blends a glyph's edges toward the background, so on a small glyph the blends outnumber
+    /// the core and a most-frequent-pixel read returns the blend; the deepest pixel is the
+    /// ink the sentence is about.</summary>
+    private static SKColor CoreColor(SKBitmap bitmap, Component component)
+    {
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+        var best = default(SKColor);
+        var bestDistance = -1f;
+        for (var y = component.Top; y < component.Bottom; y++)
+        for (var x = component.Left; x < component.Right; x++)
+        {
+            var p = pixels[y * width + x];
+            var d = Distance(p, SKColors.White);
+            if (d > bestDistance) { bestDistance = d; best = p; }
+        }
+        return new SKColor(best.Red, best.Green, best.Blue);
     }
 
     /// <summary>The first text band's ink is the stated colour and the next band's is not.</summary>
