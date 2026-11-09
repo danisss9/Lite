@@ -1240,7 +1240,7 @@ internal static class VisualChecks
                 "same-dimension" => SameDimension(check, shapes),
                 "bar-gap" => BarGap(shapes),
                 "line-style" => LineStyle(check, shapes),
-                "look-same" => bitmap is null ? "no render" : LookSame(shapes, bitmap, check.Approx ? 3 * PixelTolerance : PixelTolerance),
+                "look-same" => bitmap is null ? "no render" : LookSame(shapes, bitmap, check.Approx ? 3 * PixelTolerance : PixelTolerance, top),
                 "solid-line" => SolidLine(check, shapes),
                 "border-ring" => BorderRing(check, shapes, bitmap),
                 "shape-relation" => ShapeRelation(check, shapes, nested, bitmap),
@@ -1434,8 +1434,26 @@ internal static class VisualChecks
 
     /// <summary>Two top-level shapes, same dimensions, pixel-identical within tolerance
     /// (antialiasing by default; "approximately the same" admits three times that).</summary>
-    private static string? LookSame(IReadOnlyList<Component> shapes, SKBitmap bitmap, int tolerance)
+    private static string? LookSame(IReadOnlyList<Component> shapes, SKBitmap bitmap, int tolerance, int top = 0)
     {
+        // The segmentation dump the counters residue asked for: when LITE_LOOKSAME_DEBUG names
+        // a file, the shapes' extents and the band clustering land there verbatim.
+        var debugPath = Environment.GetEnvironmentVariable("LITE_LOOKSAME_DEBUG");
+        if (debugPath is not null)
+        {
+            var lines = new List<string> { $"shapes={shapes.Count} tolerance={tolerance} regionTop={top}" };
+            foreach (var s in shapes)
+                lines.Add($"  shape [{s.Left},{s.Top} .. {s.Right},{s.Bottom}] {s.Right - s.Left:0}x{s.Bottom - s.Top:0}");
+            try
+            {
+                File.WriteAllLines(debugPath, lines);
+                using var image = SKImage.FromBitmap(bitmap);
+                using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                using var stream = File.OpenWrite(debugPath + ".png");
+                data.SaveTo(stream);
+            }
+            catch { /* a diagnostic dump never fails the case */ }
+        }
         if (shapes.Count == 2) return LookSamePair([shapes[0]], [shapes[1]], bitmap, tolerance);
         // "The following two lines should look the same" over TEXT lines: the ink fragments
         // into glyph-level components (the counters family renders 60+), so the two lines are
