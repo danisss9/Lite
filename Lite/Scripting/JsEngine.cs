@@ -38,6 +38,9 @@ internal class JsEngine : IDisposable
     /// <summary>The window's slice of a node dispatch path (DOM §2.9's first path entry).</summary>
     internal bool WindowPathListeners(string type, Dom.JsEvent evt, bool capture) =>
         _jsWindow.InvokePathListeners(type, evt, capture, this);
+
+    /// <summary>The per-window navigator instance (tests check per-window identity).</summary>
+    internal Dom.JsNavigator Navigator => _jsWindow.navigator;
     private readonly Dictionary<JsEngine, Dom.JsWindowProxy> _windowProxies = new();
     private Dom.JsMessagePortContext? _messagePortContext;
     internal Dom.JsMessagePortContext MessagePortContext => _messagePortContext ??= new(this);
@@ -387,7 +390,7 @@ internal class JsEngine : IDisposable
             """, "lite/blob-urls.js");
 
         // navigator
-        _engine.SetValue("navigator", new JsNavigator(DocumentState.Session, () => CurrentUrl));
+        _engine.SetValue("navigator", new JsNavigator(DocumentState.Session, () => CurrentUrl, _engine));
 
         // Base64 utilities (HTML5 §6.2)
         _engine.SetValue("atob", new Func<string, string>(Dom.JsBase64.Decode));
