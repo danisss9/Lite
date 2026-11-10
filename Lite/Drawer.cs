@@ -2896,6 +2896,17 @@ internal static class Drawer
 
             // §15.6 'font-variant: small-caps': lowercase letters synthesize to small capitals.
             var smallCaps = IsSmallCaps(node);
+            // §15.5 italic synthesis: the face resolved upright while the node requested
+            // italic — skew the glyph runs (the oblique every browser falls back to).
+            var synthItalic = SynthesizesItalic(node, lineFont);
+            if (synthItalic)
+            {
+                canvas.Save();
+                canvas.Translate(drawX, baseline);
+                canvas.Skew(-0.25f, 0f);
+            }
+            var runX = synthItalic ? 0f : drawX;
+            var runY = synthItalic ? 0f : baseline;
             // text-shadow drawn before (behind) the main text
             if (textShadow.HasValue)
             {
@@ -2908,18 +2919,19 @@ internal static class Drawer
                     MaskFilter = sigma > 0 ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma) : null,
                 };
                 if (smallCaps)
-                    DrawTextSmallCaps(canvas, line.Text, drawX + ts.OffsetX, baseline + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing);
+                    DrawTextSmallCaps(canvas, line.Text, runX + ts.OffsetX, runY + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing);
                 else
-                    DrawTextWithSpacing(canvas, line.Text, drawX + ts.OffsetX, baseline + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing);
+                    DrawTextWithSpacing(canvas, line.Text, runX + ts.OffsetX, runY + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing);
             }
 
             // ::first-letter is not handled here: the Parser splits it into a real inline box
             // (#pseudo-first-letter) so it takes part in layout, and it paints as ordinary inline
             // content through this same routine.
             if (smallCaps)
-                DrawTextSmallCaps(canvas, line.Text, drawX, baseline, lineFont, linePaint, letterSpacing, lineWordSpacing);
+                DrawTextSmallCaps(canvas, line.Text, runX, runY, lineFont, linePaint, letterSpacing, lineWordSpacing);
             else
-                DrawTextWithSpacing(canvas, line.Text, drawX, baseline, lineFont, linePaint, letterSpacing, lineWordSpacing);
+                DrawTextWithSpacing(canvas, line.Text, runX, runY, lineFont, linePaint, letterSpacing, lineWordSpacing);
+            if (synthItalic) canvas.Restore();
 
             if (underline)
             {
@@ -2982,6 +2994,15 @@ internal static class Drawer
     {
         var raw = node.TryResolveStyle("font-variant", out var ov) ? ov : node.Style.GetPropertyValueSafe("font-variant");
         return raw.Trim().Equals("small-caps", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>True when the node requests italic/oblique but the resolved face is upright —
+    /// Skia matched the closest face without synthesizing, and §15.5's oblique synthesis is
+    /// ours to paint: a skew around the glyph runs (advances unchanged, outline slanted).</summary>
+    private static bool SynthesizesItalic(LayoutNode node, SKFont font)
+    {
+        if (!node.GetFontItalic()) return false;
+        return font.Typeface.FontStyle.Slant == SKFontStyleSlant.Upright;
     }
 
     /// <summary>Synthesized small-caps drawing (§15.6): capitals and non-letters draw at the

@@ -2156,7 +2156,27 @@ internal static class Parser
             if (Length(Attr("height")) is { } height) Hint("height", height);
         if (tag is "BODY" or "TABLE" or "TR" or "TD" or "TH" && Attr("bgcolor") is { Length: > 0 } bgcolor)
             Hint("background-color", bgcolor.Trim());
-        if (tag == "BODY" && Attr("text") is { Length: > 0 } text) Hint("color", text.Trim());
+        if (tag == "BODY")
+        {
+            if (Attr("text") is { Length: > 0 } text) Hint("color", text.Trim());
+            // The link/vlink/alink attributes paint anchors: visited/unvisited distinction
+            // needs history state the headless harness does not model, so the unvisited color
+            // wins (a:visited styling is outside the headless scope).
+            if (Attr("link") is { Length: > 0 } link) Hint("__link-color", link.Trim());
+        }
+        if (tag == "A" && element.HasAttribute("href"))
+        {
+            // The anchor color comes from the containing body's link hint (the UA sheet's
+            // blue default applies when no hint exists).
+            for (var p2 = (LayoutNode?)node; p2 != null; p2 = p2.Parent)
+            {
+                if (p2.TagName == "BODY" && p2.StyleOverrides.TryGetValue("__link-color", out var linkColor))
+                {
+                    Hint("color", linkColor);
+                    break;
+                }
+            }
+        }
         var align = Attr("align")?.Trim().ToLowerInvariant();
         if (tag is "TD" or "TH" or "TR" or "DIV" or "P" or "H1" or "H2" or "H3" or "H4" or "H5" or "H6" or "CAPTION" or "THEAD" or "TBODY" or "TFOOT"
             && align is "left" or "right" or "center" or "justify")
@@ -2371,8 +2391,13 @@ internal static class Parser
 
         foreach (var rule in CssRules)
         {
+            // A 'font' shorthand without an explicit /<line-height> component RESETS
+            // line-height to 'normal' (§15.8: the shorthand sets every font longhand) — the
+            // span of font-044 inherited its parent's line-height: 1 and its message-box
+            // content area stopped covering the inline-block's red box. The shorthand's
+            // line-height value is its /<line-height> component, or 'normal' when unstated.
             var isFont = rule.Properties.TryGetValue("font", out var font) &&
-                         !string.IsNullOrWhiteSpace(font) && LineHeightComponentOf(font) is not null;
+                         !string.IsNullOrWhiteSpace(font);
             var direct = rule.Properties.TryGetValue("line-height", out var lh) &&
                          !string.IsNullOrWhiteSpace(lh);
             if (!isFont && !direct) continue;
@@ -2382,7 +2407,7 @@ internal static class Parser
                        rule.Specificity, rule.Order);
             if (best is null || key.CompareTo(bestKey) > 0)
             {
-                best = direct ? lh : LineHeightComponentOf(font!);
+                best = direct ? lh : (LineHeightComponentOf(font!) ?? "normal");
                 bestKey = key;
             }
         }
@@ -2393,8 +2418,8 @@ internal static class Parser
             var (props, _) = ParseDeclarations(inline);
             if (props.TryGetValue("line-height", out var direct) && !string.IsNullOrWhiteSpace(direct))
                 return direct;
-            if (props.TryGetValue("font", out var font) && LineHeightComponentOf(font) is { } comp)
-                return comp;
+            if (props.TryGetValue("font", out var font) && !string.IsNullOrWhiteSpace(font))
+                return LineHeightComponentOf(font) ?? "normal";
         }
         return best;
     }
