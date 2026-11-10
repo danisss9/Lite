@@ -1790,8 +1790,10 @@ internal static class VisualChecks
             return Math.Abs(gapA - gapB) > 2 * EdgeTolerance ? $"gaps differ: {gapA}px vs {gapB}px" : null;
         }
         // "The height of the <color> box is similar to the height of the <color> boxes"
-        // compares one box against several; every other relation names exactly one of each.
-        var singleFirst = check.Relation != "height-similar";
+        // compares one box against several; height-band states the plural the same way
+        // (line-height-001's two black reference boxes). Every other relation names exactly
+        // one of each.
+        var singleFirst = check.Relation is not ("height-similar" or "height-band");
         if (a.Count != 1 || singleFirst && b.Count != 1 || b.Count == 0)
             return $"{a.Count} {check.ColorA} and {b.Count} {check.ColorB} shapes below the instructions";
         var (first, second) = (a[0], b[0]);
@@ -1900,11 +1902,14 @@ internal static class VisualChecks
                 // The sentence's "it is acceptable to have the blue box height be shorter or
                 // taller" clause relaxes the comparison to a band (the reviewed reading:
                 // similar means within a factor of two of the reference boxes either way).
+                // The references are PLURAL ("the black boxes"): the blue height must sit in
+                // the band of at least one of them (line-height-001's two black boxes are the
+                // recommended settings either side of the rendered line-height).
                 var blue = a[0].Height;
-                var reference = b[0].Height;
-                if (blue < reference / 2f - EdgeTolerance || blue > reference * 2f + EdgeTolerance)
-                    return $"the {check.ColorA} box's height ({blue}px) is outside the similar band around {check.ColorB} ({reference}px)";
-                return null;
+                foreach (var reference in b)
+                    if (blue >= reference.Height / 2f - EdgeTolerance && blue <= reference.Height * 2f + EdgeTolerance)
+                        return null;
+                return $"the {check.ColorA} box's height ({blue}px) is outside the similar band around {check.ColorB} ({string.Join(", ", b.Select(x => x.Height))}px)";
             }
             case "no-vertical-gap":
                 var touching = Math.Abs(first.Bottom - second.Top) <= EdgeTolerance || Math.Abs(second.Bottom - first.Top) <= EdgeTolerance;
