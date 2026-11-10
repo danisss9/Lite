@@ -1,4 +1,8 @@
 using Lite;
+using Lite;
+using Lite.Layout;
+using Lite.Models;
+using Lite.Extensions;
 using Lite.Scripting;
 using static Lite.Tests.TestRunner;
 
@@ -56,6 +60,35 @@ public static class DocumentColorTests
             """);
         // The body IDL and the document IDL share one attribute store.
         Equal("green/green|red/red|silver/silver", Eval(engine, "out"));
+    }
+
+    [Test]
+    public static void DocumentColor_LinkHintPaintsAnchors()
+    {
+        var page = Parser.ParseChildPage(
+            "<!doctype html><body link='red'><a href='x.html'>link</a></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        // The body's link hint colors the anchor (the UA blue default applies without it).
+        var anchor = Find(page.Root, "A");
+        True(anchor != null, "anchor missing");
+        var color = anchor!.Style.GetPropertyValueSafe("color")?.Trim();
+        True(color == "red", $"the body's link hint must color the anchor red, got {color}");
+        // Without the hint the UA blue default applies.
+        var page2 = Parser.ParseChildPage(
+            "<!doctype html><body><a href='x.html'>link</a></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page2.Root, 800, 600);
+        var anchor2 = Find(page2.Root, "A");
+        var color2 = anchor2!.Style.GetPropertyValueSafe("color")?.Trim();
+        True(color2 == "blue", $"the UA default anchor color must be blue, got {color2}");
+    }
+
+    private static LayoutNode? Find(LayoutNode node, string tag)
+    {
+        if (node.TagName == tag) return node;
+        foreach (var c in node.Children) { var f = Find(c, tag); if (f != null) return f; }
+        return null;
     }
 
     [Test]
