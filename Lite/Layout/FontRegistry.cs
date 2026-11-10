@@ -51,12 +51,87 @@ internal static class FontRegistry
             if (_typefaces.ContainsKey(key)) { tf.Dispose(); return; }
             _typefaces[key] = tf;
             _persistent.Add(key);
+            // The name table's LOCALIZED family names (nameID 1/16 on every platform record)
+            // alias to the same face: the official suite's localized-name tests address the
+            // CSSTest fonts by their Japanese fullwidth names, which Skia's primary
+            // FamilyName never exposes (font-family-name-010).
+            foreach (var alias in LocalizedFamilyNames(path))
+            {
+                if (alias.Equals(family, StringComparison.OrdinalIgnoreCase)) continue;
+                var aliasKey = MakeKey(alias, bold, italic);
+                if (_typefaces.TryAdd(aliasKey, tf)) _persistent.Add(aliasKey);
+            }
             Console.WriteLine($"[FontRegistry] Provisioned '{family}' bold={bold} italic={italic}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[FontRegistry] Failed to provision {Path.GetFileName(path)}: {ex.Message}");
         }
+    }
+
+    /// <summary>Every family name (nameID 1 and 16) the font's 'name' table declares — all
+    /// platforms and encodings. A minimal big-endian sfnt walk: the table holds length-prefixed
+    /// records whose string values are UTF-16BE (Windows) or the Mac ASCII form.</summary>
+    private static IEnumerable<string> LocalizedFamilyNames(string path)
+    {
+        var names = new List<string>();
+        try
+        {
+            var data = File.ReadAllBytes(path);
+            static ushort U16(byte[] b, int o) => (ushort)((b[o] << 8) | b[o + 1]);
+            static uint U32(byte[] b, int o) => ((uint)b[o] << 24) | ((uint)b[o + 1] << 16) | ((uint)b[o + 2] << 8) | b[o + 3];
+            if (data.Length < 12) return names;
+            var sfnt = U32(data, 0);
+            if (sfnt != 0x00010000 && sfnt != 0x74727565 && sfnt != 0x4F54544F) return names;
+            var numTables = U16(data, 4);
+            uint tableOffset = 0;
+            for (var i = 0; i < numTables && 12 + (i + 1) * 16 <= data.Length; i++)
+            {
+                var o = 12 + i * 16;
+                var tag = U32(data, o);
+                tableOffset = U32(data, o + 8);
+                if (tag == 0x6E616D65) break; // 'name'
+                tableOffset = 0;
+            }
+            if (tableOffset == 0 || tableOffset + 6 > data.Length) return names;
+            var count = U16(data, (int)tableOffset + 2);
+            var stringOffset = U16(data, (int)tableOffset + 4);
+            var records = new List<(int Platform, ushort Offset, ushort Length)>();
+            for (var i = 0; i < count; i++)
+            {
+                var rec = (int)tableOffset + 6 + i * 12;
+                if (rec + 12 > data.Length) break;
+                var platform = U16(data, rec);
+                var nameId = U16(data, rec + 6);
+                if (nameId is not (1 or 16)) continue;
+                // The 'name' record carries LENGTH then OFFSET (the "name" table spec).
+                var length = U16(data, rec + 8);
+                var offset = U16(data, rec + 10);
+                records.Add((platform, offset, length));
+            }
+            foreach (var (platform, offset, length) in records)
+            {
+                var str = (int)(tableOffset + stringOffset + offset);
+                if (length == 0 || str + length > data.Length) continue;
+                // Windows/Unicode records are UTF-16BE; Mac records are the ASCII form.
+                string name;
+                if (platform is 0 or 3 && length % 2 == 0)
+                {
+                    var chars = new char[length / 2];
+                    for (var c = 0; c < chars.Length; c++)
+                        chars[c] = (char)((data[str + c * 2] << 8) | data[str + c * 2 + 1]);
+                    name = new string(chars);
+                }
+                else name = System.Text.Encoding.ASCII.GetString(data, str, length);
+                name = name.Trim('\0', ' ');
+                if (name.Length > 0) names.Add(name);
+            }
+        }
+        catch
+        {
+            // A malformed name table only costs the aliases; the primary name still works.
+        }
+        return names;
     }
 
     internal static SKTypeface? Resolve(string family, bool bold, bool italic)

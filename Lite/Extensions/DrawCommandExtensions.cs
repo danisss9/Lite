@@ -1822,7 +1822,11 @@ public static class StyleExtensions
                 return mapped;
             // Not available: keep trying the remaining parts.
         }
-        return firstPart ?? "Arial";
+        // Nothing in the list resolved: the fallback is the UA DEFAULT font — the same face an
+        // element without any font-family renders in — NOT Skia's fuzzy match of the unknown
+        // name (a closest-face pick like Segoe UI differs from the reference's default and
+        // fails the whole unknown-family family: font-family-name-017..024).
+        return "Arial";
     }
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> s_genericFamilies =
