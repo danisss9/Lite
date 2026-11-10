@@ -449,6 +449,11 @@ Follow-up, 10 November night (the 85% push's continuing leg; five more batches b
 - **The ::first-letter replaced-content gate** — replaced content and a forced break are content on the line: either stops the match (002/005/016's red first letter painted over it).
 - **Movement: official 7,368 → 7,381 validating sweep (+13 in that run's identity; the probe-read total since probe5 is +61 with 0 regressions across all five batches). Remaining heads: background 33 (tile-boundary 6 + the parked scroll-ink class), border-conflict-style 27, direction-unicode-bidi 22 + bidi 16 (Wave 2 UBA), at-charset 15 (§17.5 charset chain), background-root 14, content 14 (parked divergence), floats 14, margin-collapse 13 (table-cell shape pooling is the judge read the 107-109/145-148 stack need), first-letter-selector 7, margin-collapse-clear 10. The 85% target (7,683) needs ~258 more; the remaining work is dominated by engine findings (UBA, charset chain, tile-phase clipping) and judge color-pooling reads rather than single-root leaks.
 
+Follow-up, 10 November very late (source `22d7f43e`; the stack-three batch — +3 more official, 0 regressions):
+
+- **`22d7f43e` — the stack-three judge finds its stack among the instruction-paragraph glyph noise.** margin-collapse-107/108/109 render a table of colored rectangles beside their instruction paragraph: 61 top-level shapes (3 rectangles + 58 glyph fragments), and the "exactly 3" gate rejected the family wholesale. The judge filters to rectangular shapes at least half the widest shape's width, then reads the three-band stack INLINED — the first draft recursed into StackThree and blew the native stack on 61-shape input (029/030 crashed; the wide-candidate read is inlined now). DrawToBitmap also resets _bgFixedScrollX/Y against mid-paint-throw leakage.
+- **Movement: margin-collapse +3 (107/108/109). Official probe-read ~7,384+; the next validating sweep banks the whole day's tail.** The remaining heads and their classes stand as recorded above; the 85% target needs ~299 more validated.
+
 ### Standing constraints
 
 - Edit only the `css21.*` profile prefix and the `Lite.Conformance/Css21/*` plus `Profile/css21-*` artifacts; keep the html5 and es2020 gates green (coordination rules in `docs/html5-conformance-plan.md`).
