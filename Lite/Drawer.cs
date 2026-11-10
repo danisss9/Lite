@@ -2889,6 +2889,8 @@ internal static class Drawer
                 linePaint = tempPaint;
             }
 
+            // §15.6 'font-variant: small-caps': lowercase letters synthesize to small capitals.
+            var smallCaps = IsSmallCaps(node);
             // text-shadow drawn before (behind) the main text
             if (textShadow.HasValue)
             {
@@ -2900,13 +2902,19 @@ internal static class Drawer
                     IsAntialias = true,
                     MaskFilter = sigma > 0 ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma) : null,
                 };
-                DrawTextWithSpacing(canvas, line.Text, drawX + ts.OffsetX, baseline + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing);
+                if (smallCaps)
+                    DrawTextSmallCaps(canvas, line.Text, drawX + ts.OffsetX, baseline + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing);
+                else
+                    DrawTextWithSpacing(canvas, line.Text, drawX + ts.OffsetX, baseline + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing);
             }
 
             // ::first-letter is not handled here: the Parser splits it into a real inline box
             // (#pseudo-first-letter) so it takes part in layout, and it paints as ordinary inline
             // content through this same routine.
-            DrawTextWithSpacing(canvas, line.Text, drawX, baseline, lineFont, linePaint, letterSpacing, lineWordSpacing);
+            if (smallCaps)
+                DrawTextSmallCaps(canvas, line.Text, drawX, baseline, lineFont, linePaint, letterSpacing, lineWordSpacing);
+            else
+                DrawTextWithSpacing(canvas, line.Text, drawX, baseline, lineFont, linePaint, letterSpacing, lineWordSpacing);
 
             if (underline)
             {
@@ -2961,6 +2969,59 @@ internal static class Drawer
             curX += font.MeasureText(s) + letterSpacing;
             if (ch is ' ' or '\u00A0') curX += wordSpacing;
         }
+    }
+
+    /// <summary>True when <c>font-variant: small-caps</c> (§15.6) — lowercase letters render
+    /// as small capitals.</summary>
+    public static bool IsSmallCaps(LayoutNode node)
+    {
+        var raw = node.TryResolveStyle("font-variant", out var ov) ? ov : node.Style.GetPropertyValueSafe("font-variant");
+        return raw.Trim().Equals("small-caps", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Synthesized small-caps drawing (§15.6): capitals and non-letters draw at the
+    /// full size, LOWERCASE letters draw UPPERCASED at 0.75em on the same baseline — the
+    /// synthesis every engine falls back to when the face carries no real small-caps glyphs.
+    /// The reference graph of the font-variant-applies-to family turns on exactly this
+    /// visible difference (its != edge requires small-caps text to differ from plain).</summary>
+    private static void DrawTextSmallCaps(SKCanvas canvas, string text, float x, float y,
+                                          SKFont font, SKPaint paint, float letterSpacing, float wordSpacing)
+    {
+        using var smallFont = new SKFont(font.Typeface, font.Size * 0.75f);
+        var curX = x;
+        var runStart = -1;
+        var runLower = false;
+        void FlushRun(int endExclusive)
+        {
+            if (runStart < 0) return;
+            var run = text[runStart..endExclusive];
+            var runFont = runLower ? smallFont : font;
+            if (runLower) run = run.ToUpperInvariant();
+            if (letterSpacing == 0f && wordSpacing == 0f)
+            {
+                canvas.DrawText(run, curX, y, SKTextAlign.Left, runFont, paint);
+                curX += runFont.MeasureText(run);
+            }
+            else
+            {
+                foreach (var ch in run)
+                {
+                    var s = ch.ToString();
+                    canvas.DrawText(s, curX, y, SKTextAlign.Left, runFont, paint);
+                    curX += runFont.MeasureText(s) + letterSpacing;
+                    if (ch is ' ' or '\u00A0') curX += wordSpacing;
+                }
+            }
+            runStart = -1;
+        }
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+            var lower = char.IsLower(ch);
+            if (runStart < 0) { runStart = i; runLower = lower; }
+            else if (lower != runLower) { FlushRun(i); runStart = i; runLower = lower; }
+        }
+        FlushRun(text.Length);
     }
 
     /// <summary>Measures text width including letter-spacing and word-spacing. Shared with layout
