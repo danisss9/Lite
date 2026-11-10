@@ -359,7 +359,7 @@ SCROLL_TEMPLATES = [
     (re.compile(r'^there is a green box below, and when the box is scrolled down, there is a line of cat images at the bottom of the box$'),
      {'kind': 'scroll-cats-bottom', 'scroll': {'to': 'bottom'}}),
     (re.compile(r'^there is a picture of a cat repeated over a green box the box below\. the cat image also needs to move with the scrolling mechanism when scrolled to the right$'),
-     {'kind': 'scroll-cats-moved', 'scroll': {'to': 'bottom-right'}}),
+     {'kind': 'scroll-cats-moved', 'scroll': {'to': 'right'}}),
     (re.compile(r'^the box below is filled with cat images that move when the box is scrolled\. also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box \(there can be additional cat images\)$'),
      {'kind': 'scroll-cats-moved', 'variant': 'center', 'scroll': {'to': 'bottom-right'}}),
     (re.compile(r'^(?:in the box below, there is a picture of a cat repeated across the bottom of the box|there is a picture of a cat repeated across the bottom of the box below) that moves with the scrollbar when the box is scrolled to the right$'),
