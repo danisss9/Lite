@@ -530,6 +530,99 @@ public class JsDocument
             // table this target tracks is a no-op in the single-origin serving environment.
         }
     }
+    // ---- obsolete document color IDL (HTML §15.3.2): each accessor reads and writes the
+    // body element's presentational content attribute (text/bgcolor/link/vlink/alink),
+    // empty default. document-color-01..04 exercise the set/get round trips and the
+    // body-attribute mirror; removing the body makes the getters read "".
+
+    private static string BodyColor(JsEngine? eng, string attribute)
+    {
+        var body = eng?.DocumentFacade?.RootNode;
+        var bodyNode = FindFirstColorNode(body, "BODY");
+        return bodyNode is null ? "" : bodyNode.Attributes.GetValueOrDefault(attribute, "");
+    }
+
+    private static void SetBodyColor(JsEngine? eng, string attribute, string value)
+    {
+        var body = eng?.DocumentFacade?.RootNode;
+        var bodyNode = FindFirstColorNode(body, "BODY");
+        if (bodyNode is not null) bodyNode.Attributes[attribute] = value;
+    }
+
+    private static LayoutNode? FindFirstColorNode(LayoutNode? root, string tag)
+    {
+        if (root is null) return null;
+        var stack = new System.Collections.Generic.Stack<LayoutNode>();
+        stack.Push(root);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            if (node.TagName == tag) return node;
+            for (var i = node.Children.Count - 1; i >= 0; i--) stack.Push(node.Children[i]);
+        }
+        return null;
+    }
+
+    private string FgColorValue
+    {
+        get => BodyColor(JsEngine.For(_engine), "text");
+        set => SetBodyColor(JsEngine.For(_engine), "text", value);
+    }
+
+    private string BgColorValue
+    {
+        get => BodyColor(JsEngine.For(_engine), "bgcolor");
+        set => SetBodyColor(JsEngine.For(_engine), "bgcolor", value);
+    }
+
+    private string LinkColorValue
+    {
+        get => BodyColor(JsEngine.For(_engine), "link");
+        set => SetBodyColor(JsEngine.For(_engine), "link", value);
+    }
+
+    private string VLinkColorValue
+    {
+        get => BodyColor(JsEngine.For(_engine), "vlink");
+        set => SetBodyColor(JsEngine.For(_engine), "vlink", value);
+    }
+
+    private string ALinkColorValue
+    {
+        get => BodyColor(JsEngine.For(_engine), "alink");
+        set => SetBodyColor(JsEngine.For(_engine), "alink", value);
+    }
+
+    public string fgColor
+    {
+        get => FgColorValue;
+        set => FgColorValue = value;
+    }
+
+    public string bgColor
+    {
+        get => BgColorValue;
+        set => BgColorValue = value;
+    }
+
+    public string linkColor
+    {
+        get => LinkColorValue;
+        set => LinkColorValue = value;
+    }
+
+    public string vlinkColor
+    {
+        get => VLinkColorValue;
+        set => VLinkColorValue = value;
+    }
+
+    public string alinkColor
+    {
+        get => ALinkColorValue;
+        set => ALinkColorValue = value;
+    }
+
     public string compatMode => _document?.CompatMode ?? "CSS1Compat";
 
     /// <summary>DOM Normalizer on the document: merges adjacent text nodes everywhere.</summary>

@@ -241,6 +241,42 @@ public class JsElement
         set => textContent = value;
     }
 
+    // ---- HTMLBodyElement obsolete color IDL (HTML §15.3.2): reflect the text/bgcolor/
+    // link/vlink/alink content attributes (document-color-02..04 mirror through
+    // document.bgColor et al) ----
+    private string BodyColorAttr(string name) => Node.Attributes.GetValueOrDefault(name, "");
+    private void SetBodyColorAttr(string name, string? value)
+    {
+        if (Node.TagName != "BODY" && Node.TagName != "FRAMESET") return;
+        var old = Node.Attributes.GetValueOrDefault(name);
+        Node.Attributes[name] = value ?? "";
+        OnAttributeChanged(Node, name, old);
+    }
+
+    public string bodyBgColor
+    {
+        get => BodyColorAttr("bgcolor");
+        set => SetBodyColorAttr("bgcolor", value);
+    }
+
+    public string bodyLink
+    {
+        get => BodyColorAttr("link");
+        set => SetBodyColorAttr("link", value);
+    }
+
+    public string bodyVLink
+    {
+        get => BodyColorAttr("vlink");
+        set => SetBodyColorAttr("vlink", value);
+    }
+
+    public string bodyALink
+    {
+        get => BodyColorAttr("alink");
+        set => SetBodyColorAttr("alink", value);
+    }
+
     public string innerHTML
     {
         get

@@ -670,7 +670,10 @@ internal class JsEngine : IDisposable
                 scrollDelay: 'marqueeScrollDelay', trueSpeed: 'marqueeTrueSpeed',
                 vspace: 'marqueeVspace', width: 'marqueeWidth',
               },
-              HTMLFrameSetElement: { cols: 'framesetCols', rows: 'framesetRows' },
+              HTMLFrameSetElement: {
+                cols: 'framesetCols', rows: 'framesetRows',
+                bgColor: 'bodyBgColor', link: 'bodyLink', vLink: 'bodyVLink', aLink: 'bodyALink',
+              },
               HTMLFrameElement: {
                 name: 'frameName', scrolling: 'frameScrolling', src: 'frameSrc',
                 frameBorder: 'frameBorder', longDesc: 'frameLongDesc',
@@ -680,6 +683,9 @@ internal class JsEngine : IDisposable
               HTMLDirElement: { compact: 'dirCompact' },
               HTMLFontElement: { color: 'fontColor', face: 'fontFace', size: 'fontSize' },
               HTMLScriptElement: { event: 'scriptEvent' },
+              HTMLBodyElement: {
+                bgColor: 'bodyBgColor', link: 'bodyLink', vLink: 'bodyVLink', aLink: 'bodyALink',
+              },
             };
             var _loop = function (pn) {
               var proto = protos[pn];
