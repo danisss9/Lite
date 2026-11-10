@@ -2619,23 +2619,30 @@ internal static class Parser
 
     /// <summary>Length of the ::first-letter run at the start of <paramref name="text"/>: any
     /// leading Ps/Pe/Pi/Pf/Po punctuation, the letter itself, and any punctuation directly after
-    /// it (CSS 2.1 §5.12.1). Zero when there is no letter at all.</summary>
+    /// it (CSS 2.1 §5.12.1). Zero when there is no letter at all. The walk is per CODE POINT:
+    /// astral punctuation (first-letter-punctuation-334's U+10100 word separators) is a
+    /// surrogate pair, and a code-unit walk split half a pair, corrupting the text.</summary>
     internal static int FirstLetterLength(string text)
     {
-        static bool IsFirstLetterPunctuation(char c) =>
-            System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) is
+        static bool IsFirstLetterPunctuation(int codePoint) =>
+            System.Globalization.CharUnicodeInfo.GetUnicodeCategory(codePoint) is
                 System.Globalization.UnicodeCategory.OpenPunctuation or
                 System.Globalization.UnicodeCategory.ClosePunctuation or
                 System.Globalization.UnicodeCategory.InitialQuotePunctuation or
                 System.Globalization.UnicodeCategory.FinalQuotePunctuation or
                 System.Globalization.UnicodeCategory.OtherPunctuation;
+        static int LengthOf(char high, char next) => char.IsHighSurrogate(high) && char.IsLowSurrogate(next) ? 2 : 1;
+        static int CodePointAt(string s, int i) => char.IsSurrogatePair(s[i], i + 1 < s.Length ? s[i + 1] : ' ')
+            ? char.ConvertToUtf32(s, i) : s[i];
 
         var i = 0;
         while (i < text.Length && char.IsWhiteSpace(text[i])) i++;
-        while (i < text.Length && IsFirstLetterPunctuation(text[i])) i++;
+        while (i < text.Length && IsFirstLetterPunctuation(CodePointAt(text, i)))
+            i += LengthOf(text[i], i + 1 < text.Length ? text[i + 1] : ' ');
         if (i >= text.Length) return 0;   // punctuation only: no first letter to style
-        i++;                              // the letter itself
-        while (i < text.Length && IsFirstLetterPunctuation(text[i])) i++;
+        i += LengthOf(text[i], i + 1 < text.Length ? text[i + 1] : ' ');   // the letter itself
+        while (i < text.Length && IsFirstLetterPunctuation(CodePointAt(text, i)))
+            i += LengthOf(text[i], i + 1 < text.Length ? text[i + 1] : ' ');
         return i;
     }
 
