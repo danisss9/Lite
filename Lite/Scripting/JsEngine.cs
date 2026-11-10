@@ -557,6 +557,7 @@ internal class JsEngine : IDisposable
             HTMLTrackElement: 'HTMLElement', HTMLParamElement: 'HTMLElement',
             HTMLObjectElement: 'HTMLElement', HTMLEmbedElement: 'HTMLElement',
             HTMLAppletElement: 'HTMLElement', HTMLMarqueeElement: 'HTMLElement',
+            HTMLDirElement: 'HTMLElement',
             HTMLTemplateElement: 'HTMLElement', HTMLTimeElement: 'HTMLElement',
             HTMLDataElement: 'HTMLElement', HTMLModElement: 'HTMLElement',
             HTMLMenuElement: 'HTMLElement', HTMLDetailsElement: 'HTMLElement',
@@ -657,6 +658,46 @@ internal class JsEngine : IDisposable
               }
             }
           });
+          // Obsolete-element reflection (HTML §15.3.1): the reflected IDL attributes of the
+          // marquee/frameset/frame/dir/font elements live on their per-interface prototypes,
+          // forwarding to the tag-gated host properties on the element wrapper.
+          (function () {
+            var obsoleteProps = {
+              HTMLMarqueeElement: {
+                behavior: 'marqueeBehavior', bgColor: 'marqueeBgColor',
+                direction: 'marqueeDirection', height: 'marqueeHeight',
+                hspace: 'marqueeHspace', scrollAmount: 'marqueeScrollAmount',
+                scrollDelay: 'marqueeScrollDelay', trueSpeed: 'marqueeTrueSpeed',
+                vspace: 'marqueeVspace', width: 'marqueeWidth',
+              },
+              HTMLFrameSetElement: { cols: 'framesetCols', rows: 'framesetRows' },
+              HTMLFrameElement: {
+                name: 'frameName', scrolling: 'frameScrolling', src: 'frameSrc',
+                frameBorder: 'frameBorder', longDesc: 'frameLongDesc',
+                noResize: 'frameNoResize', marginHeight: 'frameMarginHeight',
+                marginWidth: 'frameMarginWidth',
+              },
+              HTMLDirElement: { compact: 'dirCompact' },
+              HTMLFontElement: { color: 'fontColor', face: 'fontFace', size: 'fontSize' },
+              HTMLScriptElement: { event: 'scriptEvent' },
+            };
+            var _loop = function (pn) {
+              var proto = protos[pn];
+              if (!proto) return 'continue';
+              var map = obsoleteProps[pn];
+              var ks = Object.keys(map);
+              for (var k = 0; k < ks.length; k++) {
+                (function (key, hostProp) {
+                  Object.defineProperty(proto, key, {
+                    configurable: true, enumerable: true,
+                    get: function () { return this[hostProp]; },
+                    set: function (v) { this[hostProp] = v; },
+                  });
+                })(ks[k], map[ks[k]]);
+              }
+            };
+            for (var pn in obsoleteProps) _loop(pn);
+          })();
           globalThis.__lite_brand = (obj, name) => {
             const proto = protos[name];
             if (proto && (typeof obj === 'object' || typeof obj === 'function')) {

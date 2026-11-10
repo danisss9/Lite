@@ -563,6 +563,8 @@ public class JsElement
     {
         get
         {
+            // SCRIPT's htmlFor (obsolete IDL) reflects the for content attribute.
+            if (Node.TagName == "SCRIPT") return ReflectString("for");
             if (Node.TagName == "OUTPUT" && IsHtmlNamespaced)
                 return new JsClassList(Node, "for");
             if (Node.TagName == "LABEL") return Node.Attributes.GetValueOrDefault("for", string.Empty);
@@ -764,6 +766,192 @@ public class JsElement
             }
             return false;
         }
+    }
+
+    // ---- obsolete-element reflection (HTML §15.3.1, the elements-obsolete matrix) ----
+    // The reflected IDL attributes of the marquee/frameset/frame/dir/font elements: enum
+    // attributes read their keyword or the declared default, unsigned longs parse a
+    // non-negative integer with the fallback default, booleans reflect presence.
+
+    /// <summary>Reflects an enumerated content attribute: a value outside the keyword set
+    /// reads as the default (HTML §15.3.1 marquee behavior/direction).</summary>
+    private string ReflectEnum(string attribute, string[] keywords, string defaultVal)
+    {
+        var raw = Node.Attributes.GetValueOrDefault(attribute, defaultVal);
+        foreach (var k in keywords) if (raw == k) return raw;
+        return defaultVal;
+    }
+
+    /// <summary>Reflects an unsigned long content attribute with a fallback default: a value
+    /// that fails the non-negative-integer parse (or is absent) reads the default.</summary>
+    private long ReflectULong(string attribute, long defaultVal)
+    {
+        var raw = Node.Attributes.GetValueOrDefault(attribute);
+        if (raw is null) return defaultVal;
+        return long.TryParse(raw.Trim(), out var v) && v >= 0 ? v : defaultVal;
+    }
+
+    /// <summary>Reflects a boolean content attribute (presence = true; set stores an empty
+    /// value, unset removes).</summary>
+    private bool ReflectBoolean(string attribute)
+    {
+        if (!Node.Attributes.TryGetValue(attribute, out var v)) return false;
+        return v != "false";
+    }
+
+    private void SetReflectedBoolean(string attribute, bool value)
+    {
+        if (value) Node.Attributes[attribute] = "";
+        else Node.Attributes.Remove(attribute);
+    }
+
+    private string ReflectString(string attribute) => Node.Attributes.GetValueOrDefault(attribute, "");
+
+    private void SetReflectedString(string attribute, string? value) =>
+        Node.Attributes[attribute] = value ?? "";
+
+    public string marqueeBehavior
+    {
+        get => Node.TagName == "MARQUEE" ? ReflectEnum("behavior", ["scroll", "slide", "alternate"], "scroll") : "";
+        set { if (Node.TagName == "MARQUEE") SetReflectedString("behavior", value); }
+    }
+
+    public string marqueeBgColor
+    {
+        get => Node.TagName == "MARQUEE" ? ReflectString("bgcolor") : "";
+        set { if (Node.TagName == "MARQUEE") SetReflectedString("bgcolor", value); }
+    }
+
+    public string marqueeDirection
+    {
+        get => Node.TagName == "MARQUEE" ? ReflectEnum("direction", ["up", "right", "down", "left"], "left") : "";
+        set { if (Node.TagName == "MARQUEE") SetReflectedString("direction", value); }
+    }
+
+    public string marqueeHeight
+    {
+        get => Node.TagName == "MARQUEE" ? ReflectString("height") : "";
+        set { if (Node.TagName == "MARQUEE") SetReflectedString("height", value); }
+    }
+
+    public long marqueeHspace
+    {
+        get => Node.TagName == "MARQUEE" ? ReflectULong("hspace", 0) : 0;
+        set { if (Node.TagName == "MARQUEE") SetReflectedString("hspace", value.ToString()); }
+    }
+
+    public long marqueeScrollAmount
+    {
+        get => Node.TagName == "MARQUEE" ? ReflectULong("scrollamount", 6) : 6;
+        set { if (Node.TagName == "MARQUEE") SetReflectedString("scrollamount", value.ToString()); }
+    }
+
+    public long marqueeScrollDelay
+    {
+        get => Node.TagName == "MARQUEE" ? ReflectULong("scrolldelay", 85) : 85;
+        set { if (Node.TagName == "MARQUEE") SetReflectedString("scrolldelay", value.ToString()); }
+    }
+
+    public bool marqueeTrueSpeed
+    {
+        get => Node.TagName == "MARQUEE" && ReflectBoolean("truespeed");
+        set { if (Node.TagName == "MARQUEE") SetReflectedBoolean("truespeed", value); }
+    }
+
+    public long marqueeVspace
+    {
+        get => Node.TagName == "MARQUEE" ? ReflectULong("vspace", 0) : 0;
+        set { if (Node.TagName == "MARQUEE") SetReflectedString("vspace", value.ToString()); }
+    }
+
+    public string marqueeWidth
+    {
+        get => Node.TagName == "MARQUEE" ? ReflectString("width") : "";
+        set { if (Node.TagName == "MARQUEE") SetReflectedString("width", value); }
+    }
+
+    public string framesetCols
+    {
+        get => Node.TagName == "FRAMESET" ? ReflectString("cols") : "";
+        set { if (Node.TagName == "FRAMESET") SetReflectedString("cols", value); }
+    }
+
+    public string framesetRows
+    {
+        get => Node.TagName == "FRAMESET" ? ReflectString("rows") : "";
+        set { if (Node.TagName == "FRAMESET") SetReflectedString("rows", value); }
+    }
+
+    public string frameName
+    {
+        get => Node.TagName == "FRAME" ? ReflectString("name") : "";
+        set { if (Node.TagName == "FRAME") SetReflectedString("name", value); }
+    }
+
+    public string frameScrolling
+    {
+        get => Node.TagName == "FRAME" ? ReflectString("scrolling") : "";
+        set { if (Node.TagName == "FRAME") SetReflectedString("scrolling", value); }
+    }
+
+    public string frameSrc
+    {
+        get => Node.TagName == "FRAME" ? ReflectString("src") : "";
+        set { if (Node.TagName == "FRAME") SetReflectedString("src", value); }
+    }
+
+    public string frameBorder
+    {
+        get => Node.TagName == "FRAME" ? ReflectString("frameborder") : "";
+        set { if (Node.TagName == "FRAME") SetReflectedString("frameborder", value); }
+    }
+
+    public string frameLongDesc
+    {
+        get => Node.TagName == "FRAME" ? ReflectString("longdesc") : "";
+        set { if (Node.TagName == "FRAME") SetReflectedString("longdesc", value); }
+    }
+
+    public bool frameNoResize
+    {
+        get => Node.TagName == "FRAME" && ReflectBoolean("noresize");
+        set { if (Node.TagName == "FRAME") SetReflectedBoolean("noresize", value); }
+    }
+
+    public string frameMarginHeight
+    {
+        get => Node.TagName == "FRAME" ? ReflectString("marginheight") : "";
+        set { if (Node.TagName == "FRAME") SetReflectedString("marginheight", value ?? ""); }
+    }
+
+    public string frameMarginWidth
+    {
+        get => Node.TagName == "FRAME" ? ReflectString("marginwidth") : "";
+        set { if (Node.TagName == "FRAME") SetReflectedString("marginwidth", value ?? ""); }
+    }
+
+    public bool dirCompact
+    {
+        get => Node.TagName == "DIR" && ReflectBoolean("compact");
+        set { if (Node.TagName == "DIR") SetReflectedBoolean("compact", value); }
+    }
+
+    public string fontColor
+    {
+        get => Node.TagName == "FONT" ? ReflectString("color") : "";
+        set { if (Node.TagName == "FONT") SetReflectedString("color", value ?? ""); }
+    }
+
+    public string fontFace
+    {
+        get => Node.TagName == "FONT" ? ReflectString("face") : "";
+        set { if (Node.TagName == "FONT") SetReflectedString("face", value); }
+    }
+
+    public string fontSize
+    {
+        get => Node.TagName == "FONT" ? ReflectString("size") : "";
+        set { if (Node.TagName == "FONT") SetReflectedString("size", value); }
     }
 
     public bool willValidate => FormValidation.IsCandidate(Node);
@@ -1949,6 +2137,20 @@ public class JsElement
     // ---- per-interface DOMTokenList attributes (dom/lists/DOMTokenList-coverage-for-attributes):
     // the property exists — a DOMTokenList over its attribute — only where the element's interface
     // and namespace declare it, and reads undefined everywhere else.
+    /// <summary>HTMLScriptElement.event/htmlFor (obsolete IDL): reflect the event/for
+    /// content attributes, empty-string default (script-IDL-event-htmlfor).</summary>
+    public string scriptEvent
+    {
+        get => Node.TagName == "SCRIPT" ? ReflectString("event") : "";
+        set { if (Node.TagName == "SCRIPT") SetReflectedString("event", value); }
+    }
+
+    public string htmlForScript
+    {
+        get => Node.TagName == "SCRIPT" ? ReflectString("for") : "";
+        set { if (Node.TagName == "SCRIPT") SetReflectedString("for", value); }
+    }
+
     public object? relList
     {
         get
