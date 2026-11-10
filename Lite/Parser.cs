@@ -2166,13 +2166,15 @@ internal static class Parser
         }
         if (tag == "A" && element.HasAttribute("href"))
         {
-            // The anchor color comes from the containing body's link hint (the UA sheet's
-            // blue default applies when no hint exists).
+            // The anchor color comes from the containing body's link hint. Presentational
+            // hints sit ABOVE the UA sheet (HTML §15.3.2 maps them to :link styling), so the
+            // hint force-overrides the UA blue — the plain Hint() guard (empty/auto only)
+            // would refuse.
             for (var p2 = (LayoutNode?)node; p2 != null; p2 = p2.Parent)
             {
                 if (p2.TagName == "BODY" && p2.StyleOverrides.TryGetValue("__link-color", out var linkColor))
                 {
-                    Hint("color", linkColor);
+                    if (!node.StyleOverrides.ContainsKey("color")) node.StyleOverrides["color"] = linkColor;
                     break;
                 }
             }
@@ -2634,6 +2636,10 @@ internal static class Parser
             if (child.TagName != "#text" && (child.GetFloat() != FloatType.None ||
                 child.GetPosition() is PositionType.Absolute or PositionType.Fixed))
                 continue;
+            // Replaced content and a forced break are CONTENT on the line: the first letter
+            // matches only when nothing precedes it (§5.12.2 — an <img> or <br> before the text
+            // stops the match entirely; first-letter-selector-002/005/016's red first letter).
+            if (child.TagName is "BR" || BoxEngine.IsReplacedImage(child)) return null;
             if (child.TagName != "#text" && child.GetDisplay() != DisplayType.Inline)
                 return null;
             if (!string.IsNullOrWhiteSpace(child.DisplayText)) return child;
