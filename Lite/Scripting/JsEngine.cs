@@ -689,6 +689,7 @@ internal class JsEngine : IDisposable
           // Window event surface forwards to the CLR window (which owns listener state).
           globalThis.addEventListener = function (t, fn, o) { return __jsWindow.addEventListener(t, fn, o); };
           globalThis.open = function (u, t, f) { return __jsWindow.open(u, t, f); };
+          globalThis.getSelection = function () { return document.getSelection(); };
           globalThis.removeEventListener = function (t, fn, o) { return __jsWindow.removeEventListener(t, fn, o); };
           globalThis.dispatchEvent = function (e) { return __jsWindow.dispatchEvent(e); };
           // DOMException: name + spec error code, so assert_throws_dom (and page code) can

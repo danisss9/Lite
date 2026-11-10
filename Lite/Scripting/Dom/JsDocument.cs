@@ -289,6 +289,37 @@ public class JsDocument
         return new JsEvent { Initialized = false };
     }
 
+    /// <summary>document.createRange() — the document's Range factory (DOM4 §5).</summary>
+    public JsRange createRange() => new(_engine);
+
+    /// <summary>The document's live selection (one per document, shared by all windows of the
+    /// context through the engine).</summary>
+    public JsSelection getSelection() => _selection ??= new JsSelection(_engine);
+
+    /// <summary>HTML §7.5.1 execCommand: dispatches an editing command against the document's
+    /// selection. Unknown commands return false without throwing (the never-throw contract);
+    /// known commands edit the tree through the same mutation paths the DOM methods use.</summary>
+    public bool execCommand(string command, bool showUI = false, string? value = null)
+    {
+        if (!EditingCommands.Supported.Contains(command)) return false;
+        return EditingCommands.Execute(this, command, value);
+    }
+
+    public bool queryCommandSupported(string command) => EditingCommands.Supported.Contains(command);
+
+    public bool queryCommandEnabled(string command) => EditingCommands.Supported.Contains(command);
+
+    public bool queryCommandState(string command) =>
+        command.Equals("stylewithcss", StringComparison.OrdinalIgnoreCase) ? _styleWithCss : false;
+
+    public string queryCommandValue(string command) => "";
+
+    private bool _styleWithCss;
+
+    internal Engine SelectionEngine => _engine;
+
+    private JsSelection? _selection;
+
     // ---- EventTarget ----
     // The document carries its own listener store: it is the second object of every node
     // dispatch path (window → document → …, DOM §2.9), firing capture listeners during

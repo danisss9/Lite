@@ -723,6 +723,49 @@ public class JsElement
         }
     }
 
+    /// <summary>contentEditable (HTML §7.5.1): "true"/"false" reflect the attribute; "inherit"
+    /// is the default. isContentEditable resolves the inherited state up the tree.</summary>
+    public string contentEditable
+    {
+        get
+        {
+            var raw = Node.Attributes.GetValueOrDefault("contenteditable");
+            return raw switch
+            {
+                "true" => "true",
+                "false" => "false",
+                "plaintext-only" => "plaintext-only",
+                _ => "inherit",
+            };
+        }
+        set
+        {
+            var v = value switch
+            {
+                "true" => "true",
+                "false" => "false",
+                "plaintext-only" => "plaintext-only",
+                _ => "inherit",
+            };
+            if (v == "inherit") Node.Attributes.Remove("contenteditable");
+            else Node.Attributes["contenteditable"] = v;
+        }
+    }
+
+    public bool isContentEditable
+    {
+        get
+        {
+            for (var node = (LayoutNode?)Node; node != null; node = node.Parent)
+            {
+                var raw = node.Attributes.GetValueOrDefault("contenteditable");
+                if (raw == "true" || raw == "plaintext-only") return true;
+                if (raw == "false") return false;
+            }
+            return false;
+        }
+    }
+
     public bool willValidate => FormValidation.IsCandidate(Node);
     public ValidityState validity => FormValidation.GetValidity(Node);
     public bool checkValidity() => !willValidate || validity.valid;
