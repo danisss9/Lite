@@ -2816,7 +2816,22 @@ internal static class VisualChecks
         if (x is null)
             return new(WptRunner.Cat.Unsupported, "Visual check: no letter-x element below the instructions", 0, 0);
         var xTop = (int)MathF.Floor(x.Box.BorderBox.Top);
-        var ink = ElementInk(bitmap, x, 1, out var xBox);
+        // The ink presence read is GEOMETRIC, not component-based: a 16px glyph's antialiased
+        // pixels separate past the join threshold and shatter into 1x1 fragments the component
+        // size filter discards — the component read saw "no ink" over a plainly rendered letter
+        // (font-033's `font: caption` X). Scan the box's own crop for ink pixels instead.
+        var border = x.Box.BorderBox;
+        var lx = SKRectI.Round(new SKRect(border.Left - 1, border.Top - 1, border.Right + 1, border.Bottom + 1));
+        lx.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+        var lpixels = bitmap.Pixels;
+        long inkPixels = 0;
+        for (var yy = lx.Top; yy < lx.Bottom; yy++)
+        for (var xx = lx.Left; xx < lx.Right; xx++)
+            if (ChannelDistance(lpixels[yy * bitmap.Width + xx], SKColors.White) > InkThreshold) inkPixels++;
+        var ink = inkPixels >= 12
+            ? new List<Component> { new(lx.Left, lx.Top, lx.Right, lx.Bottom, true, SKColors.Black) }
+            : [];
+        var xBox = lx;
         var assertion = Describe(check);
         if (ink.Count == 0)
             return new(WptRunner.Cat.Fail, $"{assertion}: the letter x painted no ink", 1, 1,

@@ -112,6 +112,11 @@ internal static class Drawer
         _viewportScrollY = viewport.ScrollY;
         _viewportHeight = height;
         _viewportWidth = width;
+        // A paint that throws mid-node (or any future early return) must not leak the previous
+        // render's scrollable-box offsets into this one: the fixed-background placement would
+        // land in mid-air (background-027-class cases render per test in a shared worker).
+        _bgFixedScrollX = 0f;
+        _bgFixedScrollY = 0f;
 
         canvas.Save();
         canvas.Translate(-viewport.ScrollX, -viewport.ScrollY);
