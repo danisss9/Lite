@@ -246,6 +246,36 @@ public class JsDocument
         return JsElement.For(_engine, node);
     }
 
+    /// <summary>DOM §4.5's qualified-name validation, raised as catchable DOM exceptions from
+    /// the host layer (the fork's DOM validator throws a CLR exception whose message would
+    /// otherwise surface as an opaque thrown value): a name that is not an XML Name raises
+    /// InvalidCharacterError, and a namespace/prefix mismatch raises NamespaceError.</summary>
+    private void ValidateQualifiedName(string? namespaceUri, string qualifiedName)
+    {
+        if (!IsXmlName(qualifiedName))
+            throw JsErrors.Dom(_engine, "InvalidCharacterError", "The qualified name is not a valid name.");
+        var colon = qualifiedName.IndexOf(':');
+        if (colon < 0) return;
+        if (colon == 0 || colon == qualifiedName.Length - 1 || qualifiedName.IndexOf(':', colon + 1) >= 0)
+            throw JsErrors.Dom(_engine, "NamespaceError", "The qualified name has an invalid prefix.");
+        if (namespaceUri is null)
+            throw JsErrors.Dom(_engine, "NamespaceError",
+                "A qualified name with a prefix requires a namespace.");
+    }
+
+    private static bool IsXmlName(string? name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        var start = name[0];
+        if (!(char.IsLetter(start) || start is '_' or ':' || start > 0x7F)) return false;
+        for (var i = 1; i < name.Length; i++)
+        {
+            var c = name[i];
+            if (!(char.IsLetterOrDigit(c) || c is '.' or '-' or '_' or ':' || c > 0x7F)) return false;
+        }
+        return true;
+    }
+
     /// <summary>DOM §4.5 createElement on the authoritative document: an HTML document creates
     /// the element in the HTML namespace (the fork lowercases the name there), an XHTML document
     /// in the HTML namespace with the name verbatim, and any other XML document in the null
@@ -256,16 +286,13 @@ public class JsDocument
         var type = contentType;
         if (string.Equals(type, "text/html", StringComparison.OrdinalIgnoreCase))
             return document.CreateElement(tagName);
-        var colon = tagName.IndexOf(':');
-        if (colon > 0 || tagName.Count(c => c == ':') > 1)
-            throw JsErrors.Dom(_engine, "NamespaceError",
-                "A qualified name with a prefix cannot be created without a namespace.");
         var isHtmlNamespace = type is "application/xhtml+xml" or "application/xhtml";
         return document.CreateElement(isHtmlNamespace ? "http://www.w3.org/1999/xhtml" : null, tagName);
     }
 
     public JsElement createElementNS(string? ns, string tagName)
     {
+        ValidateQualifiedName(ns, tagName);
         if (_document is not null)
         {
             var projection = State!.ForDomNode(_document.CreateElement(ns, tagName));
