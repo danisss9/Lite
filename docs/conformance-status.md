@@ -9,6 +9,12 @@ Each track's normative detail lives in its own document —
 [es2020-conformance.md](es2020-conformance.md) — and nothing here changes a
 completion contract or claims new passing coverage.
 
+The current position and the end-to-end path to all three readiness flags are in
+[Track status at a glance](#track-status-at-a-glance) and
+[Roadmap to full conformance](#roadmap-to-full-conformance-written-11-november-2026)
+(written 11 November 2026). The dated snapshot paragraphs below are the history that
+led there.
+
 Snapshot written 2 November 2026 on build `2b978d0` after the second probe batch
 and its same-day engine fixes: the stated pass condition of 4,012 self-describing
 CSS 2.1 cases is now machine-checked (fifty-odd sentence templates and their
@@ -125,152 +131,230 @@ the Milestone 6 evidence pass behind them.
 
 ## Track status at a glance
 
-| Track | Readiness | Last recorded position |
+Measured 11 November 2026. The CSS official number comes from that day's validating sweep and
+the WPT number from the 9 November closing baseline. The HTML5 counts are a static recount of
+`Wpt/html5-applicability.json` and the shared profile; no HTML5 run was executed for this
+snapshot.
+
+For this program, "100%" means three readiness flags are true on one identified build:
+`es2020ProfileReady`, `css21ProfileReady` (screen scope) and `html5ProfileReady`. Every
+applicable obligation must have passing evidence or a reviewed exclusion (permitted choice,
+defective test, post-target). Expected failures, manual-pending, unsupported, timeouts and
+crashes never count as success. `releaseReady` stays a separate final decision.
+
+| Track | Readiness | Position |
 | --- | --- | --- |
-| ES2020 | **`es2020ProfileReady` true** — enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, zero failures and zero expected failures, no dependency exception; host suite 20/20; all 2,115 ECMA-262 clauses reviewed |
-| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 4 November, the bidi-box-model cluster closes and the border-conflict-style judge artifact clears (cluster-scoped runs on work in progress over `3280b413` + `8c3c9307`; full-suite numbers stand at the 2 November baseline: official 6,915/9,039, WPT 6,334/8,904): bidi-box-model 45/45 official and 45/45 WPT twins (from 18/45) — `css21.8.6` flipped under the strict rule, obligations 18/213 `implemented`; border-conflict-style 65 → 35 official fails as the ring judge reads the ring's own extent (30 honest conversions; residue = thin double/dotted swatch reads under the 40% band threshold + one float-packing engine finding for the tables cluster); behind it the §8.6 physical-side edge reservation, the §8.6 mirrored split-box join sides, and the §16.2/UAX #9 subset for RTL `bidi-override` scopes (6 of 28 `direction-unicode-bidi` now pass the painted-order judge); the 3 November routing invariant stands (every one of the 11,934 cataloged cases carries exactly one verdict route, unit-audited); unit 465/465, curated css21 51 pass / 1 published expected-fail, wpt 86 pass / 2 published expected-fails, html5 gate green over the 2,440-case reviewed corpus |
-| HTML5 | `html5ProfileReady` false | 5 November (second pass): **Milestone 1 closed — the applicability inventory is complete; `inventoryComplete` is true under the guarded check.** The 11-root remainder (4,641 sources / 6,631 catalog cases — the mechanical recount of the check's own per-root blockers) is at zero: static sweeps classified the post-target whole-directory and marker families plus the canvas/print/worker-only scope buckets; the 81 dependency-usage files each got an individual decision (infrastructure use measured, later-feature binds post-target, dep-API binds profile-excluded; the DOM4-2014 `append`/`prepend` correction re-queued 19); 289 manual sources closed verified-gap vs procedure-blocked; 3,811 unique catalog paths measured across six survey shards — **741 pass, 2,775 reviewed-failing** entries with measured failing-subtest evidence and the owning Milestone 4 package. Manifest: **12,575 entries — 5,848 `included`, 5,281 `post-target`, 1,422 `profile-excluded`, 23 `regression-only`, 1 `mixed`, 0 `unreviewed`**; ProfileRunner reads 0 `html5-unclassified-tests` / 0 `html5-unreviewed-test` across all 16 candidate roots. Units 468/468; curated wpt 86/2 and css21 51/1 untouched; parse fidelity 1,889/1,891, tokenizer 7,052/7,052; the 5,849 standing `html5-missing-applicable-test` blockers are the Milestone 4 queue; REC section review 0/762; Milestone 3's capability rows are all landed (testdriver, serving, fuzzy/DPI). **The Milestone 4 DOM authority package landed 5 November** (commit `6281ee0d`; the plan's checkpoint carries the behavior list): the HTMLCollection/NamedNodeMap legacy platform-object semantics, getElementsByTagNameNS, the verbatim DOMTokenList stringifier with per-interface coverage, DOMStringMap/NamedNodeMap enumeration, the title's engine-tree authority, initial-parse comment projection, catchable DOMException/TypeError for wrong-typed wrappers (the survey's raw-wrapper-leak shape), the query-path origin-sheet exclusion, and the TreeWalker/NodeIterator residuals — 17 regression tests in `DomAuthorityTests`, unit suite 490/491 with the one failure attributed by worktree bisect to the parallel session's in-flight reference-graph work (fixed on the main line by `716b928a`); the cluster rerun and shared gates are pending a quiet tree, and `scripts/review-m4-dom-authority-flip.py` stands ready to close the cluster's manifest reasons from that evidence |
+| ES2020 | **`es2020ProfileReady` true**, enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, with zero failures, zero expected failures and no dependency exception. Host suite 20/20. All 2,115 ECMA-262 clauses reviewed. Maintenance only. |
+| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | Official **7,394/9,039 (81.8%)**. WPT `css/CSS2` ~6,552/8,904 (73.6%, 9 November). Obligations 18/213 `implemented`. Non-pass pool: ~2,371 real fails, 511 unsupported, **1,216 manual-pending**, 62 timeouts (the block-in-inline/hit-test hang cluster), 1 crash (`visudet/line-height-201`). The 966 official fails split into 460 twin-walk pixel diffs, 172 red-pixel engine bugs, 152 shape/box judge reads and ~180 mixed. |
+| HTML5 | `html5ProfileReady` false | Milestones 1–3 closed (`inventoryComplete` true). The manifest has 12,575 entries and 5,848 are `included`. Of those, **~3,800 carry reviewed-failing reasons** and ~2,000 have a pass state unknown until the next run. Profile `html5.*`: 192 of 202 `untested`. Section review 0/762. Milestone 4 packages and increments landed 5–11 November, but **no cluster has been rerun and no manifest entries flipped** (evidence debt). They cover DOM authority, events and messaging, origins and sandbox, history, cookies, navigator, canvas, editing and selection, obsolete reflection and rendering, dynamic markup, forms, and DOM creation. |
 
-## Roadmap
+The HTML5 reviewed-failing queue by area (static recount, 11 November):
 
-### Lead: CSS 2.1 completion
+| Area | Failing entries |
+| --- | --- |
+| `html/semantics` | 1,646: embedded-content 548, forms 487, scripting-1 356, document-metadata 86, links 30, tabular-data 28, selectors 28, … |
+| `html/editing` | 269 (dnd 228) |
+| `html/webappapis` | 251 (dynamic-markup-insertion 149, scripting 74) |
+| `fetch` + `cors` + `url` | 287 |
+| `html/syntax` | 199 (speculative-parsing 126, parsing 37, charset 22) |
+| `html/dom` | 183 (elements 104, partial-updates 34, documents 30) |
+| `dom/*` | nodes 156, events 129, ranges 51, collections 11, traversal 10 |
+| Other dependency suites | encoding 112, selection 105, editing 66, uievents 63, FileAPI 55, cookies 40 |
 
-Closest to a readiness flip. The work runs the established loop per cluster —
-run the failing cluster, implement the behavior, add focused regression coverage,
-rerun the cluster plus the curated 52-entry gate and the unit suite — never closing
-a package from a sample.
+## Roadmap to full conformance (written 11 November 2026)
 
-Campaign plan, 5 November 2026: the next stretch is organized as the four-wave
-campaign written at the end of [css21-conformance-plan.md](css21-conformance-plan.md)
-— a validating full-screen baseline opens it (banking the never-executed 3 November
-routing: the scroll two-render corpus and the user-stylesheet route), then the
-engine queue worst-by-real-failure-count, the full UBA port, and oracle-fidelity/
-reference conversion — 1,000 net new passes official + WPT combined, the queue
-re-ranked from the Wave 0 aggregate.
+This roadmap supersedes the 5–6 November one. The per-track documents keep their milestone
+definitions and campaign checkpoints. This section is the single end-to-end path and its order.
 
-1. **Work the official-suite queue cluster by cluster**, re-ranked by the 2 November
-   full-screen baseline (worst clusters by real failure count, not pass rate, so
-   unsupported singletons do not crowd the queue). Expected heads: official
-   border-conflict-style (65 fails — the conflict winner read honestly through the
-   sample oracle), bidi-box-model (27), quotes (22), content-counters (18),
-   text-transform-bicameral (18), bidi (16), margin-collapse (16), background-root
-   (14), floats (14), table-height-algorithm (14 — the cell vertical-align reading);
-   WPT tables (184), normal-flow (143), text (116), generated-content (78), borders
-   (75), floats (74), css1 (67), fonts (66), bidi-text (65), floats-clear (64). The
-   probe batch's own engine findings were fixed same day (spanning-cell column
-   widths, cell sub/super/text values as baseline, the outline-overlap judge); the
-   still-queued heads are the row-height metric under a specified table height
-   (004/009/010), 4px vertical-align: top spans (012-014), two no-ink fillers
-   (031/032), and outside markers above bars. The unsupported long tail (official
-   background 213, direction-unicode-bidi 28, cursor 23; WPT backgrounds 253, tables
-   145, css1 92, ui 79, borders 63) needs reviewed references or manual evidence —
-   feed the oracle/reference work alongside the engine queue. The 2 November probe
-   pass already machine-checks the stated pass condition of 4,012 self-describing
-   cases; extend the templates only where the sentence has a strict machine reading.
-2. **Keep the obligation inventory honest as clusters close**: the 31 October pass
-   flipped 15 obligations under the strict rule — every applicable test mapped to
-   the obligation passes, official and WPT alike, mapped by their official paths in
-   the evidence-record form (`css21-official/` prefix) because `css21-wpt` evidence
-   requires the upstream-wpt serving environment. Four near-misses stayed `untested`
-   because their WPT twins still fail (`css21.9.2.2.1`, `css21.10.3.1`,
-   `css21.11.1`, `css21.5.11.1`). Flip only whole families; never from a sample.
-3. **Grow the WPT `css/CSS2` evidence**: `visual` tests now execute through the
-   suite's self-describing no-failure-red route, so the parked 44.9% corpus can be
-   re-run and the remaining real failures and crashes re-classified
-   (later-feature, defective, or reviewed-failing engine gaps feeding the queue).
-4. **Phase 6 final audit**: run the complete screen matrix against one identified
-   build, merge shards, publish obligation coverage separately from suite pass
-   rates, add the CSS gate-hygiene regressions, and only then evaluate
-   `css21ScreenReady`/`css21ProfileReady` and enforce `--require-css-ready` in CI
-   and release validation. Print stays out of scope (`css21PrintReady` false).
+### Stage 0: integration discipline and evidence reset (all tracks, first)
 
-### HTML5 follows
+Two problems hold both tracks back:
 
-In the delivery order of [html5-conformance-plan.md](html5-conformance-plan.md):
+- **Unbanked work.** The HTML5 packages and the CSS probe-read conversions are not in any baseline yet.
+- **Cross-track breakage.** The comment-projection regression cost CSS about −215 cases, and HTML runs keep waiting for a quiet tree.
 
-1. **Classify the harness-blocked applicability tail (109 entries)**: the 2026-11-02
-   root reviews closed the `dom` stragglers (20 reviewed-failing obligations now
-   feed the Milestone 4 engine queue as `included` entries with standing evidence
-   blockers) and classified the `editing` and `html` roots (directory-coherent
-   feature analysis with representative spot-checks). The remaining 109
-   `unreviewed` entries each carry a reason naming the Milestone 3 capability
-   their classification waits on — testdriver input automation (66 editing, 30
-   html), HTTPS upstream serving (13), or the manual-evidence flow — and the
-   dependency roots the scope decision already covers (`uievents`, `url`,
-   `encoding`, `webstorage`, `webmessaging`, `cookies`, `fetch`/`cors`,
-   `FileAPI`, `selection`, `mimesniff`) were bulk-classified in earlier sweeps.
-   **Closed 3 November: the 109-entry tail is 0.** The checkpoint in
-   [html5-conformance-plan.md](html5-conformance-plan.md) records the mechanism
-   and the batches: 101 entries executed under the landed capabilities (2 pass,
-   99 reviewed-failing on the Milestone 4 queue) and the 8 manual-kind files
-   classified by static reviewed-failing review (the manual-evidence recordings
-   remain the Milestone 6 evidence step). **Milestone 1's remaining work is
-   inventory completion**: the propose tool's testdriver inventory batch (481
-   sources, 35 pass / 446 reviewed-failing) and the cited post-target batches
-   are in the manifest, and the runner's guarded omission check quantifies the
-   remainder at **6,691 unclassified catalog cases across 11 roots** — worked to
-   zero through the propose batches and the section review before
-   `inventoryComplete` flips.
-2. **Milestone 2's measured corpus work is complete** (3 November): the tree-construction corpus is
-   **closed under the contract** — every case is a raw pass, a pipeline-fixes
-   artifact, a reviewed ledger-pass correction (`Wpt/html5-parse-expectations.json`,
-   regenerated by `scripts/gen_html5_parse_expectations.py`, reviewed entries never
-   overwritten), or a pinned runner-exclusion (the two scripted_webkit01 streaming
-   document.write cases; the pipeline executes classic scripts post-parse by design,
-   and the streaming semantics live on the frame-level write path). Fork patches
-   012–014 (in-select anything-else, the in-cell HTML-cell pop, after-frameset
-   whitespace) carried 20 cases to the letter; the .dat loader now decodes the
-   format's `\uXXXX` escapes. The tokenizer corpus is vendored and gated —
-   `--suite html5-tokenizer` decides **7,052/7,052** case/state runs (+1 pinned
-   U+FFFF runner-exclusion) through fork patches 015–019 and a 30-entry reviewed
-   ledger; encoding determination (§8.2.2.1 — BOM, transport charset, prescan,
-   default, late restart) is wired into the load path; the serialization
-   residuals are closed (innerHTML/outerHTML omit the injected origin sheets at
-   every depth). What remains of Milestone 2 is the **serving integration** the
-   WPT encoding suite needs — Milestone 3 work, sequenced with the rest of the
-   remaining plan in [html5-conformance-plan.md](html5-conformance-plan.md).
-3. **Milestone 3 harness automation — complete (5 November 2026)**: testdriver input
-   automation over the native/headless hosts, window-context `.any.js` variants,
-   upstream serving integration (the pinned wptserve now runs on this toolchain via the
-   Python 3.15 compat shim, and the `--wpt-base-url` route is verified outcome-for-outcome
-   against local serving), reftest fuzzy/DPI metadata honored with false-pass fixtures,
-   recorded manual evidence routed through static review, and the historical-feature
-   coverage the pinned tree still carries (application cache; `keygen` has no vendored
-   upstream test, so its obligations join the Milestone 4 forms package). Every non-pass
-   on a reviewed applicable test is a genuine engine failure.
-4. **Milestone 4 engine packages in dependency order**: DOM authority first (it
-   unblocks live collections, serialization fidelity and the editing package),
-   then events and messaging (postMessage targetOrigin/transfer, structured
-   clone), origins and sandbox, cross-document history, top-level dynamic markup
-   replacement and the streaming insertion point, cookies, navigator/capabilities,
-   Canvas 2D scope, forms (keygen and per-state coverage), 2014 media semantics,
-   editing and selection, obsolete-element processing and rendering.
-5. **Milestones 5–6 last**: work the 762-section backlog into atomic obligations
-   until `inventoryComplete`, collect identity-matched evidence for every
-   applicable requirement (including native Windows keyboard/editing/file/media
-   evidence), and only then re-evaluate `html5ProfileReady`.
+Steps:
 
-### ES2020: maintenance only
+1. **Per-track worktrees by default, plus an integration baseline.** Each track works in its
+   own worktree, using the established isolated-worktree evidence route. After every landed
+   batch pair, one build identity runs every gate:
+   - unit;
+   - curated css21 and wpt;
+   - `--suite html5`;
+   - html5-parse and html5-tokenizer;
+   - `run-es2020.py --require-ready`;
+   - the sharded CSS full baseline.
 
-`es2020ProfileReady` is true and enforced. No conformance work is planned; the
-obligation is to keep `python scripts/run-es2020.py --require-ready` green through
-engine churn (AngleSharp fork work, QuickJS bridge changes) — any execution
-regression flips readiness false and fails those gates automatically. Intl/ECMA-402,
-public Web Workers, parser-blocking execution, and `document.write` reentrancy
-remain separate workstreams outside the ES2020 contract.
+   The baseline also diffs every case against the previous integration identity. A
+   cross-track regression goes to its owning track and is fixed before more feature work.
+2. **Fix the build environment.** The machine lacks MinGW gcc, so `Lite.QuickJs/native`
+   cannot recompile. The `LITE_SKIP_QUICKJS_NATIVE` csproj edit is uncommitted plumbing.
+   Either restore the toolchain or commit a prebuilt-binary path that verifies its stamp.
+   ES2020's guarantee depends on bridge evidence that can be rebuilt.
+3. **Get the unit suite fully green.** Three tests fail: the two worker-bin tests
+   (`WptWorker_ContainsLoadHangsAndRejectsChildReports`, `Worker_RecoversAfterHardTimeout`)
+   and `Css21CoverageTests.VisualChecks_BoxCountsAndThreeBars`.
+4. **Run the HTML5 evidence.** Run `--suite html5 --shard k/6` on one identity and merge the
+   shards. Then run `scripts/review-m4-dom-authority-flip.py` and the matching flips for every
+   landed package. The output is the exact per-entry pass/fail queue.
+5. **Run a CSS validating baseline** on both suites to bank the 9–11 November probe reads.
+   Put every non-pass in one bucket: engine, judge, reference, manual, timeout or crash.
 
-### Cross-track
+Exit: both queues are exact, every gate is green on one identity, and the integration cadence is running.
 
-- `releaseReady` stays a separate final decision taken once the CSS and HTML gates
-  settle; a CSS completion alone does not imply it.
-- Respect the per-track file ownership when tracks run in parallel (only
-  `html5.*` / `css21.*` / `es2020-*` profile prefixes per track; never touch
-  another track's suites, expected-failure lists, or artifacts), rebuild before
-  collecting evidence, and never mix build identities in one evidence set.
-- Hygiene: the root `compatibility-report.json` (git-ignored, regenerated per
-  snapshot) was refreshed from the 31 October flip-identity profile run — the
-  on-disk copy had predated the 9 October print scope decision and contradicted
-  the docs.
+### Cross-cutting keystones
+
+Many clusters wait on these architectural changes, so schedule them early.
+
+- **K1: script execution inside the parser.** Classic scripts currently run after the parse,
+  by design. HTML 5.0 needs:
+  - the tokenizer pausing at parser-inserted scripts;
+  - the rule that style sheets block scripts;
+  - async/defer ordering;
+  - the insertion point;
+  - nested `document.write`;
+  - speculative parsing.
+
+  K1 unblocks scripting-1 (356 entries) and speculative-parsing (126). It also unblocks the
+  dynamic-markup residual (script_010–013, module writes, MutationObserver) and the two pinned
+  `scripted_webkit01` runner-exclusions, which get unpinned once they pass. It delivers the
+  parser-blocking work ES2020 scoped out. Primary areas: `Parser.cs`, the fork's
+  `HtmlDomBuilder`, and the `JsDocument` write-region code.
+- **K2: one DOM authority.** The AngleSharp mirror and the `LayoutNode` projection still
+  diverge on the query path, the `querySelectorAll` backfill and frame document identity. The
+  authoritative DOM must become the only source, with the projection derived purely from it.
+  K2 unblocks dom/nodes, ranges, selection, editing (the execCommand undo journal) and
+  MutationObserver.
+- **K3: auxiliary browsing contexts.** This means `window.open` and a joint session history
+  for frames. It is a prerequisite for much of `html/browsers` (browsing-the-web 211, windows
+  56) and for several dynamic-markup and manual-tail residuals.
+- **K4: one manual-evidence capture tool for both tracks.** CSS holds 1,216 manual-pending
+  cases, and HTML needs native keyboard, editing, file and media evidence. The tool renders
+  each case natively on Windows and takes a reviewer's verdict. It hashes the screenshot or
+  recording into `ExecutionEvidence` against the build identity. It also accepts reviewed
+  equivalent replacement tests. Neither profile can become ready without it.
+
+### CSS 2.1 (screen) to `css21ProfileReady`
+
+The per-batch loop stays the same:
+
+1. Run the cluster.
+2. Diagnose.
+3. Fix the engine.
+4. Add focused `Lite.Tests` pins.
+5. Rerun the cluster, the curated gate and the units.
+6. Diff every case, requiring 0 regressions.
+7. Commit as `fix(...)` plus `docs(css21)`.
+
+**C1. Crashes and hangs (P1).**
+- The `line-height-201` NRE inside AngleSharp's `ComputeDeclarations`.
+- The 62-page timeout cluster. Measure it before fixing.
+
+**C2. Engine roots, largest first.**
+- **Full UBA port (Wave 2).** Port `scripts/gen_css21_bidi_expectations.py` into the
+  `RenderedText`/painted-order path. Targets: direction-unicode-bidi 22, bidi 16, WPT
+  bidi-text ~31, the 56 char-order cases, and §8.6 split-box placement.
+- **§4.4 stylesheet charset chain.** Targets at-charset 15 and character-encoding. Coordinate
+  with the HTML encoding work.
+- **Worker-vs-harness render divergence.** Targets content-attr 12, font-03x, and the counters
+  XML-pipeline zeros (19).
+- **Tables (WPT ~130):**
+  - eager cell-content layout for column-visibility-004;
+  - §9.5.2 clearance on internal table boxes;
+  - the row-height metric under a specified table height;
+  - the vertical-align: top spans.
+- **WPT families:** normal-flow ~139, floats + floats-clear ~125, fonts 72, css1 68, text 68,
+  selectors 61, generated-content 59, positioning 53, linebox 48, margin-padding-clear 48,
+  borders 54.
+- **Official families:**
+  - background scroll-ink (24);
+  - tile-boundary clipping (6);
+  - background-root dynamic recalc;
+  - font-family invalid-characters (fork error recovery).
+- **The general inline-declaration stamp.**
+
+**C3. Judge and oracle fidelity (Wave 3).**
+- border-conflict-style thin double/dotted reads (27).
+- The 152 shape/box reads.
+- The look-same thresholds and overlapping bands.
+
+Thresholds come from renders, and every judge change ships with a both-ways false-pass fixture.
+
+**C4. The non-engine classes.**
+- 511 unsupported (WPT backgrounds 228, css1 26): reviewed references or strict machine templates.
+- 1,216 manual-pending: K4 recordings or reviewed replacements.
+- Permitted-rendering and defective cases: reviewed `css21-applicability.json`
+  classifications with provenance.
+
+**C5. Obligations.** Flip the 195 `untested` obligations to `implemented` under the strict
+whole-family rule. Start with the four near-misses (`css21.9.2.2.1`, `css21.10.3.1`,
+`css21.11.1`, `css21.5.11.1`). Resolve Acid2.
+
+**C6. Milestone 10 audit.**
+1. Run the full screen matrix on one identity.
+2. Add the gate-hygiene regressions.
+3. Flip `css21ScreenReady` and `css21ProfileReady`.
+4. Enforce `--require-css-ready` in CI and release validation.
+
+### HTML 5.0 to `html5ProfileReady`
+
+The Milestone 4 packages run in dependency order, on top of K1–K3. From now on, every package
+closes with a cluster rerun and manifest flips, not unit tests alone.
+
+| Order | Package | Queue it drains | Notes |
+| --- | --- | --- | --- |
+| H1 | DOM completion (on K2) | dom/nodes 156, dom/events 129, ranges 51, collections/traversal 21, html/dom 183, document-metadata 86 | createElementNS still fails 325 subtests and createElement 82. Also MutationObserver and reflection (`html/dom/elements` 104). |
+| H2 | Scripting and parser (on K1) | scripting-1 356, speculative-parsing 126, dynamic-markup 149, webappapis/scripting 74, syntax parsing + charset 59 | Retires the parse gate's two runner-exclusions. |
+| H3 | Browsing contexts and navigation (on K3) | `html/browsers` (561 included; exact state from Stage 0), focus | window.open, joint frame history, and frame document identity across open/close. |
+| H4 | Forms | forms 487 (input-element 103 remaining) | valueAsDate, email IDN, color/number formatting, activation and event order, cloning steps, submission encodings, constraint validation, keygen. |
+| H5 | Embedded content and media (2014 semantics) | embedded-content 548, rendering/replaced-elements 87 | img/iframe/object/embed loading and sizing; media ready/network states, MediaController/mediagroup, TextTrack; the video fixture gap. |
+| H6 | Editing, selection and DnD | html/editing 269 (dnd 228), editing 263, selection 105 | The undo journal, drag-and-drop through testdriver, and K4 native evidence. |
+| H7 | Dependency suites | fetch/cors/url 287, encoding 112, uievents 63, FileAPI 55, cookies 40, mimesniff 5 | Check each entry against the 2014 dependency snapshot first. Bindings to later specs move to `post-target` with reasons. |
+| H8 | Rendering | html/rendering 446 (non-replaced 208, widgets 73, details 33), obsolete residue | UA stylesheet completeness. Shares layout and paint with CSS, so it is coordinated through the integration baseline. |
+| H9 | Remaining webappapis | timers, animation frames, user prompts, system state, canvas residue | Small; folds into neighbouring packages. |
+
+**H10. Milestone 5.**
+- Run the 762-section backlog through `scripts/import-html5-sections.py` into atomic obligations.
+- Map each obligation to a requirement plus tests, or give it a named reason.
+- The 192 `untested` requirements shrink by whole-family flips.
+- This is review work, so it runs in parallel with Milestone 4 from the start. It can surface
+  obligations that no test covers.
+
+**H11. Milestone 6.**
+1. Collect identity-matched evidence for every requirement, K4 native recordings included.
+2. Run the schema audit and check the gate-hygiene invariants.
+3. Evaluate `html5ProfileReady`.
+
+### ES2020: maintenance
+
+`python scripts/run-es2020.py --require-ready` runs inside every integration baseline. Watch
+K1 (script scheduling), QuickJS bridge changes and AngleSharp fork patches. Intl/ECMA-402,
+public Web Workers and `document.write` reentrancy stay outside the contract. K1 delivers
+parser-blocking execution for the HTML track.
+
+### Sequencing
+
+1. Stage 0. Nothing downstream is trustworthy until it closes.
+2. In parallel, in per-track worktrees:
+   - CSS: C1 → C2.
+   - HTML: H1 on K2, then K1 → H2.
+   - Throughout: K4 tooling and the Milestone 5 section review.
+3. K3 → H3, with H4 and H5 in parallel, then H6 → H7.
+4. H8 after CSS C2, because they share layout and paint. Then CSS C3 and C4.
+5. CSS C5 and C6 → `css21ProfileReady`. HTML H10 and H11 → `html5ProfileReady`. The `releaseReady` decision comes last.
+
+CSS is closest to a flip. HTML is the long pole, dominated by K1, embedded content and media,
+and forms.
+
+### Cross-track rules
+
+- `releaseReady` stays a separate final decision, taken once the CSS and HTML gates settle.
+- When tracks run in parallel, keep per-track file ownership. Each track edits only its own
+  profile prefix (`html5.*`, `css21.*` or `es2020-*`) and never touches another track's
+  suites, expected-failure lists or artifacts.
+- Rebuild before collecting evidence, and never mix build identities in one evidence set.
+- Readiness can be claimed only from full, unfiltered, single-identity evidence. It goes
+  through `--require-css-ready`, `--require-es2020-ready` and the html5 profile evaluation.
 
 ## Refreshing the numbers
 

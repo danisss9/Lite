@@ -1,6 +1,6 @@
 ﻿# Full HTML5 conformance plan
 
-Planning baseline: 12 October 2026 (refreshed from 3 October with the measured progress below). Scope: Windows x64, screen rendering, retaining Lite's C#/AngleSharp/QuickJS/Skia architecture. This document is an implementation plan; it does not change the active compatibility profile or claim that any new coverage has passed. The current state and confirmed-gap inventory live in [html5-conformance.md](html5-conformance.md); this document defines the order of work and the rules that keep each gate honest while it grows.
+Planning baseline: 12 October 2026 (refreshed from 3 October with the measured progress below). Scope: Windows x64, screen rendering, retaining Lite's C#/AngleSharp/QuickJS/Skia architecture. This document is an implementation plan; it does not change the active compatibility profile or claim that any new coverage has passed. The current state and confirmed-gap inventory live in [html5-conformance.md](html5-conformance.md); this document defines the order of work and the rules that keep each gate honest while it grows. The cross-track roadmap of 11 November 2026 ([conformance-status.md](conformance-status.md#roadmap-to-full-conformance-written-11-november-2026)) sequences the remaining Milestone 4 packages (H1–H9) on the shared keystones K1–K4, followed by Milestones 5–6.
 
 ## Target and completion contract
 

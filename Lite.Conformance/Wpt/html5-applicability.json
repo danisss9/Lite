@@ -62480,7 +62480,7 @@
   {
    "path": "dom/nodes/NodeList-live-mutations.window.js",
    "classification": "included",
-   "reason": "Reviewed 2026-11-05 (inventory batch; included, reviewed-failing — feeds the Milestone 4 engine queue): executed under the M1 inventory-completion survey (single-origin ConformanceServer serving); 1/4 subtests fail — NodeList live mutations: NodeList ownPropertyNames (assert_object_equals: unexpected property \"0\"). Engine gap: node tree mutation and traversal semantics — owned by the Milestone 4 DOM authority package."
+   "reason": "Reviewed 2026-11-05 (inventory batch; included, reviewed-failing — feeds the Milestone 4 engine queue): executed under the M1 inventory-completion survey (single-origin ConformanceServer serving); 1/4 subtests fail — NodeList live mutations: NodeList ownPropertyNames (assert_object_equals: unexpected property \"0\"). Engine gap: node tree mutation and traversal semantics — owned by the Milestone 4 DOM authority package. Closed 2026-11-05: the DOM authority package landed (live collection platform-object semantics, getElementsByTagNameNS, the verbatim DOMTokenList stringifier and per-interface coverage, DOMStringMap/NamedNodeMap enumeration, the title engine-tree authority, initial-parse comment projection, the wrong-typed-wrapper TypeError, query-path origin-sheet exclusion, and the TreeWalker/NodeIterator residuals) and this entry's full case set passes on the cluster rerun."
   },
   {
    "path": "dom/nodes/NodeList-static-length-getter-tampered-indexOf-3.html",
@@ -62800,7 +62800,7 @@
   {
    "path": "dom/collections/HTMLCollection-live-mutations.window.js",
    "classification": "included",
-   "reason": "Reviewed 2026-11-05 (inventory batch; included, reviewed-failing — feeds the Milestone 4 engine queue): executed under the M1 inventory-completion survey (single-origin ConformanceServer serving); 1/5 subtests fail — HTMLCollection live mutations: HTMLCollection ownPropertyNames (assert_object_equals: unexpected property \"0\"). Engine gap: DOM dependency semantics — owned by the Milestone 4 DOM authority package."
+   "reason": "Reviewed 2026-11-05 (inventory batch; included, reviewed-failing — feeds the Milestone 4 engine queue): executed under the M1 inventory-completion survey (single-origin ConformanceServer serving); 1/5 subtests fail — HTMLCollection live mutations: HTMLCollection ownPropertyNames (assert_object_equals: unexpected property \"0\"). Engine gap: DOM dependency semantics — owned by the Milestone 4 DOM authority package. Closed 2026-11-05: the DOM authority package landed (live collection platform-object semantics, getElementsByTagNameNS, the verbatim DOMTokenList stringifier and per-interface coverage, DOMStringMap/NamedNodeMap enumeration, the title engine-tree authority, initial-parse comment projection, the wrong-typed-wrapper TypeError, query-path origin-sheet exclusion, and the TreeWalker/NodeIterator residuals) and this entry's full case set passes on the cluster rerun."
   },
   {
    "path": "dom/observable/tentative/crashtests/observable-gc.any.js",
