@@ -449,7 +449,7 @@ public class JsElement
                     textContent = ToStr(value);
                     break;
                 default:
-                    FormState.TextInputValues[Node.NodeKey] = ToStr(value);
+                    FormState.TextInputValues[Node.NodeKey] = SanitizeInputValue(ToStr(value));
                     break;
             }
         }
@@ -458,7 +458,243 @@ public class JsElement
     private string FormValue()
     {
         Node.Attributes.TryGetValue("value", out var defaultVal);
-        return FormState.GetTextValue(Node.NodeKey, defaultVal);
+        return SanitizeInputValue(FormState.GetTextValue(Node.NodeKey, defaultVal));
+    }
+
+    private string InputType =>
+        Node.TagName == "INPUT" ? (Node.Attributes.GetValueOrDefault("type") ?? "text").Trim().ToLowerInvariant() : "";
+
+    /// <summary>HTMLInputElement.valueAsNumber (HTML §4.10.5.5): the current value as an epoch
+    /// millisecond number for the date/time states, a floating-point number for number/range,
+    /// and NaN for the states that have no numeric value; setting converts back through the
+    /// state's string format and throws InvalidStateError/TypeError for non-numeric states or
+    /// non-finite values.</summary>
+    public object valueAsNumber
+    {
+        get
+        {
+            if (Node.TagName != "INPUT") return double.NaN;
+            var raw = value as string ?? "";
+            return InputType switch
+            {
+                "number" or "range" => double.TryParse(raw, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : double.NaN,
+                "date" => EpochMs(raw, "yyyy-MM-dd", null),
+                "month" => raw.Length == 7 ? EpochMs(raw + "-01", "yyyy-MM-dd", null) : double.NaN,
+                "week" => WeekMs(raw),
+                "time" => TimeMs(raw),
+                "datetime-local" => DateTimeMs(raw),
+                _ => double.NaN,
+            };
+        }
+        set
+        {
+            var type = InputType;
+            if (type is not ("number" or "range" or "date" or "month" or "week" or "time" or "datetime-local"))
+                throw JsErrors.Dom(_engine, "InvalidStateError", "The input element's type does not support numeric values.");
+            var number = value switch
+            {
+                double d => d,
+                int i => i,
+                long l => l,
+                float f => f,
+                _ => double.NaN,
+            };
+            if (double.IsInfinity(number) || double.IsNaN(number))
+                throw JsErrors.Native(_engine, "TypeError", "The value provided is not a finite number.");
+            switch (type)
+            {
+                case "number":
+                case "range":
+                    this.value = number.ToString("0.################", System.Globalization.CultureInfo.InvariantCulture);
+                    break;
+                case "date":
+                    this.value = DateTimeOffset.FromUnixTimeMilliseconds((long)number).UtcDateTime.ToString("yyyy-MM-dd",
+                        System.Globalization.CultureInfo.InvariantCulture);
+                    break;
+                case "month":
+                    this.value = DateTimeOffset.FromUnixTimeMilliseconds((long)number).UtcDateTime.ToString("yyyy-MM",
+                        System.Globalization.CultureInfo.InvariantCulture);
+                    break;
+                case "week":
+                {
+                    var date = DateTimeOffset.FromUnixTimeMilliseconds((long)number).UtcDateTime;
+                    this.value = $"{System.Globalization.ISOWeek.GetYear(date):D4}-W{System.Globalization.ISOWeek.GetWeekOfYear(date):D2}";
+                    break;
+                }
+                case "time":
+                {
+                    var time = DateTimeOffset.FromUnixTimeMilliseconds((long)number).UtcDateTime.TimeOfDay;
+                    this.value = time.Milliseconds != 0
+                        ? new DateTime(1970, 1, 1).Add(time).ToString("HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture)
+                        : new DateTime(1970, 1, 1).Add(time).ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+                    break;
+                }
+                case "datetime-local":
+                    this.value = DateTimeOffset.FromUnixTimeMilliseconds((long)number).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fff",
+                        System.Globalization.CultureInfo.InvariantCulture).TrimEnd('0').TrimEnd('.');
+                    break;
+            }
+        }
+    }
+
+    private static double EpochMs(string value, string format, string? suffix)
+    {
+        if (!DateTime.TryParseExact(value, format, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal,
+                out var date)) return double.NaN;
+        return new DateTimeOffset(date).ToUnixTimeMilliseconds();
+    }
+
+    private static double WeekMs(string value)
+    {
+        if (value.Length != 8 || value[4] != '-' || value[5] != 'W' ||
+            !int.TryParse(value[..4], out var year) || !int.TryParse(value[6..], out var week) ||
+            week < 1 || week > System.Globalization.ISOWeek.GetWeeksInYear(year)) return double.NaN;
+        var date = System.Globalization.ISOWeek.ToDateTime(year, week, DayOfWeek.Monday);
+        return new DateTimeOffset(DateTime.SpecifyKind(date, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+    }
+
+    private static double TimeMs(string value)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(value,
+                @"^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9](\.\d{1,3})?)?$")) return double.NaN;
+        if (!TimeSpan.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out var time)) return double.NaN;
+        return (long)time.TotalMilliseconds;
+    }
+
+    private static double DateTimeMs(string value)
+    {
+        var t = value.IndexOf('T');
+        if (t <= 0) return double.NaN;
+        var date = EpochMs(value[..t], "yyyy-MM-dd", null);
+        var time = TimeMs(value[(t + 1)..]);
+        return double.IsNaN(date) || double.IsNaN(time) ? double.NaN : date + time;
+    }
+
+    /// <summary>HTMLInputElement.maxLength/minLength (HTML §4.10.5.3): the non-negative integer
+    /// content attribute, or -1 when absent/malformed/negative; setting a negative value throws
+    /// IndexSizeError and a non-numeric value converts to 0.</summary>
+    public long maxLength
+    {
+        get => LengthAttribute("maxlength");
+        set => SetLengthAttribute("maxlength", value);
+    }
+
+    public long minLength
+    {
+        get => LengthAttribute("minlength");
+        set => SetLengthAttribute("minlength", value);
+    }
+
+    private long LengthAttribute(string name) =>
+        Node.Attributes.TryGetValue(name, out var raw) && long.TryParse(raw.Trim(), out var value) && value >= 0 ? value : -1;
+
+    private void SetLengthAttribute(string name, object? value)
+    {
+        var number = value switch
+        {
+            double d => (long)d,
+            int i => i,
+            long l => l,
+            float f => (long)f,
+            string s when long.TryParse(s.Trim(), out var parsed) => parsed,
+            _ => 0L,
+        };
+        if (number < 0) throw JsErrors.Dom(_engine, "IndexSizeError", $"The {name} attribute cannot be negative.");
+        Node.Attributes[name] = number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>The per-type value sanitization algorithm (HTML §4.10.5.5): a control's value
+    /// is the raw current value run through the type's rules, so a color input with a malformed
+    /// value reads #000000, a number with garbage reads empty, and text strips newlines.</summary>
+    private string SanitizeInputValue(string? raw)
+    {
+        if (Node.TagName != "INPUT") return raw ?? "";
+        var value = raw ?? "";
+        var type = (Node.Attributes.GetValueOrDefault("type") ?? "text").Trim().ToLowerInvariant();
+        switch (type)
+        {
+            case "text":
+            case "search":
+            case "tel":
+            case "password":
+                return value.Replace("\r", "").Replace("\n", "");
+            case "url":
+                return value.Replace("\r", "").Replace("\n", "").Trim();
+            case "email":
+            {
+                var cleaned = value.Replace("\r", "").Replace("\n", "");
+                if (Node.Attributes.ContainsKey("multiple")) return cleaned;
+                cleaned = cleaned.Trim();
+                return cleaned.Contains('@') ? cleaned : "";
+            }
+            case "number":
+            {
+                var cleaned = value.Replace("\r", "").Replace("\n", "").Trim();
+                return double.TryParse(cleaned, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var number) && !double.IsNaN(number) && !double.IsInfinity(number)
+                    ? cleaned : "";
+            }
+            case "range":
+            {
+                var cleaned = value.Replace("\r", "").Replace("\n", "").Trim();
+                if (!double.TryParse(cleaned, System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var number) ||
+                    double.IsNaN(number) || double.IsInfinity(number))
+                    return "50";
+                var min = NumAttr("min", 0);
+                var max = NumAttr("max", 100);
+                var clamped = Math.Clamp(number, min, max);
+                return clamped.ToString("0.################", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            case "color":
+            {
+                var cleaned = value.Trim();
+                return cleaned.Length == 7 && cleaned[0] == '#' &&
+                    cleaned.Skip(1).All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f')
+                    ? cleaned : "#000000";
+            }
+            case "date":
+                return IsValidDate(value) ? value : "";
+            case "month":
+                return IsValidMonth(value) ? value : "";
+            case "week":
+                return IsValidWeek(value) ? value : "";
+            case "time":
+                return IsValidTime(value) ? value : "";
+            case "datetime-local":
+                return IsValidDateTimeLocal(value) ? value : "";
+            case "checkbox":
+            case "radio":
+                return value.Length == 0 ? "on" : value;
+            default:
+                return value;
+        }
+    }
+
+    private static bool IsValidDate(string value) =>
+        DateTime.TryParseExact(value, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out _);
+
+    private static bool IsValidMonth(string value) =>
+        value.Length == 7 && DateTime.TryParseExact(value + "-01", "yyyy-MM-dd",
+            System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _);
+
+    private static bool IsValidWeek(string value)
+    {
+        if (value.Length != 8 || value[4] != '-' || value[5] != 'W') return false;
+        return int.TryParse(value[..4], out var year) && int.TryParse(value[6..], out var week) &&
+            week >= 1 && week <= System.Globalization.ISOWeek.GetWeeksInYear(year);
+    }
+
+    private static bool IsValidTime(string value) =>
+        System.Text.RegularExpressions.Regex.IsMatch(value, @"^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9](\.\d{1,3})?)?$");
+
+    private static bool IsValidDateTimeLocal(string value)
+    {
+        var t = value.IndexOf('T');
+        return t > 0 && IsValidDate(value[..t]) && IsValidTime(value[(t + 1)..]);
     }
 
     // ---- progress / meter (HTMLProgressElement, HTMLMeterElement) ----
@@ -475,10 +711,38 @@ public class JsElement
     private double MeterValue() => Math.Clamp(NumAttr("value", 0), MeterMin(), MeterMax());
 
     /// <summary>HTMLProgressElement.max / HTMLMeterElement.max (reflected, defaulting to 1).</summary>
-    public double max => Node.TagName == "PROGRESS" ? ProgressMax() : MeterMax();
+    /// <summary>HTMLMeterElement.max (reflected, defaulting to 1); HTMLInputElement.max is the
+    /// verbatim content attribute string for the non-numeric states (date/time/color...).</summary>
+    public object max
+    {
+        get => Node.TagName switch
+        {
+            "PROGRESS" => ProgressMax(),
+            "METER" => MeterMax(),
+            _ => Node.Attributes.GetValueOrDefault("max", ""),
+        };
+        set
+        {
+            if (Node.TagName is "PROGRESS" or "METER") Node.Attributes["max"] = ToNumStr(value);
+            else Node.Attributes["max"] = ToStr(value);
+        }
+    }
 
-    /// <summary>HTMLMeterElement.min (reflected, defaulting to 0).</summary>
-    public double min => MeterMin();
+    /// <summary>HTMLMeterElement.min (reflected, defaulting to 0); HTMLInputElement.min is the
+    /// verbatim content attribute string for the non-numeric states.</summary>
+    public object min
+    {
+        get => Node.TagName switch
+        {
+            "METER" => MeterMin(),
+            _ => Node.Attributes.GetValueOrDefault("min", ""),
+        };
+        set
+        {
+            if (Node.TagName == "METER") Node.Attributes["min"] = ToNumStr(value);
+            else Node.Attributes["min"] = ToStr(value);
+        }
+    }
 
     /// <summary>HTMLProgressElement.position — value/max for a determinate bar, or -1 when
     /// the element is indeterminate (no <c>value</c> attribute).</summary>
