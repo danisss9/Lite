@@ -3910,11 +3910,67 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         var node = FindFiller(root, top) ?? InstructionNode(root, sentence);
         if (node is null)
             return new(WptRunner.Cat.Unsupported, "Visual check: no paragraph below the instructions", 0, 0);
+        var pixels = bitmap.Pixels;
+        var width = bitmap.Width;
+
+        // The #pseudo-first-letter child carries the ::first-letter styles AND its own
+        // BorderBox (laid out by the inline run). When ::first-letter has float: left, the
+        // pseudo is pulled OUT of the text band and floats to the left of the remaining text —
+        // scanning the paragraph's first text band would find the black "h" of "he first
+        // letter..." instead of the floated lime T (first-letter-selector-026). Use the
+        // pseudo node's box for the first-letter read when it exists; fall back to the
+        // geometric band scan for blocks without a pseudo child.
+        LayoutNode? pseudoLetter = null;
+        void FindPseudo(LayoutNode n)
+        {
+            if (pseudoLetter is not null) return;
+            if (n.TagName == "#pseudo-first-letter") { pseudoLetter = n; return; }
+            foreach (var c in n.Children) FindPseudo(c);
+        }
+        FindPseudo(node);
+
+        if (pseudoLetter is { } letter)
+        {
+            // The pseudo node IS the first letter: read its box's core colour directly.
+            var lb = letter.Box.BorderBox;
+            var letterCrop = SKRectI.Round(new SKRect(lb.Left, lb.Top, lb.Right, lb.Bottom));
+            letterCrop.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+            var firstColor = CoreColor(bitmap, new Component(letterCrop.Left, letterCrop.Top, letterCrop.Right, letterCrop.Bottom, true, default));
+            if (!Matches(check.Color!, firstColor))
+                return new(WptRunner.Cat.Fail, $"{assertion}: the first letter is {firstColor}", 1, 1,
+                    [new(assertion, 1, $"first letter {firstColor}")], 0);
+            // The REST of the paragraph's ink must NOT be the stated colour. Scan everything
+            // OUTSIDE the pseudo's box within the paragraph's crop.
+            var pborder = node.Box.BorderBox;
+            var pcrop = SKRectI.Round(new SKRect(pborder.Left - 1, pborder.Top - 1, pborder.Right + 1, pborder.Bottom + 1));
+            pcrop.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+            // The ::first-letter styling (background, border, padding) may extend beyond the
+            // pseudo node's border box — inflate the exclusion zone to cover the visual extent.
+            var excLeft = letterCrop.Left - 4;
+            var excTop = letterCrop.Top - 4;
+            var excRight = letterCrop.Right + 4;
+            var excBottom = letterCrop.Bottom + 4;
+            var restColor = SKColors.White;
+            var restSeen = false;
+            for (var y = pcrop.Top; y < pcrop.Bottom; y++)
+            for (var x = pcrop.Left; x < pcrop.Right; x++)
+            {
+                if (x >= excLeft && x < excRight && y >= excTop && y < excBottom) continue;
+                var p = pixels[y * width + x];
+                var d = Distance(p, SKColors.White);
+                if (d > InkThreshold && (!restSeen || d > Distance(restColor, SKColors.White)))
+                { restColor = p; restSeen = true; }
+            }
+            if (restSeen && Matches(check.Color!, restColor))
+                return new(WptRunner.Cat.Fail, $"{assertion}: the rest of the paragraph is {check.Color} too", 1, 1,
+                    [new(assertion, 1, "the rest of the paragraph is also coloured")], 0);
+            return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+        }
+
+        // No pseudo child (the block carries its own text): the geometric band scan.
         var border = node.Box.BorderBox;
         var crop = SKRectI.Round(new SKRect(border.Left - 1, border.Top - 1, border.Right + 1, border.Bottom + 1));
         crop.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
-        var pixels = bitmap.Pixels;
-        var width = bitmap.Width;
         bool Inked(int x, int y) => Distance(pixels[y * width + x], SKColors.White) > InkThreshold;
         // The first ink row band: rows from the crop's top until a fully-white row (a glyph's
         // ink is contiguous vertically; the band ends at the paragraph's line gap).
@@ -3950,24 +4006,24 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
             return new(WptRunner.Cat.Fail, $"{assertion}: the paragraph painted no ink", 1, 1,
                 [new(assertion, 1, "no ink")], 0);
         // The first glyph's core colour, then the rest of the paragraph's ink core.
-        var firstColor = CoreColor(bitmap, new Component(glyphLeft, bandTop, glyphRight, bandBottom, true, default));
-        if (!Matches(check.Color!, firstColor))
-            return new(WptRunner.Cat.Fail, $"{assertion}: the first letter is {firstColor}", 1, 1,
-                [new(assertion, 1, $"first letter {firstColor}")], 0);
-        var restColor = SKColors.White;
-        var restSeen = false;
+        var geoFirstColor = CoreColor(bitmap, new Component(glyphLeft, bandTop, glyphRight, bandBottom, true, default));
+        if (!Matches(check.Color!, geoFirstColor))
+            return new(WptRunner.Cat.Fail, $"{assertion}: the first letter is {geoFirstColor}", 1, 1,
+                [new(assertion, 1, $"first letter {geoFirstColor}")], 0);
+        var geoRestColor = SKColors.White;
+        var geoRestSeen = false;
         for (var y = crop.Top; y < crop.Bottom; y++)
         for (var x = glyphRight; x < crop.Right; x++)
         {
             var p = pixels[y * width + x];
             var d = Distance(p, SKColors.White);
-            if (d > InkThreshold && (!restSeen || d > Distance(restColor, SKColors.White)))
+            if (d > InkThreshold && (!geoRestSeen || d > Distance(geoRestColor, SKColors.White)))
             {
-                restColor = p;
-                restSeen = true;
+                geoRestColor = p;
+                geoRestSeen = true;
             }
         }
-        if (restSeen && Matches(check.Color!, restColor))
+        if (geoRestSeen && Matches(check.Color!, geoRestColor))
             return new(WptRunner.Cat.Fail, $"{assertion}: the rest of the paragraph is {check.Color} too", 1, 1,
                 [new(assertion, 1, "the rest of the paragraph is also coloured")], 0);
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);

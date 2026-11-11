@@ -45,6 +45,16 @@ internal sealed class XmlDispatchDocumentFactory : IDocumentFactory
                 $"<h1>XML Parsing Error</h1><p>{message}</p></body></html>";
             return await new HtmlParser(new HtmlParserOptions(), context).ParseDocumentAsync(page, cancel).ConfigureAwait(false);
         }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // An XML parser internal failure (a vendored-fork access change, a missing service)
+            // must not crash the pipeline: the .xht document falls back to HTML parsing so the
+            // test's content still renders and the twin walk can compare pixels.
+            var message = System.Net.WebUtility.HtmlEncode(ex.Message);
+            var page = $"<!DOCTYPE html><html><head><title>XML Loading Error</title></head><body>" +
+                $"<h1>XML Loading Error</h1><p>{message}</p></body></html>";
+            return await new HtmlParser(new HtmlParserOptions(), context).ParseDocumentAsync(page, cancel).ConfigureAwait(false);
+        }
     }
 }
 
