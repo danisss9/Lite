@@ -37,11 +37,18 @@ public static class ObsoleteTests
             m2.scrollAmount = 30;
             out.push(m2.scrollAmount);
             out.push(m2.getAttribute('scrollamount'));
+            // marquee.loop: malformed/absent reads -1; a positive integer reads back; the
+            // setter writes the content attribute (document-color/loop clusters).
+            out.push(m1.loop);
+            m2.setAttribute('loop', '2');
+            out.push(m2.loop);
+            m2.loop = 5;
+            out.push(m2.loop + '/' + m2.getAttribute('loop'));
             globalThis.out = out.join('|');
             """);
         // Defaults: scroll/left/6/85; reflected values read through; a setter writes the
         // content attribute.
-        Equal("scroll|left|6|85|slide|up|12|30|30", Eval(engine, "out"));
+        Equal("scroll|left|6|85|slide|up|12|30|30|-1|2|5/5", Eval(engine, "out"));
     }
 
     [Test]

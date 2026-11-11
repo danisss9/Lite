@@ -50,8 +50,31 @@ public class JsDocument
     /// globalThis and throw "Cyclic reference detected".</summary>
     public JsValue? defaultView => _engine.GetValue("window");
 
-    public JsElement? body => _document?.Body is { } body ? Wrap(body) :
-        FindFirst(_root, n => n.TagName == "BODY") is { } b ? JsElement.For(_engine, b) : null;
+    public JsElement? body
+    {
+        get => _document?.Body is { } body ? Wrap(body) :
+            _document?.QuerySelector("frameset") is { } frameset ? Wrap(frameset) :
+            FindFirst(_root, n => n.TagName is "BODY" or "FRAMESET") is { } b ? JsElement.For(_engine, b) : null;
+        set
+        {
+            // document.body setter: the value must be a body element (or null); it replaces
+            // the current body as the document element's second child (after head) and the
+            // projection is rebuilt from the DOM (document-color-01's cleanup re-adds body).
+            if (_document is not { } doc || doc.DocumentElement is not { } html) return;
+            var newBody = value?.Node.DomNode as IElement;
+            if (newBody is not null && !string.Equals(newBody.LocalName, "body", StringComparison.OrdinalIgnoreCase))
+                return;
+            var current = doc.Body;
+            if (current is not null && !ReferenceEquals(current, newBody)) html.RemoveChild(current);
+            if (newBody is not null)
+            {
+                var reference = doc.Head?.NextSibling;
+                if (!ReferenceEquals(newBody.Parent, html) || !ReferenceEquals(newBody, reference))
+                    html.InsertBefore(newBody, reference);
+            }
+            if (State is { } state) Parser.ReProjectChildren(html, state);
+        }
+    }
 
     public JsElement? activeElement =>
         JsEngine.For(_engine)?.DocumentState.ActiveElement is { } active
@@ -942,7 +965,9 @@ public class JsDocument
     {
         var body = eng?.DocumentFacade?.RootNode;
         var bodyNode = FindFirstColorNode(body, "BODY");
-        if (bodyNode is not null) bodyNode.Attributes[attribute] = value;
+        // The color IDL attributes are [LegacyNullToEmptyString]: null stores the empty
+        // attribute value, not a null dictionary entry (document-color-02).
+        if (bodyNode is not null) bodyNode.Attributes[attribute] = value ?? "";
     }
 
     private static LayoutNode? FindFirstColorNode(LayoutNode? root, string tag)

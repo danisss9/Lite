@@ -244,12 +244,18 @@ public class JsElement
     }
 
     /// <summary>HTMLScriptElement.text (and the legacy alias other elements rarely use): the
-    /// element's text content. Loader scripts built with createElement('script') set .text
-    /// before insertion; the insertion hook reads it back through the same storage.</summary>
+    /// element's text content. HTMLBodyElement.text is the obsolete IDL reflection of the body's
+    /// text content attribute (HTML §15.3.2), not the body's text content. Loader scripts built
+    /// with createElement('script') set .text before insertion; the insertion hook reads it back
+    /// through the same storage.</summary>
     public string text
     {
-        get => textContent;
-        set => textContent = value;
+        get => Node.TagName == "BODY" ? BodyColorAttr("text") : textContent;
+        set
+        {
+            if (Node.TagName == "BODY") { SetBodyColorAttr("text", value); return; }
+            textContent = value;
+        }
     }
 
     // ---- HTMLBodyElement obsolete color IDL (HTML §15.3.2): reflect the text/bgcolor/
@@ -740,7 +746,22 @@ public class JsElement
     }
 
     public bool autoplay { get => GetBoolAttr("autoplay"); set => SetBoolAttr("autoplay", value); }
-    public bool loop { get => GetBoolAttr("loop"); set => SetBoolAttr("loop", value); }
+    /// <summary>HTMLMediaElement.loop is the boolean presence reflection; HTMLMarqueeElement.loop
+    /// is the obsolete numeric loop count (a positive integer, else -1). One host member shadows
+    /// both prototypes, so the tag decides which IDL shape answers.</summary>
+    public object loop
+    {
+        get => Node.TagName == "MARQUEE" ? marqueeLoop : GetBoolAttr("loop");
+        set
+        {
+            if (Node.TagName == "MARQUEE")
+            {
+                marqueeLoop = value is bool marqueeBool ? (marqueeBool ? 1L : 0L) : Convert.ToInt64(value);
+                return;
+            }
+            SetBoolAttr("loop", value is bool b ? b : Convert.ToBoolean(value));
+        }
+    }
     public bool controls { get => GetBoolAttr("controls"); set => SetBoolAttr("controls", value); }
     public string preload { get => Node.Attributes.GetValueOrDefault("preload", ""); set => Node.Attributes["preload"] = value; }
     public string poster { get => Node.Attributes.GetValueOrDefault("poster", ""); set => Node.Attributes["poster"] = value; }
@@ -885,6 +906,19 @@ public class JsElement
     {
         get => Node.TagName == "MARQUEE" ? ReflectULong("hspace", 0) : 0;
         set { if (Node.TagName == "MARQUEE") SetReflectedString("hspace", value.ToString()); }
+    }
+
+    /// <summary>marquee.loop: a positive integer reads back; an absent, malformed, zero or
+    /// negative value reads -1 (HTML §15.3.1's loop processing rules).</summary>
+    public long marqueeLoop
+    {
+        get
+        {
+            if (Node.TagName != "MARQUEE") return -1;
+            var raw = Node.Attributes.GetValueOrDefault("loop");
+            return raw is not null && long.TryParse(raw.Trim(), out var v) && v >= 1 ? v : -1;
+        }
+        set { if (Node.TagName == "MARQUEE") SetReflectedString("loop", value.ToString()); }
     }
 
     public long marqueeScrollAmount
@@ -1094,6 +1128,7 @@ public class JsElement
             if (node.Attributes.TryGetValue(name, out var value)) element.SetAttribute(name, value);
             else element.RemoveAttribute(name);
         }
+        if (IsPresentationalHintAttribute(name)) Parser.RefreshPresentationalHints(node);
         if (name is "class" or "id" || name.StartsWith("data-"))
         {
             // Rules that matched the OLD attribute value but not the new one lose their
@@ -1131,6 +1166,13 @@ public class JsElement
                 For(eng.RawEngine, node).LoadInsertedIframe();
         }
     }
+
+    /// <summary>The attributes the presentational-hint pass reads: changing one re-runs the
+    /// pass so the new value repaints (body bgcolor yellow → green).</summary>
+    private static bool IsPresentationalHintAttribute(string name) => name is
+        "bgcolor" or "text" or "link" or "vlink" or "alink" or "align" or "valign" or
+        "width" or "height" or "border" or "cellpadding" or "cellspacing" or "nowrap" or
+        "color" or "face" or "size" or "hspace" or "vspace" or "background" or "bgproperties";
 
     /// <summary>A class/id change can change what matches the element's DESCENDANTS and its
     /// FOLLOWING SIBLINGS (descendant, child and sibling combinators): background-root-101's

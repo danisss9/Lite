@@ -87,6 +87,9 @@ public class LayoutNode
     /// cascade (StyleResolver) rather than inline styles. Cleared and re-stamped on each
     /// re-resolution so class/id changes can retract stale rule-applied values.</summary>
     public HashSet<string> CascadeAppliedProps { get; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Properties stamped by the HTML presentational-hint pass: retracted before a
+    /// hint attribute change re-runs the pass, so bgcolor yellow → green replaces the value.</summary>
+    internal HashSet<string> HintAppliedProps { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, string> HoverStyles { get; } = [];
     public Dictionary<string, string> FocusStyles { get; } = [];
     public Dictionary<string, string> ActiveStyles { get; } = [];

@@ -666,7 +666,7 @@ internal class JsEngine : IDisposable
               HTMLMarqueeElement: {
                 behavior: 'marqueeBehavior', bgColor: 'marqueeBgColor',
                 direction: 'marqueeDirection', height: 'marqueeHeight',
-                hspace: 'marqueeHspace', scrollAmount: 'marqueeScrollAmount',
+                hspace: 'marqueeHspace', loop: 'marqueeLoop', scrollAmount: 'marqueeScrollAmount',
                 scrollDelay: 'marqueeScrollDelay', trueSpeed: 'marqueeTrueSpeed',
                 vspace: 'marqueeVspace', width: 'marqueeWidth',
               },

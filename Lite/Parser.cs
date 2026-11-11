@@ -36,6 +36,7 @@ internal static class Parser
         h1, h2, h3, h4, h5, h6 { cursor: text; }
         a[href] { color: blue; text-decoration: underline; cursor: pointer; }
         img { display: inline; }
+        marquee { display: inline-block; overflow: hidden !important; }
         input { display: inline-block; cursor: text; }
         input[type="checkbox"] { cursor: default; }
         button { display: inline-block; cursor: pointer; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-color: #a0a0a0; border-right-color: #a0a0a0; border-bottom-color: #a0a0a0; border-left-color: #a0a0a0; border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; }
@@ -2193,7 +2194,10 @@ internal static class Parser
             computed ??= ComputeCurrentStyle(element);
             var declared = computed.GetPropertyValueSafe(property)?.Trim();
             if ((string.IsNullOrEmpty(declared) || declared == "auto") && !node.StyleOverrides.ContainsKey(property))
+            {
                 node.StyleOverrides[property] = value;
+                node.HintAppliedProps.Add(property);
+            }
         }
         static string? Length(string? raw)
         {
@@ -2368,6 +2372,17 @@ internal static class Parser
     /// Presentational hints lose to an author declaration, so a cell that sets its own padding
     /// keeps it. Called after the subtree is built, since it has to reach the cells.
     /// </summary>
+    /// <summary>Re-runs the presentational-hint pass after a hint attribute changed: the
+    /// previously stamped properties are retracted first so the new attribute value replaces
+    /// the old one (body bgcolor yellow → green, body-bgcolor-attribute-change).</summary>
+    internal static void RefreshPresentationalHints(LayoutNode node)
+    {
+        if (node.DomNode is not IElement element) return;
+        foreach (var property in node.HintAppliedProps) node.StyleOverrides.Remove(property);
+        node.HintAppliedProps.Clear();
+        ApplyPresentationalHints(element, node, node.TagName);
+    }
+
     private static void ApplyTableSpacingAttributes(IElement element, LayoutNode node)
     {
         if (element.GetAttribute("cellspacing")?.Trim() is { Length: > 0 } spacing &&

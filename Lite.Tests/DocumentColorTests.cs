@@ -73,7 +73,6 @@ public static class DocumentColorTests
         // The body's link hint colors the anchor (the UA blue default applies without it).
         var anchor = Find(page.Root, "A");
         True(anchor != null, "anchor missing");
-        Console.WriteLine("[hint] root=" + page.Root.TagName + " bodyHint=" + (Find(page.Root, "BODY")?.StyleOverrides.GetValueOrDefault("__link-color") ?? "<none>") + " anchorColor=" + anchor!.StyleOverrides.GetValueOrDefault("color"));
         var color = anchor!.StyleOverrides.GetValueOrDefault("color");
         True(color == "red", $"the body's link hint must color the anchor red, got {color}");
         True(Lite.Extensions.StyleExtensions.GetColor(anchor) == SKColors.Red,
@@ -87,6 +86,31 @@ public static class DocumentColorTests
         True(anchor2 != null, "anchor missing");
         True(Lite.Extensions.StyleExtensions.GetColor(anchor2!) == SKColors.Blue,
             $"the UA default anchor color must be blue, got {Lite.Extensions.StyleExtensions.GetColor(anchor2!)}");
+    }
+
+    [Test]
+    public static void DocumentColor_BodyTextIdlReflectsTheAttribute()
+    {
+        var engine = Parsed("<!doctype html><body text='blue'>content</body></html>");
+        Run(engine, "globalThis.out = document.body.text + '/' + document.body.textContent;");
+        // body.text is the obsolete IDL reflection of the text attribute, not the body text.
+        Equal("blue/content", Eval(engine, "out"));
+        Run(engine, "document.body.text = 'red'; globalThis.out2 = document.fgColor + '/' + document.body.getAttribute('text');");
+        Equal("red/red", Eval(engine, "out2"));
+    }
+
+    [Test]
+    public static void DocumentColor_BodyAttributeChangeRepaints()
+    {
+        var page = Parser.ParseChildPage(
+            "<!doctype html><body bgcolor='yellow'>content</body>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var body = Find(page.Root, "BODY")!;
+        // The presentational hint paints the parsed value...
+        Equal("yellow", body.StyleOverrides.GetValueOrDefault("background-color") ?? "");
+        page.Engine!.RawEngine.Execute("document.body.setAttribute('bgcolor', 'green');");
+        // ...and a later attribute change retracts the old hint value (body-bgcolor-attribute-change).
+        Equal("green", body.StyleOverrides.GetValueOrDefault("background-color") ?? "");
     }
 
     private static LayoutNode? Find(LayoutNode node, string tag)
