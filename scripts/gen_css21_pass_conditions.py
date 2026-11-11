@@ -418,30 +418,30 @@ BULLET_GLYPH_SHAPES = {'•': 'round-dot', '◦': 'hollow-circle', '■': 'tiny-
 BORDER_SIDES_PATTERNS = [
     (re.compile(rf'^a\s+box(?:\s+below)?\s+with\s+top\s+and\s+bottom\s+borders\s+that\s+are\s+({COLOR})'
                 rf'\s+and\s+left\s+and\s+right\s+borders\s+that\s+are\s+({COLOR})$'),
-     [('top', 1, None), ('bottom', 1, None), ('left', 2, None), ('right', 2, None)]),
+     [('top', 1, None), ('bottom', 1, None), ('left', 3, None), ('right', 3, None)]),
     (re.compile(rf'^a\s+box(?:\s+below)?\s+with\s+top\s+border\s+that\s+is\s+({COLOR})'
                 rf',\s+left\s+and\s+right\s+borders\s+that\s+are\s+({COLOR})\s+and\s+a\s+bottom\s+border\s+that\s+is\s+({COLOR})$'),
-     [('top', 1, None), ('left', 2, None), ('right', 2, None), ('bottom', 3, None)]),
+     [('top', 1, None), ('left', 3, None), ('right', 3, None), ('bottom', 5, None)]),
     (re.compile(rf'^a\s+box(?:\s+below)?\s+with\s+top\s+border\s+that\s+is\s+({COLOR})'
                 rf',\s+right\s+border\s+that\s+is\s+({COLOR}),\s+a\s+bottom\s+border\s+that\s+is\s+({COLOR})'
                 rf'\s+and\s+a\s+left\s+border\s+that\s+is\s+({COLOR})$'),
-     [('top', 1, None), ('right', 2, None), ('bottom', 3, None), ('left', 4, None)]),
+     [('top', 1, None), ('right', 3, None), ('bottom', 5, None), ('left', 7, None)]),
     (re.compile(rf'^a\s+box\s+below\s+with\s+top\s+and\s+bottom\s+({COLOR})\s+borders\s+and\s+left\s+and\s+right\s+({COLOR})\s+borders$'),
-     [('top', 1, None), ('bottom', 1, None), ('left', 2, None), ('right', 2, None)]),
+     [('top', 1, None), ('bottom', 1, None), ('left', 3, None), ('right', 3, None)]),
     (re.compile(rf'^a\s+box\s+below\s+with\s+a\s+({COLOR})\s+top\s+border,\s+({COLOR})\s+left\s+and\s+right\s+borders'
                 rf'\s+and\s+an?\s+({COLOR})\s+bottom\s+border$'),
-     [('top', 1, None), ('left', 2, None), ('right', 2, None), ('bottom', 3, None)]),
+     [('top', 1, None), ('left', 3, None), ('right', 3, None), ('bottom', 5, None)]),
     (re.compile(rf'^a\s+box\s+below\s+with\s+a\s+({COLOR})\s+top\s+border,\s+a\s+({COLOR})\s+right\s+border,'
                 rf'\s+an?\s+({COLOR})\s+bottom\s+border\s+and\s+a\s+({COLOR})\s+left\s+border$'),
-     [('top', 1, None), ('right', 2, None), ('bottom', 3, None), ('left', 4, None)]),
+     [('top', 1, None), ('right', 3, None), ('bottom', 5, None), ('left', 7, None)]),
     (re.compile(rf'^the\s+top\s+and\s+bottom\s+borders\s+are\s+({COLOR})\s+and\s+the\s+left\s+and\s+right\s+borders\s+are\s+({COLOR})$'),
-     [('top', 1, None), ('bottom', 1, None), ('left', 2, None), ('right', 2, None)]),
+     [('top', 1, None), ('bottom', 1, None), ('left', 3, None), ('right', 3, None)]),
     (re.compile(rf'^the\s+top\s+border\s+is\s+({COLOR}),\s+the\s+bottom\s+border\s+is\s+({COLOR})'
                 rf'\s+and\s+the\s+left\s+and\s+right\s+borders\s+are\s+({COLOR})$'),
-     [('top', 1, None), ('bottom', 2, None), ('left', 3, None), ('right', 3, None)]),
+     [('top', 1, None), ('bottom', 3, None), ('left', 5, None), ('right', 5, None)]),
     (re.compile(rf'^the\s+top\s+border\s+is\s+({COLOR}),\s+the\s+right\s+border\s+is\s+({COLOR}),\s+the\s+bottom\s+border\s+is\s+({COLOR})'
                 rf',\s+and\s+the\s+left\s+border\s+is\s+({COLOR})$'),
-     [('top', 1, None), ('right', 2, None), ('bottom', 3, None), ('left', 4, None)]),
+     [('top', 1, None), ('right', 3, None), ('bottom', 5, None), ('left', 7, None)]),
     (re.compile(rf'^a\s+box\s+below\s+with\s+(dashed|dotted)\s+top\s+and\s+bottom\s+borders\s+and\s+(dashed|dotted)\s+left\s+and\s+right\s+borders$'),
      [('top', None, 1), ('bottom', None, 1), ('left', None, 2), ('right', None, 2)]),
     (re.compile(rf'^a\s+box\s+below\s+with\s+a\s+(dashed|dotted)\s+top\s+border,\s+left\s+and\s+right\s+borders\s+that\s+are\s+(dashed|dotted)'
