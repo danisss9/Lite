@@ -616,6 +616,11 @@ namespace AngleSharp.Dom
             protected set;
         }
 
+        /// <summary>Sets the content type from within the assembly (DOMImplementation.createDocument
+        /// creates an XML document; the accessibility stays protected so the XML document type in
+        /// its own assembly keeps deriving).</summary>
+        internal void SetContentType(String contentType) => ContentType = contentType;
+
         /// <inheritdoc />
         public DocumentReadyState ReadyState
         {
@@ -1094,8 +1099,13 @@ namespace AngleSharp.Dom
         {
             if (localName.IsXmlName())
             {
+                // DOM §4.5: createElement lowercases the name in an HTML document and takes it
+                // verbatim in an XML one (an XHTML document is an XML document here) — the
+                // factory itself preserves the spelling it is given.
+                var name = string.Equals(ContentType, "text/html", StringComparison.OrdinalIgnoreCase)
+                    ? localName.HtmlLower() : localName;
                 var factory = _context.GetFactory<IElementFactory<Document, HtmlElement>>();
-                var element = factory.Create(this, localName);
+                var element = factory.Create(this, name);
                 element.SetupElement();
                 return element;
             }

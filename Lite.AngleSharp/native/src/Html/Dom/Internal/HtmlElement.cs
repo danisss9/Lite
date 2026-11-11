@@ -434,7 +434,7 @@ namespace AngleSharp.Html.Dom
 
         /// <inheritdoc />
         public HtmlElement(Document owner, String localName, String? prefix = null, NodeFlags flags = NodeFlags.None)
-            : base(owner, Combine(prefix, localName), localName, prefix, NamespaceNames.HtmlUri, flags | NodeFlags.HtmlMember)
+            : base(owner, Combine(owner, prefix, localName), localName, prefix, NamespaceNames.HtmlUri, flags | NodeFlags.HtmlMember)
         {
         }
 
@@ -665,7 +665,14 @@ namespace AngleSharp.Html.Dom
 
         private String? GetDefaultLanguage() => ParentElement is IHtmlElement parent ? parent.Language : Context!.GetLanguage();
 
-        private static String Combine(String? prefix, String localName) => (prefix is not null ? String.Concat(prefix, ":", localName) : localName).ToUpperInvariant();
+        private static String Combine(Document owner, String? prefix, String localName)
+        {
+            var name = prefix is not null ? String.Concat(prefix, ":", localName) : localName;
+            // DOM §4.5: an HTML document's element names are ASCII-uppercased in tagName/nodeName;
+            // an XML document (XHTML included) keeps the qualified name verbatim.
+            return string.Equals(owner.ContentType, "text/html", StringComparison.OrdinalIgnoreCase)
+                ? name.ToUpperInvariant() : name;
+        }
 
         #endregion
     }

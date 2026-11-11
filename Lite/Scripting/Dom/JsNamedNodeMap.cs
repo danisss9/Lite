@@ -65,10 +65,11 @@ public class JsNamedNodeMap : IJsNamedCollection
 
     public int length => Names.Count;
 
-    public JsAttr? item(int index)
+    public JsAttr? item(double index)
     {
+        var u = DomCollections.ToUint32(index);
         var names = Names;
-        return index >= 0 && index < names.Count ? new JsAttr(_node, names[index]) : null;
+        return u < (uint)names.Count ? new JsAttr(_node, names[(int)u]) : null;
     }
 
     /// <summary>Indexer so attributes[i] works from JS.</summary>

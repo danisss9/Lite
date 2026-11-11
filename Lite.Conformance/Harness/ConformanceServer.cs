@@ -135,6 +135,24 @@ internal static class ConformanceServer
             await next();
         });
 
+        // WPT .py handlers cannot execute under the .NET harness. The handful the reviewed
+        // corpus actually addresses are emulated here: dom/nodes/encoding.py serves the
+        // meta-charset probe document (§encoding.py upstream returns exactly this markup
+        // with no charset in the response header, so the prescan decides).
+        app.Use(async (ctx, next) =>
+        {
+            var path = ctx.Request.Path.Value ?? "";
+            if (path.EndsWith("/dom/nodes/encoding.py", StringComparison.OrdinalIgnoreCase))
+            {
+                var label = ctx.Request.Query["label"].ToString();
+                ctx.Response.ContentType = "text/html";
+                await ctx.Response.WriteAsync(
+                    $"<!doctype html><meta charset=\"{System.Net.WebUtility.HtmlEncode(label)}\">\n");
+                return;
+            }
+            await next();
+        });
+
         // overrides\ first (custom testharnessreport.js, local smoke tests), then vendor\wpt\.
         foreach (var root in new[] { ConformancePaths.Overrides, Path.Combine(ConformancePaths.Vendor, "wpt"), ConformancePaths.Vendor })
         {

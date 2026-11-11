@@ -1,4 +1,4 @@
-using AngleSharp.Io;
+﻿using AngleSharp.Io;
 using AngleSharp;
 using AngleSharp.Css;
 using AngleSharp.Dom;
@@ -143,6 +143,11 @@ internal static class Parser
         /// raw suffix that follows a parser-inserted script (the parse-time writes splice
         /// into the live token stream).</summary>
         internal string? Source;
+        /// <summary>The canonical name of the encoding the document bytes were decoded with
+        /// (Encoding Standard name column): document.characterSet/inputEncoding/charset.</summary>
+        internal string Charset = EncodingNames.Utf8;
+        /// <summary>The response MIME type (see DocumentState.MediaType).</summary>
+        internal string? MediaType;
         /// <summary>Cursor into <see cref="Source"/>: scripts are collected in document order,
         /// so each one consumes the next source span (its start tag through its end tag).</summary>
         internal int SourceCursor;
@@ -252,9 +257,10 @@ internal static class Parser
         // REC §8.2.2.1: the document bytes are decoded by the encoding-sniffing algorithm
         // (BOM, then the transport charset, then the 1024-byte meta prescan, then Lite's
         // implementation-defined UTF-8 default, with the late-declaration restart).
-        var html = EncodingSniffer.DecodeDocument(
+        var (html, charset) = EncodingSniffer.DecodeDocumentWithEncoding(
             response.Content.ReadAsByteArrayAsync().Result,
             response.Content.Headers.ContentType?.CharSet);
+        Current.Charset = charset;
         if (!response.IsSuccessStatusCode)
         {
             // A browser renders the server's error body (search engines rate-limit with HTML
@@ -265,6 +271,7 @@ internal static class Parser
                 response.EnsureSuccessStatusCode();
         }
         var mediaType = response.Content.Headers.ContentType?.MediaType;
+        Current.MediaType = mediaType;
         Current.IsXmlDocument = mediaType is "application/xhtml+xml" or "text/xml" or "application/xml";
         // AngleSharp re-encodes string content as UTF-8 bytes and honors <meta
         // http-equiv=Content-Type> as an encoding change over those bytes — any other
@@ -308,6 +315,17 @@ internal static class Parser
                 req.Header("Content-Type", mediaType);
         }).Result;
     }
+
+    /// <summary>The child-document variant of <see cref="OpenDocument"/>: the context is already
+    /// built (an XML media type selects the XML parser).</summary>
+    private static IDocument OpenDocument(IBrowsingContext context, string address, string html, string? mediaType) =>
+        context.OpenAsync(req =>
+        {
+            req.Address(address);
+            req.Content(html);
+            if (mediaType is not null)
+                req.Header("Content-Type", mediaType);
+        }).Result;
 
     private static readonly Regex StyleBlockRegex =
         new("<style\\b[^>]*>.*?</style>", RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.Compiled);
@@ -729,7 +747,7 @@ internal static class Parser
         // Always create the JS engine so inline onclick/on* handlers work,
         // even when there are no external or inline script blocks.
         var state = new DocumentState(document, address, _documentBaseUrl ?? address, CssRules.ToArray())
-        { ParserContext = Current, Session = Session };
+        { ParserContext = Current, Session = Session, Charset = Current.Charset, MediaType = Current.MediaType };
         Session?.Attach(state);
         var jsEngine = JsEngine.Create(root, viewportWidth, viewportHeight, state);
         // The sandbox enforcement reads the flags mid-parse (the script pump gates on them),
@@ -924,7 +942,6 @@ internal static class Parser
             ViewportHeight = viewportHeight;
 
             var config = ParseConfiguration(viewportWidth, viewportHeight);
-            var context = BrowsingContext.New(config);
             var address = baseUrl;
             string html;
             string? mediaType = null;
@@ -942,19 +959,25 @@ internal static class Parser
                 address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? content;
                 // Same REC §8.2.2.1 decode as the top-level load: an iframe's document
                 // carries its own encoding declarations.
-                html = EncodingSniffer.DecodeDocument(
+                var (decoded, charset) = EncodingSniffer.DecodeDocumentWithEncoding(
                     response.Content.ReadAsByteArrayAsync().Result,
                     response.Content.Headers.ContentType?.CharSet);
+                html = decoded;
+                Current.Charset = charset;
                 mediaType = response.Content.Headers.ContentType?.MediaType;
+                Current.MediaType = mediaType;
             }
+            // The child document dispatches on its MIME type exactly like the top-level load:
+            // an XML media type (application/xml, text/xml, image/svg+xml, an XHTML document)
+            // parses through the XML parser, not the HTML one.
+            Current.IsXmlDocument = mediaType is "application/xhtml+xml" or "text/xml" or "application/xml"
+                or "image/svg+xml" or "application/xhtml" or "text/xhtml";
             var parsedSource = NormalizeImportantBangs(html);
             Current.Source = parsedSource;
             Current.SourceCursor = 0;
-            var document = context.OpenAsync(req =>
-            {
-                req.Address(address).Content(parsedSource);
-                if (mediaType is not null) req.Header("Content-Type", mediaType);
-            }).Result;
+            var childConfig = Current.IsXmlDocument ? config.WithXml() : config;
+            var context = BrowsingContext.New(childConfig.WithOnly<IDocumentFactory>(new XmlDispatchDocumentFactory()));
+            var document = OpenDocument(context, address, parsedSource, mediaType);
             return ParseOpenedDocument(document, address, viewportWidth, viewportHeight, parentEngine, frameNode, sandboxFlags);
         }
         finally

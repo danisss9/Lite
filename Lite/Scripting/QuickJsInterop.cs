@@ -6,6 +6,17 @@ using Lite.Scripting.Dom;
 
 namespace Lite.Scripting.Runtime;
 
+/// <summary>A host object that resolves member reads the binder did not declare (a WindowProxy
+/// answers the accessing window's globals). The binder installs a JS Proxy facade so page code
+/// can read <c>win.Element</c>, <c>win.getComputedStyle</c> and friends.</summary>
+internal interface IJsDynamicMembers
+{
+    /// <summary>Resolves a member in the <paramref name="requesting"/> realm: a cross-realm
+    /// value cannot be shared, so an interface name answers a branding constructor and other
+    /// globals answer primitives.</summary>
+    QuickJsValue GetMember(QuickJsRealm requesting, string name);
+}
+
 /// <summary>The browser's managed boundary to a QuickJS realm.</summary>
 public sealed class Engine : IDisposable
 {
@@ -197,7 +208,7 @@ public sealed class Engine : IDisposable
         {
             var wrapped = _realm.HostObjects.Wrap(value, binding => BindMembers(hostType, binding));
             Brand(wrapped, value);
-            return wrapped;
+            return wrapped is null ? null! : WithDynamicMembers(value, wrapped);
         }
         if (_indexProxies.TryGetValue(value, out var cached)) return cached.Clone();
         using var target = _realm.HostObjects.Wrap(value, binding => BindMembers(hostType, binding));
@@ -412,6 +423,70 @@ public sealed class Engine : IDisposable
         return makeConstructor.Call(arguments: [factory]);
     }
 
+    private readonly Dictionary<object, Dictionary<nint, QuickJsValue>> _dynamicProxies = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>Wraps a host object whose type resolves dynamic members (a WindowProxy answers a
+    /// window's remaining globals) in a JS Proxy: declared members win, and any other string key
+    /// is resolved by <see cref="IJsDynamicMembers.GetMember"/>, which answers a value of the
+    /// ACCESSING realm — a cross-realm object graph cannot be shared, so an interface name
+    /// answers a constructor whose Symbol.hasInstance brand-checks the host object (what
+    /// <c>elt instanceof frame.contentWindow.Element</c> observes) and other globals answer
+    /// their primitive value or undefined. The proxy is cached per (value, realm) so repeated
+    /// reads keep one identity: <c>event.source === frame.contentWindow</c> must hold.</summary>
+    private QuickJsValue WithDynamicMembers(object value, QuickJsValue wrapped)
+    {
+        if (value is not IJsDynamicMembers dynamicMembers) return wrapped;
+        var realmKey = _realm.Handle;
+        if (!_dynamicProxies.TryGetValue(value, out var perRealm))
+        {
+            perRealm = [];
+            _dynamicProxies[value] = perRealm;
+        }
+        if (perRealm.TryGetValue(realmKey, out var cached)) return cached.Clone();
+        using var lookup = _realm.HostFunction("__member", 1, (_, args) =>
+            dynamicMembers.GetMember(_realm, args.Length > 0 ? args[0].AsString() : ""));
+        using var factory = _realm.Eval("""
+            ((target, lookup) => new Proxy(target, {
+              get(t, k, r) {
+                if (typeof k !== 'string') return Reflect.get(t, k, r);
+                if (k in t) return Reflect.get(t, k, r);
+                return lookup(k);
+              }
+            }))
+            """);
+        using var proxy = factory.Call(arguments: [wrapped, lookup]);
+        perRealm[realmKey] = proxy.Clone();
+        return proxy.Clone();
+    }
+
+    internal QuickJsValue BrandConstructor(string interfaceName, Func<object, bool> isInstance) =>
+        BrandConstructor(_realm, interfaceName, isInstance);
+
+    /// <summary>An interface constructor of <paramref name="realm"/> that brand-checks host
+    /// objects through <paramref name="isInstance"/>: the hasInstance test is all a cross-realm
+    /// <c>instanceof</c> observes, and the constructor itself is never callable.</summary>
+    internal static QuickJsValue BrandConstructor(QuickJsRealm realm, string interfaceName, Func<object, bool> isInstance)
+    {
+        using var fn = realm.HostFunction(interfaceName, 0, (_, _) =>
+            throw new JavaScriptException((JsValue)"Illegal constructor"));
+        using var check = realm.HostFunction("isInstance", 1, (_, args) =>
+        {
+            if (args.Length == 0) return realm.Bool(false);
+            var host = realm.HostObjects.Unwrap<object>(args[0]);
+            return realm.Bool(host is not null && isInstance(host));
+        });
+        using var decorate = realm.Eval("""
+            ((fn, check) => {
+              Object.defineProperty(fn, Symbol.hasInstance, {
+                value: (v) => { try { return check(v); } catch (e) { return false; } },
+                configurable: true,
+              });
+              return fn;
+            })
+            """);
+        return decorate.Call(arguments: [fn, check]);
+    }
+
     private void BindMembers(Type type, QuickJsHostBinding<object> binding)
     {
         foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
@@ -497,11 +572,39 @@ public sealed class Engine : IDisposable
                 for (var j = i; j < args.Length; j++) array.SetValue(ConvertArgument(elementType, args[j]), j - i);
                 result[i] = array;
             }
-            else if (i < args.Length) result[i] = ConvertArgument(parameters[i].ParameterType, args[i]);
+            else if (i < args.Length) result[i] = ConvertParameter(parameters[i], args[i]);
             else if (parameters[i].IsOptional) result[i] = parameters[i].DefaultValue;
-            else result[i] = ConvertArgument(parameters[i].ParameterType, _realm.Undefined());
+            else result[i] = ConvertParameter(parameters[i], _realm.Undefined());
         }
         return result;
+    }
+
+    /// <summary>Converts one argument for a declared parameter: a nullable string
+    /// (<c>string?</c>, WebIDL's nullable DOMString) keeps null/undefined as a DOM null, while a
+    /// plain DOMString converts them to "null"/"undefined".</summary>
+    private object? ConvertParameter(ParameterInfo parameter, QuickJsValue native)
+    {
+        if (parameter.ParameterType == typeof(string) &&
+            native.Kind is (QuickJsKind.Null or QuickJsKind.Undefined) && IsNullableString(parameter))
+            return null;
+        return ConvertArgument(parameter.ParameterType, native);
+    }
+
+    private static readonly Dictionary<ParameterInfo, bool> NullableStringCache = new();
+
+    /// <summary>True when a string parameter is declared nullable (<c>string?</c>): WebIDL's
+    /// nullable DOMString keeps null/undefined, while a plain DOMString converts them to the
+    /// strings "null"/"undefined".</summary>
+    private static bool IsNullableString(ParameterInfo parameter)
+    {
+        lock (NullableStringCache)
+        {
+            if (NullableStringCache.TryGetValue(parameter, out var cached)) return cached;
+            var context = new NullabilityInfoContext();
+            var nullable = context.Create(parameter).WriteState == NullabilityState.Nullable;
+            NullableStringCache[parameter] = nullable;
+            return nullable;
+        }
     }
 
     private object? ConvertArgument(Type type, QuickJsValue native)
@@ -510,13 +613,16 @@ public sealed class Engine : IDisposable
         type = nullable ?? type;
         if (type == typeof(JsValue)) return new JsValue(this, native.Clone());
         if (type == typeof(object)) return new JsValue(this, native.Clone()).ToObject();
+        // WebIDL DOMString conversion: null and undefined become "null"/"undefined" — a
+        // DOMString parameter is not nullable unless the IDL says so (createElement(null)
+        // creates an element named "null", setAttribute(name, undefined) stores "undefined").
+        if (type == typeof(string)) return native.AsString();
         if (native.Kind is QuickJsKind.Null or QuickJsKind.Undefined)
             return type.IsValueType && nullable is null ? Activator.CreateInstance(type) : null;
         var host = _realm.HostObjects.Unwrap<object>(native);
         if (host is null && native.Identity != 0)
             host = _indexProxies.FirstOrDefault(p => p.Value.Identity == native.Identity).Key;
         if (host is not null && type.IsInstanceOfType(host)) return host;
-        if (type == typeof(string)) return native.AsString();
         if (type == typeof(bool)) return native.AsBoolean();
         if (type.IsEnum) return Enum.ToObject(type, (int)native.AsNumber());
         if (type == typeof(double)) return native.AsNumber();

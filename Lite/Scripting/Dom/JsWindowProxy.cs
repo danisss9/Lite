@@ -1,3 +1,4 @@
+using Lite.QuickJs;
 using Lite.Scripting.Runtime;
 
 namespace Lite.Scripting.Dom;
@@ -8,7 +9,7 @@ namespace Lite.Scripting.Dom;
 /// (the one that holds/uses the proxy) and the target context it points at, so
 /// <see cref="postMessage"/> can deliver into the target with the source's origin.
 /// </summary>
-internal sealed class JsWindowProxy
+internal sealed class JsWindowProxy : IJsDynamicMembers
 {
     private readonly JsEngine _source;
     private readonly JsEngine _target;
@@ -46,4 +47,34 @@ internal sealed class JsWindowProxy
     public void focus() { }
     public void blur() { }
     public void close() { }
+
+    /// <summary>The window's remaining globals, answered in the ACCESSING realm: an interface
+    /// name answers a constructor whose instanceof brand-checks the host object (a cross-realm
+    /// wrapper cannot be shared as a JS value), and any other global answers its primitive
+    /// value or undefined.</summary>
+    public QuickJsValue GetMember(QuickJsRealm requesting, string name)
+    {
+        if (string.IsNullOrEmpty(name)) return requesting.Undefined();
+        if (WebIdlInterfaces.IsInterfaceName(name))
+            return Engine.BrandConstructor(requesting, name, value => IsInstanceOf(value, name));
+        var value = _target.RawEngine.GetValue(name);
+        if (value.IsBoolean()) return requesting.Bool(value.AsBoolean());
+        if (value.IsNumber()) return requesting.Number(value.AsNumber());
+        if (value.IsString()) return requesting.String(value.AsString());
+        return requesting.Undefined();
+    }
+
+    /// <summary>The interface-chain test behind a cross-realm <c>instanceof</c>: an element is
+    /// also a Node/Element/HTMLElement (its per-tag interface is what the brand records), and
+    /// every other host object matches its own interface name.</summary>
+    private static bool IsInstanceOf(object value, string name) => name switch
+    {
+        "EventTarget" or "Node" or "Element" or "HTMLElement" => value is JsElement,
+        "Document" or "HTMLDocument" => value is JsDocument,
+        "Window" => value is JsWindowProxy,
+        "Location" => value is JsLocation,
+        "History" => value is JsHistory,
+        "Navigator" => value is JsNavigator,
+        _ => WebIdlInterfaces.For(value) == name,
+    };
 }

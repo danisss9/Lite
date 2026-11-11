@@ -18,6 +18,13 @@ internal sealed class DocumentState(IDocument? document, string address, string 
     internal string Address { get; } = address;
     internal string Url { get; set; } = address;
     internal string BaseUrl { get; } = baseUrl;
+    /// <summary>The canonical Encoding Standard name of the encoding the document bytes were
+    /// decoded with (document.characterSet/inputEncoding/charset).</summary>
+    internal string Charset { get; init; } = EncodingNames.Utf8;
+    /// <summary>The response's MIME type: the XML parser reports every XML document as
+    /// text/xml, but document.contentType (and createElement's namespace rule) follows what the
+    /// server declared — application/xhtml+xml is an XHTML document.</summary>
+    internal string? MediaType { get; init; }
     /// <summary>The rule set captured at parse time; refreshed when the rule set itself changes
     /// (a style sheet toggled disabled, a host control), so the dynamic resolver follows.</summary>
     internal IReadOnlyList<Parser.CssRule> StyleRules { get; private set; } = styleRules;

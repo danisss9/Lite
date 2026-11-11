@@ -39,24 +39,31 @@ internal static class EncodingSniffer
     private static readonly Regex CharsetInContentType =
         new(@"charset\s*=\s*[""']?([A-Za-z0-9_.:\-]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    internal static string DecodeDocument(byte[] bytes, string? transportCharset)
+    internal static string DecodeDocument(byte[] bytes, string? transportCharset) =>
+        DecodeDocumentWithEncoding(bytes, transportCharset).Text;
+
+    /// <summary>The §8.2.2.1 algorithm plus the encoding it decided on: document.characterSet
+    /// reports the canonical name of whatever actually decoded the bytes (BOM, transport
+    /// charset, meta prescan, or the UTF-8 default with its late-declaration restart).</summary>
+    internal static (string Text, string Charset) DecodeDocumentWithEncoding(byte[] bytes, string? transportCharset)
     {
         // BOM (certain): UTF-8, UTF-16 LE/BE. The mark is consumed — input preprocessing
         // drops it from the stream.
         if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
-            return TextEncoding.Utf8.GetString(bytes, 3, bytes.Length - 3);
+            return (TextEncoding.Utf8.GetString(bytes, 3, bytes.Length - 3), "UTF-8");
         if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
-            return TextEncoding.Utf16Le.GetString(bytes, 2, bytes.Length - 2);
+            return (TextEncoding.Utf16Le.GetString(bytes, 2, bytes.Length - 2), "UTF-16LE");
         if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
-            return TextEncoding.Utf16Be.GetString(bytes, 2, bytes.Length - 2);
+            return (TextEncoding.Utf16Be.GetString(bytes, 2, bytes.Length - 2), "UTF-16BE");
 
         // Transport layer (certain), when the label resolves.
         if (ResolveTransport(transportCharset) is { } transport)
-            return transport.GetString(bytes);
+            return (transport.Encoding.GetString(bytes), transport.Name);
 
-        // Prescan of the first 1024 bytes (tentative).
-        if (PrescanCharset(bytes, PrescanLimit) is { } sniffed)
-            return ResolveMeta(sniffed)!.GetString(bytes);
+        // Prescan of the first 1024 bytes (tentative). A meta-declared UTF-16 decodes as
+        // UTF-8 (the encoding-change rule), so the reported name follows the decode.
+        if (PrescanCharset(bytes, PrescanLimit) is { } sniffed && ResolveMeta(sniffed) is { } metaEncoding)
+            return (metaEncoding.Encoding.GetString(bytes), metaEncoding.Name);
 
         // Implementation-defined default (tentative): UTF-8, with the late-declaration
         // restart applied over the full byte walk (the same comment-aware walker, so a
@@ -65,28 +72,42 @@ internal static class EncodingSniffer
         var html = TextEncoding.Utf8.GetString(bytes);
         if (PrescanCharset(bytes, bytes.Length) is { } declared &&
             ResolveMeta(declared) is { } declaredEncoding &&
-            !declaredEncoding.Equals(TextEncoding.Utf8))
+            !declaredEncoding.Encoding.Equals(TextEncoding.Utf8))
         {
-            return declaredEncoding.GetString(bytes);
+            return (declaredEncoding.Encoding.GetString(bytes), declaredEncoding.Name);
         }
 
-        return html;
+        return (html, EncodingNames.Utf8);
     }
 
-    /// <summary>Resolves a transport-layer label exactly as declared (a "utf-16" Content-Type
-    /// decodes as UTF-16LE per its label; the UTF-16→UTF-8 remap is a meta-declaration rule).</summary>
-    private static Encoding? ResolveTransport(string? label) =>
-        label is not null && TextEncoding.IsSupported(label.Trim()) ? TextEncoding.Resolve(label.Trim()) : null;
+    /// <summary>A resolved declaration: the canonical Encoding Standard name that
+    /// document.characterSet reports, and the decoder for it.</summary>
+    private readonly record struct ResolvedEncoding(string Name, Encoding Encoding);
 
-    /// <summary>Resolves a meta-declared label through AngleSharp's HTML label table (the
-    /// case-insensitive dictionary covering the WHATWG aliases). Unknown labels yield null;
-    /// a declared UTF-16 becomes UTF-8 (the encoding-change rule).</summary>
-    private static Encoding? ResolveMeta(string? label)
+    /// <summary>Resolves a transport-layer label through the standard's label table (a
+    /// "utf-16" Content-Type decodes as UTF-16LE per its label; the UTF-16 to UTF-8 remap is a
+    /// meta-declaration rule, not a transport one).</summary>
+    private static ResolvedEncoding? ResolveTransport(string? label)
     {
-        if (label is null || !TextEncoding.IsSupported(label.Trim()))
-            return null;
-        var encoding = TextEncoding.Resolve(label.Trim());
-        return encoding.IsUnicode() ? TextEncoding.Utf8 : encoding;
+        if (EncodingLabels.CanonicalName(label) is not { } name) return null;
+        if (name is "UTF-16LE" or "UTF-16BE")
+        {
+            var codePage = name == "UTF-16LE" ? 1200 : 1201;
+            try { return new ResolvedEncoding(name, Encoding.GetEncoding(codePage)); }
+            catch (ArgumentException) { return new ResolvedEncoding(name, Encoding.UTF8); }
+        }
+        return new ResolvedEncoding(name, EncodingLabels.EncodingFor(name));
+    }
+
+    /// <summary>Resolves a meta-declared label: the canonical name plus its decoder, with the
+    /// encoding-change rule that a declared UTF-16 decodes as UTF-8. Unknown labels yield null
+    /// (the declaration is ignored); the replacement encoding keeps its name (characterSet
+    /// reports "replacement") while its decoder is the UTF-8 fallback.</summary>
+    private static ResolvedEncoding? ResolveMeta(string? label)
+    {
+        if (EncodingLabels.CanonicalName(label) is not { } name) return null;
+        if (name is "UTF-16LE" or "UTF-16BE") return new ResolvedEncoding(EncodingNames.Utf8, TextEncoding.Utf8);
+        return new ResolvedEncoding(name, EncodingLabels.EncodingFor(name));
     }
 
     // ----- the prescan: a byte-level walk that honors comments, bogus comments, quoted

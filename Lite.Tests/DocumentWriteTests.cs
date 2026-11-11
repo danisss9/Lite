@@ -1,4 +1,4 @@
-using Lite;
+﻿using Lite;
 using Lite.Models;
 using static Lite.Tests.TestRunner;
 
@@ -187,4 +187,5 @@ public static class DocumentWriteTests
         engine.RawEngine.Execute("globalThis.__domText = document.body.textContent;");
         Equal("PASS", engine.RawEngine.GetValue("__domText")?.ToString() ?? "");
     }
+
 }

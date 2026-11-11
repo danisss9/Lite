@@ -45,6 +45,9 @@ public class JsElement
     public string tagName => (DomNode as IElement)?.TagName ?? Node.TagName.ToUpperInvariant();
     public string localName => (DomNode as IElement)?.LocalName ?? Node.TagName.ToLowerInvariant();
     public string? namespaceURI => (DomNode as IElement)?.NamespaceUri;
+    /// <summary>Element.prefix: the namespace prefix, or null when the element has none
+    /// (a DOM null, not undefined — tests compare with assert_equals(prefix, null)).</summary>
+    public string? prefix => (DomNode as IElement)?.Prefix;
     public bool isConnected => DomNode is { } dom
         ? ReferenceEquals(GetDomRoot(dom), State?.Document)
         : GetRootNode() == JsEngine.For(_engine)?.DocumentFacade.documentElement?.Node;

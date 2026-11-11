@@ -215,6 +215,6 @@ sealed class HtmlElementFactory : IElementFactory<Document, HtmlElement>
             return creator.Invoke(document, prefix);
         }
 
-        return new HtmlUnknownElement(document, localName.HtmlLower(), prefix, flags);
+        return new HtmlUnknownElement(document, localName, prefix, flags);
     }
 }

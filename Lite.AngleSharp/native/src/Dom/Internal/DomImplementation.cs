@@ -92,8 +92,36 @@ namespace AngleSharp.Dom
             return document;
         }
 
-        public Boolean HasFeature(String feature, String? version = null)
+        public IDocument CreateDocument(String? namespaceUri, String qualifiedName, IDocumentType? doctype)
         {
+            // DOM §4.5 createDocument: a new document holding the doctype (if any) and a document
+            // element created by createElement in the requested namespace. An empty qualified name
+            // creates no document element. The document is an XML document (case-sensitive names,
+            // no HTML whitespace/quirks rules), which is what the createElement namespace rules
+            // observe.
+            var document = new HtmlDocument();
+            // DOM §4.5: the created document's content type follows the requested namespace —
+            // application/xhtml+xml for the HTML namespace, image/svg+xml for SVG, and
+            // application/xml otherwise.
+            document.SetContentType(namespaceUri switch
+            {
+                "http://www.w3.org/1999/xhtml" => "application/xhtml+xml",
+                "http://www.w3.org/2000/svg" => "image/svg+xml",
+                _ => "application/xml",
+            });
+            if (doctype is not null)
+            {
+                document.AppendChild((DocumentType)doctype);
+            }
+            if (!String.IsNullOrEmpty(qualifiedName))
+            {
+                document.AppendChild(document.CreateElement(namespaceUri, qualifiedName));
+            }
+            document.BaseUrl = _owner.BaseUrl;
+            return document;
+        }
+
+        public Boolean HasFeature(String feature, String? version = null)        {
             if (feature is null)
             {
                 throw new ArgumentNullException(nameof(feature));

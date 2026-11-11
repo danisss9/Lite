@@ -18,14 +18,22 @@ public class JsDocument
     private JsElement Wrap(INode node) => JsElement.For(_engine, State!.ForDomNode(node));
     private readonly JsHtmlAllCollection _all;
 
-    public JsDocument(Engine engine, LayoutNode root)
+    public JsDocument(Engine engine, LayoutNode root) : this(engine, root, null) { }
+
+    /// <summary>A facade over an explicitly-owned document: document.implementation's
+    /// createHTMLDocument/createDocument produce a detached document whose document element is
+    /// that document's root, so the authority is supplied instead of discovered.</summary>
+    internal JsDocument(Engine engine, LayoutNode root, IDocument? document)
     {
         _engine = engine;
         _root = root;
-        var source = JsEngine.For(engine)?.SourceDocument;
+        var source = document ?? JsEngine.For(engine)?.SourceDocument;
         _document = ReferenceEquals(root.DomNode, source?.DocumentElement) ? source : null;
         _all = new JsHtmlAllCollection(engine, root);
     }
+
+    /// <summary>document.implementation (DOM §4.5): the DOMImplementation of this document.</summary>
+    public JsDomImplementation implementation => new(_engine, _document ?? State?.Document);
 
     // ---- identity ----
     public string nodeName => "#document";
@@ -226,7 +234,7 @@ public class JsDocument
     {
         if (_document is not null)
         {
-            var projection = State!.ForDomNode(_document.CreateElement(tagName));
+            var projection = State!.ForDomNode(CreateDomElement(_document, tagName));
             projection.NeedsStyleResolution = true;
             return JsElement.For(_engine, projection);
         }
@@ -238,7 +246,25 @@ public class JsDocument
         return JsElement.For(_engine, node);
     }
 
-    public JsElement createElementNS(string ns, string tagName)
+    /// <summary>DOM §4.5 createElement on the authoritative document: an HTML document creates
+    /// the element in the HTML namespace (the fork lowercases the name there), an XHTML document
+    /// in the HTML namespace with the name verbatim, and any other XML document in the null
+    /// namespace with the name verbatim. A qualified name whose prefix is not bound raises
+    /// NamespaceError.</summary>
+    private IElement CreateDomElement(IDocument document, string tagName)
+    {
+        var type = contentType;
+        if (string.Equals(type, "text/html", StringComparison.OrdinalIgnoreCase))
+            return document.CreateElement(tagName);
+        var colon = tagName.IndexOf(':');
+        if (colon > 0 || tagName.Count(c => c == ':') > 1)
+            throw JsErrors.Dom(_engine, "NamespaceError",
+                "A qualified name with a prefix cannot be created without a namespace.");
+        var isHtmlNamespace = type is "application/xhtml+xml" or "application/xhtml";
+        return document.CreateElement(isHtmlNamespace ? "http://www.w3.org/1999/xhtml" : null, tagName);
+    }
+
+    public JsElement createElementNS(string? ns, string tagName)
     {
         if (_document is not null)
         {
@@ -251,7 +277,7 @@ public class JsDocument
         {
             NeedsStyleResolution = true,
         };
-        node.Attributes["xmlns"] = ns;
+        if (ns is not null) node.Attributes["xmlns"] = ns;
         return JsElement.For(_engine, node);
     }
 
@@ -865,8 +891,19 @@ public class JsDocument
     public void writeln(JsValue markup)
         => write(markup is null || markup.IsNull() ? "null\n" : markup.IsUndefined() ? "undefined\n" : markup.AsString() + "\n");
 
-    /// <summary>HTML §4.2.1 document.contentType: the document's MIME type.</summary>
-    public string contentType => _document?.ContentType ?? "text/html";
+    /// <summary>HTML §4.2.1 document.contentType: the document's MIME type. The XML parser
+    /// reports text/xml for every XML document, so the response's declared type wins — for the
+    /// page's own document only: a facade over a document created through
+    /// document.implementation reports that document's type.</summary>
+    public string contentType => _document is { } doc && !ReferenceEquals(doc, State?.Document)
+        ? doc.ContentType
+        : State?.MediaType ?? _document?.ContentType ?? "text/html";
+
+    /// <summary>HTML §4.2.1 document.characterSet: the Encoding Standard's name for the
+    /// encoding the document was decoded with; inputEncoding and charset are aliases.</summary>
+    public string characterSet => State?.Charset ?? EncodingNames.Utf8;
+    public string inputEncoding => characterSet;
+    public string charset => characterSet;
 
     public void close()
     {

@@ -67,6 +67,29 @@ internal static class WebIdlInterfaces
         _ => TagCache.GetOrAdd(node.TagName, ElementInterface),
     };
 
+    private static readonly HashSet<string> KnownInterfaces = new(StringComparer.Ordinal);
+
+    /// <summary>True when the name is one of the interface names this projection can report —
+    /// the set a cross-realm window proxy answers as a brand-checking constructor.</summary>
+    internal static bool IsInterfaceName(string name)
+    {
+        if (KnownInterfaces.Count == 0)
+            lock (KnownInterfaces)
+            {
+                foreach (var value in ElementTags.Values) KnownInterfaces.Add(value);
+                foreach (var value in TypeMap.Values) KnownInterfaces.Add(value);
+                foreach (var known in new[]
+                {
+                    "Element", "Node", "EventTarget", "HTMLElement", "SVGElement", "Document",
+                    "HTMLDocument", "DocumentFragment", "CharacterData", "Text", "Comment",
+                    "DocumentType", "Window", "Location", "History", "Navigator", "Event",
+                    "CustomEvent", "CSSStyleDeclaration", "DOMTokenList", "NodeList",
+                    "HTMLCollection", "MediaQueryList", "Selection", "Range", "Attr",
+                }) KnownInterfaces.Add(known);
+            }
+        return KnownInterfaces.Contains(name);
+    }
+
     private static string ElementInterface(string tagName)
     {
         // SVG content keeps one interface in the 2014 snapshot; MathML nodes have none
