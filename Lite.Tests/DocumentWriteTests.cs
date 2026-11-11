@@ -90,18 +90,20 @@ public static class DocumentWriteTests
     }
 
     [Test]
-    public static void WriteWithoutOpen_KeepsTheLegacyAppendPath()
+    public static void WriteWithoutOpen_StreamsUntilClose()
     {
         var page = NewParentPage();
         page.Engine.RawEngine.Execute("""
             var frame = document.createElement('iframe');
             document.body.appendChild(frame);
-            frame.contentDocument.write('<p id=appended>legacy</p>');
+            var doc = frame.contentDocument;
+            doc.write('<p id=appended>legacy</p>');
+            doc.close();
             """);
         var child = Find(page.Root, n => n.TagName == "IFRAME")?.ChildPage;
         True(child is not null, "frame has no child page");
         True(FindById(child!.Root, "appended") is not null,
-            "a write without open() must append to the live document, not buffer");
+            "a frame write without open() streams into the initial document and parses at close()");
     }
 
     /// <summary>HTML §8.5.2 stream join: consecutive top-level writes join into ONE token

@@ -475,6 +475,17 @@ public class JsDocument
             return;
         }
         var engine = JsEngine.For(_engine);
+        // A frame's initial about:blank document has an open parser: writes join its input
+        // stream and are parsed by close() (document-write/iframe_003, iframe_007). Later
+        // writes on a loaded frame keep the append behavior.
+        if (_writeBuffer is null && engine?.ParentContextEngine is not null && engine.CurrentScriptNode is null &&
+            IsPristineFrameDocument())
+            _writeBuffer = string.Empty;
+        if (_writeBuffer is not null)
+        {
+            _writeBuffer += text;
+            return;
+        }
         var script = engine?.CurrentScriptNode;
         var region = script is not null
             ? _parserWriteRegions.TryGetValue(script, out var existing) ? existing : CreateWriteRegion(script, engine!)
@@ -840,6 +851,15 @@ public class JsDocument
             i = lt + 1;
         }
         return open;
+    }
+
+    /// <summary>True for a frame child document that has not been written to yet (the initial
+    /// about:blank page): its parser is still open, so write() streams to close().</summary>
+    private bool IsPristineFrameDocument()
+    {
+        var body = _document?.Body;
+        if (body is null) return true;
+        return body.ChildNodes.Length == 0;
     }
 
     public void writeln(JsValue markup)
