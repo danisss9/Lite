@@ -972,6 +972,17 @@ internal static class Parser
             // parses through the XML parser, not the HTML one.
             Current.IsXmlDocument = mediaType is "application/xhtml+xml" or "text/xml" or "application/xml"
                 or "image/svg+xml" or "application/xhtml" or "text/xhtml";
+            // Same declaration alignment as the top-level load (TraversePage): the transport
+            // decode already happened, and AngleSharp re-encodes the document string as UTF-8
+            // bytes before honoring an unaligned <meta charset> declaration over them. With a
+            // multibyte label (eucjp_chars.html's <meta charset="euc-jp">) the re-decode pairs
+            // lead bytes with the ASCII bytes of following tags, swallowing them — the 13,459
+            // sibling spans of the legacy-mb chars frames nested 6,254 levels deep and the
+            // tree walk overflowed its stack (worker exit 0xC00000FD).
+            if (Current.IsXmlDocument)
+                html = AlignXmlDeclarationCharset(html, "utf-8");
+            else
+                html = AlignMetaCharset(html, "utf-8");
             var parsedSource = NormalizeImportantBangs(html);
             Current.Source = parsedSource;
             Current.SourceCursor = 0;

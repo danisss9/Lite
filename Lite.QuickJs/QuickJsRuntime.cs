@@ -233,6 +233,25 @@ internal sealed class QuickJsRuntime : IDisposable
         GC.KeepAlive(_rejectionCallback);
         GC.KeepAlive(_interruptCallback);
     }
+
+    /// <summary>
+    /// Frees the native runtime when this object is collected without Dispose — callers that
+    /// drop a page engine without an explicit teardown (the conformance runners render pages
+    /// whose last handle was a local) would otherwise leak the whole QuickJS heap for the
+    /// process lifetime. Safe from the finalizer thread: every realm and value references its
+    /// runtime, so reachability of any of them keeps this finalizer from running, and an
+    /// unreachable runtime cannot be in use on its owning thread. The realm-owned values must
+    /// be released first — their handles still hold refcounts, and JS_FreeRuntime asserts the
+    /// gc object list empty.
+    /// </summary>
+    ~QuickJsRuntime()
+    {
+        if (Handle == 0 || _disposed) return;
+        foreach (var realm in _realms.Values.ToArray()) realm.ForceRelease();
+        Native.lite_runtime_free(Handle);
+        Handle = 0;
+        _disposed = true;
+    }
 }
 
 /// <summary>CESU-8 conversion for strings crossing the QuickJS boundary. QuickJS stores strings
@@ -424,6 +443,21 @@ internal sealed class QuickJsRealm : IDisposable
     {
         if (_disposed) return;
         Runtime.CheckThread();
+        foreach (var value in _owned.ToArray()) value.Dispose();
+        Runtime.Remove(this);
+        Native.lite_context_free(Handle);
+        Handle = 0;
+        _disposed = true;
+    }
+
+    /// <summary>Frees the realm's owned values and its context without the thread check — the
+    /// runtime's finalizer path, where the runtime is unreachable and no other thread can
+    /// reach it. <see cref="QuickJsValue.Dispose"/> performs no thread check, so the owned
+    /// values release cleanly; JS_FreeRuntime's gc-object assert requires their refcounts
+    /// dropped before the runtime frees.</summary>
+    internal void ForceRelease()
+    {
+        if (_disposed) return;
         foreach (var value in _owned.ToArray()) value.Dispose();
         Runtime.Remove(this);
         Native.lite_context_free(Handle);

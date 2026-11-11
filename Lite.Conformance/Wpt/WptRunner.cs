@@ -32,18 +32,37 @@ internal static class WptRunner
         var started = DateTime.UtcNow;
         var outcomes = new List<TestEvidence>();
         var accepted = 0;
+        var destination = reportPath ?? DefaultReport("html5", shard);
+        // Checkpoints + the last-chance handler exist so a parent death (an OOM escaping a
+        // Kestrel request thread used to kill the shard and its whole queue) loses minutes,
+        // not hours. They skip the identity re-capture and are recorded not-completed, so
+        // evidence reads keep rejecting them; the final write below does the real check.
+        ShardCheckpoint.Activate(destination, identity, started, outcomes);
         ConformanceServer.Start(cssRegressionMode: false);
-        foreach (var path in entries)
+        try
         {
-            var result = RunOne(path);
-            var evidence = ToEvidence(path, result);
-            outcomes.Add(evidence);
-            var review = HtmlApplicability.FindReview(applicability["tests"]!.AsArray().OfType<System.Text.Json.Nodes.JsonObject>(), path,
-                CatalogCase(path)?.Source ?? path.Split(['?', '#'])[0]);
-            if (evidence.HarnessStatus == 0 && review is not null && HtmlApplicability.HasPassingAssertions(evidence, review, null)) accepted++;
-            Console.WriteLine($"  {result.Cat.ToString().ToUpperInvariant(),-7} {path} ({result.Detail}, {result.DurationMs} ms)");
+            foreach (var path in entries)
+            {
+                var result = RunOne(path);
+                var evidence = ToEvidence(path, result);
+                outcomes.Add(evidence);
+                var review = HtmlApplicability.FindReview(applicability["tests"]!.AsArray().OfType<System.Text.Json.Nodes.JsonObject>(), path,
+                    CatalogCase(path)?.Source ?? path.Split(['?', '#'])[0]);
+                if (evidence.HarnessStatus == 0 && review is not null && HtmlApplicability.HasPassingAssertions(evidence, review, null)) accepted++;
+                Console.WriteLine($"  {result.Cat.ToString().ToUpperInvariant(),-7} {path} ({result.Detail}, {result.DurationMs} ms)");
+                if (outcomes.Count % 100 == 0) ExecutionEvidence.Write(destination, identity, started, outcomes, verifyIdentity: false);
+            }
         }
-        ExecutionEvidence.Write(reportPath ?? DefaultReport("html5", shard), identity, started, outcomes);
+        catch (Exception)
+        {
+            // The finally below removes the last-chance handler before the exception reaches
+            // the AppDomain handler, so write the checkpoint here — an OOM unwinding the queue
+            // must still leave every completed outcome on disk.
+            ShardCheckpoint.WriteNow();
+            throw;
+        }
+        finally { ShardCheckpoint.Deactivate(); }
+        ExecutionEvidence.Write(destination, identity, started, outcomes);
         PrintSlowest(outcomes);
         Console.WriteLine($"html5: {accepted}/{outcomes.Count} reviewed tests passed; this is not a profile-readiness claim.");
         return accepted == outcomes.Count ? 0 : 1;
@@ -166,7 +185,9 @@ internal static class WptRunner
         }
 
         int pass = 0, fail = 0, crash = 0, timeout = 0, empty = 0, skipped = 0, unsupported = 0, manualPending = 0;
-
+        ShardCheckpoint.Activate(destination, identity, started, outcomes);
+        try
+        {
         foreach (var file in tests)
         {
             var urlPath = file;
@@ -204,7 +225,9 @@ internal static class WptRunner
             // (a hash over every tracked repository file) and are recorded not-completed, so
             // evidence reads keep rejecting them; the final write below does the real check.
             if (outcomes.Count % 100 == 0) ExecutionEvidence.Write(destination, identity, started, outcomes, verifyIdentity: false);
+            }
         }
+        finally { ShardCheckpoint.Deactivate(); }
 
         int total = tests.Count;
         Console.WriteLine();
@@ -477,8 +500,24 @@ internal static class WptRunner
 
     /// <summary>Executes one test in this process: missing-input gating followed by the
     /// per-kind dispatch. Shared by the single-shot worker and the persistent batch worker,
-    /// so a test runs identically whichever isolation hosts it.</summary>
+    /// so a test runs identically whichever isolation hosts it. The last engine the case
+    /// created is disposed on the way out — the reftest/selftest/crashtest routes render
+    /// pages whose native QuickJS runtimes are freed only by Dispose, and the persistent
+    /// worker would otherwise retain them until its recycle.</summary>
     private static RunResult ExecuteOne(string path)
+    {
+        try
+        {
+            return ExecuteOneCore(path);
+        }
+        finally
+        {
+            try { JsEngine.Instance?.Dispose(); }
+            catch { /* a disposed engine must never mask the case's outcome */ }
+        }
+    }
+
+    private static RunResult ExecuteOneCore(string path)
     {
         var test = CatalogCase(path);
         // A page referencing a resource that never made it into the vendored tree cannot be
@@ -517,6 +556,7 @@ internal static class WptRunner
         var reports = new Dictionary<JsEngine, string>();
         var reporter = File.ReadAllText(Path.Combine(ConformancePaths.Overrides, "resources", "testharnessreport.js"));
         BrowserWindow? window = null;
+        JsEngine? engine = null;
         void Hook(JsEngine engine)
         {
             engine.RawEngine.SetValue("__lite_report", new Action<string>(json => reports.TryAdd(engine, json)));
@@ -535,7 +575,6 @@ internal static class WptRunner
         JsEngine.OnCreated += Hook;
         try
         {
-            JsEngine? engine;
             if (testDriver)
             {
                 // testdriver pages drive the engine's real input pipeline: the same
@@ -561,6 +600,12 @@ internal static class WptRunner
         finally
         {
             JsEngine.OnCreated -= Hook;
+            // The page's QuickJS runtime is native memory freed only by Dispose — without it a
+            // persistent worker leaks one whole engine (JS heap + nested frame engines) per
+            // case, and the encoding megavariants ballooned workers past 17 GB within their
+            // 200-case recycle window. The report JSON was already extracted above.
+            try { engine?.Dispose(); }
+            catch (Exception ex) { Console.Error.WriteLine($"[worker] engine dispose failed: {ex.Message}"); }
         }
 
         if (reportJson is null)
@@ -756,6 +801,11 @@ internal static class WptRunner
     private sealed class WorkerClient : IDisposable
     {
         private const int RecycleAfterTests = 200;
+        /// <summary>Private bytes above which the worker is recycled BETWEEN cases: engines
+        /// are disposed per case now, but native growth that outpaces GC (finalizers only run
+        /// when managed pressure collects them) must not compound across six parallel shards
+        /// on a 31 GB machine. The recycle happens on a case boundary, so no case is lost.</summary>
+        private const long RecycleAbovePrivateBytes = 2L << 30;
         private Process? _process;
         private Task<string>? _stderr;
         private int _count;
@@ -765,6 +815,15 @@ internal static class WptRunner
             var deadline = DateTime.UtcNow + TimeSpan.FromMilliseconds(timeoutMs);
             try
             {
+                if (_process is { HasExited: false })
+                {
+                    _process.Refresh();
+                    if (_process.PrivateMemorySize64 > RecycleAbovePrivateBytes)
+                    {
+                        Console.Error.WriteLine($"[worker] recycled at {_process.PrivateMemorySize64 / (1 << 20)} MB before {path}");
+                        Stop();
+                    }
+                }
                 if (_process is null || _process.HasExited || _count >= RecycleAfterTests) Start();
                 _count++;
                 _process!.StandardInput.WriteLine(JsonSerializer.Serialize(new Request(path, url), Wire));
