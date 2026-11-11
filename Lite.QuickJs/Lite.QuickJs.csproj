@@ -54,11 +54,29 @@
     <None Include="$(QuickJsLinuxNative);$(QuickJsLinuxNative).build.json" Pack="true" PackagePath="runtimes\linux-x64\native\" />
   </ItemGroup>
 
-  <Target Name="BuildQuickJsNative" BeforeTargets="CoreCompile">
-    <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))"
-          Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build-quickjs.ps1&quot; -OutputPath &quot;$(QuickJsNativeOutput)&quot;" />
+  <!-- Default: build the bridge from the pinned archive + patches (MinGW-w64 gcc on Windows,
+       gcc on Linux). The scripts skip the compile when the existing library and its .build.json
+       record already match the current inputs. -->
+  <Target Name="BuildQuickJsNative" BeforeTargets="CoreCompile" Condition="'$(LiteQuickJsPrebuilt)' != 'true'">
+    <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))" ContinueOnError="true"
+          Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build-quickjs.ps1&quot; -OutputPath &quot;$(QuickJsNativeOutput)&quot;">
+      <Output TaskParameter="ExitCode" PropertyName="_QuickJsNativeExitCode" />
+    </Exec>
+    <Error Condition="$([MSBuild]::IsOSPlatform('Windows')) And '$(_QuickJsNativeExitCode)' != '0'"
+           Text="build-quickjs.ps1 failed (exit $(_QuickJsNativeExitCode)). Without MinGW-w64 gcc, build with -p:LiteQuickJsPrebuilt=true (optionally -p:LiteQuickJsPrebuiltSource=&lt;litequickjs.dll&gt;) to use a prebuilt bridge verified against the committed build record; see docs/es2020-conformance.md, Reproduce." />
     <Exec Condition="!$([MSBuild]::IsOSPlatform('Windows'))"
           Command="bash &quot;$(MSBuildProjectDirectory)/build-quickjs.sh&quot; --output-path &quot;$(QuickJsNativeOutput)&quot;" />
+  </Target>
+
+  <!-- Opt-in (LiteQuickJsPrebuilt=true, as an MSBuild property or environment variable): no
+       compiler is invoked. verify-quickjs-prebuilt.ps1 recomputes build-quickjs.ps1's input
+       fingerprint from the checked-out sources and fails the build unless it equals the committed
+       record's inputSha256 and the dll's SHA-256 equals its nativeDllSha256. The dll is untracked;
+       LiteQuickJsPrebuiltSource copies one into place first (e.g. into a fresh worktree). -->
+  <Target Name="VerifyQuickJsPrebuilt" BeforeTargets="CoreCompile" Condition="'$(LiteQuickJsPrebuilt)' == 'true'">
+    <Error Condition="!$([MSBuild]::IsOSPlatform('Windows'))"
+           Text="LiteQuickJsPrebuilt is supported on Windows only; on Linux install gcc and build without it." />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\verify-quickjs-prebuilt.ps1&quot; -OutputPath &quot;$(QuickJsNativeOutput)&quot; -PrebuiltSource &quot;$(LiteQuickJsPrebuiltSource)&quot;" />
   </Target>
 
   <ItemGroup>

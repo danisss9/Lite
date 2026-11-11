@@ -51,6 +51,42 @@ dotnet run --project Lite.Tests -c Release --no-build
 python scripts/run-es2020.py --require-ready
 ```
 
+### Building the QuickJS bridge
+
+By default `dotnet build` compiles the patched QuickJS bridge from source through
+`Lite.QuickJs/build-quickjs.ps1`, which needs MinGW-w64 gcc (`gcc.exe` on `PATH`,
+or MSYS2 at `C:\msys64\mingw64\bin`; MSYS2 package `mingw-w64-x86_64-gcc`). It
+writes `runtimes/win-x64/native/litequickjs.dll` (untracked) and the committed
+`litequickjs.dll.build.json` record, whose `inputSha256` fingerprints the pinned
+archive, compiler version/target, flags, `native/litequickjs.c`, every patch and
+the build script itself. CI and NuGet release validation always take this path.
+
+A machine without gcc builds against an existing dll with the explicit opt-in
+`LiteQuickJsPrebuilt=true` (an MSBuild property or an environment variable):
+
+```powershell
+dotnet build Lite.sln -c Release -p:LiteQuickJsPrebuilt=true
+# Fresh worktree: copy the dll in from another checkout; it is verified before the copy.
+dotnet build Lite.sln -c Release -p:LiteQuickJsPrebuilt=true `
+  -p:LiteQuickJsPrebuiltSource=C:\Repos\Lite\Lite.QuickJs\runtimes\win-x64\native\litequickjs.dll
+```
+
+No compiler runs. `Lite.QuickJs/verify-quickjs-prebuilt.ps1` recomputes the
+fingerprint from the checked-out sources and the compiler named in the record,
+and the build fails unless it equals the record's `inputSha256` and the dll's
+SHA-256 equals its `nativeDllSha256`. Any change to `litequickjs.c`, a patch or
+`build-quickjs.ps1` therefore fails the opt-in build until someone with gcc
+rebuilds the bridge and commits the new record. The compiler identity is taken
+from the record, not re-derived. Without the opt-in, a missing gcc fails the
+build with a pointer here.
+
+This is the chosen resolution for the development machine that lost its MinGW
+toolchain (2026-11): it keeps one verified bridge identity — record
+`325bf045…`, dll `922a24e6…`, gcc 16.2.0 `x86_64-w64-mingw32` — behind the
+committed ES2020 evidence. Restoring gcc remains the way to change the bridge;
+a different gcc version yields a new fingerprint and dll, which need fresh
+`run-es2020.py --require-ready` evidence before they are committed.
+
 The script runs eight deterministic Test262 shards and the host suite, keeps all
 failures, aggregates evidence, exports the remaining-work list, and invokes
 `--require-es2020-ready`. A failing shard does not prevent the other shards or
