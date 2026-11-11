@@ -103,4 +103,86 @@ public static class DocumentWriteTests
         True(FindById(child!.Root, "appended") is not null,
             "a write without open() must append to the live document, not buffer");
     }
+
+    /// <summary>HTML §8.5.2 stream join: consecutive top-level writes join into ONE token
+    /// stream (document-write/004: &#60;i then &#62;Filler Text forms one i element).</summary>
+    [Test]
+    public static void TopLevelWrites_JoinIntoOneStream()
+    {
+        var page = Parser.ParseChildPage(
+            "<!doctype html><head><script>document.write('<i');document.write('>Filler Text');</script></head><body></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var body = Find(page.Root, n => n.TagName == "BODY");
+        True(body is not null, "body missing");
+        True(body!.Children.Count > 0, "the joined stream must produce the i element");
+        True(body.Children[0].TagName == "I", $"first child must be I, got {body.Children[0].TagName}");
+        True(body.Children[0].Text == "Filler Text",
+            $"the joined element must hold the text, got '{body.Children[0].Text}'");
+    }
+
+    /// <summary>Cross-tag-boundary join (document-write/016): the second write closes the i and
+    /// opens a b; the resulting tree carries both elements in order.</summary>
+    [Test]
+    public static void TopLevelWrites_CrossBoundaryJoin()
+    {
+        var page = Parser.ParseChildPage(
+            "<!doctype html><head><script>document.write('<i>Filler Text');document.write('</i><b>Filler Text');</script></head><body></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var body = Find(page.Root, n => n.TagName == "BODY");
+        True(body is not null && body.Children.Count >= 2, "both elements must exist");
+        True(body.Children[0].TagName == "I" && body.Children[0].Text == "Filler Text", "first: i");
+        True(body.Children[1].TagName == "B" && body.Children[1].Text == "Filler Text", "second: b");
+    }
+
+    /// <summary>document-write/001: nodes the source produced after the writing script are not
+    /// attached while the script runs (a cached reference from an earlier script, the
+    /// testharness's #log, must not see them yet) and reappear after the script completes.</summary>
+    [Test]
+    public static void TopLevelWrite_DetachesFollowingNodesDuringTheScript()
+    {
+        var page = Parser.ParseChildPage(
+            "<!doctype html><script>function test(f){ f(); } test(function(){ document.write('PASS'); globalThis.__during = document.getElementById('log'); globalThis.__text = document.body.textContent; });</script><div id=log></div>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var engine = page.Engine!;
+        Equal("null", engine.RawEngine.Evaluate("String(__during)").ToString() ?? "");
+        Equal("PASS", engine.RawEngine.GetValue("__text")?.ToString() ?? "");
+        Equal("true", engine.RawEngine.Evaluate("document.getElementById('log') !== null").ToString() ?? "");
+    }
+
+    /// <summary>document.write-02: WebIDL DOMString conversion writes "null" and "undefined".</summary>
+    [Test]
+    public static void TopLevelWrite_NullAndUndefinedWriteTheirStringForms()
+    {
+        var page = Parser.ParseChildPage(
+            "<!doctype html><script>document.write(null); document.write(' '); document.write(undefined);</script><body></body>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var engine = page.Engine!;
+        engine.RawEngine.Execute("globalThis.__t = document.body.textContent;");
+        Contains("null undefined", engine.RawEngine.GetValue("__t")?.ToString() ?? "");
+    }
+
+    /// <summary>document-write/script_002: an inline script in the written markup runs before the
+    /// write call returns; an external one waits until the writing script finishes
+    /// (document-write/script_005).</summary>
+    [Test]
+    public static void WrittenScripts_RunInlineNowAndExternalAfter()
+    {
+        var page = Parser.ParseChildPage(
+            "<!doctype html><script>var order = []; order.push(1); document.write(\"<script>order.push(2)<\\/script>\"); order.push(3);</script><body></body>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var engine = page.Engine!;
+        Equal("1,2,3", engine.RawEngine.Evaluate("order.join(',')").ToString() ?? "");
+    }
+
+    [Test]
+    public static void TopLevelWrite_InHeadScript_InsertsAtTheScriptPosition()
+    {
+        var page = Parser.ParseChildPage(
+            "<!doctype html><title>t</title><script>function test(f){f();} test(function(){ document.write('PASS'); globalThis.__text = document.body.textContent; });</script><div id=log></div>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var engine = page.Engine!;
+        Equal("PASS", engine.RawEngine.GetValue("__text")?.ToString() ?? "");
+        engine.RawEngine.Execute("globalThis.__domText = document.body.textContent;");
+        Equal("PASS", engine.RawEngine.GetValue("__domText")?.ToString() ?? "");
+    }
 }

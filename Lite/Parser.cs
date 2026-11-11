@@ -131,12 +131,20 @@ internal static class Parser
     }
 
     internal sealed record ScriptRecord(string? Code, string Url, bool IsModule = false, bool Inline = false,
-        string? CrossOrigin = null, string? RequestedUrl = null);
+        string? CrossOrigin = null, string? RequestedUrl = null, LayoutNode? Node = null,
+        string? Continuation = null);
 
     internal sealed class ParseState
     {
         internal BrowserSession? Session;
         internal string? BaseUrl, DocumentBaseUrl;
+        /// <summary>The exact source text handed to the DOM parser: document.write needs the
+        /// raw suffix that follows a parser-inserted script (the parse-time writes splice
+        /// into the live token stream).</summary>
+        internal string? Source;
+        /// <summary>Cursor into <see cref="Source"/>: scripts are collected in document order,
+        /// so each one consumes the next source span (its start tag through its end tag).</summary>
+        internal int SourceCursor;
         internal IDocument? Document;
         internal int ViewportWidth = 800, ViewportHeight = 600, InlineModuleCounter;
         /// <summary>§12.3.2 quote nesting depth, advanced in document order by every
@@ -288,6 +296,8 @@ internal static class Parser
         string address, string html, string? mediaType)
     {
         html = NormalizeImportantBangs(html);
+        Current.Source = html;
+        Current.SourceCursor = 0;
         var context = BrowsingContext.New(config.WithOnly<IDocumentFactory>(new XmlDispatchDocumentFactory()));
         return context.OpenAsync(req =>
         {
@@ -746,6 +756,11 @@ internal static class Parser
         QueueParsedDetailsNotifications(root, jsEngine);
         QueueParsedDetailsNotifications(root, jsEngine);
 
+        // The body's link presentational hint paints its anchors (HTML §15.3.2): the anchor
+        // consumption runs as a POST-TRaverse pass because a node's Parent link is unset
+        // while its own hints run inside Traverse (hints fire before AddChild links it).
+        ApplyLinkColorHints(root);
+
         // Now that the parent engine exists, wire each nested <iframe>'s child context
         // (parent/top/frameElement) and queue its load event. Done before the parent's scripts run
         // so they can immediately use iframe.contentWindow.
@@ -760,7 +775,16 @@ internal static class Parser
         //    (HTML §6.5.3) — none of the load pipeline's executions happen.
         var sandboxAllowsScripts = jsEngine.SandboxAllowsScripts;
         foreach (var script in _pendingScripts)
-            if (sandboxAllowsScripts) jsEngine.Execute(script.Code!, script.Url, script.RequestedUrl);
+            if (sandboxAllowsScripts)
+            {
+                jsEngine.CurrentScriptContinuation = script.Continuation;
+                try { jsEngine.Execute(script.Code!, script.Url, script.RequestedUrl); }
+                finally
+                {
+                    jsEngine.CurrentScriptContinuation = null;
+                    jsEngine.DocumentFacade.FlushParserWrites(script.Node);
+                }
+            }
 
         jsEngine.MarkDocumentInteractive();
 
@@ -796,6 +820,28 @@ internal static class Parser
         }
 
         return page;
+    }
+
+    /// <summary>HTML §15.3.2: every anchor inside a body carrying a link presentational
+    /// attribute takes that color (force-overriding the UA sheet's blue, which is exactly
+    /// what the presentational tier means; author CSS beats it through the normal cascade).
+    /// Runs post-traverse so the ancestor chain is wired.</summary>
+    private static void ApplyLinkColorHints(LayoutNode root)
+    {
+        string? bodyLink = null;
+        void Walk(LayoutNode node)
+        {
+            if (bodyLink is null && node.TagName == "BODY" &&
+                node.StyleOverrides.TryGetValue("__link-color", out var found))
+                bodyLink = found;
+            // An author declaration of any tier outranks the presentational hint, so only
+            // stamp the override when the anchor has no color from the cascade already.
+            if (node.TagName == "A" && node.Attributes.ContainsKey("href") && bodyLink is not null
+                && !node.StyleOverrides.ContainsKey("color"))
+                node.StyleOverrides["color"] = bodyLink;
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
     }
 
     /// <summary>Optimistically reports whether a media MIME type can be played. The simulated
@@ -880,6 +926,7 @@ internal static class Parser
             var context = BrowsingContext.New(config);
             var address = baseUrl;
             string html;
+            string? mediaType = null;
             if (isSrcdoc) html = content;
             else if (BlobUrlRegistry.TryResolve(content, out var blob) && blob is not null)
             {
@@ -897,9 +944,16 @@ internal static class Parser
                 html = EncodingSniffer.DecodeDocument(
                     response.Content.ReadAsByteArrayAsync().Result,
                     response.Content.Headers.ContentType?.CharSet);
+                mediaType = response.Content.Headers.ContentType?.MediaType;
             }
-            var document = context.OpenAsync(req => req.Address(address)
-                .Content(NormalizeImportantBangs(html))).Result;
+            var parsedSource = NormalizeImportantBangs(html);
+            Current.Source = parsedSource;
+            Current.SourceCursor = 0;
+            var document = context.OpenAsync(req =>
+            {
+                req.Address(address).Content(parsedSource);
+                if (mediaType is not null) req.Header("Content-Type", mediaType);
+            }).Result;
             return ParseOpenedDocument(document, address, viewportWidth, viewportHeight, parentEngine, frameNode, sandboxFlags);
         }
         finally
@@ -1679,8 +1733,9 @@ internal static class Parser
                     var childTag = TagOf(childEl);
                     if (childTag == "SCRIPT")
                     {
-                        CollectScript(childEl);
-                        node.AddChild(Traverse(childEl, indent + 1, fontPx, node));
+                        var scriptNode = Traverse(childEl, indent + 1, fontPx, node);
+                        node.AddChild(scriptNode);
+                        CollectScript(childEl, scriptNode);
                         continue;
                     }
                     node.AddChild(Traverse(childEl, indent + 1, fontPx, node));
@@ -1711,8 +1766,9 @@ internal static class Parser
                 var childTag = TagOf(child);
                 if (childTag == "SCRIPT")
                 {
-                    CollectScript(child);
-                    node.AddChild(Traverse(child, indent + 1, fontPx, node));
+                    var scriptNode = Traverse(child, indent + 1, fontPx, node);
+                    node.AddChild(scriptNode);
+                    CollectScript(child, scriptNode);
                     continue;
                 }
                 node.AddChild(Traverse(child, indent + 1, fontPx, node));
@@ -2164,21 +2220,7 @@ internal static class Parser
             // wins (a:visited styling is outside the headless scope).
             if (Attr("link") is { Length: > 0 } link) Hint("__link-color", link.Trim());
         }
-        if (tag == "A" && element.HasAttribute("href"))
-        {
-            // The anchor color comes from the containing body's link hint. Presentational
-            // hints sit ABOVE the UA sheet (HTML §15.3.2 maps them to :link styling), so the
-            // hint force-overrides the UA blue — the plain Hint() guard (empty/auto only)
-            // would refuse.
-            for (var p2 = (LayoutNode?)node; p2 != null; p2 = p2.Parent)
-            {
-                if (p2.TagName == "BODY" && p2.StyleOverrides.TryGetValue("__link-color", out var linkColor))
-                {
-                    if (!node.StyleOverrides.ContainsKey("color")) node.StyleOverrides["color"] = linkColor;
-                    break;
-                }
-            }
-        }
+
         var align = Attr("align")?.Trim().ToLowerInvariant();
         if (tag is "TD" or "TH" or "TR" or "DIV" or "P" or "H1" or "H2" or "H3" or "H4" or "H5" or "H6" or "CAPTION" or "THEAD" or "TBODY" or "TFOOT"
             && align is "left" or "right" or "center" or "justify")
@@ -3188,9 +3230,10 @@ internal static class Parser
         return sb.ToString();
     }
 
-    private static void CollectScript(IElement scriptEl)
+    private static void CollectScript(IElement scriptEl, LayoutNode scriptNode)
     {
         if (Current.IsFragment) return;
+        var continuation = ScriptContinuation(scriptEl);
         var type = scriptEl.GetAttribute("type");
         bool isModule = string.Equals(type, "module", StringComparison.OrdinalIgnoreCase);
         var src = scriptEl.GetAttribute("src");
@@ -3208,8 +3251,9 @@ internal static class Parser
             {
                 var code = DecodeDataUri(src);
                 if (string.IsNullOrWhiteSpace(code)) return;
-                if (isModule) (isAsync ? _asyncScripts : _deferredScripts).Add(new(code, src, true));
-                else BucketClassic(code, src, isAsync, isDefer);
+                if (isModule) (isAsync ? _asyncScripts : _deferredScripts).Add(new(code, src, true,
+                    Node: scriptNode, Continuation: continuation));
+                else BucketClassic(code, src, isAsync, isDefer, scriptNode, continuation);
                 return;
             }
 
@@ -3220,7 +3264,7 @@ internal static class Parser
                 {
                     // Let the module loader fetch it on import (so its own imports resolve).
                     (isAsync ? _asyncScripts : _deferredScripts).Add(new(null, scriptUrl, true,
-                        CrossOrigin: crossOrigin));
+                        CrossOrigin: crossOrigin, Node: scriptNode, Continuation: continuation));
                     return;
                 }
                 try
@@ -3232,7 +3276,7 @@ internal static class Parser
                     var code = response.Content.ReadAsStringAsync().Result;
                     var responseUrl = response.RequestMessage?.RequestUri?.AbsoluteUri ?? scriptUrl;
                     if (!string.IsNullOrWhiteSpace(code))
-                        BucketClassic(code, responseUrl, isAsync, isDefer, scriptUrl);
+                        BucketClassic(code, responseUrl, isAsync, isDefer, scriptNode, continuation, scriptUrl);
                 }
                 catch (Exception ex)
                 {
@@ -3245,9 +3289,42 @@ internal static class Parser
         {
             // Inline scripts always run in document position (defer/async do not apply).
             var inlineCode = StripCdata(scriptEl.TextContent);
-            if (isModule) (isAsync ? _asyncScripts : _deferredScripts).Add(new(inlineCode, NextInlineModuleSpecifier(), true, true));
-            else _pendingScripts.Add(new(inlineCode, _documentBaseUrl ?? _baseUrl ?? "about:blank", Inline: true));
+            if (isModule) (isAsync ? _asyncScripts : _deferredScripts).Add(new(inlineCode, NextInlineModuleSpecifier(), true, true,
+                Node: scriptNode, Continuation: continuation));
+            else _pendingScripts.Add(new(inlineCode, _documentBaseUrl ?? _baseUrl ?? "about:blank", Inline: true,
+                Node: scriptNode, Continuation: continuation));
         }
+    }
+
+    /// <summary>The raw source between a script element's end tag and the next script start:
+    /// a parse-time document.write splices into the tokenizer at this exact point, so the
+    /// words that follow the writing script complete a tag/attribute/entity/rawtext run the
+    /// script left open (document-write/019-031, 042-043, 050-051).</summary>
+    private static string? ScriptContinuation(IElement scriptEl)
+    {
+        var source = Current.Source;
+        if (source is null) return null;
+        var start = IndexOfStartTag(source, "<script", Math.Clamp(Current.SourceCursor, 0, source.Length));
+        if (start < 0 || start >= source.Length) return null;
+        var endTag = source.IndexOf("</script", start, StringComparison.OrdinalIgnoreCase);
+        if (endTag < 0) return null;
+        var close = source.IndexOf('>', endTag + 8);
+        var end = close < 0 ? source.Length : close + 1;
+        Current.SourceCursor = end;
+        var next = IndexOfStartTag(source, "<script", end);
+        return source[end..(next < 0 ? source.Length : next)];
+    }
+
+    private static int IndexOfStartTag(string source, string name, int from)
+    {
+        for (var i = source.IndexOf(name, from, StringComparison.OrdinalIgnoreCase); i >= 0;
+             i = source.IndexOf(name, i + 1, StringComparison.OrdinalIgnoreCase))
+        {
+            var after = i + name.Length;
+            if (after >= source.Length || char.IsWhiteSpace(source[after]) || source[after] is '>' or '/')
+                return i;
+        }
+        return -1;
     }
 
     /// <summary>
@@ -3267,9 +3344,9 @@ internal static class Parser
     /// <summary>Routes an external classic script's code into the in-position, deferred, or async
     /// execution bucket (HTML §"prepare the script element").</summary>
     private static void BucketClassic(string code, string url, bool isAsync, bool isDefer,
-        string? requestedUrl = null)
+        LayoutNode? node = null, string? continuation = null, string? requestedUrl = null)
     {
-        var script = new ScriptRecord(code, url, RequestedUrl: requestedUrl);
+        var script = new ScriptRecord(code, url, RequestedUrl: requestedUrl, Node: node, Continuation: continuation);
         if (isAsync) _asyncScripts.Add(script);
         else if (isDefer) _deferredScripts.Add(script);
         else _pendingScripts.Add(script);
@@ -4301,7 +4378,8 @@ internal static class Parser
     /// against the current page's stylesheets. Used by Element.innerHTML / insertAdjacentHTML.
     /// Per HTML semantics, &lt;script&gt; elements in the fragment are parsed but not executed.
     /// </summary>
-    internal static List<LayoutNode> ParseFragment(string html, string contextTag = "DIV", DocumentState? owner = null)
+    internal static List<LayoutNode> ParseFragment(string html, string contextTag = "DIV", DocumentState? owner = null,
+        bool includeScripts = false)
     {
         var previous = Current;
         if (owner is not null)
@@ -4319,7 +4397,7 @@ internal static class Parser
         Current.IsFragment = true;
         try
         {
-            var nodes = ParseFragmentCore(html, contextTag);
+            var nodes = ParseFragmentCore(html, contextTag, includeScripts);
             if (owner is not null) foreach (var node in nodes)
             {
                 owner.Bind(node);
@@ -4737,7 +4815,7 @@ internal static class Parser
         foreach (var child in node.Children) QueueParsedDetailsNotifications(child, engine);
     }
 
-    private static List<LayoutNode> ParseFragmentCore(string html, string contextTag)
+    private static List<LayoutNode> ParseFragmentCore(string html, string contextTag, bool includeScripts = false)
     {
         var result = new List<LayoutNode>();
         if (string.IsNullOrEmpty(html)) return result;
@@ -4780,8 +4858,20 @@ internal static class Parser
                 else if (childNode is IElement childEl)
                 {
                     var ct = TagOf(childEl);
-                    if (ct == "SCRIPT") continue;          // innerHTML never runs scripts
+                    // innerHTML never runs scripts, but a document.write stream must keep the
+                    // script elements so the write path can execute them at the insertion point.
+                    if (ct == "SCRIPT" && !includeScripts) continue;
                     result.Add(Traverse(childEl, 0));
+                }
+                else if (childNode is IComment commentNode)
+                {
+                    var cn = new LayoutNode(null, "#comment", commentNode.Data ?? string.Empty, ComputeCurrentStyle(container))
+                    {
+                        DomNode = commentNode
+                    };
+                    cn.ResetNonInheritedStyles();
+                    cn.StyleOverrides[AngleSharp.Css.PropertyNames.Display] = "none";
+                    result.Add(cn);
                 }
             }
         }

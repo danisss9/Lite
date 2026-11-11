@@ -203,7 +203,7 @@ public class JsElement
     // ---- content ----
     public string textContent
     {
-        get => DomNode?.TextContent ?? GetTextContentRecursive(Node);
+        get => DomNode is { } dom ? VisibleTextContent(dom) : GetTextContentRecursive(Node);
         set
         {
             if (DomNode is not null)
@@ -219,6 +219,17 @@ public class JsElement
                 Node.TextOverride = value;
             }
         }
+    }
+
+    /// <summary>textContent over the script-visible children: the engine-injected origin
+    /// sheets are not author content, so their CSS text must not leak into an ancestor's
+    /// textContent (document.write-02 reads documentElement.textContent).</summary>
+    private string VisibleTextContent(INode dom)
+    {
+        if (dom is ICharacterData data && dom is not IComment) return data.Data ?? string.Empty;
+        var text = new System.Text.StringBuilder();
+        foreach (var child in VisibleDomChildren(dom)) text.Append(VisibleTextContent(child));
+        return text.ToString();
     }
 
     private static string GetTextContentRecursive(LayoutNode node)

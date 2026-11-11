@@ -404,33 +404,426 @@ public class JsDocument
 
     private string? _writeBuffer;
 
-    public void open() => _writeBuffer = string.Empty;
-
-    public void write(string markup)
+    public void open()
     {
+        // HTML §6.3: open() from a parser-inserted script (the write stream is live) leaves
+        // the document alone — the parser keeps its nodes (document-write/002, /004).
+        if (JsEngine.For(_engine)?.CurrentScriptNode is not null) return;
+        _writeBuffer = string.Empty;
+    }
+
+    /// <summary>HTML §8.5.2 document.write: the markup enters the token stream at the writing
+    /// script's position, so consecutive writes join into ONE token stream (write("&lt;i") then
+    /// write("&gt;Filler Text") forms one i element — document-write/004) and the raw source
+    /// that follows the script completes whatever the write left open (document-write/019-031,
+    /// 042-043, 050-051). The engine parses the whole tree before running scripts, so there is
+    /// no live tokenizer to splice into; the emulation accumulates each script's stream,
+    /// absorbs the nodes its continuation produced, and re-parses the joined text at the
+    /// insertion point on every write.</summary>
+    private sealed class WriteRegion
+    {
+        internal required LayoutNode Target { get; init; }
+        internal required int Anchor { get; init; }
+        internal required string Continuation { get; init; }
+        internal LayoutNode? Script { get; init; }
+        internal string Buffer = "";
+        internal readonly List<LayoutNode> Written = [];
+        internal readonly List<(LayoutNode Node, LayoutNode Parent, int Index)> Suffix = [];
+        internal bool HeadTailMoved;
+        internal bool Flushed;
+        internal int ExecutedScripts;
+        internal readonly List<(LayoutNode Node, string Code, string Url)> DeferredScripts = [];
+    }
+
+    private readonly Dictionary<LayoutNode, WriteRegion> _parserWriteRegions = [];
+    private WriteRegion? _lateWriteRegion;
+
+    private enum ContinuationKind { None, Text, Full }
+
+    public void write(JsValue markup)
+    {
+        if (Parser.IsXmlDocument)
+            throw JsErrors.Dom(_engine, "InvalidStateError",
+                "document.write() is not allowed in XML documents.");
+        var text = markup is null || markup.IsNull() ? "null" : markup.IsUndefined() ? "undefined" : markup.AsString();
         if (_writeBuffer is not null)
         {
-            _writeBuffer += markup ?? string.Empty;
+            _writeBuffer += text;
             return;
         }
-        if (string.IsNullOrEmpty(markup)) return;
-        // A mid-parse write cannot splice into the parser's input: the pipeline
-        // executes classic scripts after the tree parse by design (layout
-        // determinism), so there is no live insertion point — the tokenizer has
-        // consumed the stream. The write therefore parses as a fragment and
-        // appends; the streaming document.write semantics live on the
-        // frame-level write path (open/write/close) instead.
-        var target = FindFirst(_root, n => n.TagName == "BODY") ?? _root;
-        foreach (var node in Parser.ParseFragment(markup, target.TagName, JsEngine.For(_engine)?.DocumentState))
+        var engine = JsEngine.For(_engine);
+        var script = engine?.CurrentScriptNode;
+        var region = script is not null
+            ? _parserWriteRegions.TryGetValue(script, out var existing) ? existing : CreateWriteRegion(script, engine!)
+            : _lateWriteRegion ??= CreateLateWriteRegion();
+        region.Buffer += text;
+        if (region.Buffer.Length == 0) return;
+        RebuildWriteRegion(region, flush: false);
+    }
+
+    /// <summary>Runs when the writing script finishes: the tokenizer only resumes with the
+    /// source that follows the script after its execution ends, so the continuation joins the
+    /// stream here (document-write/019-031, 035-036, 042-043, 046, 050-051). Assertions made
+    /// inside the script itself see the written tokens alone.</summary>
+    internal void FlushParserWrites(LayoutNode? script)
+    {
+        if (script is null || !_parserWriteRegions.TryGetValue(script, out var region) || region.Flushed) return;
+        region.Flushed = true;
+        if (region.Buffer.Length > 0) RebuildWriteRegion(region, flush: true);
+        // An external script blocks the written parser: the scripts queued behind it run
+        // after the writing script, before the next source script (document-write/script_005-006).
+        if (JsEngine.For(_engine) is { } engine)
+            foreach (var (node, code, url) in region.DeferredScripts.ToList())
+            {
+                var savedContinuation = engine.CurrentScriptContinuation;
+                engine.CurrentScriptContinuation = null;
+                try { engine.Execute(code, url); }
+                finally
+                {
+                    engine.CurrentScriptContinuation = savedContinuation;
+                    FlushParserWrites(node);
+                }
+            }
+        region.DeferredScripts.Clear();
+    }
+
+    private WriteRegion CreateWriteRegion(LayoutNode script, JsEngine engine)
+    {
+        var body = FindFirst(_root, n => n.TagName == "BODY") ?? _root;
+        LayoutNode target;
+        var anchor = 0;
+        if (script.Parent is not { } parent)
         {
-            // The fragment's nodes carry detached DOM counterparts; moving them under the live
-            // body keeps getElementById/querySelector working on written content.
-            if (node.DomNode is { } dom && _document?.Body is { } body) body.AppendChild(dom);
-            target.AddChild(node);
+            target = body;
+            anchor = body.Children.Count;
+        }
+        else if (parent.TagName == "HEAD")
+        {
+            target = body;
+            anchor = 0;
+        }
+        else
+        {
+            target = parent;
+            anchor = parent.Children.IndexOf(script) + 1;
+        }
+        var region = new WriteRegion
+        {
+            Target = target,
+            Anchor = anchor,
+            Continuation = engine.CurrentScriptContinuation ?? "",
+            Script = script,
+        };
+        // The parser has not consumed the source after this script yet: detach those nodes for
+        // the duration of the write so the document inside the script is exactly the pre-script
+        // tree plus the written tokens. document-write/001's body.textContent must be "PASS",
+        // not "PASS" plus the #log status text the testharness writes once it can see the node.
+        region.Suffix.AddRange(SuffixRootsAfter(script));
+        foreach (var (node, parentNode, index) in region.Suffix)
+        {
+            parentNode.Children.Remove(node);
+            node.Parent = null;
+            if (node.DomNode is { } dom) dom.Parent?.RemoveChild(dom);
+        }
+        _parserWriteRegions[script] = region;
+        return region;
+    }
+
+    private WriteRegion CreateLateWriteRegion()
+    {
+        var body = FindFirst(_root, n => n.TagName == "BODY") ?? _root;
+        var type = _document?.ContentType;
+        if (!string.IsNullOrEmpty(type) && !type.Equals("text/html", StringComparison.OrdinalIgnoreCase))
+        {
+            // A document that is not HTML (text/plain, an image or a media document) replaces
+            // its content on the first write — the implicit document.open() (contentType.window.js
+            // expects body.firstChild to be the written b, not the text viewer's pre element).
+            foreach (var child in body.Children.ToList()) Detach(child);
+            if (body.DomNode is AngleSharp.Dom.INode bodyDom)
+                while (bodyDom.FirstChild is { } first) bodyDom.RemoveChild(first);
+            return new WriteRegion { Target = body, Anchor = 0, Continuation = "" };
+        }
+        return new WriteRegion { Target = body, Anchor = body.Children.Count, Continuation = "" };
+    }
+
+    /// <summary>The top-level source nodes after <paramref name="node"/> in document order,
+    /// stopping at the next script element (the raw continuation stops at that script's start
+    /// tag). Descendants stay attached to their roots, so only the roots are recorded.</summary>
+    private static List<(LayoutNode Node, LayoutNode Parent, int Index)> SuffixRootsAfter(LayoutNode node)
+    {
+        var result = new List<(LayoutNode, LayoutNode, int)>();
+        var current = node;
+        while (current.Parent is { } parent)
+        {
+            var index = parent.Children.IndexOf(current);
+            for (var i = index + 1; i < parent.Children.Count; i++)
+            {
+                var sibling = parent.Children[i];
+                if (sibling.TagName == "SCRIPT") return result;
+                if (sibling.TagName is "BODY" or "HEAD" or "HTML")
+                {
+                    if (CollectDescendantRoots(sibling, result)) return result;
+                    continue;
+                }
+                if (HasScript(sibling)) return result;
+                result.Add((sibling, parent, i));
+            }
+            current = parent;
+        }
+        return result;
+    }
+
+    /// <summary>Records descendant roots produced by the continuation span, stopping at the
+    /// next script element; returns true when a script ended the walk.</summary>
+    private static bool CollectDescendantRoots(LayoutNode node, List<(LayoutNode, LayoutNode, int)> result)
+    {
+        for (var i = 0; i < node.Children.Count; i++)
+        {
+            var child = node.Children[i];
+            if (child.TagName == "SCRIPT") return true;
+            if (child.TagName is "BODY" or "HEAD" or "HTML")
+            {
+                if (CollectDescendantRoots(child, result)) return true;
+                continue;
+            }
+            if (HasScript(child)) return true;
+            result.Add((child, node, i));
+        }
+        return false;
+    }
+
+    private static bool HasScript(LayoutNode node)
+        => node.TagName == "SCRIPT" || node.Children.Any(HasScript);
+
+    private void MoveHeadTailToBody(LayoutNode head, LayoutNode script, LayoutNode body)
+    {
+        var start = head.Children.IndexOf(script) + 1;
+        if (start <= 0 || start >= head.Children.Count) return;
+        var tail = head.Children.Skip(start).ToList();
+        for (var i = 0; i < tail.Count; i++)
+        {
+            var child = tail[i];
+            head.Children.Remove(child);
+            child.Parent = body;
+            body.Children.Insert(i, child);
+            if (child.DomNode is { } dom && head.DomNode is { } headDom && dom.Parent == headDom)
+            {
+                headDom.RemoveChild(dom);
+                if (_document?.Body is { } bodyDom)
+                    bodyDom.InsertBefore(dom, i < bodyDom.ChildNodes.Length ? bodyDom.ChildNodes[i] : null);
+            }
         }
     }
 
-    public void writeln(string markup) => write((markup ?? "") + "\n");
+    private void RebuildWriteRegion(WriteRegion region, bool flush)
+    {
+        foreach (var node in region.Written) Detach(node);
+        region.Written.Clear();
+        var (kind, continuation) = flush
+            ? ClassifyContinuation(region.Buffer, region.Continuation)
+            : (ContinuationKind.None, "");
+        if (flush && region.Script is { Parent: { TagName: "HEAD" } head } script && !region.HeadTailMoved)
+        {
+            region.HeadTailMoved = true;
+            MoveHeadTailToBody(head, script, region.Target);
+        }
+        var stream = region.Buffer + continuation;
+        var context = region.Target.TagName is "HTML" or "#document" or "#text" ? "BODY" : region.Target.TagName;
+        var nodes = Parser.ParseFragment(stream, context, JsEngine.For(_engine)?.DocumentState, includeScripts: true);
+        var anchor = Math.Clamp(region.Anchor, 0, region.Target.Children.Count);
+        var domTarget = region.Target.DomNode as AngleSharp.Dom.INode ?? _document?.Body;
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            var node = nodes[i];
+            node.Parent = region.Target;
+            region.Target.Children.Insert(anchor + i, node);
+            region.Written.Add(node);
+            if (node.DomNode is { } dom && domTarget is not null)
+                domTarget.InsertBefore(dom, anchor + i < domTarget.ChildNodes.Length ? domTarget.ChildNodes[anchor + i] : null);
+        }
+        ExecuteWrittenScripts(region, nodes);
+        if (!flush) return;
+        // Restore the following source unless the continuation replaced it: complete-token
+        // writes keep the original node identities, text joins keep the element roots.
+        var keep = kind switch
+        {
+            ContinuationKind.None => region.Suffix,
+            ContinuationKind.Text => region.Suffix.Where(s => s.Node.TagName != "#text").ToList(),
+            _ => new List<(LayoutNode Node, LayoutNode Parent, int Index)>(),
+        };
+        var writtenInTarget = region.Written.Count;
+        foreach (var (node, parentNode, index) in keep)
+        {
+            node.Parent = parentNode;
+            var insertAt = index;
+            if (ReferenceEquals(parentNode, region.Target) && index >= region.Anchor) insertAt += writtenInTarget;
+            insertAt = Math.Clamp(insertAt, 0, parentNode.Children.Count);
+            parentNode.Children.Insert(insertAt, node);
+            if (node.DomNode is { } dom && parentNode.DomNode is AngleSharp.Dom.INode domParent)
+                domParent.InsertBefore(dom, insertAt < domParent.ChildNodes.Length ? domParent.ChildNodes[insertAt] : null);
+        }
+    }
+
+    /// <summary>document.write parses scripts synchronously at their stream position: the
+    /// written script runs before the write call returns (document-write/script_*). Only the
+    /// scripts beyond the region's executed count run, so a later re-parse of the grown stream
+    /// does not re-execute them.</summary>
+    private void ExecuteWrittenScripts(WriteRegion region, List<LayoutNode> nodes)
+    {
+        if (JsEngine.For(_engine) is not { } engine) return;
+        var scripts = new List<LayoutNode>();
+        void Collect(LayoutNode node)
+        {
+            if (node.TagName == "SCRIPT") { scripts.Add(node); return; }
+            foreach (var child in node.Children) Collect(child);
+        }
+        foreach (var node in nodes) Collect(node);
+        if (region.ExecutedScripts >= scripts.Count) return;
+        for (var i = region.ExecutedScripts; i < scripts.Count; i++)
+        {
+            var script = scripts[i];
+            region.ExecutedScripts = i + 1;
+            if (!IsRunnableScript(script) || !TryGetScriptCode(script, engine, out var code, out var sourceUrl))
+                continue;
+            var src = script.Attributes.GetValueOrDefault("src");
+            if (!string.IsNullOrEmpty(src))
+            {
+                // The external fetch blocks the written parser: this script and everything parsed
+                // behind it run once the writing script returns.
+                region.DeferredScripts.Add((script, code, sourceUrl));
+                for (var j = i + 1; j < scripts.Count; j++)
+                {
+                    var later = scripts[j];
+                    if (!IsRunnableScript(later) || !TryGetScriptCode(later, engine, out var laterCode, out var laterUrl))
+                        continue;
+                    region.DeferredScripts.Add((later, laterCode, laterUrl));
+                }
+                region.ExecutedScripts = scripts.Count;
+                return;
+            }
+            var savedContinuation = engine.CurrentScriptContinuation;
+            engine.CurrentScriptContinuation = null;
+            try { engine.Execute(code, sourceUrl); }
+            finally
+            {
+                engine.CurrentScriptContinuation = savedContinuation;
+                FlushParserWrites(script);
+            }
+        }
+    }
+
+    private static bool IsRunnableScript(LayoutNode script)
+    {
+        var type = script.Attributes.GetValueOrDefault("type");
+        if (string.Equals(type, "module", StringComparison.OrdinalIgnoreCase)) return false;
+        return type is null || type.Contains("javascript", StringComparison.OrdinalIgnoreCase)
+            || type.Contains("ecmascript", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool TryGetScriptCode(LayoutNode script, JsEngine engine, out string code, out string sourceUrl)
+    {
+        code = "";
+        sourceUrl = engine.CurrentUrl;
+        var src = script.Attributes.GetValueOrDefault("src");
+        if (!string.IsNullOrEmpty(src))
+        {
+            try
+            {
+                sourceUrl = new Uri(new Uri(engine.CurrentUrl), src).AbsoluteUri;
+                using var response = engine.DocumentState.Session!.Client.GetAsync(sourceUrl).Result;
+                code = response.Content.ReadAsStringAsync().Result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[document.write script] {ex.Message}");
+                return false;
+            }
+        }
+        else
+        {
+            code = script.DomNode is AngleSharp.Dom.IElement element ? element.TextContent : script.Text;
+        }
+        return !string.IsNullOrWhiteSpace(code);
+    }
+
+    /// <summary>Decides what the following source contributes to the write stream: nothing when
+    /// the write already emitted complete tokens (the source nodes keep their identity — the
+    /// testharness's #log must stay attached), the leading text run when the source continues a
+    /// text node (document-write/051), or the whole raw continuation when a tag, entity, comment
+    /// or rawtext element is left open (document-write/019-031, 035-036, 042-043, 046, 050).</summary>
+    private static (ContinuationKind Kind, string Text) ClassifyContinuation(string stream, string continuation)
+    {
+        if (continuation.Length == 0) return (ContinuationKind.None, "");
+        if (NeedsContinuation(stream)) return (ContinuationKind.Full, continuation);
+        var trimmed = continuation.TrimStart('\r', '\n', '\t', ' ');
+        if (trimmed.Length == 0 || trimmed[0] == '<') return (ContinuationKind.None, "");
+        var lt = trimmed.IndexOf('<');
+        var text = lt < 0 ? trimmed : trimmed[..lt];
+        return text.Length == 0 ? (ContinuationKind.None, "") : (ContinuationKind.Text, text);
+    }
+
+    private static void Detach(LayoutNode node)
+    {
+        node.Parent?.Children.Remove(node);
+        node.Parent = null;
+        if (node.DomNode is { } dom) dom.Parent?.RemoveChild(dom);
+    }
+
+    private static bool NeedsContinuation(string stream)
+    {
+        var rawText = OpenRawTextElement(stream);
+        if (rawText is "plaintext") return true;
+        if (rawText is not null && !stream.EndsWith("</" + rawText + ">", StringComparison.OrdinalIgnoreCase)) return true;
+        var lastLt = stream.LastIndexOf('<');
+        if (lastLt >= 0 && stream.IndexOf('>', lastLt) < 0) return true;
+        var lastComment = stream.LastIndexOf("<!--", StringComparison.Ordinal);
+        if (lastComment >= 0 && stream.IndexOf("-->", lastComment + 4, StringComparison.Ordinal) < 0) return true;
+        var lastAmp = stream.LastIndexOf('&');
+        if (lastAmp >= 0 && stream.IndexOf(';', lastAmp) < 0 &&
+            stream[(lastAmp + 1)..].All(c => char.IsLetterOrDigit(c) || c == '#')) return true;
+        return false;
+    }
+
+    private static string? OpenRawTextElement(string stream)
+    {
+        string[] rawTags = ["script", "style", "textarea", "title", "xmp", "iframe", "noembed", "noframes", "plaintext"];
+        string? open = null;
+        var i = 0;
+        while (i < stream.Length)
+        {
+            var lt = stream.IndexOf('<', i);
+            if (lt < 0) break;
+            if (lt + 1 >= stream.Length) break;
+            if (stream[lt + 1] == '/')
+            {
+                var closeEnd = stream.IndexOf('>', lt);
+                if (closeEnd < 0) break;
+                var name = stream[(lt + 2)..closeEnd].Trim().ToLowerInvariant();
+                if (open == name) open = null;
+                i = closeEnd + 1;
+                continue;
+            }
+            if (lt + 1 < stream.Length && (char.IsLetter(stream[lt + 1])))
+            {
+                var end = lt + 1;
+                while (end < stream.Length && !char.IsWhiteSpace(stream[end]) && stream[end] != '>' && stream[end] != '/') end++;
+                var name = stream[(lt + 1)..end].ToLowerInvariant();
+                var tagEnd = stream.IndexOf('>', end);
+                if (tagEnd < 0) break;
+                if (rawTags.Contains(name)) open = name;
+                i = tagEnd + 1;
+                continue;
+            }
+            i = lt + 1;
+        }
+        return open;
+    }
+
+    public void writeln(JsValue markup)
+        => write(markup is null || markup.IsNull() ? "null\n" : markup.IsUndefined() ? "undefined\n" : markup.AsString() + "\n");
+
+    /// <summary>HTML §4.2.1 document.contentType: the document's MIME type.</summary>
+    public string contentType => _document?.ContentType ?? "text/html";
 
     public void close()
     {
@@ -442,24 +835,27 @@ public class JsDocument
             engine.FrameElementWrapper is not JsElement frame) return;
         var frameNode = frame.Node;
         var navigationVersion = ++frameNode.FrameNavigationVersion;
-        parent.EnqueueMacrotask(() =>
+        try
         {
-            if (navigationVersion != frameNode.FrameNavigationVersion) return;
-            try
+            // close() closes the parser: the written stream is parsed now, before control
+            // returns to the script (document.write-02 reads the new document immediately).
+            var width = int.TryParse(frameNode.Attributes.GetValueOrDefault("width"), out var w) && w > 0 ? w : 300;
+            var height = int.TryParse(frameNode.Attributes.GetValueOrDefault("height"), out var h) && h > 0 ? h : 150;
+            var child = Parser.ParseChildPage(markup, isSrcdoc: true, parent.DocumentBaseUrl,
+                width, height, parent.DocumentState.Session, parent, frameNode, frameNode.ChildPage.SandboxFlags);
+            frameNode.ChildPage = child;
+            // The load event is a task, not a synchronous side effect of close().
+            parent.EnqueueMacrotask(() =>
             {
-                var width = int.TryParse(frameNode.Attributes.GetValueOrDefault("width"), out var w) && w > 0 ? w : 300;
-                var height = int.TryParse(frameNode.Attributes.GetValueOrDefault("height"), out var h) && h > 0 ? h : 150;
-                var child = Parser.ParseChildPage(markup, isSrcdoc: true, parent.DocumentBaseUrl,
-                    width, height, parent.DocumentState.Session, parent, frameNode, frameNode.ChildPage.SandboxFlags);
-                frameNode.ChildPage = child;
+                if (navigationVersion != frameNode.FrameNavigationVersion) return;
                 EventDispatcher.DispatchToNode(frameNode, "load", parent);
-            }
-            catch (Exception ex)
-            {
-                parent.DocumentState.Session?.Diagnostics.Enqueue($"document.write: {ex.Message}");
-                Console.WriteLine($"[document.write] {ex.Message}");
-            }
-        });
+            });
+        }
+        catch (Exception ex)
+        {
+            parent.DocumentState.Session?.Diagnostics.Enqueue($"document.write: {ex.Message}");
+            Console.WriteLine($"[document.write] {ex.Message}");
+        }
     }
 
     // ---- document metadata ----

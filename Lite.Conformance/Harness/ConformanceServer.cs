@@ -81,6 +81,9 @@ internal static class ConformanceServer
 
         var contentTypes = new FileExtensionContentTypeProvider();
         contentTypes.Mappings[".any.js"] = "text/javascript";
+        contentTypes.Mappings[".webm"] = "video/webm";
+        contentTypes.Mappings[".ogv"] = "video/ogg";
+        contentTypes.Mappings[".ogg"] = "audio/ogg";
         // WPT CSS reftests are frequently XHTML (.xht/.xhtml); serve as HTML so the parser
         // builds a document rather than treating the markup as plain text.
         contentTypes.Mappings[".xht"] = cssRegressionMode ? "text/html" : "application/xhtml+xml";

@@ -4,6 +4,7 @@ using Lite.Layout;
 using Lite.Models;
 using Lite.Extensions;
 using Lite.Scripting;
+using SkiaSharp;
 using static Lite.Tests.TestRunner;
 
 namespace Lite.Tests;
@@ -72,16 +73,20 @@ public static class DocumentColorTests
         // The body's link hint colors the anchor (the UA blue default applies without it).
         var anchor = Find(page.Root, "A");
         True(anchor != null, "anchor missing");
-        var color = anchor!.Style.GetPropertyValueSafe("color")?.Trim();
+        Console.WriteLine("[hint] root=" + page.Root.TagName + " bodyHint=" + (Find(page.Root, "BODY")?.StyleOverrides.GetValueOrDefault("__link-color") ?? "<none>") + " anchorColor=" + anchor!.StyleOverrides.GetValueOrDefault("color"));
+        var color = anchor!.StyleOverrides.GetValueOrDefault("color");
         True(color == "red", $"the body's link hint must color the anchor red, got {color}");
+        True(Lite.Extensions.StyleExtensions.GetColor(anchor) == SKColors.Red,
+            $"the hint must reach the paint path, got {Lite.Extensions.StyleExtensions.GetColor(anchor)}");
         // Without the hint the UA blue default applies.
         var page2 = Parser.ParseChildPage(
             "<!doctype html><body><a href='x.html'>link</a></body></html>",
             isSrcdoc: true, "http://test/", 800, 600);
         BoxEngine.Layout(page2.Root, 800, 600);
         var anchor2 = Find(page2.Root, "A");
-        var color2 = anchor2!.Style.GetPropertyValueSafe("color")?.Trim();
-        True(color2 == "blue", $"the UA default anchor color must be blue, got {color2}");
+        True(anchor2 != null, "anchor missing");
+        True(Lite.Extensions.StyleExtensions.GetColor(anchor2!) == SKColors.Blue,
+            $"the UA default anchor color must be blue, got {Lite.Extensions.StyleExtensions.GetColor(anchor2!)}");
     }
 
     private static LayoutNode? Find(LayoutNode node, string tag)

@@ -996,7 +996,11 @@ internal class JsEngine : IDisposable
 
     public void Execute(string script) => Execute(script, DocumentBaseUrl);    /// <summary>The script element currently being executed (HTML §4.11.1): exposed as
     /// <c>document.currentScript</c>. Cleared for timers, microtasks, and module code.</summary>
-    internal LayoutNode? CurrentScriptNode { get; private set; }    private LayoutNode? FindScriptNode(string script, string sourceUrl, string? alsoMatchUrl)
+    internal LayoutNode? CurrentScriptNode { get; private set; }
+    /// <summary>The raw source after the currently executing parser-inserted script (up to the
+    /// next script start): document.write appends it so a write that leaves a tag, entity or
+    /// rawtext run open is completed by the words that followed the script in the source.</summary>
+    internal string? CurrentScriptContinuation { get; set; }    private LayoutNode? FindScriptNode(string script, string sourceUrl, string? alsoMatchUrl)
     {
         var stack = new Stack<LayoutNode>();
         stack.Push(_root);
