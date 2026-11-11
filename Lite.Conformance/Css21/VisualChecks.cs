@@ -2023,7 +2023,10 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
             var ok = true;
             for (var k = 0; k < 2; k++)
                 if (wOrdered[k + 1].Top < wOrdered[k].Bottom - EdgeTolerance) { ok = false; break; }
-            if (ok && wOrdered.Max(s => s.Width) - wOrdered.Min(s => s.Width) <= EdgeTolerance) return null;
+            // The stated condition still includes even spacing when the check asks for it: the
+            // fast path must not accept a lopsided stack that the three-shape read rejects.
+            if (ok && wOrdered.Max(s => s.Width) - wOrdered.Min(s => s.Width) <= EdgeTolerance)
+                return check.Even ? UnevenGaps(wOrdered) : null;
         }
         if (shapes.Count != 3) return $"{shapes.Count} top-level shapes below the instructions";
         if (shapes.Any(s => !s.Rectangular)) return "a shape below the instructions is not rectangular";
@@ -2033,13 +2036,15 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
                 return $"rectangle {k + 1} overlaps rectangle {k}";
         if (ordered.Max(s => s.Width) - ordered.Min(s => s.Width) > EdgeTolerance)
             return "rectangle widths differ: " + string.Join(", ", ordered.Select(s => s.Width));
-        if (check.Even)
-        {
-            var gap0 = ordered[1].Top - ordered[0].Bottom;
-            var gap1 = ordered[2].Top - ordered[1].Bottom;
-            if (Math.Abs(gap0 - gap1) > 2 * EdgeTolerance) return $"the gaps differ: {gap0}px and {gap1}px";
-        }
-        return null;
+        return check.Even ? UnevenGaps(ordered) : null;
+    }
+
+    /// <summary>The first three rectangles of a top-ordered stack are evenly spaced, or why not.</summary>
+    private static string? UnevenGaps(IReadOnlyList<Component> ordered)
+    {
+        var gap0 = ordered[1].Top - ordered[0].Bottom;
+        var gap1 = ordered[2].Top - ordered[1].Bottom;
+        return Math.Abs(gap0 - gap1) > 2 * EdgeTolerance ? $"the gaps differ: {gap0}px and {gap1}px" : null;
     }
 
     private static string? TwoSize(IReadOnlyList<Component> shapes)
