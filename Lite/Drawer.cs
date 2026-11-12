@@ -1196,7 +1196,7 @@ internal static class Drawer
         if (string.IsNullOrEmpty(node.DisplayText)) return;
         using var font = TextMeasure.CreateFont(node);
         using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
-        DrawWrappedText(canvas, node, node.RenderedText(),
+        DrawWrappedText(canvas, node, node.BidiVisualBlockText(node.Box.ContentBox.Width, font),
             node.Box.ContentBox.Left, node.Box.ContentBox.Top, node.Box.ContentBox.Width, font, paint);
     }
 
@@ -1246,7 +1246,7 @@ internal static class Drawer
         using var font = TextMeasure.CreateFont(node);
         using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
 
-        DrawWrappedText(canvas, node, node.RenderedText(),
+        DrawWrappedText(canvas, node, node.BidiVisualBlockText(box.ContentBox.Width, font),
                         box.ContentBox.Left, box.ContentBox.Top, box.ContentBox.Width, font, paint);
     }
 

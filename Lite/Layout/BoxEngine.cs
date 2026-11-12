@@ -2460,6 +2460,13 @@ internal static class BoxEngine
             nodes = nodes.AsEnumerable().Reverse().ToList();
         CollectInlineItems(nodes, items, firstW, viewportWidth, viewportHeight);
 
+        // §16.2 / UAX #9: an RTL paragraph or an embed scope reorders its inline content
+        // visually. The paragraph-level pass runs before the line loop — it engages only when
+        // the composed run fits one band, because line breaking must stay on the logical order
+        // (a wrapped RTL line re-evaluates the algorithm per line box). Paragraphs under an
+        // active bidi-override scope keep the legacy whole-stream reversal above.
+        items = ReorderForBidi(items, nodes.Count > 0 ? nodes[0].Parent : null, firstW) ?? items;
+
         if (items.Count == 0) return 0f;
 
         // CSS 2.1 §16.2: 'text-align' aligns the inline-level content of each LINE BOX, not just
@@ -3198,6 +3205,212 @@ internal static class BoxEngine
     // the character stream reverses as a whole, so the child order reverses at every level,
     // while each inline box's own edge items stay at its physical boundaries (§8.6 — side
     // margins are unaffected by directionality).
+
+    /// <summary>The paragraph-level bidirectional reordering (§16.2 / UAX #9), applied to the
+    /// collected inline items when the composed run carries RTL-class content or an embedding
+    /// scope and fits one line. Returns null when the run needs no reordering — the caller keeps
+    /// the logical order.
+    ///
+    /// The text items compose one character stream (in logical order); <see cref="Bidi.Reorder"/>
+    /// resolves the embedding levels and the L2 reordering. The visual line then composes at two
+    /// granularities: each text item SPLITS at its level-run boundaries (so every fragment is
+    /// homogeneous), the fragment sequence runs the L2 passes at fragment granularity (a run
+    /// that crosses item boundaries reverses the fragment order), and each fragment's own chars
+    /// reverse when its level is odd. With homogeneous fragments that composition is exactly the
+    /// whole-stream L2 — the same order the reviewed painted-order judges compare against.
+    /// Non-text items (edges, images, inline blocks) ride the fragment passes at their innermost
+    /// embedding scope's level.</summary>
+    private static List<InlineItem>? ReorderForBidi(List<InlineItem> items, LayoutNode? container, float firstW)
+    {
+        if (items.Count == 0 || container is null) return null;
+
+        // Paragraphs under an active bidi-override scope keep the legacy whole-stream reversal
+        // (the child-sequence reversal at collection plus RenderedText's leaf reversal): the
+        // §8.6 physical-side edge reservation and the mirrored join sides of split boxes key on
+        // that mechanism, and this pass does not yet model split-box edges.
+        foreach (var it in items)
+            if (it.Node?.BidiReversesContent() == true) return null;
+
+        // The cheap gate: any strong RTL / Arabic content anywhere in the run.
+        var hasRtl = false;
+        var streamLength = 0;
+        foreach (var it in items)
+        {
+            if (it.Kind != InlineItemKind.Text || it.Text is not { Length: > 0 } gate) continue;
+            streamLength += gate.Length;
+            if (!hasRtl && Bidi.HasBidiContent(gate)) hasRtl = true;
+        }
+        if (!hasRtl) return null;
+
+        // Single-line gate: line breaking must stay on the logical order, so a run that wraps
+        // keeps it (a wrapped RTL line re-evaluates the algorithm per line box — queued).
+        var totalWidth = 0f;
+        foreach (var it in items) totalWidth += it.Width;
+        if (totalWidth > firstW + 0.5f) return null;
+
+        var baseLtr = container.GetDirection() != "rtl";
+
+        // The embedding scope chain per item: the embed/override declarations between the
+        // item's own node and the paragraph container (exclusive — UAX #9 X8: an ancestor
+        // block's embedding does not cross the paragraph boundary, so the UA sheet's
+        // block-level unicode-bidi: embed must not leak into this paragraph's levels),
+        // outermost first. A leaf ELEMENT's own declaration opens the scope over its content
+        // (the item's node is that element); a synthesized #text node carries no declaration
+        // of its own — its shared parent style object must not double-count the container's
+        // scope, which the paragraph base already accounts for.
+        bool ChainEquals(LayoutNode? node, List<LayoutNode> chain)
+        {
+            var own = ScopeChain(node);
+            if (own.Count != chain.Count) return false;
+            for (var i = 0; i < chain.Count; i++)
+                if (!ReferenceEquals(own[i], chain[i])) return false;
+            return true;
+        }
+        List<LayoutNode> ScopeChain(LayoutNode? node)
+        {
+            var chain = new List<LayoutNode>();
+            var start = node is not null && node.TagName.StartsWith('#') ? node.Parent : node;
+            for (var n = start; n is not null && !ReferenceEquals(n, container); n = n.Parent)
+            {
+                if (n.GetUnicodeBidi() is not ("embed" or "bidi-override")) continue;
+                chain.Insert(0, n);
+            }
+            return chain;
+        }
+        static int ChainLevel(List<LayoutNode> chain, bool baseLtr)
+        {
+            // X2/X3 down the chain: each scope takes the least (odd|even) level above the level
+            // its parent scope established.
+            var level = baseLtr ? 0 : 1;
+            foreach (var scope in chain)
+            {
+                var rtl = scope.GetDirection() == "rtl";
+                if (rtl) level = level % 2 == 0 ? level + 1 : level + 2;
+                else level = level % 2 == 0 ? level + 2 : level + 1;
+            }
+            return level;
+        }
+
+        // Compose the stream and record each text item's range; adjacent text items with the
+        // same scope chain merge into one span (a scope's items are contiguous — collection
+        // walks depth-first).
+        var stream = new System.Text.StringBuilder(streamLength);
+        var ranges = new List<(int ItemIndex, int Start, int Length)>();
+        var spans = new List<Bidi.Span>();
+        var textItems = new List<int>();
+        for (var i = 0; i < items.Count; i++)
+        {
+            var it = items[i];
+            if (it.Kind != InlineItemKind.Text || string.IsNullOrEmpty(it.Text))
+            {
+                // Zero-width markers (edges, breaks, out-of-flow) take their innermost scope's
+                // level so they ride the fragment passes with the content they sit between.
+                continue;
+            }
+            var start = stream.Length;
+            stream.Append(it.Text);
+            ranges.Add((i, start, it.Text.Length));
+            textItems.Add(i);
+        }
+        if (ranges.Count == 0) return null;
+
+        // Spans from scope chains: consecutive text items sharing one chain form one span over
+        // their combined range (a span per scope, not per item, keeps the X rules' nesting).
+        var chainCache = new List<(List<LayoutNode> Chain, int Start, int Length)>();
+        foreach (var (itemIndex, start, length) in ranges)
+        {
+            var chain = ScopeChain(items[itemIndex].Node);
+            if (chainCache.Count > 0 && ChainEquals(items[itemIndex].Node, chainCache[^1].Chain))
+                chainCache[^1] = (chainCache[^1].Chain, chainCache[^1].Start, chainCache[^1].Length + length);
+            else
+                chainCache.Add((chain, start, length));
+        }
+        foreach (var (chain, start, length) in chainCache)
+        {
+            if (chain.Count == 0) continue;
+            var innermost = chain[^1];
+            spans.Add(new Bidi.Span(start, length, innermost.GetDirection() == "rtl",
+                innermost.GetUnicodeBidi() == "bidi-override"));
+        }
+
+        var (levels, _) = Bidi.Reorder(stream.ToString(), baseLtr, spans);
+
+        // Split every text item at its level-run boundaries, then run the L2 passes at fragment
+        // granularity (order only) and reverse each odd-level fragment's own chars.
+        var fragments = new List<BidiFragment>();
+        foreach (var (itemIndex, start, length) in ranges)
+        {
+            var source = items[itemIndex];
+            var logical = source.Text!;
+            var runStart = 0;
+            for (var k = 1; k <= length; k++)
+            {
+                if (k < length && levels[start + k] == levels[start + runStart]) continue;
+                var slice = logical[runStart..k];
+                var level = levels[start + runStart];
+                fragments.Add(new BidiFragment(source, slice, level, MeasureSlice(source, slice)));
+                runStart = k;
+            }
+        }
+        // Non-text items ride at their innermost scope's level (base level when none).
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (items[i].Kind == InlineItemKind.Text) continue;
+            fragments.Add(new BidiFragment(items[i], null, ChainLevel(ScopeChain(items[i].Node), baseLtr), items[i].Width));
+        }
+
+        // Fragment-granularity L2: reverse maximal runs at each level, highest first. Only the
+        // ORDER moves here — each fragment's own chars reverse below (odd level ⇒ reversed),
+        // which composes with the passes exactly like the whole-stream reversal.
+        var order = Enumerable.Range(0, fragments.Count).ToList();
+        var highest = 0;
+        foreach (var f in fragments) highest = Math.Max(highest, f.Level);
+        for (var level = highest; level >= 1; level--)
+        {
+            var k = 0;
+            while (k < order.Count)
+            {
+                if (fragments[order[k]].Level >= level)
+                {
+                    var m = k;
+                    while (m < order.Count && fragments[order[m]].Level >= level) m++;
+                    order.Reverse(k, m - k);
+                    k = m;
+                }
+                else k++;
+            }
+        }
+
+        var result = new List<InlineItem>(items.Count);
+        foreach (var index in order)
+        {
+            var f = fragments[index];
+            if (f.Text is null || f.Source.Kind != InlineItemKind.Text)
+            {
+                result.Add(f.Source);
+                continue;
+            }
+            var visual = f.Level % 2 == 1 ? StyleExtensions.ReverseText(f.Text) : f.Text;
+            result.Add(f.Source with
+            {
+                Text = visual,
+                Width = f.Level % 2 == 1 ? MeasureSlice(f.Source, visual) : f.Width,
+            });
+        }
+        return result;
+    }
+
+    /// <summary>One homogeneous slice of a text item (or a riding non-text item) during the
+    /// paragraph-level bidi reordering: <see cref="Level"/> is the slice's embedding level.</summary>
+    private sealed record BidiFragment(InlineItem Source, string? Text, int Level, float Width);
+
+    private static float MeasureSlice(InlineItem source, string slice)
+    {
+        if (source.Node is not { } node) return 0f;
+        using var font = TextMeasure.CreateFont(node);
+        var (ls, wsp) = TextMeasure.SpacingOf(node);
+        return TextMeasure.MeasureSingleLine(slice, font, -1f, ls, wsp).Width;
+    }
 
     /// <summary>
     /// Recursively extracts a flat list of InlineItems from inline nodes.

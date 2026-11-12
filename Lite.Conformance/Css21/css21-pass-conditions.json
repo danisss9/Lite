@@ -13106,7 +13106,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "ليودتلا طاشن \"i18n activity, رابتخا\"!"
+    "needle": "!\"i18n activity, رابتخا\" ليودتلا طاشن"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-005.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -13119,7 +13119,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "ليودتلا طاشن \"i18n activity, رابتخا\"!"
+    "needle": "!\"رابتخا ,i18n activity\" ليودتلا طاشن"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-006.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -13132,7 +13132,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "i18n activity \"ليودتلا طاشن، W3C\"!"
+    "needle": "!\"ليودتلا طاشن، W3C\" i18n activity"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-007.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -13171,7 +13171,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-010.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -13197,7 +13197,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-012.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -13288,7 +13288,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "ليودتلا طاشن \"i18n activity, اختبار\"!"
+    "needle": "!\"رابتخا ,ytivitca n81i\" ليودتلا طاشن"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-019.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -13301,7 +13301,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "ليودتلا طاشن \"i18n activity, اختبار\"!"
+    "needle": "!\"i18n activity, اختبار\" ليودتلا طاشن"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-020.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -13314,7 +13314,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "رابتخا ,ytivitca n81i\" ليودتلا طاشن\"!"
+    "needle": "!\"رابتخا ,ytivitca n81i\" ليودتلا طاشن"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-021.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -13340,7 +13340,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-023.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -13366,7 +13366,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-025.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -13392,7 +13392,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن i18n activity!W3C ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-027.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -13405,7 +13405,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن i18n activity!W3C ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-028.png where the suite ships a distinct reference; the WPT document is equivalent to the official one"
   },
@@ -74930,7 +74930,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "ليودتلا طاشن \"i18n activity, رابتخا\"!"
+    "needle": "!\"i18n activity, رابتخا\" ليودتلا طاشن"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-005.png where the suite ships a distinct reference"
   },
@@ -74943,7 +74943,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "ليودتلا طاشن \"i18n activity, رابتخا\"!"
+    "needle": "!\"رابتخا ,i18n activity\" ليودتلا طاشن"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-006.png where the suite ships a distinct reference"
   },
@@ -74956,7 +74956,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "i18n activity \"ليودتلا طاشن، W3C\"!"
+    "needle": "!\"ليودتلا طاشن، W3C\" i18n activity"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-007.png where the suite ships a distinct reference"
   },
@@ -74995,7 +74995,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-010.png where the suite ships a distinct reference"
   },
@@ -75021,7 +75021,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-012.png where the suite ships a distinct reference"
   },
@@ -75112,7 +75112,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "ليودتلا طاشن \"i18n activity, اختبار\"!"
+    "needle": "!\"رابتخا ,ytivitca n81i\" ليودتلا طاشن"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-019.png where the suite ships a distinct reference"
   },
@@ -75125,7 +75125,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "ليودتلا طاشن \"i18n activity, اختبار\"!"
+    "needle": "!\"i18n activity, اختبار\" ليودتلا طاشن"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-020.png where the suite ships a distinct reference"
   },
@@ -75138,7 +75138,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "رابتخا ,ytivitca n81i\" ليودتلا طاشن\"!"
+    "needle": "!\"رابتخا ,ytivitca n81i\" ليودتلا طاشن"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-021.png where the suite ships a distinct reference"
   },
@@ -75164,7 +75164,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-023.png where the suite ships a distinct reference"
   },
@@ -75190,7 +75190,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-025.png where the suite ships a distinct reference"
   },
@@ -75216,7 +75216,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن i18n activity!W3C ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-027.png where the suite ships a distinct reference"
   },
@@ -75229,7 +75229,7 @@
    "reviewed": true,
    "check": {
     "kind": "painted-order",
-    "needle": "W3C ليودتلا طاشن i18n activity!W3C ليودتلا طاشن i18n activity!"
+    "needle": "!i18n activity ليودتلا طاشن i18n activity!W3C ليودتلا طاشن W3C"
    },
    "note": "bidi glyph order computed from the case source by the reviewed reordering (scripts/gen_css21_bidi_expectations.py) and verified against support/direction-unicode-bidi-028.png where the suite ships a distinct reference"
   },

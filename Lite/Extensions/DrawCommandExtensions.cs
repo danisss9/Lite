@@ -715,6 +715,25 @@ public static class StyleExtensions
         return node.BidiReversesContent() ? ReverseText(text) : text;
     }
 
+    /// <summary>The block's own text as it paints under the paragraph-level bidi reordering
+    /// (§16.2 / UAX #9): a text-bearing BLOCK's content is one bidi paragraph whose base
+    /// direction is the block's own 'direction' — a line whose content carries RTL-class
+    /// characters (or an embedding scope) reorders visually before painting. Only a run that
+    /// fits ONE line reorders: line breaking must stay on the logical order (a wrapped RTL
+    /// line re-evaluates the algorithm per line box — queued). Width is order-invariant, so
+    /// the single-line gate measures the logical string. A block under the legacy
+    /// bidi-override reversal keeps that mechanism's output (RenderedText already reversed
+    /// it) — the paragraph-level pass does not yet model split-box edges.</summary>
+    public static string BidiVisualBlockText(this LayoutNode node, float availableWidth, SkiaSharp.SKFont font)
+    {
+        var text = node.RenderedText();
+        if (string.IsNullOrEmpty(text) || !Lite.Layout.Bidi.HasBidiContent(text)) return text;
+        if (node.BidiReversesContent()) return text;
+        if (Lite.Layout.TextMeasure.MeasureSingleLine(text, font).Width > availableWidth + 0.5f) return text;
+        var (_, visual) = Lite.Layout.Bidi.Reorder(text, node.GetDirection() != "rtl", System.Array.Empty<Lite.Layout.Bidi.Span>());
+        return visual;
+    }
+
     public static TextTransform GetTextTransform(this LayoutNode node)
     {
         var raw = node.TryResolveStyle("text-transform", out var ov)

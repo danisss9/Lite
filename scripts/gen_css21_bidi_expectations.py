@@ -150,8 +150,14 @@ def case_config(source: str) -> dict:
             config['div_dir'] = (re.search(r'direction:\s*(\w+)', decl) or [None, None])[1]
             config['div_bidi'] = (re.search(r'unicode-bidi:\s*(\S+?)\s*[;}]', decl) or [None, 'normal'])[1]
         elif sel == '.test':
-            config['test_dir'] = (re.search(r'direction:\s*(\w+)', decl) or [None, None])[1] or 'ltr'
-            config['test_bidi'] = (re.search(r'unicode-bidi:\s*(\S+?)\s*[;}]', decl) or [None, 'normal'])[1]
+            # The suite's "not part of the test" style block repeats `.test` for font sizing
+            # without a direction of its own; a rule that does not DECLARE direction must not
+            # reset the declared one (the cascade keeps the earlier declaration). The last
+            # explicit direction wins.
+            declared = (re.search(r'direction:\s*(\w+)', decl) or [None, None])[1]
+            if declared:
+                config['test_dir'] = declared
+            config['test_bidi'] = (re.search(r'unicode-bidi:\s*(\S+?)\s*[;}]', decl) or [None, 'normal'])[1] or 'normal'
     return config
 
 
