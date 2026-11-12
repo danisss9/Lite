@@ -129,6 +129,25 @@ the 5,849 standing `html5-missing-applicable-test` blockers are the reviewed-fai
 queue the Milestone 4 engine packages drain, with the REC section review (0/762) and
 the Milestone 6 evidence pass behind them.
 
+Snapshot updated 12 November 2026: the HTML5 track's first executed gate baseline exists and is
+diagnostic, not banked. It reads **1,351/6,538 accepted (20.7%)** over **6,538 of the 7,837
+expanded reviewed paths (83.4%)**, with the queue's largest clusters at `html/semantics`
+386/2,098, `html/browsers` 56/588, `html/syntax` 112/401, `html/rendering` 196/452 and
+`html/webappapis` 114/311. Three reasons keep it off the evidence shelf: the checkout is shared
+with the CSS 2.1 track, so identity drifted four times mid-run (`Bidi.cs`, `BidiClassTable.cs`,
+`BoxEngine.cs` and `Drawer.cs` written 16:22–17:23) and the `html/` and `selection/` phases that
+finished their queues failed final verification; `editing/` dies about five minutes into its
+queue under memory contention (5, 4 and 2 shards), and the one attempt that survived on an idle
+machine was stopped at 600 of 729 paths to close the baseline; and the `encoding/legacy-mb`
+family — 102 entries expanding to 1,196 one-thousand-subtest pages at ~3.9 GB peak each —
+exceeds this machine's memory on any pass wide enough to finish it. Probes on the same build are
+exact: tokenizer 7,052/7,053 token streams decided, parse gate 1,886/1,891 decided and **failing
+by three open `tests19.dat` meta-charset cases** (the pipeline normalizes a declared `utf-8` label
+to `ascii`), inventory 762 sections against 15,458 candidate cases. Stage 0's evidence reset
+therefore now has exact counts for 83.4% of the reviewed queue and three named blockers instead of
+an unmeasured gate; the tooling to re-bank it on a quiet tree is `scripts/run-html5-baseline.ps1`
+plus `scripts/aggregate-html5-baseline.py`.
+
 ## Track status at a glance
 
 Measured 11 November 2026. The CSS official number comes from that day's validating sweep and
@@ -146,7 +165,7 @@ crashes never count as success. `releaseReady` stays a separate final decision.
 | --- | --- | --- |
 | ES2020 | **`es2020ProfileReady` true**, enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, with zero failures, zero expected failures and no dependency exception. Host suite 20/20. All 2,115 ECMA-262 clauses reviewed. Maintenance only. |
 | CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | Official **7,394/9,039 (81.8%)**. WPT `css/CSS2` ~6,552/8,904 (73.6%, 9 November). Obligations 18/213 `implemented`. Non-pass pool: ~2,371 real fails, 511 unsupported, **1,216 manual-pending**, 62 timeouts (the block-in-inline/hit-test hang cluster), 1 crash (`visudet/line-height-201`). The 966 official fails split into 460 twin-walk pixel diffs, 172 red-pixel engine bugs, 152 shape/box judge reads and ~180 mixed. |
-| HTML5 | `html5ProfileReady` false | Milestones 1–3 closed (`inventoryComplete` true). The manifest has 12,575 entries and 5,848 are `included`. Of those, **~3,800 carry reviewed-failing reasons** and ~2,000 have a pass state unknown until the next run. Profile `html5.*`: 192 of 202 `untested`. Section review 0/762. Milestone 4 packages and increments landed 5–11 November, but **no cluster has been rerun and no manifest entries flipped** (evidence debt). They cover DOM authority, events and messaging, origins and sandbox, history, cookies, navigator, canvas, editing and selection, obsolete reflection and rendering, dynamic markup, forms, and DOM creation. |
+| HTML5 | `html5ProfileReady` false | Milestones 1–3 closed (`inventoryComplete` true). The manifest has 12,575 entries and 5,848 are `included`. Of those, **~3,800 carry reviewed-failing reasons** and ~2,000 have a pass state unknown until the next run. Profile `html5.*`: 192 of 202 `untested`. Section review 0/762. Milestone 4 packages and increments landed 5–11 November, but **no cluster has been rerun and no manifest entries flipped** (evidence debt). The 12 November diagnostic baseline prices that debt: **1,351/6,538 accepted (20.7%)** over 83.4% of the expanded queue (`editing/` partial at 600 of 729 paths, `encoding/legacy-mb` blocked by memory, identity drifted by the parallel CSS track), so the flip review has per-cluster counts to work from; it is not banked evidence. |
 
 The HTML5 reviewed-failing queue by area (static recount, 11 November):
 
