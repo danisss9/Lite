@@ -229,24 +229,36 @@ internal static class ExecutionEvidence
 
     private static string Git(string root, params string[] args)
     {
-        var start = new ProcessStartInfo("git")
+        // Parallel evidence runs on linked worktrees contend for the shared repository's
+        // locks, which can hold a single git invocation past its timeout. The identity reads
+        // are pure reads of unchanged state, so a short retry with backoff recovers instead
+        // of failing the whole shard.
+        for (var attempt = 0; ; attempt++)
         {
-            WorkingDirectory = root,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-        foreach (var arg in args) start.ArgumentList.Add(arg);
-        using var process = Process.Start(start) ?? throw new IOException("Cannot run git for evidence identity.");
-        var output = process.StandardOutput.ReadToEndAsync();
-        var error = process.StandardError.ReadToEndAsync();
-        if (!process.WaitForExit(30_000))
-        {
-            process.Kill(entireProcessTree: true);
-            throw new IOException("Timed out reading source identity.");
+            var start = new ProcessStartInfo("git")
+            {
+                WorkingDirectory = root,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            foreach (var arg in args) start.ArgumentList.Add(arg);
+            using var process = Process.Start(start) ?? throw new IOException("Cannot run git for evidence identity.");
+            var output = process.StandardOutput.ReadToEndAsync();
+            var error = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(30_000))
+            {
+                process.Kill(entireProcessTree: true);
+                if (attempt < 2)
+                {
+                    Thread.Sleep(2_000 * (attempt + 1));
+                    continue;
+                }
+                throw new IOException("Timed out reading source identity.");
+            }
+            if (process.ExitCode != 0) throw new IOException(error.GetAwaiter().GetResult());
+            return output.GetAwaiter().GetResult();
         }
-        if (process.ExitCode != 0) throw new IOException(error.GetAwaiter().GetResult());
-        return output.GetAwaiter().GetResult();
     }
 }

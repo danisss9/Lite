@@ -125,20 +125,25 @@ public static class CssWideKeywordTests
     [Test]
     public static void StylesheetEncoding_DetectsUtf16CharsetWithoutBom()
     {
-        // CSS 2.1 §4.4: a BOM-less sheet whose bytes spell @charset in UTF-16 is decoded as
-        // UTF-16 in the detected endianness, but only when the declaration names utf-16.
-        var be = System.Text.Encoding.BigEndianUnicode.GetBytes("@charset \"utf-16\"; .p\u5e73 { color: green }");
-        True(Parser.DecodeCss(be, null, null, null, out var usedBe).Contains("\u5e73"),
-            "UTF-16BE without a BOM must decode through the NUL-interleaved @charset");
-        Equal("utf-16be", usedBe);
-        var le = System.Text.Encoding.Unicode.GetBytes("@charset \"UTF-16\"; .p\u5e73 { color: green }");
-        True(Parser.DecodeCss(le, null, null, null, out var usedLe).Contains("\u5e73"),
-            "UTF-16LE without a BOM must decode through the NUL-interleaved @charset");
-        Equal("utf-16le", usedLe);
+        // CSS Syntax Level 3 3.2 (the behavior the WPT at-charset twins pin): a BOM-less
+        // sheet whose bytes spell @charset in NUL-interleaved UTF-16 does NOT match the ASCII
+        // byte pattern, so no @charset is found and the sheet decodes through the fallback
+        // chain - UTF-8 here - whose read drops the non-ASCII rule. (The old CSS 2.1 REC 4.4
+        // table read decoded the pattern's own endianness; the official no-BOM cases that need
+        // it are the ones their own WPT twins reject, recorded in the 12 November checkpoint
+        // as the defective-classification queue.)
+        var be = System.Text.Encoding.BigEndianUnicode.GetBytes("@charset \"utf-16\"; .p平 { color: green }");
+        True(!Parser.DecodeCss(be, null, null, null, out var usedBe).Contains("平"),
+            "a BOM-less NUL-interleaved UTF-16 sheet must fall through to UTF-8 (the rule drops)");
+        Equal("utf-8", usedBe);
+        var le = System.Text.Encoding.Unicode.GetBytes("@charset \"UTF-16\"; .p平 { color: green }");
+        True(!Parser.DecodeCss(le, null, null, null, out var usedLe).Contains("平"),
+            "a BOM-less NUL-interleaved UTF-16LE sheet must fall through to UTF-8 as well");
+        Equal("utf-8", usedLe);
         // A non-utf-16 declaration inside UTF-16 bytes decodes as UTF-8 per the spec, which
-        // mangles it — the observed bytes, not a silently recovered text.
+        // mangles it - the observed bytes, not a silently recovered text.
         var misdeclared = System.Text.Encoding.BigEndianUnicode.GetBytes("@charset \"shift-JIS\"; .p { color: green }");
-        True(!Parser.DecodeCss(misdeclared, null, null, null, out var usedOther).Contains("\u5e73"),
+        True(!Parser.DecodeCss(misdeclared, null, null, null, out var usedOther).Contains("平"),
             "a non-utf-16 declaration must not keep the UTF-16 decode");
         Equal("utf-8", usedOther);
     }

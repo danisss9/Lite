@@ -631,7 +631,12 @@ internal static class Parser
             {
                 string css;
                 string cssBase;
-                var sheetCharset = document.CharacterSet;
+                // The referrer charset is the encoding the ENGINE decided for the document
+                // (Current.Charset) - not AngleSharp's IDocument.CharacterSet, which for XML
+                // servings reports the XML declaration's own label, leaving the sheet decoding
+                // a different encoding than the document's class attribute was read with
+                // (character-encoding-010/011's selector mismatch).
+                var sheetCharset = Current.Charset;
                 if (DataUri.IsDataUri(href))
                 {
                     if (!DataUri.TryDecodeText(href, out css, out _)) continue;
@@ -643,7 +648,7 @@ internal static class Parser
                     if (cssUrl is null) continue;
                     // §4.4 also consults the linking element's charset attribute and, failing
                     // that, the referring document's own encoding.
-                    css = FetchCssText(cssUrl, link.GetAttribute("charset"), document.CharacterSet,
+                    css = FetchCssText(cssUrl, link.GetAttribute("charset"), Current.Charset,
                                        out sheetCharset);
                     cssBase = cssUrl;
                 }
@@ -708,11 +713,15 @@ internal static class Parser
         }
 
         // Process @import in author <style> elements (skip the UA sheet, which has none).
+        // The importing sheet is embedded: its referrer charset is the DOCUMENT's encoding
+        // (§4.4 tier 4), the same value the <link> path hands its imports. Dropping it left
+        // an inline import decoding UTF-8 and mismatching a Shift_JIS document's own class
+        // attribute (at-charset-012).
         foreach (var styleEl in document.QuerySelectorAll("style"))
         {
             var text = styleEl.TextContent;
             if (text.Contains("@import", StringComparison.OrdinalIgnoreCase))
-                styleEl.TextContent = InlineImports(text, _documentBaseUrl ?? _baseUrl ?? "");
+                styleEl.TextContent = InlineImports(text, _documentBaseUrl ?? _baseUrl ?? "", Current.Charset);
         }
 
         // §4.2 parsing errors: drop illegal declarations from the sheet text after import
@@ -2074,70 +2083,38 @@ internal static class Parser
             var offset = preamble.Length > 0 && bytes.AsSpan().StartsWith(preamble) ? preamble.Length : 0;
             return transportEncoding.GetString(bytes, offset, bytes.Length - offset);
         }
-        // 2. BOM and/or @charset, consulted only without a usable transport charset.
-        if (bytes.AsSpan().StartsWith(new byte[] { 0, 0, 0xFE, 0xFF }))
-        {
-            usedCharset = "utf-32BE";
-            return new UTF32Encoding(bigEndian: true, byteOrderMark: true).GetString(bytes, 4, bytes.Length - 4);
-        }
-        if (bytes.AsSpan().StartsWith(new byte[] { 0xFF, 0xFE, 0, 0 }))
-        {
-            usedCharset = "utf-32";
-            return Encoding.UTF32.GetString(bytes, 4, bytes.Length - 4);
-        }
+        // 2. BOM and/or @charset, consulted only without a usable transport charset. UTF-32
+        // BOMs are NOT in the sniffing table (CSS Syntax 3 §3.2 decodes through WHATWG Decode,
+        // whose BOM sniff knows only UTF-8/16) — a UTF-32 sheet falls through to the chain
+        // below, whose UTF-8 read drops every non-ASCII rule (what the at-charset UTF-32
+        // cases on both suites rely on).
         if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
         {
-            // §4.4 / the i18n suite: a BOM-decoded sheet whose @charset names a DIFFERENT known
-            // encoding is thrown out — the declaration cannot be honored (character-encoding-017,
-            // at-charset-042). An utf-8 alias applies normally.
-            var ascii = Encoding.ASCII.GetString(bytes, 3, Math.Min(bytes.Length - 3, 128));
-            if (ascii.StartsWith("@charset \"", StringComparison.Ordinal))
-            {
-                var declaredEnd = ascii.IndexOf("\";", 10, StringComparison.Ordinal);
-                if (declaredEnd > 10 && TryGetEncoding(ascii[10..declaredEnd]) is { } bomDeclared &&
-                    !bomDeclared.WebName.Equals("utf-8", StringComparison.OrdinalIgnoreCase))
-                    return string.Empty;
-            }
+            // §4.4 tier 2: the BOM decides, and an @charset rule the sheet also carries is
+            // simply ignored — the detection is done (character-encoding-017's UTF-8-BOM sheet
+            // declaring iso-8859-15 still applies its ASCII rules; at-charset-042's "UTF-16BE"
+            // declaration loses to the BOM the same way). The old throw-out contradicted the
+            // very cases it cited: their green references need the BOM-decoded sheet applied.
             return Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
         }
         if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
         {
             usedCharset = "utf-16le";
-            // §4.4: the encoding detection is done; an @charset naming a DIFFERENT encoding is
-            // the mismatch the suite's "thrown out" tests pin — the sheet must not be applied.
-            if (CharsetContradictsBom(bytes, 2, "utf-16le", bigEndian: false)) return string.Empty;
+            // The BOM decides (at-charset-043's sheet declares "UTF-8" and at-charset-045's
+            // declares "UTF-16BE" — both payloads are UTF-16LE and both must apply).
             return Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
         }
         if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
         {
             usedCharset = "utf-16be";
-            if (CharsetContradictsBom(bytes, 2, "utf-16be", bigEndian: true)) return string.Empty;
             return Encoding.BigEndianUnicode.GetString(bytes, 2, bytes.Length - 2);
         }
 
-        // 2b. @charset written in UTF-16 without a BOM: the sheet begins with NUL-interleaved
-        // octets, so the ASCII probe below cannot see it. CSS 2.1 §4.4 keeps this UTF-16
-        // decode only when the declaration itself names utf-16, and the endianness comes from
-        // the detected byte pattern, not from the declared name.
-        if (bytes.Length >= 20 && bytes[0] + bytes[1] == 0x40 && (bytes[0] == 0 || bytes[1] == 0))
-        {
-            var bigEndian = bytes[0] == 0;
-            var probeWidth = Math.Min(bytes.Length, 256);
-            var utf16Probe = bigEndian
-                ? Encoding.BigEndianUnicode.GetString(bytes, 0, probeWidth)
-                : Encoding.Unicode.GetString(bytes, 0, probeWidth);
-            if (utf16Probe.StartsWith("@charset \"", StringComparison.Ordinal))
-            {
-                var utf16End = utf16Probe.IndexOf("\";", 10, StringComparison.Ordinal);
-                if (utf16End > 10 && utf16Probe[10..utf16End].Contains("utf-16", StringComparison.OrdinalIgnoreCase))
-                {
-                    usedCharset = bigEndian ? "utf-16be" : "utf-16le";
-                    return bigEndian
-                        ? Encoding.BigEndianUnicode.GetString(bytes, 2, bytes.Length - 2)
-                        : Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
-                }
-            }
-        }
+        // A NUL-interleaved @charset pattern (CSS 2.1 §4.4's UTF-16 rows) does NOT match CSS
+        // Syntax 3 §3.2's ASCII byte pattern, so no @charset is found: the sheet falls through
+        // to the link/referrer/UTF-8 chain below, whose UTF-8 read drops every non-ASCII rule —
+        // what the utf-16-named sheets on both suites rely on. (The old branch decoded the
+        // pattern's own endianness per the CSS 2.1 table; no case on either suite needs it.)
 
         // 2. @charset at the very start of the sheet. Its own name has to be readable as ASCII,
         //    which it is in every encoding CSS 2.1 allows here.
@@ -2167,22 +2144,6 @@ internal static class Parser
                 return enc.GetString(bytes);
             }
         return Encoding.UTF8.GetString(bytes);
-    }
-
-    /// <summary>True when a BOM-decoded sheet begins with an @charset that names a different
-    /// encoding (§4.4's mismatch: the style sheet is thrown out). A plain "utf-16" declaration
-    /// leaves the endianness to the BOM and matches either side.</summary>
-    private static bool CharsetContradictsBom(byte[] bytes, int offset, string bomCharset, bool bigEndian)
-    {
-        var probe = bigEndian
-            ? Encoding.BigEndianUnicode.GetString(bytes, offset, Math.Min(bytes.Length - offset, 128))
-            : Encoding.Unicode.GetString(bytes, offset, Math.Min(bytes.Length - offset, 128));
-        if (!probe.StartsWith("@charset \"", StringComparison.Ordinal)) return false;
-        var end = probe.IndexOf("\";", 10, StringComparison.Ordinal);
-        if (end <= 10) return false;
-        var declared = probe[10..end].Trim();
-        if (declared.Equals("utf-16", StringComparison.OrdinalIgnoreCase)) return false;
-        return TryGetEncoding(declared)?.WebName.Equals(bomCharset, StringComparison.OrdinalIgnoreCase) != true;
     }
 
     /// <summary>Resolves a charset name to an encoding, or null when it is unknown. The legacy
