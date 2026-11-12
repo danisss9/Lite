@@ -4094,6 +4094,12 @@ internal static class Parser
     /// each part — the subject the rule would apply to.</summary>
     private static bool XmlTypeSelectorMatches(IElement element, string selector)
     {
+        // A SELECTOR LIST matches when ANY part matches (§5.2.1's comma semantics), so the
+        // case-sensitivity pre-filter must be per part too: 'body, #test { counter-reset: c }'
+        // matched the #test div through its '#test' part even though its 'body' part names a
+        // different element — requiring every part to pass skipped the whole rule on XML-served
+        // documents and left every counter at zero (the WPT content-counters twins). The full
+        // match still runs through element.Matches below, which ORs the parts.
         foreach (var rawPart in selector.Split(','))
         {
             var part = rawPart.Trim();
@@ -4103,10 +4109,10 @@ internal static class Parser
             var i = 0;
             while (i < compound.Length && (char.IsAsciiLetterOrDigit(compound[i]) || compound[i] is '-' or '_')) i++;
             var type = compound[..i];
-            if (type.Length == 0 || type == "*") continue;
-            if (!element.LocalName.Equals(type, StringComparison.Ordinal)) return false;
+            if (type.Length == 0 || type == "*") return true;
+            if (element.LocalName.Equals(type, StringComparison.Ordinal)) return true;
         }
-        return true;
+        return false;
     }
 
     /// <summary>Whether <paramref name="element"/>'s inherited document language matches a
