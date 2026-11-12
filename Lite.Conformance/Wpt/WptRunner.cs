@@ -22,10 +22,15 @@ internal static class WptRunner
         var errors = new List<string>();
         HtmlApplicability.Validate(applicability, errors);
         if (errors.Count > 0) { foreach (var error in errors) Console.WriteLine(error); return 2; }
+        // '|' separates alternative substrings so a baseline can run one memory-bounded phase
+        // of the reviewed queue (the encoding legacy-mb pages hold ~4 GB each) without
+        // overlapping another phase's paths.
+        var terms = filter?.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var paths = applicability["tests"]!.AsArray().OfType<System.Text.Json.Nodes.JsonObject>()
             .Where(HtmlApplicability.IsIncluded)
             .Select(t => t["path"]!.GetValue<string>())
-            .Where(p => filter is null || p.Contains(filter, StringComparison.Ordinal)).Order(StringComparer.Ordinal);
+            .Where(p => terms is null or { Length: 0 } || terms.Any(term => p.Contains(term, StringComparison.Ordinal)))
+            .Order(StringComparer.Ordinal);
         var entries = shard.Apply(paths.SelectMany(Expand)).ToArray();
         if (entries.Length == 0) { Console.WriteLine("html5: no reviewed applicable tests match."); return 2; }
         var identity = ExecutionEvidence.CaptureIdentity();
