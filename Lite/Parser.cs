@@ -5461,11 +5461,54 @@ internal static class Parser
                 }
             }
             if (string.IsNullOrEmpty(raw) || IsIllegalPropertyValue(prop, raw)) continue;
+            // A css-wide keyword on a SHORTHAND sets every longhand to it (§6.2.1: 'inherit'
+            // is valid as the whole value of any property, shorthand included). Without the
+            // expansion the keyword sits on a shorthand the keyword resolver cannot see
+            // (PropertyTable tracks longhands), and the suite's "* { font: inherit }" reset
+            // rules then leak the raw keyword into the font reads — font-family resolved to
+            // the provisioned 'inherit' test font (white-space-normal-003's instruction
+            // paragraph rendered in it), font-size/weight stayed unset.
+            if (ShorthandLonghands.TryGetValue(prop, out var longhands) &&
+                raw.Trim() is "inherit" or "initial" or "unset")
+            {
+                foreach (var longhand in longhands)
+                {
+                    props[longhand] = raw;
+                    if (importantCandidate) important.Add(longhand);
+                }
+                continue;
+            }
             props[prop] = raw;
             if (importantCandidate) important.Add(prop);
         }
         return (props, important);
     }
+
+    /// <summary>CSS 2.1's shorthands and the PropertyTable longhands each expands to when its
+    /// value is a css-wide keyword. Longhands the engine does not track are omitted — the
+    /// keyword resolver would drop them anyway.</summary>
+    private static readonly Dictionary<string, string[]> ShorthandLonghands = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["font"] = new[] { "font-family", "font-size", "font-variant", "font-weight", "font-style", "line-height" },
+        ["background"] = new[] { "background-color", "background-image", "background-attachment", "background-position", "background-repeat" },
+        ["list-style"] = new[] { "list-style-type", "list-style-position", "list-style-image" },
+        ["margin"] = new[] { "margin-top", "margin-right", "margin-bottom", "margin-left" },
+        ["padding"] = new[] { "padding-top", "padding-right", "padding-bottom", "padding-left" },
+        ["border"] = new[]
+        {
+            "border-top-width", "border-right-width", "border-bottom-width", "border-left-width",
+            "border-top-style", "border-right-style", "border-bottom-style", "border-left-style",
+            "border-top-color", "border-right-color", "border-bottom-color", "border-left-color",
+        },
+        ["border-width"] = new[] { "border-top-width", "border-right-width", "border-bottom-width", "border-left-width" },
+        ["border-style"] = new[] { "border-top-style", "border-right-style", "border-bottom-style", "border-left-style" },
+        ["border-color"] = new[] { "border-top-color", "border-right-color", "border-bottom-color", "border-left-color" },
+        ["border-top"] = new[] { "border-top-width", "border-top-style", "border-top-color" },
+        ["border-right"] = new[] { "border-right-width", "border-right-style", "border-right-color" },
+        ["border-bottom"] = new[] { "border-bottom-width", "border-bottom-style", "border-bottom-color" },
+        ["border-left"] = new[] { "border-left-width", "border-left-style", "border-left-color" },
+        ["outline"] = new[] { "outline-color", "outline-style", "outline-width" },
+    };
 
     // Properties whose value grammar forbids negative lengths in CSS 2.1: width and
     // min/max-width (§10.4), height and min/max-height (§10.7), padding (§8.4),

@@ -1854,10 +1854,13 @@ public static class StyleExtensions
             : node.Style.GetPropertyValueSafe(PropertyNames.FontFamily);
         // A css-wide keyword computed into the family (a `font: inherit` shorthand Lite's own
         // cascade stored) is not a family name — resolve it as the inheritance it declares
-        // instead of letting it fall through the matcher to a fallback face.
-        if (value.Trim().Equals("inherit", StringComparison.OrdinalIgnoreCase) && node.Parent is { } parent)
-            return parent.GetFontFamily();
-        if (string.IsNullOrEmpty(value) || value.Trim() is "initial" or "unset" or "none") return "Arial";
+        // instead of letting it fall through the matcher to a fallback face. At the root there
+        // is nothing to inherit: the UA DEFAULT font applies (the probe would happily "match"
+        // the suite's provisioned font literally named 'inherit').
+        var trimmedValue = value.Trim();
+        if (trimmedValue.Equals("inherit", StringComparison.OrdinalIgnoreCase))
+            return node.Parent is { } parent ? parent.GetFontFamily() : "Arial";
+        if (string.IsNullOrEmpty(value) || trimmedValue is "initial" or "unset" or "none") return "Arial";
         return s_fontFamilyCache.GetOrAdd(value, ResolveFontFamilyList);
     }
 

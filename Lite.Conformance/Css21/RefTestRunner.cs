@@ -222,7 +222,20 @@ internal static class RefTestRunner
     internal static int RenderToFile(NavigationRequest request, string outName, int width, int height)
     {
         ConformanceServer.Start();
-        using var bmp = Render(request, width, height);
+        List<Lite.Rendering.PaintLog.Entry> paint;
+        Lite.Rendering.PaintLog.Begin();
+        try { using var bmp = Render(request, width, height); paint = Lite.Rendering.PaintLog.End(); using (bmp) { SaveRender(bmp, request, outName); } }
+        catch { Lite.Rendering.PaintLog.End(); throw; }
+        if (Environment.GetEnvironmentVariable("LITE_RENDER_PAINTLOG") is "1")
+            foreach (var e in paint)
+                Console.WriteLine($"[PAINT] '{Truncate(e.Text)}' x={e.X:F1} y={e.BaselineY:F1} face={e.Typeface} size={e.Size:F1} bold={e.Bold} italic={e.Italic}");
+        return 0;
+
+        static string Truncate(string text) => text.Length > 40 ? text[..40] + "…" : text;
+    }
+
+    private static void SaveRender(SKBitmap bmp, NavigationRequest request, string outName)
+    {
         var dir = ConformancePaths.EnsureArtifacts();
         var path = Path.Combine(dir, outName + ".png");
         using (var image = SKImage.FromBitmap(bmp))
@@ -230,7 +243,6 @@ internal static class RefTestRunner
         using (var stream = File.OpenWrite(path))
             data.SaveTo(stream);
         Console.WriteLine($"rendered {request.Method} {request.Url} -> {path}");
-        return 0;
     }
 
     /// <summary>Loads a page, runs its scripts, then prints the geometry of elements matching
@@ -256,7 +268,8 @@ internal static class RefTestRunner
                         ' offsetW=' + e.offsetWidth + ' offsetH=' + e.offsetHeight +
                         ' offsetLeft=' + e.offsetLeft + ' offsetTop=' + e.offsetTop +
                         ' clientW=' + e.clientWidth + ' clientH=' + e.clientHeight +
-                        ' fontSize=' + cs.fontSize + ' borderTop=' + cs.borderTopWidth +
+                        ' fontSize=' + cs.fontSize + ' fontFamily=' + cs.fontFamily + ' fontWeight=' + cs.fontWeight +
+                        ' borderTop=' + cs.borderTopWidth +
                         ' width=' + cs.width + ' marginTop=' + cs.marginTop +
                         ' paddingTop=' + cs.paddingTop + ' paddingBottom=' + cs.paddingBottom +
                         ' lineHeight=' + cs.lineHeight +
