@@ -75,7 +75,7 @@ namespace AngleSharp.Dom
 
         public IDocument CreateHtmlDocument(String title)
         {
-            var document = new HtmlDocument();
+            var document = new HtmlDocument(_owner.Context);
             document.AppendChild(new DocumentType(document, TagNames.Html));
             document.AppendChild(document.CreateElement(TagNames.Html));
             document.DocumentElement.AppendChild(document.CreateElement(TagNames.Head));
@@ -92,14 +92,14 @@ namespace AngleSharp.Dom
             return document;
         }
 
-        public IDocument CreateDocument(String? namespaceUri, String qualifiedName, IDocumentType? doctype)
+        public IDocument CreateDocument(String? namespaceUri, String? qualifiedName, IDocumentType? doctype)
         {
             // DOM §4.5 createDocument: a new document holding the doctype (if any) and a document
             // element created by createElement in the requested namespace. An empty qualified name
             // creates no document element. The document is an XML document (case-sensitive names,
             // no HTML whitespace/quirks rules), which is what the createElement namespace rules
             // observe.
-            var document = new HtmlDocument();
+            var document = new HtmlDocument(_owner.Context);
             // DOM §4.5: the created document's content type follows the requested namespace —
             // application/xhtml+xml for the HTML namespace, image/svg+xml for SVG, and
             // application/xml otherwise.

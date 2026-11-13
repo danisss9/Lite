@@ -64,6 +64,7 @@ internal sealed class DocumentState(IDocument? document, string address, string 
             var tag = key switch
             {
                 IElement element => element.TagName.ToUpperInvariant(),
+                ICDataSection => "#cdata",
                 IText => "#text",
                 IComment => "#comment",
                 IDocumentType => "#document-type",

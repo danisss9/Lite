@@ -14,6 +14,12 @@ public class JsDocument
     // bound to the source document's element, so there is no <title> element to reflect.
     private string? _title;
     internal bool HasAuthoritativeDom => _document is not null;
+
+    /// <summary>Whether this facade presents the page's own document (as opposed to an
+    /// implementation-created or standalone document, which the Web IDL brand reports as
+    /// Document rather than HTMLDocument).</summary>
+    internal bool IsPageDocument => _document is { } doc && State is { } state && ReferenceEquals(doc, state.Document);
+
     private DocumentState? State => JsEngine.For(_engine)?.DocumentState;
     private JsElement Wrap(INode node) => JsElement.For(_engine, State!.ForDomNode(node));
     private readonly JsHtmlAllCollection _all;
@@ -341,6 +347,17 @@ public class JsDocument
         node.StyleOverrides["display"] = "none";
         node.Attributes["_pi_target"] = target ?? string.Empty;
         return JsElement.For(_engine, node);
+    }
+
+    /// <summary>document.createCDATASection(data) — a CDATA section node. CDATA sections exist
+    /// only in XML documents: an HTML document raises NotSupportedError (DOM §3.6); an XML
+    /// document (new Document(), implementation.createDocument) creates one.</summary>
+    public JsElement createCDATASection(string data)
+    {
+        if (_document is null || IsPageDocument)
+            throw JsErrors.Dom(_engine, "NotSupportedError",
+                "Failed to execute 'createCDATASection' on 'Document': This document is not XML.");
+        return Wrap(_document.CreateCDataSection(data ?? string.Empty));
     }
 
     /// <summary>document.createAttribute(name) — a detached Attr to attach via setAttributeNode.</summary>
@@ -1002,10 +1019,13 @@ public class JsDocument
     /// <summary>The engine tree's root node, for walkers rooted at the document itself.</summary>
     internal LayoutNode RootNode => _root;
 
-    /// <summary>document.location — same object as window.location.</summary>
-    public JsLocation? location => JsEngine.For(_engine)?.Location;
+    /// <summary>document.location — same object as window.location. A document without a
+    /// browsing context (implementation-created, new Document()) reads null.</summary>
+    public JsLocation? location => _document is { } doc && !IsPageDocument ? null : JsEngine.For(_engine)?.Location;
 
-    public string URL => JsEngine.For(_engine)?.CurrentUrl ?? Parser.BaseUrl ?? "";
+    public string URL => _document is { } doc && !IsPageDocument
+        ? "about:blank" // DOM §3.5: documents without a browsing context are at about:blank
+        : JsEngine.For(_engine)?.CurrentUrl ?? Parser.BaseUrl ?? "";
     public string domain
     {
         get
@@ -1130,6 +1150,116 @@ public class JsDocument
 
     public string compatMode => _document?.CompatMode ?? "CSS1Compat";
 
+    /// <summary>document.documentURI — the document's URL as a string (DOM §3.5); same value
+    /// as document.URL.</summary>
+    public string documentURI => URL;
+
+    // ---- document-node mutation (DOM §4.4): doctype/PI/comment/element appends at the
+    // document level. The dom/common.js setup appends elements and PIs to implementation-
+    // created documents; the page document never needed these before. ----
+
+    private DocumentState? StateOrNull => JsEngine.For(_engine)?.DocumentState;
+
+    private JsElement WrapNode(INode node)
+    {
+        var state = StateOrNull ?? throw new InvalidOperationException("The engine has no document state.");
+        return JsElement.For(_engine, state.ForDomNode(node));
+    }
+
+    /// <summary>document.appendChild(node): a doctype appends before the document element, an
+    /// element becomes the document element when none exists, PI/comment appends freely;
+    /// anything else raises HierarchyRequestError (DOM §4.4).</summary>
+    public JsElement appendChild(JsElement child)
+    {
+        if (_document is not { } document || child.Node.DomNode is not { } dom)
+            throw JsErrors.Dom(_engine, "HierarchyRequestError", "The node cannot be appended to this document.");
+        switch (dom)
+        {
+            case IDocumentType when document.Doctype is not null:
+                throw JsErrors.Dom(_engine, "HierarchyRequestError", "This document already has a doctype.");
+            case IElement when document.DocumentElement is not null:
+                throw JsErrors.Dom(_engine, "HierarchyRequestError", "This document already has a document element.");
+            case IElement or IDocumentType or IProcessingInstruction or IComment:
+                document.AppendChild(dom);
+                break;
+            default:
+                throw JsErrors.Dom(_engine, "HierarchyRequestError", "This node cannot be a child of a document.");
+        }
+        return child;
+    }
+
+    /// <summary>document.insertBefore(node, ref): document-level insertion before the given
+    /// child (DOM §4.4).</summary>
+    public JsElement insertBefore(JsElement child, JsElement? reference)
+    {
+        if (_document is not { } document || child.Node.DomNode is not { } dom)
+            throw JsErrors.Dom(_engine, "HierarchyRequestError", "The node cannot be inserted into this document.");
+        if (reference is not { } refElement || refElement.Node.DomNode is not { } refDom ||
+            !ReferenceEquals(refDom.Parent, document))
+            throw JsErrors.Dom(_engine, "NotFoundError", "The reference node is not a child of this document.");
+        switch (dom)
+        {
+            case IElement when document.DocumentElement is not null &&
+                !ReferenceEquals(document.DocumentElement, dom):
+                throw JsErrors.Dom(_engine, "HierarchyRequestError", "This document already has a document element.");
+            case IElement or IDocumentType or IProcessingInstruction or IComment:
+                document.InsertBefore(dom, refDom);
+                break;
+            default:
+                throw JsErrors.Dom(_engine, "HierarchyRequestError", "This node cannot be a child of a document.");
+        }
+        return child;
+    }
+
+    /// <summary>document.removeChild(child): document-level removal (DOM §4.4).</summary>
+    public JsElement removeChild(JsElement? child)
+    {
+        if (_document is not { } document || child is not { } childElement ||
+            childElement.Node.DomNode is not { } dom || !ReferenceEquals(dom.Parent, document))
+            throw JsErrors.Dom(_engine, "NotFoundError", "The node to be removed is not a child of this document.");
+        document.RemoveChild(dom);
+        return childElement;
+    }
+
+    /// <summary>The document element's wrapper: the authoritative document's element when the
+    /// facade has one, otherwise the projection root's first element child.</summary>
+    private JsElement? DocumentElementWrapper()
+    {
+        if (_document?.DocumentElement is { } domElement && State is { } state)
+            return JsElement.For(_engine, state.ForDomNode(domElement));
+        if (_root.Children.Count > 0 && _root.Children[0].TagName != "#document-type")
+            return JsElement.For(_engine, _root.Children[0]);
+        return null;
+    }
+
+    /// <summary>document.lookupNamespaceURI(prefix): the document delegates to its document
+    /// element; a document without one resolves null (DOM §3.7).</summary>
+    public string? lookupNamespaceURI(JsValue? prefix) => DocumentElementWrapper()?.lookupNamespaceURI(prefix);
+
+    /// <summary>document.isDefaultNamespace(namespace): delegates to the document element; a
+    /// document with no document element is in the default (empty) namespace.</summary>
+    public bool isDefaultNamespace(JsValue? namespaceUri)
+    {
+        var wrapper = DocumentElementWrapper();
+        if (wrapper is null)
+            return namespaceUri is null || namespaceUri.IsUndefined() || namespaceUri.IsNull() ||
+                namespaceUri.ToString() == "";
+        return wrapper.isDefaultNamespace(namespaceUri);
+    }
+
+    /// <summary>document.lookupPrefix(namespace): delegates to the document element.</summary>
+    public string? lookupPrefix(JsValue? namespaceUri) => DocumentElementWrapper()?.lookupPrefix(namespaceUri);
+
+    /// <summary>document.isEqualNode(other) / isSameNode(other): the document node compares
+    /// through its document-rooted LayoutNode (DOM §4.2).</summary>
+    public bool isEqualNode(JsValue? other) =>
+        other is not null && !other.IsUndefined() && !other.IsNull() &&
+        JsElement.NodeOf(_engine, other) == _root && other.ToObject() is JsDocument;
+
+    public bool isSameNode(JsValue? other) =>
+        other is not null && !other.IsUndefined() && !other.IsNull() &&
+        other.ToObject() is JsDocument && ReferenceEquals(other.ToObject(), this);
+
     /// <summary>DOM Normalizer on the document: merges adjacent text nodes everywhere.</summary>
     public void normalize() => JsElement.NormalizeNode(_root);
 
@@ -1214,4 +1344,13 @@ public class JsDocument
         }
         return results;
     }
+}
+
+/// <summary>The `new Document()` facade: an XML document (application/xml) with no doctype
+/// and no document element (DOM §3.5's create-a-Document), distinct from the page document so
+/// the Web IDL brand resolves to Document rather than HTMLDocument.</summary>
+public class JsStandaloneDocument : JsDocument
+{
+    internal JsStandaloneDocument(Engine engine, LayoutNode root, IDocument document)
+        : base(engine, root, document) { }
 }

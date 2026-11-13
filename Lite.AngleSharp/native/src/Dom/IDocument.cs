@@ -291,6 +291,17 @@ namespace AngleSharp.Dom
         IText CreateTextNode(String data);
 
         /// <summary>
+        /// Creates a new CDATA section node with the given content. XML documents only:
+        /// an HTML document cannot contain CDATA sections.
+        /// </summary>
+        /// <param name="data">
+        /// A string containing the data to be put in the CDATA section.
+        /// </param>
+        /// <returns>The created CDATA section node.</returns>
+        [DomName("createCDATASection")]
+        ICDataSection CreateCDataSection(String data);
+
+        /// <summary>
         /// Creates a new NodeIterator object.
         /// </summary>
         /// <param name="root">

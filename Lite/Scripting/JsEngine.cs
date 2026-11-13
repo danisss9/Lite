@@ -430,6 +430,12 @@ internal class JsEngine : IDisposable
         _engine.SetValue("KeyboardEvent", typeof(JsEvent));
         _engine.SetValue("WheelEvent", typeof(JsEvent));
         _engine.SetValue("PointerEvent", typeof(JsEvent));
+        // The remaining UIEvent subinterfaces the reviewed clusters construct directly
+        // (uievents/inputevent-constructor, Event-subclasses-init).
+        _engine.SetValue("InputEvent", typeof(JsEvent));
+        _engine.SetValue("FocusEvent", typeof(JsEvent));
+        _engine.SetValue("CompositionEvent", typeof(JsEvent));
+        _engine.SetValue("TextEvent", typeof(JsEvent));
 
         // EventTarget base interface — constructible (new EventTarget()) with its own listener list.
         _engine.SetValue("EventTarget", typeof(Dom.JsEventTarget));
@@ -489,6 +495,12 @@ internal class JsEngine : IDisposable
             s => System.Text.Encoding.UTF8.GetBytes(s).Select(b => (double)b).ToArray()));
         _engine.SetValue("__textDecodeUtf8", new Func<double[], string>(
             bytes => System.Text.Encoding.UTF8.GetString(bytes.Select(Convert.ToByte).ToArray())));
+
+        // ---- The constructible Document/Range interface objects ----
+        // The interface bootstrap adopts existing functions, so defining them as plain JS
+        // functions BEFORE InstallInterfaceObjects wires Document.prototype/Range.prototype
+        // onto the real interface prototypes (instanceof, getPrototypeOf, constructor).
+        _engine.SetValue("__lite_newDocument", new Func<object>(() => Dom.JsDomImplementation.NewStandaloneDocument(_engine)));
 
         // ---- JS-side shims: fetch() Promise wrapper + queueMicrotask polyfill ----
         _engine.Execute(HostShim);
@@ -719,6 +731,16 @@ internal class JsEngine : IDisposable
           globalThis.Worker = class Worker {
             constructor(url) { return __createWorker(String(url)); }
           };
+          // Constructible Document/Range (DOM §3.5, §5): the bootstrap's ctors loop adopts
+          // these plain functions and wires the real interface prototypes. `new Document()`
+          // builds an XML document through __lite_newDocument; `new Range()` returns the
+          // document's range (start/end at the document, offset 0 per §5's Range constructor).
+          if (typeof globalThis.Document !== 'function') {
+            globalThis.Document = function Document() { return __lite_newDocument(); };
+          }
+          if (typeof globalThis.Range !== 'function') {
+            globalThis.Range = function Range() { return document.createRange(); };
+          }
           if (typeof globalThis.queueMicrotask !== 'function') {
             globalThis.queueMicrotask = function (cb) { Promise.resolve().then(cb); };
           }

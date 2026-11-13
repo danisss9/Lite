@@ -12,7 +12,6 @@ public class JsDomImplementation
 {
     private readonly Engine _engine;
     private readonly IDocument? _document;
-
     internal JsDomImplementation(Engine engine, IDocument? document)
     {
         _engine = engine;
@@ -34,7 +33,7 @@ public class JsDomImplementation
 
     /// <summary>DOM §4.5 createDocument: a new document in the given namespace whose document
     /// element is <paramref name="qualifiedName"/> (an empty name creates no root).</summary>
-    public object? createDocument(string? namespaceUri, string qualifiedName, object? doctype)
+    public object? createDocument(string? namespaceUri, string? qualifiedName, object? doctype = null)
     {
         if (_document is not { } document) return null;
         var created = document.Implementation.CreateDocument(namespaceUri, qualifiedName, doctype as IDocumentType);
@@ -59,6 +58,22 @@ public class JsDomImplementation
             ? state.ForDomNode(element)
             : new LayoutNode(null, "HTML", string.Empty, JsEngine.For(_engine)!.DocumentFacade.RootNode.Style);
         return new JsDocument(_engine, root, created);
+    }
+
+    /// <summary>The `new Document()` factory (DOM §3.5's create-a-Document): an XML document
+    /// (application/xml) with no doctype and no document element, URL about:blank. Created from
+    /// the source document's implementation, so the created document is a real AngleSharp
+    /// document whose nodes are ordinary wrappers; the facade is a <see cref="JsStandaloneDocument"/>
+    /// so the Web IDL brand reads Document, not HTMLDocument.</summary>
+    internal static JsStandaloneDocument NewStandaloneDocument(Engine engine)
+    {
+        var state = JsEngine.For(engine)?.DocumentState
+            ?? throw new InvalidOperationException("The engine has no document state.");
+        var created = state.Document.Implementation.CreateDocument(null, "", null);
+        var root = created.DocumentElement is { } element
+            ? state.ForDomNode(element)
+            : new LayoutNode(null, "HTML", string.Empty, JsEngine.For(engine)!.DocumentFacade.RootNode.Style);
+        return new JsStandaloneDocument(engine, root, created);
     }
 
     private object? Wrap(INode node) => State is { } state ? JsElement.For(_engine, state.ForDomNode(node)) : null;

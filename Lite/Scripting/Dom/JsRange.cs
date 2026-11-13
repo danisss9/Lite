@@ -32,13 +32,13 @@ public class JsRange
     internal (LayoutNode Node, int Offset) Start => (StartNodeField, StartOffsetField);
     internal (LayoutNode Node, int Offset) End => (EndNodeField, EndOffsetField);
 
-    public JsElement? startContainer => Wrap(StartNodeField);
+    public object? startContainer => Wrap(StartNodeField);
     public int startOffset => StartOffsetField;
-    public JsElement? endContainer => Wrap(EndNodeField);
+    public object? endContainer => Wrap(EndNodeField);
     public int endOffset => EndOffsetField;
     public bool collapsed => ReferenceEquals(StartNodeField, EndNodeField) && StartOffsetField == EndOffsetField;
 
-    public JsElement? commonAncestorContainer
+    public object? commonAncestorContainer
     {
         get
         {
@@ -50,18 +50,54 @@ public class JsRange
         }
     }
 
-    internal JsElement? Wrap(LayoutNode node) => JsElement.For(JsEngine.For(_engine)!.RawEngine, node);
-
-    public void setStart(JsElement node, int offset)
+    /// <summary>The boundary-point container wrapper: a document-rooted position presents the
+    /// document facade itself (DOM4 §5's startContainer "the Document"), other nodes wrap as
+    /// elements.</summary>
+    internal object? Wrap(LayoutNode node)
     {
-        StartNodeField = node.Node;
+        var jsEngine = JsEngine.For(_engine)!;
+        if (node == jsEngine.DocumentFacade?.RootNode) return jsEngine.DocumentFacade;
+        return JsElement.For(jsEngine.RawEngine, node);
+    }
+
+    /// <summary>The LayoutNode a boundary argument refers to: element wrappers carry their own
+    /// node; the document facade is the document-rooted node.</summary>
+    internal LayoutNode NodeOf(JsValue? value)
+    {
+        var obj = value?.ToObject();
+        if (obj is JsElement element) return element.Node;
+        if (obj is JsDocument document) return document.RootNode;
+        throw JsErrors.Dom(_engine, "TypeError", "The value is not a Node.");
+    }
+
+    public void setStart(JsValue node, int offset)
+    {
+        StartNodeField = NodeOf(node);
         StartOffsetField = Math.Max(0, offset);
         CollapseIfNeeded();
     }
 
-    public void setEnd(JsElement node, int offset)
+    public void setEnd(JsValue node, int offset)
     {
-        EndNodeField = node.Node;
+        EndNodeField = NodeOf(node);
+        EndOffsetField = Math.Max(0, offset);
+        CollapseIfNeeded();
+    }
+
+    private void SetStart(LayoutNode node, int offset)
+    {
+        StartNodeField = node;
+        StartOffsetField = Math.Max(0, offset);
+        CollapseIfNeeded();
+    }
+
+    /// <summary>The direct node+offset entry for internal callers (selection's editing range)
+    /// that already hold a LayoutNode.</summary>
+    internal void SetStartDirect(LayoutNode node, int offset) => SetStart(node, offset);
+
+    private void SetEnd(LayoutNode node, int offset)
+    {
+        EndNodeField = node;
         EndOffsetField = Math.Max(0, offset);
         CollapseIfNeeded();
     }
@@ -69,25 +105,25 @@ public class JsRange
     public void setStartBefore(JsElement node)
     {
         if (node.Node.Parent is not { } parent) throw JsErrors.Dom(_engine, "InvalidNodeTypeError", "No parent.");
-        setStart(Wrap(parent), parent.Children.IndexOf(node.Node));
+        SetStart(parent, parent.Children.IndexOf(node.Node));
     }
 
     public void setStartAfter(JsElement node)
     {
         if (node.Node.Parent is not { } parent) throw JsErrors.Dom(_engine, "InvalidNodeTypeError", "No parent.");
-        setStart(Wrap(parent), parent.Children.IndexOf(node.Node) + 1);
+        SetStart(parent, parent.Children.IndexOf(node.Node) + 1);
     }
 
     public void setEndBefore(JsElement node)
     {
         if (node.Node.Parent is not { } parent) throw JsErrors.Dom(_engine, "InvalidNodeTypeError", "No parent.");
-        setEnd(Wrap(parent), parent.Children.IndexOf(node.Node));
+        SetEnd(parent, parent.Children.IndexOf(node.Node));
     }
 
     public void setEndAfter(JsElement node)
     {
         if (node.Node.Parent is not { } parent) throw JsErrors.Dom(_engine, "InvalidNodeTypeError", "No parent.");
-        setEnd(Wrap(parent), parent.Children.IndexOf(node.Node) + 1);
+        SetEnd(parent, parent.Children.IndexOf(node.Node) + 1);
     }
 
     public void collapse(bool toStart = true)
@@ -115,10 +151,13 @@ public class JsRange
 
     private void CollapseIfNeeded()
     {
-        // Start after end: collapse to the later point.
+        // Start after end (DOM §5.7 setStart / §5.8 setEnd): the END moves to the new START —
+        // the range collapses to the later point. Copying the end into the start instead
+        // collapsed to the earlier point and the setStart sanity checks in the Range suite
+        // read the wrong container.
         if (DocumentOrder(StartNodeField, StartOffsetField, EndNodeField, EndOffsetField) > 0)
         {
-            (StartNodeField, StartOffsetField) = (EndNodeField, EndOffsetField);
+            (EndNodeField, EndOffsetField) = (StartNodeField, StartOffsetField);
         }
     }
 

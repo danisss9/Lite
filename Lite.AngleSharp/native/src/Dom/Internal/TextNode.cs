@@ -6,7 +6,7 @@ namespace AngleSharp.Dom
     /// <summary>
     /// Represents a text node.
     /// </summary>
-    sealed class TextNode : CharacterData, IText
+    class TextNode : CharacterData, IText
     {
         #region ctor
 
@@ -17,6 +17,11 @@ namespace AngleSharp.Dom
 
         internal TextNode(Document owner, String text)
             : base(owner, "#text", NodeType.Text, text)
+        {
+        }
+
+        internal TextNode(Document owner, String name, NodeType type, String text)
+            : base(owner, name, type, text)
         {
         }
 
