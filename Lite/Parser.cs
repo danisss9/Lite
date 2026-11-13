@@ -105,6 +105,7 @@ internal static class Parser
     /// service's evaluation entry point deliberately no-ops.</summary>
     internal static IConfiguration ParseConfiguration(int width, int height) => Configuration.Default
         .WithCss()
+        .Without<AngleSharp.Browser.EncodingMetaHandler>()
         .With(new ScriptingFlagOnlyService())
         .WithRenderDevice(new DefaultRenderDevice
         {
@@ -117,6 +118,7 @@ internal static class Parser
     /// <summary>Device-less variant for pre-page fragment parses (see ParseFragmentCore).</summary>
     private static IConfiguration ParseConfiguration() => Configuration.Default
         .WithCss()
+        .Without<AngleSharp.Browser.EncodingMetaHandler>()
         .With(new ScriptingFlagOnlyService())
         .WithRenderDevice();
 
@@ -279,9 +281,14 @@ internal static class Parser
         // character-encoding-003..017 stop matching). The wire decode already happened in
         // EncodingSniffer, so the declaration now describes OUR bytes: align it with UTF-8
         // and the parser's re-decode is a lossless no-op.
-        if (!Current.IsXmlDocument)
-            html = AlignMetaCharset(html, "utf-8");
-        else
+        // The parse configuration drops the encoding meta handler, so AngleSharp never
+        // re-decodes on a declared charset - the alignment rewrite (which mutated the DOM
+        // observably: the tree-construction corpus's charset="utf8" cases read the REWRITTEN
+        // attribute) is no longer needed. The XML declaration's encoding pseudo-attribute is
+        // honored by the XML parser itself, not through the meta handler, so it still needs
+        // the alignment: the string was already decoded with the transport charset, and a
+        // non-UTF-8 declaration would double-decode every non-ASCII attribute.
+        if (Current.IsXmlDocument)
             // The XML parser mirrors the HTML one: it re-encodes the string content and honors
             // the XML declaration's encoding pseudo-attribute over those bytes. The string was
             // already decoded with the transport charset (§4.4: HTTP wins), so the declaration
@@ -981,8 +988,6 @@ internal static class Parser
             // tree walk overflowed its stack (worker exit 0xC00000FD).
             if (Current.IsXmlDocument)
                 html = AlignXmlDeclarationCharset(html, "utf-8");
-            else
-                html = AlignMetaCharset(html, "utf-8");
             var parsedSource = NormalizeImportantBangs(html);
             Current.Source = parsedSource;
             Current.SourceCursor = 0;
