@@ -2680,6 +2680,22 @@ internal static class BoxEngine
                 continue;
             }
 
+            // §9.5: a float met mid-run registers as an active float at the CURRENT line box's
+            // top (rule 4: the float's top aligns with the line box it was generated in), beside
+            // the band's start or end edge per its side, and the line's remaining width shrinks
+            // beside it. The float's node lays out its own content here; the line loop continues
+            // with the narrowed band.
+            if (item.Kind == InlineItemKind.Float)
+            {
+                PlaceInRunFloat(item, floats, originX, originY, lineY, lineX,
+                                Math.Max(maxAbove + maxBelow, strutAbove + strutBelow), maxWidth,
+                                viewportWidth, viewportHeight, bandLeft);
+                var (nbx, nbw) = AvailableBand(floats, originY + lineY, 1, originX, maxWidth);
+                bandLeft = nbx - originX;
+                bandRight = bandLeft + nbw;
+                continue;
+            }
+
             // A whitespace-only text item that would cross the line's end collapses there
             // (§16.6.1): it must neither wrap onto a fabricated line box nor commit one — the
             // green overlay in the white-space band grew a ~45px phantom line from exactly this.
@@ -2735,8 +2751,14 @@ internal static class BoxEngine
                 var (fitLs, fitWsp) = TextMeasure.SpacingOf(item.Node);
                 fitWidth = TextMeasure.MeasureSingleLine(fitText.TrimEndCss(), fitFont, -1f, fitLs, fitWsp).Width;
             }
+            if (Environment.GetEnvironmentVariable("LITE_TRACE_LINE") == "1")
+                File.AppendAllText("line-trace.txt",
+                    $"item[{itemIndex}] '{item.Text}' w={item.Width:F0} fit={fitWidth:F0} lineX={lineX:F0} band=[{bandLeft:F0},{bandRight:F0}] overflow={lineX + fitWidth > bandRight}\n");
             if (lineX > bandLeft && lineX + fitWidth > bandRight)
             {
+                if (Environment.GetEnvironmentVariable("LITE_TRACE_LINE") == "1")
+                    File.AppendAllText("line-trace.txt",
+                        $"  -> breakAllowed={BreakAllowedBefore(placed, lineStart, item)} split={SplitAtFirstOpportunity(items, itemIndex)}\n");
                 if (BreakAllowedBefore(placed, lineStart, item))
                     CommitLine();
                 else if (SplitAtFirstOpportunity(items, itemIndex) )
@@ -2787,6 +2809,32 @@ internal static class BoxEngine
                     using (var stripFont = TextMeasure.CreateFont(item.Node))
                         item = item with { Text = stripped, Width = stripFont.MeasureText(stripped),
                                        ContentW = stripFont.MeasureText(stripped) };
+                }
+            }
+
+            // §16.6.1: consecutive collapsible spaces across an inline boundary collapse to
+            // one — the previous item's trailing space has already advanced the line, so this
+            // item's leading space must not render a second one (float-nowrap-3's 'my parent.'
+            // sat one ch right of the reference's). Preserved spaces (pre/pre-wrap) stay.
+            if (lineX > bandLeft && item.Kind == InlineItemKind.Text && item.Text is { Length: > 0 } lt &&
+                char.IsWhiteSpace(lt[0]) &&
+                item.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+            {
+                for (var k = placed.Count - 1; k >= lineStart; k--)
+                {
+                    var pit = placed[k].item;
+                    if (pit.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow or InlineItemKind.Float) continue;
+                    if (pit.Kind == InlineItemKind.Text && pit.Text is { Length: > 0 } pt &&
+                        char.IsWhiteSpace(pt[^1]) &&
+                        pit.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+                    {
+                        var stripped = lt.TrimStartCss();
+                        if (stripped.Length == 0) continue;
+                        using (var stripFont = TextMeasure.CreateFont(item.Node))
+                            item = item with { Text = stripped, Width = stripFont.MeasureText(stripped),
+                                           ContentW = stripFont.MeasureText(stripped) };
+                    }
+                    break;
                 }
             }
 
@@ -3060,10 +3108,18 @@ internal static class BoxEngine
 
     private static bool BreakBetween(InlineItem prev, InlineItem next)
     {
-        if (next.Kind == InlineItemKind.Text && next.Text is { Length: > 0 } nt && IsBreakSpace(nt[0]))
-            return WrapsLines(next.Node);
-        if (prev.Kind == InlineItemKind.Text && prev.Text is { Length: > 0 } pt && IsBreakSpace(pt[^1]))
-            return WrapsLines(prev.Node);
+        // The space checks consult BOTH sides before deciding: the whitespace between two
+        // inline siblings collapses across the boundary, and the soft wrap opportunity
+        // survives when EITHER element's own space allows it. Checking the next side alone
+        // suppressed every break into a white-space: nowrap span whose leading space sat
+        // next to a normal element's breakable trailing space (float-nowrap-3: 'Some' plus a
+        // nowrap span never wrapped, the whole line overflowed and its nested float vanished).
+        if (next.Kind == InlineItemKind.Text && next.Text is { Length: > 0 } nt && IsBreakSpace(nt[0]) &&
+            WrapsLines(next.Node))
+            return true;
+        if (prev.Kind == InlineItemKind.Text && prev.Text is { Length: > 0 } pt && IsBreakSpace(pt[^1]) &&
+            WrapsLines(prev.Node))
+            return true;
         if (IsAtomicInline(next)) return WrapsLines(next.Node.Parent ?? next.Node) && (prev.Kind != InlineItemKind.Text || WrapsLines(prev.Node));
         if (IsAtomicInline(prev)) return WrapsLines(prev.Node.Parent ?? prev.Node) && (next.Kind != InlineItemKind.Text || WrapsLines(next.Node));
         return false;
@@ -3460,6 +3516,117 @@ internal static class BoxEngine
         return TextMeasure.MeasureSingleLine(slice, font, -1f, ls, wsp).Width;
     }
 
+    /// <summary>Lays out a float met inside an inline run: the node's content (a subtree or a
+    /// text run) lays out at the float's box, and the returned active float narrows every band
+    /// from the float's top down. Sizing follows §10.3.5 (explicit width or shrink-to-fit,
+    /// clamped by min/max); the Y placement follows §9.5.1 rule 4 — the float's top aligns
+    /// with the current line box's top.</summary>
+    private static void PlaceInRunFloat(InlineItem item, List<ActiveFloat> floats,
+        float originX, float originY, float lineY, float lineX, float lineHeight, float maxWidth,
+        float viewportWidth, float viewportHeight, float bandLeft)
+    {
+        var node = item.Node!;
+        var side = node.GetFloat();
+        var fontSize = node.GetFontSize();
+        var margin = node.GetMargin(maxWidth, viewportHeight, fontSize);
+        var padding = node.GetPadding(maxWidth, viewportHeight, fontSize);
+        var border = node.GetBorderWidth();
+
+        // §10.3.5 sizing: explicit width or shrink-to-fit, clamped by min/max (the same
+        // discipline the direct-child float path applies).
+        var hasExplicitW = !node.IsAutoWidth();
+        var explicitW = hasExplicitW ? node.GetWidth(maxWidth) : 0f;
+        float childContentW;
+        if (hasExplicitW)
+        {
+            var isBB = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
+            childContentW = isBB
+                ? Math.Max(0, explicitW - border.Left - border.Right - padding.Left - padding.Right)
+                : explicitW;
+        }
+        else
+        {
+            var maxAvail = Math.Max(0f, maxWidth - margin.Left - margin.Right - border.Left - border.Right - padding.Left - padding.Right);
+            childContentW = IntrinsicSizer.ShrinkToFit(node, maxAvail, viewportHeight);
+        }
+        var isBBW = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
+        var maxW = node.GetMaxWidth(maxWidth, fontSize);
+        if (maxW < float.PositiveInfinity)
+            childContentW = Math.Min(childContentW,
+                isBBW ? Math.Max(0f, maxW - border.Left - border.Right - padding.Left - padding.Right) : maxW);
+        var minW = node.GetMinWidth(maxWidth, fontSize);
+        if (minW > 0f)
+            childContentW = Math.Max(childContentW,
+                isBBW ? Math.Max(0f, minW - border.Left - border.Right - padding.Left - padding.Right) : minW);
+        childContentW = Math.Max(0, childContentW);
+        var outerW = margin.Left + border.Left + padding.Left + childContentW + padding.Right + border.Right + margin.Right;
+
+        // The float's box: beside the band's end edge for its side, at the current line's top
+        // (§9.5.1 rules 4-5: as high as the line permits, as far to its side as possible). When
+        // the float would overlap the line's already-placed content (the content's extent
+        // reaches past the float's inner edge — the overflowing nowrap line), it drops below
+        // the line box (§9.5.1: a float never overlaps the line's content).
+        var (bx, bw) = AvailableBand(floats, originY + lineY, 1, originX, maxWidth);
+        float outerLeft;
+        float outerRight;
+        if (side == FloatType.Right)
+        {
+            outerRight = bx + bw;
+            outerLeft = outerRight - outerW;
+        }
+        else
+        {
+            outerLeft = bx;
+            outerRight = outerLeft + outerW;
+        }
+        var outerTop = originY + lineY;
+        var contentLeftAbs = originX + bandLeft;
+        var contentRightAbs = originX + lineX;
+        if (outerLeft < contentRightAbs && outerRight > contentLeftAbs && contentRightAbs > contentLeftAbs)
+            outerTop = originY + lineY + lineHeight;
+        var placeContentX = outerLeft + margin.Left + border.Left + padding.Left;
+        var placeContentY = outerTop + margin.Top + border.Top + padding.Top;
+
+        var explicitH = node.GetHeight(0, 0, viewportHeight);
+        float childContentH;
+        if (explicitH > 0)
+        {
+            var isBBH = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
+            childContentH = isBBH
+                ? Math.Max(0, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
+                : explicitH;
+        }
+        else
+        {
+            childContentH = LayoutChildren(node.Children, placeContentX, placeContentY,
+                childContentW, viewportWidth, viewportHeight, 0);
+            if (childContentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
+            {
+                using var font = TextMeasure.CreateFont(node);
+                var lh = node.GetLineHeight(fontSize);
+                var lines = TextMeasure.WrapText(node.RenderedText(), Math.Max(childContentW, 1f),
+                    font, node.GetWhiteSpace(), lh);
+                childContentH = lines.Sum(l => l.Height);
+            }
+        }
+        if (explicitH > 0 && node.Style.GetPropertyValueSafe("box-sizing") != "border-box")
+            childContentH = explicitH;
+
+        node.Box = new BoxDimensions
+        {
+            ContentBox = new SKRect(placeContentX, placeContentY,
+                                    placeContentX + childContentW, placeContentY + childContentH),
+            Padding = padding,
+            Border = border,
+            Margin = margin,
+        };
+
+        floats.Add(new ActiveFloat(
+            outerLeft, outerTop,
+            outerRight, outerTop + margin.Top + border.Top + padding.Top + childContentH + padding.Bottom + border.Bottom + margin.Bottom,
+            side, 0, node));
+    }
+
     /// <summary>
     /// Recursively extracts a flat list of InlineItems from inline nodes.
     /// </summary>
@@ -3481,6 +3648,19 @@ internal static class BoxEngine
             if (nodePos == PositionType.Absolute || nodePos == PositionType.Fixed)
             {
                 items.Add(new InlineItem(InlineItemKind.OutOfFlow, node, null, 0, 0,
+                           default, default, default, 0, 0, 0));
+                continue;
+            }
+
+            // §9.5: a floated element met INSIDE an inline subtree (a span wrapping a float) is
+            // out of the line's flow just like a direct-child float — it rides as a marker item
+            // and the line loop registers it as an active float at the current line box's top.
+            // Without this the run collection fell through every branch (an empty floated span
+            // has neither text nor children) and the float never laid out or painted
+            // (float-nowrap-3's nested .float span vanished).
+            if (node.GetFloat() != FloatType.None)
+            {
+                items.Add(new InlineItem(InlineItemKind.Float, node, null, 0, 0,
                            default, default, default, 0, 0, 0));
                 continue;
             }
@@ -3992,7 +4172,7 @@ internal static class BoxEngine
     /// line position it lands on is the box's static position (§10.3.7 / §10.6.4).</summary>
     /// <summary><see cref="InlineEdge"/> is the leading or trailing margin+border+padding of a
     /// non-replaced inline box: it advances the line but has no height of its own (§8.4).</summary>
-    private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, InlineTable, LineBreak, OutOfFlow, InlineEdge }
+    private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, InlineTable, LineBreak, OutOfFlow, InlineEdge, Float }
 
     /// <summary><see cref="Ascent"/> is the distance from this item's own top (margin edge) down
     /// to the baseline it should align on (CSS 2.1 §10.8). Text uses the font's half-leading
