@@ -1437,11 +1437,29 @@ internal static class TableEngine
             }
             else
             {
-                var text = preserves ? raw
-                    : string.Join(' ', raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-                max = font.MeasureText(text);
-                foreach (var word in text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
-                    min = Math.Max(min, font.MeasureText(word));
+                // Under pre / pre-wrap the newlines are the only forced breaks (§16.6): the
+                // intrinsic max-content is the widest HARD line. Measuring the whole raw text
+                // as one unbroken string measured every line's total (white-space-pre-001's
+                // cell grew to the full container width against a 21-char widest line).
+                if (preserves)
+                {
+                    foreach (var line in raw.Split('\n'))
+                    {
+                        var w = font.MeasureText(line);
+                        max = Math.Max(max, w);
+                        if (ws == WhiteSpace.PreWrap)
+                            foreach (var word in line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                                min = Math.Max(min, font.MeasureText(word));
+                    }
+                    if (ws == WhiteSpace.Pre) min = max; // pre never wraps: min = max
+                }
+                else
+                {
+                    var text = string.Join(' ', raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+                    max = font.MeasureText(text);
+                    foreach (var word in text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                        min = Math.Max(min, font.MeasureText(word));
+                }
             }
         }
         float runMin = 0f, runMax = 0f;
