@@ -2455,7 +2455,10 @@ internal static class BoxEngine
         // CSS 2.1 §16.2 / UAX #9 subset: a block carrying an active RTL override renders its
         // inline content in reverse visual order — the top-level child sequence reverses here
         // (keyed on the container only: an inline override further down reverses its OWN
-        // content, not its siblings), and each text leaf reverses through RenderedText.
+        // content, not its siblings), and each text leaf reverses through RenderedText. The
+        // legacy reversal owns every override scope: the paragraph pass reproduces the
+        // character reversal but the twin-walk shapes assert the legacy's line geometry
+        // (bidi-box-model, the unicode-bidi-applies-to families), so the routing stays.
         if (nodes.Count > 0 && nodes[0].Parent is { } runBlock && runBlock.BidiIsRtlOverride())
             nodes = nodes.AsEnumerable().Reverse().ToList();
         CollectInlineItems(nodes, items, firstW, viewportWidth, viewportHeight);
@@ -3164,7 +3167,7 @@ internal static class BoxEngine
     /// — they push whatever follows along the line — while its vertical ones do not affect the
     /// line box's height. Returns the widths to reserve before and after the box's own content.
     /// </summary>
-    private static (float Leading, float Trailing) InlineBoxEdges(
+    internal static (float Leading, float Trailing) InlineBoxEdges(
         LayoutNode node, float maxWidth, float viewportHeight)
     {
         // Anonymous boxes (#text and friends) resolve their styles from the element they came
@@ -3192,6 +3195,27 @@ internal static class BoxEngine
         var left = (node.IsAutoMarginLeft() ? 0f : margin.Left) + padding.Left + border.Left;
         var right = (node.IsAutoMarginRight() ? 0f : margin.Right) + padding.Right + border.Right;
         return (left, right);
+    }
+
+    /// <summary>Whether any inline box in <paramref name="root"/>'s subtree carries horizontal
+    /// edge space (margin, padding or border). The bidi scope split reads this: an override
+    /// scope WITHOUT edge boxes routes to the paragraph-level reordering (the §16.2 pass
+    /// reproduces the whole-stream reversal exactly), while a scope WITH them keeps the legacy
+    /// child-sequence reversal — the §8.6 physical-side edge reservation keys on it, and
+    /// the paragraph pass does not model split-box edges. The available width only matters for
+    /// percentage margins, which the bidi families do not use; a generous value keeps the
+    /// predicate a pure function of the declared edges.</summary>
+    internal static bool SubtreeHasEdgeBoxes(LayoutNode root)
+    {
+        var pending = new System.Collections.Generic.Stack<LayoutNode>();
+        pending.Push(root);
+        while (pending.TryPop(out var node))
+        {
+            var (leading, trailing) = InlineBoxEdges(node, 4096f, 600f);
+            if (leading > 0f || trailing > 0f) return true;
+            foreach (var child in node.Children) pending.Push(child);
+        }
+        return false;
     }
 
     // -------------------------------------------------------------------------
@@ -3224,23 +3248,36 @@ internal static class BoxEngine
     {
         if (items.Count == 0 || container is null) return null;
 
-        // Paragraphs under an active bidi-override scope keep the legacy whole-stream reversal
-        // (the child-sequence reversal at collection plus RenderedText's leaf reversal): the
-        // §8.6 physical-side edge reservation and the mirrored join sides of split boxes key on
-        // that mechanism, and this pass does not yet model split-box edges.
+        // Paragraphs under an active bidi-override scope keep the legacy whole-stream
+        // reversal: the §8.6 physical-side edge reservation and the mirrored join sides of
+        // split boxes key on that mechanism, and the pass's forced-R output diverges from it
+        // in the twin-walk shapes (the unicode-bidi-applies-to families measure the legacy's
+        // line geometry).
         foreach (var it in items)
             if (it.Node?.BidiReversesContent() == true) return null;
 
-        // The cheap gate: any strong RTL / Arabic content anywhere in the run.
-        var hasRtl = false;
+        // The cheap gate: strong RTL / Arabic content anywhere in the run, or an embedding
+        // scope (an override reverses pure-Latin content too — bidi-box-model-003's
+        // 'dnoceS tsriF' carries no RTL-class character).
+        var hasBidi = false;
         var streamLength = 0;
         foreach (var it in items)
         {
             if (it.Kind != InlineItemKind.Text || it.Text is not { Length: > 0 } gate) continue;
             streamLength += gate.Length;
-            if (!hasRtl && Bidi.HasBidiContent(gate)) hasRtl = true;
+            if (!hasBidi && Bidi.HasBidiContent(gate)) hasBidi = true;
         }
-        if (!hasRtl) return null;
+        if (!hasBidi)
+        {
+            // A DECLARED override on the container reverses pure-Latin content too
+            // (bidi-box-model-003's 'dnoceS tsriF' carries no RTL-class character). The UA
+            // sheet's block-level unicode-bidi: embed must NOT count — it is parity-neutral
+            // decoration on every block, and gating on it engaged the pass for paragraphs it
+            // never needed to touch (the rtl-span padding reservation, the Latin embed spans
+            // the box-model families pin).
+            hasBidi = container.GetUnicodeBidi() == "bidi-override";
+        }
+        if (!hasBidi) return null;
 
         // Single-line gate: line breaking must stay on the logical order, so a run that wraps
         // keeps it (a wrapped RTL line re-evaluates the algorithm per line box — queued).
@@ -3332,6 +3369,17 @@ internal static class BoxEngine
             spans.Add(new Bidi.Span(start, length, innermost.GetDirection() == "rtl",
                 innermost.GetUnicodeBidi() == "bidi-override"));
         }
+        // The establishing block's own declaration boxes the WHOLE paragraph (§16.2: an
+        // override/embed on the block applies to its inline content) — the chain walk stops at
+        // the container, so this scope never appears in the per-item chains. It comes first so
+        // the inner spans' X rules compute from its raised level.
+        var containerBidi = container.GetUnicodeBidi();
+        // Override only: the UA sheet's embed sits on every block (parity-neutral noise) and
+        // a declared container embed has no corpus case — the declared span embeds arrive
+        // through the chains above.
+        if (containerBidi == "bidi-override")
+            spans.Insert(0, new Bidi.Span(0, stream.Length, container.GetDirection() == "rtl",
+                Override: true));
 
         var (levels, _) = Bidi.Reorder(stream.ToString(), baseLtr, spans);
 

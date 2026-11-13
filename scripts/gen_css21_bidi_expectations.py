@@ -157,7 +157,12 @@ def case_config(source: str) -> dict:
             declared = (re.search(r'direction:\s*(\w+)', decl) or [None, None])[1]
             if declared:
                 config['test_dir'] = declared
-            config['test_bidi'] = (re.search(r'unicode-bidi:\s*(\S+?)\s*[;}]', decl) or [None, 'normal'])[1] or 'normal'
+            # The same cascade rule for unicode-bidi: the boilerplate font-sizing rule carries
+            # no declaration and must not reset the declared one (direction-unicode-bidi-023's
+            # override branch never fired while the reset stood).
+            declared_bidi = (re.search(r'unicode-bidi:\s*(\S+?)\s*[;}]', decl) or [None, None])[1]
+            if declared_bidi:
+                config['test_bidi'] = declared_bidi
     return config
 
 
@@ -167,19 +172,27 @@ def expectations_for(source: str) -> list[str]:
     body = html.unescape(cfg['body'])
     base_ltr = cfg['test_dir'] != 'rtl'
     # One line per block child; the span participates inside its parent's line.
-    if cfg['test_bidi'] == 'bidi-override' and '<div' in body:
-        # The override governs the block's own inline content; the nested block div forms
-        # its own line(s) under the same override.
+    # The override branch keys on the test div's OWN declaration alone: the body text was
+    # already stripped of the test div's markup, so a '<div' presence check skipped every
+    # container-override case (direction-unicode-bidi-023's needle lost the override). A
+    # nested div's markup survives the strip and still splits the lines below.
+    if cfg['test_bidi'] == 'bidi-override':
+        # The override governs the block's own INLINE content; a nested block div forms its
+        # own line(s) OUTSIDE the override (16.2: bidi-override lays out the element's inline
+        # boxes in the exact order - a block child re-establishes its own paragraph with the
+        # inherited base direction), so only the outer inline content carries the span.
         inner = re.search(r'<div[^>]*>(.*?)</div>', body, re.S)
         rest = body.replace(inner.group(0), '', 1) if inner else body
-        lines = []
+        result = []
         if inner:
-            lines.append((re.sub(r'<[^>]+>', '', inner.group(1)), cfg['test_dir'], []))
+            inner_text = re.sub(r'<[^>]+>', '', inner.group(1)).strip()
+            if inner_text:
+                result.append(visual_line(inner_text, cfg['test_dir'] != 'rtl', []))
         outer_text = re.sub(r'<[^>]+>', '', rest).strip()
         if outer_text:
-            lines.append((outer_text, cfg['test_dir'], []))
-        return [visual_line(text, dir != 'rtl', [(0, len(text), dir, 'override')])
-                for text, dir, _ in lines]
+            result.append(visual_line(outer_text, cfg['test_dir'] != 'rtl',
+                                      [(0, len(outer_text), cfg['test_dir'], 'override')]))
+        return result
     span_m = re.search(r'<span[^>]*>(.*?)</span>', body, re.S)
     if span_m and (cfg['span_bidi'] in ('embed', 'bidi-override')):
         # The span opens an embedding: compute the line as one text with the span range marked.

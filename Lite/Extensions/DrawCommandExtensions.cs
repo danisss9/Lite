@@ -436,10 +436,45 @@ public static class StyleExtensions
         for (var n = node; n is not null; n = n.Parent)
         {
             if (n.BidiIsRtlOverride()) return true;
+            // The block-container stop applies to the FIRST node too: a BLOCK child of an
+            // override element re-establishes its own paragraph (16.2: the override lays out
+            // the element's INLINE boxes), so an outer override never reverses it
+            // (direction-unicode-bidi-025's nested div painted the whole-stream reversal).
+            if (n.GetDisplay() is not DisplayType.Inline) return false;
+        }
+        return false;
+    }
+
+    /// <summary>Whether the override scope that reverses <paramref name="node"/>'s content
+    /// also contains edge-bearing inline boxes. The §8.6 physical-side edge reservation and
+    /// the mirrored join sides of split boxes key on the legacy whole-stream reversal, which
+    /// keeps every edge item at its physical boundaries; a scope without edge boxes has no
+    /// such structure, and the paragraph-level reordering (Lite.Layout.Bidi) reproduces the
+    /// reversal exactly — so the legacy reversal fires only here, and the paragraph pass
+    /// owns the edge-less scopes.</summary>
+    internal static bool ScopeHasEdgeBoxes(this LayoutNode node)
+    {
+        // The scope root: the nearest ancestor-or-self whose RTL override reverses content,
+        // stopping at the first non-inline ancestor (the same walk BidiReversesContent makes).
+        // A synthesized #text node carries no scope of its own - it shares its parent's style
+        // object, so its computed bidi-override would name the parent while the subtree search
+        // ran over the empty #text (bidi-box-model-003's trailing text read scope-less).
+        var start = node is not null && node.TagName.StartsWith('#') ? node.Parent : node;
+        for (var n = start; n is not null; n = n.Parent)
+        {
+            if (n.BidiIsRtlOverride())
+                return Lite.Layout.BoxEngine.SubtreeHasEdgeBoxes(n);
             if (n != node && n.GetDisplay() is not DisplayType.Inline) return false;
         }
         return false;
     }
+
+    /// <summary>The legacy whole-stream reversal's gate: true when the reversing override
+    /// scope also carries edge boxes (see <see cref="ScopeHasEdgeBoxes"/>). The paragraph-level
+    /// pass owns edge-less scopes, and every reversal site — the collection-time child
+    /// sequence, RenderedText's leaf reversal — gates on this so layout and painting agree.</summary>
+    internal static bool BidiReversesContentForLayout(this LayoutNode node) =>
+        node.BidiReversesContent() && node.ScopeHasEdgeBoxes();
 
     /// <summary>Reverses a string's characters for painting under an RTL override. The
     /// reversal is character-wise: surrogate pairs (astral characters) are not re-composed —
@@ -728,7 +763,25 @@ public static class StyleExtensions
     {
         var text = node.RenderedText();
         if (string.IsNullOrEmpty(text) || !Lite.Layout.Bidi.HasBidiContent(text)) return text;
-        if (node.BidiReversesContent()) return text;
+        // A block-leaf override scope WITH edge boxes keeps the legacy reversal (RenderedText
+        // already returned the reversed text). An edge-less scope routes to the paragraph-level
+        // reorder: the block's own content is one override span whose direction is the block's
+        // OWN — an LTR override forces everything logical (direction-unicode-bidi-022), an RTL
+        // one reverses the whole stream (direction-unicode-bidi-023) — and the reorder
+        // reproduces both.
+        if (node.BidiReversesContentForLayout()) return text;
+        // The content gate is load-bearing here: a synthesized node's shared style object can
+        // compute a bidi-override noise value, and reordering pure-LTR text would shift it
+        // (LayoutTests.InlineBox_ReservesItsHorizontalMarginAndPadding's span). Real override
+        // content carries RTL or Arabic characters.
+        if ((node.BidiReversesContent() || node.GetUnicodeBidi() == "bidi-override") &&
+            Lite.Layout.Bidi.HasBidiContent(text))
+        {
+            var spans = new System.Collections.Generic.List<Lite.Layout.Bidi.Span>
+                { new(0, text.Length, Rtl: node.GetDirection() == "rtl", Override: true) };
+            var (_, overrideVisual) = Lite.Layout.Bidi.Reorder(text, node.GetDirection() != "rtl", spans);
+            return overrideVisual;
+        }
         if (Lite.Layout.TextMeasure.MeasureSingleLine(text, font).Width > availableWidth + 0.5f) return text;
         var (_, visual) = Lite.Layout.Bidi.Reorder(text, node.GetDirection() != "rtl", System.Array.Empty<Lite.Layout.Bidi.Span>());
         return visual;
