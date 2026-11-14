@@ -58,6 +58,26 @@ public static class ParseFidelityTests
     }
 
     [Test]
+    public static void MetaCharset_DeclarationSurvivesTheParseAndTextStaysIntact()
+    {
+        // The pipeline hands the parser an already-decoded string, so a <meta charset>
+        // declaration must not be treated as an encoding change over the re-encoded UTF-8
+        // bytes: the author's attribute stays verbatim and non-ASCII text keeps its
+        // characters (html5lib tests19 #84–86 pin the tree shape; the transport tests pin
+        // the decode).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><meta charset=\"ascii\"></head>" +
+            "<body><div id=\"host\">h\u00e9llo</div>" +
+            "<script>document.getElementById('host').textContent = " +
+            "document.getElementById('host').textContent + '|' + " +
+            "document.querySelector('meta').getAttribute('charset');</script></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var host = Find(page.Root, n => n.Attributes.GetValueOrDefault("id") == "host");
+        True(host != null, "host div missing");
+        Equal("h\u00e9llo|ascii", host!.DisplayText);
+    }
+
+    [Test]
     public static void BareOption_SerializesWithoutAValueAttribute()
     {
         // html5lib (innerHTML in select): "<select><option>" must serialize the option with

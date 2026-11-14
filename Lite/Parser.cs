@@ -20,6 +20,14 @@ namespace Lite;
 
 internal static class Parser
 {
+    static Parser()
+    {
+        // EncodingSniffer registers this for byte decoding; unregistering AngleSharp's
+        // EncodingMetaHandler (which also registered it) must not leave a fragment-only
+        // parse without the legacy code pages.
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
     private const string UserAgentStylesheet = """
         div, section, article, header, footer, main, nav, aside, form, ul, ol, li, fieldset, figure, figcaption, address, details, summary, dialog { display: block; }
         label { display: inline; }
@@ -102,10 +110,15 @@ internal static class Parser
     /// service so AngleSharp parses with the scripting flag ON (REC §8.2.5: &lt;noscript&gt;
     /// content parses as raw text and the in-head-noscript rules apply — the parse-fidelity
     /// corpus runs scripting-enabled). Lite executes scripts through its own loader; the
-    /// service's evaluation entry point deliberately no-ops.</summary>
-    internal static IConfiguration ParseConfiguration(int width, int height) => Configuration.Default
-        .WithCss()
-        .With(new ScriptingFlagOnlyService())
+    /// service's evaluation entry point deliberately no-ops.
+    /// The parse always receives an already-decoded Unicode string, so AngleSharp's
+    /// <see cref="AngleSharp.Browser.EncodingMetaHandler"/> must not run: it treats a
+    /// &lt;meta charset&gt; declaration as an encoding change over the re-encoded UTF-8 bytes,
+    /// which either mojibakes non-ASCII text or forces the engine to rewrite the author's
+    /// declaration before parsing (the html5lib tests19 cases measured that rewrite as a
+    /// pipeline tree deviation). Encoding sniffing belongs to <see cref="EncodingSniffer"/>,
+    /// before the string pipeline starts.</summary>
+    internal static IConfiguration ParseConfiguration(int width, int height) => BaseParseConfiguration()
         .WithRenderDevice(new DefaultRenderDevice
         {
             DeviceWidth = width,
@@ -115,10 +128,12 @@ internal static class Parser
         });
 
     /// <summary>Device-less variant for pre-page fragment parses (see ParseFragmentCore).</summary>
-    private static IConfiguration ParseConfiguration() => Configuration.Default
+    private static IConfiguration ParseConfiguration() => BaseParseConfiguration().WithRenderDevice();
+
+    private static IConfiguration BaseParseConfiguration() => Configuration.Default
+        .Without<AngleSharp.Browser.IMetaHandler>()
         .WithCss()
-        .With(new ScriptingFlagOnlyService())
-        .WithRenderDevice();
+        .With(new ScriptingFlagOnlyService());
 
     private sealed class ScriptingFlagOnlyService : IScriptingService
     {
@@ -273,20 +288,14 @@ internal static class Parser
         var mediaType = response.Content.Headers.ContentType?.MediaType;
         Current.MediaType = mediaType;
         Current.IsXmlDocument = mediaType is "application/xhtml+xml" or "text/xml" or "application/xml";
-        // AngleSharp re-encodes string content as UTF-8 bytes and honors <meta
-        // http-equiv=Content-Type> as an encoding change over those bytes — any other
-        // charset then MOJIBAKES every non-ASCII attribute (the class selectors of
-        // character-encoding-003..017 stop matching). The wire decode already happened in
-        // EncodingSniffer, so the declaration now describes OUR bytes: align it with UTF-8
-        // and the parser's re-decode is a lossless no-op.
-        if (!Current.IsXmlDocument)
-            html = AlignMetaCharset(html, "utf-8");
-        else
-            // The XML parser mirrors the HTML one: it re-encodes the string content and honors
-            // the XML declaration's encoding pseudo-attribute over those bytes. The string was
-            // already decoded with the transport charset (§4.4: HTTP wins), so the declaration
-            // now describes OUR bytes — align it with UTF-8 or a non-UTF-8 transport charset
-            // double-decodes every non-ASCII attribute (character-encoding-003..016).
+        // The XML parser mirrors the HTML one: it re-encodes the string content and honors
+        // the XML declaration's encoding pseudo-attribute over those bytes. The string was
+        // already decoded with the transport charset (§4.4: HTTP wins), so the declaration
+        // now describes OUR bytes — align it with UTF-8 or a non-UTF-8 transport charset
+        // double-decodes every non-ASCII attribute (character-encoding-003..016). The HTML
+        // parser's <meta charset> handler is unregistered in ParseConfiguration for the same
+        // reason, so the author's declaration is left intact in the tree.
+        if (Current.IsXmlDocument)
             html = AlignXmlDeclarationCharset(html, "utf-8");
         var document = OpenDocument(config, response, address, html, mediaType);
         _baseUrl = address;
@@ -342,32 +351,13 @@ internal static class Parser
     /// name and the matched document language are ASCII case-insensitive (§5.11.4).</summary>
     private static readonly Regex LangPseudoRegex =
         new(":lang\\s*\\(\\s*[^)]*\\)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    private static readonly Regex MetaContentTypeRegex =
-        new("<meta\\b[^>]*(?:http-equiv\\s*=\\s*[\"']?content-type[\"']?|\\scharset\\s*=)[^>]*>",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    private static readonly Regex MetaCharsetRegex =
-        new("charset\\s*=\\s*[\"']?[A-Za-z0-9_\\- :]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    /// <summary>Rewrites the charset a <c>&lt;meta http-equiv=Content-Type&gt;</c> or short-form
-    /// <c>&lt;meta charset&gt;</c> declaration states to <paramref name="appliedCharset"/> — the
-    /// encoding the document string was actually decoded with. Both spellings are encoding
-    /// changes the parser's own re-decode honors over the re-encoded bytes, so an unaligned
-    /// non-UTF-8 declaration mojibakes every non-ASCII character (measured end to end by the
-    /// transport-charset tests against real responses). The element stays in the DOM; only the
-    /// now-true statement is kept.</summary>
-    internal static string AlignMetaCharset(string html, string appliedCharset)
-    {
-        return MetaContentTypeRegex.Replace(html, match =>
-            MetaCharsetRegex.Replace(match.Value, m =>
-                m.Value[..(m.Value.IndexOf('=') + 1)] + appliedCharset));
-    }
-
     private static readonly Regex XmlDeclarationRegex =
         new(@"^(<\?xml\b[^>]*?)encoding\s*=\s*([""'])([^""']*)\2", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>Rewrites the encoding pseudo-attribute of the XML declaration to
-    /// <paramref name="appliedCharset"/> — same purpose as <see cref="AlignMetaCharset"/> for
-    /// the XML parser's re-decode of the already-transport-decoded string.</summary>
+    /// <paramref name="appliedCharset"/> — the XML parser's re-decode of the
+    /// already-transport-decoded string honors the declaration over its UTF-8 bytes, so an
+    /// unaligned label double-decodes every non-ASCII attribute.</summary>
     internal static string AlignXmlDeclarationCharset(string html, string appliedCharset)
     {
         return XmlDeclarationRegex.Replace(html, m =>
@@ -981,17 +971,15 @@ internal static class Parser
             // parses through the XML parser, not the HTML one.
             Current.IsXmlDocument = mediaType is "application/xhtml+xml" or "text/xml" or "application/xml"
                 or "image/svg+xml" or "application/xhtml" or "text/xhtml";
-            // Same declaration alignment as the top-level load (TraversePage): the transport
-            // decode already happened, and AngleSharp re-encodes the document string as UTF-8
-            // bytes before honoring an unaligned <meta charset> declaration over them. With a
-            // multibyte label (eucjp_chars.html's <meta charset="euc-jp">) the re-decode pairs
-            // lead bytes with the ASCII bytes of following tags, swallowing them — the 13,459
-            // sibling spans of the legacy-mb chars frames nested 6,254 levels deep and the
-            // tree walk overflowed its stack (worker exit 0xC00000FD).
+            // Same XML declaration alignment as the top-level load (TraversePage). The HTML
+            // parser's <meta charset> handler is unregistered in ParseConfiguration: the
+            // content is already a decoded string, and letting the parser honor an unaligned
+            // declaration over its re-encoded UTF-8 bytes mojibakes non-ASCII attributes (a
+            // multibyte label such as eucjp_chars.html's <meta charset="euc-jp"> swallowed
+            // the following tags' ASCII bytes) or forces a visible rewrite of the author's
+            // declaration.
             if (Current.IsXmlDocument)
                 html = AlignXmlDeclarationCharset(html, "utf-8");
-            else
-                html = AlignMetaCharset(html, "utf-8");
             var parsedSource = NormalizeImportantBangs(html);
             Current.Source = parsedSource;
             Current.SourceCursor = 0;
