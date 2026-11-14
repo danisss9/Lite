@@ -630,9 +630,19 @@ internal class JsEngine : IDisposable
                 let desc = null;
                 try { desc = Object.getOwnPropertyDescriptor(ctor, 'prototype'); } catch (e) { }
                 if (desc && !desc.writable) {
-                  // Class-defined constructor (e.g. the Worker shim): its prototype is fixed
-                  // and instances already chain to it — adopt it as the interface prototype.
-                  protos[name] = desc.value;
+                  // Class-defined constructor (the Text/Comment shims): its prototype is fixed
+                  // and instances chain to it, so adopt it — but wire the interface parent
+                  // underneath it. Without the link a branded Text/Comment inherited straight
+                  // from Object.prototype and lost every CharacterData/Node member (nodeType,
+                  // data, after, …). The toStringTag the interface prototype would have carried
+                  // moves onto the adopted object.
+                  var adopted = desc.value;
+                  protos[name] = adopted;
+                  const ifaceParent = parents[name];
+                  if (ifaceParent && protos[ifaceParent] && Object.getPrototypeOf(adopted) !== protos[ifaceParent])
+                    Object.setPrototypeOf(adopted, protos[ifaceParent]);
+                  if (!Object.prototype.hasOwnProperty.call(adopted, Symbol.toStringTag))
+                    Object.defineProperty(adopted, Symbol.toStringTag, { value: name, configurable: true });
                   continue;
                 }
               } else {

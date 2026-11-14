@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Reflection;
 using Lite.QuickJs;
@@ -23,6 +24,26 @@ public sealed class Engine : IDisposable
     private readonly QuickJsRuntime _runtime = new();
     private readonly QuickJsRealm _realm;
     private readonly Dictionary<object, QuickJsValue> _indexProxies = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<nint, object> _proxyByIdentity = new();
+    private readonly HashSet<object> _branded = new(ReferenceEqualityComparer.Instance);
+    private QuickJsValue? _newArray;
+    private QuickJsValue? _arrayPush;
+    private QuickJsValue? _defineTag;
+    private QuickJsValue? _makeDatasetProxy;
+    private QuickJsValue? _datasetGet;
+    private QuickJsValue? _datasetSet;
+    private QuickJsValue? _datasetHas;
+    private QuickJsValue? _datasetDelete;
+    private QuickJsValue? _datasetKeys;
+    private QuickJsValue? _makeLegacyProxy;
+    private QuickJsValue? _makeProxy;
+    private QuickJsValue? _makeConstructor;
+    private QuickJsValue? _makeDynamicProxy;
+    private QuickJsValue? _stringify;
+    private bool _elementProtoInstalled;
+    private QuickJsValue? _elemGet;
+    private QuickJsValue? _elemSet;
+    private QuickJsValue? _elemCall;
     private bool _disposed;
 
     public Engine()
@@ -128,12 +149,13 @@ public sealed class Engine : IDisposable
         }
         if (value is IEnumerable enumerable)
         {
-            using var array = _realm.Eval("[]");
-            using var push = array.Get("push");
+            _newArray ??= _realm.Eval("() => []");
+            _arrayPush ??= _realm.Eval("(a, v) => { a.push(v); }");
+            using var array = _newArray.Call();
             foreach (var item in enumerable)
             {
                 using var element = ConvertToNative(item);
-                using var ignored = push.Call(array, element);
+                using var ignored = _arrayPush.Call(arguments: [array, element]);
             }
             return array.Clone();
         }
@@ -146,73 +168,75 @@ public sealed class Engine : IDisposable
             // the empty data attribute ("data-") and trailing-hyphen forms ("data-id-") are
             // supported names too, so no identifier gate may filter them out.
             if (_indexProxies.TryGetValue(value, out var cachedDataset)) return cachedDataset.Clone();
-            using var datasetTarget = _realm.Object();
-            using var defineTag = _realm.Eval("(o, tag) => Object.defineProperty(o, Symbol.toStringTag, { value: tag })");
-            using var tagValue = ConvertToNative("DOMStringMap");
-            using var ignoredTag = defineTag.Call(arguments: [datasetTarget, tagValue]);
-            using var dataGet = _realm.HostFunction("dataset get", 1, (_, args) =>
+            using var datasetTarget = _realm.HostObjects.Wrap(dataset, _ => { });
+            _defineTag ??= _realm.Eval("(o, tag) => Object.defineProperty(o, Symbol.toStringTag, { value: tag })");
+            using var tagValue = _realm.String("DOMStringMap");
+            using var ignoredTag = _defineTag.Call(arguments: [datasetTarget, tagValue]);
+            _datasetGet ??= _realm.HostFunction("dataset get", 2, (_, args) =>
             {
-                var found = dataset.get(args[0].AsString());
+                var ds = _realm.HostObjects.Unwrap<JsDataset>(args[0]);
+                var found = ds?.get(args[1].AsString());
                 return found is null ? _realm.Undefined() : ConvertToNative(found);
             });
-            using var dataSet = _realm.HostFunction("dataset set", 2, (_, args) =>
+            _datasetSet ??= _realm.HostFunction("dataset set", 3, (_, args) =>
             {
-                dataset.set(args[0].AsString(), args[1].AsString());
+                _realm.HostObjects.Unwrap<JsDataset>(args[0])?.set(args[1].AsString(), args[2].AsString());
                 return _realm.Undefined();
             });
-            using var dataHas = _realm.HostFunction("dataset has", 1, (_, args) =>
-                _realm.Bool(dataset.has(args[0].AsString())));
-            using var dataDelete = _realm.HostFunction("dataset delete", 1, (_, args) =>
+            _datasetHas ??= _realm.HostFunction("dataset has", 2, (_, args) =>
+                _realm.Bool(_realm.HostObjects.Unwrap<JsDataset>(args[0])?.has(args[1].AsString()) ?? false));
+            _datasetDelete ??= _realm.HostFunction("dataset delete", 2, (_, args) =>
             {
-                dataset.remove(args[0].AsString());
+                _realm.HostObjects.Unwrap<JsDataset>(args[0])?.remove(args[1].AsString());
                 return _realm.Undefined();
             });
-            using var dataKeys = _realm.HostFunction("dataset keys", 0, (_, _) =>
-                ConvertToNative(dataset.keys()));
-            using var makeDatasetProxy = _realm.Eval("""
+            _datasetKeys ??= _realm.HostFunction("dataset keys", 1, (_, args) =>
+                ConvertToNative(_realm.HostObjects.Unwrap<JsDataset>(args[0])?.keys() ?? []));
+            _makeDatasetProxy ??= _realm.Eval("""
                 (target, get, set, has, del, keys) => new Proxy(target, {
                   get(t, p, r) {
-                    if (typeof p === 'string' && has(p)) return get(p);
+                    if (typeof p === 'string' && has(t, p)) return get(t, p);
                     return Reflect.get(t, p, r);
                   },
                   set(t, p, v, r) {
-                    if (typeof p === 'string') { set(p, String(v)); return true; }
+                    if (typeof p === 'string') { set(t, p, String(v)); return true; }
                     return Reflect.set(t, p, v, r);
                   },
                   has(t, p) {
-                    return (typeof p === 'string' && has(p)) || Reflect.has(t, p);
+                    return (typeof p === 'string' && has(t, p)) || Reflect.has(t, p);
                   },
                   deleteProperty(t, p) {
-                    if (typeof p === 'string' && has(p)) { del(p); return true; }
+                    if (typeof p === 'string' && has(t, p)) { del(t, p); return true; }
                     return Reflect.deleteProperty(t, p);
                   },
                   ownKeys(t) {
-                    return [...keys(), ...Reflect.ownKeys(t)];
+                    return [...keys(t), ...Reflect.ownKeys(t)];
                   },
                   getOwnPropertyDescriptor(t, p) {
-                    if (typeof p === 'string' && has(p))
-                      return { value: get(p), writable: true, enumerable: true, configurable: true };
+                    if (typeof p === 'string' && has(t, p))
+                      return { value: get(t, p), writable: true, enumerable: true, configurable: true };
                     return Reflect.getOwnPropertyDescriptor(t, p);
                   }
                 })
                 """);
-            var proxy2 = makeDatasetProxy.Call(arguments: [datasetTarget, dataGet, dataSet, dataHas, dataDelete, dataKeys]);
-            _indexProxies.Add(value, proxy2);
+            var proxy2 = _makeDatasetProxy.Call(arguments: [datasetTarget, _datasetGet, _datasetSet, _datasetHas, _datasetDelete, _datasetKeys]);
+            CacheIndexProxy(value, proxy2);
             return proxy2.Clone();
         }
         var hostType = value.GetType();
-        var indexer = hostType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .FirstOrDefault(p => p.Name == "Item" && p.GetIndexParameters() is [{ ParameterType: var key }]
-                && key == typeof(int) && p.GetMethod is not null);
+        var typeMembers = GetTypeMembers(hostType);
+        var indexer = typeMembers.IntIndexer;
         if (indexer is null)
         {
-            var wrapped = _realm.HostObjects.Wrap(value, binding => BindMembers(hostType, binding));
-            Brand(wrapped, value);
+            var useElementProto = value is JsElement && EnsureElementPrototype();
+            var wrapped = _realm.HostObjects.Wrap(value,
+                useElementProto ? _ => { } : binding => BindMembers(typeMembers, binding));
+            if (!_branded.Contains(value)) Brand(wrapped, value);
             return wrapped is null ? null! : WithDynamicMembers(value, wrapped);
         }
         if (_indexProxies.TryGetValue(value, out var cached)) return cached.Clone();
-        using var target = _realm.HostObjects.Wrap(value, binding => BindMembers(hostType, binding));
-        Brand(target, value);
+        using var target = _realm.HostObjects.Wrap(value, binding => BindMembers(typeMembers, binding));
+        if (!_branded.Contains(value)) Brand(target, value);
         using var index = _realm.HostFunction("item", 1, (_, args) =>
         {
             // WebIDL unsigned long: ToUint32 wraps — item(4294967296) reads index 0, item(-2)
@@ -230,8 +254,8 @@ public sealed class Engine : IDisposable
         {
             using var names = _realm.HostFunction("names", 0, (_, _) =>
                 ConvertToNative((value as IJsNamedCollection)?.SupportedNames() ?? Array.Empty<string>()));
-            using var memberNames = ConvertToNative(InterfaceMemberNames(hostType));
-            using var makeLegacyProxy = _realm.Eval("""
+            using var memberNames = ConvertToNative(typeMembers.InterfaceMemberNames);
+            _makeLegacyProxy ??= _realm.Eval("""
                 (target, item, named, names, members, hasNames) => {
                   const INDEX = /^(0|[1-9][0-9]*)$/;
                   // A canonical array-index property name (WebIDL §3.9): ToUint32 round-trip,
@@ -316,12 +340,12 @@ public sealed class Engine : IDisposable
                 }
                 """);
             using var hasNamesLegacy = _realm.Bool(value is IJsNamedCollection);
-            var legacyProxy = makeLegacyProxy.Call(arguments: [target, index, named, names, memberNames,
+            var legacyProxy = _makeLegacyProxy.Call(arguments: [target, index, named, names, memberNames,
                 hasNamesLegacy]);
-            _indexProxies.Add(value, legacyProxy);
+            CacheIndexProxy(value, legacyProxy);
             return legacyProxy.Clone();
         }
-        using var makeProxy = _realm.Eval("""
+        _makeProxy ??= _realm.Eval("""
             (target, item, named, hasNames) => new Proxy(target, {
               get(t,p,r) {
                 if (typeof p === 'string' && /^(0|[1-9][0-9]*)$/.test(p)) return item(+p) ?? undefined;
@@ -346,22 +370,105 @@ public sealed class Engine : IDisposable
             })
             """);
         using var hasNames = _realm.Bool(value is IJsNamedCollection);
-        var proxy = makeProxy.Call(arguments: [target, index, named, hasNames]);
-        _indexProxies.Add(value, proxy);
+        var proxy = _makeProxy.Call(arguments: [target, index, named, hasNames]);
+        CacheIndexProxy(value, proxy);
         return proxy.Clone();
     }
 
-    /// <summary>The interface member names <see cref="BindMembers"/> exposes on a host wrapper.
-    /// The legacy-collection proxy's ownKeys excludes them (they are prototype members, not own
-    /// properties of the collection) and its get trap throws when they are reached through a
-    /// foreign receiver.</summary>
-    private static IReadOnlyCollection<string> InterfaceMemberNames(Type hostType) =>
-        hostType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.GetIndexParameters().Length == 0 && p.GetMethod is not null).Select(p => p.Name)
-            .Concat(hostType.GetFields(BindingFlags.Public | BindingFlags.Instance).Select(f => f.Name))
-            .Concat(hostType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                .Where(m => !m.IsSpecialName && m.DeclaringType != typeof(object)).Select(m => m.Name))
-            .Distinct().ToArray();
+    private void CacheIndexProxy(object value, QuickJsValue proxy)
+    {
+        _indexProxies.Add(value, proxy);
+        if (proxy.Identity != 0) _proxyByIdentity[proxy.Identity] = value;
+    }
+
+    private object? UnwrapHost(QuickJsValue value)
+    {
+        var host = _realm.HostObjects.Unwrap<object>(value);
+        if (host is null && value.Identity != 0) _proxyByIdentity.TryGetValue(value.Identity, out host);
+        return host;
+    }
+
+    private bool EnsureElementPrototype()
+    {
+        if (_elementProtoInstalled) return true;
+        using var hasProtos = _realm.Eval("Boolean(globalThis.__lite_brand && globalThis.Element && globalThis.Element.prototype)");
+        if (hasProtos.Kind != QuickJsKind.Boolean || !hasProtos.AsBoolean()) return false;
+
+        var typeMembers = GetTypeMembers(typeof(JsElement));
+        var props = typeMembers.Properties;
+        var methods = typeMembers.Methods;
+
+        _elemGet = _realm.HostFunction("__elemGet", 2, (_, args) =>
+        {
+            if (UnwrapHost(args[0]) is not JsElement target)
+                throw JsErrors.Native(this, "TypeError", "Illegal invocation");
+            var prop = props[(int)args[1].AsNumber()];
+            return ConvertToNative(prop.Getter(target));
+        });
+        _elemSet = _realm.HostFunction("__elemSet", 3, (_, args) =>
+        {
+            if (UnwrapHost(args[0]) is not JsElement target)
+                throw JsErrors.Native(this, "TypeError", "Illegal invocation");
+            var prop = props[(int)args[1].AsNumber()];
+            InvokePropertySetter(prop, target, args[2]);
+            return _realm.Undefined();
+        });
+        _elemCall = _realm.HostFunction("__elemCall", 2, (_, args) =>
+        {
+            if (UnwrapHost(args[0]) is not JsElement target)
+                throw JsErrors.Native(this, "TypeError", "Illegal invocation");
+            var group = methods[(int)args[1].AsNumber()];
+            var callArgs = args.Length > 2 ? args[2..] : [];
+            return InvokeMethodGroup(group, target, callArgs);
+        });
+
+        using var propNames = ConvertToNative(props.Select(p => p.Name).ToArray());
+        using var propWritable = ConvertToNative(props.Select(p => p.Setter is not null).ToArray());
+        using var methodNames = ConvertToNative(methods.Select(m => m.Name).ToArray());
+        using var methodArities = ConvertToNative(methods.Select(m => m.MinArity).ToArray());
+        using var installer = _realm.Eval("""
+            (get, set, call, propNames, propWritable, methodNames, methodArities) => {
+              const targets = [
+                globalThis.Element && globalThis.Element.prototype,
+                globalThis.CharacterData && globalThis.CharacterData.prototype,
+                globalThis.DocumentType && globalThis.DocumentType.prototype,
+                globalThis.DocumentFragment && globalThis.DocumentFragment.prototype,
+              ].filter(Boolean);
+              const descs = Object.create(null);
+              for (let i = 0; i < propNames.length; i++) {
+                const idx = i;
+                const name = propNames[i];
+                const getter = function () { return get(this, idx); };
+                const setter = propWritable[i] ? function (v) { set(this, idx, v); } : undefined;
+                descs[name] = { get: getter, set: setter, enumerable: true, configurable: true };
+              }
+              for (let i = 0; i < methodNames.length; i++) {
+                const idx = i;
+                const name = methodNames[i];
+                const fn = function (...args) { return call(this, idx, ...args); };
+                Object.defineProperty(fn, 'name', { value: name, configurable: true });
+                Object.defineProperty(fn, 'length', { value: methodArities[i], configurable: true });
+                descs[name] = { value: fn, writable: true, enumerable: true, configurable: true };
+              }
+              for (const proto of targets) {
+                for (const k of Object.keys(descs)) {
+                  if (!Object.prototype.hasOwnProperty.call(proto, k)) {
+                    Object.defineProperty(proto, k, descs[k]);
+                  }
+                }
+              }
+              if (globalThis.HTMLMarqueeElement && globalThis.HTMLMarqueeElement.prototype && descs.loop)
+                Object.defineProperty(globalThis.HTMLMarqueeElement.prototype, 'loop', descs.loop);
+              if (globalThis.HTMLFrameElement && globalThis.HTMLFrameElement.prototype) {
+                if (descs.name) Object.defineProperty(globalThis.HTMLFrameElement.prototype, 'name', descs.name);
+                if (descs.src) Object.defineProperty(globalThis.HTMLFrameElement.prototype, 'src', descs.src);
+              }
+            }
+            """);
+        using var ignored = installer.Call(arguments: [_elemGet, _elemSet, _elemCall, propNames, propWritable, methodNames, methodArities]);
+        _elementProtoInstalled = true;
+        return true;
+    }
 
     private QuickJsValue? _brand;
 
@@ -370,48 +477,63 @@ public sealed class Engine : IDisposable
     private void Brand(QuickJsValue wrapped, object value)
     {
         var interfaceName = Dom.WebIdlInterfaces.For(value);
-        if (interfaceName is null) return;
-        if (_brand is null) _brand = _realm.Eval("(o, n) => globalThis.__lite_brand && __lite_brand(o, n)");
+        if (interfaceName is null)
+        {
+            _branded.Add(value);
+            return;
+        }
+        _brand ??= _realm.Eval("(o, n) => globalThis.__lite_brand ? (__lite_brand(o, n), true) : false");
         using var name = _realm.String(interfaceName);
-        using var ignored = _brand.Call(arguments: [wrapped, name]);
+        using var applied = _brand.Call(arguments: [wrapped, name]);
+        if (applied.Kind == QuickJsKind.Boolean && applied.AsBoolean())
+            _branded.Add(value);
     }
 
-    private QuickJsValue BindDelegate(Delegate callback) => _realm.HostFunction(callback.Method.Name,
-        callback.Method.GetParameters().Length, (_, args) =>
+    private QuickJsValue BindDelegate(Delegate callback)
+    {
+        var methodSpec = GetMethodSpec(callback.Method);
+        return _realm.HostFunction(callback.Method.Name, methodSpec.Parameters.Length, (_, args) =>
         {
-            var converted = ConvertParameters(callback.Method.GetParameters(), args);
+            var converted = ConvertParameters(methodSpec.Parameters, args);
             try
             {
                 var result = callback.DynamicInvoke(converted);
                 // A void delegate DynamicInvokes to null, but WebIDL void operations must
                 // produce undefined: testharness rejects add_cleanup callbacks returning any
                 // value, which cascaded whole url-runner files to NOTRUN.
-                return callback.Method.ReturnType == typeof(void) ? _realm.Undefined() : ConvertToNative(result);
+                return methodSpec.IsVoid ? _realm.Undefined() : ConvertToNative(result);
             }
             catch (TargetInvocationException error) { throw error.InnerException ?? error; }
         });
+    }
 
     private QuickJsValue BindConstructor(Type type)
     {
+        var candidates = GetTypeMembers(type).Constructors;
         using var factory = _realm.HostFunction("create " + type.Name, 0, (_, args) =>
         {
-            var candidates = type.GetConstructors();
-            var constructor = candidates.OrderBy(c => c.GetParameters().Length)
-                .FirstOrDefault(c => CanBind(c.GetParameters(), args.Length));
+            ConstructorSpec? constructor = null;
+            for (var i = 0; i < candidates.Length; i++)
+            {
+                if (CanBind(candidates[i], args.Length)) { constructor = candidates[i]; break; }
+            }
             if (constructor is null)
             {
                 // WebIDL constructors ignore trailing arguments beyond their declared ones.
-                constructor = candidates.Where(c => c.GetParameters().Length <= args.Length)
-                    .OrderByDescending(c => c.GetParameters().Length).FirstOrDefault()
-                    ?? throw JsErrors.Native(this, "TypeError",
+                for (var i = candidates.Length - 1; i >= 0; i--)
+                {
+                    if (candidates[i].Parameters.Length <= args.Length) { constructor = candidates[i]; break; }
+                }
+                if (constructor is null)
+                    throw JsErrors.Native(this, "TypeError",
                         $"No constructor for {type.Name} with {args.Length} arguments");
             }
-            try { return ConvertToNative(constructor.Invoke(ConvertParameters(constructor.GetParameters(), args))); }
+            try { return ConvertToNative(constructor.Constructor.Invoke(ConvertParameters(constructor.Parameters, args))); }
             catch (TargetInvocationException error) { throw error.InnerException ?? error; }
         });
         // WebIDL interface constructors throw when called without new (the [Constructor]
         // shapes — Event, URL, MessageChannel, …) — only legacy constructors are callable.
-        using var makeConstructor = _realm.Eval("""
+        _makeConstructor ??= _realm.Eval("""
             (factory => function (...args) {
               if (!new.target)
                 throw new TypeError("Failed to construct: Please use the 'new' operator to call the constructor.");
@@ -420,7 +542,7 @@ public sealed class Engine : IDisposable
             """);
         // Ordinary JavaScript functions can be called and used with new; returning the host
         // object supplies the constructed value in either form.
-        return makeConstructor.Call(arguments: [factory]);
+        return _makeConstructor.Call(arguments: [factory]);
     }
 
     private readonly Dictionary<object, Dictionary<nint, QuickJsValue>> _dynamicProxies = new(ReferenceEqualityComparer.Instance);
@@ -445,7 +567,7 @@ public sealed class Engine : IDisposable
         if (perRealm.TryGetValue(realmKey, out var cached)) return cached.Clone();
         using var lookup = _realm.HostFunction("__member", 1, (_, args) =>
             dynamicMembers.GetMember(_realm, args.Length > 0 ? args[0].AsString() : ""));
-        using var factory = _realm.Eval("""
+        _makeDynamicProxy ??= _realm.Eval("""
             ((target, lookup) => new Proxy(target, {
               get(t, k, r) {
                 if (typeof k !== 'string') return Reflect.get(t, k, r);
@@ -454,7 +576,7 @@ public sealed class Engine : IDisposable
               }
             }))
             """);
-        using var proxy = factory.Call(arguments: [wrapped, lookup]);
+        using var proxy = _makeDynamicProxy.Call(arguments: [wrapped, lookup]);
         perRealm[realmKey] = proxy.Clone();
         return proxy.Clone();
     }
@@ -487,94 +609,97 @@ public sealed class Engine : IDisposable
         return decorate.Call(arguments: [fn, check]);
     }
 
-    private void BindMembers(Type type, QuickJsHostBinding<object> binding)
+    private void BindMembers(TypeMembers typeMembers, QuickJsHostBinding<object> binding)
     {
-        foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        foreach (var property in typeMembers.Properties)
         {
-            if (property.GetIndexParameters().Length != 0 || property.GetMethod is null) continue;
             binding.Property(property.Name,
-                target => ConvertToNative(property.GetValue(target)),
-                property.SetMethod is null ? null : (target, next) =>
-                {
-                    try { property.SetValue(target, ConvertArgument(property.PropertyType, next)); }
-                    // Reflection wraps the setter's own JavaScriptException in a
-                    // TargetInvocationException — unwrap it so the typed error object surfaces.
-                    catch (TargetInvocationException error) when (error.InnerException is JavaScriptException)
-                    { throw error.InnerException; }
-                    // A property setter has no overload fallthrough: a wrong-typed value (for
-                    // example TreeWalker.currentNode = nonNode) must raise a catchable TypeError.
-                    catch (InvalidCastException error) { throw JsErrors.Native(this, "TypeError", error.Message); }
-                });
+                target => ConvertToNative(property.Getter(target)),
+                property.Setter is null ? null : (target, next) => InvokePropertySetter(property, target, next));
         }
-        foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
+        foreach (var group in typeMembers.Methods)
         {
-            binding.Property(field.Name, target => ConvertToNative(field.GetValue(target)),
-                field.IsInitOnly ? null : (target, next) =>
-                {
-                    try { field.SetValue(target, ConvertArgument(field.FieldType, next)); }
-                    catch (InvalidCastException error) { throw JsErrors.Native(this, "TypeError", error.Message); }
-                });
+            binding.Method(group.Name, group.MinArity, (target, _, args) => InvokeMethodGroup(group, target, args));
         }
-        foreach (var group in type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .Where(m => !m.IsSpecialName && m.DeclaringType != typeof(object))
-            .GroupBy(m => m.Name))
+    }
+
+    private void InvokePropertySetter(PropertySpec property, object target, QuickJsValue next)
+    {
+        try { property.Setter!(target, ConvertArgument(property.MemberType, next)); }
+        // Reflection wraps the setter's own JavaScriptException in a
+        // TargetInvocationException — unwrap it so the typed error object surfaces.
+        catch (TargetInvocationException error) when (error.InnerException is JavaScriptException)
+        { throw error.InnerException; }
+        // A property setter has no overload fallthrough: a wrong-typed value (for
+        // example TreeWalker.currentNode = nonNode) must raise a catchable TypeError.
+        catch (InvalidCastException error) { throw JsErrors.Native(this, "TypeError", error.Message); }
+    }
+
+    private QuickJsValue InvokeMethodGroup(MethodGroupSpec group, object target, QuickJsValue[] args)
+    {
+        // WebIDL host behavior: arguments beyond an operation's declared parameters are
+        // ignored (reCAPTCHA calls appendChild(node, reference)), and a match that
+        // cannot convert an argument falls through to the next overload. Too few
+        // arguments still raises — a browser throws TypeError there.
+        var methods = group.Candidates;
+        var hasDirectMatch = false;
+        string? bindingFailure = null;
+        for (var pass = 0; pass < 2; pass++)
         {
-            var methods = group.ToArray();
-            binding.Method(group.Key, methods.Min(m => m.GetParameters().Length), (target, _, args) =>
+            for (var i = 0; i < methods.Length; i++)
             {
-                // WebIDL host behavior: arguments beyond an operation's declared parameters are
-                // ignored (reCAPTCHA calls appendChild(node, reference)), and a match that
-                // cannot convert an argument falls through to the next overload. Too few
-                // arguments still raises — a browser throws TypeError there.
-                var candidates = methods.Where(m => CanBind(m.GetParameters(), args.Length)).ToList();
-                if (candidates.Count == 0)
-                    candidates = methods.Where(m => m.GetParameters().Length <= args.Length)
-                        .OrderByDescending(m => m.GetParameters().Length).ToList();
-                string? bindingFailure = null;
-                foreach (var candidate in candidates)
+                var candidate = methods[i];
+                if (pass == 0)
                 {
-                    var parameters = candidate.GetParameters();
-                    object?[] arguments;
-                    try { arguments = ConvertParameters(parameters, args); }
-                    catch (InvalidCastException error) { bindingFailure = error.Message; continue; }
-                    try
-                    {
-                        var result = candidate.Invoke(target, arguments);
-                        // Void operations must return undefined, not null (see BindDelegate).
-                        return candidate.ReturnType == typeof(void) ? _realm.Undefined() : ConvertToNative(result);
-                    }
-                    catch (TargetInvocationException error) { throw error.InnerException ?? error; }
+                    if (!CanBind(candidate, args.Length)) continue;
+                    hasDirectMatch = true;
                 }
-                // WebIDL raises a TypeError (not an engine-internal error) when no overload can
-                // take the supplied arguments, so page code can catch it by constructor.
-                throw JsErrors.Native(this, "TypeError",
-                    bindingFailure ?? $"No overload of {group.Key} accepts {args.Length} arguments");
-            });
+                else
+                {
+                    if (hasDirectMatch || candidate.Parameters.Length > args.Length) continue;
+                }
+                object?[] arguments;
+                try { arguments = ConvertParameters(candidate.Parameters, args); }
+                catch (InvalidCastException error) { bindingFailure = error.Message; continue; }
+                try
+                {
+                    var result = candidate.Method.Invoke(target, arguments);
+                    // Void operations must return undefined, not null (see BindDelegate).
+                    return candidate.IsVoid ? _realm.Undefined() : ConvertToNative(result);
+                }
+                catch (TargetInvocationException error) { throw error.InnerException ?? error; }
+            }
+            if (hasDirectMatch) break;
         }
+        // WebIDL raises a TypeError (not an engine-internal error) when no overload can
+        // take the supplied arguments, so page code can catch it by constructor.
+        throw JsErrors.Native(this, "TypeError",
+            bindingFailure ?? $"No overload of {group.Name} accepts {args.Length} arguments");
     }
 
-    private static bool CanBind(ParameterInfo[] parameters, int supplied)
-    {
-        var required = parameters.Count(p => !p.IsOptional && p.GetCustomAttribute<ParamArrayAttribute>() is null);
-        return supplied >= required && (supplied <= parameters.Length ||
-            parameters.LastOrDefault()?.GetCustomAttribute<ParamArrayAttribute>() is not null);
-    }
+    private static bool CanBind(MethodSpec spec, int supplied) =>
+        supplied >= spec.RequiredCount && (supplied <= spec.Parameters.Length || spec.HasParamArray);
 
-    private object?[] ConvertParameters(ParameterInfo[] parameters, QuickJsValue[] args)
+    private static bool CanBind(ConstructorSpec spec, int supplied) =>
+        supplied >= spec.RequiredCount && (supplied <= spec.Parameters.Length || spec.HasParamArray);
+
+    private object?[] ConvertParameters(ParamSpec[] parameters, QuickJsValue[] args)
     {
+        if (parameters.Length == 0) return [];
         var result = new object?[parameters.Length];
         for (var i = 0; i < parameters.Length; i++)
         {
-            if (parameters[i].GetCustomAttribute<ParamArrayAttribute>() is not null)
+            var param = parameters[i];
+            if (param.IsParamArray)
             {
-                var elementType = parameters[i].ParameterType.GetElementType()!;
+                var elementType = param.ParamArrayElementType!;
                 var array = Array.CreateInstance(elementType, Math.Max(0, args.Length - i));
                 for (var j = i; j < args.Length; j++) array.SetValue(ConvertArgument(elementType, args[j]), j - i);
                 result[i] = array;
             }
-            else if (i < args.Length) result[i] = ConvertParameter(parameters[i], args[i]);
-            else if (parameters[i].IsOptional) result[i] = parameters[i].DefaultValue;
-            else result[i] = ConvertParameter(parameters[i], _realm.Undefined());
+            else if (i < args.Length) result[i] = ConvertParameter(param, args[i]);
+            else if (param.IsOptional) result[i] = param.DefaultValue;
+            else result[i] = ConvertParameter(param, _realm.Undefined());
         }
         return result;
     }
@@ -582,30 +707,149 @@ public sealed class Engine : IDisposable
     /// <summary>Converts one argument for a declared parameter: a nullable string
     /// (<c>string?</c>, WebIDL's nullable DOMString) keeps null/undefined as a DOM null, while a
     /// plain DOMString converts them to "null"/"undefined".</summary>
-    private object? ConvertParameter(ParameterInfo parameter, QuickJsValue native)
+    private object? ConvertParameter(ParamSpec parameter, QuickJsValue native)
     {
-        if (parameter.ParameterType == typeof(string) &&
-            native.Kind is (QuickJsKind.Null or QuickJsKind.Undefined) && IsNullableString(parameter))
+        if (parameter.IsNullableString && native.Kind is (QuickJsKind.Null or QuickJsKind.Undefined))
             return null;
         return ConvertArgument(parameter.ParameterType, native);
     }
 
-    private static readonly Dictionary<ParameterInfo, bool> NullableStringCache = new();
+    private static readonly ConcurrentDictionary<Type, TypeMembers> TypeMembersCache = new();
+    private static readonly ConcurrentDictionary<MethodInfo, MethodSpec> DelegateMethodCache = new();
 
-    /// <summary>True when a string parameter is declared nullable (<c>string?</c>): WebIDL's
-    /// nullable DOMString keeps null/undefined, while a plain DOMString converts them to the
-    /// strings "null"/"undefined".</summary>
-    private static bool IsNullableString(ParameterInfo parameter)
+    private static TypeMembers GetTypeMembers(Type type) => TypeMembersCache.GetOrAdd(type, BuildTypeMembers);
+    private static MethodSpec GetMethodSpec(MethodInfo method) => DelegateMethodCache.GetOrAdd(method, BuildMethodSpec);
+
+    private static TypeMembers BuildTypeMembers(Type type)
     {
-        lock (NullableStringCache)
+        var nullabilityContext = new NullabilityInfoContext();
+        PropertyInfo? indexer = null;
+        var properties = new List<PropertySpec>();
+        foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            if (NullableStringCache.TryGetValue(parameter, out var cached)) return cached;
-            var context = new NullabilityInfoContext();
-            var nullable = context.Create(parameter).WriteState == NullabilityState.Nullable;
-            NullableStringCache[parameter] = nullable;
-            return nullable;
+            var indexParams = property.GetIndexParameters();
+            if (indexParams.Length > 0)
+            {
+                if (indexer is null && property.Name == "Item" && indexParams is [{ ParameterType: var key }]
+                    && key == typeof(int) && property.GetMethod is not null)
+                    indexer = property;
+                continue;
+            }
+            if (property.GetMethod is null) continue;
+            properties.Add(new PropertySpec(
+                property.Name,
+                property.PropertyType,
+                property.GetValue,
+                property.SetMethod is null ? null : property.SetValue));
         }
+        foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
+        {
+            properties.Add(new PropertySpec(
+                field.Name,
+                field.FieldType,
+                field.GetValue,
+                field.IsInitOnly ? null : field.SetValue));
+        }
+        var methodGroups = type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+            .Where(m => !m.IsSpecialName && m.DeclaringType != typeof(object))
+            .GroupBy(m => m.Name)
+            .Select(g =>
+            {
+                var specs = g.Select(m => BuildMethodSpec(m, nullabilityContext))
+                    .OrderByDescending(m => m.Parameters.Length)
+                    .ToArray();
+                return new MethodGroupSpec(g.Key, specs.Min(m => m.Parameters.Length), specs);
+            })
+            .ToArray();
+        var constructors = type.GetConstructors()
+            .OrderBy(c => c.GetParameters().Length)
+            .Select(c => BuildConstructorSpec(c, nullabilityContext))
+            .ToArray();
+        var memberNames = properties.Select(p => p.Name)
+            .Concat(methodGroups.Select(m => m.Name))
+            .Distinct()
+            .ToArray();
+        return new TypeMembers(indexer, properties.ToArray(), methodGroups, constructors, memberNames);
     }
+
+    private static MethodSpec BuildMethodSpec(MethodInfo method) =>
+        BuildMethodSpec(method, new NullabilityInfoContext());
+
+    private static MethodSpec BuildMethodSpec(MethodInfo method, NullabilityInfoContext nullability)
+    {
+        var parameters = BuildParamSpecs(method.GetParameters(), nullability);
+        var required = parameters.Count(p => !p.IsOptional && !p.IsParamArray);
+        var hasParamArray = parameters.Length > 0 && parameters[^1].IsParamArray;
+        return new MethodSpec(method, method.ReturnType == typeof(void), parameters, required, hasParamArray);
+    }
+
+    private static ConstructorSpec BuildConstructorSpec(ConstructorInfo constructor, NullabilityInfoContext nullability)
+    {
+        var parameters = BuildParamSpecs(constructor.GetParameters(), nullability);
+        var required = parameters.Count(p => !p.IsOptional && !p.IsParamArray);
+        var hasParamArray = parameters.Length > 0 && parameters[^1].IsParamArray;
+        return new ConstructorSpec(constructor, parameters, required, hasParamArray);
+    }
+
+    private static ParamSpec[] BuildParamSpecs(ParameterInfo[] parameters, NullabilityInfoContext nullability)
+    {
+        if (parameters.Length == 0) return [];
+        var specs = new ParamSpec[parameters.Length];
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            var p = parameters[i];
+            var isParamArray = p.IsDefined(typeof(ParamArrayAttribute), inherit: false);
+            var isNullableString = p.ParameterType == typeof(string) &&
+                nullability.Create(p).WriteState == NullabilityState.Nullable;
+            specs[i] = new ParamSpec(
+                p.ParameterType,
+                p.IsOptional,
+                p.IsOptional ? p.DefaultValue : null,
+                isParamArray,
+                isParamArray ? p.ParameterType.GetElementType() : null,
+                isNullableString);
+        }
+        return specs;
+    }
+
+    private sealed record PropertySpec(
+        string Name,
+        Type MemberType,
+        Func<object, object?> Getter,
+        Action<object, object?>? Setter);
+
+    private sealed record ParamSpec(
+        Type ParameterType,
+        bool IsOptional,
+        object? DefaultValue,
+        bool IsParamArray,
+        Type? ParamArrayElementType,
+        bool IsNullableString);
+
+    private sealed record MethodSpec(
+        MethodInfo Method,
+        bool IsVoid,
+        ParamSpec[] Parameters,
+        int RequiredCount,
+        bool HasParamArray);
+
+    private sealed record MethodGroupSpec(
+        string Name,
+        int MinArity,
+        MethodSpec[] Candidates);
+
+    private sealed record ConstructorSpec(
+        ConstructorInfo Constructor,
+        ParamSpec[] Parameters,
+        int RequiredCount,
+        bool HasParamArray);
+
+    private sealed record TypeMembers(
+        PropertyInfo? IntIndexer,
+        PropertySpec[] Properties,
+        MethodGroupSpec[] Methods,
+        ConstructorSpec[] Constructors,
+        string[] InterfaceMemberNames);
 
     private object? ConvertArgument(Type type, QuickJsValue native)
     {
@@ -619,9 +863,7 @@ public sealed class Engine : IDisposable
         if (type == typeof(string)) return native.AsString();
         if (native.Kind is QuickJsKind.Null or QuickJsKind.Undefined)
             return type.IsValueType && nullable is null ? Activator.CreateInstance(type) : null;
-        var host = _realm.HostObjects.Unwrap<object>(native);
-        if (host is null && native.Identity != 0)
-            host = _indexProxies.FirstOrDefault(p => p.Value.Identity == native.Identity).Key;
+        var host = UnwrapHost(native);
         if (host is not null && type.IsInstanceOfType(host)) return host;
         if (type == typeof(bool)) return native.AsBoolean();
         if (type.IsEnum) return Enum.ToObject(type, (int)native.AsNumber());
@@ -655,9 +897,7 @@ public sealed class Engine : IDisposable
 
     internal object? ToObject(QuickJsValue value)
     {
-        var host = _realm.HostObjects.Unwrap<object>(value);
-        if (host is null && value.Identity != 0)
-            host = _indexProxies.FirstOrDefault(p => p.Value.Identity == value.Identity).Key;
+        var host = UnwrapHost(value);
         if (host is not null) return host;
         return value.Kind switch
         {
@@ -673,10 +913,10 @@ public sealed class Engine : IDisposable
     {
         // Used for structured clone and test inspection. Cyclic or accessor-heavy page
         // objects stay as managed handles instead of recursively walking arbitrary script.
-        using var stringify = _realm.Eval("JSON.stringify");
+        _stringify ??= _realm.Eval("JSON.stringify");
         try
         {
-            using var json = stringify.Call(arguments: [value]);
+            using var json = _stringify.Call(arguments: [value]);
             if (json.Kind == QuickJsKind.Undefined) return new JsValue(this, value.Clone());
             using var document = System.Text.Json.JsonDocument.Parse(json.AsString());
             return ReadJson(document.RootElement);
