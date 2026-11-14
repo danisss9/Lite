@@ -2,6 +2,8 @@
 # 7,837 expanded paths and the encoding legacy-mb pages hold ~4 GB each while they run, so
 # the whole queue does not fit in one 8-way pass on a 32 GB machine: phases bound the
 # concurrency per family and the aggregator merges the phase reports into one evidence set.
+# Pass -Aggregate -Gate after the last phase to enforce the reviewed no-regression baseline
+# (Wpt\html5-baseline-passes.txt); without -Gate the merge only checks the paths that ran.
 # Long-running (hours): launch detached, e.g.
 #   Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',
 #     'scripts\run-html5-baseline.ps1','-Filter','html/','-Label','html' -RedirectStandardOutput <log> -WindowStyle Hidden
@@ -18,7 +20,8 @@ param(
     [string]$Label = 'all',
     [string]$Dotnet = 'dotnet',
     [switch]$SkipBuild,
-    [switch]$Aggregate
+    [switch]$Aggregate,
+    [switch]$Gate
 )
 
 $ErrorActionPreference = 'Stop'
@@ -88,8 +91,13 @@ if ($Aggregate) {
     $all = @(Get-ChildItem $artifacts -Filter 'html5-results-*-of-*.json' |
         Where-Object { $_.LastWriteTime -gt (Get-Date).AddHours(-24) } | Sort-Object Name)
     $aggregated = Join-Path $artifacts 'html5-baseline.md'
-    & python (Join-Path $PSScriptRoot 'aggregate-html5-baseline.py') @($all | ForEach-Object { $_.FullName }) --output $aggregated
+    # A full-queue aggregation can enforce the reviewed no-regression baseline; a phase run
+    # checks only the baseline paths it actually executed.
+    $aggregateArguments = @($all | ForEach-Object { $_.FullName }) + @('--output', $aggregated)
+    if ($Gate) { $aggregateArguments += '--gate' } else { $aggregateArguments += '--allow-missing-baseline' }
+    & python (Join-Path $PSScriptRoot 'aggregate-html5-baseline.py') @aggregateArguments
     Write-Host "aggregation exit: $LASTEXITCODE"
     Write-Host "report: $aggregated"
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 Write-Host "shard logs: $logDir"

@@ -127,8 +127,29 @@ identity hashes every tracked and untracked source file:
 ./scripts/run-html5-baseline.ps1 -Filter 'dom/nodes|dom/events|dom/ranges' -Label dom -ShardCount 4
 ./scripts/run-html5-baseline.ps1 -Filter 'editing/crashtests|editing/other|editing/run|editing/whitespaces|editing/manual' -Label editing -ShardCount 2
 ./scripts/run-html5-baseline.ps1 -Filter 'encoding/legacy-mb-japanese/euc-jp' -Label enc-eucjp -ShardCount 2
-python scripts/aggregate-html5-baseline.py Lite.Conformance/artifacts/html5-results-*-of-*.json
+./scripts/run-html5-baseline.ps1 -Aggregate -Gate
 ```
+
+CI runs the complete queue on the nightly schedule and on `workflow_dispatch` as a 16-shard
+matrix of independent Windows runners. Each shard is one process, so a ~4 GB encoding page is
+the only heavy page that runner holds; position-based sharding interleaves the sorted queue, so
+every shard gets the same mix of heavy pages instead of one shard owning the encoding family.
+One build is packaged and shared by every shard, because the evidence identity hashes the
+loaded assemblies and the native QuickJS DLL. The reviewed timeout budgets cap every
+never-completing page the baseline measured (143 paths at 10-30 s instead of the ~600 s
+two-attempt default), so known hangs cost minutes, not hours. Pull requests and pushes run a
+~200-path smoke slice (`lite/`, the DOM collection/list/traversal tests, the editing and
+selection crashtests, and `html/obsolete`) rather than the full multi-hour queue.
+
+The CI gate is a no-regression gate, not an all-green gate. `Wpt/html5-baseline-passes.txt`
+lists the 1,426 expanded paths that passed in the banked 12 November run (including the
+executed encoding/legacy-mb slice); the runner's
+`--baseline Wpt/html5-baseline-passes.txt` fails only when one of its in-scope paths stops
+passing, and `aggregate-html5-baseline.py --gate` enforces the complete list after the shard
+merge (a missing path is a regression too). Non-baseline failures remain diagnostics. When a
+review deliberately banks a new baseline, regenerate the list from a completed, single-identity
+merge with `--write-baseline-passes`; the report lists unexpected new passes so they can be
+promoted.
 
 The aggregator writes `html5-results.json` only when every input completed on one build identity;
 when a parallel track edited the checkout mid-run it fails with the offending reports, and

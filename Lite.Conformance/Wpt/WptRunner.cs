@@ -16,7 +16,7 @@ namespace Lite.Conformance.Wpt;
 /// </summary>
 internal static class WptRunner
 {
-    public static int RunHtml(string? filter, ShardSpec shard, string? reportPath)
+    public static int RunHtml(string? filter, ShardSpec shard, string? reportPath, string? baselinePath = null)
     {
         var applicability = HtmlApplicability.Read();
         var errors = new List<string>();
@@ -33,6 +33,12 @@ internal static class WptRunner
             .Order(StringComparer.Ordinal);
         var entries = shard.Apply(paths.SelectMany(Expand)).ToArray();
         if (entries.Length == 0) { Console.WriteLine("html5: no reviewed applicable tests match."); return 2; }
+        // The reviewed baseline lists paths that passed in a banked run. Under --baseline the
+        // gate asks only that none of those in-scope paths regress, instead of demanding that
+        // every reviewed path in the queue pass (the queue is ~20% green, so the all-pass rule
+        // could never be satisfied). Paths outside the run's filter/shard are not checked; the
+        // shard aggregator performs the full-queue completeness check.
+        var baseline = baselinePath is null ? null : LoadBaselinePasses(baselinePath);
         var identity = ExecutionEvidence.CaptureIdentity();
         var started = DateTime.UtcNow;
         var outcomes = new List<TestEvidence>();
@@ -70,7 +76,57 @@ internal static class WptRunner
         ExecutionEvidence.Write(destination, identity, started, outcomes);
         PrintSlowest(outcomes);
         Console.WriteLine($"html5: {accepted}/{outcomes.Count} reviewed tests passed; this is not a profile-readiness claim.");
+        if (baseline is not null) return CheckBaseline(entries, outcomes, baseline);
         return accepted == outcomes.Count ? 0 : 1;
+    }
+
+    /// <summary>Loads Wpt\html5-baseline-passes.txt (or another review-approved list): exact
+    /// expanded WPT paths that passed in a banked run. The no-regression gate compares a new
+    /// run against this set, so unexpected passes and still-red reviewed paths do not paint
+    /// the gate green or red on their own.</summary>
+    internal static HashSet<string> LoadBaselinePasses(string path)
+    {
+        var file = Path.IsPathRooted(path) ? path : ConformancePaths.Manifest(path);
+        if (!File.Exists(file) && File.Exists(path)) file = Path.GetFullPath(path);
+        if (!File.Exists(file)) throw new InvalidDataException($"HTML5 baseline list not found: {path}");
+        var passes = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var raw in File.ReadAllLines(file))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0 || line.StartsWith('#')) continue;
+            passes.Add(line);
+        }
+        if (passes.Count == 0) throw new InvalidDataException($"HTML5 baseline list is empty: {file}");
+        return passes;
+    }
+
+    /// <summary>Compares this run's outcomes with the reviewed baseline-pass set and returns
+    /// the gate exit code. <paramref name="entries"/> is the shard's selected queue, so a
+    /// baseline path that should have run but produced no outcome (a lost result) also fails.
+    /// </summary>
+    internal static int CheckBaseline(IReadOnlyList<string> entries, IReadOnlyList<TestEvidence> outcomes,
+        HashSet<string> baseline)
+    {
+        var inScope = entries.Count(path => baseline.Contains(path));
+        if (inScope == 0)
+        {
+            Console.WriteLine("html5: the baseline check selected no reviewed passing paths; check --filter and --baseline.");
+            return 2;
+        }
+        var executed = outcomes.Where(test => baseline.Contains(test.Path)).ToArray();
+        var regressions = executed.Where(test => test.Outcome != "pass")
+            .OrderBy(test => test.Path, StringComparer.Ordinal).ToArray();
+        var missing = entries.Where(path => baseline.Contains(path))
+            .Where(path => outcomes.All(test => test.Path != path))
+            .OrderBy(path => path, StringComparer.Ordinal).ToArray();
+        foreach (var test in regressions)
+            Console.WriteLine($"  BASELINE-REGRESSION {test.Path} — {test.Outcome}: {test.Detail}");
+        foreach (var path in missing)
+            Console.WriteLine($"  BASELINE-MISSING {path} — selected but produced no outcome");
+        var held = executed.Length - regressions.Length;
+        Console.WriteLine($"html5: baseline {held}/{inScope} in-scope passing paths held " +
+            $"({regressions.Length} regressed, {missing.Length} missing).");
+        return regressions.Length == 0 && missing.Length == 0 ? 0 : 1;
     }
 
     private const int TestTimeoutMs = 10_000;

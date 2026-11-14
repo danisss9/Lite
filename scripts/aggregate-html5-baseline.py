@@ -19,7 +19,13 @@ A strict merge refuses reports from more than one build identity, because eviden
 only usable for the sources that produced it. --diagnostic accepts a checkout edited
 during the run (a parallel track writing source files drifts the identity between
 phases): the report then lists the identity slices and writes no merged evidence, so a
-drifted run can still feed the work queue without being mistaken for banked evidence."""
+drifted run can still feed the work queue without being mistaken for banked evidence.
+
+--gate turns the reviewed pass baseline (Wpt/html5-baseline-passes.txt) into the gate:
+every listed path must still run and pass. Regressions and absent paths exit 1, while
+non-baseline failures remain diagnostics. --allow-missing-baseline restricts the check
+to paths the phase actually ran; --write-baseline-passes re-banks the current pass set
+from a completed, single-identity run."""
 
 from __future__ import annotations
 
@@ -34,6 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT / "Lite.Conformance" / "artifacts"
 APPLICABILITY = ROOT / "Lite.Conformance" / "Wpt" / "html5-applicability.json"
 MANIFEST = ARTIFACTS / "wpt-manifest.json"
+BASELINE_PASSES = ROOT / "Lite.Conformance" / "Wpt" / "html5-baseline-passes.txt"
 
 OUTCOME_ORDER = ["pass", "fail", "crash", "timeout", "empty", "unsupported", "manual-pending"]
 
@@ -103,6 +110,14 @@ def accepted(test: dict, review: dict | None) -> bool:
     return True
 
 
+def load_baseline_passes(path: Path) -> list[str]:
+    """The reviewed no-regression list: exact expanded paths that passed in a banked run."""
+    if not path.exists():
+        raise FileNotFoundError(f"baseline-pass list not found: {path}")
+    paths = [line.strip() for line in path.read_text(encoding="utf-8").splitlines()]
+    return [line for line in paths if line and not line.startswith("#")]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("reports", nargs="+", type=Path, help="html5 shard evidence JSON files")
@@ -116,7 +131,21 @@ def main() -> int:
                              "then lists the identity slices and no merged evidence is written")
     parser.add_argument("--expected", type=int, default=0,
                         help="size of the reviewed queue's expanded path set, for a coverage line")
+    parser.add_argument("--gate", action="store_true",
+                        help="fail when a reviewed baseline-passing path stops passing or disappears")
+    parser.add_argument("--baseline-passes", type=Path, default=BASELINE_PASSES,
+                        help="review-approved list of passing expanded paths (default: Wpt/html5-baseline-passes.txt)")
+    parser.add_argument("--allow-missing-baseline", action="store_true",
+                        help="check only baseline paths that ran (for a phase or partial-queue report); "
+                             "the default also fails when a baseline path is absent")
+    parser.add_argument("--write-baseline-passes", action="store_true",
+                        help="rewrite --baseline-passes from this run's passing paths (only for a "
+                             "completed, single-identity run)")
     args = parser.parse_args()
+    if args.gate and args.diagnostic:
+        print("--gate requires a completed, single-identity merge; it cannot be combined with --diagnostic",
+              file=sys.stderr)
+        return 2
 
     reports: list[dict] = []
     problems: list[str] = []
@@ -181,6 +210,22 @@ def main() -> int:
         return 2
 
     tests.sort(key=lambda test: test["path"])
+    by_path = {test["path"]: test for test in tests}
+    baseline: list[str] = []
+    try:
+        baseline = load_baseline_passes(args.baseline_passes)
+    except OSError as error:
+        if args.gate:
+            print(f"problem: {error}", file=sys.stderr)
+            return 2
+    baseline_set = set(baseline)
+    regressions = [(path, by_path[path].get("outcome", "?"), by_path[path].get("detail") or "")
+                   for path in baseline if path in by_path and by_path[path].get("outcome") != "pass"]
+    missing = [path for path in baseline if path not in by_path]
+    held = sum(1 for path in baseline if by_path.get(path, {}).get("outcome") == "pass")
+    new_passes = sorted(test["path"] for test in tests
+                        if test.get("outcome") == "pass" and test["path"] not in baseline_set)
+    baseline_failed = bool(regressions or (missing and not args.allow_missing_baseline))
     started = min(report.get("startedUtc", "") for report in reports)
     finished = max(report.get("finishedUtc", "") for report in reports)
     if not args.diagnostic:
@@ -289,6 +334,30 @@ def main() -> int:
     lines.append("|" + "---|" * len(OUTCOME_ORDER))
     lines.append("| " + " | ".join(str(suite_counts.get(outcome, 0)) for outcome in OUTCOME_ORDER) + " |")
     lines.append("")
+    if baseline:
+        lines.append(f"## Baseline gate: {held}/{len(baseline)} reviewed passing paths held")
+        lines.append("")
+        lines.append(f"- regressions: {len(regressions)}")
+        lines.append(f"- missing from this run: {len(missing)}"
+                     + (" (ignored by --allow-missing-baseline)" if args.allow_missing_baseline else ""))
+        lines.append(f"- unexpected new passes (refresh the baseline to bank them): {len(new_passes)}")
+        lines.append("")
+        if regressions:
+            lines.append("| regressed path | outcome | detail |")
+            lines.append("|---|---|---|")
+            for path, outcome, detail in regressions[:100]:
+                lines.append(f"| {path} | {outcome} | {detail[:160]} |")
+            if len(regressions) > 100:
+                lines.append(f"| ... | | {len(regressions) - 100} more |")
+            lines.append("")
+        if missing and not args.allow_missing_baseline:
+            lines.append("| missing baseline path |")
+            lines.append("|---|")
+            for path in missing[:100]:
+                lines.append(f"| {path} |")
+            if len(missing) > 100:
+                lines.append(f"| ... {len(missing) - 100} more |")
+            lines.append("")
     failing = [(cluster, counts) for cluster, counts in cluster_counts.items()
                if counts.get("pass", 0) < sum(counts.values())]
     worst = sorted(failing, key=lambda item: item[1]["pass"] / sum(item[1].values()))[:40]
@@ -314,9 +383,36 @@ def main() -> int:
     if not args.diagnostic:
         print(f"evidence: {args.evidence}")
     print(f"csv: {csv_path}")
+    if baseline:
+        print(f"baseline: {held}/{len(baseline)} reviewed passing paths held; "
+              f"{len(regressions)} regressed; {len(missing)} missing; {len(new_passes)} new passes")
+        for path, outcome, detail in regressions[:20]:
+            print(f"  regression: {path} ({outcome}: {detail[:120]})")
+        if len(regressions) > 20:
+            print(f"  ... {len(regressions) - 20} more regressions in the report")
+        if missing and not args.allow_missing_baseline:
+            for path in missing[:20]:
+                print(f"  missing: {path}")
+            if len(missing) > 20:
+                print(f"  ... {len(missing) - 20} more missing paths in the report")
+    if args.write_baseline_passes:
+        if problems or (args.gate and baseline_failed):
+            print("refusing to write the baseline-pass list: the merge is not completed evidence "
+                  "or the current gate has regressions/missing paths", file=sys.stderr)
+        else:
+            passing = sorted(test["path"] for test in tests if test.get("outcome") == "pass")
+            args.baseline_passes.parent.mkdir(parents=True, exist_ok=True)
+            args.baseline_passes.write_text(
+                "# Reviewed HTML 5.0 baseline passing WPT paths (no-regression gate).\n"
+                "# Any path listed here that fails during --suite html5 or baseline aggregation is a gate regression.\n"
+                + "\n".join(passing) + "\n", encoding="utf-8")
+            print(f"baseline-pass list: {args.baseline_passes} ({len(passing)} paths)")
     for problem in problems:
         print(f"problem: {problem}", file=sys.stderr)
-    return 1 if problems else 0
+    if baseline_failed:
+        print(f"baseline gate failed: {len(regressions)} regressions, {len(missing)} missing",
+              file=sys.stderr)
+    return 1 if problems or baseline_failed else 0
 
 
 if __name__ == "__main__":

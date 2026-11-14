@@ -1,8 +1,119 @@
 # Reviewed per-path kill budgets, longest prefix wins: <path-prefix> | <budgetMs> | <reason>
 #
-# Entries exist for executions known to loop the engine (engine-perf queue findings, not
-# regressions): their outcome is timeout under any budget, so the default 300,000 ms is
-# pure burnout. Remove an entry the moment the tracked engine work lands — a stale budget
-# would mask a now-passing test as a timeout.
+# Entries exist for executions known to loop the engine or wait indefinitely for unimplemented
+# async events (engine-perf / harness queue findings, not regressions): their outcome is
+# timeout under any budget, so the default 300,000 ms is pure burnout. Remove an entry the
+# moment the tracked engine work lands — a stale budget would mask a now-passing test as a timeout.
 
-dom/nodes/NodeList-static-length-getter-tampered | 15000 | engine-perf queue: tampered length getter loops the engine during page load; never completes under any budget
+dom/nodes/NodeList-static-length-getter-tampered | 10000 | engine-perf queue: tampered length getter loops the engine during page load; never completes under any budget
+dom/events/scrolling/scrollend-event-not-fired-after-removing-scroller.tentative.html | 10000 | async event wait: scrollend completion never fires in headless pump
+dom/nodes/Document-constructor-svg.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+dom/nodes/Element-childElementCount-dynamic-svg.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+dom/nodes/Element-childElementCount-nochild-svg.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+dom/nodes/Element-childElementCount-svg.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+dom/nodes/Element-firstElementChild-namespace-svg.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+dom/nodes/Element-firstElementChild-svg.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+dom/nodes/Element-lastElementChild-svg.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+dom/nodes/Element-nextElementSibling-svg.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+dom/nodes/Element-previousElementSibling-svg.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+editing/crashtests/ | 15000 | async editing completion never clears the harness test-wait; healthy crashtests are sub-second (one SVG insertion case measures ~9 s)
+editing/run/inserthtml.html | 15000 | engine-perf queue: execCommand insertHTML matrix hangs during load
+editing/run/removeformat.html | 15000 | engine-perf queue: execCommand removeFormat matrix hangs during load
+editing/whitespaces/chrome-compat/ | 10000 | async editing harness never signals completion in headless pump
+html/browsers/the-window-object/window-indexed-properties-delete-no-cache.html | 10000 | async iframe load callback never settles after indexed property deletion
+html/dom/reflection- | 30000 | engine-perf queue: cap reflection megasuites that exceed 30s budget
+html/editing/focus/sequential-focus-navigation-and-the-tabindex-attribute/focus-tabindex-event.html | 10000 | async sequential focus navigation event never fires
+html/rendering/dimension-attributes.html | 15000 | engine-perf queue: dimension-attributes megasuite loops during load
+html/semantics/document-metadata/the-base-element/base-data.html | 10000 | async data-URL subresource load never settles in testharness
+html/semantics/document-metadata/the-base-element/base-javascript.html | 10000 | async javascript-URL base resolution never settles in testharness
+html/semantics/document-metadata/the-style-element/style_type_svg.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+html/semantics/embedded-content/the-iframe-element/iframe_sandbox_block_modals-1.html | 10000 | sandboxed child iframe postMessage callback never fires
+html/semantics/scripting-1/the-script-element/module/modulepreload-cross-origin-referrerpolicy.sub.html | 10000 | modulepreload link load event never fires
+html/semantics/scripting-1/the-script-element/script-type-and-language-js-svg.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+html/semantics/tabular-data/processing-model-1/span-limits.html | 15000 | engine-perf queue: extreme colspan/rowspan table layout hangs during load
+html/webappapis/dynamic-markup-insertion/the-innerhtml-property/innerhtml-and-xml-namespaces.svg | 10000 | standalone SVG script execution not wired; testharness report never fires
+selection/crashtests/ | 10000 | async selection completion never clears the harness test-wait; healthy crashtests are sub-second
+uievents/order-of-events/mouse-events/ | 10000 | async mouse/wheel event sequence never settles in headless pump
+url/IdnaTestV2.any.js | 15000 | engine-perf queue: IDNA v2 table sweep exceeds budget during load
+FileAPI/url/url_xmlhttprequest_img.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+dom/nodes/Element-childElement-null-svg.svg | 10000 | engine-perf queue: page load never reports results; never completes under any budget
+dom/nodes/Element-childElementCount-dynamic-add-svg.svg | 10000 | engine-perf queue: page load never reports results; never completes under any budget
+dom/nodes/Element-childElementCount-dynamic-remove-svg.svg | 10000 | engine-perf queue: page load never reports results; never completes under any budget
+dom/nodes/Element-firstElementChild-entity.svg | 10000 | engine-perf queue: page load never reports results; never completes under any budget
+dom/nodes/Element-siblingElement-null-svg.svg | 10000 | engine-perf queue: page load never reports results; never completes under any budget
+fetch/http-cache/basic-auth-cache-test.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/browsers/browsing-the-web/navigating-across-documents/unknown-protocol-reload-crash.html | 10000 | async completion never clears the harness test-wait in the headless pump; never completes under any budget
+html/browsers/history/the-location-interface/cross-origin-location-stringify-crash.sub.html | 10000 | async completion never clears the harness test-wait in the headless pump; never completes under any budget
+html/canvas/element/manual/draw-element-image/fullscreen-child-crash.tentative.html | 10000 | async completion never clears the harness test-wait in the headless pump; never completes under any budget
+html/canvas/element/manual/draw-element-image/fullscreen-crash.tentative.html | 10000 | async completion never clears the harness test-wait in the headless pump; never completes under any budget
+html/rendering/cdata-001.xhtml | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/cdata-002.xhtml | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/non-replaced-elements/the-fieldset-and-legend-elements/fieldset-dynamic-pseudo.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/non-replaced-elements/the-page/Document-documentElement-remove-clears-content.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/replaced-elements/embedded-content-rendering-rules/canvas-update-with-border-object-fit.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/replaced-elements/embedded-content/change-src-while-not-displayed.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/replaced-elements/embedded-content/cross-domain-iframe-in-multicol.sub.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/replaced-elements/embedded-content/cross-domain-iframe.sub.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/replaced-elements/embedded-content/tall-cross-domain-iframe-in-scrolled.sub.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/widgets/field-sizing-input-number-relayout.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/widgets/field-sizing-input-text-relayout.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/widgets/field-sizing-textarea-relayout.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/widgets/input-checkbox-switch.tentative.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/widgets/the-select-element/select-invalidation.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/rendering/widgets/the-select-element/select-label-appearance.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/media-elements/track/track-element/track-cue-rendering-after-controls-added.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/media-elements/track/track-element/track-cue-rendering-after-controls-removed.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/media-elements/track/track-element/track-cue-rendering-line-doesnt-fit.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/media-elements/track/track-element/track-cue-rendering-transformed-video.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/media-elements/track/track-element/track-webvtt-non-snap-to-lines.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/media-elements/track/track-element/track-webvtt-two-cue-layout-after-first-end.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/the-iframe-element/iframe-initially-empty-is-updated.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/the-img-element/available-images.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/the-img-element/image-compositing-change.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/the-img-element/image-compositing-large-scale-change.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/the-img-element/img-with-containment-and-size.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/embedded-content/the-video-element/video-poster-shown-preload-auto.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-input-element/type-change-to-same-type.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select-multiple-popup/select-multiple-popup-appearance.tentative.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/appearance-base-and-base-select.tentative.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/checkmark-animation-002.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/option-label-in-shadow-tree.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/picker-and-slotted-invalidation.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/picker-and-slotted.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-custom-button.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-dark-mode.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-default-button.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-disabled-option.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-fallback-bottom-left-scroller.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-fallback-bottom-left.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-fallback-bottom-right-scroller.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-fallback-bottom-right.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-fallback-top-left-scroller.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-fallback-top-left.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-fallback-top-right-scroller.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-fallback-top-right.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-font-inheriting.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-optgroup-legend-and-label.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-optgroup-legend.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-optgroup-rendering.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-option-with-label.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-picker-select-border.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-switching-invalidation.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-writing-mode-vertical-lr.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-appearance-writing-mode-vertical-rl.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-listitems-crash.html | 10000 | async completion never clears the harness test-wait in the headless pump; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-listitems-hr-crash.html | 10000 | async completion never clears the harness test-wait in the headless pump; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-only-picker-opt-in.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-option-images.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-picker-pseudo-backdrop.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-picker-pseudo-before-after.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-picker-pseudo-first-letter-first-line.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-picker-pseudo-highlight.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-picker-pseudo-selection.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-picker-pseudo-target-text.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-pseudo-ordering.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/select-second-child-button.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/customizable-select/uses-label-dynamic.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/forms/the-select-element/list-box-important-colors.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+html/semantics/scripting-1/the-script-element/module/dynamic-import/microtasks/worklet.https.html | 10000 | async reftest completion never clears reftest-wait in the headless run; never completes under any budget
+uievents/mouse/crashtests/retrieve_coords_after_moving_target_outside_subdoc_and_hide_the_subdoc.html | 10000 | async completion never clears the harness test-wait in the headless pump; never completes under any budget

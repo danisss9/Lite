@@ -105,6 +105,48 @@ public static class ConformanceTests
     }
 
     [Test]
+    public static void WptBaseline_LoadsReviewedPassListAndRejectsMissingFile()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "lite-baseline-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var list = Path.Combine(directory, "passes.txt");
+            File.WriteAllText(list, "# reviewed\n\n  dom/a.html  \nhtml/b.html\n");
+            var passes = WptRunner.LoadBaselinePasses(list);
+            Equal(2, passes.Count);
+            True(passes.Contains("dom/a.html"));
+            True(passes.Contains("html/b.html"));
+            True(Throws<InvalidDataException>(() => WptRunner.LoadBaselinePasses(Path.Combine(directory, "missing.txt"))));
+            File.WriteAllText(list, "# only comments\n");
+            True(Throws<InvalidDataException>(() => WptRunner.LoadBaselinePasses(list)));
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+
+        static bool Throws<T>(Action action) where T : Exception
+        {
+            try { action(); return false; }
+            catch (T) { return true; }
+        }
+    }
+
+    [Test]
+    public static void WptBaseline_ChecksOnlyListedPathsAndShardCoverage()
+    {
+        static TestEvidence Outcome(string path, string outcome) =>
+            new("wpt", path, outcome, outcome, [new("assertion", outcome == "pass" ? 0 : 1, null)]);
+        var baseline = new HashSet<string>(StringComparer.Ordinal) { "a.html", "b.html" };
+        var entries = new[] { "a.html", "b.html", "c.html" };
+        Equal(0, WptRunner.CheckBaseline(entries,
+            [Outcome("a.html", "pass"), Outcome("b.html", "pass"), Outcome("c.html", "fail")], baseline));
+        Equal(1, WptRunner.CheckBaseline(entries,
+            [Outcome("a.html", "fail"), Outcome("b.html", "pass"), Outcome("c.html", "pass")], baseline));
+        Equal(1, WptRunner.CheckBaseline(entries,
+            [Outcome("a.html", "pass"), Outcome("c.html", "pass")], baseline));
+        Equal(2, WptRunner.CheckBaseline(["c.html"], [Outcome("c.html", "pass")], baseline));
+    }
+
+    [Test]
     public static void ManualEvidence_RequiresArtifactsAndRejectsTampering()
     {
         var identity = ExecutionEvidence.CaptureIdentity();

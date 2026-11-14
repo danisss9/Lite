@@ -33,6 +33,7 @@ internal static class Program
         int surveyLimit = 0;
         bool updateBaselines = false;
         string? reportPath = null;
+        string? baselinePath = null;
         var shard = ShardSpec.All;
         bool requireReady = false;
         bool requireHtmlReady = false;
@@ -91,6 +92,9 @@ internal static class Program
                     break;
                 case "--report" when i + 1 < args.Length:
                     reportPath = args[++i];
+                    break;
+                case "--baseline" when i + 1 < args.Length:
+                    baselinePath = args[++i];
                     break;
                 case "--shard" when i + 1 < args.Length:
                     if (!ShardSpec.TryParse(args[++i], out shard))
@@ -154,6 +158,8 @@ internal static class Program
         { Console.Error.WriteLine("--catalog requires --suite css21-full."); return 2; }
         if (reportPath is not null && suite.ToLowerInvariant() is not ("profile" or "wpt" or "html5" or "html5-inventory" or "html5-attribution" or "html5-parse" or "html5-tokenizer" or "css21" or "css21-full" or "css21-inventory" or "test262" or "es2020-inventory" or "es2020-host"))
         { Console.WriteLine("--report is supported by profile, wpt, html5, html5-inventory, css21, and test262."); return 2; }
+        if (baselinePath is not null && !suite.Equals("html5", StringComparison.OrdinalIgnoreCase))
+        { Console.Error.WriteLine("--baseline requires --suite html5."); return 2; }
         if (survey is not null && suite.Equals("css21", StringComparison.OrdinalIgnoreCase) && reportPath is not null)
         { Console.WriteLine("CSS surveys do not produce readiness evidence; use the curated CSS gate with --report."); return 2; }
         if (survey is not null && surveyList is not null)
@@ -166,7 +172,7 @@ internal static class Program
                 "wpt" when survey is not null => WptRunner.Survey(survey, surveyLimit, reportPath, shard),
                 "wpt" when surveyList is not null => WptRunner.SurveyList(surveyList, surveyLimit, reportPath, shard),
                 "wpt" => WptRunner.Run(filter, shard, reportPath),
-                "html5" => WptRunner.RunHtml(filter, shard, reportPath),
+                "html5" => WptRunner.RunHtml(filter, shard, reportPath, baselinePath),
                 "html5-inventory" => HtmlInventoryRunner.Run(reportPath),
                 "html5-attribution" => ParseAttribution.Run(reportPath),
                 "html5-parse" => ParseAttribution.RunGate(reportPath),
@@ -238,6 +244,9 @@ internal static class Program
               --render <url> [name] [width] [height]  Render a local or absolute URL to PNG
               --render-post <url> <body> [name] [width] [height]  Render a form POST response
               --report <path>        Write suite evidence, inventory or profile JSON (except acid/all)
+              --baseline <path>      (html5) Gate on reviewed baseline-passing paths instead of
+                                     requiring every reviewed path to pass; path is project-
+                                     relative (e.g. Wpt/html5-baseline-passes.txt) or absolute
               --shard <index/count>  Run one stable zero-based shard (for example 2/8)
               --require-ready        (profile) Fail unless every release-readiness check passes
               --require-css-ready    (profile) Require CSS 2.1 screen and print completion
