@@ -72,7 +72,15 @@ public class JsNavigator
             throw JsErrors.Native(pageEngine, "SyntaxError",
                 $"Failed to execute 'registerProtocolHandler': The scheme '{scheme}' is not safe.");
         var origin = JsEngine.Instance?.Origin ?? "null";
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var u) && !Uri.TryCreate(new Uri(origin), url, out u))
+        // IsAbsolute must gate the parse: UriKind.Absolute alone accepts a path-absolute
+        // reference ("/handler?u=%s") as an implicit file: URI on Unix, which then reads as
+        // cross-origin instead of resolving against the page (see UrlUtils.IsAbsolute).
+        Uri? u;
+        if (Lite.Network.UrlUtils.IsAbsolute(url) && Uri.TryCreate(url, UriKind.Absolute, out var parsed))
+            u = parsed;
+        else if (Uri.TryCreate(new Uri(origin), url, out var resolved))
+            u = resolved;
+        else
             throw JsErrors.Native(pageEngine, "SyntaxError",
                 "Failed to execute 'registerProtocolHandler': The url is not valid.");
         if (u.IsAbsoluteUri && $"{u.Scheme}://{u.Authority}" != origin)
