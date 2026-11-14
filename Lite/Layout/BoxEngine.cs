@@ -2756,12 +2756,20 @@ internal static class BoxEngine
                     $"item[{itemIndex}] '{item.Text}' w={item.Width:F0} fit={fitWidth:F0} lineX={lineX:F0} band=[{bandLeft:F0},{bandRight:F0}] overflow={lineX + fitWidth > bandRight}\n");
             if (lineX > bandLeft && lineX + fitWidth > bandRight)
             {
+                // A wrappable text item GLUED to the line's start (only edge items before it —
+                // the span's own leading margin) neither breaks nor peels: the text fills the
+                // line from the indented start and wraps naturally through the re-measure
+                // below (text-indent-wrap-001's inline-margin reference). Committing it moved
+                // the whole item one line down; split-peeling duplicated the text.
+                var gluedToLineStart = item.Kind == InlineItemKind.Text && item.Text is { Length: > 0 } glued &&
+                    !IsBreakSpace(glued[0]) && WrapsLines(item.Node) &&
+                    placed.FindIndex(lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow)) < 0;
                 if (Environment.GetEnvironmentVariable("LITE_TRACE_LINE") == "1")
                     File.AppendAllText("line-trace.txt",
-                        $"  -> breakAllowed={BreakAllowedBefore(placed, lineStart, item)} split={SplitAtFirstOpportunity(items, itemIndex)}\n");
-                if (BreakAllowedBefore(placed, lineStart, item))
+                        $"  -> breakAllowed={BreakAllowedBefore(placed, lineStart, item)} split={SplitAtFirstOpportunity(items, itemIndex)} glued={gluedToLineStart}\n");
+                if (!gluedToLineStart && BreakAllowedBefore(placed, lineStart, item))
                     CommitLine();
-                else if (SplitAtFirstOpportunity(items, itemIndex) )
+                else if (!gluedToLineStart && SplitAtFirstOpportunity(items, itemIndex) )
                 {
                     // The glued head stays with the content before it; the tail, which now
                     // starts after a break opportunity, is placed on its own turn.
@@ -2857,13 +2865,37 @@ internal static class BoxEngine
                     // beside a float the first lines are narrow and the ones below it are not.
                     var bands = LineBandsFor(floats, originX + lineX, originY + lineY, lh,
                                              originX, maxWidth, availW);
+                    if (bands is null && lineX > bandLeft)
+                    {
+                        // A wrapped item starting mid-band with no floats in play (the span's
+                        // own leading margin): the FIRST band begins at the item's x and the
+                        // continuation lines at the line's band start — an inline box's left
+                        // margin renders on its first fragment only (§8.3). Without the bands
+                        // the painter indented EVERY wrapped line (text-indent-wrap-001).
+                        bands = new List<(float X, float Width)>
+                        {
+                            (originX + lineX, availW),
+                            (originX + bandLeft, bandRight - bandLeft),
+                        };
+                    }
                     var wrapLines = TextMeasure.WrapText(item.Text, Math.Max(availW, 1f), font, ws, lh,
                                                          bands?.Select(b => b.Width).ToList());
                     var wrappedH = wrapLines.Sum(l => l.Height);
                     var usedW = wrapLines.Count > 0 ? wrapLines.Max(l => l.Width) : availW;
                     item.Node.LineBands = bands;
+                    // Per-line slices with their band-anchored x, for the painter's fragment
+                    // records: a wrapped item paints one fragment per line (the background of
+                    // an indented span covers line 1 from the margin edge and the rest from the
+                    // band start), instead of one rect every line shares.
+                    var slices = bands is { Count: > 0 }
+                        ? wrapLines.Select((l, i) =>
+                        {
+                            var b = bands[Math.Min(i, bands.Count - 1)];
+                            return (l.Text, b.X, Math.Min(b.Width, l.Width), l.Height);
+                        }).ToList()
+                        : null;
                     effectiveItem = item with { Width = Math.Max(availW, usedW), Height = wrappedH,
-                                                ContentW = availW, ContentH = wrappedH };
+                                                ContentW = availW, ContentH = wrappedH, WrappedLines = slices };
                 }
                 else item.Node.LineBands = null;
             }
@@ -3102,7 +3134,18 @@ internal static class BoxEngine
             prev = it;
             break;
         }
-        if (prev is null) return true;
+        if (prev is null)
+        {
+            // The line holds only edge items so far (the span's own leading margin, say):
+            // a break is the NEXT item's own decision, not a free one. A word glued to the
+            // box edge ('<span style="margin-left:100px">This…') has no break opportunity
+            // between the boundary and the letter — committing the edge as an empty first
+            // line box both phantom-wrapped the line and dropped the indent
+            // (text-indent-wrap-001's inline-margin reference rendered the paragraph one
+            // line low and unindented).
+            return next.Kind == InlineItemKind.Text && next.Text is { Length: > 0 } nx &&
+                   IsBreakSpace(nx[0]) && WrapsLines(next.Node);
+        }
         return BreakBetween(prev, next);
     }
 
@@ -4136,6 +4179,30 @@ internal static class BoxEngine
             case InlineItemKind.Text:
             case InlineItemKind.LineBreak:
                 {
+                    // A re-measured item that wrapped paints one fragment per line, each
+                    // anchored to its own band x (an indented span's background covers line 1
+                    // from the margin edge, the rest from the band start — §8.3 first-fragment
+                    // margins). The LineBreak case below stays as-is.
+                    if (item.Kind == InlineItemKind.Text && item.WrappedLines is { Count: > 1 } wrapped)
+                    {
+                        var union = SKRect.Empty;
+                        (node.InlineFragments ??= []).Clear();
+                        var y = absY;
+                        foreach (var (text, fx, fw, fh) in wrapped)
+                        {
+                            var fr = new SKRect(fx, y, fx + fw, y + fh);
+                            (node.InlineFragments).Add((fr, text));
+                            union = union.IsEmpty ? fr : SKRect.Union(union, fr);
+                            y += fh;
+                        }
+                        node.Box = new BoxDimensions
+                        {
+                            ContentBox = union,
+                            Padding = node.TagName.StartsWith('#') ? default : node.GetPadding(0, 0, node.GetFontSize()),
+                            Border = node.TagName.StartsWith('#') ? default : node.GetBorderWidth(),
+                        };
+                        break;
+                    }
                     var rect = new SKRect(absX, absY, absX + item.ContentW, absY + item.ContentH);
                     // Record every fragment, and let Box span them all: an inline box broken over
                     // two lines has one rect per line, and painting only the last one lost the
@@ -4192,6 +4259,7 @@ internal static class BoxEngine
         float ContentW,
         float ContentH,
         float Ascent,
-        bool TrailingEdge = false
+        bool TrailingEdge = false,
+        IReadOnlyList<(string Text, float X, float Width, float Height)>? WrappedLines = null
     );
 }

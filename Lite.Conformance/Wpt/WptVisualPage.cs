@@ -101,6 +101,12 @@ internal static class WptVisualPage
         if (elementScroll is null && pageScroll is null)
         {
             var (plain, plainPaint) = Draw();
+            // Diagnostic: the walk-context paint sequence (LITE_RENDER_PAINTLOG=1) — the
+            // --render route serves .xht as HTML while the walk serves it as XML, so font
+            // and line-shape questions need the walk's own paint trace.
+            if (Environment.GetEnvironmentVariable("LITE_RENDER_PAINTLOG") is "1")
+                foreach (var e in plainPaint)
+                    Console.WriteLine($"[PAINT] '{(e.Text.Length > 44 ? e.Text[..44] + "…" : e.Text)}' x={e.X:F1} y={e.BaselineY:F1} face={e.Typeface} size={e.Size:F1} bold={e.Bold} italic={e.Italic}");
             return (plain, root, null, null, plainPaint);
         }
 
