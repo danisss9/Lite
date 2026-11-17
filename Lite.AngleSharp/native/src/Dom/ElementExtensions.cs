@@ -192,10 +192,11 @@ namespace AngleSharp.Dom
         /// <param name="element">The element to check.</param>
         /// <returns>True if the element is currently hovered, otherwise false.</returns>
         /// <remarks>
-        /// Calls to this method will always return false as there is no renderer
-        /// and, therefore, the element can never be hovered.
+        /// AngleSharp has no renderer: the answer comes from the host's
+        /// <see cref="DynamicPseudoState.Hover"/> probe, and is false without one.
         /// </remarks>
-        public static Boolean IsHovered(this IElement element) => false;
+        public static Boolean IsHovered(this IElement element) =>
+            DynamicPseudoState.AssumeAll || (DynamicPseudoState.Hover?.Invoke(element) ?? false);
 
         /// <summary>
         /// Checks if the element is the only of its type among the parent's children.

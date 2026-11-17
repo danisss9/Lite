@@ -74,6 +74,14 @@ public class BrowserWindow
         _initialHeight = height;
     }
 
+    /// <summary>A window on an explicit session — headless callers that load a page with the
+    /// user's settings (a user style sheet enabled as a test prerequisite).</summary>
+    internal BrowserWindow(string url, BrowserSession session, int width = 800, int height = 600)
+        : this(url, "Lite", width, height)
+    {
+        _session = session;
+    }
+
     public void Run()
     {
         AnimationEngine.Reset();
@@ -388,7 +396,7 @@ public class BrowserWindow
                 for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
                 {
                     var region = _hitRegions[ri];
-                    if (!region.Bounds.Contains(x, contentY)) continue;
+                    if (region.CursorOnly || !region.Bounds.Contains(x, contentY)) continue;
                     if (jsEngine != null)
                     {
                         var mdNode = FindNodeByKey(_rootNode, region.NodeKey);
@@ -405,7 +413,7 @@ public class BrowserWindow
                 for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
                 {
                     var region = _hitRegions[ri];
-                    if (!region.Bounds.Contains(x, contentY)) continue;
+                    if (region.CursorOnly || !region.Bounds.Contains(x, contentY)) continue;
                     if (region.InputAction == InputAction.Range)
                     {
                         var node = FindNodeByKey(_rootNode, region.NodeKey);
@@ -539,7 +547,7 @@ public class BrowserWindow
             for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
             {
                 var region = _hitRegions[ri];
-                if (!region.Bounds.Contains(x, contentY)) continue;
+                if (region.CursorOnly || !region.Bounds.Contains(x, contentY)) continue;
                 if (jsEngine != null)
                 {
                     var node = FindNodeByKey(_rootNode, region.NodeKey);
@@ -553,7 +561,7 @@ public class BrowserWindow
         for (int ri = _hitRegions.Count - 1; ri >= 0; ri--)
         {
             var region = _hitRegions[ri];
-            if (!region.Bounds.Contains(x, contentY)) continue;
+            if (region.CursorOnly || !region.Bounds.Contains(x, contentY)) continue;
 
             // Interaction focus (HTML §3.2.2): activating a form control focuses it, mirroring
             // HTMLElement.focus() — the document's activeElement moves and focus/focusin fire
@@ -717,6 +725,7 @@ public class BrowserWindow
                     EventDispatcher.DispatchToNode(blurred, "focusout", blurEngine, bubbles: true, trusted: true);
                 }
                 blurState.ActiveElement = null;
+                PseudoClassState.SetFocus(null);
             }
         }
 
@@ -756,7 +765,13 @@ public class BrowserWindow
     {
         if (_loading != null) return;
         if (_rootNode == null) return;
-        DispatchKeyEvent(down, MapVirtualKey(vk), vk, MapVirtualKeyToCode(vk), modifiers);
+        var proceed = DispatchKeyEvent(down, MapVirtualKey(vk), vk, MapVirtualKeyToCode(vk), modifiers);
+        // Tab's default action is sequential focus navigation (Shift+Tab goes backwards).
+        if (down && vk == 0x09 && proceed)
+        {
+            MoveFocus(modifiers.Shift);
+            return;
+        }
 
         // Handle Enter in single-line input → submit
         if (down && vk == 0x0D && FormState.FocusedInput != null)
@@ -779,7 +794,83 @@ public class BrowserWindow
         if (_loading != null) return;
         if (_rootNode == null) return;
         var vk = ResolveVirtualKey(key);
-        DispatchKeyEvent(down, vk != 0 ? MapVirtualKey(vk) : key, vk, vk != 0 ? MapVirtualKeyToCode(vk) : "", default);
+        var proceed = DispatchKeyEvent(down, vk != 0 ? MapVirtualKey(vk) : key, vk, vk != 0 ? MapVirtualKeyToCode(vk) : "", default);
+        if (down && vk == 0x09 && proceed) MoveFocus(backward: false);
+    }
+
+    /// <summary>Sequential focus navigation (HTML §6.6.3): moves focus to the next (or
+    /// previous) element in the sequential navigation order — positive tabindex values
+    /// ascending, then tabindex 0 and the natively focusable elements in tree order — and
+    /// wraps at the ends. Elements with a negative tabindex, disabled controls and elements
+    /// that render no box are skipped. Returns whether focus moved.</summary>
+    internal bool MoveFocus(bool backward)
+    {
+        if (_rootNode is null || JsEngine.Instance is not { } engine) return false;
+        var order = SequentialFocusOrder(_rootNode);
+        if (order.Count == 0) return false;
+        var current = _rootNode.DocumentState?.ActiveElement;
+        var index = current is null ? -1 : order.IndexOf(current);
+        var next = backward
+            ? order[index <= 0 ? order.Count - 1 : index - 1]
+            : order[(index + 1) % order.Count];
+        if (ReferenceEquals(next, current)) return false;
+        AnimationEngine.SnapshotForTransition(_rootNode);
+        var prevInput = FormState.FocusedInput;
+        FormState.FocusedInput = next.TagName is "INPUT" or "TEXTAREA" or "SELECT" ? next.NodeKey : null;
+        if (prevInput != FormState.FocusedInput)
+            _focusedValueSnapshot = FormState.FocusedInput is { } focused
+                ? FormState.TextInputValues.GetValueOrDefault(focused, "")
+                : null;
+        FocusNode(next, engine);
+        if (AnimationEngine.DetectAndStartTransitions(_rootNode))
+            StartAnimationTimer();
+        (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
+        _host.Invalidate();
+        return true;
+    }
+
+    /// <summary>The document's sequential focus navigation order (HTML §6.6.3).</summary>
+    internal static List<LayoutNode> SequentialFocusOrder(LayoutNode root)
+    {
+        var positive = new List<(int TabIndex, int Order, LayoutNode Node)>();
+        var natural = new List<LayoutNode>();
+        var seen = new HashSet<AngleSharp.Dom.INode>(ReferenceEqualityComparer.Instance);
+        var order = 0;
+        void Walk(LayoutNode node)
+        {
+            if (node.DomNode is AngleSharp.Dom.IElement && seen.Add(node.DomNode) && IsSequentiallyFocusable(node, out var tabIndex))
+            {
+                if (tabIndex > 0) positive.Add((tabIndex, order++, node));
+                else natural.Add(node);
+            }
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        return positive.OrderBy(p => p.TabIndex).ThenBy(p => p.Order).Select(p => p.Node).Concat(natural).ToList();
+    }
+
+    private static bool IsSequentiallyFocusable(LayoutNode node, out int tabIndex)
+    {
+        tabIndex = 0;
+        var box = node.Box.BorderBox;
+        if (box.Width <= 0 && box.Height <= 0) return false;
+        if (node.Attributes.ContainsKey("disabled") && node.TagName is "BUTTON" or "INPUT" or "SELECT" or "TEXTAREA")
+            return false;
+        if (node.Attributes.TryGetValue("tabindex", out var raw) &&
+            int.TryParse(raw.Trim(), System.Globalization.NumberStyles.AllowLeadingSign,
+                System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+        {
+            tabIndex = parsed;
+            return parsed >= 0;
+        }
+        return node.TagName switch
+        {
+            "A" or "AREA" => node.Attributes.ContainsKey("href"),
+            "INPUT" => !string.Equals(node.Attributes.GetValueOrDefault("type"), "hidden", StringComparison.OrdinalIgnoreCase),
+            "BUTTON" or "SELECT" or "TEXTAREA" or "IFRAME" or "SUMMARY" => true,
+            _ => node.Attributes.TryGetValue("contenteditable", out var editable) &&
+                 (editable is "" || string.Equals(editable, "true", StringComparison.OrdinalIgnoreCase)),
+        };
     }
 
     /// <summary>Interaction focus: mirrors <c>HTMLElement.focus()</c> from the input pipeline —
@@ -794,11 +885,14 @@ public class BrowserWindow
             EventDispatcher.DispatchToNode(previous, "focusout", engine, bubbles: true, trusted: true);
         }
         state.ActiveElement = node;
+        PseudoClassState.SetFocus(node);
         EventDispatcher.DispatchToNode(node, "focus", engine, trusted: true);
         EventDispatcher.DispatchToNode(node, "focusin", engine, bubbles: true, trusted: true);
     }
 
-    private void DispatchKeyEvent(bool down, string keyName, int vk, string code, KeyModifiers modifiers)
+    /// <summary>Dispatches keydown/keyup to the focused element; returns false when a
+    /// listener cancelled it (the key's default action must not run).</summary>
+    private bool DispatchKeyEvent(bool down, string keyName, int vk, string code, KeyModifiers modifiers)
     {
         // Key events go to the focused element: the focused form control when there is one,
         // else the document's active element (tabindex, contenteditable), else the body.
@@ -807,8 +901,8 @@ public class BrowserWindow
             ? active
             : null;
         targetNode ??= FindFirst(_rootNode, n => n.TagName == "BODY");
-        if (targetNode == null) return;
-        if (JsEngine.Instance is not { } jsEngine) return;
+        if (targetNode == null) return true;
+        if (JsEngine.Instance is not { } jsEngine) return true;
 
         var evt = new Scripting.Dom.JsEvent();
         evt.Init(down ? "keydown" : "keyup", true, true);
@@ -822,6 +916,7 @@ public class BrowserWindow
         evt.isTrusted = true; // user-agent-generated: native hosts and injected input alike
         evt.target = new Scripting.Dom.JsElement(jsEngine.RawEngine, targetNode);
         EventDispatcher.DispatchEvent(targetNode, evt, jsEngine);
+        return !evt.defaultPrevented;
     }
 
     /// <summary>A character was typed ('\b' for Backspace, '\r' for Enter).</summary>
@@ -860,18 +955,16 @@ public class BrowserWindow
         _host.Invalidate();
     }
 
-    /// <summary>The cursor to show over client point (x, y): the topmost hit region's cursor.</summary>
-    internal CursorType CursorAt(int x, int y)
-    {
-        var cursor = CursorType.Default;
-        var contentPtY = y + _viewport.ScrollY;
-        foreach (var region in _hitRegions)
-        {
-            if (region.Bounds.Contains(x, contentPtY))
-                cursor = region.Cursor;
-        }
-        return cursor;
-    }
+    /// <summary>The cursor to show over client point (x, y) (CSS 2.1 §18.1): the topmost hit
+    /// region's cursor, 'auto' resolved by context, with the url() image of a custom cursor.</summary>
+    internal (CursorType Type, string? Image) CursorSpecAt(int x, int y) =>
+        HitRegion.CursorAt(_hitRegions, x, y + _viewport.ScrollY);
+
+    internal CursorType CursorAt(int x, int y) => CursorSpecAt(x, y).Type;
+
+    /// <summary>The bytes of a url() cursor image, through this window's session (cached by
+    /// the session's HTTP stack); null when it cannot be fetched.</summary>
+    internal byte[]? FetchCursorImage(string url) => Lite.Network.ResourceLoader.FetchBytes(url, null, _session);
 
     /// <summary>
     /// Handles a link click or scripted navigation. http(s) URLs load inside this window;
@@ -1223,7 +1316,7 @@ public class BrowserWindow
     {
         if (_rootNode is null) return false;
         var contentY = y + _viewport.ScrollY;
-        var region = _hitRegions.LastOrDefault(r => r.OwnerPage is not null && r.Bounds.Contains(x, contentY));
+        var region = _hitRegions.LastOrDefault(r => !r.CursorOnly && r.OwnerPage is not null && r.Bounds.Contains(x, contentY));
         if (region?.OwnerPage is not { } page) return false;
         var node = FindNodeByKey(page.Root, region.NodeKey);
         if (node is null) return false;

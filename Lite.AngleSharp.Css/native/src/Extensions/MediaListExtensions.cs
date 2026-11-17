@@ -35,7 +35,7 @@ namespace AngleSharp.Css.Dom
 
         public static Boolean Validate(this ICssMedium medium, IRenderDevice device)
         {
-            if (!String.IsNullOrEmpty(medium.Type) && KnownTypes.Contains(medium.Type) == medium.IsInverse)
+            if (!String.IsNullOrEmpty(medium.Type) && KnownTypes.Contains(medium.Type, StringComparer.OrdinalIgnoreCase) == medium.IsInverse)
             {
                 return false;
             }
@@ -49,6 +49,6 @@ namespace AngleSharp.Css.Dom
             medium.IsInvalid(device, CssKeywords.Print, DeviceCategory.Printer);
 
         private static Boolean IsInvalid(this ICssMedium medium, IRenderDevice device, String keyword, DeviceCategory category) =>
-            device != null && keyword.Is(medium.Type) && device.Category == category == medium.IsInverse;
+            device != null && keyword.Isi(medium.Type) && device.Category == category == medium.IsInverse;
     }
 }

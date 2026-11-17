@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using Lite.Models;
 
 namespace Lite.Interaction;
@@ -6,11 +7,59 @@ namespace Lite.Interaction;
 /// Tracks :hover, :focus, and :active pseudo-class state across the layout tree.
 /// Returns whether a re-render is needed after each state change.
 /// </summary>
+/// <remarks>
+/// The state is kept twice: on the layout nodes (<see cref="LayoutNode.IsHovered"/> and
+/// friends, read by the media-conditional pseudo styles and transitions) and as DOM element
+/// sets that AngleSharp's selector matching reads through <see cref="DynamicPseudoState"/>
+/// (CSS 2.1 §5.11.3: :hover and :active also apply to the ancestors in the document tree).
+/// Every change bumps <see cref="Epoch"/>, which invalidates the per-node dynamic-rule cache.
+/// </remarks>
 internal static class PseudoClassState
 {
     private static readonly List<LayoutNode> _hoveredChain = [];
     private static LayoutNode? _activeNode;
     private static LayoutNode? _focusedNode;
+    private static readonly HashSet<INode> _hoveredDom = new(ReferenceEqualityComparer.Instance);
+    private static readonly HashSet<INode> _activeDom = new(ReferenceEqualityComparer.Instance);
+    private static INode? _focusedDom;
+    private static int _dynamicRules;
+
+    /// <summary>Bumped on every interaction-state change (and by <see cref="Invalidate"/>),
+    /// so dynamic-rule matches are recomputed instead of read from a stale cache.</summary>
+    public static int Epoch { get; private set; }
+
+    /// <summary>Installs the live-state probes AngleSharp's :hover/:active/:focus matching
+    /// reads, and records that the page has dynamic rules (any state change re-renders).</summary>
+    public static void Install()
+    {
+        _dynamicRules++;
+        if (DynamicPseudoState.Hover is not null) return;
+        DynamicPseudoState.Hover = element => _hoveredDom.Contains(element);
+        DynamicPseudoState.Active = element => _activeDom.Contains(element);
+        DynamicPseudoState.Focus = element => ReferenceEquals(_focusedDom, element);
+    }
+
+    /// <summary>Drops cached dynamic-rule matches (the DOM may have changed under them).</summary>
+    public static void Invalidate() => Epoch++;
+
+    private static bool AnyDynamicRules => _dynamicRules > 0;
+
+    /// <summary>The DOM node a layout node renders; an inline piece renders its source's.</summary>
+    private static INode? DomOf(LayoutNode node) => node.DomNode ?? node.SplitFrom?.DomNode;
+
+    private static void FillDomChain(HashSet<INode> set, LayoutNode? target)
+    {
+        set.Clear();
+        for (var dom = target is null ? null : DomOf(target) ?? FirstDomAncestor(target); dom is not null; dom = dom.Parent)
+            set.Add(dom);
+    }
+
+    private static INode? FirstDomAncestor(LayoutNode node)
+    {
+        for (var n = node.Parent; n is not null; n = n.Parent)
+            if (DomOf(n) is { } dom) return dom;
+        return null;
+    }
 
     /// <summary>
     /// Updates hover state based on the mouse position (in content-space coordinates).
@@ -18,7 +67,7 @@ internal static class PseudoClassState
     /// </summary>
     public static bool UpdateHover(LayoutNode? root, float x, float contentY)
     {
-        if (root == null) { ClearHover(); return _hoveredChain.Count > 0; }
+        if (root == null) { var had = _hoveredChain.Count > 0; ClearHover(); return had && AnyDynamicRules; }
 
         var target = FindNodeAt(root, x, contentY);
 
@@ -36,20 +85,22 @@ internal static class PseudoClassState
             return false;
 
         // Check if any affected node has hover styles (old or new chain)
-        var needsRender = false;
+        var needsRender = AnyDynamicRules;
         foreach (var node in _hoveredChain)
         {
-            if (node.HoverStyles.Count > 0) needsRender = true;
+            if (node.MediaHoverStyles.Count > 0) needsRender = true;
             node.IsHovered = false;
         }
         foreach (var node in newChain)
         {
-            if (node.HoverStyles.Count > 0) needsRender = true;
+            if (node.MediaHoverStyles.Count > 0) needsRender = true;
             node.IsHovered = true;
         }
 
         _hoveredChain.Clear();
         _hoveredChain.AddRange(newChain);
+        FillDomChain(_hoveredDom, target);
+        Epoch++;
 
         return needsRender;
     }
@@ -60,6 +111,8 @@ internal static class PseudoClassState
         foreach (var node in _hoveredChain)
             node.IsHovered = false;
         _hoveredChain.Clear();
+        _hoveredDom.Clear();
+        Epoch++;
     }
 
     /// <summary>
@@ -75,18 +128,20 @@ internal static class PseudoClassState
         // Clear previous
         ClearActiveInternal();
 
-        if (target == null) return false;
+        if (target == null) return AnyDynamicRules;
         _activeNode = target;
 
         // Set :active on target and ancestors
-        var needsRender = false;
+        var needsRender = AnyDynamicRules;
         var n = target;
         while (n != null)
         {
             n.IsActive = true;
-            if (n.ActiveStyles.Count > 0) needsRender = true;
+            if (n.MediaActiveStyles.Count > 0) needsRender = true;
             n = n.Parent;
         }
+        FillDomChain(_activeDom, target);
+        Epoch++;
         return needsRender;
     }
 
@@ -94,15 +149,17 @@ internal static class PseudoClassState
     public static bool ClearActive()
     {
         if (_activeNode == null) return false;
-        var needsRender = false;
+        var needsRender = AnyDynamicRules;
         var n = _activeNode;
         while (n != null)
         {
-            if (n.ActiveStyles.Count > 0) needsRender = true;
+            if (n.MediaActiveStyles.Count > 0) needsRender = true;
             n.IsActive = false;
             n = n.Parent;
         }
         _activeNode = null;
+        _activeDom.Clear();
+        Epoch++;
         return needsRender;
     }
 
@@ -112,6 +169,8 @@ internal static class PseudoClassState
         var n = _activeNode;
         while (n != null) { n.IsActive = false; n = n.Parent; }
         _activeNode = null;
+        _activeDom.Clear();
+        Epoch++;
     }
 
     /// <summary>
@@ -120,26 +179,34 @@ internal static class PseudoClassState
     /// </summary>
     public static bool UpdateFocus(LayoutNode? root, Guid? nodeKey)
     {
-        var needsRender = false;
+        var target = root == null || nodeKey == null ? null : FindNodeByKey(root, nodeKey.Value);
+        return SetFocus(target);
+    }
+
+    /// <summary>Moves :focus to <paramref name="target"/> (null clears it) — the single
+    /// writer behind interaction focus, script focus()/blur() and sequential navigation.
+    /// Returns true if a re-render is needed.</summary>
+    public static bool SetFocus(LayoutNode? target)
+    {
+        if (ReferenceEquals(target, _focusedNode)) return false;
+        var needsRender = AnyDynamicRules;
 
         // Clear old focus
         if (_focusedNode != null)
         {
-            if (_focusedNode.FocusStyles.Count > 0) needsRender = true;
+            if (_focusedNode.MediaFocusStyles.Count > 0) needsRender = true;
             _focusedNode.IsFocused = false;
             _focusedNode = null;
         }
 
-        if (root == null || nodeKey == null) return needsRender;
-
-        // Find and set new focus
-        var target = FindNodeByKey(root, nodeKey.Value);
+        _focusedDom = target is null ? null : DomOf(target);
         if (target != null)
         {
             target.IsFocused = true;
             _focusedNode = target;
-            if (target.FocusStyles.Count > 0) needsRender = true;
+            if (target.MediaFocusStyles.Count > 0) needsRender = true;
         }
+        Epoch++;
 
         return needsRender;
     }

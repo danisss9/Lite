@@ -73,6 +73,22 @@ internal static class User32
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     internal static extern IntPtr LoadCursor(IntPtr hInstance, int lpCursorName);
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "LoadCursorFromFileW")]
+    internal static extern IntPtr LoadCursorFromFile(string lpFileName);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ICONINFO
+    {
+        public bool fIcon;
+        public int xHotspot;
+        public int yHotspot;
+        public IntPtr hbmMask;
+        public IntPtr hbmColor;
+    }
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr CreateIconIndirect([In] ref ICONINFO piconinfo);
+
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     internal static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
 

@@ -218,7 +218,7 @@ internal static class BoxEngine
         => n.TagName is not ("#text" or "#comment" or "#pi") && IsInFlow(n)
             && n.GetDisplay() is DisplayType.Block or DisplayType.ListItem
                 or DisplayType.Flex or DisplayType.Table
-            && !(IsCssTableCaption(n) && WhitespaceOnlyInterior(n));
+            && !(IsCssTableCaption(n) && WhitespaceOnlyInterior(n) && RendersNoBoxOfItsOwn(n));
 
     /// <summary>Whether an inline box (transitively, through <b>in-flow</b> nested inline boxes)
     /// contains an in-flow block-level box, so it must be broken. Recursion stops at out-of-flow
@@ -349,9 +349,7 @@ internal static class BoxEngine
         var clone = new LayoutNode(null, inline.TagName, "", inline.Style);
         clone.SplitFrom = inline;
         CopyDict(inline.StyleOverrides, clone.StyleOverrides);
-        CopyDict(inline.HoverStyles, clone.HoverStyles);
-        CopyDict(inline.FocusStyles, clone.FocusStyles);
-        CopyDict(inline.ActiveStyles, clone.ActiveStyles);
+        clone.DynamicRules = inline.DynamicRules;
         CopyDict(inline.MediaOverrides, clone.MediaOverrides);
         CopyDict(inline.AnimationOverrides, clone.AnimationOverrides);
         CopyDict(inline.CustomProperties, clone.CustomProperties);
@@ -780,7 +778,7 @@ internal static class BoxEngine
                 var later = parent.Children[k];
                 if (later.TagName == "#text" && string.IsNullOrWhiteSpace(later.DisplayText)) continue;
                 if (later.GetDisplay() == DisplayType.None || later.TagName == "SCRIPT") continue;
-                if (IsCssTableCaption(later) && WhitespaceOnlyInterior(later)) continue;
+                if (IsCssTableCaption(later) && WhitespaceOnlyInterior(later) && RendersNoBoxOfItsOwn(later)) continue;
                 return IsProperTableChild(later, atTableLevel: wrapAsRow);
             }
             return false;

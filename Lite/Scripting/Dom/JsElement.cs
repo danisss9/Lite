@@ -1881,6 +1881,7 @@ public class JsElement
             EventDispatcher.DispatchToNode(previous, "focusout", engine, bubbles: true, trusted: true);
         }
         state.ActiveElement = Node;
+        Interaction.PseudoClassState.SetFocus(Node);
         if (Node.TagName is "INPUT" or "TEXTAREA" or "SELECT")
             FormState.FocusedInput = Node.NodeKey;
         EventDispatcher.DispatchToNode(Node, "focus", engine, trusted: true);
@@ -1892,6 +1893,7 @@ public class JsElement
         if (JsEngine.For(_engine) is not { } engine ||
             !ReferenceEquals(engine.DocumentState.ActiveElement, Node)) return;
         engine.DocumentState.ActiveElement = null;
+        Interaction.PseudoClassState.SetFocus(null);
         if (FormState.FocusedInput == Node.NodeKey) FormState.FocusedInput = null;
         EventDispatcher.DispatchToNode(Node, "blur", engine, trusted: true);
         EventDispatcher.DispatchToNode(Node, "focusout", engine, bubbles: true, trusted: true);

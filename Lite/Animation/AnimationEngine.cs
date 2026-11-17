@@ -382,11 +382,9 @@ public static class AnimationEngine
     private static string? GetTargetValue(LayoutNode node, string prop)
     {
         if (node.IsActive && node.MediaActiveStyles.TryGetValue(prop, out var v1m)) return v1m;
-        if (node.IsActive && node.ActiveStyles.TryGetValue(prop, out var v1)) return v1;
         if (node.IsFocused && node.MediaFocusStyles.TryGetValue(prop, out var v2m)) return v2m;
-        if (node.IsFocused && node.FocusStyles.TryGetValue(prop, out var v2)) return v2;
         if (node.IsHovered && node.MediaHoverStyles.TryGetValue(prop, out var v3m)) return v3m;
-        if (node.IsHovered && node.HoverStyles.TryGetValue(prop, out var v3)) return v3;
+        if (node.DynamicStyles() is { } dynamic && dynamic.TryGetValue(prop, out var vd)) return vd;
         if (node.MediaOverrides.TryGetValue(prop, out var v4m)) return v4m;
         if (node.StyleOverrides.TryGetValue(prop, out var v4)) return v4;
         var sv = node.Style.GetPropertyValueSafe(prop);

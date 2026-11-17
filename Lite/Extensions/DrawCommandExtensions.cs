@@ -1709,16 +1709,90 @@ public static class StyleExtensions
             || dec.Contains(line, StringComparison.OrdinalIgnoreCase);
     }
 
-    public static CursorType GetCursor(this LayoutNode node)
+    public static CursorType GetCursor(this LayoutNode node) => node.GetCursorSpec().Type;
+
+    /// <summary>The cursor a box shows (CSS 2.1 §18.1): the first url() entry whose image the
+    /// user agent can load, else the closing keyword. A value that is not a well-formed
+    /// <c>[ &lt;uri&gt; , ]* keyword</c> list is an invalid declaration and is ignored, so the
+    /// box keeps the cursor it inherits (cursor is an inherited property).</summary>
+    public static (CursorType Type, string? Image) GetCursorSpec(this LayoutNode node)
     {
-        var raw = node.TryResolveStyle(PropertyNames.Cursor, out var ov)
-            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.Cursor);
-        return raw switch
+        for (var current = node; current is not null; current = current.Parent)
         {
+            var raw = current.TryResolveStyle(PropertyNames.Cursor, out var ov)
+                ? ov : current.Style.GetPropertyValueSafe(PropertyNames.Cursor);
+            raw = raw.Trim();
+            // No value of its own, 'inherit', or an invalid list: the box takes its parent's
+            // cursor; the root's initial value is 'auto'.
+            if (raw.Length == 0 || raw.Equals("inherit", StringComparison.OrdinalIgnoreCase)) continue;
+            if (ParseCursorList(raw) is not { } parsed) continue;
+            foreach (var url in parsed.Urls)
+                if (LoadableCursorImage(current, url) is { } image) return (CursorType.Custom, image);
+            return (parsed.Keyword, null);
+        }
+        return (CursorType.Auto, null);
+    }
+
+    private static (List<string> Urls, CursorType Keyword)? ParseCursorList(string raw)
+    {
+        var parts = SplitTopLevelCommas(raw);
+        var urls = new List<string>();
+        for (var i = 0; i < parts.Count - 1; i++)
+        {
+            var part = parts[i].Trim();
+            if (!part.StartsWith("url(", StringComparison.OrdinalIgnoreCase) || !part.EndsWith(')')) return null;
+            urls.Add(part[4..^1].Trim().Trim('"', '\''));
+        }
+        CursorType? keyword = parts[^1].Trim().ToLowerInvariant() switch
+        {
+            "auto" => CursorType.Auto,
+            "default" => CursorType.Default,
             "pointer" => CursorType.Pointer,
             "text" => CursorType.Text,
-            _ => CursorType.Default,
+            "crosshair" => CursorType.Crosshair,
+            "move" => CursorType.Move,
+            "e-resize" => CursorType.EResize,
+            "ne-resize" => CursorType.NeResize,
+            "nw-resize" => CursorType.NwResize,
+            "n-resize" => CursorType.NResize,
+            "se-resize" => CursorType.SeResize,
+            "sw-resize" => CursorType.SwResize,
+            "s-resize" => CursorType.SResize,
+            "w-resize" => CursorType.WResize,
+            "wait" => CursorType.Wait,
+            "help" => CursorType.Help,
+            "progress" => CursorType.Progress,
+            _ => null,
         };
+        return keyword is { } k ? (urls, k) : null;
+    }
+
+    private static List<string> SplitTopLevelCommas(string value)
+    {
+        var parts = new List<string>();
+        var depth = 0;
+        char? quote = null;
+        var start = 0;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (quote is { } q) { if (c == q) quote = null; continue; }
+            if (c is '"' or '\'') quote = c;
+            else if (c == '(') depth++;
+            else if (c == ')') depth--;
+            else if (c == ',' && depth == 0) { parts.Add(value[start..i]); start = i + 1; }
+        }
+        parts.Add(value[start..]);
+        return parts;
+    }
+
+    /// <summary>The absolute URL of a url() cursor whose resource loads and decodes as an
+    /// image (Skia's ICO codec reads .cur files), else null so the next entry is tried.</summary>
+    private static string? LoadableCursorImage(LayoutNode node, string url)
+    {
+        var baseUrl = node.DocumentState?.BaseUrl;
+        if (Lite.Network.ResourceLoader.FetchImage(url, baseUrl, node.DocumentState?.Session) is null) return null;
+        return Lite.Network.UrlUtils.Resolve(url, baseUrl) ?? url;
     }
 
     public static bool GetPointerEventsNone(this LayoutNode node)

@@ -31,7 +31,16 @@ internal sealed class Win32WindowHost(BrowserWindow window) : IWindowHost
     private const int HTCLIENT = 1;
     private const int IDC_ARROW = 32512;
     private const int IDC_IBEAM = 32513;
+    private const int IDC_WAIT = 32514;
+    private const int IDC_CROSS = 32515;
+    private const int IDC_SIZENWSE = 32642;
+    private const int IDC_SIZENESW = 32643;
+    private const int IDC_SIZEWE = 32644;
+    private const int IDC_SIZENS = 32645;
+    private const int IDC_SIZEALL = 32646;
     private const int IDC_HAND = 32649;
+    private const int IDC_APPSTARTING = 32650;
+    private const int IDC_HELP = 32651;
     private const uint BI_RGB = 0;
     private const uint DIB_RGB_COLORS = 0;
     private static readonly IntPtr AnimationTimerId = new(1);
@@ -205,13 +214,10 @@ internal sealed class Win32WindowHost(BrowserWindow window) : IWindowHost
                 {
                     User32.GetCursorPos(out var pt);
                     User32.ScreenToClient(hWnd, ref pt);
-                    var cursorId = window.CursorAt(pt.X, pt.Y) switch
-                    {
-                        CursorType.Pointer => IDC_HAND,
-                        CursorType.Text => IDC_IBEAM,
-                        _ => IDC_ARROW
-                    };
-                    User32.SetCursor(User32.LoadCursor(IntPtr.Zero, cursorId));
+                    var (cursorType, cursorImage) = window.CursorSpecAt(pt.X, pt.Y);
+                    var custom = cursorType == CursorType.Custom && cursorImage is not null
+                        ? LoadCustomCursor(window, cursorImage) : IntPtr.Zero;
+                    User32.SetCursor(custom != IntPtr.Zero ? custom : User32.LoadCursor(IntPtr.Zero, SystemCursorId(cursorType)));
                     return new IntPtr(1);
                 }
                 return User32.DefWindowProc(hWnd, msg, wParam, lParam);
@@ -223,6 +229,74 @@ internal sealed class Win32WindowHost(BrowserWindow window) : IWindowHost
     }
 
     private static int LowWord(IntPtr lParam) => (short)(lParam.ToInt32() & 0xFFFF);
+
+    /// <summary>The system cursor for a CSS 2.1 §18.1 keyword ('auto' arrives already resolved).</summary>
+    internal static int SystemCursorId(CursorType type) => type switch
+    {
+        CursorType.Pointer => IDC_HAND,
+        CursorType.Text => IDC_IBEAM,
+        CursorType.Crosshair => IDC_CROSS,
+        CursorType.Move => IDC_SIZEALL,
+        CursorType.EResize or CursorType.WResize => IDC_SIZEWE,
+        CursorType.NResize or CursorType.SResize => IDC_SIZENS,
+        CursorType.NeResize or CursorType.SwResize => IDC_SIZENESW,
+        CursorType.NwResize or CursorType.SeResize => IDC_SIZENWSE,
+        CursorType.Wait => IDC_WAIT,
+        CursorType.Help => IDC_HELP,
+        CursorType.Progress => IDC_APPSTARTING,
+        _ => IDC_ARROW,
+    };
+
+    private static readonly Dictionary<string, IntPtr> CustomCursors = new(StringComparer.Ordinal);
+
+    /// <summary>A url() cursor as an HCURSOR: the fetched file is written to a per-URL temp
+    /// file once and loaded with its own hotspot; IntPtr.Zero (falling back to the keyword's
+    /// system cursor) when it cannot be fetched or loaded.</summary>
+    private static IntPtr LoadCustomCursor(BrowserWindow window, string url)
+    {
+        if (CustomCursors.TryGetValue(url, out var cached)) return cached;
+        var handle = IntPtr.Zero;
+        if (window.FetchCursorImage(url) is { Length: > 0 } bytes)
+        {
+            var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(url)))[..16];
+            var file = Path.Combine(Path.GetTempPath(), $"lite-cursor-{hash}.cur");
+            try
+            {
+                File.WriteAllBytes(file, bytes);
+                handle = User32.LoadCursorFromFile(file);
+            }
+            catch (IOException) { }
+            // LoadCursorFromFile reads only .cur/.ani; any other image the engine decodes
+            // (a url(cat.png) cursor) becomes a 32-bit cursor with its hotspot at the top left.
+            if (handle == IntPtr.Zero && Lite.Network.ResourceLoader.DecodeImageBytes(bytes) is { } image)
+                using (image) handle = CursorFromBitmap(image);
+        }
+        CustomCursors[url] = handle;
+        return handle;
+    }
+
+    private static IntPtr CursorFromBitmap(SkiaSharp.SKBitmap image)
+    {
+        // Windows cursors stay small; scale the image down to the 32px cursor box, keeping it.
+        var scale = Math.Min(1f, 32f / Math.Max(image.Width, image.Height));
+        var width = Math.Max(1, (int)(image.Width * scale));
+        var height = Math.Max(1, (int)(image.Height * scale));
+        using var scaled = image.Resize(new SkiaSharp.SKImageInfo(width, height, SkiaSharp.SKColorType.Bgra8888,
+            SkiaSharp.SKAlphaType.Premul), SkiaSharp.SKFilterQuality.Medium) ?? image.Copy(SkiaSharp.SKColorType.Bgra8888);
+        if (scaled is null) return IntPtr.Zero;
+        var color = Gdi32.CreateBitmap(scaled.Width, scaled.Height, 1, 32, scaled.Bytes);
+        var mask = Gdi32.CreateBitmap(scaled.Width, scaled.Height, 1, 1, null);
+        try
+        {
+            var info = new User32.ICONINFO { fIcon = false, xHotspot = 0, yHotspot = 0, hbmMask = mask, hbmColor = color };
+            return User32.CreateIconIndirect(ref info);
+        }
+        finally
+        {
+            Gdi32.DeleteObject(color);
+            Gdi32.DeleteObject(mask);
+        }
+    }
 
     private static int HighWord(IntPtr lParam) => (short)((lParam.ToInt32() >> 16) & 0xFFFF);
 

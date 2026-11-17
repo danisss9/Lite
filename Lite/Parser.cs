@@ -349,6 +349,13 @@ internal static class Parser
         new("::?(before|after|first-letter|first-line)\\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     /// <summary>The :lang() pseudo-class (any argument), matched case-insensitively — both the
     /// name and the matched document language are ASCII case-insensitive (§5.11.4).</summary>
+    /// <summary>:link, which Lite decides itself before a dynamic rule is kept (every link is
+    /// unvisited): stripped from the selector the live state re-matches.</summary>
+    private static readonly Regex DynamicStripRegex =
+        new(":link\\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    /// <summary>The pseudo-classes whose match follows the live interaction state.</summary>
+    private static readonly Regex DynamicStateRegex =
+        new(":(hover|focus|active)\\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex LangPseudoRegex =
         new(":lang\\s*\\(\\s*[^)]*\\)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex XmlDeclarationRegex =
@@ -3967,10 +3974,15 @@ internal static class Parser
         }
         else if (!hasLinkPseudo && baseSelector.Length == 0 && !LangPseudoRegex.IsMatch(selector))
         {
-            // A bare dynamic pseudo-class rule ('X:link', ':lAnG(en)') that Lite does not
-            // evaluate itself: AngleSharp's matching decides.
-            try { if (!element.Matches(selector)) return true; }
-            catch { /* apply universally when the engine cannot evaluate it */ }
+            // A bare dynamic pseudo-class rule ('X:link', ':lAnG(en)', ':AcTiVe') that Lite does
+            // not evaluate itself: AngleSharp's matching decides — with :hover/:active/:focus
+            // assumed to hold, since the live state is re-matched at style resolution (at
+            // parse time nothing is hovered, so pseudo-010's ':AcTiVe' never reached it).
+            using (DynamicStateRegex.IsMatch(selector) ? AngleSharp.Dom.DynamicPseudoState.AssumingAll() : null)
+            {
+                try { if (!element.Matches(selector)) return true; }
+                catch { /* apply universally when the engine cannot evaluate it */ }
+            }
         }
 
         // Extract all CSS properties from this rule
@@ -4002,6 +4014,16 @@ internal static class Parser
                 props[prop] = val;
         }
 
+        // The painters read longhands ('outline-style', 'outline-width'), but CssText keeps
+        // the shorthand a rule declared ('outline: 10px solid black'): add every longhand the
+        // parsed declaration holds, so a dynamic rule's shorthand reaches the paint.
+        foreach (var property in rule.Style)
+        {
+            if (property.Name is { Length: > 0 } name && !props.ContainsKey(name) &&
+                property.Value is { Length: > 0 } value && !name.StartsWith("--", StringComparison.Ordinal))
+                props[name] = value.Replace("!important", "").Trim();
+        }
+
         if (mediaText is null)
         {
             // Regular pseudo-class rule
@@ -4009,15 +4031,37 @@ internal static class Parser
             var hasFocus = selector.Contains(":focus", StringComparison.OrdinalIgnoreCase);
             var hasActive = selector.Contains(":active", StringComparison.OrdinalIgnoreCase);
             var hasLink = selector.Contains(":link", StringComparison.OrdinalIgnoreCase);
-            if (hasHover) foreach (var (p, v) in props) node.HoverStyles[p] = v;
-            if (hasFocus) foreach (var (p, v) in props) node.FocusStyles[p] = v;
-            if (hasActive) foreach (var (p, v) in props) node.ActiveStyles[p] = v;
+            // A :hover/:active/:focus rule keeps its whole selector: it is re-matched against
+            // the live interaction state at style resolution, so the state may sit on any
+            // compound ('textarea:focus + span', 'div:hover p'). The rule is kept only when
+            // it could ever match this element (every dynamic pseudo-class assumed true).
+            // :link/:lang are decided above and stripped (AngleSharp reports neither); a list
+            // part that also needs :visited never applies, since every link is unvisited.
+            var live = string.Join(", ", selector.Split(',')
+                .Where(part => !part.Contains(":visited", StringComparison.OrdinalIgnoreCase))
+                .Select(part => DynamicStripRegex.Replace(LangPseudoRegex.Replace(part, ""), "").Trim())
+                .Where(part => part.Length > 0));
+            if ((hasHover || hasFocus || hasActive) && live.Length > 0)
+            {
+                bool couldMatch;
+                using (AngleSharp.Dom.DynamicPseudoState.AssumingAll())
+                {
+                    try { couldMatch = element.Matches(live); }
+                    catch { couldMatch = false; }
+                }
+                if (couldMatch)
+                {
+                    Interaction.PseudoClassState.Install();
+                    (node.DynamicRules ??= []).Add(new DynamicRule(element, live, props));
+                }
+            }
             // :link applies immediately to unvisited anchors (we treat all as unvisited). It
             // OVERWRITES like every other author declaration here — the injected UA sheet's
             // plain `a { color: blue }` went through the same channel earlier, and the TryAdd
             // form let UA styling beat the author's :link rule (§6.4.1 author beats UA:
             // case-sensitive-003's anchors stayed blue).
-            if (hasLink) foreach (var (p, v) in props) node.StyleOverrides[p] = v;
+            // (a :link rule that also names :hover/:active/:focus is a dynamic rule above.)
+            if (hasLink && !hasHover && !hasFocus && !hasActive) foreach (var (p, v) in props) node.StyleOverrides[p] = v;
             // :visited is ignored (privacy) — no styles applied
             // A rule whose only dynamic pseudo is :lang matched above — its declarations
             // apply as ordinary author values (AngleSharp's cascade drops the whole rule).
@@ -4079,13 +4123,17 @@ internal static class Parser
         string? inherited = null;
         for (var node = element; node is not null; node = node.ParentElement)
         {
-            // XML documents carry the namespaced spelling; HTML uses the bare attribute.
+            // XML documents carry the namespaced spelling; HTML uses the bare attribute. In an
+            // HTML document a literal 'xml:lang' attribute sits in no namespace and sets no
+            // language (HTML §3.2.6.2) — only the XML-namespaced one, which the HTML parser
+            // gives foreign (SVG/MathML) elements, counts (xml-lang-selectors-002).
             var lang = node.GetAttribute("lang");
             if (string.IsNullOrEmpty(lang))
             {
+                var htmlDocument = node.Owner is AngleSharp.Html.Dom.IHtmlDocument;
                 var xmlLang = node.Attributes.FirstOrDefault(a =>
-                    a.Name.Equals("xml:lang", StringComparison.OrdinalIgnoreCase) ||
-                    a.NamespaceUri == "http://www.w3.org/XML/1998/namespace" && a.Name == "lang");
+                    !htmlDocument && a.Name.Equals("xml:lang", StringComparison.OrdinalIgnoreCase) ||
+                    a.NamespaceUri == "http://www.w3.org/XML/1998/namespace" && a.LocalName == "lang");
                 lang = xmlLang?.Value;
             }
             if (!string.IsNullOrEmpty(lang)) { inherited = lang.Trim(); break; }

@@ -11,6 +11,12 @@ namespace Lite.Models;
 /// among the adjoining cell, row/column groups, and the table.</summary>
 public readonly record struct EdgeBorder(float Width, BorderStyle Style, SKColor Color);
 
+/// <summary>A style rule naming a dynamic pseudo-class (:hover, :active, :focus) that could
+/// apply to <paramref name="Element"/>: its selector is kept whole and re-matched against the
+/// live interaction state at style resolution (CSS 2.1 §5.11.3), so the state may sit on any
+/// compound — <c>textarea:focus + span</c> styles the span while the textarea has focus.</summary>
+internal sealed record DynamicRule(AngleSharp.Dom.IElement Element, string Selector, Dictionary<string, string> Properties);
+
 /// <summary>A CSS property/value pair that is conditional on a media query.</summary>
 public record MediaConditionalStyle(string MediaText, string Property, string Value, string Target);
 
@@ -90,9 +96,33 @@ public class LayoutNode
     /// <summary>Properties stamped by the HTML presentational-hint pass: retracted before a
     /// hint attribute change re-runs the pass, so bgcolor yellow → green replaces the value.</summary>
     internal HashSet<string> HintAppliedProps { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public Dictionary<string, string> HoverStyles { get; } = [];
-    public Dictionary<string, string> FocusStyles { get; } = [];
-    public Dictionary<string, string> ActiveStyles { get; } = [];
+    /// <summary>The dynamic pseudo-class rules that can apply to this element, in cascade
+    /// order (a later rule's declaration wins); shared by the inline pieces split from it.</summary>
+    internal List<DynamicRule>? DynamicRules { get; set; }
+    private int _dynamicEpoch = -1;
+    private Dictionary<string, string>? _dynamicStyles;
+
+    /// <summary>The declarations of the dynamic rules matching the current interaction state,
+    /// recomputed once per <see cref="Interaction.PseudoClassState.Epoch"/>.</summary>
+    internal Dictionary<string, string>? DynamicStyles()
+    {
+        if (DynamicRules is not { Count: > 0 } rules) return null;
+        var epoch = Interaction.PseudoClassState.Epoch;
+        if (_dynamicEpoch == epoch) return _dynamicStyles;
+        Dictionary<string, string>? merged = null;
+        foreach (var rule in rules)
+        {
+            bool matches;
+            try { matches = rule.Element.Matches(rule.Selector); }
+            catch { matches = false; }
+            if (!matches) continue;
+            merged ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (prop, value) in rule.Properties) merged[prop] = value;
+        }
+        _dynamicStyles = merged;
+        _dynamicEpoch = epoch;
+        return merged;
+    }
     /// <summary>on* IDL attribute handlers set as script properties (element.onload = fn).
     /// Values are the stored handler; the registered listener lives in <see cref="EventListeners"/>.</summary>
     public Dictionary<string, JsValue?>? OnProperties { get; set; }
@@ -159,11 +189,9 @@ public class LayoutNode
         // Animation/transition overrides have highest priority (live interpolated values)
         if (AnimationOverrides.TryGetValue(prop, out var va)) { val = ResolveVarRefs(va); return true; }
         if (IsActive && MediaActiveStyles.TryGetValue(prop, out var v1m)) { val = ResolveVarRefs(v1m); return true; }
-        if (IsActive && ActiveStyles.TryGetValue(prop, out var v1)) { val = ResolveVarRefs(v1); return true; }
         if (IsFocused && MediaFocusStyles.TryGetValue(prop, out var v2m)) { val = ResolveVarRefs(v2m); return true; }
-        if (IsFocused && FocusStyles.TryGetValue(prop, out var v2)) { val = ResolveVarRefs(v2); return true; }
         if (IsHovered && MediaHoverStyles.TryGetValue(prop, out var v3m)) { val = ResolveVarRefs(v3m); return true; }
-        if (IsHovered && HoverStyles.TryGetValue(prop, out var v3)) { val = ResolveVarRefs(v3); return true; }
+        if (DynamicStyles() is { } dynamic && dynamic.TryGetValue(prop, out var vd)) { val = ResolveVarRefs(vd); return true; }
         if (MediaOverrides.TryGetValue(prop, out var v4m)) { val = ResolveVarRefs(v4m); return true; }
         if (StyleOverrides.TryGetValue(prop, out var v4)) { val = ResolveVarRefs(v4); return true; }
         return false;

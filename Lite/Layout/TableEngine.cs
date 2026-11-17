@@ -54,14 +54,14 @@ internal static class TableEngine
         float viewportW, float viewportH)
     {
         var rows = CollectRows(table);
-        if (rows.Count == 0) return 0f;
+        if (rows.Count == 0) return LayoutCaptionsOnly(table, contentX, contentY, contentW, viewportW, viewportH);
 
         var collapse = IsBorderCollapse(table);
         var (spacing, verticalSpacing) = collapse ? (0f, 0f) : GetBorderSpacing(table);
 
         // Build 2D grid placement with colspan/rowspan support
         var placements = BuildGrid(rows, out var colCount, out var rowCount);
-        if (colCount == 0) return 0f;
+        if (colCount == 0) return LayoutCaptionsOnly(table, contentX, contentY, contentW, viewportW, viewportH);
 
         // §17.5.1: 'visibility: collapse' on a column/column-group removes that column from
         // the rendering — the cells occupying it (all of whose columns are collapsed) paint
@@ -412,6 +412,16 @@ internal static class TableEngine
         }
         Walk(table);
         return collapsed;
+    }
+
+    /// <summary>A table with no rows still has its wrapper box, and its caption is an ordinary
+    /// block in it (§17.4): lay the caption out (it paints in the normal child pass) and return
+    /// its height, instead of dropping the whole wrapper's content.</summary>
+    private static float LayoutCaptionsOnly(LayoutNode table, float contentX, float contentY, float contentW,
+        float viewportW, float viewportH)
+    {
+        var caption = table.Children.FirstOrDefault(c => IsCaption(c) && c.GetDisplay() != DisplayType.None);
+        return caption is null ? 0f : LayoutCaptionBlock(caption, contentX, contentY, contentW, viewportW, viewportH);
     }
 
     /// <summary>The table's caption: the HTML CAPTION element or any 'display: table-caption' box.</summary>

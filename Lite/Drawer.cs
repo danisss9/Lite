@@ -74,6 +74,9 @@ internal static class Drawer
     /// device-scaled render; 1 is the live-window default).</summary>
     internal static SKBitmap DrawToBitmap(int width, int height, LayoutNode root, Viewport viewport, float scale = 1f)
     {
+        // Dynamic pseudo-class rules re-match once per frame: the DOM may have changed under
+        // a cached match (a class toggled by script) even when the interaction state did not.
+        Interaction.PseudoClassState.Invalidate();
         // Layout pass — compute node.Box for every node
         BoxEngine.Layout(root, width, height);
         // Nested iframes inherit the device scale (read by PaintIframe during PaintNode);
@@ -107,6 +110,11 @@ internal static class Drawer
         // and the scrollbar all rasterize at the scaled resolution (CSS coordinates unchanged).
         canvas.Scale(scale, scale);
         _hitRegions = [];
+        // §18.1 with §14.2: the canvas beyond the root box belongs to the root element, so it
+        // shows the root's cursor. Bottom-most and cursor-only (clicks there hit nothing, as
+        // before), bounded to this frame's own canvas.
+        _hitRegions.Add(CursorRegion(new SKRect(0, 0, Math.Max(width + viewport.ScrollX, root.Box.MarginBox.Right),
+            Math.Max(height + viewport.ScrollY, root.Box.MarginBox.Bottom)), root) with { CursorOnly = true });
         SelectOptionMap.Clear();
         _pendingDropdown = null;
         _viewportScrollY = viewport.ScrollY;
@@ -160,8 +168,7 @@ internal static class Drawer
                 {
                     if (child.GetDisplay() == DisplayType.None) continue;
                     if (!child.Box.BorderBox.IsEmpty)
-                        _hitRegions.Add(new HitRegion(child.Box.BorderBox, node.GetCursor(), node.Href,
-                            NodeKey: node.NodeKey));
+                        _hitRegions.Add(CursorRegion(child.Box.BorderBox, node, node.Href, node.NodeKey));
                     foreach (var grandchild in child.Children) descendants.Push(grandchild);
                 }
             }
@@ -260,7 +267,7 @@ internal static class Drawer
 
         // A block hoisted out of a link broken around it (§9.2.1.1) is still link content.
         if (node.TagName != "A" && SplitLink(node) is { } link)
-            _hitRegions.Add(new HitRegion(node.Box.BorderBox, link.GetCursor(), link.Href, NodeKey: link.NodeKey));
+            _hitRegions.Add(CursorRegion(node.Box.BorderBox, link, link.Href, link.NodeKey));
 
         // position:relative — translate by offset, paint normally, then restore
         var pos = node.GetPosition();
@@ -801,8 +808,7 @@ internal static class Drawer
 
         if (!node.GetPointerEventsNone())
         {
-            var cursor = node.GetCursor();
-            _hitRegions.Add(new HitRegion(box.BorderBox, cursor, NodeKey: node.NodeKey));
+            _hitRegions.Add(CursorRegion(box.BorderBox, node, nodeKey: node.NodeKey));
         }
 
         // Draw own text content (block elements like <div>Text</div> with no child nodes).
@@ -1134,6 +1140,12 @@ internal static class Drawer
         if (paintsOwnBorders)
             foreach (var wrapperBox in node.InlineFragmentBoxes ?? [])
                 DrawBorders(canvas, wrapperBox, node);
+        // An inline element is a hit target over its own fragments (its cursor, §18.1, and
+        // the innermost element for pointer events); anonymous boxes belong to their host.
+        var hitTarget = paintsOwnBorders && !node.GetPointerEventsNone();
+        if (hitTarget)
+            foreach (var wrapperBox in node.InlineFragmentBoxes ?? [])
+                _hitRegions.Add(CursorRegion(wrapperBox.BorderBox, node, nodeKey: node.NodeKey));
         if (node.InlineFragments is { Count: > 1 } fragments)
         {
             // §8.4: an inline box split over lines paints its left border at the FIRST fragment's
@@ -1145,6 +1157,7 @@ internal static class Drawer
             for (var fi = 0; fi < fragments.Count; fi++)
             {
                 var (rect, text) = fragments[fi];
+                if (hitTarget) _hitRegions.Add(CursorRegion(rect, node, nodeKey: node.NodeKey));
                 if (bgColor != SKColors.Transparent)
                 {
                     using var fragBg = new SKPaint { Color = bgColor };
@@ -1164,6 +1177,11 @@ internal static class Drawer
                 }, node);
                 DrawWrappedText(canvas, node, text, rect.Left, rect.Top, rect.Width, font, paint, lineAligned: true);
             }
+            // §18.4: an inline element's outline is drawn around each line fragment (the
+            // UA may also draw the union; per-fragment is the common rendering).
+            if (paintsOwnBorders)
+                for (var fi = 0; fi < fragments.Count; fi++)
+                    DrawOutline(canvas, new BoxDimensions { ContentBox = fragments[fi].Rect, Padding = fragPadding, Border = fragBorder }, node);
             return true;
         }
         if (bgColor != SKColors.Transparent)
@@ -1171,6 +1189,8 @@ internal static class Drawer
             using var bgPaint = new SKPaint { Color = bgColor };
             canvas.DrawRect(node.Box.PaddingBox, bgPaint);
         }
+        if (hitTarget && !node.Box.BorderBox.IsEmpty)
+            _hitRegions.Add(CursorRegion(node.Box.BorderBox, node, nodeKey: node.NodeKey));
         // §8.4: the borders of an unsplit inline box paint around its border box — the box the
         // line layout recorded (borders were laid out but never painted: a 90px border on
         // display:inline painted nothing, border-width-applies-to-008). A boxless inline wrapper
@@ -1185,6 +1205,15 @@ internal static class Drawer
             DrawWrappedText(canvas, node, paintedText,
                 node.Box.ContentBox.Left, node.Box.ContentBox.Top, node.Box.ContentBox.Width, font, paint,
                 lineAligned: true);
+        }
+        // §18.4 outlines apply to inline elements too (outline-pseudo-selector-002's hovered
+        // span): around the unsplit border box, or each fragment a boxless wrapper assembled.
+        if (paintsOwnBorders)
+        {
+            if (node.InlineFragmentBoxes is { Count: > 0 } wrapperBoxes)
+                foreach (var wrapperBox in wrapperBoxes) DrawOutline(canvas, wrapperBox, node);
+            else if (!node.Box.BorderBox.IsEmpty)
+                DrawOutline(canvas, node.Box, node);
         }
         return false;
     }
@@ -1230,8 +1259,7 @@ internal static class Drawer
         DrawBorders(canvas, box, node);
         DrawOutline(canvas, box, node);
 
-        var cursor = node.GetCursor();
-        _hitRegions.Add(new HitRegion(box.MarginBox, cursor, node.Href, NodeKey: node.NodeKey));
+        _hitRegions.Add(CursorRegion(box.MarginBox, node, node.Href, node.NodeKey));
 
         if (string.IsNullOrEmpty(node.DisplayText)) return;
 
@@ -1256,11 +1284,10 @@ internal static class Drawer
 
     private static void PaintAnchor(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
-        var cursor = node.GetCursor();
         // A piece of an anchor broken around a block (§9.2.1.1) is a clone without attributes:
         // it links through the anchor it was split from.
         var link = SplitLink(node) ?? node;
-        _hitRegions.Add(new HitRegion(node.Box.BorderBox, cursor, link.Href, NodeKey: link.NodeKey));
+        _hitRegions.Add(CursorRegion(node.Box.BorderBox, node, link.Href, link.NodeKey));
 
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
@@ -1275,11 +1302,14 @@ internal static class Drawer
                 ? box.ContentBox.Width + 1f : box.ContentBox.Width;
             DrawWrappedText(canvas, node, node.RenderedText(), box.ContentBox.Left, box.ContentBox.Top,
                             paintWidth, font, paint, lineAligned: true);
+            if (!box.BorderBox.IsEmpty) DrawOutline(canvas, box, node);
             return;
         }
 
         // Anchor wraps child nodes (e.g. #TEXT created by parser for mixed content)
         PaintChildrenSorted(canvas, node, viewportWidth);
+        // §18.4: a focused link's 'a:focus { outline: ... }' (outline-pseudo-selector-001).
+        if (!node.Box.BorderBox.IsEmpty) DrawOutline(canvas, node.Box, node);
     }
 
     /// <summary>The link a split piece or hoisted block belongs to: the nearest anchor with an
@@ -1484,6 +1514,13 @@ internal static class Drawer
     // Input
     // -------------------------------------------------------------------------
 
+    /// <summary>A text control's text colour: the 'color' declared on the control itself (an author,
+    /// user or dynamic rule — focus-selector-001's 'textarea:focus { color: green }'), else the
+    /// UA's field text black; a control does not take the page's inherited text colour.</summary>
+    private static SKColor ControlTextColor(LayoutNode node) =>
+        node.TryResolveStyle("color", out var own) && own.Trim() is { Length: > 0 } value &&
+        !value.Equals("inherit", StringComparison.OrdinalIgnoreCase) ? node.GetColor() : SKColors.Black;
+
     private static void PaintInput(SKCanvas canvas, LayoutNode node)
     {
         var rect = node.Box.ContentBox;
@@ -1543,7 +1580,7 @@ internal static class Drawer
         }
         else if (!string.IsNullOrEmpty(displayText))
         {
-            using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
+            using var textPaint = new SKPaint { Color = ControlTextColor(node), IsAntialias = true };
             using var textFont = TextMeasure.CreateFont(node);
             canvas.DrawText(displayText, rect.Left + 4, rect.MidY + textFont.Size * 0.35f, SKTextAlign.Left, textFont, textPaint);
         }
@@ -1798,7 +1835,7 @@ internal static class Drawer
         }
         else if (!string.IsNullOrEmpty(text))
         {
-            using var textPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
+            using var textPaint = new SKPaint { Color = ControlTextColor(node), IsAntialias = true };
             using var textFont = new SKFont(TextMeasure.SystemTypeface(PlatformFonts.Monospace), 13);
             var lines = text.Split('\n');
             var lineY = rect.Top + 16;
@@ -2771,6 +2808,7 @@ internal static class Drawer
         var letterSpacing = node.GetLetterSpacing(font.Size);
         var wordSpacing = node.GetWordSpacing(font.Size);
         var textIndent = node.GetTextIndent(maxWidth, font.Size);
+        var autoCursor = !node.GetPointerEventsNone() && node.GetCursor() == CursorType.Auto;
 
         // ::first-line styles are resolved from the node or its parent block. CSS 2.1 §5.12.1:
         // they do not apply inside descendant floats — a float's content is not part of the
@@ -2932,6 +2970,11 @@ internal static class Drawer
             else
                 DrawTextWithSpacing(canvas, line.Text, runX, runY, lineFont, linePaint, letterSpacing, lineWordSpacing);
             if (synthItalic) canvas.Restore();
+            // §18.1 'auto': the UA picks the cursor by context — a text cursor over text. The
+            // fragment's region only informs the cursor lookup (clicks and hover skip it).
+            if (autoCursor && !string.IsNullOrWhiteSpace(line.Text))
+                _hitRegions.Add(new HitRegion(new SKRect(drawX, lineY, drawX + drawnWidth, lineY + line.Height),
+                    CursorType.Text, NodeKey: node.NodeKey) { CursorOnly = true });
 
             if (underline)
             {
@@ -2964,6 +3007,14 @@ internal static class Drawer
             tempFont?.Dispose();
             lineY += line.Height;
         }
+    }
+
+    /// <summary>A hit region showing <paramref name="cursorNode"/>'s cursor (CSS 2.1 §18.1),
+    /// including the url() image a custom cursor loaded.</summary>
+    private static HitRegion CursorRegion(SKRect bounds, LayoutNode cursorNode, string? href = null, Guid nodeKey = default)
+    {
+        var (type, image) = cursorNode.GetCursorSpec();
+        return new HitRegion(bounds, type, href, nodeKey) { CursorImage = image };
     }
 
     /// <summary>Draws text with custom letter-spacing and word-spacing.</summary>
