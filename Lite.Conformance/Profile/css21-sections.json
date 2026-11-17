@@ -177,11 +177,9 @@
       "clause": "D",
       "title": "Default style sheet for HTML 4",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/sample.html#q22.0",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.D, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.D"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. Appendix D states \"This appendix is informative, not normative.\"",
+      "requirementIds": []
     },
     {
       "clause": "E",
@@ -473,11 +471,9 @@
       "clause": "4.1.2.1",
       "title": "Vendor-specific extensions",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#vendor-keywords",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.4.1.2.1, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.4.1.2.1"
-      ]
+      "classification": "authoring",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. Vendor-specific naming is authoring guidance (\"Authors should avoid vendor-specific extensions\"); the UA consequence for unknown names is 4.2 parsing-error handling.",
+      "requirementIds": []
     },
     {
       "clause": "4.1.2.2",
@@ -501,11 +497,9 @@
       "clause": "4.1.4",
       "title": "Statements",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#statements",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.4.1.4, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.4.1.4"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. Descriptive (\"There are two kinds of statements\"); @import obligations live in 6.3.",
+      "requirementIds": []
     },
     {
       "clause": "4.1.5",
@@ -941,21 +935,17 @@
       "clause": "6.1.3",
       "title": "Used values",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#used-value",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.6.1.3, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.6.1.3"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. A definition of the used value; the UA obligation is 6.1's \"must assign, for every element in the tree, a value to every property\", evidenced through 6.1.1/6.1.2.",
+      "requirementIds": []
     },
     {
       "clause": "6.1.4",
       "title": "Actual values",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#actual-value",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.6.1.4, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.6.1.4"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. A definition of the actual value; the UA obligation is 6.1's value-assignment rule.",
+      "requirementIds": []
     },
     {
       "clause": "6.2",
@@ -1079,11 +1069,9 @@
       "clause": "7.3.1",
       "title": "Media groups",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/media.html#media-groups",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.7.3.1, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.7.3.1"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. The section states \"This section is informative, not normative.\"",
+      "requirementIds": []
     },
     {
       "clause": "8.1",
@@ -1275,11 +1263,9 @@
       "clause": "9.2.3",
       "title": "Run-in boxes",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#run-in",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.9.2.3, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.9.2.3"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. A placeholder: \"'Display: run-in' is now defined in CSS level 3.\"",
+      "requirementIds": []
     },
     {
       "clause": "9.2.4",
@@ -1435,11 +1421,9 @@
       "clause": "9.8.1",
       "title": "Normal flow",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#comp-normal-flow",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.9.8.1, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.9.8.1"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. Part of 9.8's worked examples, whose diagrams \"are illustrative\"; the float and flow rules are normative in 9.4 and 9.5.",
+      "requirementIds": []
     },
     {
       "clause": "9.8.2",
@@ -1455,11 +1439,9 @@
       "clause": "9.8.3",
       "title": "Floating a box",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#comp-float",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.9.8.3, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.9.8.3"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. Part of 9.8's worked examples, whose diagrams \"are illustrative\"; float placement is normative in 9.5.1.",
+      "requirementIds": []
     },
     {
       "clause": "9.8.4",
@@ -2101,51 +2083,41 @@
       "clause": "15.3.1.1",
       "title": "serif",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#serif-def",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.15.3.1.1, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.15.3.1.1"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. Describes the serif family with example fonts; the UA \"should provide reasonable default choices\" obligation is the 15.3.1 introduction.",
+      "requirementIds": []
     },
     {
       "clause": "15.3.1.2",
       "title": "sans-serif",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#sans-serif-def",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.15.3.1.2, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.15.3.1.2"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. Describes the sans-serif family with example fonts; obligation in 15.3.1.",
+      "requirementIds": []
     },
     {
       "clause": "15.3.1.3",
       "title": "cursive",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#cursive-def",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.15.3.1.3, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.15.3.1.3"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. Describes the cursive family with example fonts; obligation in 15.3.1.",
+      "requirementIds": []
     },
     {
       "clause": "15.3.1.4",
       "title": "fantasy",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#fantasy-def",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.15.3.1.4, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.15.3.1.4"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. Describes the fantasy family with example fonts; obligation in 15.3.1.",
+      "requirementIds": []
     },
     {
       "clause": "15.3.1.5",
       "title": "monospace",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#monospace-def",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.15.3.1.5, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.15.3.1.5"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. Describes the monospace family with example fonts; obligation in 15.3.1.",
+      "requirementIds": []
     },
     {
       "clause": "15.4",
@@ -2515,11 +2487,9 @@
       "clause": "18.3",
       "title": "User preferences for fonts",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/ui.html#system-fonts",
-      "classification": "user-agent",
-      "rationale": "Normative user-agent requirement reviewed against the pinned Recommendation; decomposed to obligation css21.18.3, whose test mappings are recorded as applicability batches close.",
-      "requirementIds": [
-        "css21.18.3"
-      ]
+      "classification": "informative",
+      "rationale": "Reviewed 2026-11-16 against the pinned Recommendation: not a user-agent obligation. A pointer to the 'font' property; the system-font obligations are in 15.8.",
+      "requirementIds": []
     },
     {
       "clause": "18.4",

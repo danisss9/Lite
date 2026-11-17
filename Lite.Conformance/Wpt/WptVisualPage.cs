@@ -46,7 +46,7 @@ internal static class WptVisualPage
         IReadOnlyList<Lite.Rendering.PaintLog.Entry> Paint) Render(string path, string? viewport = null,
         string waitClass = "reftest-wait", Css21.ScrollSpec? elementScroll = null,
         Func<Lite.Models.LayoutNode, (float ScrollX, float ScrollY)>? pageScroll = null,
-        bool testDriver = false, float scale = 1f)
+        bool testDriver = false, float scale = 1f, Css21.InteractionSpec? interaction = null, string? sentence = null)
     {
         var width = 800;
         var height = 600;
@@ -59,15 +59,19 @@ internal static class WptVisualPage
         var url = ConformanceServer.TestUrl(path);
         Lite.Models.LayoutNode root;
         Scripting.JsEngine engine;
-        if (testDriver)
+        BrowserWindow? window = null;
+        if (testDriver || interaction is not null)
         {
             // A testdriver visual page drives the real input pipeline before its snapshot:
             // load through a headless BrowserWindow with the bridge registered, then run the
-            // same quiescence protocol below on the window's root.
-            var window = new BrowserWindow(url, width: width, height: height);
+            // same quiescence protocol below on the window's root. An interaction protocol
+            // drives the same window's pointer and keyboard.
+            window = UserStyleSession(path) is { } userSession
+                ? new BrowserWindow(url, userSession, width, height)
+                : new BrowserWindow(url, width: width, height: height);
             engine = window.RunHeadless(new HeadlessHost()) ??
                 throw new InvalidDataException($"WPT document failed to load: {path}.");
-            TestDriverBridge.Register(engine, window);
+            if (testDriver) TestDriverBridge.Register(engine, window);
             root = window.RootNode ?? throw new InvalidDataException($"WPT document has no root: {path}.");
         }
         else
@@ -98,6 +102,8 @@ internal static class WptVisualPage
             try { var bmp = Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height }, scale); paint = Lite.Rendering.PaintLog.End(); return (bmp, paint); }
             catch { Lite.Rendering.PaintLog.End(); throw; }
         }
+        if (interaction is not null && window is not null)
+            return RenderInteraction(window, engine, root, interaction, sentence, Draw, width, height);
         if (elementScroll is null && pageScroll is null)
         {
             var (plain, plainPaint) = Draw();
@@ -147,6 +153,74 @@ internal static class WptVisualPage
         catch { Lite.Rendering.PaintLog.End(); throw; }
     }
 
+    /// <summary>The interaction protocol's renders: at rest, in the stated state (the final
+    /// render), and — for a press — after the button is released off the subject (so the
+    /// release activates nothing).</summary>
+    private static (SKBitmap Bitmap, Lite.Models.LayoutNode Root, SKBitmap? Mid, SKBitmap? Before,
+        IReadOnlyList<Lite.Rendering.PaintLog.Entry> Paint) RenderInteraction(BrowserWindow window,
+        Scripting.JsEngine engine, Lite.Models.LayoutNode root, Css21.InteractionSpec interaction, string? sentence,
+        Func<(SKBitmap, IReadOnlyList<Lite.Rendering.PaintLog.Entry>)> draw, int width, int height)
+    {
+        var (atRest, _) = draw();
+        if (Css21.VisualChecks.InteractionSubject(interaction, root, sentence) is not var (pointer, focus))
+        {
+            atRest.Dispose();
+            throw new Css21.InteractionUnavailableException(
+                $"Interaction protocol: no subject '{interaction.Subject}' to {interaction.Action}");
+        }
+        var box = pointer.Box.BorderBox;
+        var x = (int)MathF.Round((box.Left + box.Right) / 2);
+        var y = (int)MathF.Round((box.Top + box.Bottom) / 2);
+        void Settle()
+        {
+            HeadlessPage.PumpFrames(engine, 2);
+            engine.FlushMicrotasksTree();
+        }
+        switch (interaction.Action)
+        {
+            case "hover":
+                window.OnMouseMove(x, y);
+                break;
+            case "active":
+            case "hover-active":
+                window.OnMouseMove(x, y);
+                window.OnMouseDown(x, y);
+                break;
+            case "focus":
+            {
+                if (focus is null)
+                {
+                    atRest.Dispose();
+                    throw new Css21.InteractionUnavailableException("Interaction protocol: the subject has no focusable element");
+                }
+                var steps = Lite.BrowserWindow.SequentialFocusOrder(root).Count;
+                for (var i = 0; i < steps && !ReferenceEquals(root.DocumentState?.ActiveElement, focus); i++)
+                {
+                    window.OnKey(true, 0x09, default);
+                    window.OnKey(false, 0x09, default);
+                    Settle();
+                }
+                break;
+            }
+            default:
+                atRest.Dispose();
+                throw new Css21.InteractionUnavailableException($"Interaction protocol: unknown action '{interaction.Action}'");
+        }
+        Settle();
+        var (during, paint) = draw();
+        SKBitmap? released = null;
+        if (interaction.Action is "active" or "hover-active")
+        {
+            // Release off the subject: the press ends (:active clears) without activating it.
+            var (farX, farY) = (width - 2, height - 2);
+            window.OnMouseMove(farX, farY);
+            window.OnMouseUp(farX, farY);
+            Settle();
+            (released, _) = draw();
+        }
+        return (during, root, released, atRest, paint);
+    }
+
     internal static WptRunner.RunResult RunCrash(WptCase test)
     {
         var (scale, scaleNote) = DeviceScale(test.Options);
@@ -182,7 +256,7 @@ internal static class WptVisualPage
     /// one (before it is handed to the check as <c>before</c>).</summary>
     internal static WptRunner.RunResult RunSelfTest(WptCase test, bool embeddedRequired = false,
         Func<Css21.RenderSet, Lite.Models.LayoutNode, WptRunner.RunResult>? statedCondition = null,
-        Css21.VisualCheck? statedCheck = null)
+        Css21.VisualCheck? statedCheck = null, string? sentence = null)
     {
         if (test.TestDriver)
             return new(WptRunner.Cat.Unsupported, "Self-test requires test-driver support", 0, 0);
@@ -203,7 +277,8 @@ internal static class WptVisualPage
                 ? null
                 : (Func<Lite.Models.LayoutNode, (float, float)>)(root => Css21.VisualChecks.PageScrollExtent(pageTarget, root, width, height));
             var (bitmap, root, mid, before, paint) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(),
-                elementScroll: pageTarget is null ? scroll : null, pageScroll: pageScroll, scale: scale);
+                elementScroll: pageTarget is null ? scroll : null, pageScroll: pageScroll, scale: scale,
+                interaction: statedCheck?.Interaction, sentence: sentence);
             var renders = new Css21.RenderSet(bitmap, mid, before, paint);
             using (bitmap)
             {
@@ -292,6 +367,7 @@ internal static class WptVisualPage
             }
         }
         catch (TimeoutException ex) { return new(WptRunner.Cat.Timeout, ex.Message, 0, 0); }
+        catch (Css21.InteractionUnavailableException ex) { return new(WptRunner.Cat.Unsupported, ex.Message, 0, 0); }
         catch (Exception ex) { return new(WptRunner.Cat.Crash, WptVisualPage.CrashDetail(ex), 0, 0); }
     }
 

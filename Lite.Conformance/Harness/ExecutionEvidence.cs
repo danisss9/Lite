@@ -24,7 +24,7 @@ internal sealed record TestEvidence(string Suite, string Path, string Outcome, s
     IReadOnlyList<SubtestEvidence> Subtests, int? HarnessStatus = null, string Environment = "local", string? Url = null,
     string Context = "window", string Kind = "testharness", IReadOnlyList<EvidenceArtifact>? Artifacts = null,
     ManualEvidence? Manual = null, JavaScriptEvidence? JavaScript = null, CssEvidence? Css = null,
-    long? DurationMs = null);
+    long? DurationMs = null, string? CatalogKind = null);
 internal sealed record EvidenceReport(int FormatVersion, EvidenceIdentity Identity,
     string StartedUtc, string FinishedUtc, bool Completed, IReadOnlyList<TestEvidence> Tests);
 
@@ -173,6 +173,12 @@ internal static class ExecutionEvidence
                          css.ShardCount <= 0 || css.ShardIndex < 0 || css.ShardIndex >= css.ShardCount ||
                          css.InventorySha256.Length != 64))
                         throw new InvalidDataException("CSS evidence needs media, document mode, inventory identity, geometry and shard identity.");
+                    // CSS evidence names the route that decided the case (the catalog kind
+                    // rides along in CatalogKind); a case no route executed can never pass.
+                    if (test.Suite is "css21-wpt" or "css21-official" &&
+                        (test.Kind is not ("reftest" or "selftest" or "crashtest" or "testharness" or "manual" or "unexecuted") ||
+                         test.Kind == "unexecuted" && test.Outcome == "pass"))
+                        throw new InvalidDataException($"CSS evidence names no executed route: {test.Path} ({test.Kind}/{test.Outcome}).");
                     if (test.DurationMs is < 0)
                         throw new InvalidDataException("Invalid execution duration.");
                     if (string.IsNullOrWhiteSpace(test.Context) || string.IsNullOrWhiteSpace(test.Kind))

@@ -548,11 +548,91 @@ def painted_check(clause: str) -> dict | None:
 
 
 
+CURSOR_DIRECTION = re.compile(r'indicates\s+(north|south)?(east|west)?w?ard\s+movement')  # the suite spells 'southwestard'
+CURSOR_KEYWORDS = (('pointer cursor', 'pointer'), ('default cursor', 'default'), ('arrow cursor', 'default'),
+                   ('crosshair cursor', 'crosshair'), ('move cursor', 'move'), ('text cursor', 'text'),
+                   ('wait cursor', 'wait'), ('help cursor', 'help'), ('progress cursor', 'progress'))
+
+
+def cursor_check(sentence: str) -> dict | None:
+    """CSS 2.1 18.1: the cursor shown over the test subject. The harness performs the stated
+    pointing mechanically (the engine's own cursor lookup at the subject's center), so the
+    whole sentence must name both the subject and the expected cursor; anything else (a
+    second stated condition, an unnamed subject) stays unchecked."""
+    text = ' '.join(sentence.lower().split())
+    if re.search(r'hover over this page\. you should see another \(possibly scaled-down\) copy of the (\w+) you see below, '
+                 r'moving as you move the mouse', text):
+        # The page's own cursor is a url() image: the pointer anywhere on the page shows it.
+        return {'kind': 'cursor', 'shape': 'image', 'target': 'page'}
+    if 'cursor' not in text or 'marker bullet' in text:
+        return None
+    if m := re.search(r'the cursor is the same when it is over "([^"]+)" and when it is over "([^"]+)"', text):
+        return {'kind': 'cursor', 'shape': 'same', 'target': 'text', 'needles': [m.group(1), m.group(2)]}
+    if re.search(r'over the text sample|hovered over the text sample', text):
+        target = {'target': 'text', 'needle': 'text sample'}
+    elif re.search(r'over the following text', text):
+        target = {'target': 'text', 'needle': 'filler text'}
+    elif re.search(r'(?:inside|over) the blue (?:box|area)', text):
+        target = {'target': 'box', 'color': 'blue'}
+    elif re.search(r'over the box\b', text):
+        target = {'target': 'box'}
+    else:
+        return None
+    if re.search(r'matches this image|look like this', text):
+        expected = 'image'
+    elif m := CURSOR_DIRECTION.search(text):
+        if not (m.group(1) or m.group(2)):
+            return None
+        expected = (m.group(1) or '')[:1] + (m.group(2) or '')[:1] + '-resize'
+    else:
+        named = [keyword for phrase, keyword in CURSOR_KEYWORDS if phrase in text]
+        if len(set(named)) != 1:
+            return None
+        expected = named[0]
+    return {'kind': 'cursor', 'shape': expected, **target}
+
+
+INTERACTION_STATES = (('is hovered over', 'hover'), ('is activated', 'active'), ('has focus', 'focus'))
+
+
+def interaction_check(sentence: str) -> dict | None:
+    """CSS 2.1 5.11.3: a stated condition that holds in a dynamic state ("turns green when it
+    is hovered over"). The harness drives the real input pipeline of a headless window —
+    pointer move, button press (released off the subject), Tab to focus — and judges the
+    stated check in that state; the at-rest render must not already satisfy it ("changes
+    to", "turns"), or must show the stated rest colour ("initially black ... returns to
+    black"). Only whole sentences naming the "Filler Text" subject and one state match."""
+    text = ' '.join(sentence.lower().split()).rstrip('.')
+    subject = {'needle': 'filler text'}
+    if m := re.fullmatch(r'test passes if the "filler text" below (?:changes to|turns) green (?:when|while) '
+                         r'(?:the text|it|the element containing the text) (is hovered over|is activated|has focus)', text):
+        action = dict(INTERACTION_STATES)[m.group(1)]
+        return {'kind': 'text-color', 'color': 'green', **subject, 'interaction': {'action': action, 'subject': 'filler text'}}
+    if m := re.fullmatch(r'test passes if (hovering over|activating) the "filler text" below changes the text color to green', text):
+        action = 'hover' if m.group(1) == 'hovering over' else 'active'
+        return {'kind': 'text-color', 'color': 'green', **subject, 'interaction': {'action': action, 'subject': 'filler text'}}
+    if re.fullmatch(r'test passes if the "filler text" below is initially black, when it is activated it turns green, '
+                    r'and it returns to black when it is deactivated', text):
+        return {'kind': 'text-color', 'color': 'green', **subject,
+                'interaction': {'action': 'active', 'subject': 'filler text', 'rest': 'black'}}
+    if re.fullmatch(r'test passes if the "filler text" below is green when it is hovered over and activated', text):
+        return {'kind': 'text-color', 'color': 'green', **subject, 'interaction': {'action': 'hover-active', 'subject': 'filler text'}}
+    if m := re.fullmatch(r'test passes if there is a box around the "filler text" below when the text '
+                         r'(is hovered over|is activated|has focus)', text):
+        action = dict(INTERACTION_STATES)[m.group(1)]
+        return {'kind': 'no-ring', 'variant': 'present', **subject, 'interaction': {'action': action, 'subject': 'filler text'}}
+    return None
+
+
 def visual_check(sentence: str | None) -> dict | None:
     """A machine check for the stated condition, when the whole sentence matches a known
     template (Css21/VisualChecks.cs evaluates it). Anything unmatched stays unchecked."""
     if not sentence:
         return None
+    if check := interaction_check(sentence):
+        return check
+    if check := cursor_check(sentence):
+        return check
     match = passes_re.search(sentence)
     if match:
         clause = ' '.join(match.group(1).strip().lower().rstrip('.!').split())
@@ -1008,7 +1088,12 @@ def main() -> None:
             # likewise harness-satisfiable (the UA's own user-stylesheet obligation), so its
             # stated sentence decides mechanically too. Every other template leaves the suite's
             # interaction flag standing (the ledger decides those).
-            if check.get('kind', '').startswith(('scroll-', 'painted-')) or 'userstyle' in flags:
+            # A cursor check points at the stated subject through the engine's own cursor
+            # lookup (the hit regions the native window reads), so it too performs the
+            # stated interaction mechanically.
+            # An interaction check drives the stated pointer/keyboard interaction through
+            # the real input pipeline of a headless window (the same reason).
+            if check.get('kind', '').startswith(('scroll-', 'painted-', 'cursor')) or 'interaction' in check                     or 'userstyle' in flags:
                 entry['check'] = check
         entries.append(entry)
 

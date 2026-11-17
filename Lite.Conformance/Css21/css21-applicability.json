@@ -4317,9 +4317,9 @@
     {
       "path": "css/CSS2/backgrounds/background-attachment-010.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.14.2.1. flags: image paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.14.2.1. flags: image paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.14.2.1"
@@ -7305,15 +7305,11 @@
     },
     {
       "path": "css/CSS2/bidi-overflow-scroll-001.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.9.10, css21.11.1.1.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.11.1.1",
-        "css21.9.10"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.9.10, css21.11.1.1. Reviewed 2026-11-15: reclassified optional - it asserts the scrollbar sits on the LEFT in an rtl box, which CSS 2.1 never requires; no official twin exists.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 11.1.1 'scroll' requires only that a visible scrolling mechanism be displayed, without placing it; 9.10 'direction' governs the direction of horizontal overflow, not scrollbar placement."
     },
     {
       "path": "css/CSS2/bidi-text/bidi-001.xht",
@@ -17587,9 +17583,9 @@
     {
       "path": "css/CSS2/box-display/containing-block-024.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.1. flags: paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.1. flags: paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.10.1"
@@ -43241,9 +43237,9 @@
     {
       "path": "css/CSS2/margin-padding-clear/margin-collapse-160.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.8.3.1. flags: paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.8.3.1. flags: paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.8.3.1"
@@ -59647,9 +59643,9 @@
     {
       "path": "css/CSS2/page-box/page-container-007.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.9.6.1. flags: image paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.9.6.1. flags: image paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.9.6.1"
@@ -59658,9 +59654,9 @@
     {
       "path": "css/CSS2/page-box/page-container-008.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.1. flags: paged. cites later specifications: http://www.w3.org/TR/css3-page/#painting.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.1. flags: paged. cites later specifications: http://www.w3.org/TR/css3-page/#painting. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.10.1"
@@ -59669,9 +59665,9 @@
     {
       "path": "css/CSS2/page-box/page-container-009.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.1. flags: paged. cites later specifications: http://www.w3.org/TR/css3-page/#painting.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.1. flags: paged. cites later specifications: http://www.w3.org/TR/css3-page/#painting. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.10.1"
@@ -59693,9 +59689,9 @@
     {
       "path": "css/CSS2/page-box/page-container-011.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.9.8.4. flags: paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.9.8.4. flags: paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.9.8.4"
@@ -59929,9 +59925,9 @@
     {
       "path": "css/CSS2/pagination/allowed-page-breaks-005.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.16.4. flags: paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.16.4. flags: paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.16.4"
@@ -59940,9 +59936,9 @@
     {
       "path": "css/CSS2/pagination/allowed-page-breaks-006.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.16.4. flags: paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.16.4. flags: paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.16.4"
@@ -59951,9 +59947,9 @@
     {
       "path": "css/CSS2/pagination/allowed-page-breaks-007a.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.16.4. flags: paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.16.4. flags: paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.16.4"
@@ -59962,9 +59958,9 @@
     {
       "path": "css/CSS2/pagination/allowed-page-breaks-007b.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.16.4. flags: paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.16.4. flags: paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.16.4"
@@ -60657,9 +60653,9 @@
     {
       "path": "css/CSS2/pagination/page-break-inside-005.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.16.4. flags: paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.16.4. flags: paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.16.4"
@@ -65306,9 +65302,9 @@
     {
       "path": "css/CSS2/positioning/position-fixed-004.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.9.3.1. flags: paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.9.3.1. flags: paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.9.3.1"
@@ -65317,9 +65313,9 @@
     {
       "path": "css/CSS2/positioning/position-fixed-005.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.9.3.1. flags: paged.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.9.3.1. flags: paged. Reviewed 2026-11-15: media corrected to print - the test carries the \"paged\" flag and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.9.3.1"
@@ -74691,14 +74687,11 @@
     },
     {
       "path": "css/CSS2/syntax/at-charset-013.html",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.4.4. flags: HTMLonly interact.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.4.4"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.4.4. flags: HTMLonly interact. Reviewed 2026-11-15: reclassified optional - its PREREQUISITE is the user overriding the page encoding to Shift-JIS, a user-agent feature CSS 2.1 never requires; the referring-document rule of 4.4 itself stays covered by the applicable at-charset cases that declare the document encoding.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 4.4 takes the referring document's encoding as given; offering the user a way to override a page's encoding is optional (HTML: user agents may provide a mechanism to override the character encoding)."
     },
     {
       "path": "css/CSS2/syntax/at-charset-014.xht",
@@ -104382,13 +104375,25 @@
     },
     {
       "path": "css21-official/html4/at-charset-008.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: defective HTML build; the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "self-contradiction",
+        "citation": "HTML encoding sniffing: absent an HTTP charset, <meta http-equiv=\"Content-Type\" content=\"text/html; charset=windows-1252\"> decides the document encoding.",
+        "detail": "The html4 build keeps the windows-1252 declaration but writes the class attribute as raw UTF-8 bytes (e5 b9 b3 e5 92 8c), so a conforming HTML parser decodes the class to mojibake and the Shift_JIS selector can never match, whatever the stylesheet decoding does. The WPT twin writes the class as character references (&#x5e73;&#x548c;), which decode the same under any document encoding, and asserts the same @charset-over-referrer behaviour."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-008.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
@@ -104404,13 +104409,25 @@
     },
     {
       "path": "css21-official/html4/at-charset-010.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: defective HTML build; the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "self-contradiction",
+        "citation": "HTML encoding sniffing: absent an HTTP charset, <meta http-equiv=\"Content-Type\" content=\"text/html; charset=windows-1252\"> decides the document encoding.",
+        "detail": "The html4 build keeps the windows-1252 declaration but writes the class attribute as raw UTF-8 bytes (e5 b9 b3 e5 92 8c), so a conforming HTML parser decodes the class to mojibake and the Shift_JIS selector can never match, whatever the stylesheet decoding does. The WPT twin writes the class as character references (&#x5e73;&#x548c;), which decode the same under any document encoding, and asserts the same @charset-over-referrer behaviour."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-010.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
@@ -104437,14 +104454,11 @@
     },
     {
       "path": "css21-official/html4/at-charset-013.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. flags: HTMLonly interact. requires interaction; manual execution evidence pending.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.4.4"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. flags: HTMLonly interact. requires interaction; manual execution evidence pending. Reviewed 2026-11-15: reclassified optional - its PREREQUISITE is the user overriding the page encoding to Shift-JIS, a user-agent feature CSS 2.1 never requires; the referring-document rule of 4.4 itself stays covered by the applicable at-charset cases that declare the document encoding.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 4.4 takes the referring document's encoding as given; offering the user a way to override a page's encoding is optional (HTML: user agents may provide a mechanism to override the character encoding)."
     },
     {
       "path": "css21-official/html4/at-charset-014.htm",
@@ -104569,24 +104583,48 @@
     },
     {
       "path": "css21-official/html4/at-charset-029.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: superseded in this profile by the modern stylesheet-decoding reading (project decision); the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "superseded-in-profile",
+        "citation": "CSS 2.1 REC 4.4 (the BOM/@charset detection table and its ignore-the-sheet rule) is superseded in this profile by CSS Syntax Level 3 3.2 (determine the fallback encoding) and the Encoding Standard decode algorithm (a BOM wins; @charset is read only as an ASCII byte pattern). Project decision 2026-11-15, published as a deviation from the 2011 Recommendation.",
+        "detail": "The official test asserts the REC 4.4 reading: it sniffs UTF-16LE from a BOM-less @charset. Its WPT-maintained twin asserts the opposite result for the same stylesheet bytes, following the modern algorithm every current browser implements; no engine can pass both, and the profile adopts the modern reading."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-029.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
       "path": "css21-official/html4/at-charset-030.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: superseded in this profile by the modern stylesheet-decoding reading (project decision); the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "superseded-in-profile",
+        "citation": "CSS 2.1 REC 4.4 (the BOM/@charset detection table and its ignore-the-sheet rule) is superseded in this profile by CSS Syntax Level 3 3.2 (determine the fallback encoding) and the Encoding Standard decode algorithm (a BOM wins; @charset is read only as an ASCII byte pattern). Project decision 2026-11-15, published as a deviation from the 2011 Recommendation.",
+        "detail": "The official test asserts the REC 4.4 reading: it sniffs UTF-16BE from a BOM-less @charset. Its WPT-maintained twin asserts the opposite result for the same stylesheet bytes, following the modern algorithm every current browser implements; no engine can pass both, and the profile adopts the modern reading."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-030.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
@@ -104690,24 +104728,48 @@
     },
     {
       "path": "css21-official/html4/at-charset-042.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: superseded in this profile by the modern stylesheet-decoding reading (project decision); the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "superseded-in-profile",
+        "citation": "CSS 2.1 REC 4.4 (the BOM/@charset detection table and its ignore-the-sheet rule) is superseded in this profile by CSS Syntax Level 3 3.2 (determine the fallback encoding) and the Encoding Standard decode algorithm (a BOM wins; @charset is read only as an ASCII byte pattern). Project decision 2026-11-15, published as a deviation from the 2011 Recommendation.",
+        "detail": "The official test asserts the REC 4.4 reading: it throws out a UTF-8-BOM sheet whose @charset names UTF-16BE. Its WPT-maintained twin asserts the opposite result for the same stylesheet bytes, following the modern algorithm every current browser implements; no engine can pass both, and the profile adopts the modern reading."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-042.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
       "path": "css21-official/html4/at-charset-043.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: superseded in this profile by the modern stylesheet-decoding reading (project decision); the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "superseded-in-profile",
+        "citation": "CSS 2.1 REC 4.4 (the BOM/@charset detection table and its ignore-the-sheet rule) is superseded in this profile by CSS Syntax Level 3 3.2 (determine the fallback encoding) and the Encoding Standard decode algorithm (a BOM wins; @charset is read only as an ASCII byte pattern). Project decision 2026-11-15, published as a deviation from the 2011 Recommendation.",
+        "detail": "The official test asserts the REC 4.4 reading: it throws out a UTF-16LE-BOM sheet whose @charset names UTF-8. Its WPT-maintained twin asserts the opposite result for the same stylesheet bytes, following the modern algorithm every current browser implements; no engine can pass both, and the profile adopts the modern reading."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-043.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
@@ -104723,46 +104785,94 @@
     },
     {
       "path": "css21-official/html4/at-charset-045.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: superseded in this profile by the modern stylesheet-decoding reading (project decision); the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "superseded-in-profile",
+        "citation": "CSS 2.1 REC 4.4 (the BOM/@charset detection table and its ignore-the-sheet rule) is superseded in this profile by CSS Syntax Level 3 3.2 (determine the fallback encoding) and the Encoding Standard decode algorithm (a BOM wins; @charset is read only as an ASCII byte pattern). Project decision 2026-11-15, published as a deviation from the 2011 Recommendation.",
+        "detail": "The official test asserts the REC 4.4 reading: it throws out a UTF-16LE-BOM sheet whose @charset names UTF-16BE. Its WPT-maintained twin asserts the opposite result for the same stylesheet bytes, following the modern algorithm every current browser implements; no engine can pass both, and the profile adopts the modern reading."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-045.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
       "path": "css21-official/html4/at-charset-046.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: superseded in this profile by the modern stylesheet-decoding reading (project decision); the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "superseded-in-profile",
+        "citation": "CSS 2.1 REC 4.4 (the BOM/@charset detection table and its ignore-the-sheet rule) is superseded in this profile by CSS Syntax Level 3 3.2 (determine the fallback encoding) and the Encoding Standard decode algorithm (a BOM wins; @charset is read only as an ASCII byte pattern). Project decision 2026-11-15, published as a deviation from the 2011 Recommendation.",
+        "detail": "The official test asserts the REC 4.4 reading: it throws out a UTF-16BE-BOM sheet whose @charset names UTF-16LE. Its WPT-maintained twin asserts the opposite result for the same stylesheet bytes, following the modern algorithm every current browser implements; no engine can pass both, and the profile adopts the modern reading."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-046.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
       "path": "css21-official/html4/at-charset-047.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: superseded in this profile by the modern stylesheet-decoding reading (project decision); the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "superseded-in-profile",
+        "citation": "CSS 2.1 REC 4.4 (the BOM/@charset detection table and its ignore-the-sheet rule) is superseded in this profile by CSS Syntax Level 3 3.2 (determine the fallback encoding) and the Encoding Standard decode algorithm (a BOM wins; @charset is read only as an ASCII byte pattern). Project decision 2026-11-15, published as a deviation from the 2011 Recommendation.",
+        "detail": "The official test asserts the REC 4.4 reading: it sniffs UTF-16 from a BOM-less little-endian @charset \"UTF-16\". Its WPT-maintained twin asserts the opposite result for the same stylesheet bytes, following the modern algorithm every current browser implements; no engine can pass both, and the profile adopts the modern reading."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-047.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
       "path": "css21-official/html4/at-charset-048.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: superseded in this profile by the modern stylesheet-decoding reading (project decision); the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "superseded-in-profile",
+        "citation": "CSS 2.1 REC 4.4 (the BOM/@charset detection table and its ignore-the-sheet rule) is superseded in this profile by CSS Syntax Level 3 3.2 (determine the fallback encoding) and the Encoding Standard decode algorithm (a BOM wins; @charset is read only as an ASCII byte pattern). Project decision 2026-11-15, published as a deviation from the 2011 Recommendation.",
+        "detail": "The official test asserts the REC 4.4 reading: it sniffs UTF-16 from a BOM-less big-endian @charset \"UTF-16\". Its WPT-maintained twin asserts the opposite result for the same stylesheet bytes, following the modern algorithm every current browser implements; no engine can pass both, and the profile adopts the modern reading."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-048.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
@@ -104888,13 +104998,25 @@
     },
     {
       "path": "css21-official/html4/at-charset-060.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: superseded in this profile by the modern stylesheet-decoding reading (project decision); the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "superseded-in-profile",
+        "citation": "CSS 2.1 REC 4.4 (the BOM/@charset detection table and its ignore-the-sheet rule) is superseded in this profile by CSS Syntax Level 3 3.2 (determine the fallback encoding) and the Encoding Standard decode algorithm (a BOM wins; @charset is read only as an ASCII byte pattern). Project decision 2026-11-15, published as a deviation from the 2011 Recommendation.",
+        "detail": "The official test asserts the REC 4.4 reading: it ignores a UTF-16LE-BOM sheet's rules because its @charset is bogus. Its WPT-maintained twin asserts the opposite result for the same stylesheet bytes, following the modern algorithm every current browser implements; no engine can pass both, and the profile adopts the modern reading."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-060.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
@@ -105020,13 +105142,25 @@
     },
     {
       "path": "css21-official/html4/at-charset-utf16-be-001.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: superseded in this profile by the modern stylesheet-decoding reading (project decision); the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "superseded-in-profile",
+        "citation": "CSS 2.1 REC 4.4 (the BOM/@charset detection table and its ignore-the-sheet rule) is superseded in this profile by CSS Syntax Level 3 3.2 (determine the fallback encoding) and the Encoding Standard decode algorithm (a BOM wins; @charset is read only as an ASCII byte pattern). Project decision 2026-11-15, published as a deviation from the 2011 Recommendation.",
+        "detail": "The official test asserts the REC 4.4 reading: it sniffs UTF-16BE from a BOM-less sheet. Its WPT-maintained twin asserts the opposite result for the same stylesheet bytes, following the modern algorithm every current browser implements; no engine can pass both, and the profile adopts the modern reading."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-utf16-be-001.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
@@ -105053,13 +105187,25 @@
     },
     {
       "path": "css21-official/html4/at-charset-utf16-le-001.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.4.4. Reviewed 2026-11-15: superseded in this profile by the modern stylesheet-decoding reading (project decision); the WPT-maintained twin carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.4.4"
+      ],
+      "defect": {
+        "kind": "superseded-in-profile",
+        "citation": "CSS 2.1 REC 4.4 (the BOM/@charset detection table and its ignore-the-sheet rule) is superseded in this profile by CSS Syntax Level 3 3.2 (determine the fallback encoding) and the Encoding Standard decode algorithm (a BOM wins; @charset is read only as an ASCII byte pattern). Project decision 2026-11-15, published as a deviation from the 2011 Recommendation.",
+        "detail": "The official test asserts the REC 4.4 reading: it sniffs UTF-16LE from a BOM-less sheet. Its WPT-maintained twin asserts the opposite result for the same stylesheet bytes, following the modern algorithm every current browser implements; no engine can pass both, and the profile adopts the modern reading."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/syntax/at-charset-utf16-le-001.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {

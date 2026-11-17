@@ -249,7 +249,7 @@ internal static class Program
                                      relative (e.g. Wpt/html5-baseline-passes.txt) or absolute
               --shard <index/count>  Run one stable zero-based shard (for example 2/8)
               --require-ready        (profile) Fail unless every release-readiness check passes
-              --require-css-ready    (profile) Require CSS 2.1 screen and print completion
+              --require-css-ready    (profile) Require CSS 2.1 screen completion (css21ProfileReady)
               --media <screen|print> (css21-full) Select medium; defaults to screen
               --catalog <all|wpt|official> (css21-full) Select candidate catalogs; defaults to all
               --survey <dir>         (wpt) Survey every vendored test under the directory

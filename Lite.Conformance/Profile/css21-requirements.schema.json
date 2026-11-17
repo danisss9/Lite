@@ -60,6 +60,7 @@
                     "unit",
                     "css21-wpt",
                     "css21-official",
+                    "css21-curated",
                     "manual"
                   ]
                 },
@@ -78,6 +79,19 @@
                 "assertion"
               ],
               "additionalProperties": false
+            }
+          },
+          "notes": {
+            "type": "string"
+          },
+          "rollUp": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "A section whose requirements live entirely in the listed obligations: implemented only while every listed obligation is implemented. Its own tests may then be empty.",
+            "items": {
+              "type": "string",
+              "minLength": 1
             }
           }
         },

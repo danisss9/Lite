@@ -657,12 +657,6 @@
    "note": "the stated condition (\"Test passes if the word \"Bottom\" is centered inside the black box and is below the word \"Top\".\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css/CSS2/cascade/html-attribute-002.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css/CSS2/cascade/html-attribute-006.xht",
    "condition": "manual",
    "manualPending": true,
@@ -2625,12 +2619,6 @@
    "note": "the stated condition (\"Test passes if there is no red visible on the page, even after navigating to the \"Filler Text\" link below.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css/CSS2/selectors/link-visited-selector-003.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green while the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css/CSS2/selectors/link-visited-selector-004.xht",
    "condition": "manual",
    "manualPending": true,
@@ -2641,12 +2629,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if the \"Filler Text\" below is green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/selectors/pseudo-010.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css/CSS2/syntax/at-charset-013.html",
@@ -3643,12 +3625,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if the \"Filler Text\" below is overlapped by the blue box.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/ui/outline-pseudo-selector-003.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is a box around the \"Filler Text\" below when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css/CSS2/ui/outline-style-002.xht",
@@ -5685,12 +5661,6 @@
    "note": "the stated condition (\"Test passes if the word \"Bottom\" is centered inside the black box and is below the word \"Top\".\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css21-official/html4/html-attribute-002.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css21-official/html4/html-attribute-006.htm",
    "condition": "manual",
    "manualPending": true,
@@ -5845,12 +5815,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if there is no red visible on the page, even after navigating to the \"Filler Text\" link below.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/link-visited-selector-003.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green while the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/link-visited-selector-004.htm",
@@ -6207,12 +6171,6 @@
    "note": "the stated condition (\"Test passes if the \"Filler Text\" below is overlapped by the blue box.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css21-official/html4/outline-pseudo-selector-003.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is a box around the \"Filler Text\" below when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css21-official/html4/outline-style-002.htm",
    "condition": "manual",
    "manualPending": true,
@@ -6445,12 +6403,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if the \"Filler Text\" below is green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/pseudo-010.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/quotes-033.htm",

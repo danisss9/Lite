@@ -158,6 +158,9 @@ internal static class ProfileRunner
             ["css21ProfileReady"] = cssReady,
             ["css21ScreenBlockers"] = JsonSerializer.SerializeToNode(cssScreen.Blockers.Concat(evidenceBlockers).Distinct()),
             ["css21PrintBlockers"] = JsonSerializer.SerializeToNode(cssPrint.Blockers.Concat(evidenceBlockers).Distinct()),
+            // Reviewed defective tests excluded from the screen matrix, each with the
+            // replacements whose passing evidence keeps the exclusion valid.
+            ["css21Exclusions"] = JsonSerializer.SerializeToNode(cssScreen.Exclusions ?? []),
             ["css21Coverage"] = JsonSerializer.SerializeToNode(new { screen = new { cssScreen.Requirements, cssScreen.Tests },
                 print = new { cssPrint.Requirements, cssPrint.Tests } }, ExecutionEvidence.JsonOptions),
             ["html5ProfileReady"] = htmlReady,
@@ -201,10 +204,15 @@ internal static class ProfileRunner
             Console.WriteLine("  FAIL  HTML 5.0 compatibility profile is not ready.");
             return 1;
         }
-        Console.WriteLine($"        css21ScreenReady={cssScreen.Ready.ToString().ToLowerInvariant()}; css21PrintReady={cssPrint.Ready.ToString().ToLowerInvariant()}");
+        Console.WriteLine($"        css21ProfileReady={cssReady.ToString().ToLowerInvariant()} (screen scope; " +
+            $"css21ScreenReady={cssScreen.Ready.ToString().ToLowerInvariant()}; css21PrintReady={cssPrint.Ready.ToString().ToLowerInvariant()}, out of scope)");
+        // Group the screen blockers by kind so a readiness read shows what is left at a glance.
+        foreach (var group in cssScreen.Blockers.Concat(evidenceBlockers).Distinct()
+                     .GroupBy(b => b.Split(':')[0]).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal))
+            Console.WriteLine($"          {group.Count(),6}  {group.Key}");
         if (requireCssReady && !cssReady)
         {
-            Console.WriteLine("  FAIL  CSS 2.1 screen and print profiles are not ready.");
+            Console.WriteLine("  FAIL  CSS 2.1 screen profile is not ready (print and paged media are out of scope).");
             return 1;
         }
         if (requireReady && !releaseReady)

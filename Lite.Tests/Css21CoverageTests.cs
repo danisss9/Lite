@@ -37,6 +37,55 @@ public static class Css21CoverageTests
     }
 
     [Test]
+    public static void Evidence_WholeCaseAssertionMatchesAnyPassingRoute()
+    {
+        var pass = Evidence();
+        True(Css21Inventory.HasEvidence([pass], pass.Suite, pass.Path, "screen", "inventory", Css21Inventory.WholeCase));
+        True(Css21Inventory.HasEvidence([pass with { Subtests = [new("twin reftest", 0, null)] }], pass.Suite, pass.Path,
+            "screen", "inventory", Css21Inventory.WholeCase));
+        True(!Css21Inventory.HasEvidence([pass], pass.Suite, pass.Path, "screen", "inventory", "a different route's sentence"));
+        True(!Css21Inventory.HasEvidence([pass with { Outcome = "fail" }], pass.Suite, pass.Path, "screen", "inventory", Css21Inventory.WholeCase));
+        True(!Css21Inventory.HasEvidence([pass with { Subtests = [new("twin reftest", 1, "diff")] }], pass.Suite, pass.Path,
+            "screen", "inventory", Css21Inventory.WholeCase));
+    }
+
+    [Test]
+    public static void Evidence_KindNamesTheRouteThatRan()
+    {
+        // A css/CSS2 "visual" page is decided by the selftest oracle; a manual case runs only
+        // when its stated condition has a machine check, and otherwise has no route at all.
+        Equal("selftest", WptRunner.EvidenceKind(new WptCase("css/CSS2/a.xht", "css/CSS2/a.xht", "visual", "window", false, false, []), "css/CSS2/a.xht"));
+        Equal("reftest", WptRunner.EvidenceKind(RefCase("css/CSS2/b.xht", null), "css/CSS2/b.xht"));
+        const string checkedManual = "css/CSS2/backgrounds/background-012.xht";
+        True(WptRunner.IsMachineCheckedManual(new WptCase(checkedManual, checkedManual, "manual", "window", false, false, []), checkedManual));
+        Equal("selftest", WptRunner.EvidenceKind(new WptCase(checkedManual, checkedManual, "manual", "window", false, false, []), checkedManual));
+        const string noCheck = "css/CSS2/ui/no-such-manual-case.xht";
+        Equal("unexecuted", WptRunner.EvidenceKind(new WptCase(noCheck, noCheck, "manual", "window", false, false, []), noCheck));
+
+        // Evidence that names the executed route reads without a manual record; a catalog
+        // "visual" kind still demands one, and an unexecuted route can never be a pass.
+        var identity = ExecutionEvidence.CaptureIdentity();
+        var path = Path.Combine(ConformancePaths.EnsureArtifacts(), $"css-kind-test-{Guid.NewGuid():N}.json");
+        try
+        {
+            var row = Evidence() with { Kind = "selftest", CatalogKind = "visual" };
+            row = row with { Css = row.Css! with { InventorySha256 = new string('a', 64) } };
+            int Read(TestEvidence test)
+            {
+                var report = new EvidenceReport(ExecutionEvidence.FormatVersion, identity, DateTime.UtcNow.AddMinutes(-1).ToString("O"),
+                    DateTime.UtcNow.ToString("O"), true, [test]);
+                File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(report, ExecutionEvidence.JsonOptions));
+                return ExecutionEvidence.ReadCurrent([path], identity, []).Count;
+            }
+            Equal(1, Read(row));
+            Equal(0, Read(row with { Kind = "visual" }));
+            Equal(0, Read(row with { Kind = "unexecuted" }));
+            Equal(1, Read(row with { Kind = "unexecuted", Outcome = "unsupported" }));
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Test]
     public static void Evidence_RequiresActualDocumentModeAndPaginatedArtifacts()
     {
         var pass = Evidence() with { Path = "css/CSS2/example.xht" };
@@ -67,6 +116,119 @@ public static class Css21CoverageTests
             ["requirementIds"] = new JsonArray()
         });
         Reject(() => Css21Inventory.ValidateReviews(requirements, tests));
+    }
+
+    [Test]
+    public static void Review_DefectiveTestsNeedAReviewedDefectAndAnEquivalentReplacement()
+    {
+        var requirements = Css21Inventory.Read(Css21Inventory.RequirementsFile);
+        // The committed reviews, defective rows included, validate as they stand.
+        Css21Inventory.ValidateReviews(requirements, Css21Inventory.Read(Css21Inventory.ApplicabilityFile));
+        const string defective = "css21-official/html4/at-charset-008.htm";
+        JsonObject Row(JsonObject file, string path) =>
+            file["tests"]!.AsArray().OfType<JsonObject>().Single(t => t["path"]!.GetValue<string>() == path);
+        void RejectMutation(Action<JsonObject> mutate)
+        {
+            var file = Css21Inventory.Read(Css21Inventory.ApplicabilityFile);
+            mutate(Row(file, defective));
+            Reject(() => Css21Inventory.ValidateReviews(requirements, file));
+        }
+        RejectMutation(r => r.Remove("replacements"));
+        RejectMutation(r => r.Remove("defect"));
+        RejectMutation(r => r["defect"]!["kind"] = "looks-wrong");
+        RejectMutation(r => r["replacements"] = new JsonArray());
+        RejectMutation(r => r["requirementIds"] = new JsonArray());
+        // A replacement must be an applicable case of its own suite sharing the obligation.
+        RejectMutation(r => r["replacements"]![0]!["path"] = "css/CSS2/bidi-overflow-scroll-001.xht");
+        RejectMutation(r => r["replacements"]![0]!["suite"] = "css21-official");
+        RejectMutation(r => r["replacements"]![0]!["path"] = defective);
+        // A curated replacement must be a waiver-free entry of the curated gate.
+        RejectMutation(r => r["replacements"] = new JsonArray(new JsonObject
+            { ["suite"] = "css21-curated", ["path"] = "css21/not-in-the-manifest.html", ["relation"] = "authored-equivalent" }));
+        // Defect fields belong to defective rows only, and a permitting sentence to optional ones.
+        var other = Css21Inventory.Read(Css21Inventory.ApplicabilityFile);
+        Row(other, "css/CSS2/syntax/at-charset-008.xht")["defect"] = Row(other, defective)["defect"]!.DeepClone();
+        Reject(() => Css21Inventory.ValidateReviews(requirements, other));
+        other = Css21Inventory.Read(Css21Inventory.ApplicabilityFile);
+        Row(other, "css/CSS2/syntax/at-charset-008.xht")["permits"] = "a sentence";
+        Reject(() => Css21Inventory.ValidateReviews(requirements, other));
+    }
+
+    [Test]
+    public static void UpstreamProbe_AcceptsOnlyAServerThatServesThePinnedCheckout()
+    {
+        byte[] Vendored(string url) => File.ReadAllBytes(Path.Combine(ConformancePaths.Vendor, "wpt",
+            url["http://127.0.0.1:8000/".Length..].Replace('/', Path.DirectorySeparatorChar)));
+        Equal(null, Css21FullRunner.ProbeUpstream("http://127.0.0.1:8000", Vendored));
+        True(Css21FullRunner.ProbeUpstream("http://127.0.0.1:8000",
+            url => url.EndsWith(".xht", StringComparison.Ordinal) ? "stale"u8.ToArray() : Vendored(url))!.Contains("differs"));
+        True(Css21FullRunner.ProbeUpstream("http://127.0.0.1:8000",
+            _ => throw new HttpRequestException("connection refused"))!.Contains("could not be fetched"));
+        True(Css21FullRunner.ProbeUpstream("file:///c:/wpt", Vendored) is not null);
+    }
+
+    [Test]
+    public static void Review_RollUpsNameKnownObligationsWithoutCycles()
+    {
+        var applicability = Css21Inventory.Read(Css21Inventory.ApplicabilityFile);
+        Css21Inventory.ValidateReviews(Css21Inventory.Read(Css21Inventory.RequirementsFile), applicability);
+        void RejectRollUp(Action<Dictionary<string, JsonObject>> mutate)
+        {
+            var requirements = Css21Inventory.Read(Css21Inventory.RequirementsFile);
+            mutate(requirements["requirements"]!.AsArray().OfType<JsonObject>().ToDictionary(r => r["id"]!.GetValue<string>()));
+            Reject(() => Css21Inventory.ValidateReviews(requirements, applicability));
+        }
+        RejectRollUp(r => r["css21.4.1"]["rollUp"] = new JsonArray("css21.no-such-obligation"));
+        RejectRollUp(r => r["css21.4.1"]["rollUp"] = new JsonArray("css21.4.1"));
+        RejectRollUp(r => r["css21.4.1"]["rollUp"] = new JsonArray());
+        RejectRollUp(r => r["css21.4.1"]["rollUp"] = new JsonArray("css21.4.1.1", "css21.4.1.1"));
+        RejectRollUp(r => { r["css21.4.1.1"]["rollUp"] = new JsonArray("css21.4.1"); }); // 4.1 already rolls up 4.1.1
+    }
+
+    [Test]
+    public static void Obligations_DeriveTheirCasesFromTheApplicabilityReviews()
+    {
+        JsonObject Review(string path, string classification, string[] media, string[] ids, JsonArray? replacements = null)
+        {
+            var row = new JsonObject
+            {
+                ["path"] = path, ["classification"] = classification, ["rationale"] = "r",
+                ["media"] = new JsonArray(media.Select(m => (JsonNode)m).ToArray()),
+                ["requirementIds"] = new JsonArray(ids.Select(i => (JsonNode)i).ToArray()),
+            };
+            if (replacements is not null) row["replacements"] = replacements;
+            return row;
+        }
+        var derived = Css21Inventory.DerivedTests([
+            Review("css/CSS2/a.xht", "applicable", ["screen"], ["css21.x", "css21.y"]),
+            Review("css21-official/html4/a.htm", "applicable", ["screen", "print"], ["css21.x"]),
+            Review("css/CSS2/paged.xht", "applicable", ["print"], ["css21.x"]),
+            Review("css/CSS2/later.xht", "later-feature", [], []),
+            Review("css21-official/html4/bad.htm", "defective", ["screen"], ["css21.x"],
+                new JsonArray(new JsonObject { ["suite"] = "css21-wpt", ["path"] = "css/CSS2/a.xht", ["relation"] = "maintained-twin" })),
+        ], "screen");
+        Equal(2, derived["css21.x"].Count); // the replacement is already the applicable WPT case
+        True(derived["css21.x"].Contains(("css21-wpt", "css/CSS2/a.xht")));
+        True(derived["css21.x"].Contains(("css21-official", "css21-official/html4/a.htm")));
+        Equal(1, derived["css21.y"].Count);
+        // Every committed obligation is evaluated against its derived cases: a status that
+        // claims implemented with no evidence at all is reported, never trusted.
+        var readiness = Css21Inventory.Evaluate("screen", []);
+        True(readiness.Blockers.Any(b => b.StartsWith("css21-missing-evidence:screen:css21.ua.stylesheets:")));
+        True(!readiness.Blockers.Any(b => b.StartsWith("css21-untested:css21.4.1") && b.Length == "css21-untested:css21.4.1".Length),
+            "a roll-up section is not untested for lacking its own tests");
+    }
+
+    [Test]
+    public static void Readiness_PublishesExclusionsAndBlocksOnAFailingReplacement()
+    {
+        var readiness = Css21Inventory.Evaluate("screen", []);
+        True(readiness.Exclusions!.Any(e => e.StartsWith("css21-official/html4/at-charset-008.htm (self-contradiction) -> css21-wpt:css/CSS2/syntax/at-charset-008.xht")));
+        // No evidence: the defective case blocks through its replacement, not as a missing case.
+        True(readiness.Blockers.Contains("css21-defective-without-passing-replacement:screen:css21-official/html4/at-charset-008.htm:css/CSS2/syntax/at-charset-008.xht"));
+        True(!readiness.Blockers.Contains("css21-missing-case:screen:css21-official/html4/at-charset-008.htm"));
+        // Print-only reclassifications leave the screen matrix entirely.
+        True(!readiness.Blockers.Any(b => b.EndsWith(":css/CSS2/page-box/page-container-007.xht")));
     }
 
     [Test]
@@ -914,6 +1076,46 @@ public static class Css21CoverageTests
             }
     }
 
+    private static (SkiaSharp.SKBitmap Bitmap, LayoutNode Root) RenderPage(string css, string body)
+    {
+        var page = Parser.ParseChildPage(
+            $"<!DOCTYPE html><html><head><style>{css}</style></head><body>{body}</body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var bitmap = Drawer.DrawToBitmap(800, 600, page.Root, new Viewport { ViewportHeight = 600 });
+        return (bitmap, page.Root);
+    }
+
+    [Test]
+    public static void VisualChecks_InteractionJudgesNeedTheStateChange()
+    {
+        // The interaction protocol judges the interacted render with the stated check and the
+        // at-rest render with its negation: a condition that already holds at rest is not
+        // produced by the state change, and one missing while interacting fails outright.
+        const string sentence = "Test passes if there is a box around the \"Filler Text\" below when the text is hovered over.";
+        var body = $"<p>{sentence.Replace("\"", "&quot;")}</p><div><span>Filler Text</span></div>";
+        var (ringed, root) = RenderPage("span { outline: 10px solid black }", body);
+        var (plain, _) = RenderPage("", body);
+        var box = new VisualCheck("no-ring", Variant: "present", Needle: "filler text",
+            Interaction: new InteractionSpec("hover", "filler text"));
+        True(VisualChecks.Evaluate(box, new RenderSet(ringed, null, plain), root, sentence, "p").Passed,
+            "a ring while hovered and none at rest passes");
+        True(!VisualChecks.Evaluate(box, new RenderSet(plain, null, plain), root, sentence, "p").Passed,
+            "no ring while hovered fails");
+        True(!VisualChecks.Evaluate(box, new RenderSet(ringed, null, ringed), root, sentence, "p").Passed,
+            "a ring already at rest fails: the hover did not produce it");
+
+        const string colorSentence = "Test passes if the \"Filler Text\" below is initially black, when it is activated it turns green, and it returns to black when it is deactivated.";
+        var colorBody = $"<p>{colorSentence.Replace("\"", "&quot;")}</p><div>Filler Text</div>";
+        var (green, colorRoot) = RenderPage("div { color: green }", colorBody);
+        var (black, _) = RenderPage("", colorBody);
+        var cycle = new VisualCheck("text-color", Color: "green", Needle: "filler text",
+            Interaction: new InteractionSpec("active", "filler text", "black"));
+        True(VisualChecks.Evaluate(cycle, new RenderSet(green, black, black), colorRoot, colorSentence, "p").Passed,
+            "green while pressed, black before and after the release passes");
+        True(!VisualChecks.Evaluate(cycle, new RenderSet(green, green, black), colorRoot, colorSentence, "p").Passed,
+            "still green after the release fails the 'returns to black' phase");
+    }
+
     [Test]
     public static void VisualChecks_ScrollJudgesDecideTheCatCorpus()
     {
@@ -1168,7 +1370,7 @@ public static class Css21CoverageTests
                      "scroll-cats-bottom", "scroll-cats-moved", "scroll-cats-bottom-moved", "scroll-cats-top-moved",
                      "scroll-cats-still", "scroll-box-text", "scroll-box-edges-visible", "scroll-no-red",
                      "scroll-page-text", "scroll-page-edges-visible", "scroll-page-always-visible",
-                     "scroll-page-stuck-top", "scroll-page-no-red" })
+                     "scroll-page-stuck-top", "scroll-page-no-red", "cursor" })
             known.Add(kind);
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var entry in conditions["cases"]!.AsArray())

@@ -75,6 +75,15 @@ internal static class Css21FullRunner
             .ThenBy(s => s.Path, StringComparer.Ordinal)).ToArray();
         if (selected.Length == 0) { Console.Error.WriteLine("css21-full: empty selection."); return 2; }
 
+        // WPT evidence may claim the upstream serving environment only when the configured
+        // server demonstrably serves the pinned checkout; otherwise the run must not start.
+        var upstream = Environment.GetEnvironmentVariable("LITE_WPT_BASE_URL");
+        if (!string.IsNullOrWhiteSpace(upstream) && selected.Any(s => s.Suite == "css21-wpt") &&
+            ProbeUpstream(upstream) is { } probeError)
+        {
+            Console.Error.WriteLine($"css21-full: refusing to stamp upstream-wpt evidence: {probeError}");
+            return 2;
+        }
         var identity = ExecutionEvidence.CaptureIdentity();
         var inventoryHash = Css21Inventory.InventoryHash();
         var started = DateTime.UtcNow;
@@ -87,11 +96,15 @@ internal static class Css21FullRunner
             else result = WptRunner.RunOne(test.Path);
             var environment = test.Suite == "css21-wpt" && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LITE_WPT_BASE_URL"))
                 ? "upstream-wpt" : "local";
+            // Evidence records the route that decided the case; the catalog kind is kept
+            // alongside. A "visual" or "manual" catalog kind decided by the selftest oracle is
+            // machine evidence, not a person's verdict.
+            var kind = media == "print" ? "unexecuted" : WptRunner.EvidenceKind(WptRunner.CatalogCase(test.Path), test.Path);
             outcomes.Add(new(test.Suite, test.Path, result.Cat.ToString().ToLowerInvariant(), result.Detail,
                 result.Subtests ?? [], result.HarnessStatus, environment, ConformanceServer.TestUrl(test.Path),
-                test.Context, test.Kind, result.Artifacts, Css: new(media, test.Xhtml ? "xhtml" : "html", inventoryHash,
+                test.Context, kind, result.Artifacts, Css: new(media, test.Xhtml ? "xhtml" : "html", inventoryHash,
                 test.ViewportWidth, test.ViewportHeight, shard.Index, shard.Count, filter))
-            { DurationMs = result.DurationMs });
+            { DurationMs = result.DurationMs, CatalogKind = test.Kind });
             Console.WriteLine($"  {result.Cat.ToString().ToUpperInvariant(),-11} [{media}] {test.Path} ({result.Detail})");
         }
         var suffix = catalog is null or "all" ? "" : "-" + catalog;
@@ -106,6 +119,36 @@ internal static class Css21FullRunner
         }
         Console.WriteLine("Reviewed obligation coverage and the official catalog verification are required for readiness.");
         return outcomes.All(t => t.Outcome == "pass") ? 0 : 1;
+    }
+
+    /// <summary>Files the upstream server must return byte for byte from the pinned checkout:
+    /// the harness script every testharness page loads, and a css/CSS2 page with its own
+    /// support resource (a wrong document root or a stale checkout fails either).</summary>
+    internal static readonly string[] UpstreamProbeFiles =
+        ["resources/testharness.js", "css/CSS2/syntax/at-charset-001.xht", "css/CSS2/syntax/support/at-charset-001.css"];
+
+    /// <summary>Null when <paramref name="baseUrl"/> serves the vendored WPT checkout, else why not.</summary>
+    internal static string? ProbeUpstream(string baseUrl, Func<string, byte[]>? fetch = null)
+    {
+        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var root) || root.Scheme is not ("http" or "https"))
+            return $"'{baseUrl}' is not an HTTP(S) URL";
+        fetch ??= url =>
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            return client.GetByteArrayAsync(url).GetAwaiter().GetResult();
+        };
+        foreach (var file in UpstreamProbeFiles)
+        {
+            var vendored = Path.Combine(ConformancePaths.Vendor, "wpt", file.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(vendored)) return $"the vendored checkout has no {file}";
+            byte[] served;
+            try { served = fetch($"{baseUrl.TrimEnd('/')}/{file}"); }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
+            { return $"{file} could not be fetched ({ex.Message})"; }
+            if (!served.AsSpan().SequenceEqual(File.ReadAllBytes(vendored)))
+                return $"{file} differs from the pinned checkout";
+        }
+        return null;
     }
 
     private static (int Width, int Height) Viewport(JsonObject? options, string path)

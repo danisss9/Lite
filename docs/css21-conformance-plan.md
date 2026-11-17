@@ -32,6 +32,250 @@ Evidence checkpoint, 11 October (sources `6014aba`..`e8bbaf8`, eight commits; va
 
 Evidence checkpoint, 12 October (sources `76660b2` + `58c4bcb`; validating baseline `58c4bcbc68e1`, collected in an isolated worktree because the main checkout carried in-flight HTML-track edits — `CaptureIdentity` hashes every git-visible file per case, so any concurrent edit anywhere in the tree invalidates run evidence): the official suite stands at **94.1%** (8,502/9,039; 525 real failures, 10 crashes, honest unsupported down 877 → 2) and WPT at 44.9% (3,995 passing; parked per the scope decision). The batch, in landing order: the vendored 2011 snapshot's missing `html4/support/` subtree was restored from `csswg-test@fa448700877` (the last commit before the snapshot; gold-validated — the at-charset-045 blob equals both the Wayback capture of the built snapshot and its CDX digest, all 35 originally-crawled files verify byte-exact, and the WPT `*_color.png` family equals the pre-snapshot blobs) with per-file provenance in `Css21/css21-support-restore.json`; at-charset CSS is provenance-mapped through WPT's renumbered family by identical title/assert plus import index, and encoding-sensitive sheets get `<file>.headers` derived from the suite's recovered per-directory `.htaccess` rules (at-charset-001..006 → Shift_JIS, character-encoding-031..037, http1/8/15). Resources vendor under URL-decoded names. Deliberately-absent inputs (broken-image/cursor fallbacks, invalid url() tokens) moved to the reviewed table `Css21/css21-intentional-missing-inputs.json`; `SuiteInputs` now scans like the browser (style blocks/attributes and linked local sheets recursively, comments stripped, references percent-decoded) instead of raw document text — prose `url(...)` mentions were phantom blockers — and the WPT checkout gained `css/reference` (264 root-absolute references). §4.2 parsing errors: a declaration with a negative width/height/padding/border/font-size/line-height/border-spacing value is dropped from the sheet text (with the same filter on the dynamic declaration path), so an earlier valid declaration survives — `width: 0; width: -1px` computes 0, not auto; scan matching runs against a comment- and string-masked copy so documented property/value prose cannot clip code (width-0*/height-0* 16 → 0 failures). Per the 9 October scope decision, `css21ProfileReady` is decided by the screen matrix alone (`ProfileRunner` no longer ANDs print). The 200 missing `.xht` reference documents (299 requesting tests reported "No reference path passed" against 404 renders) were restored 198/200 from the same pre-snapshot commit, each pinned by a recovered build transform — the source's XHTML→HTML conversion must equal the vendored `.htm` twin byte for byte; provenance in `Css21/css21-xht-restore.json`. Two infrastructure defects fixed en route: the tree-hash replicas (Python and `fetch-tests.ps1`) sorted with a plain ordinal compare while the C# verifier uses `StringComparer.OrdinalIgnoreCase` (upper-case folding reorders `_` against letters) — the replicas are aligned and the pin recomputed; and full-suite evidence collection now requires a quiet tree (the isolated-worktree route: detached `git worktree` at the pinned commit plus a second worktree of the WPT clone, pre-building `css21-official-catalog.json` once before the four shards race it). The refreshed official queue: table anonymous objects 26, floats 10, background-color 9, border-conflict-element 9, character-encoding 9 and at-charset 7 (both families now executing real encoding gaps), font-family-name 9, margin-collapse 7 (162 still open), font 7, overflow-applies-to 7, white-space-normal 7, background-intrinsic 7 (SVG intrinsic sizes), border-conflict-style 6, absolute-replaced-height 6, uri 6, at-rule 6, text-align-white-space 6, then the long tail; plus 10 "Unsupported unit cannot be converted" crashes in the css1 margin/padding/valign paths that newly-executing support content exposed. Same-day follow-up (`7eaca79`): the crashes were ApplyDimensionAttribute and the DOM-projection styling reading the cascade through AngleSharp's unguarded `ComputeCurrentStyle`, which throws on the unitless line-height a `font: 10px/1` shorthand computes for any element carrying width/height attributes; both call sites now use the guarded computation and all ten render — nine pass outright (c5505-mrgn-000, c5502/c5504-mrgn, c5510-padn, c544-valgn-002..004, background-position-001/002) and c5526-fltclr-000 is an honest float-clear failure (3600 red) for the engine queue. Table-anonymous-objects batch, 12 October late (`39af8bf`; full official re-run on one identity: 8,517 pass / 520 fail / 2 unsupported / 0 crashes — +15 over `58c4bcb`, zero regressions): WrapMisparentedTableBoxes's main loop flushed its run at a display:none child the lookahead skipped (scripts split `b <script> c` into two anonymous tables — 187/188); display:none TABLE-INTERNAL boxes keep their DOM-relative position because a style-only relayout re-normalizes the existing tree rather than re-projecting DOM order (011/012); intrinsic max-content now counts the §16.6.1 boundary space a text leaf carries toward adjacent rendered content (runs bounding an atomic under-measured and wrapped abs-pos overlays — 178/180); and whitespace between table boxes is dropped only when the white-space setting actually collapses it (pre spaces are cell content — 199–204 halved their red; the remainder is a separate line-assembler/sizer width mismatch on the overlay, diagnosed with a traced pass). Family now 184/204; remaining: 008, 053/054, 085–092 (infer-cells geometry parity), 119/120, 134, 199–204. Follow-up (`e9a58da`): the line assembler's band-start whitespace strips now respect white-space:pre (a preserved space is content — the onload-built "a <cell> </cell> d" row read "abcd"), and generated anonymous tables zero border-spacing (no cellspacing attribute, so the UA default never applies — §17.6.1 initial 0): 199–202 pass; suite reads 8,521 pass / 516 fail / 2 unsupported / 0 crashes on one identity, whitespace-sensitive families unchanged case-for-case. Caption follow-up (`913b615`): a whitespace-only display:table-caption generates nothing (§17.2.1) — GetDisplay maps the keyword to Block, so the empty caption broke the inline flow around itself while painting nothing, splitting 119/120 onto three lines; it is dropped by the table wrappers, excluded from the splitter's hoistable-block rule, and counted by the wrapper pre-check: 8,523 / 514 / 2 / 0 crashes, block-in-inline and inline-block unchanged case-for-case. Family at 190/204: remaining 008 (the toggle-cycling case), 053/054 (2px anonymous-inline-table baseline fringe), 134 (caption hoisting), 203/204 (cell-metrics fringe), 085–092 (infer-cells geometry parity). Infer-cells diagnosis (12 October late, for the next session): in 085 the red overlay's authored row-1 spans (four inline siblings inside a display:table-row span) merge into ONE anonymous cell per §17.2.1's consecutive-siblings rule, and the cell's four inline spans then PAINT STAGGERED/OVERLAPPING at ~20px offsets instead of flowing — a cell line-assembly defect with multiple inline children under white-space:nowrap; the computed geometry shows the three authored row-spans each became a one-cell row (rows 2/3 match the reference exactly, so single-cell rows are fine) and the failure is confined to row 1's multi-span cell. The suite itself flags row 1 as "might not be correct, depending on spec clarifications" — a reviewed permitted-rendering classification may settle part of the band without engine work. Refined and landed same day (`2b48333`): the stagger was the CELL TEXT — whitespace between the merged cell's spans had been dropped as table-internal when it is the cell's interior; whitespace now drops only between proper table children and joins the run otherwise (uniform pre/pre-wrap rule), a run that is entirely whitespace or empty table boxes generates no cell (tables-001's "anonymous table objects only exist if the table has content" — its 1em border-spacing must not hang on an empty display:table). 008/085/086/203 pass; family 193/204; suite on one identity 8,526 pass / 511 fail / 2 unsupported / 0 crashes (+24 over `58c4bcb`, zero regressions). Remaining in the family: 054 (8 red), 087–092, 134, 204. The 087–092 widening (766 → ~2800 red, still failing either way) exposed the next defect: generated-table WIDTH PARITY — the generated table measured 782px against a 738.9px container (the block-table width path returns unclamped sumMax) while the reference tables coordinate columns at the clamped width; queued with the cell-box dump methodology. Landed same day (`37e09c5` + `5b2c483`): the width parity defect was the BOUNDARY-SPACE rule missing from table intrinsic measurement — TableEngine.MeasureIntrinsic measured every text leaf at raw length (and each whitespace leaf at its own width), so once the spaces were cell content the merged cells measured one to two characters too wide per boundary. MeasureIntrinsic now runs IntrinsicSizer's model (whitespace-only leaves arm a run-boundary flag; the next rendered atom adds exactly one space when the run has rendered content; leading whitespace and block/BR boundaries add nothing), and IntrinsicSizer.FlattenInline's whitespace-only leaves stop emitting their own space token (the same double-count). THE ENTIRE INFER-CELLS BAND 085–092 CLOSES, plus 008 and 203: family 198/204; suite on one identity 8,543 pass / 494 fail / 2 unsupported / 0 crashes — +41 over `58c4bcb`, zero regressions. Family remainder: 053/054 (2px anonymous-inline-table baseline fringe), 134 (caption hoisting), 204 (114 red).
 
+## Roadmap to `css21ProfileReady` (review of 15 November 2026)
+
+This review supersedes the C1–C6 ordering of the 11 November roadmap in
+[conformance-status.md](conformance-status.md). It is based on the 13 November full screen
+baseline (source `a70f7dc8`). "100%" means `css21ProfileReady` is true on one identity. For
+that, every applicable case in **both** corpora has passing evidence or a reviewed exclusion,
+and every screen obligation is `implemented` (`Profile/ProfileRunner.cs`,
+`Css21/Css21Inventory.Evaluate`). The WPT pass rate itself never counts; only per-case
+evidence does.
+
+| 13 Nov baseline | Official | WPT css/CSS2 |
+| --- | --- | --- |
+| pass | 7,426 (82.2%) | 6,709 (75.3%) |
+| fail | 922 | 1,151 (826 "No reference path passed") |
+| manual-pending | 643 | 577 |
+| unsupported | 48 | 457 (411 WPT `manual` kind) |
+| empty / timeout / crash | 0 / 0 / 0 | 8 / 1 / 1 |
+| gap | 1,613 | 2,195 |
+
+The baseline report printed 0 manual-pending: the aggregator counted `manual-pending`
+while the runner writes `manualpending`. The 1,220 manual-pending cases were still in the
+denominators. Obligations: 18 of 202 screen obligations are `implemented`; the other 184 have
+no test mappings at all.
+
+**The review's main finding: the evidence layer, not the engine, is what blocks readiness
+first.** With the engine as it stands, a readiness read could not succeed even for the
+cases that pass:
+
+1. The full runner recorded the *catalog* kind. The 2,209 WPT `visual` rows, decided by
+   the selftest oracle, therefore demanded a manual record, and `ExecutionEvidence.ReadCurrent`
+   rejected every shard as `unreadable-evidence`.
+2. Every WPT row is `environment: local`, but `HasEvidence` requires `upstream-wpt` for
+   `css21-wpt`.
+3. `defective` throws in `ValidateReviews`, so there is no reviewed-exclusion route for
+   defective tests.
+4. Obligation flips are hand edits, and two hand flips (`css21.8.3.1`, `css21.8.6`) mapped
+   only a subset of their applicable tests.
+5. `WptRunner.RunOne` refused 221 `manual`-kind cases whose stated condition already has a
+   machine check, before the dispatch branch written for them could run.
+
+The phases, in order:
+
+- **Phase 0, evidence plumbing (landed 15 November).**
+  - Evidence now records the route that decided a case (`WptRunner.EvidenceKind`:
+    `reftest`/`selftest`/`crashtest`/`testharness`, or `unexecuted`, which can never be a
+    pass). The catalog kind rides in the new optional `CatalogKind` field; the format version
+    is unchanged because the field is additive.
+  - Machine-checked manual cases run (`WptRunner.IsMachineCheckedManual`).
+  - The aggregator counts `manualpending`, adds `kind`/`environment` columns, and refuses to
+    hide an outcome its table does not list.
+  - The profile read prints the screen blockers grouped by kind, and its messages state the
+    screen-only scope.
+  - Obligation mappings accept assertion `"*"` (`Css21Inventory.WholeCase`): the whole case
+    passes, whatever route decided it.
+- **Phase 1, classification (landed 15 November).**
+  - **Mechanism.**
+    - The applicability schema gains `defect {kind, citation, detail}` (kinds:
+      `missing-input`, `self-contradiction`, `contradicts-target`, `superseded-in-profile`)
+      and `replacements[] {suite, path, relation}` on defective rows, plus `permits` (the
+      permitting sentence) on optional rows.
+    - `ValidateReviews` no longer throws on `defective`. A replacement must be one of:
+      - an applicable case of its own suite that covers the same media and shares an
+        obligation;
+      - a waiver-free entry of the curated gate `Css21/css21-manifest.txt`. Curated evidence
+        now carries the CSS identity.
+    - Readiness blocks with `css21-defective-without-passing-replacement` until every
+      replacement passes. The profile report publishes `css21Exclusions`.
+    - Evidence lookups are indexed: the readiness read went from more than 10 minutes to
+      217 seconds.
+  - **Reviewed outcomes.** Several were not what the plan expected.
+    - **14 WPT copies of paged-flag tests → print.** Their official twins were already print.
+    - **`bidi-overflow-scroll-001` → optional.** CSS 2.1 never places the scrollbar.
+    - **inlines-009/010 are not defective.** Their "missing input" is a deliberate
+      `<img src="404">` rendered as alt text. They join `css21-intentional-missing-inputs.json`,
+      and both official cases now pass the same-size check. The WPT twins wait on a copied
+      check (Phase 5).
+    - **background-position-091/092 do not contradict themselves.** In Ahem, `7.5ex` = 120px
+      puts the square flush with the 135px box's inner right edge. Lite puts it 45px in
+      because it resolves `ex` as 0.5em rather than the font's measured x-height. This is an
+      **engine bug** for Phase 6.
+    - **at-charset-008/010 → defective `self-contradiction`.** The html4 build declares
+      windows-1252 but writes the class name as raw UTF-8 bytes. The WPT twins use
+      character references.
+    - **at-charset-029/030/042/043/045–048/060 and utf16-be/le-001 → defective
+      `superseded-in-profile`.** Their WPT twins assert the opposite result for the same
+      bytes. By project decision (15 November) the profile adopts the CSS Syntax 3 /
+      Encoding Standard reading, and publishes it as a deviation from the 2011 REC.
+    - **at-charset-034** asserts the same thing in both suites and fails in both: it stays an
+      **engine bug**.
+    - **at-charset-013 (both suites) → optional.** Its prerequisite is a user-set page
+      encoding, a UA feature CSS 2.1 does not require.
+    - **The "text-align template bug" was a mislabel.** The generator's side is right. The
+      judge's container walk climbing to the root is the Phase 5 declaring-node problem; only
+      the judge's label is fixed.
+  - **Measured on one identity.**
+    - Official 7,429/9,025: +2, with 14 cases leaving the screen matrix.
+    - WPT 6,897/8,888: 16 cases leaving.
+    - Readiness blockers:
+      - 10,484 missing-case: all WPT cases plus 1,596 official non-passes;
+      - 13 defective-without-passing-replacement, which fail closed until WPT evidence is
+        upstream (Phase 3);
+      - 184/184 obligations;
+      - 2 route-specific mappings;
+      - the xhtml1 variant.
+  - Inline-svg (4 WPT cases) remains the one open scope call.
+- **Phase 2, obligations (landed 16 November).**
+  - **Mappings are derived, not copied.**
+    - The gate (`Css21Inventory.DerivedTests`) maps each obligation to every reviewed case
+      the applicability file assigns it: 19,301 pairs, plus the replacements of its defective
+      cases.
+    - `tests` now holds only unit, manual and curated evidence. The 157 hand-copied suite
+      mappings are gone.
+    - An `implemented` status over cases without passing evidence is reported as
+      `css21-implemented-without-evidence`.
+  - **Roll-ups.** `rollUp` lists the obligations a section's requirements live in. The schema
+    and validation reject unknown ids, duplicates and cycles. Twelve sections roll up:
+    E, 4.1, 4.3, 5.2, 5.12, 6.1, 7.2, 9.2, 9.4, 9.8, 16.3, and 3.2 over its six numbered UA
+    requirements plus the user style sheet file.
+  - **Fifteen non-obligations retired.** The spec itself says so for each:
+    - Appendix D ("This appendix is informative") and 7.3.1 ("This section is informative");
+    - 4.1.2.1 (authoring guidance) and 4.1.4 (descriptive);
+    - 9.2.3 (run-in "is now defined in CSS level 3"), 9.8.1 and 9.8.3 (illustrative examples);
+    - 6.1.3 and 6.1.4 (definitions; the obligation is 6.1's value-assignment rule);
+    - 18.3 (a pointer to 'font');
+    - 15.3.1.1–.5 (descriptions; the "should provide reasonable defaults" obligation is in
+      15.3.1).
+    Their sections become informative or authoring with the reason, leaving 198 obligations
+    (187 screen).
+  - **Unit evidence** for obligations no suite case carries:
+    - **The UA controls:** `css21.ua.stylesheets`, alternate sets, author-disabled and user
+      style sheet.
+    - **Five new tests in `Lite.Tests/Css21ObligationTests.cs`:** 4.3.8 unsupported values
+      (run-in), 7.3 media types, 9.6.1 fixed boxes under scroll, 15.3.1 generic families, and
+      retrieval failures.
+    - **12.3.2:** the existing quotes depth tests.
+  - **The 7.3 test found an engine bug.** `<style media="Screen">` dropped its whole sheet,
+    because the AngleSharp.Css fork matched media type names ordinally, while §7.3 makes
+    them case-insensitive. This is fork patch 006 in `Lite.AngleSharp.Css/README.md`. It
+    moves no suite case (0 per-case movement on the full sweep).
+  - **`scripts/gen_css21_obligation_status.py`** is the only writer of statuses:
+    - It mirrors the gate's evidence rules and refuses stale or mixed-identity evidence.
+    - It tells a failing case from an unproven one (no route, stale inventory, local WPT).
+    - It decides roll-ups after their children, demotes on regression, and has
+      `--dry-run`/`--check`.
+  - **First run: 170 status changes.**
+    - 8 obligations are implemented on real evidence: the three `ua.*` controls, 4.3.8, 7.3,
+      9.6.1, 12.3.2 and 15.3.1.
+    - 146 are failing, with at least one case failing.
+    - 33 are untested.
+    - The 18 earlier hand flips are honestly demoted. `css21.8.3.1` and `css21.8.6` become
+      failing. The other 16 become untested until their WPT twins have upstream evidence
+      (Phase 3).
+  - **Second run on the written tree.**
+    - `--check` passes: the statuses are a fixed point.
+    - Readiness now blocks only on 10,484 missing cases, 179 unimplemented obligations,
+      13 defective-without-passing-replacement and the xhtml1 variant.
+    - It reports zero untested obligations and zero missing mapped evidence.
+  - **The flip itself always needs two runs:** generator, commit, fresh run. Writing statuses
+    changes the source identity that every evidence report is bound to.
+  - **Units 579/579**; the curated gates are unchanged. One shard-only flake: `tables-102`
+    read fail once and manual-pending in three isolated reruns (the known worker-state
+    flake).
+- **Phase 3, upstream-wpt serving (landed 16 November).**
+  - **Baseline script.** `scripts/run-css21-baseline.ps1` takes `-WptBaseUrl <url>`, passed
+    to every shard as `--wpt-base-url`. `-StartWptServe` launches `scripts/serve-wpt.ps1` on
+    `http://127.0.0.1:8000`, waits for it to answer, and kills its process tree when the
+    shards finish.
+  - **Probe.** Before any WPT case runs, `Css21FullRunner.ProbeUpstream` compares three files
+    with the pinned checkout byte for byte: `resources/testharness.js`, a css/CSS2 page and
+    its support sheet. On a mismatch, an unreachable server or a non-HTTP URL, the run
+    refuses to start rather than stamp `upstream-wpt`. Pinned by
+    `Css21CoverageTests.UpstreamProbe_AcceptsOnlyAServerThatServesThePinnedCheckout`.
+  - **Routing checked.** With the base URL set, the parent hands each worker the upstream
+    URL, and WPT pages, their references and twin reads all resolve through
+    `ConformanceServer.TestUrl`. Official and curated cases stay on the local server.
+  - **Upstream-served full sweep.**
+    - All 8,888 WPT rows are stamped `upstream-wpt` with URLs on port 8000.
+    - The local-vs-upstream diff is **zero cases**, apart from the known `tables-102`
+      worker-state flake. Local serving was already faithful for css/CSS2, so nothing needed
+      triage.
+    - Official 7,429/9,025 and WPT 6,897/8,888, as before.
+  - **Readiness on that evidence plus a fresh unit report:**
+    - css21-missing-case 10,484 → **3,587**: exactly the real non-passes, 1,596 official
+      plus 1,991 WPT.
+    - The 13 defective exclusions now hold: their WPT replacements count.
+    - 179 obligations unimplemented, plus the xhtml1 variant.
+  - **Generator.** 19 more obligations reach implemented (27/187). The 16 hand flips return
+    on real evidence, and 5.2, 6.1.1 and 12.4.1 are new. 146 are failing. 14 are untested
+    with no failing case, only manual-pending or unsupported cases: for example 18.1
+    (78 cursor cases), 15.5, 17.6, 17.5.2, 4.3.1 and 9.4.1. That is the Phases 4–5 queue. The
+    statuses are written; per Phase 2, the readiness read on them needs the next fresh run.
+- **Phase 4, interaction route.** About 210 synthetic-input cases plus about 110 scroll cases
+  without templates. The work exposes engine gaps:
+  - **Cursor (76):** `CursorType` has 3 values. It needs the full §18.1 set and `url()` with
+    fallback.
+  - **:hover/:active/:focus (56):** `Parser.cs` pre-splits pseudo-classes into per-node
+    `HoverStyles`. It needs a state-aware recascade; coordinate with HTML5.
+  - **Resize (59)**, **scrollbars (25)** and **animation (6)**.
+  - **Progress, 17 November.** The route exists: an `InteractionSpec {action, subject, rest}`
+    on the visual check drives a headless `BrowserWindow` (hover = pointer move, active =
+    press then release away from the subject, focus = Tab until the subject has focus) and
+    judges each phase. With no stated rest colour, the condition must *not* hold at rest or
+    after release, so a permanently-green page cannot pass.
+    - **Cursor, done:** the full §18.1 keyword set and `url()` lists with fallback, mapped to
+      Win32 IDC_* cursors; 76 cases routed.
+    - **:hover/:active/:focus, 30 of 56 done:** the per-node `HoverStyles` pre-split is gone.
+      Dynamic rules keep their whole selector and re-match live through AngleSharp fork patch
+      020, so `textarea:focus + span` and `div:hover p` work. Tab follows HTML §6.6.3.
+    - **Verification:** the screen baseline gained 32 cases with no regressions (official
+      7,488, WPT 6,960). It exposed `xml-lang-selectors-002`: `:lang()` counted a
+      no-namespace `xml:lang` attribute in HTML, now fixed. The HTML5 gate is net +3.
+    - **Next:** the remaining ~26 dynamic cases (link-as-instruction wording, background/bold
+      variants, first-letter/first-line hover, anchors painting no background), then resize,
+      scrollbars and animation.
+- **Phase 5, judges.**
+  - An engine-fact side channel: per-edge §17.6.2.1 winner widths for border-conflict-style,
+    and the text-align declaring node per line.
+  - More strict templates for the ~1,060 visual-statement rows.
+  - An approved-render ledger (`kind: approved-render`, an RGBA hash with a re-review queue on
+    drift) for the true residue. This is the only step that takes a person's time.
+- **Phase 6, the engine queue (the dominant cost).** First the line-height-201 NRE, the
+  table-anonymous-objects-214 timeout and the 8 empty renders. Then, largest first (official/WPT
+  fails):
+
+  | Package | Fails (official/WPT) |
+  | --- | --- |
+  | inline/linebox/text | 116/205 |
+  | floats/clear | 63/174 |
+  | abspos/visudet | 87/172 |
+  | tables | 105/142 |
+  | generated content/lists | 76/77 |
+  | bidi | 51/60 |
+  | backgrounds | 72/42 |
+  | borders/outline | 65/44 |
+  | selectors/cascade/syntax | 36/118 |
+  | fonts | 43/49 |
+  | margin collapse | 33/28 |
+
+  Each package opens with its already-diagnosed parked findings.
+- **Phase 7, the flip.**
+  1. Freeze inventory edits and run the upstream-mode baseline on the committed tree.
+  2. Commit the generator's flips, then run a second baseline (any edit changes the identity).
+  3. Run `--require-css-ready`, add the gate-hygiene regressions, and enforce the gate in CI.
+
 ## Target and completion contract
 
 Keep the existing [CSS 2.1 Recommendation of 7 June 2011](https://www.w3.org/TR/2011/REC-CSS2-20110607/) as the normative target. Store checksummed copies of its source and a dated copy of the [errata](https://www.w3.org/Style/css2-updates/REC-CSS2-20110607-errata.html). The errata page has Working Draft status: review corrections individually, record their applicability and test impact, and do not silently replace the target with CSS 2.2 or later modules. Where an adopted correction changes the base Recommendation, report that compatibility decision explicitly.

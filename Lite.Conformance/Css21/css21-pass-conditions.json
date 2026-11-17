@@ -7569,9 +7569,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green when the text is activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/cascade/html-attribute-003.xht",
@@ -8180,9 +8187,16 @@
    "condition": "manual",
    "sentence": "Test passes if hovering over the \"Filler Text\" below changes the text color to green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/cascade/user-stylesheet-015.xht",
@@ -8190,9 +8204,16 @@
    "condition": "manual",
    "sentence": "Test passes if activating the \"Filler Text\" below changes the text color to green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/cascade/user-stylesheet-016.xht",
@@ -18206,9 +18227,17 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below is initially black, when it is activated it turns green, and it returns to black when it is deactivated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text",
+     "rest": "black"
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/active-selector-002.xht",
@@ -18798,9 +18827,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below turns green when the element containing the text has focus.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "focus",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/hover-selector-001.xht",
@@ -18808,9 +18844,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below turns green when it is hovered over.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/hover-selector-002.xht",
@@ -18858,9 +18901,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green while the text is activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green while the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/link-visited-selector-004.xht",
@@ -18886,9 +18936,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below is green when it is hovered over and activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover-active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/pseudo-005.xht",
@@ -18914,9 +18971,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green when the text is activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/pseudo-011.xht",
@@ -18924,9 +18988,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green when the text is hovered over.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/pseudo-012.xht",
@@ -18934,9 +19005,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green when the text has focus.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "focus",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/pseudo-013.xht",
@@ -18944,9 +19022,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green when the text is hovered over.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/syntax/at-charset-013.html",
@@ -28563,9 +28648,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor style matches this image ( ) when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "image",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-002.xht",
@@ -28573,9 +28662,16 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor is the same when it is over \"Filler Text\" and when it is over \"Reference Text\" below.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "same",
+    "target": "text",
+    "needles": [
+     "filler text",
+     "reference text"
+    ]
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-003.xht",
@@ -28583,9 +28679,13 @@
    "condition": "manual",
    "sentence": "Test passes if a crosshair cursor appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "crosshair",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-004.xht",
@@ -28593,9 +28693,13 @@
    "condition": "manual",
    "sentence": "Test passes if an arrow cursor appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "default",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-005.xht",
@@ -28603,9 +28707,13 @@
    "condition": "manual",
    "sentence": "Test passes if a pointer cursor appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-006.xht",
@@ -28613,9 +28721,13 @@
    "condition": "manual",
    "sentence": "Test passes if a move cursor appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "move",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-007.xht",
@@ -28623,9 +28735,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates eastward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "e-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-008.xht",
@@ -28633,9 +28749,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates northeastward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "ne-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-009.xht",
@@ -28643,9 +28763,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates northwestward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "nw-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-010.xht",
@@ -28653,9 +28777,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates northward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "n-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-011.xht",
@@ -28663,9 +28791,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates southeastward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "se-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-012.xht",
@@ -28673,9 +28805,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates southwestard movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "sw-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-013.xht",
@@ -28683,9 +28819,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates southward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "s-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-014.xht",
@@ -28693,9 +28833,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates westward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "w-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-015.xht",
@@ -28703,9 +28847,13 @@
    "condition": "manual",
    "sentence": "Test passes if a text cursor (the same one as when mouse is over this text) appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "text",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-016.xht",
@@ -28713,9 +28861,13 @@
    "condition": "manual",
    "sentence": "Test passes if a wait cursor appears when the mouse cursor is inside the blue box. (Such wait cursor often resembles a watch or hourglass.)",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "wait",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-017.xht",
@@ -28723,9 +28875,13 @@
    "condition": "manual",
    "sentence": "Test passes if a help cursor appears when the mouse cursor is inside the blue box. (Such help cursor often resembles a question mark or a balloon.)",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "help",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-018.xht",
@@ -28733,9 +28889,13 @@
    "condition": "manual",
    "sentence": "Test passes if a progress cursor appears when the mouse cursor is inside the blue box. (Such progess cursor often resembles a spinning beach ball, an arrow with a watch or an arrow with an hourglass.)",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "progress",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-019.xht",
@@ -28743,9 +28903,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when mouse is over the following text.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "text",
+    "needle": "filler text"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-020.xht",
@@ -28753,9 +28917,13 @@
    "condition": "manual",
    "sentence": "Hovering the pointing device over the text sample should make it rendered as a text cursor (often an I-beam).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "text",
+    "target": "text",
+    "needle": "text sample"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-021.xht",
@@ -28763,9 +28931,13 @@
    "condition": "manual",
    "sentence": "Hovering the pointing device over the text sample should make it rendered as a text cursor (often an I-beam).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "text",
+    "target": "text",
+    "needle": "text sample"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-022.xht",
@@ -28773,9 +28945,13 @@
    "condition": "manual",
    "sentence": "Test passes if the pointing device, when hovered over the text sample, is the text cursor (often rendered as an I-beam). Test fails if the pointing device is a crosshair (e.g., short line segments resembling a \"+\" sign).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "text",
+    "target": "text",
+    "needle": "text sample"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-023.xht",
@@ -28783,9 +28959,12 @@
    "condition": "manual",
    "sentence": "Hover over this page. You should see another (possibly scaled-down) copy of the cat you see below, moving as you move the mouse.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "image",
+    "target": "page"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-024.xht",
@@ -28803,9 +28982,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-002.xht",
@@ -28813,9 +28996,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-003.xht",
@@ -28823,9 +29010,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-004.xht",
@@ -28833,9 +29024,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-005.xht",
@@ -28843,9 +29038,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor is the default cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "default",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-006.xht",
@@ -28853,9 +29052,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor is the default cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "default",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-007.xht",
@@ -28863,9 +29066,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-008.xht",
@@ -28873,9 +29080,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-009.xht",
@@ -28883,9 +29094,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-010.xht",
@@ -28903,9 +29118,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-013.xht",
@@ -28913,9 +29132,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-014.xht",
@@ -28923,9 +29146,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-015.xht",
@@ -28933,9 +29160,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-fallback-001.xht",
@@ -28943,9 +29174,12 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-url-001.xht",
@@ -28953,9 +29187,12 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to look like this: when it is over the box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "image",
+    "target": "box"
+   }
   },
   {
    "path": "css/CSS2/ui/outline-001.xht",
@@ -29651,9 +29888,16 @@
    "condition": "manual",
    "sentence": "Test passes if there is a box around the \"Filler Text\" below when the text has focus.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "no-ring",
+    "variant": "present",
+    "needle": "filler text",
+    "interaction": {
+     "action": "focus",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/ui/outline-pseudo-selector-002.xht",
@@ -29661,9 +29905,16 @@
    "condition": "manual",
    "sentence": "Test passes if there is a box around the \"Filler Text\" below when the text is hovered over.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "no-ring",
+    "variant": "present",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/ui/outline-pseudo-selector-003.xht",
@@ -29671,9 +29922,16 @@
    "condition": "manual",
    "sentence": "Test passes if there is a box around the \"Filler Text\" below when the text is activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is a box around the \"Filler Text\" below when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "no-ring",
+    "variant": "present",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css/CSS2/ui/outline-style-002.xht",
@@ -33259,9 +33517,17 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below is initially black, when it is activated it turns green, and it returns to black when it is deactivated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text",
+     "rest": "black"
+    }
+   }
   },
   {
    "path": "css21-official/html4/active-selector-002.htm",
@@ -73951,9 +74217,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor style matches this image ( ) when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "image",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-002.htm",
@@ -73961,9 +74231,16 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor is the same when it is over \"Filler Text\" and when it is over \"Reference Text\" below.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "same",
+    "target": "text",
+    "needles": [
+     "filler text",
+     "reference text"
+    ]
+   }
   },
   {
    "path": "css21-official/html4/cursor-003.htm",
@@ -73971,9 +74248,13 @@
    "condition": "manual",
    "sentence": "Test passes if a crosshair cursor appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "crosshair",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-004.htm",
@@ -73981,9 +74262,13 @@
    "condition": "manual",
    "sentence": "Test passes if an arrow cursor appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "default",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-005.htm",
@@ -73991,9 +74276,13 @@
    "condition": "manual",
    "sentence": "Test passes if a pointer cursor appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-006.htm",
@@ -74001,9 +74290,13 @@
    "condition": "manual",
    "sentence": "Test passes if a move cursor appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "move",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-007.htm",
@@ -74011,9 +74304,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates eastward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "e-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-008.htm",
@@ -74021,9 +74318,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates northeastward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "ne-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-009.htm",
@@ -74031,9 +74332,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates northwestward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "nw-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-010.htm",
@@ -74041,9 +74346,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates northward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "n-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-011.htm",
@@ -74051,9 +74360,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates southeastward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "se-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-012.htm",
@@ -74061,9 +74374,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates southwestard movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "sw-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-013.htm",
@@ -74071,9 +74388,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates southward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "s-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-014.htm",
@@ -74081,9 +74402,13 @@
    "condition": "manual",
    "sentence": "Test passes if a cursor that indicates westward movement appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "w-resize",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-015.htm",
@@ -74091,9 +74416,13 @@
    "condition": "manual",
    "sentence": "Test passes if a text cursor (the same one as when mouse is over this text) appears when the mouse cursor is inside the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "text",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-016.htm",
@@ -74101,9 +74430,13 @@
    "condition": "manual",
    "sentence": "Test passes if a wait cursor appears when the mouse cursor is inside the blue box. (Such wait cursor often resembles a watch or hourglass.)",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "wait",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-017.htm",
@@ -74111,9 +74444,13 @@
    "condition": "manual",
    "sentence": "Test passes if a help cursor appears when the mouse cursor is inside the blue box. (Such help cursor often resembles a question mark or a balloon.)",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "help",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-018.htm",
@@ -74121,9 +74458,13 @@
    "condition": "manual",
    "sentence": "Test passes if a progress cursor appears when the mouse cursor is inside the blue box. (Such progess cursor often resembles a spinning beach ball, an arrow with a watch or an arrow with an hourglass.)",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "progress",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-019.htm",
@@ -74131,9 +74472,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when mouse is over the following text.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "text",
+    "needle": "filler text"
+   }
   },
   {
    "path": "css21-official/html4/cursor-020.htm",
@@ -74141,9 +74486,13 @@
    "condition": "manual",
    "sentence": "Hovering the pointing device over the text sample should make it rendered as a text cursor (often an I-beam).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "text",
+    "target": "text",
+    "needle": "text sample"
+   }
   },
   {
    "path": "css21-official/html4/cursor-021.htm",
@@ -74151,9 +74500,13 @@
    "condition": "manual",
    "sentence": "Hovering the pointing device over the text sample should make it rendered as a text cursor (often an I-beam).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "text",
+    "target": "text",
+    "needle": "text sample"
+   }
   },
   {
    "path": "css21-official/html4/cursor-022.htm",
@@ -74161,9 +74514,13 @@
    "condition": "manual",
    "sentence": "Test passes if the pointing device, when hovered over the text sample, is the text cursor (often rendered as an I-beam). Test fails if the pointing device is a crosshair (e.g., short line segments resembling a \"+\" sign).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "text",
+    "target": "text",
+    "needle": "text sample"
+   }
   },
   {
    "path": "css21-official/html4/cursor-023.htm",
@@ -74171,9 +74528,12 @@
    "condition": "manual",
    "sentence": "Hover over this page. You should see another (possibly scaled-down) copy of the cat you see below, moving as you move the mouse.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "image",
+    "target": "page"
+   }
   },
   {
    "path": "css21-official/html4/cursor-024.htm",
@@ -74191,9 +74551,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-002.htm",
@@ -74201,9 +74565,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-003.htm",
@@ -74211,9 +74579,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-004.htm",
@@ -74221,9 +74593,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-005.htm",
@@ -74231,9 +74607,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor is the default cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "default",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-006.htm",
@@ -74241,9 +74621,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor is the default cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "default",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-007.htm",
@@ -74251,9 +74635,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-008.htm",
@@ -74261,9 +74649,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-009.htm",
@@ -74271,9 +74663,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-010.htm",
@@ -74291,9 +74687,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-013.htm",
@@ -74301,9 +74701,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-014.htm",
@@ -74311,9 +74715,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-015.htm",
@@ -74321,9 +74729,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue area.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-fallback-001.htm",
@@ -74331,9 +74743,12 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "pointer",
+    "target": "box"
+   }
   },
   {
    "path": "css21-official/html4/cursor-url-001.htm",
@@ -74341,9 +74756,12 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to look like this: when it is over the box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor",
+    "shape": "image",
+    "target": "box"
+   }
   },
   {
    "path": "css21-official/html4/data-alignment-001.htm",
@@ -83802,9 +84220,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below turns green when the element containing the text has focus.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "focus",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/font-001.htm",
@@ -87782,9 +88207,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below turns green when it is hovered over.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/hover-selector-002.htm",
@@ -87822,9 +88254,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green when the text is activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/html-attribute-003.htm",
@@ -91897,9 +92336,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green while the text is activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green while the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/link-visited-selector-004.htm",
@@ -102980,9 +103426,16 @@
    "condition": "manual",
    "sentence": "Test passes if there is a box around the \"Filler Text\" below when the text has focus.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "no-ring",
+    "variant": "present",
+    "needle": "filler text",
+    "interaction": {
+     "action": "focus",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/outline-pseudo-selector-002.htm",
@@ -102990,9 +103443,16 @@
    "condition": "manual",
    "sentence": "Test passes if there is a box around the \"Filler Text\" below when the text is hovered over.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "no-ring",
+    "variant": "present",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/outline-pseudo-selector-003.htm",
@@ -103000,9 +103460,16 @@
    "condition": "manual",
    "sentence": "Test passes if there is a box around the \"Filler Text\" below when the text is activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is a box around the \"Filler Text\" below when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "no-ring",
+    "variant": "present",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/outline-style-001.htm",
@@ -108676,9 +109143,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below is green when it is hovered over and activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover-active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/pseudo-005.htm",
@@ -108732,9 +109206,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green when the text is activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green when the text is activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/pseudo-011.htm",
@@ -108742,9 +109223,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green when the text is hovered over.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/pseudo-012.htm",
@@ -108752,9 +109240,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green when the text has focus.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "focus",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/pseudo-013.htm",
@@ -108762,9 +109257,16 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below changes to green when the text is hovered over.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/pseudo-014.htm",
@@ -118072,9 +118574,16 @@
    "condition": "manual",
    "sentence": "Test passes if hovering over the \"Filler Text\" below changes the text color to green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "hover",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/user-stylesheet-015.htm",
@@ -118082,9 +118591,16 @@
    "condition": "manual",
    "sentence": "Test passes if activating the \"Filler Text\" below changes the text color to green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "filler text",
+    "interaction": {
+     "action": "active",
+     "subject": "filler text"
+    }
+   }
   },
   {
    "path": "css21-official/html4/user-stylesheet-016.htm",

@@ -53,6 +53,24 @@ internal sealed record SideSpec(string? Style, string? Color);
 /// render (scroll down, then right) for conditions that name both axes.</summary>
 internal sealed record ScrollSpec(string To, string? Then = null);
 
+/// <summary>A user-interaction protocol for a stated condition that holds only in a dynamic
+/// state (CSS 2.1 §5.11.3: "turns green when it is hovered over"). The harness loads the case
+/// in a headless <see cref="Lite.BrowserWindow"/>, renders it at rest, then drives the real
+/// input pipeline — <c>hover</c> moves the pointer over the subject, <c>active</c> presses the
+/// primary button on it (and later releases it off the subject), <c>hover-active</c> does
+/// both, <c>focus</c> presses Tab until the subject has focus — and renders the state the
+/// sentence names. <c>Subject</c> is the needle text naming the subject below the
+/// instructions, <c>link</c> (the first link in the document, for the cases whose
+/// instruction paragraph is itself the link) or <c>focusable</c> (the first element in the
+/// sequential focus order). <c>Rest</c> states what the at-rest (and released) renders must
+/// show: null — the condition must NOT already hold at rest ("changes to", "turns"); "same" —
+/// it holds in every phase ("should stay green"); a colour keyword — the same judge reads
+/// that colour at rest and after the release ("initially black … returns to black").</summary>
+internal sealed record InteractionSpec(string Action, string? Subject = null, string? Rest = null);
+
+/// <summary>The interaction protocol could not run (no subject to hover, press or focus).</summary>
+internal sealed class InteractionUnavailableException(string message) : Exception(message);
+
 /// <summary>The renders a two-phase scroll protocol produces: the initial page, the
 /// intermediate state after <see cref="ScrollSpec.To"/> (null without a scroll protocol),
 /// and the final state after <see cref="ScrollSpec.Then"/> (null without it). <c>Paint</c>
@@ -69,7 +87,8 @@ internal sealed record RenderSet(SKBitmap Final, SKBitmap? Mid, SKBitmap? Before
     string? Edge = null, string? Span = null, string? Mode = null, string? Scope = null, bool Even = false,
     bool Shades = false, bool Marker = false, string? Bullet = null, int? Rows = null, int? Cols = null,
     List<string>? Colors = null, List<string>? Needles = null, Dictionary<string, SideSpec>? Sides = null,
-    bool Ordered = false, string? BoxColor = null, string? Target = null, ScrollSpec? Scroll = null);
+    bool Ordered = false, string? BoxColor = null, string? Target = null, ScrollSpec? Scroll = null,
+    InteractionSpec? Interaction = null);
 
 /// <summary>Evaluates a <see cref="VisualCheck"/> literally and strictly against the rendered
 /// page: the region below the instruction paragraph is segmented into connected components
@@ -113,6 +132,8 @@ internal static class VisualChecks
 
     internal static WptRunner.RunResult Evaluate(VisualCheck check, RenderSet renders, LayoutNode root, string sentence, string path)
     {
+        if (check.Interaction is { } interaction)
+            return InteractionCheck(check, interaction, renders, root, sentence, path);
         // Scroll-protocol checks judge the scrolled render against the initial one; the
         // region is the scroll box itself, not the area below the instructions.
         if (check.Scroll is not null || check.Kind.StartsWith("scroll-", StringComparison.Ordinal))
@@ -178,6 +199,7 @@ internal static class VisualChecks
             "bars-match" => BarsMatch(check, bitmap, top, path),
             "bar-grid" => BarGrid(check, bitmap, top, path),
             "viewport-bottom" => ViewportBottom(check, bitmap),
+            "cursor" => CursorCheck(check, bitmap, root, top),
             "cell-border" => CellBorder(check, bitmap, root, top, path),
             "corners" => Corners(check, bitmap, top, path),
             "box-count" => BoxCount(check, bitmap, top, path),
@@ -204,6 +226,105 @@ internal static class VisualChecks
                 $"visual-check-{(result.Passed ? "pass" : "fail")}-{name}-top{top}.png"), data.ToArray());
         }
         return result;
+    }
+
+    // ------------------------------------------------------------------
+    // Interaction-protocol checks
+    // ------------------------------------------------------------------
+
+    /// <summary>Judges each phase of an interaction protocol with the stated check: the
+    /// interacted render must satisfy it, and the at-rest/released renders must satisfy the
+    /// <see cref="InteractionSpec.Rest"/> expectation. Every phase is a subtest.</summary>
+    private static WptRunner.RunResult InteractionCheck(VisualCheck check, InteractionSpec spec, RenderSet renders,
+        LayoutNode root, string sentence, string path)
+    {
+        if (renders.Before is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: the interaction protocol did not render the at-rest state", 0, 0);
+        var stated = check with { Interaction = null };
+        var state = spec.Action switch
+        {
+            "hover" => "hovered",
+            "active" => "activated",
+            "hover-active" => "hovered and activated",
+            "focus" => "focused",
+            _ => spec.Action,
+        };
+        WptRunner.RunResult Phase(VisualCheck phaseCheck, SKBitmap bitmap) =>
+            Evaluate(phaseCheck, new RenderSet(bitmap, null, null, renders.Paint), root, sentence, path);
+        var subtests = new List<Lite.Conformance.Harness.SubtestEvidence>();
+        WptRunner.RunResult Fail(string assertion, string detail)
+        {
+            subtests.Add(new(assertion, 1, detail));
+            return new(WptRunner.Cat.Fail, $"{assertion}: {detail}", subtests.Count, 1, subtests, 0);
+        }
+
+        var during = Phase(stated, renders.Final);
+        var duringAssertion = $"while {state}: {during.Detail}";
+        if (during.Cat == WptRunner.Cat.Unsupported) return during;
+        if (!during.Passed) return Fail($"while {state}", during.Detail ?? "the stated condition does not hold");
+        subtests.Add(new(duringAssertion, 0, null));
+
+        var rests = new List<(string Name, SKBitmap Bitmap)> { ("at rest", renders.Before) };
+        if (renders.Mid is { } released) rests.Add(("after release", released));
+        foreach (var (name, bitmap) in rests)
+        {
+            if (spec.Rest is null)
+            {
+                var atRest = Phase(stated, bitmap);
+                if (atRest.Passed)
+                    return Fail($"{name}, not {state}",
+                        "the stated condition already holds without the interaction, so the state change did not produce it");
+                subtests.Add(new($"{name}, not {state}: the stated condition does not hold", 0, null));
+                continue;
+            }
+            var restCheck = spec.Rest == "same" ? stated : stated with { Color = spec.Rest };
+            var rest = Phase(restCheck, bitmap);
+            if (rest.Cat == WptRunner.Cat.Unsupported) return rest;
+            if (!rest.Passed) return Fail(name, rest.Detail ?? "the at-rest condition does not hold");
+            subtests.Add(new($"{name}: {rest.Detail}", 0, null));
+        }
+        var assertion = $"{Describe(stated)} while {state} (interaction protocol)";
+        return new(WptRunner.Cat.Pass, assertion, subtests.Count, 0, subtests, 0);
+    }
+
+    /// <summary>The element the interaction protocol points at (the deepest element holding
+    /// the subject text, the link, or the first sequentially focusable element) and the
+    /// element Tab must reach for a focus protocol (the subject's own focusable element,
+    /// a focusable descendant, or its nearest focusable ancestor).</summary>
+    internal static (LayoutNode Pointer, LayoutNode? Focus)? InteractionSubject(InteractionSpec spec, LayoutNode root,
+        string? sentence)
+    {
+        var order = Lite.BrowserWindow.SequentialFocusOrder(root);
+        LayoutNode? pointer = spec.Subject switch
+        {
+            "link" => FindFirst(root, n => n.TagName == "A" && n.Attributes.ContainsKey("href") &&
+                (n.Box.BorderBox.Width > 0 || n.Box.BorderBox.Height > 0)),
+            "focusable" => order.FirstOrDefault(),
+            { } needle => DeepestWithText(root, sentence is null ? 0 : InstructionBottom(root, sentence) ?? 0, needle),
+            null => null,
+        };
+        if (pointer is null) return null;
+        bool Within(LayoutNode node, LayoutNode ancestor)
+        {
+            for (var n = node; n is not null; n = n.Parent)
+                if (ReferenceEquals(n, ancestor)) return true;
+            return false;
+        }
+        var focus = order.FirstOrDefault(n => Within(n, pointer)) ?? order.FirstOrDefault(n => Within(pointer, n));
+        return (pointer, focus);
+    }
+
+    private static LayoutNode? DeepestWithText(LayoutNode root, int top, string needle)
+    {
+        var node = FindNodeByText(root, top, needle);
+        while (node is not null)
+        {
+            var inner = node.Children.FirstOrDefault(c => !c.TagName.StartsWith('#') &&
+                Normalize(Text(c)).Contains(needle, StringComparison.Ordinal));
+            if (inner is null) break;
+            node = inner;
+        }
+        return node;
     }
 
     // ------------------------------------------------------------------
@@ -1327,7 +1448,8 @@ internal static class VisualChecks
         "border-sample" => "the center box's border matches the stated style and the sample",
         "text-color" => $"the filler text is {check.Color}",
         "text-decoration" => check.Under is false ? "the filler text has no line under it" : "the filler text has the stated lines",
-        "align-right" => "the filler text is flush with the container's right edge",
+        "align-right" => $"the filler text is flush with the container's {(check.Side == "left" ? "left" : "right")} edge",
+        "cursor" => check.Shape == "same" ? "the cursor is the same over both texts" : $"the cursor over the subject is {check.Shape}",
         "shape-relation" => $"the stated-color shapes: {check.Relation}",
         "space-between" => $"the space between the boxes is {check.Color}",
         "stack-three" => "three same-width rectangles are stacked",
@@ -1366,7 +1488,7 @@ internal static class VisualChecks
         "text-band" => $"{(check.Needle is null ? "the paragraph" : $"each \"{check.Needle}\"")} has the stated {check.Color} line(s) {check.Side}",
         "edge-letter" => $"the {check.Side} ink is {check.Color}",
         "stack-order" => $"the boxes stack bottom-to-top {string.Join(", ", check.Colors ?? [])}",
-        "no-ring" => "no border paints around the text",
+        "no-ring" => check.Variant == "present" ? "a box paints around the text" : "no border paints around the text",
         "text-below-box" => $"the filler text paints {check.Side} the box",
         "text-marker-match" => "the filler-text lines match and the bottom one has a marker",
         "border-sides" => check.Mode == "distinct" ? "each edge reads different" : "the borders read as stated per side",
@@ -2525,6 +2647,12 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         else
         {
             var node = check.Needle is { } needle ? FindNodeByText(root, top, needle) : FindFiller(root, top);
+            // Text inside a form control is read inside the control's content box: the UA's
+            // own control border and focus indication are not the text (focus-selector-001's
+            // focused textarea draws a focus ring that outweighs its glyphs).
+            if (node is not null && FindFirst(node, n => n.TagName is "TEXTAREA" or "INPUT" &&
+                    Normalize(Text(n)).Contains(check.Needle ?? "filler text", StringComparison.Ordinal)) is { } control)
+                node = control;
             targets = node is null ? [] : [node];
             if (targets.Count == 0)
                 return new(WptRunner.Cat.Unsupported, "Visual check: no element to colour-check below the instructions", 0, 0);
@@ -2612,7 +2740,22 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
 
     private static WptRunner.RunResult? TextColorOf(VisualCheck check, SKBitmap bitmap, LayoutNode node)
     {
-        var ink = ElementInk(bitmap, node, 1, out var box);
+        List<Component> ink;
+        SKRectI box;
+        if (node.TagName is "TEXTAREA" or "INPUT")
+        {
+            // Lite's control painter draws the control's own border and focus ring inside the
+            // element box, so the read stays a few pixels inside it.
+            var content = node.Box.ContentBox;
+            content.Inflate(-3, -3);
+            box = SKRectI.Round(content);
+            box.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+            var region = box;
+            ink = Components(bitmap, box, out _).Where(c =>
+                c.Right > region.Left && c.Left < region.Right && c.Bottom > region.Top && c.Top < region.Bottom).ToList();
+        }
+        else
+            ink = ElementInk(bitmap, node, 1, out box);
         // "This line should be green" is stated about the whole line: white-on-green lines
         // state their background, ordinary coloured text states its ink — either layer may
         // carry the named colour.
@@ -2826,6 +2969,96 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
             ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
             : new(WptRunner.Cat.Fail, $"{assertion}: ink ends at {inkRight}, container content edge is {contentRight}", 1, 1,
                 [new(assertion, 1, $"ink right {inkRight}, content right {contentRight}")], 0);
+    }
+
+    private static readonly Dictionary<string, CursorType> CursorKeywords = new(StringComparer.Ordinal)
+    {
+        ["default"] = CursorType.Default, ["pointer"] = CursorType.Pointer, ["text"] = CursorType.Text,
+        ["crosshair"] = CursorType.Crosshair, ["move"] = CursorType.Move,
+        ["e-resize"] = CursorType.EResize, ["ne-resize"] = CursorType.NeResize, ["nw-resize"] = CursorType.NwResize,
+        ["n-resize"] = CursorType.NResize, ["se-resize"] = CursorType.SeResize, ["sw-resize"] = CursorType.SwResize,
+        ["s-resize"] = CursorType.SResize, ["w-resize"] = CursorType.WResize,
+        ["wait"] = CursorType.Wait, ["help"] = CursorType.Help, ["progress"] = CursorType.Progress,
+    };
+
+    /// <summary>CSS 2.1 §18.1: the cursor shown with the pointer over the stated subject — the
+    /// stated-colour box's center, or the named text's first glyph — read through the engine's
+    /// own hit regions and cursor lookup (exactly what the native window shows). An "image"
+    /// expectation requires a loaded url() cursor that is the file the instructions depict;
+    /// "same" compares two subjects.</summary>
+    private static WptRunner.RunResult CursorCheck(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top)
+    {
+        var assertion = Describe(check);
+        var (_, regions) = Lite.Drawer.Draw(bitmap.Width, bitmap.Height, root, new Viewport { ViewportHeight = bitmap.Height });
+        SKPointI? Probe(string? needle)
+        {
+            // The whole page carries the cursor: point at the canvas below the content.
+            if (check.Target == "page") return new SKPointI(bitmap.Width - 4, bitmap.Height - 4);
+            if (check.Target == "text")
+            {
+                if (needle is null || FindNodeByText(root, top, needle) is not { } node) return null;
+                var ink = ElementInk(bitmap, node, 0, out _);
+                if (ink.Count == 0) return null;
+                var first = ink.OrderBy(c => c.Top).ThenBy(c => c.Left).First();
+                return new SKPointI((first.Left + first.Right) / 2, (first.Top + first.Bottom) / 2);
+            }
+            var components = TopLevel(Components(bitmap, top, out var clipped));
+            if (clipped) return null;
+            var candidates = check.Color is { } name
+                ? components.Where(c => ChannelDistance(c.Color, Named[name]) <= 48).ToList()
+                : components;
+            if (candidates.Count == 0) return null;
+            var subject = candidates.OrderByDescending(c => (long)c.Width * c.Height).First();
+            return new SKPointI((subject.Left + subject.Right) / 2, (subject.Top + subject.Bottom) / 2);
+        }
+        WptRunner.RunResult Fail(string detail) =>
+            new(WptRunner.Cat.Fail, $"{assertion}: {detail}", 1, 1, [new(assertion, 1, detail)], 0);
+        WptRunner.RunResult Pass() => new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+
+        if (check.Shape == "same")
+        {
+            if (check.Needles is not [var a, var b] || Probe(a) is not { } pa || Probe(b) is not { } pb)
+                return new(WptRunner.Cat.Unsupported, "Visual check: the two cursor subjects were not found", 0, 0);
+            var ca = HitRegion.CursorAt(regions, pa.X, pa.Y);
+            var cb = HitRegion.CursorAt(regions, pb.X, pb.Y);
+            return ca == cb ? Pass() : Fail($"'{a}' shows {ca.Type}{ca.Image}, '{b}' shows {cb.Type}{cb.Image}");
+        }
+        if (Probe(check.Needle) is not { } point)
+            return new(WptRunner.Cat.Unsupported, "Visual check: the cursor subject was not found below the instructions", 0, 0);
+        var (type, image) = HitRegion.CursorAt(regions, point.X, point.Y);
+        if (check.Shape == "image")
+        {
+            if (type != CursorType.Custom || image is null)
+                return Fail($"no url() cursor is shown at ({point.X},{point.Y}), got {type}");
+            // The depicted cursor sits in the instructions, or (a page-wide cursor) below them.
+            var shown = FindFirst(root, n => n.TagName == "IMG" && n.Box.BorderBox.Bottom <= top + 1)
+                ?? (check.Target == "page" ? FindFirst(root, n => n.TagName == "IMG") : null);
+            var shownSrc = shown?.Attributes.GetValueOrDefault("src");
+            if (shownSrc is null)
+                return new(WptRunner.Cat.Unsupported, "Visual check: the instructions show no cursor image to compare", 0, 0);
+            // The shown image is the suite's screenshot of the cursor file as a desktop renders
+            // it (antialiased over a light background), so it cannot equal the cursor bitmap
+            // pixel for pixel. The strict reading is that the engine shows the url() cursor the
+            // stylesheet names and that this is the file the instructions depict: the cursor
+            // resource must load and share the shown image's name (cursor.cur / cursor.png).
+            // The native window then loads that very file (Win32 LoadCursorFromFile).
+            if (Lite.Network.ResourceLoader.FetchImage(image, null, root.DocumentState?.Session) is null)
+                return Fail($"the url() cursor {image} does not load");
+            static string Stem(string url) => Path.GetFileNameWithoutExtension(url.Split('?', '#')[0]);
+            return string.Equals(Stem(image), Stem(shownSrc), StringComparison.OrdinalIgnoreCase)
+                ? Pass() : Fail($"the url() cursor {Stem(image)} is not the depicted {Stem(shownSrc)}");
+        }
+        if (check.Shape is null || !CursorKeywords.TryGetValue(check.Shape, out var expected))
+            return new(WptRunner.Cat.Unsupported, $"Visual check: unknown cursor expectation '{check.Shape}'", 0, 0);
+        return type == expected ? Pass() : Fail($"the pointer at ({point.X},{point.Y}) shows {type}");
+    }
+
+    private static LayoutNode? FindFirst(LayoutNode node, Func<LayoutNode, bool> predicate)
+    {
+        if (predicate(node)) return node;
+        foreach (var child in node.Children)
+            if (FindFirst(child, predicate) is { } found) return found;
+        return null;
     }
 
     /// <summary>The letter "x" is rendered below the instructions; the "box-above" variant
@@ -4234,11 +4467,17 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
     private static WptRunner.RunResult NoRing(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
     {
         var assertion = Describe(check);
-        var node = check.Needle is { } needle ? FindNodeByText(root, top, needle) : TextElementsBelow(root, top).FirstOrDefault();
+        // The positive reading names the box around the text itself: the deepest element
+        // holding it (an outline around an inline <a>, not its full-width block container).
+        var node = check.Variant == "present" && check.Needle is { } subject
+            ? DeepestWithText(root, top, subject)
+            : check.Needle is { } needle ? FindNodeByText(root, top, needle) : TextElementsBelow(root, top).FirstOrDefault();
         if (node is null)
             return new(WptRunner.Cat.Unsupported, "Visual check: no text element below the instructions", 0, 0);
         var box = node.Box.BorderBox;
         var crop = SKRectI.Round(new SKRect(box.Left - 8, box.Top - 8, box.Right + 8, box.Bottom + 8));
+        if (check.Variant == "present")
+            return BoxAround(assertion, bitmap, box);
         var ring = RingSignature(bitmap, crop, box, 6);
         if (!ring.Readable)
             return new(WptRunner.Cat.Unsupported, $"Visual check: the ring region is not readable: {ring.Note}", 0, 0);
@@ -4246,6 +4485,53 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
             ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
             : new(WptRunner.Cat.Fail, $"{assertion}: a border paints around the text ({ring.Style ?? "unclassified"})", 1, 1,
                 [new(assertion, 1, "ring ink present")], 0);
+    }
+
+    /// <summary>The positive reading of "there is a box around the text": on each side of the
+    /// text's border box, some line within <c>16px</c> outside it is ink (differs from the page
+    /// background) along at least 90% of that side — a closed ring of any style or width.
+    /// Text glyphs never cover a side's whole length, so neighbouring text cannot fake one;
+    /// a side clipped by the viewport counts when the remaining in-view offsets carry it.</summary>
+    private static WptRunner.RunResult BoxAround(string assertion, SKBitmap bitmap, SKRect box)
+    {
+        const int reach = 16;
+        var page = DominantPageColor(bitmap);
+        bool Ink(int x, int y) => x >= 0 && y >= 0 && x < bitmap.Width && y < bitmap.Height &&
+            Distance(bitmap.GetPixel(x, y), page) > InkThreshold;
+        var left = (int)MathF.Floor(box.Left);
+        var right = (int)MathF.Ceiling(box.Right);
+        var top = (int)MathF.Floor(box.Top);
+        var bottom = (int)MathF.Ceiling(box.Bottom);
+        bool Covered(Func<int, int, bool> inkAt, int from, int to)
+        {
+            for (var offset = 1; offset <= reach; offset++)
+            {
+                int inside = 0, inked = 0;
+                for (var t = from; t < to; t++)
+                {
+                    inside++;
+                    if (inkAt(offset, t)) inked++;
+                }
+                if (inside > 0 && inked >= 0.9 * inside) return true;
+            }
+            return false;
+        }
+        var missing = new List<string>();
+        if (!Covered((o, x) => Ink(x, top - o), left, right)) missing.Add("top");
+        if (!Covered((o, x) => Ink(x, bottom - 1 + o), left, right)) missing.Add("bottom");
+        if (!Covered((o, y) => left - o < 0 || Ink(left - o, y), top, bottom)) missing.Add("left");
+        if (!Covered((o, y) => right - 1 + o >= bitmap.Width || Ink(right - 1 + o, y), top, bottom)) missing.Add("right");
+        return missing.Count == 0
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: no ink line closes the {string.Join("/", missing)} side(s)", 1, 1,
+                [new(assertion, 1, $"open sides: {string.Join(", ", missing)}")], 0);
+    }
+
+    private static SKColor DominantPageColor(SKBitmap bitmap)
+    {
+        var counts = new Dictionary<uint, int>();
+        foreach (var p in bitmap.Pixels) counts[(uint)p] = counts.GetValueOrDefault((uint)p) + 1;
+        return new SKColor(counts.MaxBy(kv => kv.Value).Key);
     }
 
     /// <summary>The filler text paints below (or above) its sibling box.</summary>

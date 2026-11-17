@@ -26,7 +26,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT / "Lite.Conformance" / "artifacts"
 
-OUTCOME_ORDER = ["pass", "fail", "crash", "timeout", "empty", "unsupported", "manual-pending"]
+# The runner writes WptRunner.Cat names lower-cased, so the manual verdict is "manualpending".
+OUTCOME_ORDER = ["pass", "fail", "crash", "timeout", "empty", "unsupported", "manualpending"]
 
 
 def official_cluster(path: str) -> str:
@@ -52,7 +53,7 @@ def main() -> int:
     identity = None
     started = ""
     finished = ""
-    rows: list[tuple[str, str, str, str, str]] = []
+    rows: list[tuple[str, str, str, str, str, str, str]] = []
     problems: list[str] = []
     for report_path in args.reports:
         try:
@@ -78,7 +79,8 @@ def main() -> int:
             suite = test["suite"]
             path = test["path"]
             cluster = wpt_cluster(path) if suite == "css21-wpt" else official_cluster(path)
-            rows.append((suite, cluster, path, test.get("outcome", "?"), test.get("detail", "")))
+            rows.append((suite, cluster, path, test.get("outcome", "?"), test.get("kind", ""),
+                         test.get("environment", ""), test.get("detail", "")))
     if problems:
         for problem in problems:
             print(f"problem: {problem}", file=sys.stderr)
@@ -91,14 +93,22 @@ def main() -> int:
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["suite", "cluster", "path", "outcome", "detail"])
+        writer.writerow(["suite", "cluster", "path", "outcome", "kind", "environment", "detail"])
         writer.writerows(rows)
 
     suites: dict[str, Counter] = defaultdict(Counter)
     clusters: dict[tuple[str, str], Counter] = defaultdict(Counter)
-    for suite, cluster, _path, outcome, _detail in rows:
+    for suite, cluster, _path, outcome, *_rest in rows:
         suites[suite][outcome] += 1
         clusters[(suite, cluster)][outcome] += 1
+
+    # An outcome the table does not list would vanish from the counts while staying in
+    # the denominator (the manual-pending column read 0 that way); refuse to hide it.
+    unknown = sorted({outcome for counts in suites.values() for outcome in counts} - set(OUTCOME_ORDER))
+    if unknown:
+        problems.append(f"outcomes missing from the summary table: {', '.join(unknown)}")
+        for outcome in unknown:
+            print(f"problem: outcome '{outcome}' is not in OUTCOME_ORDER", file=sys.stderr)
 
     lines: list[str] = []
     lines.append("# css21-full screen baseline")

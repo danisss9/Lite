@@ -12,8 +12,14 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/Css21ObligationTests.cs#AssociatedStyleSheets_ApplyAroundRetrievalFailures",
+          "assertion": "*"
+        }
+      ]
     },
     {
       "id": "css21.ua.alternate-sets",
@@ -23,8 +29,14 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/StyleSheetControlsTests.cs#SelectedStyleSheetSet_PicksTheNamedAlternate",
+          "assertion": "*"
+        }
+      ]
     },
     {
       "id": "css21.ua.author-disabled",
@@ -34,8 +46,14 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/StyleSheetControlsTests.cs#AuthorStylesDisabled_KeepsUaRulesAndDropsAuthorOnes",
+          "assertion": "*"
+        }
+      ]
     },
     {
       "id": "css21.ua.user-stylesheet",
@@ -45,19 +63,14 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.D",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/sample.html#q22.0",
-      "title": "Default style sheet for HTML 4",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
-      "tests": []
+      "status": "failing",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/StyleSheetControlsTests.cs#UserStyleSheet_LosesToAuthorNormalAndBeatsAuthorImportant",
+          "assertion": "*"
+        }
+      ]
     },
     {
       "id": "css21.E",
@@ -67,8 +80,11 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "failing",
+      "tests": [],
+      "rollUp": [
+        "css21.E.2"
+      ]
     },
     {
       "id": "css21.3.2",
@@ -78,8 +94,19 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "failing",
+      "tests": [],
+      "rollUp": [
+        "css21.7.3",
+        "css21.ua.stylesheets",
+        "css21.4.2",
+        "css21.6.1",
+        "css21.6.2",
+        "css21.6.4",
+        "css21.ua.alternate-sets",
+        "css21.ua.author-disabled",
+        "css21.ua.user-stylesheet"
+      ]
     },
     {
       "id": "css21.3.3",
@@ -89,7 +116,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -100,7 +127,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -111,8 +138,18 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "failing",
+      "tests": [],
+      "rollUp": [
+        "css21.4.1.1",
+        "css21.4.1.2",
+        "css21.4.1.3",
+        "css21.4.1.5",
+        "css21.4.1.6",
+        "css21.4.1.7",
+        "css21.4.1.8",
+        "css21.4.1.9"
+      ]
     },
     {
       "id": "css21.4.1.1",
@@ -122,7 +159,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -133,18 +170,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.4.1.2.1",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#vendor-keywords",
-      "title": "Vendor-specific extensions",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -155,18 +181,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.4.1.4",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/syndata.html#statements",
-      "title": "Statements",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -177,7 +192,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -188,7 +203,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -199,7 +214,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -211,48 +226,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/declaration-whitespace-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/ignored-rules-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/ignored-rules-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/ignored-rules-003.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/ignored-rules-004.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/ignored-rules-005.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/ignored-rules-006.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/ignored-rules-007.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 8/8 and WPT twins 8/8 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -263,7 +237,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -274,7 +248,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -285,8 +259,18 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "failing",
+      "tests": [],
+      "rollUp": [
+        "css21.4.3.1",
+        "css21.4.3.2",
+        "css21.4.3.3",
+        "css21.4.3.4",
+        "css21.4.3.5",
+        "css21.4.3.6",
+        "css21.4.3.7",
+        "css21.4.3.8"
+      ]
     },
     {
       "id": "css21.4.3.1",
@@ -307,7 +291,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -319,23 +303,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/c62-percent-000.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/numbers-units-016.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/numbers-units-017.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -346,7 +314,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -357,7 +325,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -368,7 +336,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -379,7 +347,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -390,8 +358,14 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/Css21ObligationTests.cs#UnsupportedValue_IsIgnoredAsIfIllegal",
+          "assertion": "*"
+        }
+      ]
     },
     {
       "id": "css21.4.4",
@@ -401,7 +375,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -412,7 +386,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -424,13 +398,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/selectors-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 1/1 and WPT twins 1/1 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -441,8 +409,11 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [],
+      "rollUp": [
+        "css21.5.2.1"
+      ]
     },
     {
       "id": "css21.5.2.1",
@@ -453,28 +424,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/c12-grouping-000.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/grouping-000.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/grouping-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/grouping-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 4/4 and WPT twins 4/4 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -486,33 +436,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/universal-selector-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/universal-selector-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/universal-selector-003.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/universal-selector-004.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/universal-selector-005.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 5/5 and WPT twins 5/5 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -523,7 +447,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -535,88 +459,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/c16-descendant-000.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/c16-descendant-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/c16-descendant-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendant-selector-000.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendant-selector-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendent-selector-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendent-selector-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendent-selector-003.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendent-selector-004.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendent-selector-005.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendent-selector-006.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendent-selector-007.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendent-selector-008.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendent-selector-009.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendent-selector-010.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/descendent-selector-011.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 16/16 and WPT twins 16/16 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -628,23 +471,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/child-selector-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/child-selector-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/child-selector-003.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -655,7 +482,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -666,7 +493,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -677,7 +504,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -688,7 +515,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -700,88 +527,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/c14-classes-000.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-000.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-003.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-004.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-005.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-006.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-007.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-008.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-009.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-010.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-011.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/class-selector-012.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 16/16 and WPT twins 16/16 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -793,53 +539,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/c15-ids-000.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/c15-ids-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/id-000.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/id-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/id-selector-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/id-selector-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/id-selector-004.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/id-selector-005.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/id-selector-006.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 9/9 and WPT twins 9/9 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -850,7 +550,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -861,7 +561,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -872,7 +572,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -894,7 +594,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -905,7 +605,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -916,8 +616,13 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "failing",
+      "tests": [],
+      "rollUp": [
+        "css21.5.12.1",
+        "css21.5.12.2",
+        "css21.5.12.3"
+      ]
     },
     {
       "id": "css21.5.12.1",
@@ -927,7 +632,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -938,7 +643,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -949,7 +654,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -961,7 +666,11 @@
         "print"
       ],
       "status": "untested",
-      "tests": []
+      "tests": [],
+      "rollUp": [
+        "css21.6.1.1",
+        "css21.6.1.2"
+      ]
     },
     {
       "id": "css21.6.1.1",
@@ -971,35 +680,13 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "implemented",
       "tests": []
     },
     {
       "id": "css21.6.1.2",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#computed-value",
       "title": "Computed values",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.6.1.3",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#used-value",
-      "title": "Used values",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.6.1.4",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#actual-value",
-      "title": "Actual values",
       "media": [
         "screen",
         "print"
@@ -1015,7 +702,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1026,7 +713,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1037,7 +724,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1048,7 +735,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1059,7 +746,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1070,7 +757,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1081,7 +768,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1092,7 +779,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1103,8 +790,11 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "failing",
+      "tests": [],
+      "rollUp": [
+        "css21.7.2.1"
+      ]
     },
     {
       "id": "css21.7.2.1",
@@ -1114,7 +804,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1125,19 +815,14 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.7.3.1",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/media.html#media-groups",
-      "title": "Media groups",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/Css21ObligationTests.cs#MediaTypes_AreRecognizedCaseInsensitivelyAndOthersIgnored",
+          "assertion": "*"
+        }
+      ]
     },
     {
       "id": "css21.8.1",
@@ -1158,7 +843,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1169,14 +854,8 @@
         "screen",
         "print"
       ],
-      "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/margin-collapse-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "status": "failing",
+      "tests": [],
       "notes": "The official margin-collapse family passes 110/110 (chains carried as (maxPositive, minNegative) pairs, clearance per 9.5.2/8.3.1, self-collapsing re-anchoring); flip recorded 18 October 2026 with the family run as evidence. Path corrected 31 October 2026 to the evidence-record form (css21-official/ prefix): the unprefixed path could never match executed evidence, which the profile reported as css21-missing-evidence."
     },
     {
@@ -1187,7 +866,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1198,7 +877,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1209,7 +888,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1220,7 +899,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1231,7 +910,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1242,7 +921,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1253,234 +932,8 @@
         "screen",
         "print"
       ],
-      "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-003.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-004.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-005.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-006.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-007.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-008.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-009.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-010.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-011.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-012.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-013.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-014.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-015.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-016.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-017.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-018.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-019.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-020.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-021.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-022.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-023.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-024.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-025.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-026.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-027.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-028.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-029.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-030.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-031.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-032.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-033.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-034.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-035.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-036.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-037.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-038.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-039.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-040.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-041.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-042.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-043.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-044.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/bidi-box-model-045.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "status": "failing",
+      "tests": [],
       "notes": "The complete applicable family passes on the 4 November 2026 bidi-box-model cluster run (work in progress on top of source 3280b413): official suite 45/45 and WPT twins 45/45 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes. The engine work behind the family: the §8.6 unsplit-box physical sides (the rtl drop in the inline edge reservation removed), the §8.6 split-box mirrored join sides for direction-rtl boxes broken across lines, and the §16.2/UAX #9 subset that renders a bidi-override RTL scope reversed."
     },
     {
@@ -1491,7 +944,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1503,13 +956,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/containing-block-026.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 1/1 and WPT twins 2/2 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -1520,8 +967,13 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "failing",
+      "tests": [],
+      "rollUp": [
+        "css21.9.2.1",
+        "css21.9.2.2",
+        "css21.9.2.4"
+      ]
     },
     {
       "id": "css21.9.2.1",
@@ -1531,7 +983,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1542,7 +994,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1553,7 +1005,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1564,18 +1016,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.9.2.3",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#run-in",
-      "title": "Run-in boxes",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1586,7 +1027,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1597,7 +1038,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1608,7 +1049,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1619,7 +1060,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1630,8 +1071,13 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "failing",
+      "tests": [],
+      "rollUp": [
+        "css21.9.4.1",
+        "css21.9.4.2",
+        "css21.9.4.3"
+      ]
     },
     {
       "id": "css21.9.4.1",
@@ -1652,7 +1098,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1663,7 +1109,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1674,7 +1120,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1685,7 +1131,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1696,7 +1142,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1707,7 +1153,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1718,8 +1164,14 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/Css21ObligationTests.cs#FixedBox_DoesNotMoveWhenTheDocumentScrolls",
+          "assertion": "*"
+        }
+      ]
     },
     {
       "id": "css21.9.7",
@@ -1729,7 +1181,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1740,19 +1192,12 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.9.8.1",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#comp-normal-flow",
-      "title": "Normal flow",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
-      "tests": []
+      "status": "failing",
+      "tests": [],
+      "rollUp": [
+        "css21.9.8.2",
+        "css21.9.8.4"
+      ]
     },
     {
       "id": "css21.9.8.2",
@@ -1762,18 +1207,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.9.8.3",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/visuren.html#comp-float",
-      "title": "Floating a box",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1784,7 +1218,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1796,38 +1230,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/stack-floats-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/stack-floats-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/stack-floats-003.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/stack-floats-004.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/z-index-stack-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/z-index-stack-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 6/6 and WPT twins 6/6 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -1838,7 +1241,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1849,7 +1252,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1860,7 +1263,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1871,7 +1274,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1882,7 +1285,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1893,7 +1296,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1904,7 +1307,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1915,7 +1318,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1926,7 +1329,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1937,7 +1340,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1948,7 +1351,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1959,7 +1362,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1970,7 +1373,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1981,7 +1384,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -1992,7 +1395,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2003,7 +1406,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2014,7 +1417,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2026,18 +1429,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/background-root-020.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/root-box-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 2/2 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -2048,7 +1440,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2059,7 +1451,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2070,7 +1462,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2081,7 +1473,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2093,153 +1485,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-003.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-004.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-005.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-007.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-008.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-009.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-010.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-011.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-012.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-014.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-016.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-017.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-018.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-019.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-021.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-022.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-023.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-024.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-025.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-026.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-028.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-029.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-030.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-031.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-032.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-033.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/absolute-replaced-height-035.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 29/29 and WPT twins 34/34 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -2262,23 +1508,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/block-formatting-context-height-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/block-formatting-context-height-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/block-formatting-context-height-003.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -2289,7 +1519,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2300,7 +1530,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2311,7 +1541,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2322,7 +1552,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2333,7 +1563,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2344,7 +1574,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2355,7 +1585,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2366,7 +1596,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2377,7 +1607,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2389,18 +1619,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/quotes-035.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/quotes-035a.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 2/2 and WPT twins 2/2 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -2411,7 +1630,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2422,8 +1641,19 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/QuotesTests.cs#SingleCloseQuote_AtDepthZero_GeneratesNothing",
+          "assertion": "*"
+        },
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/QuotesTests.cs#DoubledCloseQuote_AfterGeneratesWithNestedDepth",
+          "assertion": "*"
+        }
+      ]
     },
     {
       "id": "css21.12.4",
@@ -2433,7 +1663,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2444,7 +1674,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "implemented",
       "tests": []
     },
     {
@@ -2455,7 +1685,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2467,23 +1697,7 @@
         "print"
       ],
       "status": "implemented",
-      "tests": [
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/counters-hidden-000.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/counters-hidden-001.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        },
-        {
-          "suite": "css21-official",
-          "path": "css21-official/html4/counters-hidden-002.htm",
-          "assertion": "Self-describing test shows no failure red (diagnostic)"
-        }
-      ],
+      "tests": [],
       "notes": "The complete applicable family passes on the 2 November 2026 full-screen baseline (source 2b978d0): official suite 3/3 and WPT twins 3/3 (mapped here by their official paths; the WPT records need the upstream-wpt serving environment and are counted in the baseline aggregate). Flipped under the strict rule: every applicable test mapped to the obligation passes."
     },
     {
@@ -2494,7 +1708,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2505,7 +1719,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2626,7 +1840,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2637,7 +1851,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2648,7 +1862,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2659,7 +1873,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2670,7 +1884,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2681,63 +1895,14 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.15.3.1.1",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#serif-def",
-      "title": "serif",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.15.3.1.2",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#sans-serif-def",
-      "title": "sans-serif",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.15.3.1.3",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#cursive-def",
-      "title": "cursive",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.15.3.1.4",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#fantasy-def",
-      "title": "fantasy",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
-      "tests": []
-    },
-    {
-      "id": "css21.15.3.1.5",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/fonts.html#monospace-def",
-      "title": "monospace",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
-      "tests": []
+      "status": "implemented",
+      "tests": [
+        {
+          "suite": "unit",
+          "path": "Lite.Tests/Css21ObligationTests.cs#GenericFontFamilies_ResolveToReasonableInstalledFaces",
+          "assertion": "*"
+        }
+      ]
     },
     {
       "id": "css21.15.4",
@@ -2747,7 +1912,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2769,7 +1934,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2780,7 +1945,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2791,7 +1956,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2802,7 +1967,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2813,7 +1978,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2824,8 +1989,11 @@
         "screen",
         "print"
       ],
-      "status": "untested",
-      "tests": []
+      "status": "failing",
+      "tests": [],
+      "rollUp": [
+        "css21.16.3.1"
+      ]
     },
     {
       "id": "css21.16.3.1",
@@ -2835,7 +2003,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2846,7 +2014,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2857,7 +2025,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2868,7 +2036,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2879,7 +2047,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2901,7 +2069,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2912,7 +2080,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2923,7 +2091,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2934,7 +2102,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2945,7 +2113,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2956,7 +2124,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2967,7 +2135,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -2989,7 +2157,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -3000,7 +2168,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -3011,7 +2179,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -3022,7 +2190,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -3033,7 +2201,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -3055,7 +2223,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -3066,7 +2234,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -3077,7 +2245,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -3088,7 +2256,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -3114,17 +2282,6 @@
       "tests": []
     },
     {
-      "id": "css21.18.3",
-      "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/ui.html#system-fonts",
-      "title": "User preferences for fonts",
-      "media": [
-        "screen",
-        "print"
-      ],
-      "status": "untested",
-      "tests": []
-    },
-    {
       "id": "css21.18.4",
       "url": "https://www.w3.org/TR/2011/REC-CSS2-20110607/ui.html#dynamic-outlines",
       "title": "Dynamic outlines: the 'outline' property",
@@ -3132,7 +2289,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     },
     {
@@ -3154,7 +2311,7 @@
         "screen",
         "print"
       ],
-      "status": "untested",
+      "status": "failing",
       "tests": []
     }
   ]

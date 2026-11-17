@@ -51,6 +51,16 @@
    "stem": "before-after-table-whitespace-001",
    "resources": ["missing-image.png"],
    "reason": "Generated-content url() of an unavailable image inside table whitespace renders nothing."
+  },
+  {
+   "stem": "inlines-009",
+   "resources": ["404"],
+   "reason": "The fourth box is <img src=\"404\" alt=\"ÉÉÉ\">: an unavailable image rendered as its alt text in a cell, which must size like the other three boxes (specified line-height variant). Reviewed 2026-11-15."
+  },
+  {
+   "stem": "inlines-010",
+   "resources": ["404"],
+   "reason": "The fourth box is <img src=\"404\" alt=\"ÉÉÉ\">: an unavailable image rendered as its alt text in a cell, which must size like the other three boxes (normal line-height variant). Reviewed 2026-11-15."
   }
  ]
 }

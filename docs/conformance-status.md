@@ -12,7 +12,8 @@ completion contract or claims new passing coverage.
 The current position and the end-to-end path to all three readiness flags are in
 [Track status at a glance](#track-status-at-a-glance) and
 [Roadmap to full conformance](#roadmap-to-full-conformance-written-11-november-2026)
-(written 11 November 2026). The dated snapshot paragraphs below are the history that
+(written 11 November 2026; the CSS 2.1 ordering is superseded by the
+[15 November CSS review](css21-conformance-plan.md#roadmap-to-css21profileready-review-of-15-november-2026)). The dated snapshot paragraphs below are the history that
 led there.
 
 Snapshot written 2 November 2026 on build `2b978d0` after the second probe batch
@@ -164,7 +165,7 @@ crashes never count as success. `releaseReady` stays a separate final decision.
 | Track | Readiness | Position |
 | --- | --- | --- |
 | ES2020 | **`es2020ProfileReady` true**, enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, with zero failures, zero expected failures and no dependency exception. Host suite 20/20. All 2,115 ECMA-262 clauses reviewed. Maintenance only. |
-| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | Official **7,394/9,039 (81.8%)**. WPT `css/CSS2` ~6,552/8,904 (73.6%, 9 November). Obligations 18/213 `implemented`. Non-pass pool: ~2,371 real fails, 511 unsupported, **1,216 manual-pending**, 62 timeouts (the block-in-inline/hit-test hang cluster), 1 crash (`visudet/line-height-201`). The 966 official fails split into 460 twin-walk pixel diffs, 172 red-pixel engine bugs, 152 shape/box judge reads and ~180 mixed. |
+| CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 13 November baseline: official **7,426/9,039 (82.2%)**, WPT `css/CSS2` **6,709/8,904 (75.3%)**. Obligations 18/202 screen `implemented`. Gap: 922 + 1,151 fails, **1,220 manual-pending** (the baseline report printed 0 through an aggregator outcome-name mismatch, fixed 15 November), 505 unsupported (411 WPT `manual` kind), 8 empty, 1 timeout, 1 crash. The 15 November review found the evidence layer blocking readiness before the engine does; its phased plan is the [roadmap to css21ProfileReady](css21-conformance-plan.md#roadmap-to-css21profileready-review-of-15-november-2026). |
 | HTML5 | `html5ProfileReady` false | Milestones 1–3 closed (`inventoryComplete` true). The manifest has 12,575 entries and 5,848 are `included`. Of those, **~3,800 carry reviewed-failing reasons** and ~2,000 have a pass state unknown until the next run. Profile `html5.*`: 192 of 202 `untested`. Section review 0/762. Milestone 4 packages and increments landed 5–11 November, but **no cluster has been rerun and no manifest entries flipped** (evidence debt). The 12 November diagnostic baseline prices that debt: **1,351/6,538 accepted (20.7%)** over 83.4% of the expanded queue (`editing/` partial at 600 of 729 paths, `encoding/legacy-mb` blocked by memory, identity drifted by the parallel CSS track), so the flip review has per-cluster counts to work from; it is not banked evidence. |
 
 The HTML5 reviewed-failing queue by area (static recount, 11 November):

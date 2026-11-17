@@ -32,6 +32,12 @@ internal static class RefTestRunner
         var started = DateTime.UtcNow;
         var evidence = new List<TestEvidence>();
         if (shard.Count > 1) Console.WriteLine($"  shard {shard}");
+        // Curated reftests can stand in for reviewed defective suite cases, so their evidence
+        // carries the same CSS identity the readiness gate checks on suite cases.
+        var inventoryHash = Css21Inventory.InventoryHash();
+        CssEvidence Css(string path) => new("screen",
+            Path.GetExtension(path) is ".xht" or ".xhtml" or ".xml" ? "xhtml" : "html", inventoryHash,
+            Width, Height, shard.Index, shard.Count, filter);
 
         foreach (var entry in entries)
         {
@@ -44,7 +50,7 @@ internal static class RefTestRunner
             {
                 result.Failed++;
                 result.Problems.Add($"{entry.Path}: no reference (manifest 'test | ref' or a <link rel=match> in the test)");
-                evidence.Add(new("css21-curated", entry.Path, "fail", "Missing reference", [], Kind: "reftest"));
+                evidence.Add(new("css21-curated", entry.Path, "fail", "Missing reference", [], Kind: "reftest", Css: Css(entry.Path)));
                 continue;
             }
 
@@ -78,7 +84,8 @@ internal static class RefTestRunner
 
             Record(result, entry, passed, detail);
             evidence.Add(new("css21-curated", entry.Path, passed ? "pass" : "fail", detail,
-                [new($"{(mismatch ? "!=" : "==")} {reference}", passed ? 0 : 1, detail)], Kind: "reftest", Artifacts: artifacts));
+                [new($"{(mismatch ? "!=" : "==")} {reference}", passed ? 0 : 1, detail)], Kind: "reftest", Artifacts: artifacts,
+                Css: Css(entry.Path)));
         }
 
         ExecutionEvidence.Write(reportPath ?? Path.Combine(ConformancePaths.EnsureArtifacts(), $"css21-{shard.Index}-of-{shard.Count}.json"), identity, started, evidence);

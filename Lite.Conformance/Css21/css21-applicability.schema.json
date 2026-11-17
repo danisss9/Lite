@@ -53,6 +53,73 @@
               "minLength": 1
             },
             "uniqueItems": true
+          },
+          "defect": {
+            "type": "object",
+            "description": "Why a defective test cannot stand as evidence. Required exactly when classification is defective.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "missing-input",
+                  "self-contradiction",
+                  "contradicts-target",
+                  "superseded-in-profile"
+                ]
+              },
+              "citation": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The specification text, erratum or suite source the defect is judged against."
+              },
+              "detail": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "kind",
+              "citation",
+              "detail"
+            ],
+            "additionalProperties": false
+          },
+          "replacements": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Equivalent tests that carry the defective test's obligation. Each must pass for the exclusion to hold.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "suite": {
+                  "enum": [
+                    "css21-wpt",
+                    "css21-official",
+                    "css21-curated"
+                  ]
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "relation": {
+                  "enum": [
+                    "maintained-twin",
+                    "authored-equivalent"
+                  ]
+                }
+              },
+              "required": [
+                "suite",
+                "path",
+                "relation"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "permits": {
+            "type": "string",
+            "minLength": 1,
+            "description": "For optional tests: the specification sentence that permits the alternative rendering."
           }
         },
         "required": [
@@ -62,7 +129,40 @@
           "media",
           "requirementIds"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "classification": {
+                  "const": "defective"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "defect",
+                "replacements"
+              ]
+            },
+            "else": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "defect"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "replacements"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
       }
     }
   },

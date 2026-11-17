@@ -30,7 +30,7 @@ internal static class SelfTestOracle
                 VisualChecks.Evaluate(c, renders, root, sentence, test.Path))
             : null;
         var result = WptVisualPage.RunSelfTest(test, embeddedRequired: stated.Condition == "same-color",
-            statedCondition: check, statedCheck: stated.Check);
+            statedCondition: check, statedCheck: stated.Check, sentence: stated.Sentence);
         return Decide(test.Path, stated.Condition, result, twin, lookup, checkedCondition: check is not null,
             manualPending: stated.ManualPending);
     }
@@ -91,5 +91,7 @@ internal static class SelfTestOracle
             kv => kv.Key, kv => new SideSpec(kv.Value!["shape"]?.GetValue<string>(), kv.Value!["color"]?.GetValue<string>())) : null,
         check["ordered"]?.GetValue<bool>() ?? false, check["boxColor"]?.GetValue<string>(),
         check["target"]?.GetValue<string>(),
-        check["scroll"] is { } scroll ? new ScrollSpec(scroll["to"]?.GetValue<string>() ?? "bottom") : null);
+        check["scroll"] is { } scroll ? new ScrollSpec(scroll["to"]?.GetValue<string>() ?? "bottom") : null,
+        check["interaction"] is { } interaction ? new InteractionSpec(interaction["action"]!.GetValue<string>(),
+            interaction["subject"]?.GetValue<string>(), interaction["rest"]?.GetValue<string>()) : null);
 }
