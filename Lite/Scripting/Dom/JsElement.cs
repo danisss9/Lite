@@ -60,11 +60,12 @@ public class JsElement
 
     // ---- DOM Core Level 2 ----
     /// <summary>True for the CharacterData node kinds: Text, Comment, ProcessingInstruction.</summary>
-    private bool IsCharacterData => Node.TagName is "#text" or "#comment" or "#pi";
+    private bool IsCharacterData => Node.TagName is "#text" or "#cdata" or "#comment" or "#pi";
 
     public int nodeType => DomNode is { } dom ? (int)dom.NodeType : Node.TagName switch
     {
         "#text" => 3,            // TEXT_NODE
+        "#cdata" => 4,           // CDATA_SECTION_NODE
         "#pi" => 7,              // PROCESSING_INSTRUCTION_NODE
         "#comment" => 8,         // COMMENT_NODE
         "#document" => 9,        // DOCUMENT_NODE
@@ -74,6 +75,7 @@ public class JsElement
     public string nodeName => DomNode?.NodeName ?? (Node.TagName switch
     {
         "#text" => "#text",
+        "#cdata" => "#cdata-section",
         "#comment" => "#comment",
         "#pi" => Node.Attributes.GetValueOrDefault("_pi_target", ""),
         _ => Node.TagName.ToUpperInvariant(),
@@ -2459,9 +2461,215 @@ public class JsElement
 
     public bool hasChildNodes() => Node.Children.Count > 0;
 
+    // ---- DOM §3.7 namespace lookup (in-scope namespace resolution) ----
+
+    private const string XmlNamespaceUri = "http://www.w3.org/XML/1998/namespace";
+    private const string XmlnsNamespaceUri = "http://www.w3.org/2000/xmlns/";
+
+    /// <summary>element.lookupNamespaceURI(prefix): walk self and ancestors for an in-scope
+    /// namespace binding — an intrinsic one (the xml/xmlns prefixes) or an xmlns(:prefix)
+    /// attribute — then the node's own namespace when its prefix matches. Documents delegate
+    /// to their document element; fragments and doctypes resolve null.</summary>
+    public string? lookupNamespaceURI(JsValue? prefix)
+    {
+        // The DOMString? prefix conversion: undefined and null both mean the default namespace.
+        var key = prefix is null || prefix.IsUndefined() || prefix.IsNull() ? null : prefix.ToString();
+        if (Node.TagName is "#document-fragment" or "#document-type") return null;
+        if (Node.TagName == "#document")
+        {
+            var element = State?.Document?.DocumentElement;
+            return element is null ? null : For(_engine, State!.ForDomNode(element)).lookupNamespaceURI(prefix);
+        }
+        for (var node = Node; node is not null; node = node.Parent)
+        {
+            var value = NamespaceFor(node, key);
+            if (value is not null) return value == string.Empty ? null : value;
+        }
+        return null;
+    }
+
+    private static string? NamespaceFor(LayoutNode node, string? prefix)
+    {
+        if (node.TagName.StartsWith('#')) return null;
+        if (prefix is null)
+        {
+            // The default namespace: an xmlns attribute, or the element's own namespace when
+            // the element itself carries no prefix.
+            if (node.Attributes.TryGetValue("xmlns", out var xmlns)) return xmlns;
+            var own = (node.DomNode as IElement)?.NamespaceUri;
+            if (own is not null && (node.DomNode as IElement)?.Prefix is null) return own;
+            return null;
+        }
+        if (prefix == "xml") return XmlNamespaceUri;
+        if (prefix == "xmlns") return XmlnsNamespaceUri;
+        if (node.Attributes.TryGetValue("xmlns:" + prefix, out var bound)) return bound;
+        var element = node.DomNode as IElement;
+        return element is { } && element.Prefix == prefix ? element.NamespaceUri : null;
+    }
+
+    /// <summary>element.isDefaultNamespace(namespace): whether the null prefix resolves to
+    /// the given namespace (DOM §3.7).</summary>
+    public bool isDefaultNamespace(JsValue? namespaceUri)
+    {
+        var ns = namespaceUri is null || namespaceUri.IsUndefined() ? null : namespaceUri.ToString();
+        var resolved = lookupNamespaceURI(JsValue.Null);
+        return (resolved ?? "") == (ns ?? "");
+    }
+
+    /// <summary>element.lookupPrefix(namespace): walk self and ancestors for an xmlns(:prefix)
+    /// attribute or an element whose own prefix binds the namespace (DOM §3.7).</summary>
+    public string? lookupPrefix(JsValue? namespaceUri)
+    {
+        var ns = namespaceUri is null || namespaceUri.IsUndefined() || namespaceUri.IsNull()
+            ? null : namespaceUri.ToString();
+        if (Node.TagName is "#document-fragment" or "#document-type") return null;
+        if (Node.TagName == "#document")
+        {
+            var element = State?.Document?.DocumentElement;
+            return element is null ? null : For(_engine, State!.ForDomNode(element)).lookupPrefix(namespaceUri);
+        }
+        for (var node = Node; node is not null; node = node.Parent)
+        {
+            if (ns is null) return null;
+            if (node.TagName.StartsWith('#')) continue;
+            if (ns == XmlNamespaceUri) return "xml";
+            foreach (var attribute in node.Attributes)
+            {
+                if (!attribute.Key.StartsWith("xmlns:", StringComparison.Ordinal)) continue;
+                if (attribute.Value == ns) return attribute.Key["xmlns:".Length..];
+            }
+            var element = node.DomNode as IElement;
+            if (element is { } && element.Prefix is { } p && element.NamespaceUri == ns &&
+                !node.Attributes.TryGetValue("xmlns:" + p, out _))
+                return p;
+        }
+        return null;
+    }
+
+    // ---- node identity and equality (DOM §4.2) ----
+
+    /// <summary>The LayoutNode a node-typed argument refers to: element wrappers carry their
+    /// own node; document facades resolve to their document-rooted node; non-node values
+    /// raise the WebIDL TypeError.</summary>
+    internal static LayoutNode NodeOf(Engine engine, JsValue? value)
+    {
+        var obj = value?.ToObject();
+        if (obj is JsElement element) return element.Node;
+        if (obj is JsDocument document) return document.RootNode;
+        throw JsErrors.Dom(engine, "TypeError", "The value is not a Node.");
+    }
+
+    /// <summary>node.isSameNode(other): the identity comparison (this === other in the DOM's
+    /// terms — the same underlying node).</summary>
+    public bool isSameNode(JsValue? other)
+    {
+        if (other is null || other.IsUndefined() || other.IsNull()) return false;
+        return NodeOf(_engine, other) == Node;
+    }
+
+    /// <summary>node.isEqualNode(other): deep structural equality — same type and name, equal
+    /// data for character nodes, equal attribute sets, and equal child recursion (DOM §4.2).</summary>
+    public bool isEqualNode(JsValue? other)
+    {
+        if (other is null || other.IsUndefined() || other.IsNull()) return false;
+        return EqualNode(Node, NodeOf(_engine, other));
+    }
+
+    private static bool EqualNode(LayoutNode a, LayoutNode b)
+    {
+        if (!string.Equals(a.TagName, b.TagName, StringComparison.Ordinal)) return false;
+        if (a.TagName == "#document-type")
+        {
+            if (!string.Equals(a.Attributes.GetValueOrDefault("_public_id"), b.Attributes.GetValueOrDefault("_public_id"), StringComparison.Ordinal) ||
+                !string.Equals(a.Attributes.GetValueOrDefault("_system_id"), b.Attributes.GetValueOrDefault("_system_id"), StringComparison.Ordinal))
+                return false;
+        }
+        if (a.TagName is "#pi" && a.Attributes.GetValueOrDefault("_pi_target") != b.Attributes.GetValueOrDefault("_pi_target"))
+            return false;
+        if (a.TagName is "#text" or "#cdata" or "#comment" or "#pi" &&
+            !string.Equals(a.DomNode?.TextContent ?? a.TextOverride ?? a.Text,
+                b.DomNode?.TextContent ?? b.TextOverride ?? b.Text, StringComparison.Ordinal))
+            return false;
+        if (!a.TagName.StartsWith('#'))
+        {
+            var aAttrs = a.Attributes.Where(kv => !kv.Key.StartsWith('_')).OrderBy(kv => kv.Key, StringComparer.Ordinal).ToArray();
+            var bAttrs = b.Attributes.Where(kv => !kv.Key.StartsWith('_')).OrderBy(kv => kv.Key, StringComparer.Ordinal).ToArray();
+            if (aAttrs.Length != bAttrs.Length) return false;
+            for (var i = 0; i < aAttrs.Length; i++)
+                if (aAttrs[i].Key != bAttrs[i].Key || aAttrs[i].Value != bAttrs[i].Value) return false;
+        }
+        var aChildren = a.Children;
+        var bChildren = b.Children;
+        if (aChildren.Count != bChildren.Count) return false;
+        for (var i = 0; i < aChildren.Count; i++)
+            if (!EqualNode(aChildren[i], bChildren[i])) return false;
+        return true;
+    }
+
+    /// <summary>node.baseURI — the owning document's base URL (DOM §4.3).</summary>
+    public string baseURI => JsEngine.For(_engine)?.DocumentBaseUrl ?? Parser.BaseUrl ?? "";
+
+    // ---- Text.splitText (DOM §4.4) ----
+
+    /// <summary>Text.splitText(offset): splits this text node at the offset — the node keeps
+    /// the leading text, a new text node holding the remainder is inserted after (mirrored
+    /// through the authoritative DOM when one exists).</summary>
+    public JsElement splitText(int offset)
+    {
+        if (!IsCharacterData) ThrowDom("NotSupportedError", "splitText is a Text interface member.");
+        var whole = DomNode?.TextContent ?? Node.TextOverride ?? Node.Text;
+        if (offset < 0 || offset > whole.Length)
+            ThrowDom("IndexSizeError", $"The offset {offset} is out of range for text of length {whole.Length}.");
+        var tail = whole[offset..];
+        SetCharacterData(whole[..offset]);
+        var engine = JsEngine.For(_engine)!;
+        var state = engine.DocumentState;
+        LayoutNode created;
+        if (state is { } && state.Document is { } document)
+        {
+            var dom = document.CreateTextNode(tail);
+            created = state.ForDomNode(dom);
+            if (DomNode is { } domNode && domNode.Parent is { } parent)
+                parent.InsertBefore(dom, domNode.NextSibling);
+            if (Node.Parent is { } parentLayout)
+                parentLayout.Children.Insert(parentLayout.Children.IndexOf(Node) + 1, created);
+        }
+        else
+        {
+            created = new LayoutNode(null, "#text", tail, Node.Style);
+            if (Node.Parent is { } parentLayout)
+                parentLayout.Children.Insert(parentLayout.Children.IndexOf(Node) + 1, created);
+            StyleResolver.ApplyTree(created);
+        }
+        if (Node.Parent is { } parentLayout2)
+            MutationObserverRegistry.NotifyChildList(_engine, parentLayout2, [created], null, Node, null);
+        return For(_engine, created);
+    }
+
     /// <summary>DOM Normalizer: merges adjacent #text children and removes empty ones,
     /// keeping the AngleSharp document and the projection in sync.</summary>
     public void normalize() => NormalizeNode(Node);
+
+    /// <summary>element.closest(selectors): the closest ancestor-or-self matching the selector
+    /// (DOM §4.4.2); null when nothing matches.</summary>
+    public JsElement? closest(string selectors)
+    {
+        if (selectors is null || selectors.Trim().Length == 0)
+            ThrowDom("SyntaxError", "'closest' called on an object that does not implement interface Element.");
+        for (var node = Node; node is not null; node = node.Parent)
+        {
+            if (node.TagName.StartsWith('#') && node.TagName != "#document") continue;
+            try
+            {
+                if (SelectorEngine.Matches(node, selectors)) return For(_engine, node);
+            }
+            catch (Exception)
+            {
+                ThrowDom("SyntaxError", $"'{selectors}' is not a valid selector.");
+            }
+        }
+        return null;
+    }
 
     internal static void NormalizeNode(LayoutNode node)
     {

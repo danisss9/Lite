@@ -25,7 +25,7 @@ namespace AngleSharp.Dom
         /// the given namespace, with the given document type as its doctype (DOM §4.5).
         /// </summary>
         [DomName("createDocument")]
-        IDocument CreateDocument(String? namespaceUri, String qualifiedName, IDocumentType? doctype);
+        IDocument CreateDocument(String? namespaceUri, String? qualifiedName, IDocumentType? doctype);
 
         /// <summary>
         /// Creates and returns a DocumentType.

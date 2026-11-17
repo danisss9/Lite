@@ -1168,6 +1168,9 @@ namespace AngleSharp.Dom
         public IText CreateTextNode(String data) => new TextNode(this, data);
 
         /// <inheritdoc />
+        public ICDataSection CreateCDataSection(String data) => new CDataSection(this, data);
+
+        /// <inheritdoc />
         public IElement? GetElementById(String elementId) => ChildNodes.GetElementById(elementId);
 
         /// <inheritdoc />

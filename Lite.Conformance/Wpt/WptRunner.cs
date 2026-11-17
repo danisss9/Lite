@@ -61,7 +61,15 @@ internal static class WptRunner
                     CatalogCase(path)?.Source ?? path.Split(['?', '#'])[0]);
                 if (evidence.HarnessStatus == 0 && review is not null && HtmlApplicability.HasPassingAssertions(evidence, review, null)) accepted++;
                 Console.WriteLine($"  {result.Cat.ToString().ToUpperInvariant(),-7} {path} ({result.Detail}, {result.DurationMs} ms)");
-                if (outcomes.Count % 100 == 0) ExecutionEvidence.Write(destination, identity, started, outcomes, verifyIdentity: false);
+                if (outcomes.Count % 100 == 0)
+                {
+                    // A checkpoint failure must not kill the shard: the runs whose parents died
+                    // silently mid-queue all stopped at a 100-outcome checkpoint boundary, so
+                    // the write path itself was killing the run. Log and continue — the final
+                    // (verifying) write is the evidence that matters.
+                    try { ExecutionEvidence.Write(destination, identity, started, outcomes, verifyIdentity: false); }
+                    catch (Exception checkpointError) { Console.Error.WriteLine($"[checkpoint] write failed: {checkpointError}"); }
+                }
             }
         }
         catch (Exception)
@@ -285,7 +293,15 @@ internal static class WptRunner
             // Checkpoints exist for crash recovery only: they skip the identity re-capture
             // (a hash over every tracked repository file) and are recorded not-completed, so
             // evidence reads keep rejecting them; the final write below does the real check.
-            if (outcomes.Count % 100 == 0) ExecutionEvidence.Write(destination, identity, started, outcomes, verifyIdentity: false);
+            if (outcomes.Count % 100 == 0)
+                {
+                    // A checkpoint failure must not kill the shard: the runs whose parents died
+                    // silently mid-queue all stopped at a 100-outcome checkpoint boundary, so
+                    // the write path itself was killing the run. Log and continue — the final
+                    // (verifying) write is the evidence that matters.
+                    try { ExecutionEvidence.Write(destination, identity, started, outcomes, verifyIdentity: false); }
+                    catch (Exception checkpointError) { Console.Error.WriteLine($"[checkpoint] write failed: {checkpointError}"); }
+                }
             }
         }
         finally { ShardCheckpoint.Deactivate(); }
@@ -719,14 +735,21 @@ internal static class WptRunner
                 }
             }
 
+            var harnessMessage = rootEl.TryGetProperty("message", out var hm) ? hm.GetString() : null;
             if (harnessStatus != 0)
             {
-                var harnessMessage = rootEl.TryGetProperty("message", out var hm) ? hm.GetString() : null;
                 failures.Insert(0, $"harness status {harnessStatus}{(string.IsNullOrEmpty(harnessMessage) ? "" : $" — {harnessMessage}")}");
             }
 
             if (total == 0)
-                return new RunResult(Cat.Empty, "0 subtests reported", 0, 0);
+            {
+                // An empty page with a failed harness carries the reason a test author needs:
+                // the runner's Empty classification hid the load error behind "0 subtests
+                // reported", which cost a whole diagnosis cycle on the dom/ranges empties.
+                return new RunResult(Cat.Empty, harnessStatus != 0
+                    ? $"0 subtests reported; harness status {harnessStatus}{(string.IsNullOrEmpty(harnessMessage) ? "" : $" — {harnessMessage}")}"
+                    : "0 subtests reported", 0, 0);
+            }
 
             var detail = failures.Count == 0
                 ? $"{total} subtests"

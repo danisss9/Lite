@@ -49,17 +49,25 @@ internal static class WebIdlInterfaces
         [typeof(JsResizeObserver)] = "ResizeObserver",
         [typeof(JsIntersectionObserver)] = "IntersectionObserver",
         [typeof(JsIntersectionObserverEntry)] = "IntersectionObserverEntry",
+        [typeof(JsRange)] = "Range",
+        [typeof(JsSelection)] = "Selection",
     };
 
     public static string? For(object value)
     {
         if (value is JsElement element) return ForNode(element.Node);
+        // A document facade that is NOT the page's own document (new Document(),
+        // implementation.createDocument/createHTMLDocument) presents as Document — the living
+        // DOM's interface for every non-browsing-context document. The page document keeps
+        // HTMLDocument, whose prototype chains to Document.prototype either way.
+        if (value is JsDocument document && !document.IsPageDocument) return "Document";
         return TypeMap.TryGetValue(value.GetType(), out var name) ? name : null;
     }
 
     internal static string ForNode(LayoutNode node) => node.TagName switch
     {
         "#text" => "Text",
+        "#cdata" => "Text", // CDATASection extends Text in the DOM interface hierarchy
         "#comment" => "Comment",
         "#document-type" => "DocumentType",
         "#document-fragment" => "DocumentFragment",

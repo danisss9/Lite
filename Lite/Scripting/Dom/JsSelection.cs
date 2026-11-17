@@ -127,7 +127,7 @@ public class JsSelection
         if (isCollapsed)
         {
             var r = new JsRange(_engine);
-            r.setStart(Wrap(FocusNodeField)!, FocusOffsetField);
+            r.SetStartDirect(FocusNodeField!, FocusOffsetField);
             r.collapse(true);
             return r;
         }
