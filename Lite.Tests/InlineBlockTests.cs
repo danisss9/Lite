@@ -51,6 +51,32 @@ public static class InlineBlockTests
     }
 
     [Test]
+    public static void WrappedBorderedSpan_TakesItsLeftBorderToTheNewLine()
+    {
+        // inlines-005: bordered <span>X</span> items wrap in a grid; the item opening line 2
+        // starts its border box at the line's start, its left border with it (it was left at
+        // the end of line 1, so the box hung 3px outside the content edge).
+        var spans = string.Concat(Enumerable.Repeat("<span>X</span> ", 40));
+        var page = Parser.ParseChildPage("<!DOCTYPE html><style>body{margin:8px} p > span { padding: 0.3em 0; line-height: 3; }" +
+            " span span { border: 3px solid blue; }</style><p> <span> " + spans + "</span></p>", isSrcdoc: true, "http://test/", 450, 600);
+        BoxEngine.Layout(page.Root, 450, 600);
+        var items = new List<SkiaSharp.SKRect>();
+        void Walk(LayoutNode n, int depth)
+        {
+            if (n.TagName == "SPAN" && depth > 0 && n.Children.All(c => c.TagName.StartsWith('#'))) items.Add(n.Box.BorderBox);
+            foreach (var c in n.Children) Walk(c, depth + (n.TagName == "SPAN" ? 1 : 0));
+        }
+        Walk(page.Root, 0);
+        var rows = items.GroupBy(r => (int)MathF.Round(r.Top)).OrderBy(g => g.Key).ToList();
+        True(rows.Count >= 2, $"the items must wrap, got {rows.Count} line(s)");
+        foreach (var row in rows)
+        {
+            var first = row.Min(r => r.Left);
+            True(MathF.Abs(first - 8f) < 0.5f, $"every line must start its first border box at x=8, got {first} at y={row.Key}");
+        }
+    }
+
+    [Test]
     public static void InsideListMarkerIndentsTheFirstLineOnly()
     {
         // §12.5.1 with list-style-position: inside — the marker box is the first inline box,

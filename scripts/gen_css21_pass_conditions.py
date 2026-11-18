@@ -502,6 +502,37 @@ def numbers_check(clause: str) -> dict | None:
 
 
 
+SCROLLBOX_TEMPLATES = [
+    # block-formatting-contexts-013/014: a float and a scroll box beside it, compared whole.
+    (re.compile(rf'^the\s+{COLOR}\s+and\s+{COLOR}\s+boxes\s+\(including\s+any\s+scrolling\s+mechanism\)(?:\s+below)?'
+                r'\s+are\s+the\s+same\s+size$'),
+     lambda m: {'kind': 'scrollbox-same-size', 'colorA': m.group(1), 'colorB': m.group(2)}),
+    # overflow-scrollbar-001: the bars sit between the border and the padding.
+    (re.compile(rf'^the\s+scrollbars\s+are\s+contained\s+inside\s+the\s+{COLOR}\s+box\s+and\s+each\s+scrollbar\s+has\s+white'
+                rf'\s+space\s+between\s+it\s+and\s+the\s+{COLOR}\s+box\s+within$'),
+     lambda m: {'kind': 'scrollbar-gap', 'colorA': m.group(1), 'colorB': m.group(2)}),
+    # stack-overflow-001: two stacks that must paint alike, labels aside.
+    (re.compile(r'^there\s+should\s+be\s+two\s+white-on-green\s+squares\s+below,\s+labelled\s+a\s+and\s+b,\s+with\s+black'
+                r'\s+borders\.\s+scrollbars\s+may\s+be\s+visible\s+if\s+they\s+are\s+visible\s+identically\s+in\s+both\s+cases$'),
+     lambda m: {'kind': 'twin-squares'}),
+    # overflow-visible-viewport-001: the page scrolls and the script wrote 'visible'.
+    (re.compile(r"^the\s+page\s+has\s+an\s+active\s+scrolling\s+mechanism\s+available\s+to\s+scroll\s+the\s+page\s+and\s+the"
+                r"\s+word\s+'(\w+)'\s+is\s+inside\s+the\s+box\s+below$"),
+     lambda m: {'kind': 'page-scroll-text', 'needle': m.group(1)}),
+]
+SCROLLBOX_KINDS = ('scrollbox-same-size', 'scrollbar-gap', 'twin-squares', 'page-scroll-text')
+
+
+def scrollbox_check(clause: str) -> dict | None:
+    """Scroll-box statements read from the render at rest: the stated scrolling mechanism is
+    the engine's own chrome, so no interaction is performed (VisualChecks reads the bars,
+    gutters and boxes directly)."""
+    for pattern, build in SCROLLBOX_TEMPLATES:
+        if m := pattern.match(clause):
+            return build(m)
+    return None
+
+
 def scroll_check(clause: str) -> dict | None:
     """Batch 3: the scroll-protocol families. The stated interaction — scrolling an overflow
     box or the page — is performed mechanically by the harness's two-render protocol, so the
@@ -713,6 +744,23 @@ def resize_check(sentence: str) -> dict | None:
     if m := re.fullmatch(r'change your window size\. however the lines wrap, the blue rectanglues should always have '
                          r'their (tops|middles) on the same alignment as other blue rectangles on the line', text):
         return {'kind': 'line-align', 'color': 'blue', 'variant': 'top' if m.group(1) == 'tops' else 'middle', **resize}
+    # inlines-004/005/006: the inline items keep one column grid however the lines wrap.
+    if re.fullmatch(r'resize your window slowly from a wide size to a narrow size\. (?:each "x+" should be wrapped by a '
+                    r'blue border\. )?the (?:xs|boxed xs|x+-filled boxes) below should always be perfectly aligned in a grid',
+                    text):
+        return {'kind': 'grid-aligned', **resize}
+    # background-root-012/013: a no-repeat 50% 50% tile stays centred on its positioning box.
+    if text == ('in the middle of the bright blue rectangle, there should be a purple tile. resizing the window '
+                'should make its position relative to this outer box stay the same'):
+        return {'kind': 'tile-centered', 'color': 'purple', 'colorB': 'blue', **resize}
+    if text == ('in the middle of this green box with the bright green border, there should be a purple tile. '
+                'resizing the window should make its position relative to this inner box stay the same'):
+        return {'kind': 'tile-centered', 'color': 'purple', 'colorB': 'lime', **resize}
+    # outline-020: every outlined span keeps its whole outline around it at each width.
+    if m := re.fullmatch(r'a thick (orange) border should be drawn around each of the (\d+) small (blue) rectangles\. each '
+                         r'of the blue rectangles must not protrude out of each of their respective orange borders\. this '
+                         r'should be still true even after changing the window size', text):
+        return {'kind': 'outline-around', 'colorA': m.group(1), 'count': int(m.group(2)), 'colorB': m.group(3), **resize}
     return None
 
 
@@ -780,6 +828,8 @@ def visual_check(sentence: str | None) -> dict | None:
     # the general strip below removes.
     if check := scroll_check(clause.rstrip('. ').rstrip('.!')):
         return check
+    if check := scrollbox_check(clause.rstrip('. ').rstrip('.!')):
+        return check
     # Trailing parentheticals are meta-commentary ("(Note the marker bullet …)", "(so there
     # should be 7 blue lines on this page)"), not part of the stated condition — except the
     # ones that state a condition themselves ("(followed by a bullet on the right)").
@@ -826,6 +876,11 @@ def visual_check(sentence: str | None) -> dict | None:
         if m.group(1):  # "does not have a line under it"
             return {'kind': 'text-decoration', 'under': False}
         return {'kind': 'text-decoration', 'over': True, 'under': True, 'through': True}
+    if re.match(r'^the\s+words\s+["\']filler\s+text["\']\s+below\s+does\s+not,?\s+blink,\s+has\s+no\s+line\s+over\s+it,'
+                r'\s+has\s+no\s+line\s+under\s+it\s+and\s+has\s+no\s+line\s+through\s+it$', clause):
+        # text-decoration-065: §16.3.1 lets a UA "simply not blink the text", and Lite never
+        # blinks — what remains to read is that none of the three lines is painted.
+        return {'kind': 'text-decoration', 'over': False, 'under': False, 'through': False}
     if ALIGN_RIGHT.match(clause):
         return {'kind': 'align-right'}
     if m := CENTERED_RIGHT.match(clause):
@@ -1236,8 +1291,12 @@ def main() -> None:
                 pass
             # Whether the page shows a scrolling mechanism ('no-scrollbar') is the engine's own
             # viewport fact, read like the 'scrollbars' chrome — no interaction is needed.
+            # "…does not blink, has no line over it, …": the blink half is a no-op Lite is
+            # permitted (§16.3.1: UAs may simply not blink), so the lines decide.
             elif check.get('kind', '').startswith(('scroll-', 'painted-', 'cursor', 'scrollbars', 'no-scrollbar')) \
-                    or 'interaction' in check or 'resize' in check or 'userstyle' in flags:
+                    or 'interaction' in check or 'resize' in check or 'userstyle' in flags \
+                    or check.get('kind') in SCROLLBOX_KINDS \
+                    or check == {'kind': 'text-decoration', 'over': False, 'under': False, 'through': False}:
                 entry['check'] = check
         entries.append(entry)
 

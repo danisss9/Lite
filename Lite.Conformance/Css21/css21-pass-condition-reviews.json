@@ -1977,18 +1977,6 @@
    "note": "the stated condition (\"Test passes if there is space between the blue and orange lines and there is a marker bullet on the left-hand side of the orange line. (Note the marker bullet d\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css/CSS2/normal-flow/block-formatting-contexts-013.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the blue and orange boxes (including any scrolling mechanism) are the same size.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/normal-flow/block-formatting-contexts-014.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the blue and orange boxes (including any scrolling mechanism) are the same size.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css/CSS2/normal-flow/block-in-inline-vertical-align-001.html",
    "condition": "manual",
    "manualPending": true,
@@ -3501,12 +3489,6 @@
    "note": "the stated condition (\"Test passes if there is a short black bar and no red . To the left of the bar, there can be a list marker but it is not required.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css/CSS2/ui/overflow-visible-viewport-001.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the page has an active scrolling mechanism available to scroll the page and the word 'visible' is inside the box below.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css/CSS2/values/numbers-units-002.xht",
    "condition": "manual",
    "manualPending": true,
@@ -3895,18 +3877,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"You should see a longer arabic word to the left, and a shorter one to the right:\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/block-formatting-contexts-013.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the blue and orange boxes (including any scrolling mechanism) below are the same size.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/block-formatting-contexts-014.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the blue and orange boxes (including any scrolling mechanism) below are the same size.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/block-in-inline-004.htm",
@@ -5851,12 +5821,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if there is a black box below and there is no red visible on the page. To the left of the box can be list marker but is it not required.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/overflow-visible-viewport-001.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the page has an active scrolling mechanism available to scroll the page and the word 'visible' is inside the box below.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/padding-applies-to-008.htm",

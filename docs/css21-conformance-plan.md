@@ -345,21 +345,57 @@ The phases, in order:
       - Three cases newly fail honestly: `background-bg-pos-207` (both suites; Lite's page
         scrollbar overlays the viewport edge) and `font-size-116` (real red).
       - Units 624/624. Curated gates 51/1 and 86/2.
-      - The 18 November full baseline is not rerun yet.
+  - **Progress, 18 November (third batch): the rest of the scroll bucket, blink and resize.**
+    - **Blink:** `text-decoration-065` (both suites). §16.3.1 lets a UA "simply not blink",
+      and Lite never blinks, so the sentence reads as "no line over, under or through". The
+      `text-decoration` judge gains that all-absent mode.
+    - **Scroll sentences read at rest:**
+      - `scrollbox-same-size`: `block-formatting-contexts-013`/`014`, a float beside a scroll
+        box, compared whole with the bars;
+      - `scrollbar-gap`: `overflow-scrollbar-001`, bars inside the border with white space
+        before the content;
+      - `twin-squares`: `stack-overflow-001`;
+      - `page-scroll-text`: `overflow-visible-viewport-001`.
+    - **Resize:**
+      - `grid-aligned`: `inlines-004`–`006`;
+      - `tile-centered`: `background-root-012`/`013`, which fail honestly because the
+        propagated body background image never paints (the parked background-root finding);
+      - `outline-around`: `outline-020`, which fails honestly because the second line of
+        outlined spans sits about half a line-height too high, so the rings merge.
+    - **Engine: clipping boxes paint their own borders.** The padding-box clip of
+      `overflow: hidden/scroll/auto` was applied before the box's own decorations, so no
+      clipping block ever showed its border. Decorations now paint before the overflow
+      clip, and after `clip: rect()`, which does clip the element's own border (§11.1.2).
+    - **Engine: a wrapped inline box takes its opening edge with it.** When an unbreakable
+      item (a bordered `<span>X</span>`) moved to the next line, its left border stayed at
+      the end of the previous line. The box then hung outside the new line's start. Items
+      with an internal break opportunity keep the old path, where the first words stay
+      beside the edge (`c5504-imrgn-l-001`). The cut-back path now also trims the
+      `placedLine` list that runs parallel to `placed`.
+    - **Verification (all three 18 November batches).**
+      - **Full screen baseline, with WPT served by upstream `wpt serve`:** official
+        7,521 → 7,571 and WPT 6,997 → 7,048, with 0 losses. Manual-pending fell from 559/568
+        to 509/559, and WPT unsupported from 138 to 98.
+      - Units 626/626. Curated gates 51/1 and 86/2.
+      - **Obligations:** `css21.9.4.1` reaches implemented, for 29/187.
     - **Next:**
-      - animation/blink (4);
-      - the rest of the scroll sentences:
-        - `c5502`/`c5505` need horizontal page scrolling and a horizontal page bar (engine);
-        - `c5504` asks to scroll to negative x, which no LTR viewport can reach (review);
-        - `block-formatting-contexts-013`/`014`, `overflow-scrollbar-001`,
-          `overflow-visible-viewport-001`, `stack-overflow-001`, `background-bg-pos-205`,
-          `position-004` and `abspos-zero-width-001` need templates;
-      - the viewport's own bar gutter (`background-bg-pos-207`), for Phase 6;
-      - vertical scrolling for `max-height`-clamped `auto` boxes, which are not tracked yet;
-      - `cursor-applies-to-010`;
-      - the other sentences of the resize bucket: `background-root-012`–`014`, `inlines-003`–`006`,
-        `outline-020`, and `first-line-selector-014`/`015`, which say "may still be true after
-        changing the window size".
+      - **Scroll:**
+        - `c5502`/`c5505` need horizontal page scrolling and a horizontal page bar
+          (engine, Phase 6);
+        - `c5504-mrgn-l-002` asks to scroll to negative x, which no LTR viewport can reach
+          (review);
+        - `background-bg-pos-205`, `position-004` and `abspos-zero-width-001` need templates;
+        - the viewport's own bar gutter (`background-bg-pos-207`), for Phase 6;
+        - vertical scrolling for `max-height`-clamped `auto` boxes, which are not tracked yet.
+      - **Deferred:**
+        - `floats-137` (a script toggles the class every 500ms, and only the word "Control"
+          may change between timed renders): Phase 5;
+        - `background-animated-001` (animated GIF frames, which CSS 2.1 does not define):
+          the exclusion review;
+        - `cursor-applies-to-010`: a cursor check combined with a marker check has no route
+          yet.
+      - **Resize, remaining:** `inlines-003`, `background-root-014` and
+        `first-line-selector-014`/`015`.
 - **Phase 5, judges.**
   - An engine-fact side channel: per-edge §17.6.2.1 winner widths for border-conflict-style,
     and the text-align declaring node per line.

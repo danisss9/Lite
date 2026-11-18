@@ -80,6 +80,24 @@ public static class ScrollGutterTests
     }
 
     [Test]
+    public static void ClippingBoxes_PaintTheirOwnBorders()
+    {
+        // overflow-scrollbar-001: a clipping box's border lies outside the padding box it clips
+        // its content to; the box's own border must still paint, bars or not.
+        foreach (var overflow in new[] { "visible", "hidden", "scroll", "auto" })
+        {
+            var root = Layout($"#s{{border:5px solid blue;overflow:{overflow};width:100px;height:50px;padding:10px}}",
+                "<div id=\"s\">x</div>");
+            using var bitmap = Drawer.DrawToBitmap(400, 300, root, new Viewport { ViewportHeight = 300 });
+            var bb = FindId(root, "s")!.Box.BorderBox;
+            var left = bitmap.GetPixel((int)bb.Left + 2, (int)((bb.Top + bb.Bottom) / 2));
+            var right = bitmap.GetPixel((int)bb.Right - 2, (int)((bb.Top + bb.Bottom) / 2));
+            True(left == SkiaSharp.SKColors.Blue && right == SkiaSharp.SKColors.Blue,
+                $"overflow:{overflow} must paint its blue border, got {left} / {right}");
+        }
+    }
+
+    [Test]
     public static void ViewportOverflow_ComesFromTheRootThenTheBody()
     {
         // overflow-root-001 / overflow-html-body-001: the root's value applies to the

@@ -16182,9 +16182,12 @@
    "condition": "manual",
    "sentence": "Test passes if the blue and orange boxes (including any scrolling mechanism) are the same size.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the blue and orange boxes (including any scrolling mechanism) are the same size.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbox-same-size",
+    "colorA": "blue",
+    "colorB": "orange"
+   }
   },
   {
    "path": "css/CSS2/normal-flow/block-formatting-contexts-014.xht",
@@ -16192,9 +16195,12 @@
    "condition": "manual",
    "sentence": "Test passes if the blue and orange boxes (including any scrolling mechanism) are the same size.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the blue and orange boxes (including any scrolling mechanism) are the same size.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbox-same-size",
+    "colorA": "blue",
+    "colorB": "orange"
+   }
   },
   {
    "path": "css/CSS2/normal-flow/block-in-inline-insert-019.html",
@@ -16670,9 +16676,16 @@
    "condition": "manual",
    "sentence": "Resize your window slowly from a wide size to a narrow size. The Xs below should always be perfectly aligned in a grid.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "grid-aligned",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/normal-flow/inlines-005.xht",
@@ -16680,9 +16693,16 @@
    "condition": "manual",
    "sentence": "Resize your window slowly from a wide size to a narrow size. Each \"X\" should be wrapped by a blue border. The boxed Xs below should always be perfectly aligned in a grid.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "grid-aligned",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/normal-flow/inlines-006.xht",
@@ -16690,9 +16710,16 @@
    "condition": "manual",
    "sentence": "Resize your window slowly from a wide size to a narrow size. Each \"XXXXXXXXXXXXXXX\" should be wrapped by a blue border. The XXXXXXXXXXXXXXX-filled boxes below should always be perfectly aligned in a grid.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "grid-aligned",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/normal-flow/inlines-007.xht",
@@ -28362,12 +28389,16 @@
   {
    "path": "css/CSS2/text/text-decoration-065.xht",
    "suite": "css21-wpt",
-   "condition": "manual",
+   "condition": "visual",
    "sentence": "Test passes if the words \"Filler Text\" below does not blink, has no line over it, has no line under it and has no line through it.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "animated/blink rendering — a UA-permitted animation the suite flags \"may animated\"; decided by observing the animation (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-decoration",
+    "over": false,
+    "under": false,
+    "through": false
+   }
   },
   {
    "path": "css/CSS2/text/text-decoration-066.xht",
@@ -29833,9 +29864,19 @@
    "condition": "manual",
    "sentence": "A thick orange border should be drawn around each of the 6 small blue rectangles. Each of the blue rectangles must not protrude out of each of their respective orange borders. This should be still true even after changing the window size.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "outline-around",
+    "colorA": "orange",
+    "count": 6,
+    "colorB": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/ui/outline-applies-to-001.xht",
@@ -31291,9 +31332,12 @@
    "condition": "manual",
    "sentence": "Test passes if the scrollbars are contained inside the blue box and each scrollbar has white space between it and the black box within.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbar-gap",
+    "colorA": "blue",
+    "colorB": "black"
+   }
   },
   {
    "path": "css/CSS2/ui/overflow-visible-viewport-001.xht",
@@ -31301,9 +31345,11 @@
    "condition": "manual",
    "sentence": "Test passes if the page has an active scrolling mechanism available to scroll the page and the word 'visible' is inside the box below.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the page has an active scrolling mechanism available to scroll the page and the word 'visible' is inside the box below.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "page-scroll-text",
+    "needle": "visible"
+   }
   },
   {
    "path": "css/CSS2/ui/system-colors-001.xht",
@@ -32175,9 +32221,10 @@
    "condition": "manual",
    "sentence": "There should be two white-on-green squares below, labelled A and B, with black borders. Scrollbars may be visible if they are visible identically in both cases.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "twin-squares"
+   }
   },
   {
    "path": "css/CSS2/zindex/z-index-abspos-006.xht",
@@ -43423,12 +43470,21 @@
   {
    "path": "css21-official/html4/background-root-012.htm",
    "suite": "css21-official",
-   "condition": "manual",
+   "condition": "visual",
    "sentence": "In the middle of the bright blue rectangle, there should be a purple tile. Resizing the window should make its position relative to this outer box stay the same.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "tile-centered",
+    "color": "purple",
+    "colorB": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/background-root-013.htm",
@@ -43436,9 +43492,18 @@
    "condition": "manual",
    "sentence": "In the middle of this green box with the bright green border, there should be a purple tile. Resizing the window should make its position relative to this inner box stay the same.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "tile-centered",
+    "color": "purple",
+    "colorB": "lime",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/background-root-014.htm",
@@ -44916,9 +44981,12 @@
    "condition": "manual",
    "sentence": "Test passes if the blue and orange boxes (including any scrolling mechanism) below are the same size.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the blue and orange boxes (including any scrolling mechanism) below are the same size.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbox-same-size",
+    "colorA": "blue",
+    "colorB": "orange"
+   }
   },
   {
    "path": "css21-official/html4/block-formatting-contexts-014.htm",
@@ -44926,9 +44994,12 @@
    "condition": "manual",
    "sentence": "Test passes if the blue and orange boxes (including any scrolling mechanism) below are the same size.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the blue and orange boxes (including any scrolling mechanism) below are the same size.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbox-same-size",
+    "colorA": "blue",
+    "colorB": "orange"
+   }
   },
   {
    "path": "css21-official/html4/block-formatting-contexts-015.htm",
@@ -90435,9 +90506,16 @@
    "condition": "manual",
    "sentence": "Resize your window slowly from a wide size to a narrow size. The Xs below should always be perfectly aligned in a grid.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "grid-aligned",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/inlines-005.htm",
@@ -90445,9 +90523,16 @@
    "condition": "manual",
    "sentence": "Resize your window slowly from a wide size to a narrow size. The boxed Xs below should always be perfectly aligned in a grid.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "grid-aligned",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/inlines-006.htm",
@@ -90455,9 +90540,16 @@
    "condition": "manual",
    "sentence": "Resize your window slowly from a wide size to a narrow size. The XXXXXXXXXXXXXXX-filled boxes below should always be perfectly aligned in a grid.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "grid-aligned",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/inlines-007.htm",
@@ -102605,9 +102697,19 @@
    "condition": "manual",
    "sentence": "A thick orange border should be drawn around each of the 6 small blue rectangles. Each of the blue rectangles must not protrude out of each of their respective orange borders. This should be still true even after changing the window size.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "outline-around",
+    "colorA": "orange",
+    "count": 6,
+    "colorB": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/outline-applies-to-001.htm",
@@ -105664,9 +105766,12 @@
    "condition": "manual",
    "sentence": "Test passes if the scrollbars are contained inside the blue box and each scrollbar has white space between it and the black box within.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbar-gap",
+    "colorA": "blue",
+    "colorB": "black"
+   }
   },
   {
    "path": "css21-official/html4/overflow-visible-viewport-001.htm",
@@ -105674,9 +105779,11 @@
    "condition": "manual",
    "sentence": "Test passes if the page has an active scrolling mechanism available to scroll the page and the word 'visible' is inside the box below.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the page has an active scrolling mechanism available to scroll the page and the word 'visible' is inside the box below.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "page-scroll-text",
+    "needle": "visible"
+   }
   },
   {
    "path": "css21-official/html4/padding-001.htm",
@@ -111844,9 +111951,10 @@
    "condition": "manual",
    "sentence": "There should be two white-on-green squares below, labelled A and B, with black borders. Scrollbars may be visible if they are visible identically in both cases.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "twin-squares"
+   }
   },
   {
    "path": "css21-official/html4/strings-000.htm",
@@ -116497,12 +116605,16 @@
   {
    "path": "css21-official/html4/text-decoration-065.htm",
    "suite": "css21-official",
-   "condition": "manual",
+   "condition": "visual",
    "sentence": "Test passes if the words \"Filler Text\" below does not, blink, has no line over it, has no line under it and has no line through it.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "animated/blink rendering — a UA-permitted animation the suite flags \"may animated\"; decided by observing the animation (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-decoration",
+    "over": false,
+    "under": false,
+    "through": false
+   }
   },
   {
    "path": "css21-official/html4/text-decoration-066.htm",

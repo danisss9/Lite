@@ -408,6 +408,30 @@ internal static class Drawer
             canvas.Save();
         }
 
+        // CSS `clip: rect(...)` — clips an absolutely-positioned element to a rectangle
+        // relative to its border box (CSS 2.1 §11.1.2), the element's own border included, so
+        // it applies before the box's decorations; 'overflow' clips only what is inside.
+        var cssClipRect = node.GetClipRect();
+        bool cssClipped = cssClipRect is not null;
+        if (cssClipped)
+        {
+            canvas.Save();
+            canvas.ClipRect(cssClipRect!.Value);
+        }
+
+        // §11.2: an invisible box paints nothing of its own, but still scrolls/clips its
+        // descendants (which may be visibility:visible). Keep the translate, drop the paint.
+        var invisible = node.IsInvisible();
+        // §11.1.1: 'overflow' clips the box's CONTENT to its padding box; the box's own
+        // background, border and outline sit outside that clip. They used to paint inside
+        // it, so a clipping box never showed its border (overflow-scrollbar-001's blue border).
+        var predecorated = clip && !invisible && PaintsAsBlock(node);
+        if (predecorated)
+        {
+            PaintBlockDecorations(canvas, node);
+            _predecorated.Add(node);
+        }
+
         if (clip)
         {
             if (clipRx > 0 || clipRy > 0)
@@ -421,26 +445,13 @@ internal static class Drawer
             }
         }
 
-        // CSS `clip: rect(...)` — clips an absolutely-positioned element to a rectangle
-        // relative to its border box (CSS 2.1 §11.1.2).
-        var cssClipRect = node.GetClipRect();
-        bool cssClipped = cssClipRect is not null;
-        if (cssClipped)
-        {
-            canvas.Save();
-            canvas.ClipRect(cssClipRect!.Value);
-        }
-
         // Apply per-element scroll offset
         var scrollState = node.ScrollState;
-        // §11.2: an invisible box paints nothing of its own, but still scrolls/clips its
-        // descendants (which may be visibility:visible). Keep the translate, drop the paint.
-        var invisible = node.IsInvisible();
         if (scrollState != null && (scrollState.NeedsScrollbar || scrollState.NeedsHorizontalScrollbar))
         {
             // Draw background, borders, and shadows at their fixed layout position
             // before the scroll translate so they don't scroll away with the content.
-            if (!invisible) PaintBlockDecorations(canvas, node);
+            if (!invisible && !predecorated) PaintBlockDecorations(canvas, node);
             // The content scrolls within the scrollport: the padding box less the bars'
             // gutters (§11.1.1), so it never paints under its own scrollbars.
             canvas.Save();
@@ -473,11 +484,26 @@ internal static class Drawer
             PaintNodeContent(canvas, node, viewportWidth);
         }
 
+        if (predecorated) _predecorated.Remove(node);
         if (cssClipped) canvas.Restore();
         if (opacity < 1f || clip) canvas.Restore();
         if (filterPaint != null) { canvas.Restore(); filterPaint.Dispose(); }
         if (transform != null) canvas.Restore();
     }
+
+    /// <summary>Boxes whose own decorations PaintNodeInner painted before their overflow clip;
+    /// PaintBlock skips those decorations for them.</summary>
+    private static readonly HashSet<LayoutNode> _predecorated = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>Whether the box's content paint goes through <see cref="PaintBlock"/> (whose
+    /// decorations are <see cref="PaintBlockDecorations"/>): a block container that is not a
+    /// tag-dispatched replaced/form/embedded element, a table, a table-internal box or a
+    /// list item (those paint their own decorations).</summary>
+    private static bool PaintsAsBlock(LayoutNode node) =>
+        !node.TagName.StartsWith('#') && node.TagName is not ("HTML" or "BODY" or "A" or "IMG" or "OBJECT" or "INPUT" or "BUTTON"
+            or "TEXTAREA" or "SELECT" or "PROGRESS" or "METER" or "HR" or "IFRAME" or "VIDEO" or "AUDIO" or "SVG" or "CANVAS")
+        && !node.CollapsedByColumn && node.CollapsedColumnClip is not { Count: > 0 }
+        && node.GetDisplay() is DisplayType.Block or DisplayType.InlineBlock or DisplayType.Flex or DisplayType.InlineFlex;
 
     private static void PaintNodeContent(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
@@ -796,7 +822,7 @@ internal static class Drawer
         // row's box would draw an inner duplicate line (border-conflict-element-003/004/012).
         // Only the row's own decorations are suppressed: its children (the cells) still paint.
         var noDecorations = false;
-        if (node.ScrollState?.NeedsScrollbar != true && !IsEmptyCellHidden(node))
+        if (!_predecorated.Contains(node) && node.ScrollState?.NeedsScrollbar != true && !IsEmptyCellHidden(node))
         {
             var propagated = node == _propagatedBackgroundNode;
             if (node.GetDisplay() is DisplayType.TableRow or DisplayType.TableRowGroup

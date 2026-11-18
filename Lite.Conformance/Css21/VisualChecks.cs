@@ -155,7 +155,7 @@ internal static class VisualChecks
         // Scrollbars are UA chrome, not the content a sentence describes ("a green square"):
         // the content judges read the render with each 'overflow: scroll' gutter erased. The
         // scrollbar judges read the chrome itself.
-        if (check.Kind is not ("scrollbars" or "scrollbar-visible"))
+        if (check.Kind is not ("scrollbars" or "scrollbar-visible" or "scrollbar-gap"))
             bitmap = EraseScrollChrome(bitmap, root);
         if (InstructionBottom(root, sentence) is not { } top)
             return new(WptRunner.Cat.Unsupported, "Visual check: instruction paragraph not found in the layout tree", 0, 0);
@@ -235,6 +235,13 @@ internal static class VisualChecks
             "text-below-box" => TextBelowBox(check, root, top, path),
             "text-marker-match" => TextMarkerMatch(bitmap, root, top, path),
             "border-sides" => BorderSides(check, bitmap, top, path),
+            "scrollbox-same-size" => ScrollboxSameSize(check, bitmap, root, top),
+            "scrollbar-gap" => ScrollbarGap(check, bitmap, root, top),
+            "twin-squares" => TwinSquares(check, bitmap, root, top),
+            "page-scroll-text" => PageScrollText(check, bitmap, root),
+            "grid-aligned" => GridAligned(check, root, top),
+            "tile-centered" => TileCentered(check, bitmap, root),
+            "outline-around" => OutlineAround(check, bitmap, top),
             _ => ComponentCheck(check, bitmap, top, path),
         };
         // Same switch as the reftest survey's failure dumps: read the render, not the numbers.
@@ -954,6 +961,275 @@ internal static class VisualChecks
                 return Fail2(assertion, $"no painted run uses '{family}' (families: {below[0].Typeface})");
         }
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    // ------------------------------------------------------------------
+    // Scroll-box statements read at rest (no scroll protocol)
+    // ------------------------------------------------------------------
+
+    private static WptRunner.RunResult Passed(string assertion) =>
+        new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+
+    private static bool HasBackground(LayoutNode n, SKColor target) =>
+        n.GetBackgroundColor() is { Alpha: 255 } bg && ChannelDistance(bg, target) <= 48;
+
+    private static LayoutNode? ClippingAncestor(LayoutNode node)
+    {
+        for (var a = node.Parent; a is not null; a = a.Parent)
+            if (a.TagName is not ("HTML" or "BODY") && a.GetOverflow() != OverflowType.Visible) return a;
+        return null;
+    }
+
+    /// <summary>"The blue and orange boxes (including any scrolling mechanism) are the same
+    /// size" (block-formatting-contexts-013/014): the stated-A box and the scroll box holding
+    /// the stated-B content have the same border box, the scrolling mechanism inside it; both
+    /// show in the render (the A ink spans its box, B ink appears inside the scroll box).</summary>
+    private static WptRunner.RunResult ScrollboxSameSize(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top)
+    {
+        var assertion = Describe(check);
+        if (!Named.TryGetValue(check.ColorA ?? "", out var colorA) || !Named.TryGetValue(check.ColorB ?? "", out var colorB))
+            return new(WptRunner.Cat.Unsupported, "Visual check: stated colours are not named colours", 0, 0);
+        var a = FindFirst(root, n => n.Box.BorderBox.Top >= top && HasBackground(n, colorA));
+        var inner = FindFirst(root, n => n.Box.BorderBox.Top >= top && HasBackground(n, colorB));
+        var scroller = inner is null ? null : ClippingAncestor(inner);
+        if (a is null || scroller is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: the stated box or the scroll box is not in the layout tree", 0, 0);
+        SKRect boxA = a.Box.BorderBox, boxB = scroller.Box.BorderBox;
+        if (Math.Abs(boxA.Width - boxB.Width) > 1f || Math.Abs(boxA.Height - boxB.Height) > 1f)
+            return Fail2(assertion, $"the {check.ColorA} box is {boxA.Width:0.#}x{boxA.Height:0.#}, the scroll box {boxB.Width:0.#}x{boxB.Height:0.#}");
+        if (ColorBoundsOf(bitmap, colorA) is not { } inkA ||
+            Math.Abs(inkA.Width + 1 - boxA.Width) > 2f || Math.Abs(inkA.Height + 1 - boxA.Height) > 2f)
+            return Fail2(assertion, $"the {check.ColorA} box does not paint its laid-out size");
+        var visibleB = SKRectI.Intersect(SKRectI.Round(boxB), new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+        if (Coverage(bitmap, visibleB, c => ChannelDistance(c, colorB) <= 48) < 0.2)
+            return Fail2(assertion, $"no {check.ColorB} content shows inside the scroll box");
+        return Passed(assertion);
+    }
+
+    /// <summary>"The scrollbars are contained inside the blue box and each scrollbar has white
+    /// space between it and the black box within" (overflow-scrollbar-001): the scroll box's
+    /// stated-A border paints outside both bars, both bars paint, and a run of white background
+    /// separates each bar from the stated-B child.</summary>
+    private static WptRunner.RunResult ScrollbarGap(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top)
+    {
+        var assertion = Describe(check);
+        if (!Named.TryGetValue(check.ColorA ?? "", out var border) || !Named.TryGetValue(check.ColorB ?? "", out var innerColor))
+            return new(WptRunner.Cat.Unsupported, "Visual check: stated colours are not named colours", 0, 0);
+        var inner = FindFirst(root, n => n.Box.BorderBox.Top >= top && HasBackground(n, innerColor));
+        var box = inner is null ? null : ClippingAncestor(inner);
+        if (box is null || BoxEngine.ShownScrollbars(box) is not (true, true))
+            return new(WptRunner.Cat.Unsupported, "Visual check: no box with both scrollbars around the stated content", 0, 0);
+        var pb = box.Box.PaddingBox;
+        var bb = box.Box.BorderBox;
+        var gutter = BoxEngine.ScrollGutter;
+        var ib = inner!.Box.BorderBox;
+        int midY = (int)((ib.Top + ib.Bottom) / 2);
+        int midX = (int)((ib.Left + ib.Right) / 2);
+        SKColor At(float x, float y) => bitmap.GetPixel(Math.Clamp((int)x, 0, bitmap.Width - 1), Math.Clamp((int)y, 0, bitmap.Height - 1));
+        static bool White(SKColor c) => c.Red > 0xE0 && c.Green > 0xE0 && c.Blue > 0xE0 && ChannelSpread(c) < 8 && c.Red > 0xF8;
+        // Containment: the stated border paints beyond each bar.
+        if (ChannelDistance(At((pb.Right + bb.Right) / 2, midY), border) > 48 || ChannelDistance(At(midX, (pb.Bottom + bb.Bottom) / 2), border) > 48)
+            return Fail2(assertion, $"the {check.ColorA} border does not paint outside the scrollbars");
+        // The bars paint in their gutters (not the white page).
+        if (White(At(pb.Right - gutter / 2, midY)) || White(At(midX, pb.Bottom - gutter / 2)))
+            return Fail2(assertion, "a scrollbar does not paint");
+        // White space between each bar and the stated box.
+        int Gap(bool vertical)
+        {
+            int run = 0, best = 0;
+            var (from, to) = vertical
+                ? ((int)MathF.Ceiling(ib.Right) + 1, (int)(pb.Right - gutter) - 1)
+                : ((int)MathF.Ceiling(ib.Bottom) + 1, (int)(pb.Bottom - gutter) - 1);
+            for (var i = from; i <= to; i++)
+            {
+                run = White(vertical ? At(i, midY) : At(midX, i)) ? run + 1 : 0;
+                best = Math.Max(best, run);
+            }
+            return best;
+        }
+        int gapRight = Gap(vertical: true), gapBottom = Gap(vertical: false);
+        if (gapRight < 2 || gapBottom < 2)
+            return Fail2(assertion, $"the white space between the bars and the {check.ColorB} box is {gapRight}px / {gapBottom}px");
+        return Passed(assertion);
+    }
+
+    /// <summary>"There should be two white-on-green squares below, labelled A and B, with black
+    /// borders. Scrollbars may be visible if they are visible identically in both cases"
+    /// (stack-overflow-001): the first two bordered boxes below the instructions render
+    /// identically outside their labels, each mostly green with white label ink and a black
+    /// border.</summary>
+    private static WptRunner.RunResult TwinSquares(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top)
+    {
+        var assertion = Describe(check);
+        var boxes = new List<LayoutNode>();
+        void Walk(LayoutNode n)
+        {
+            if (boxes.Count == 2) return;
+            if (n.TagName is not ("HTML" or "BODY") && !n.TagName.StartsWith('#') && n.Box.BorderBox.Top >= top &&
+                n.Box.Border.Top > 0 && n.Box.BorderBox.Width > 10) { boxes.Add(n); return; }
+            foreach (var c in n.Children) Walk(c);
+        }
+        Walk(root);
+        if (boxes.Count < 2)
+            return new(WptRunner.Cat.Unsupported, "Visual check: two bordered boxes are not below the instructions", 0, 0);
+        var bounds = new SKRectI(0, 0, bitmap.Width, bitmap.Height);
+        var crops = boxes.Select(b => SKRectI.Intersect(SKRectI.Round(b.Box.BorderBox), bounds)).ToList();
+        if (crops[0].Width != crops[1].Width || crops[0].Height != crops[1].Height || crops[0].Width < 10)
+            return Fail2(assertion, $"the two squares differ in size ({crops[0]} vs {crops[1]})");
+        static bool White(SKColor c) => c.Red > 0xE0 && c.Green > 0xE0 && c.Blue > 0xE0;
+        static bool Green(SKColor c) => c.Green > 0x60 && c.Green > c.Red + 0x40 && c.Green > c.Blue + 0x40;
+        // The labels: white ink inside each square, excluded (with a margin) from the comparison.
+        var labels = new SKRectI[2];
+        for (var i = 0; i < 2; i++)
+        {
+            var inside = SKRectI.Intersect(SKRectI.Round(boxes[i].Box.PaddingBox), bounds);
+            int l = int.MaxValue, t = int.MaxValue, r = int.MinValue, btm = int.MinValue, n = 0;
+            for (var y = inside.Top; y < inside.Bottom; y++)
+                for (var x = inside.Left; x < inside.Right; x++)
+                    if (White(bitmap.GetPixel(x, y))) { n++; l = Math.Min(l, x); t = Math.Min(t, y); r = Math.Max(r, x); btm = Math.Max(btm, y); }
+            if (n < 10) return Fail2(assertion, $"square {i + 1} shows no white label");
+            if (Coverage(bitmap, inside, Green) < 0.5) return Fail2(assertion, $"square {i + 1} is not green");
+            labels[i] = new SKRectI(l - 2 - crops[i].Left, t - 2 - crops[i].Top, r + 3 - crops[i].Left, btm + 3 - crops[i].Top);
+            var edge = bitmap.GetPixel(crops[i].Left, crops[i].Top + crops[i].Height / 2);
+            if (edge.Red > 0x40 || edge.Green > 0x40 || edge.Blue > 0x40) return Fail2(assertion, $"square {i + 1} has no black border");
+        }
+        long differ = 0, total = 0;
+        for (var y = 0; y < crops[0].Height; y++)
+            for (var x = 0; x < crops[0].Width; x++)
+            {
+                if (labels[0].Contains(x, y) || labels[1].Contains(x, y)) continue;
+                total++;
+                if (ChannelDistance(bitmap.GetPixel(crops[0].Left + x, crops[0].Top + y), bitmap.GetPixel(crops[1].Left + x, crops[1].Top + y)) > PixelTolerance)
+                    differ++;
+            }
+        return total > 0 && differ <= total / 100
+            ? Passed(assertion)
+            : Fail2(assertion, $"the squares differ outside their labels ({differ} of {total} pixels)");
+    }
+
+    /// <summary>"The page has an active scrolling mechanism available to scroll the page and the
+    /// word 'visible' is inside the box below" (overflow-visible-viewport-001): the viewport
+    /// does not clip, the document overflows it, a page scrollbar thumb paints at the right
+    /// edge, and the named text lies inside its parent box.</summary>
+    private static WptRunner.RunResult PageScrollText(VisualCheck check, SKBitmap bitmap, LayoutNode root)
+    {
+        var assertion = Describe(check);
+        if (BoxEngine.ViewportOverflow(root) == OverflowType.Hidden)
+            return Fail2(assertion, "the viewport clips: the page offers no scrolling mechanism");
+        var extent = BoxEngine.ScrollableExtent(root);
+        var bottom = MathF.Max(root.Box.MarginBox.Bottom, extent?.Bottom ?? 0f);
+        var right = MathF.Max(root.Box.MarginBox.Right, extent?.Right ?? 0f);
+        if (bottom <= bitmap.Height + 0.5f && right <= bitmap.Width + 0.5f)
+            return Fail2(assertion, "the document fits the viewport: nothing to scroll");
+        long dark = 0;
+        for (var y = 0; y < bitmap.Height; y++)
+        {
+            var c = bitmap.GetPixel(bitmap.Width - 5, y);
+            if (c.Red < 0xD0 && c.Green < 0xD0 && c.Blue < 0xD0 && ChannelSpread(c) < 24) dark++;
+        }
+        if (dark < 20)
+            return Fail2(assertion, "no page scrollbar paints at the right edge");
+        if (check.Needle is not { } needle || FindTextBelow(root, needle) is not { } text)
+            return Fail2(assertion, $"the word '{check.Needle}' is not in the page");
+        var parent = text.Parent;
+        while (parent is not null && parent.TagName.StartsWith('#')) parent = parent.Parent;
+        if (parent is null || !parent.Box.BorderBox.Contains(text.Box.BorderBox))
+            return Fail2(assertion, $"the word '{needle}' is not inside its box");
+        return Passed(assertion);
+    }
+
+    // ------------------------------------------------------------------
+    // Resize-protocol statements (each runs at every RESIZE_WIDTHS width)
+    // ------------------------------------------------------------------
+
+    /// <summary>"The Xs / boxed Xs below should always be perfectly aligned in a grid"
+    /// (inlines-004/005/006): the stated items are the leaf spans below the instructions (an
+    /// inline holding only text). Grouped into lines by their top, every line's left edges
+    /// match the first line's, item for item, within a pixel; the wrap must give at least two
+    /// lines (one line is no grid).</summary>
+    private static WptRunner.RunResult GridAligned(VisualCheck check, LayoutNode root, int top)
+    {
+        var assertion = Describe(check);
+        var items = new List<SKRect>();
+        void Walk(LayoutNode n)
+        {
+            if (n.TagName == "SPAN" && n.Box.BorderBox.Top >= top && n.Box.BorderBox.Width > 0 &&
+                n.Children.All(c => c.TagName.StartsWith('#')))
+            {
+                if (n.InlineFragments is { Count: > 1 } fragments) items.AddRange(fragments.Select(f => f.Item1));
+                else items.Add(n.Box.BorderBox);
+                return;
+            }
+            foreach (var c in n.Children) Walk(c);
+        }
+        Walk(root);
+        if (items.Count < 4)
+            return new(WptRunner.Cat.Unsupported, "Visual check: fewer than four grid items below the instructions", 0, 0);
+        var rows = items.GroupBy(r => (int)MathF.Round(r.Top)).OrderBy(g => g.Key)
+            .Select(g => g.OrderBy(r => r.Left).ToList()).ToList();
+        if (rows.Count < 2)
+            return Fail2(assertion, "the items fill a single line: no grid to compare");
+        var first = rows[0];
+        for (var r = 1; r < rows.Count; r++)
+            for (var j = 0; j < rows[r].Count; j++)
+            {
+                if (j >= first.Count)
+                    return Fail2(assertion, $"line {r + 1} holds more items ({rows[r].Count}) than the first ({first.Count})");
+                if (MathF.Abs(rows[r][j].Left - first[j].Left) > 1f)
+                    return Fail2(assertion, $"item {j + 1} of line {r + 1} starts at x={rows[r][j].Left:0.#}, " +
+                                            $"the first line's at x={first[j].Left:0.#}");
+            }
+        return Passed($"{assertion} ({rows.Count} lines of {first.Count})");
+    }
+
+    /// <summary>"In the middle of the bright blue rectangle / this green box with the bright
+    /// green border, there should be a purple tile; resizing the window keeps it there"
+    /// (background-root-012/013): the stated tile colour's ink centres on the padding box of
+    /// the box whose border is the stated colour (its background positioning area).</summary>
+    private static WptRunner.RunResult TileCentered(VisualCheck check, SKBitmap bitmap, LayoutNode root)
+    {
+        var assertion = Describe(check);
+        if (!Named.TryGetValue(check.Color ?? "", out var tile) || !Named.TryGetValue(check.ColorB ?? "", out var borderColor))
+            return new(WptRunner.Cat.Unsupported, "Visual check: stated colours are not named colours", 0, 0);
+        var box = FindFirst(root, n => !n.TagName.StartsWith('#') && n.Box.Border.Top > 0 &&
+            ChannelDistance(n.GetBorderTopColor(), borderColor) <= 48);
+        if (box is null)
+            return new(WptRunner.Cat.Unsupported, $"Visual check: no box with a {check.ColorB} border", 0, 0);
+        if (ColorBoundsOf(bitmap, tile) is not { } ink || ink.Width < 8 || ink.Height < 8)
+            return Fail2(assertion, $"no {check.Color} tile paints");
+        var pb = box.Box.PaddingBox;
+        float cx = (ink.Left + ink.Right + 1) / 2f, cy = (ink.Top + ink.Bottom + 1) / 2f;
+        float bx = (pb.Left + pb.Right) / 2f, by = (pb.Top + pb.Bottom) / 2f;
+        // The visible box can extend past the viewport; centring is read against the layout box.
+        return MathF.Abs(cx - bx) <= 2f && MathF.Abs(cy - by) <= 2f
+            ? Passed(assertion)
+            : Fail2(assertion, $"the tile centres at ({cx:0.#},{cy:0.#}), the box at ({bx:0.#},{by:0.#})");
+    }
+
+    /// <summary>"A thick orange border should be drawn around each of the 6 small blue
+    /// rectangles. Each of the blue rectangles must not protrude out of each of their respective
+    /// orange borders" (outline-020): exactly the stated number of stated-A rings below the
+    /// instructions, each enclosing a stated-B rectangle, and every stated-B rectangle inside a
+    /// ring.</summary>
+    private static WptRunner.RunResult OutlineAround(VisualCheck check, SKBitmap bitmap, int top)
+    {
+        var assertion = Describe(check);
+        if (check.ColorA is not { } ringName || check.ColorB is not { } boxName || check.Count is not { } count)
+            return new(WptRunner.Cat.Unsupported, "Visual check: the outline check names no colours or count", 0, 0);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped)
+            return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var rings = components.Where(c => Matches(ringName, c.Color)).ToList();
+        var boxes = components.Where(c => Matches(boxName, c.Color)).ToList();
+        if (rings.Count != count)
+            return Fail2(assertion, $"{rings.Count} {ringName} rings paint, not {count}");
+        foreach (var ring in rings)
+            if (!boxes.Any(b => ring.Contains(b)))
+                return Fail2(assertion, $"a {ringName} ring at ({ring.Left},{ring.Top}) encloses no {boxName} rectangle");
+        foreach (var b in boxes)
+            if (!rings.Any(r => r.Contains(b)))
+                return Fail2(assertion, $"a {boxName} rectangle at ({b.Left},{b.Top})..({b.Right},{b.Bottom}) protrudes from its {ringName} ring");
+        return Passed(assertion);
     }
 
     private static WptRunner.RunResult Fail2(string assertion, string detail) =>
@@ -1912,6 +2188,13 @@ internal static class VisualChecks
         "same-dimension" => $"{(check.Count is { } n ? n.ToString() : "all")} shapes share {check.Dimension}",
         "line-style" => $"one {check.Dimension ?? ""} {(check.Color is null ? "" : check.Color + " ")}{check.Shape} line".Replace("  ", " "),
         "look-same" => "the two shapes render identically",
+        "grid-aligned" => "the items line up in a grid",
+        "tile-centered" => $"the {check.Color} tile is centred in the {check.ColorB}-bordered box",
+        "outline-around" => $"{check.Count} {check.ColorA} rings each enclose a {check.ColorB} rectangle",
+        "scrollbox-same-size" => $"the {check.ColorA} box and the {check.ColorB} scroll box (with its scrollbars) are the same size",
+        "scrollbar-gap" => $"the scrollbars sit inside the {check.ColorA} box with white space before the {check.ColorB} box",
+        "twin-squares" => "two identical white-on-green labelled squares with black borders",
+        "page-scroll-text" => $"the page can scroll and '{check.Needle}' is inside its box",
         "solid-line" => $"one {(check.Color is null ? "" : check.Color + " ")}solid line",
         "border-ring" => $"one box with a {(check.Color is null ? "" : check.Color + " ")}{check.Shape} border",
         "border-sample" => "the center box's border matches the stated style and the sample",
@@ -1926,7 +2209,8 @@ internal static class VisualChecks
             "active-both" => "active horizontal and vertical scrollbars",
             _ => "scrollbars",
         }}",
-        "text-decoration" => check.Under is false ? "the filler text has no line under it" : "the filler text has the stated lines",
+        "text-decoration" => check is { Over: false, Under: false, Through: false } ? "the filler text has no decoration line"
+            : check.Under is false ? "the filler text has no line under it" : "the filler text has the stated lines",
         "align-right" => $"the filler text is flush with the container's {(check.Side == "left" ? "left" : "right")} edge",
         "cursor" => check.Shape == "same" ? "the cursor is the same over both texts" : $"the cursor over the subject is {check.Shape}",
         "shape-relation" => $"the stated-color shapes: {check.Relation}",
@@ -3387,6 +3671,16 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         var through = Enumerable.Range(textTop, Math.Max(1, textBottom - textTop))
             .Select(RowInked).Max() * 20 >= spanPx * 17;
         var assertion = Describe(check);
+        if (check is { Over: false, Under: false, Through: false })
+        {
+            // "…has no line over it, no line under it and no line through it".
+            var painted = new[] { ("over", over), ("under", under), ("through", through) }
+                .Where(l => l.Item2).Select(l => l.Item1).ToList();
+            return painted.Count == 0
+                ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+                : new(WptRunner.Cat.Fail, $"{assertion}: a line {string.Join(", ", painted)} the text is painted", 1, 1,
+                    [new(assertion, 1, $"painted: {string.Join(", ", painted)}")], 0);
+        }
         if (check.Under is false)
             return !under
                 ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)

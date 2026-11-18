@@ -2932,7 +2932,32 @@ internal static class BoxEngine
                     File.AppendAllText("line-trace.txt",
                         $"  -> breakAllowed={BreakAllowedBefore(placed, lineStart, item)} split={SplitAtFirstOpportunity(items, itemIndex)} glued={gluedToLineStart}\n");
                 if (!gluedToLineStart && BreakAllowedBefore(placed, lineStart, item))
+                {
+                    // The opening edges of the inline boxes this item starts go down with it: a
+                    // box's leading margin/border/padding cannot end a line its content begins on
+                    // the next (inlines-005: a bordered <span>X</span> wrapped and left its left
+                    // border behind, so its box hung 3px outside the next line's start).
+                    // Only an item that moves down WHOLE carries its edges: one with a break
+                    // opportunity inside re-wraps on the next line, and its first words belong on
+                    // this one beside the edge (c5504-imrgn-l-001's 'margin-left: 4em' span).
+                    var unbreakable = item.Kind != InlineItemKind.Text || !(item.Text ?? "").Trim().Any(IsBreakSpace);
+                    var carry = placed.Count;
+                    while (unbreakable && carry > lineStart && placed[carry - 1].item is { Kind: InlineItemKind.InlineEdge, TrailingEdge: false } edge &&
+                           IsAncestorOrSelf(edge.Node, item.Node))
+                        carry--;
+                    if (carry < placed.Count && carry > lineStart &&
+                        placed.FindIndex(lineStart, carry - lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow)) >= 0)
+                    {
+                        var resume = placedSource[carry];
+                        placed.RemoveRange(carry, placed.Count - carry);
+                        placedSource.RemoveRange(carry, placedSource.Count - carry);
+                        if (placedLine.Count > carry) placedLine.RemoveRange(carry, placedLine.Count - carry);
+                        CommitLine();
+                        itemIndex = resume - 1;
+                        continue;
+                    }
                     CommitLine();
+                }
                 else if (!gluedToLineStart && SplitAtFirstOpportunity(items, itemIndex) )
                 {
                     // The glued head stays with the content before it; the tail, which now
@@ -2947,6 +2972,9 @@ internal static class BoxEngine
                     var resume = placedSource[cut];
                     placed.RemoveRange(cut, placed.Count - cut);
                     placedSource.RemoveRange(cut, placedSource.Count - cut);
+                    // placedLine runs parallel to placed: the re-placed items must not inherit
+                    // the removed entries' line numbers (their wrapper fragments fold per line).
+                    if (placedLine.Count > cut) placedLine.RemoveRange(cut, placedLine.Count - cut);
                     (maxAbove, maxBelow, maxTopH, maxBottomH, hasBaselineItem) = LineMetrics(placed, lineStart);
                     CommitLine();
                     itemIndex = resume - 1;
