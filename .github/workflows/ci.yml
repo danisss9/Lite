@@ -11,6 +11,13 @@ on:
 permissions:
   contents: read
 
+# A superseded push or PR run is cancelled instead of stacking two full gate chains
+# (and competing with the nightly baseline for the concurrent-runner ceiling). The
+# nightly and manual baseline runs keep their own group and are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+
 jobs:
   windows-gates:
     runs-on: windows-latest
@@ -25,6 +32,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          # The restore is cache-fed from the central package manifest, so repeated runs do
+          # not re-download every NuGet package on a fresh runner VM.
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            **/*.csproj
 
       - uses: msys2/setup-msys2@v2
         with:
@@ -102,9 +115,9 @@ jobs:
       # The full reviewed queue is 7,837 expanded paths and tens of hours of single-threaded
       # engine time (the encoding/legacy-mb pages alone are ~1,200 one-thousand-subtest pages),
       # so it runs in the scheduled/manual sharded job below. Pull requests and pushes keep a
-      # fast, representative slice of the reviewed queue: every path here has banked baseline
-      # passes, so the step fails only when one of them regresses, not because the rest of the
-      # queue is still red.
+      # fast, representative slice of the reviewed queue: the banked baseline passes in scope
+      # gate the step (a regression among them fails it), while the remaining still-red
+      # entries run as diagnostics and cannot paint the step red.
       - name: HTML 5.0 reviewed assertion smoke gate
         if: github.event_name == 'pull_request' || github.event_name == 'push'
         run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html5 --filter "lite/|dom/collections|dom/lists|dom/traversal|editing/crashtests|selection/crashtests|selection/caret|selection/textcontrols|html/obsolete" --baseline Wpt/html5-baseline-passes.txt --report Lite.Conformance/artifacts/html5-smoke-results.json
@@ -153,6 +166,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          # The restore is cache-fed from the central package manifest, so repeated runs do
+          # not re-download every NuGet package on a fresh runner VM.
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            **/*.csproj
 
       - uses: msys2/setup-msys2@v2
         with:
@@ -204,6 +223,18 @@ jobs:
           path: html5-runner-build.tar.gz
           if-no-files-found: error
 
+      # The gate job reads the generated manifest (variant paths map back to reviewed
+      # sources through it) but runs no dotnet, so it downloads these two small files
+      # instead of the whole build tarball.
+      - name: Upload the WPT manifest for the gate job
+        uses: actions/upload-artifact@v4
+        with:
+          name: html5-wpt-manifest
+          path: |
+            Lite.Conformance/artifacts/wpt-manifest.json
+            Lite.Conformance/artifacts/wpt-manifest.json.meta.json
+          if-no-files-found: error
+
   html5-baseline:
     needs: html5-baseline-prepare
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -231,9 +262,8 @@ jobs:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      # No setup-python here: the shard runs the prebuilt runner and the fetch fallback is
+      # pure pwsh; Python is only needed where the WPT manifest is generated (prepare).
 
       - name: Fetch pinned tests
         if: steps.vendor-cache.outputs.cache-hit != 'true'
@@ -278,17 +308,13 @@ jobs:
           python-version: "3.12"
 
       # The aggregator maps variant paths (?1001-2000) back to their reviewed source through
-      # the generated WPT manifest, which the shared build carries; the gate does not need a
-      # second vendor fetch.
-      - name: Download the shared build
+      # the generated WPT manifest; the gate runs no dotnet, so it needs only that manifest,
+      # not the shared build tarball (and no second vendor fetch).
+      - name: Download the WPT manifest
         uses: actions/download-artifact@v4
         with:
-          name: html5-runner-build
-          path: .
-
-      - name: Unpack the shared build
-        shell: pwsh
-        run: tar -xzf html5-runner-build.tar.gz
+          name: html5-wpt-manifest
+          path: Lite.Conformance/artifacts
 
       - name: Download shard evidence
         uses: actions/download-artifact@v4
@@ -303,7 +329,10 @@ jobs:
           $reports = @(Get-ChildItem Lite.Conformance/artifacts/html5-shards/*.json -ErrorAction SilentlyContinue)
           Write-Host "downloaded $($reports.Count) shard reports"
           if ($reports.Count -eq 0) { throw 'No shard evidence was downloaded.' }
-          python scripts/aggregate-html5-baseline.py @($reports.FullName) --gate --expected 7837 --output Lite.Conformance/artifacts/html5-baseline.md --evidence Lite.Conformance/artifacts/html5-results.json
+          # --expected is the reviewed queue's expanded path size (8,167 WPT-manifest cases for
+          # included sources + 10 catalog-absent entries, e.g. the lite/ fixtures); it feeds the
+          # report's coverage line only. Re-derive it after a vendored-suite bump.
+          python scripts/aggregate-html5-baseline.py @($reports.FullName) --gate --expected 8177 --output Lite.Conformance/artifacts/html5-baseline.md --evidence Lite.Conformance/artifacts/html5-results.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload merged baseline
@@ -330,6 +359,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            **/*.csproj
 
       - uses: actions/setup-python@v5
         with:
