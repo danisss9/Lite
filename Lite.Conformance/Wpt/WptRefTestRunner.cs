@@ -102,7 +102,7 @@ internal static class WptRefTestRunner
         SKBitmap Render(string path, bool testDriver = false)
         {
             if (images.TryGetValue(path, out var bitmap)) return bitmap;
-            (bitmap, _, _, _, _) = WptVisualPage.Render(path, test.Options?["viewport_size"]?.GetValue<string>(),
+            (bitmap, _, _, _, _, _) = WptVisualPage.Render(path, test.Options?["viewport_size"]?.GetValue<string>(),
                 testDriver: testDriver, scale: scale);
             images.Add(path, bitmap);
             return bitmap;
@@ -115,8 +115,8 @@ internal static class WptRefTestRunner
     {
         ConformanceServer.Start(cssRegressionMode: false);
         ConformanceServer.EnsureTestFontsProvisioned();
-        var (test, _, _, _, _) = WptVisualPage.Render(left.TrimStart('/'));
-        var (reference, _, _, _, _) = WptVisualPage.Render(right.TrimStart('/'));
+        var (test, _, _, _, _, _) = WptVisualPage.Render(left.TrimStart('/'));
+        var (reference, _, _, _, _, _) = WptVisualPage.Render(right.TrimStart('/'));
         using (test)
         using (reference)
         {

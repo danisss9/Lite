@@ -14,8 +14,12 @@ public readonly record struct EdgeBorder(float Width, BorderStyle Style, SKColor
 /// <summary>A style rule naming a dynamic pseudo-class (:hover, :active, :focus) that could
 /// apply to <paramref name="Element"/>: its selector is kept whole and re-matched against the
 /// live interaction state at style resolution (CSS 2.1 §5.11.3), so the state may sit on any
-/// compound — <c>textarea:focus + span</c> styles the span while the textarea has focus.</summary>
-internal sealed record DynamicRule(AngleSharp.Dom.IElement Element, string Selector, Dictionary<string, string> Properties);
+/// compound — <c>textarea:focus + span</c> styles the span while the textarea has focus.
+/// <paramref name="Style"/>, <paramref name="Specificity"/>, <paramref name="Order"/> and
+/// <paramref name="Origin"/> place it in the §6.4.1 cascade: the parser drops declarations a
+/// static rule outranks, and the live merge applies the rest in cascade order.</summary>
+internal sealed record DynamicRule(AngleSharp.Dom.IElement Element, string Selector, Dictionary<string, string> Properties,
+    AngleSharp.Css.Dom.ICssStyleDeclaration Style, AngleSharp.Css.Priority Specificity, int Order, int Origin);
 
 /// <summary>A CSS property/value pair that is conditional on a media query.</summary>
 public record MediaConditionalStyle(string MediaText, string Property, string Value, string Target);
@@ -160,6 +164,10 @@ public class LayoutNode
     public Dictionary<string, List<int>>? CounterStacks { get; set; }
     /// <summary>Per-element scroll state for overflow:scroll/auto elements.</summary>
     public ElementScrollState? ScrollState { get; set; }
+    /// <summary>The widest line of a block's own text (a block with text but no child boxes),
+    /// set at layout: an unbreakable word wider than the box overflows it (§11.1.1), and no
+    /// child box records that width.</summary>
+    public float OwnTextWidth { get; set; }
 
     /// <summary>For a child collapsed by a closed &lt;details&gt;: the display value before it was
     /// hidden (null = not hidden by details; "" = no explicit display to restore).</summary>

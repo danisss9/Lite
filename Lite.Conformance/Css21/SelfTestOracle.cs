@@ -93,5 +93,7 @@ internal static class SelfTestOracle
         check["target"]?.GetValue<string>(),
         check["scroll"] is { } scroll ? new ScrollSpec(scroll["to"]?.GetValue<string>() ?? "bottom") : null,
         check["interaction"] is { } interaction ? new InteractionSpec(interaction["action"]!.GetValue<string>(),
-            interaction["subject"]?.GetValue<string>(), interaction["rest"]?.GetValue<string>()) : null);
+            interaction["subject"]?.GetValue<string>(), interaction["rest"]?.GetValue<string>(),
+            interaction["each"]?.GetValue<bool>() ?? false, interaction["bolder"]?.GetValue<bool>() ?? false) : null,
+        check["resize"] is { } resize ? [.. resize.AsArray().Select(w => w!.GetValue<int>())] : null);
 }

@@ -65,8 +65,16 @@ internal sealed record ScrollSpec(string To, string? Then = null);
 /// sequential focus order). <c>Rest</c> states what the at-rest (and released) renders must
 /// show: null — the condition must NOT already hold at rest ("changes to", "turns"); "same" —
 /// it holds in every phase ("should stay green"); a colour keyword — the same judge reads
-/// that colour at rest and after the release ("initially black … returns to black").</summary>
-internal sealed record InteractionSpec(string Action, string? Subject = null, string? Rest = null);
+/// that colour at rest and after the release ("initially black … returns to black"); "after"
+/// — it holds at rest and after the release while the pressed state is unconstrained ("it
+/// should turn red while clicked … remains green after you click it"). Action <c>every</c>
+/// hovers, focuses and presses the subject in turn, each state judged ("whatever you do to
+/// this link, it should stay green"). <c>Each</c> repeats the protocol over every element
+/// holding the subject text ("each 'Text sample' becomes bold when hovering over it").
+/// <c>Bolder</c> also requires the subject's ink to grow against its at-rest render: a bold
+/// face paints thicker strokes over the same glyphs.</summary>
+internal sealed record InteractionSpec(string Action, string? Subject = null, string? Rest = null,
+    bool Each = false, bool Bolder = false);
 
 /// <summary>The interaction protocol could not run (no subject to hover, press or focus).</summary>
 internal sealed class InteractionUnavailableException(string message) : Exception(message);
@@ -74,9 +82,14 @@ internal sealed class InteractionUnavailableException(string message) : Exceptio
 /// <summary>The renders a two-phase scroll protocol produces: the initial page, the
 /// intermediate state after <see cref="ScrollSpec.To"/> (null without a scroll protocol),
 /// and the final state after <see cref="ScrollSpec.Then"/> (null without it). <c>Paint</c>
-/// carries the text the final render drew (the paint log) for glyph-order judges.</summary>
+/// carries the text the final render drew (the paint log) for glyph-order judges. An
+/// interaction protocol with several interacted states (<see cref="InteractionSpec.Each"/>,
+/// action <c>every</c>) puts the first in <c>Final</c> and the rest, named, in
+/// <c>States</c>, in the order of <see cref="VisualChecks.InteractionSubjects"/> (for
+/// <c>Each</c>) or of the actions.</summary>
 internal sealed record RenderSet(SKBitmap Final, SKBitmap? Mid, SKBitmap? Before,
-    IReadOnlyList<Lite.Rendering.PaintLog.Entry>? Paint = null);
+    IReadOnlyList<Lite.Rendering.PaintLog.Entry>? Paint = null,
+    IReadOnlyList<(string Name, SKBitmap Bitmap)>? States = null);
 
     internal sealed record VisualCheck(string Kind, string? Shape = null, string? Color = null,
     string? Dimension = null, int? Count = null, string? ColorA = null, string? ColorB = null,
@@ -88,7 +101,7 @@ internal sealed record RenderSet(SKBitmap Final, SKBitmap? Mid, SKBitmap? Before
     bool Shades = false, bool Marker = false, string? Bullet = null, int? Rows = null, int? Cols = null,
     List<string>? Colors = null, List<string>? Needles = null, Dictionary<string, SideSpec>? Sides = null,
     bool Ordered = false, string? BoxColor = null, string? Target = null, ScrollSpec? Scroll = null,
-    InteractionSpec? Interaction = null);
+    InteractionSpec? Interaction = null, List<int>? Resize = null);
 
 /// <summary>Evaluates a <see cref="VisualCheck"/> literally and strictly against the rendered
 /// page: the region below the instruction paragraph is segmented into connected components
@@ -139,6 +152,11 @@ internal static class VisualChecks
         if (check.Scroll is not null || check.Kind.StartsWith("scroll-", StringComparison.Ordinal))
             return ScrollCheck(check, renders, root, path);
         var bitmap = renders.Final;
+        // Scrollbars are UA chrome, not the content a sentence describes ("a green square"):
+        // the content judges read the render with each 'overflow: scroll' gutter erased. The
+        // scrollbar judges read the chrome itself.
+        if (check.Kind is not ("scrollbars" or "scrollbar-visible"))
+            bitmap = EraseScrollChrome(bitmap, root);
         if (InstructionBottom(root, sentence) is not { } top)
             return new(WptRunner.Cat.Unsupported, "Visual check: instruction paragraph not found in the layout tree", 0, 0);
         // Fail-closed color names: every stated colour must be a CSS keyword the judges know.
@@ -164,7 +182,7 @@ internal static class VisualChecks
             "text-in-box" => TextInBox(check, bitmap, root, top),
             "box-beside-text" => BoxBesideText(check, bitmap, root, top),
             "hanging-indent" => HangingIndent(check, bitmap, top),
-            "no-scrollbar" => NoScrollbar(check, bitmap),
+            "no-scrollbar" => NoScrollbar(check, bitmap, root),
             "scrollbar-visible" => ScrollbarVisible(check, bitmap, root),
             "same-width-corner" => SameWidthCorner(check, bitmap, top),
             "striped-fill" => StripedFill(check, bitmap, top),
@@ -177,6 +195,9 @@ internal static class VisualChecks
             "spans-stack" => ComponentCheck(check, bitmap, top, path),
             "border-sample" => BorderSample(check, bitmap, root, path),
             "text-color" => TextColor(check, bitmap, root, top, sentence),
+            "text-on-background" => TextOnBackground(check, bitmap, root, top),
+            "line-align" => LineAlign(check, bitmap, root, top),
+            "scrollbars" => Scrollbars(check, bitmap, root, top),
             "text-color-pairs" => TextColorPairs(check, bitmap, root, top),
             "text-decoration" => TextDecoration(check, bitmap, root, top, path),
             "align-right" => AlignRight(check, bitmap, root, top, path),
@@ -258,11 +279,58 @@ internal static class VisualChecks
             return new(WptRunner.Cat.Fail, $"{assertion}: {detail}", subtests.Count, 1, subtests, 0);
         }
 
-        var during = Phase(stated, renders.Final);
-        var duringAssertion = $"while {state}: {during.Detail}";
-        if (during.Cat == WptRunner.Cat.Unsupported) return during;
-        if (!during.Passed) return Fail($"while {state}", during.Detail ?? "the stated condition does not hold");
-        subtests.Add(new(duringAssertion, 0, null));
+        // Every interacted state: the single one, one per subject occurrence (Each), or one per
+        // action ('every'). A bold-only statement ("it should go bold") has no other check.
+        var subjects = InteractionSubjects(spec, root, sentence);
+        var interacted = new List<(string Name, SKBitmap Bitmap, int Subject)>();
+        if (spec.Each)
+        {
+            interacted.Add(($"{state} (occurrence 1)", renders.Final, 0));
+            for (var i = 0; i < (renders.States?.Count ?? 0); i++)
+                interacted.Add(($"{state} (occurrence {i + 2})", renders.States![i].Bitmap, i + 1));
+            if (subjects.Count != interacted.Count)
+                return new(WptRunner.Cat.Unsupported,
+                    $"Visual check: {subjects.Count} subject occurrence(s) but {interacted.Count} interacted render(s)", 0, 0);
+        }
+        else
+        {
+            interacted.Add((spec.Action == "every" ? "hovered" : state, renders.Final, 0));
+            foreach (var (name, bitmap) in renders.States ?? [])
+                interacted.Add((name, bitmap, 0));
+        }
+        var boldOnly = stated.Kind == "bolder";
+        foreach (var (name, bitmap, subject) in interacted)
+        {
+            if (spec.Rest == "after") break;
+            if (!boldOnly)
+            {
+                var during = Phase(stated, bitmap);
+                if (during.Cat == WptRunner.Cat.Unsupported) return during;
+                if (!during.Passed) return Fail($"while {name}", during.Detail ?? "the stated condition does not hold");
+                subtests.Add(new($"while {name}: {during.Detail}", 0, null));
+            }
+            if (spec.Bolder || boldOnly)
+            {
+                if (subject >= subjects.Count)
+                    return new(WptRunner.Cat.Unsupported, "Visual check: no subject to compare the stroke weight of", 0, 0);
+                var (grew, detail) = InkGrew(subjects[subject].Pointer, renders.Before, bitmap);
+                if (!grew) return Fail($"bolder while {name}", detail);
+                subtests.Add(new($"bolder while {name}: {detail}", 0, null));
+            }
+        }
+        if (boldOnly)
+        {
+            // Bold is a state change by definition: the comparison above is the whole check,
+            // and the released render (a press) must lose the extra weight again.
+            if (renders.Mid is { } after && subjects.Count > 0)
+            {
+                var (stillBold, detail) = InkGrew(subjects[0].Pointer, renders.Before, after);
+                if (stillBold) return Fail("after release", $"still bolder than at rest: {detail}");
+                subtests.Add(new($"after release: back to the at-rest weight ({detail})", 0, null));
+            }
+            return new(WptRunner.Cat.Pass, $"the text grows bolder while {state} (interaction protocol)",
+                subtests.Count, 0, subtests, 0);
+        }
 
         var rests = new List<(string Name, SKBitmap Bitmap)> { ("at rest", renders.Before) };
         if (renders.Mid is { } released) rests.Add(("after release", released));
@@ -277,14 +345,44 @@ internal static class VisualChecks
                 subtests.Add(new($"{name}, not {state}: the stated condition does not hold", 0, null));
                 continue;
             }
-            var restCheck = spec.Rest == "same" ? stated : stated with { Color = spec.Rest };
+            var restCheck = spec.Rest is "same" or "after" ? stated : stated with { Color = spec.Rest };
             var rest = Phase(restCheck, bitmap);
             if (rest.Cat == WptRunner.Cat.Unsupported) return rest;
             if (!rest.Passed) return Fail(name, rest.Detail ?? "the at-rest condition does not hold");
             subtests.Add(new($"{name}: {rest.Detail}", 0, null));
         }
-        var assertion = $"{Describe(stated)} while {state} (interaction protocol)";
+        if (spec.Rest == "after" && renders.Mid is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: an 'after the interaction' reading needs the released render", 0, 0);
+        var assertion = $"{Describe(stated)} {(spec.Rest == "after" ? "before and after" : "while")} {state} (interaction protocol)";
         return new(WptRunner.Cat.Pass, assertion, subtests.Count, 0, subtests, 0);
+    }
+
+    /// <summary>Whether the subject's text paints more ink in <paramref name="state"/> than at
+    /// rest — a bold face thickens every stroke (at least 10% more ink pixels). The band is
+    /// the subject's line, from the subject's left edge to its block container's right edge,
+    /// so text a wider bold run pushes along still counts.</summary>
+    private static (bool Grew, string Detail) InkGrew(LayoutNode subject, SKBitmap atRest, SKBitmap state)
+    {
+        var container = subject;
+        while (container.Parent is { } parent && container.GetDisplay() is not (DisplayType.Block or
+                   DisplayType.ListItem or DisplayType.TableCell))
+            container = parent;
+        var box = subject.Box.BorderBox;
+        var band = SKRectI.Round(new SKRect(box.Left, box.Top, Math.Max(box.Right, container.Box.ContentBox.Right), box.Bottom));
+        band.Intersect(new SKRectI(0, 0, Math.Min(atRest.Width, state.Width), Math.Min(atRest.Height, state.Height)));
+        if (band.IsEmpty) return (false, "the subject is outside the render");
+        long Ink(SKBitmap bitmap)
+        {
+            var background = CropBackground(bitmap, band);
+            long count = 0;
+            for (var y = band.Top; y < band.Bottom; y++)
+            for (var x = band.Left; x < band.Right; x++)
+                if (Distance(bitmap.GetPixel(x, y), background) > InkThreshold) count++;
+            return count;
+        }
+        var (rest, now) = (Ink(atRest), Ink(state));
+        var grew = rest > 0 && now >= rest * 1.10;
+        return (grew, $"{now} ink pixels against {rest} at rest");
     }
 
     /// <summary>The element the interaction protocol points at (the deepest element holding
@@ -297,8 +395,11 @@ internal static class VisualChecks
         var order = Lite.BrowserWindow.SequentialFocusOrder(root);
         LayoutNode? pointer = spec.Subject switch
         {
-            "link" => FindFirst(root, n => n.TagName == "A" && n.Attributes.ContainsKey("href") &&
-                (n.Box.BorderBox.Width > 0 || n.Box.BorderBox.Height > 0)),
+            "link" => FirstRenderedLink(root),
+            "a-element" => FirstRenderedLink(root, requireHref: false),
+            // "The next paragraph should have …": the first text element below the instructions.
+            "next" => sentence is not null && InstructionBottom(root, sentence) is { } below
+                ? TextElementsBelow(root, below).FirstOrDefault() : null,
             "focusable" => order.FirstOrDefault(),
             { } needle => DeepestWithText(root, sentence is null ? 0 : InstructionBottom(root, sentence) ?? 0, needle),
             null => null,
@@ -312,6 +413,135 @@ internal static class VisualChecks
         }
         var focus = order.FirstOrDefault(n => Within(n, pointer)) ?? order.FirstOrDefault(n => Within(pointer, n));
         return (pointer, focus);
+    }
+
+    /// <summary>The first rendered link (an a element with an href) or, without
+    /// <paramref name="requireHref"/>, the first rendered a element at all (c21-pseud-anch-000's
+    /// href-less anchor).</summary>
+    private static LayoutNode? FirstRenderedLink(LayoutNode root, bool requireHref = true) => FindFirst(root, n =>
+        n.TagName == "A" && (!requireHref || n.Attributes.ContainsKey("href")) &&
+        (n.Box.BorderBox.Width > 0 || n.Box.BorderBox.Height > 0));
+
+    /// <summary>"…should have a green background color and a white text color": the subject's
+    /// box shows the stated background (its most common colour) and the stated ink (the most
+    /// common colour that differs from it). The subject is the first link
+    /// (<c>Anchor: "link"</c>) or the deepest element holding the needle.</summary>
+    private static WptRunner.RunResult TextOnBackground(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top)
+    {
+        var assertion = Describe(check);
+        // The ink colour is optional ("highlighted in yellow" states only the background).
+        var inkName = check.Color;
+        if (check.BoxColor is not { } backgroundName || !Named.ContainsKey(backgroundName) ||
+            inkName is not null && !Named.ContainsKey(inkName))
+            return new(WptRunner.Cat.Unsupported, "Visual check: text-on-background needs a known background (and ink) colour", 0, 0);
+        var node = check.Anchor == "next" ? TextElementsBelow(root, top).FirstOrDefault()
+            : check.Anchor is "link" or "a-element" ? FirstRenderedLink(root, requireHref: check.Anchor == "link")
+            : check.Needle is { } needle ? DeepestWithText(root, top, needle) : FindFiller(root, top);
+        if (node is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no subject element for the text-on-background read", 0, 0);
+        var box = SKRectI.Round(node.Box.BorderBox);
+        box.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+        if (box.IsEmpty)
+            return new(WptRunner.Cat.Unsupported, "Visual check: the subject is outside the render", 0, 0);
+        var counts = new Dictionary<uint, long>();
+        for (var y = box.Top; y < box.Bottom; y++)
+        for (var x = box.Left; x < box.Right; x++)
+        {
+            var p = (uint)bitmap.GetPixel(x, y);
+            counts[p] = counts.GetValueOrDefault(p) + 1;
+        }
+        var background = new SKColor(counts.MaxBy(kv => kv.Value).Key);
+        var ink = counts.Where(kv => Distance(new SKColor(kv.Key), background) > InkThreshold).ToList();
+        WptRunner.RunResult Fail(string detail) => new(WptRunner.Cat.Fail, $"{assertion}: {detail}", 1, 1,
+            [new(assertion, 1, detail)], 0);
+        if (!Matches(backgroundName, background)) return Fail($"the background is {background}, not {backgroundName}");
+        if (ink.Count == 0) return Fail("the text painted no ink");
+        var dominant = new SKColor(ink.MaxBy(kv => kv.Value).Key);
+        if (inkName is not null && !Matches(inkName, dominant)) return Fail($"the text ink is {dominant}, not {inkName}");
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>"However the lines wrap, the blue rectangles should always have their tops (or
+    /// middles) on the same alignment as other blue rectangles on the line": every image below
+    /// the instructions is read from its rendered ink (the stated colour inside its box), the
+    /// images whose ink overlaps vertically share a line, and on each line the tops (or
+    /// middles) agree within a pixel. Run at several window widths by the resize protocol.</summary>
+    private static WptRunner.RunResult LineAlign(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top)
+    {
+        var assertion = Describe(check);
+        var colorName = check.Color ?? "blue";
+        if (!Named.ContainsKey(colorName))
+            return new(WptRunner.Cat.Unsupported, $"Visual check: unknown colour '{colorName}'", 0, 0);
+        var images = new List<LayoutNode>();
+        void Walk(LayoutNode node)
+        {
+            if (node.TagName == "IMG" && node.Box.BorderBox.Top >= top && node.Box.BorderBox.Width > 0) images.Add(node);
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        var inks = new List<(int Top, int Bottom, int Left)>();
+        foreach (var image in images)
+        {
+            var box = SKRectI.Round(image.Box.BorderBox);
+            box.Inflate(1, 1);
+            box.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+            int? inkTop = null, inkBottom = null;
+            for (var y = box.Top; y < box.Bottom; y++)
+            for (var x = box.Left; x < box.Right; x++)
+                if (Matches(colorName, bitmap.GetPixel(x, y))) { inkTop ??= y; inkBottom = y + 1; break; }
+            if (inkTop is null)
+                return new(WptRunner.Cat.Fail, $"{assertion}: an image at ({box.Left},{box.Top}) paints no {colorName}", 1, 1,
+                    [new(assertion, 1, "image without its colour")], 0);
+            inks.Add((inkTop.Value, inkBottom!.Value, box.Left));
+        }
+        if (inks.Count < 2)
+            return new(WptRunner.Cat.Unsupported, $"Visual check: {inks.Count} image(s) below the instructions", 0, 0);
+        // Lines: images whose ink overlaps vertically by more than the edge tolerance (a
+        // line's tallest image may end a pixel into the next line's top band through
+        // rounding, which must not chain two lines into one).
+        var lines = new List<List<(int Top, int Bottom, int Left)>>();
+        foreach (var ink in inks.OrderBy(i => i.Top))
+        {
+            var line = lines.FirstOrDefault(l => l.Any(o =>
+                Math.Min(o.Bottom, ink.Bottom) - Math.Max(o.Top, ink.Top) > EdgeTolerance + 1));
+            if (line is null) lines.Add([ink]); else line.Add(ink);
+        }
+        var middle = check.Variant == "middle";
+        foreach (var line in lines.Where(l => l.Count > 1))
+        {
+            var keys = line.Select(i => middle ? (i.Top + i.Bottom) / 2.0 : i.Top).ToList();
+            if (keys.Max() - keys.Min() > EdgeTolerance)
+                return new(WptRunner.Cat.Fail, $"{assertion}: a line's images have {(middle ? "middles" : "tops")} at " +
+                    string.Join(", ", keys.Select(k => k.ToString("0.#"))), 1, 1, [new(assertion, 1, "misaligned line")], 0);
+        }
+        var detail = $"{assertion} ({inks.Count} images on {lines.Count} line(s))";
+        return new(WptRunner.Cat.Pass, detail, 1, 0, [new(detail, 0, null)], 0);
+    }
+
+    /// <summary>The subjects the protocol drives, in document order: every element holding
+    /// the subject text for an <see cref="InteractionSpec.Each"/> protocol, otherwise the one
+    /// <see cref="InteractionSubject"/> picks.</summary>
+    internal static List<(LayoutNode Pointer, LayoutNode? Focus)> InteractionSubjects(InteractionSpec spec, LayoutNode root,
+        string? sentence)
+    {
+        if (!spec.Each || spec.Subject is not { } needle || needle is "link" or "a-element" or "focusable" or "next")
+            return InteractionSubject(spec, root, sentence) is { } single ? [single] : [];
+        // The whole page: hover-selector-002 repeats its instruction on every line, each
+        // ending in its own subject ("…it should go bold: <span>test test</span>").
+        var subjects = new List<(LayoutNode, LayoutNode?)>();
+        var instructions = sentence is null ? [] : InstructionNodes(root, sentence);
+        for (var i = 0; FindNodeByOccurrence(root, 0, needle, i) is { } occurrence; i++)
+        {
+            // The instruction may quote the subject text ('Test passes if each "Text sample"
+            // becomes bold'): its own paragraph is not a subject.
+            if (instructions.Any(n => ReferenceEquals(n, occurrence))) continue;
+            var node = occurrence;
+            while (node.Children.FirstOrDefault(c => !c.TagName.StartsWith('#') &&
+                       Normalize(Text(c)).Contains(needle, StringComparison.Ordinal)) is { } inner)
+                node = inner;
+            subjects.Add((node, null));
+        }
+        return subjects;
     }
 
     private static LayoutNode? DeepestWithText(LayoutNode root, int top, string needle)
@@ -351,8 +581,12 @@ internal static class VisualChecks
     {
         var box = FindScrollBox(root);
         if (box?.ScrollState is not { } ss) return null;
-        if (scroll.To is "bottom" or "bottom-right") ss.ScrollTo(ss.MaxScroll);
+        if (scroll.To is "bottom" or "bottom-right" or "bottom-center") ss.ScrollTo(ss.MaxScroll);
         if (scroll.To is "right" or "bottom-right") ss.ScrollXTo(ss.MaxScrollX);
+        // "bottom-center": the tester scrolls down and centres the view horizontally on the
+        // scrolled content, so a tile placed at the content's horizontal center sits at the
+        // scrollport's center (the "cat … centered at the bottom of the box" sentences).
+        if (scroll.To is "bottom-center") ss.ScrollXTo(ss.MaxScrollX / 2f);
         return box;
     }
 
@@ -360,6 +594,9 @@ internal static class VisualChecks
     /// extent minus the viewport — the way a tester drags the page scrollbars to the end.</summary>
     internal static (float ScrollX, float ScrollY) PageScrollExtent(string to, LayoutNode root, int width, int height)
     {
+        // A viewport clipped by a propagated 'overflow: hidden' (§11.1.1) offers the tester
+        // no scrollbars to drag.
+        if (BoxEngine.ViewportOverflow(root) == OverflowType.Hidden) return (0f, 0f);
         var maxX = MathF.Max(0f, root.Box.BorderBox.Right - width);
         var maxY = MathF.Max(0f, root.Box.BorderBox.Bottom - height);
         return (to.Contains("right") ? maxX : 0f, to.Contains("bottom") ? maxY : 0f);
@@ -391,17 +628,33 @@ internal static class VisualChecks
         if (ss.NeedsHorizontalScrollbar) cropBottom -= ElementScrollState.BarWidth + ElementScrollState.BarMargin;
         var crop = SKRectI.Intersect(new SKRectI((int)pb.Left, (int)pb.Top, (int)cropRight, (int)cropBottom),
             new SKRectI(0, 0, after.Width, after.Height));
+        // The scroll-to-text judge reads the layout, not the crop: a one-line scroller (whose
+        // crop is under the bitmap judges' minimum) is still decidable.
+        if (check.Kind == "scroll-box-text")
+            return ScrollBoxText(check, root);
         if (crop.Width < 20 || crop.Height < 20)
             return new(WptRunner.Cat.Unsupported, "Visual check: scroll box crop is empty or off-viewport", 0, 0);
+        if (Environment.GetEnvironmentVariable("LITE_SURVEY_DUMP") is "1" or "all")
+        {
+            // Read the scrolled renders, not the numbers (same switch as the at-rest dumps).
+            var name = Path.GetFileNameWithoutExtension(path);
+            foreach (var (label, bmp) in new[] { ("before", before), ("mid", mid), ("after", after) })
+            {
+                if (bmp is null) continue;
+                using var data = bmp.Encode(SKEncodedImageFormat.Png, 100);
+                File.WriteAllBytes(Path.Combine(Lite.Conformance.Harness.ConformancePaths.EnsureArtifacts(),
+                    $"scroll-check-{name}-{label}-crop{crop.Left}x{crop.Top}-{crop.Right}x{crop.Bottom}.png"), data.ToArray());
+            }
+        }
         return check.Kind switch
         {
             "scroll-cats-bottom" => CatsBottom(check, after, before, crop),
-            "scroll-cats-moved" => CatsMoved(check, after, before, crop),
+            "scroll-cats-moved" => CatsMoved(check, after, before, crop, path),
             "scroll-cats-bottom-moved" => CatsBottomMoved(check, after, mid, before, crop),
             "scroll-cats-top-moved" => CatsTopMoved(check, after, before, crop),
             "scroll-cats-still" => CatsStill(check, after, before, crop),
             "scroll-box-text" => ScrollBoxText(check, root),
-            "scroll-box-edges-visible" => ScrollBoxEdgesVisible(check, after, crop),
+            "scroll-box-edges-visible" => ScrollBoxEdgesVisible(check, after, crop, box),
             "scroll-no-red" => Pass("no failure red in the scrolled box"),
             _ => new(WptRunner.Cat.Unsupported, $"Visual check: unknown scroll check '{check.Kind}'", 0, 0),
         };
@@ -410,7 +663,7 @@ internal static class VisualChecks
     /// <summary>"The box can be scrolled to the green square in the bottom-right corner":
     /// after the scroll, the stated color's ink bounding box lies wholly inside the
     /// scrollport crop.</summary>
-    private static WptRunner.RunResult ScrollBoxEdgesVisible(VisualCheck check, SKBitmap after, SKRectI crop)
+    private static WptRunner.RunResult ScrollBoxEdgesVisible(VisualCheck check, SKBitmap after, SKRectI crop, LayoutNode scroller)
     {
         if (!Named.TryGetValue(check.Color ?? "green", out var target))
             return new(WptRunner.Cat.Unsupported, "Visual check: stated color is not a named color", 0, 0);
@@ -426,14 +679,27 @@ internal static class VisualChecks
             }
         if (hits < 200)
             return Fail($"no {check.Color} ink is visible inside the scrolled box");
+        // "…scrolled to the green square in the bottom-right corner": a box in the corner sits
+        // flush against the scrollport edges, so touching an edge is not by itself a clip.
+        // When the stated box is in the layout tree, its whole border box must show instead.
+        if (FindFirst(scroller, n => !ReferenceEquals(n, scroller) && ChannelDistance(n.GetBackgroundColor(), target) <= 48 &&
+                n.GetBackgroundColor().Alpha == 255 && n.Box.BorderBox.Width > 0) is { } stated)
+        {
+            var (w, h) = (stated.Box.BorderBox.Width, stated.Box.BorderBox.Height);
+            var (seenW, seenH) = (maxR - minL + 1, maxB - minT + 1);
+            return seenW >= w - 1.5f && seenH >= h - 1.5f
+                ? Pass($"the {check.Color} box is wholly visible in the scrolled box ({seenW}x{seenH} of {w:0.#}x{h:0.#})")
+                : Fail($"the {check.Color} box is clipped by the scrollport: {seenW}x{seenH} of its {w:0.#}x{h:0.#} show");
+        }
         if (minL <= crop.Left + 1 || minT <= crop.Top + 1 || maxR >= crop.Right - 1 || maxB >= crop.Bottom - 1)
             return Fail($"the {check.Color} box is clipped by the scrollport (({minL},{minT})..({maxR},{maxB}) in ({crop.Left},{crop.Top})..({crop.Right},{crop.Bottom}))");
         return Pass($"the {check.Color} box is wholly visible in the scrolled box");
     }
 
     /// <summary>"The box can be scrolled to the words 'Filler Text'": after the scroll-box
-    /// protocol scrolls the overflow box to its end, the named text sits inside the
-    /// scrollport's visible band (the box's layout coordinates shifted by the scroll).</summary>
+    /// protocol scrolls the overflow box to its end on both axes, the named text sits inside
+    /// the scrollport on both axes — at its painted position (its layout box shifted by the
+    /// relative offsets between it and the scroll box, §9.4.3, then by the scroll).</summary>
     private static WptRunner.RunResult ScrollBoxText(VisualCheck check, LayoutNode root)
     {
         var box = FindScrollBox(root);
@@ -441,11 +707,20 @@ internal static class VisualChecks
             return new(WptRunner.Cat.Unsupported, "Visual check: no scrollable box rendered", 0, 0);
         if (check.Needle is not { } needle || FindTextBelow(box, needle) is not { } textNode)
             return new(WptRunner.Cat.Unsupported, "Visual check: the named text is not in the scroll box's subtree", 0, 0);
+        var (dx, dy) = (0f, 0f);
+        for (var n = textNode; n is not null && !ReferenceEquals(n, box); n = n.Parent)
+            if (n.GetPosition() == PositionType.Relative)
+            {
+                var (rx, ry) = BoxEngine.RelativeOffset(n);
+                (dx, dy) = (dx + rx, dy + ry);
+            }
         var pb = box.Box.PaddingBox;
-        var text = textNode.Box.BorderBox;
-        var visible = text.Top - ss.ScrollY >= pb.Top - EdgeTolerance && text.Bottom - ss.ScrollY <= pb.Bottom + EdgeTolerance;
+        var t = textNode.Box.BorderBox;
+        var text = new SKRect(t.Left + dx - ss.ScrollX, t.Top + dy - ss.ScrollY, t.Right + dx - ss.ScrollX, t.Bottom + dy - ss.ScrollY);
+        var visible = text.Top >= pb.Top - EdgeTolerance && text.Bottom <= pb.Bottom + EdgeTolerance &&
+                      text.Left >= pb.Left - EdgeTolerance && text.Right <= pb.Right + EdgeTolerance;
         return visible ? Pass($"the named text '{needle}' is inside the scrolled box")
-            : Fail($"the named text '{needle}' is not inside the scrolled box (text {text.Top}..{text.Bottom}, scroll {ss.ScrollY})");
+            : Fail($"the named text '{needle}' is not inside the scrolled box (painted at {text}, scrollport {pb})");
     }
 
     /// <summary>Whole-viewport judges for the page-scroll protocol: a stated-color box that
@@ -498,6 +773,29 @@ internal static class VisualChecks
                     return Fail($"the top band moved with the page (before {beforeTop.Top}..{beforeTop.Bottom}, after {afterTop.Top}..{afterTop.Bottom})");
                 return Pass("the top band holds the same position before and after scrolling");
             }
+            case "scroll-page-box-still":
+            {
+                // "The box below does not move when the page is scrolled": the page's first box
+                // with an opaque background (the sentence names no colour) shows at the same
+                // viewport position before and after the page scrolls to its end.
+                if (before is null) return new(WptRunner.Cat.Unsupported, "Visual check: no before render", 0, 0);
+                var subject = FindFirst(root, n => n.TagName is not ("HTML" or "BODY") && !n.TagName.StartsWith('#') &&
+                    n.GetBackgroundColor().Alpha == 255 && n.Box.BorderBox.Width > 0 && n.Box.BorderBox.Height > 0);
+                if (subject is null)
+                    return new(WptRunner.Cat.Unsupported, "Visual check: no box with a background to follow", 0, 0);
+                var (pageX, pageY) = PageScrollExtent("page-bottom", root, after.Width, after.Height);
+                if (pageX <= 0f && pageY <= 0f)
+                    return new(WptRunner.Cat.Unsupported, "Visual check: the page does not scroll", 0, 0);
+                var color = subject.GetBackgroundColor();
+                if (ColorBoundsOf(before, color) is not { } was)
+                    return Fail("the box is not visible before scrolling");
+                if (ColorBoundsOf(after, color) is not { } now)
+                    return Fail("the box is not visible after scrolling");
+                return Math.Abs(was.Left - now.Left) <= EdgeTolerance && Math.Abs(was.Top - now.Top) <= EdgeTolerance &&
+                       Math.Abs(was.Right - now.Right) <= EdgeTolerance && Math.Abs(was.Bottom - now.Bottom) <= EdgeTolerance
+                    ? Pass($"the box holds its viewport position while the page scrolls {pageY:0}px")
+                    : Fail($"the box moved with the page ({was} before, {now} after a {pageY:0}px scroll)");
+            }
             case "scroll-page-no-red":
                 // The red scan already ran on the final (scrolled) render — reaching here
                 // means it found none, which is the whole stated condition.
@@ -509,9 +807,11 @@ internal static class VisualChecks
 
     /// <summary>Bounding rows/columns of the named color's ink, optionally restricted to the
     /// viewport's top band. Null when the coverage is negligible.</summary>
-    private static SKRectI? ColorBounds(SKBitmap bitmap, string colorName, int bandHeight = 0)
+    private static SKRectI? ColorBounds(SKBitmap bitmap, string colorName, int bandHeight = 0) =>
+        Named.TryGetValue(colorName, out var target) ? ColorBoundsOf(bitmap, target, bandHeight) : null;
+
+    private static SKRectI? ColorBoundsOf(SKBitmap bitmap, SKColor target, int bandHeight = 0)
     {
-        if (!Named.TryGetValue(colorName, out var target)) return null;
         int minL = bitmap.Width, minT = bitmap.Height, maxR = 0, maxB = 0;
         long hits = 0;
         int bottom = bandHeight > 0 ? Math.Min(bandHeight, bitmap.Height) : bitmap.Height;
@@ -833,10 +1133,17 @@ internal static class VisualChecks
     }
 
     /// <summary>"The horizontal and vertical scrolling mechanism is not available on the
-    /// page": the document fits the viewport and no page scrollbar painted at the right edge.</summary>
-    private static WptRunner.RunResult NoScrollbar(VisualCheck check, SKBitmap bitmap)
+    /// page": the engine offers no page scrolling on either axis — the viewport clips a
+    /// propagated 'overflow: hidden' (§11.1.1) or the document fits it both ways — and no page
+    /// scrollbar painted at the right edge.</summary>
+    private static WptRunner.RunResult NoScrollbar(VisualCheck check, SKBitmap bitmap, LayoutNode root)
     {
         var assertion = Describe(check);
+        var extent = root.Box.MarginBox;
+        if (BoxEngine.ViewportOverflow(root) != OverflowType.Hidden &&
+            (extent.Right > bitmap.Width + 0.5f || extent.Bottom > bitmap.Height + 0.5f))
+            return Fail2(assertion, $"the page can scroll: the document extends to {extent.Right:0}x{extent.Bottom:0} " +
+                $"in a {bitmap.Width}x{bitmap.Height} viewport that does not clip");
         // The page scrollbar paints as a translucent dark rounded bar at the right edge.
         long dark = 0;
         for (int y = 0; y < bitmap.Height; y++)
@@ -847,6 +1154,84 @@ internal static class VisualChecks
         if (dark > bitmap.Height / 4)
             return Fail2(assertion, "a page scrollbar is visible at the right edge");
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    /// <summary>"A green square with inactive scrollbars", "…should have an active horizontal
+    /// scrollbar": the first 'overflow: scroll' box below the instructions is read from the
+    /// render. Each scrollbar is the gutter strip along the inside of the padding box's right
+    /// (vertical) or bottom (horizontal) edge: a track is a strip visibly distinct from the content
+    /// beside it over most of its length; a thumb is a run at least 20% darker than the strip's
+    /// own track shade. An inactive scrollbar shows its track and no thumb; an active one a thumb. The
+    /// stated colour is the box's most common colour.</summary>
+    private static WptRunner.RunResult Scrollbars(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top)
+    {
+        var assertion = Describe(check);
+        var box = FindFirst(root, n => n.TagName is not ("HTML" or "BODY") && !n.TagName.StartsWith('#') &&
+            n.Box.BorderBox.Top >= top && n.GetOverflow() is OverflowType.Scroll or OverflowType.Auto && n.Box.PaddingBox.Width > 20 &&
+            n.Box.PaddingBox.Height > 20);
+        if (box is null)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no 'overflow: scroll' box below the instructions", 0, 0);
+        var pb = SKRectI.Round(box.Box.PaddingBox);
+        pb.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+        WptRunner.RunResult Fail(string detail) => new(WptRunner.Cat.Fail, $"{assertion}: {detail}", 1, 1, [new(assertion, 1, detail)], 0);
+        static double Luma(SKColor c) => 0.299 * c.Red + 0.587 * c.Green + 0.114 * c.Blue;
+        const int Bar = 6, Margin = 2;
+        // Every shown scrollbar owns an opaque gutter trough (§11.1.1; Drawer.DrawElementScrollbar),
+        // so bars read against the strip itself: a track is a strip visibly distinct from the
+        // content beside it, a thumb a run 20%+ darker than the strip's brightest (track) shade.
+        (double Track, double Thumb) Read(bool vertical)
+        {
+            var length = vertical ? pb.Height - Bar - 4 * Margin : pb.Width - Bar - 4 * Margin;
+            if (length <= 0) return (0, 0);
+            var samples = new List<(SKColor Bar, SKColor Reference)>(length);
+            for (var i = 0; i < length; i++)
+            {
+                // The reference is the pixel just inside the bar: the content under a bar
+                // varies along its length, so a reference further in can sit on other content.
+                var (x, y, rx, ry) = vertical
+                    ? (pb.Right - Margin - Bar / 2, pb.Top + 2 * Margin + i, pb.Right - Margin - Bar - 2, pb.Top + 2 * Margin + i)
+                    : (pb.Left + 2 * Margin + i, pb.Bottom - Margin - Bar / 2, pb.Left + 2 * Margin + i, pb.Bottom - Margin - Bar - 2);
+                if (x < 0 || y < 0 || rx < 0 || ry < 0 || x >= bitmap.Width || y >= bitmap.Height) continue;
+                samples.Add((bitmap.GetPixel(x, y), bitmap.GetPixel(rx, ry)));
+            }
+            int tracked = 0, thumbed = 0;
+            var brightest = samples.Count == 0 ? 0 : samples.Max(s => Luma(s.Bar));
+            foreach (var s in samples)
+            {
+                if (ChannelDistance(s.Bar, s.Reference) > PixelTolerance) tracked++;
+                if (brightest > 1 && Luma(s.Bar) <= 0.8 * brightest) thumbed++;
+            }
+            return (tracked / (double)length, thumbed / (double)length);
+        }
+        var (vTrack, vThumb) = Read(vertical: true);
+        var (hTrack, hThumb) = Read(vertical: false);
+        string Shares() => $"vertical track {vTrack:P0}/thumb {vThumb:P0}, horizontal track {hTrack:P0}/thumb {hThumb:P0}";
+        // An inactive or merely present pair of scrollbars needs both tracks; an active one
+        // needs its thumb (an 'auto' box draws no track, only the thumb of an axis that scrolls).
+        if (check.Variant is "inactive" or "present" or null && (vTrack < 0.8 || hTrack < 0.8))
+            return Fail($"the box does not show both scrollbars ({Shares()})");
+        var detail = check.Variant switch
+        {
+            "inactive" when vThumb > 0.02 || hThumb > 0.02 => "a scrollbar shows a thumb: it is active",
+            "active-horizontal" when hThumb < 0.05 => "the horizontal scrollbar shows no thumb",
+            "active-both" when hThumb < 0.05 || vThumb < 0.05 => "a scrollbar shows no thumb",
+            _ => null,
+        };
+        if (detail is not null) return Fail($"{detail} ({Shares()})");
+        if (check.Color is { } colorName)
+        {
+            var counts = new Dictionary<uint, long>();
+            for (var y = pb.Top; y < pb.Bottom; y++)
+            for (var x = pb.Left; x < pb.Right; x++)
+            {
+                var p = (uint)bitmap.GetPixel(x, y);
+                counts[p] = counts.GetValueOrDefault(p) + 1;
+            }
+            var dominant = new SKColor(counts.MaxBy(kv => kv.Value).Key);
+            if (!Named.ContainsKey(colorName) || !Matches(colorName, dominant))
+                return Fail($"the box is {dominant}, not {colorName}");
+        }
+        return new(WptRunner.Cat.Pass, $"{assertion} ({Shares()})", 1, 0, [new(assertion, 0, null)], 0);
     }
 
     /// <summary>"…should have active horizontal and vertical scrollbars": the box paints
@@ -1248,7 +1633,7 @@ internal static class VisualChecks
     /// "not cut off" variants (<c>Variant</c> "center"/"left") additionally read the named
     /// bottom tile as complete: a cat drawing sits inside the bottom band and the tile
     /// window's outermost columns and rows hold no cut strokes.</summary>
-    private static WptRunner.RunResult CatsMoved(VisualCheck check, SKBitmap after, SKBitmap before, SKRectI crop)
+    private static WptRunner.RunResult CatsMoved(VisualCheck check, SKBitmap after, SKBitmap before, SKRectI crop, string path)
     {
         var initial = TwoToneCoverage(before, crop);
         var after_ink = TwoToneCoverage(after, crop);
@@ -1261,39 +1646,123 @@ internal static class VisualChecks
             return Fail($"scrolling changed only {Pct(diff)} of the box's pixels (the images did not move)");
         if (check.Variant is "center" or "left")
         {
-            var cx = check.Variant == "center" ? crop.Left + crop.Width / 2 : crop.Left + TileW / 2;
-            if (CompleteCatTile(after, cx, crop.Bottom) is { } problem) return Fail(problem);
+            if (CatImage(path) is not { } cat)
+                return new(WptRunner.Cat.Unsupported, "Visual check: the case's support/cat.png was not found", 0, 0);
+            var cx = check.Variant == "center" ? crop.Left + crop.Width / 2 : crop.Left + cat.Width / 2;
+            if (CompleteCatTile(after, cat, cx, crop) is { } problem) return Fail(problem);
         }
         return Pass();
     }
 
-    /// <summary>The cat tile's rendered size (the image's intrinsic 98x99 pixels).</summary>
-    private const int TileW = 98;
-    private const int TileH = 99;
-
-    /// <summary>Reads a bottom tile window centered at <paramref name="cx"/> as a complete
-    /// cat: black strokes inside, and the window's two outermost columns and rows free of
-    /// strokes (a cut tile's strokes would reach its edges).</summary>
-    private static string? CompleteCatTile(SKBitmap bitmap, int cx, int bottom)
+    /// <summary>A copy of the render with every shown scrollbar's gutter (BoxEngine.ShownScrollbars:
+    /// ScrollGutter wide, inside the padding box's right or bottom edge) painted over by the
+    /// content pixel just inside each gutter row/column — the
+    /// render as if the chrome were not drawn. Rows/columns a clip removed stay as they are
+    /// (their inside pixel is the clipped-away background too). Returns the render itself
+    /// when no such box exists.</summary>
+    internal static SKBitmap EraseScrollChrome(SKBitmap bitmap, LayoutNode root)
     {
-        int left = Math.Max(0, cx - TileW / 2);
-        int top = Math.Max(0, bottom - TileH);
-        int right = Math.Min(bitmap.Width, left + TileW);
-        if (right - left < TileW - 2 || bottom - top < TileH - 2)
-            return "the bottom tile window is clipped";
-        var ink = BlackCoverage(bitmap, new SKRectI(left + 4, top + 4, right - 4, bottom - 4));
-        if (ink < 0.02)
-            return "the bottom tile window holds no cat drawing";
-        foreach (var band in new[]
-                 {
-                     new SKRectI(left, top, left + 2, bottom),          // left columns
-                     new SKRectI(right - 2, top, right, bottom),       // right columns
-                     new SKRectI(left, bottom - 2, right, bottom),     // bottom rows
-                 })
-            if (BlackCoverage(bitmap, band) > 0.02)
-                return "the cat drawing is cut at the tile boundary";
-        return null;
+        var gutter = (int)MathF.Ceiling(BoxEngine.ScrollGutter);
+        var boxes = new List<(SKRectI Box, bool Vertical, bool Horizontal)>();
+        void Walk(LayoutNode n)
+        {
+            var (vertical, horizontal) = BoxEngine.ShownScrollbars(n);
+            if (vertical || horizontal)
+            {
+                var pb = SKRectI.Round(n.Box.PaddingBox);
+                if (pb.Width > gutter + 1 && pb.Height > gutter + 1) boxes.Add((pb, vertical, horizontal));
+            }
+            foreach (var c in n.Children) Walk(c);
+        }
+        Walk(root);
+        if (boxes.Count == 0) return bitmap;
+        var copy = bitmap.Copy();
+        foreach (var (pb, vertical, horizontal) in boxes)
+        {
+            int innerX = pb.Right - (vertical ? gutter : 0) - 1, innerY = pb.Bottom - (horizontal ? gutter : 0) - 1;
+            if (innerX < 0 || innerX >= copy.Width || innerY < 0 || innerY >= copy.Height) continue;
+            if (vertical)
+                for (var y = Math.Max(pb.Top, 0); y < Math.Min(pb.Bottom, copy.Height); y++)
+                {
+                    var fill = copy.GetPixel(innerX, horizontal && y > innerY ? innerY : y);
+                    for (var x = Math.Max(pb.Right - gutter, 0); x < Math.Min(pb.Right, copy.Width); x++)
+                        copy.SetPixel(x, y, fill);
+                }
+            if (horizontal)
+                for (var x = Math.Max(pb.Left, 0); x <= Math.Min(innerX, copy.Width - 1); x++)
+                {
+                    var fill = copy.GetPixel(x, innerY);
+                    for (var y = Math.Max(pb.Bottom - gutter, 0); y < Math.Min(pb.Bottom, copy.Height); y++)
+                        copy.SetPixel(x, y, fill);
+                }
+        }
+        return copy;
     }
+
+    /// <summary>The case's own tile image (<c>support/cat.png</c> beside the test file),
+    /// cached per directory.</summary>
+    private static SKBitmap? CatImage(string path)
+    {
+        var file = ResolveCaseFile(path);
+        if (file is null) return null;
+        var cat = Path.Combine(Path.GetDirectoryName(file)!, "support", "cat.png");
+        lock (CatImages)
+        {
+            if (!CatImages.TryGetValue(cat, out var bitmap))
+                CatImages[cat] = bitmap = File.Exists(cat) ? SKBitmap.Decode(cat) : null;
+            return bitmap;
+        }
+    }
+
+    private static readonly Dictionary<string, SKBitmap?> CatImages = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>A case path as the runner names it ("css21-official/html4/x.htm",
+    /// "css/CSS2/backgrounds/x.xht", or already a file path) to the vendored file.</summary>
+    private static string? ResolveCaseFile(string path)
+    {
+        if (File.Exists(path)) return path;
+        var vendor = Lite.Conformance.Harness.ConformancePaths.Vendor;
+        var relative = path.Replace('\\', '/');
+        string[] candidates = relative.StartsWith("css21-official/", StringComparison.Ordinal)
+            ? [Path.Combine(vendor, "css21-official-20110323", relative["css21-official/".Length..])]
+            : [Path.Combine(vendor, "wpt", relative), Path.Combine(vendor, relative)];
+        return candidates.FirstOrDefault(File.Exists);
+    }
+
+    /// <summary>"…there is a cat image that is not cut off, and it is centered at the bottom
+    /// of the box": the bottom tile window centered at <paramref name="cx"/> lies wholly
+    /// inside the scrollport and matches the case's own tile image pixel for pixel (black
+    /// line art against everything else), allowing a few pixels of placement slack. The
+    /// image's own strokes reach its edges (the feet are ~19% of its bottom rows), so the
+    /// edges cannot be read as "cut"; a tile cut by the scrollport or misphased by the
+    /// painter fails the match instead.</summary>
+    private static string? CompleteCatTile(SKBitmap bitmap, SKBitmap cat, int cx, SKRectI crop)
+    {
+        const int Slack = 4;
+        const double Required = 0.97;
+        int w = cat.Width, h = cat.Height;
+        var best = 0.0;
+        (int X, int Y) bestAt = default;
+        for (var dy = -Slack; dy <= Slack; dy++)
+            for (var dx = -Slack; dx <= Slack; dx++)
+            {
+                int left = cx - w / 2 + dx, top = crop.Bottom - h + dy;
+                // 1px of rounding slack: the crop truncates the box's fractional edges.
+                if (left < crop.Left - 1 || top < crop.Top - 1 || left + w > crop.Right + 1 || top + h > crop.Bottom + 1) continue;
+                long agree = 0;
+                for (var y = 0; y < h; y++)
+                    for (var x = 0; x < w; x++)
+                        if (IsStroke(cat.GetPixel(x, y)) == IsStroke(bitmap.GetPixel(left + x, top + y))) agree++;
+                var score = (double)agree / (w * h);
+                if (score > best) (best, bestAt) = (score, (left, top));
+            }
+        if (best == 0)
+            return $"no {w}x{h} tile window centered at x={cx} fits inside the scrollport";
+        return best >= Required ? null
+            : $"the bottom tile window best matches the cat image at {best:P1} (needs {Required:P0}; at {bestAt.X},{bestAt.Y}) — the cat is cut or misplaced";
+    }
+
+    private static bool IsStroke(SKColor c) => c.Alpha > 0x80 && c.Red <= 0x30 && c.Green <= 0x30 && c.Blue <= 0x30;
 
     private static double BlackCoverage(SKBitmap bitmap, SKRectI crop) => Coverage(bitmap, crop,
         static c => c.Red <= 0x30 && c.Green <= 0x30 && c.Blue <= 0x30);
@@ -1447,6 +1916,16 @@ internal static class VisualChecks
         "border-ring" => $"one box with a {(check.Color is null ? "" : check.Color + " ")}{check.Shape} border",
         "border-sample" => "the center box's border matches the stated style and the sample",
         "text-color" => $"the filler text is {check.Color}",
+        "text-on-background" => $"the {(check.Anchor == "link" ? "link" : check.Needle ?? "filler text")} is {check.Color} text on {check.BoxColor}",
+        "bolder" => $"the {check.Needle ?? "subject"} text grows bolder",
+        "line-align" => $"the {check.Color ?? ""} images on each line share their {check.Variant ?? "top"}".Replace("  ", " "),
+        "scrollbars" => $"the {(check.Color is null ? "" : check.Color + " ")}scroll box shows {check.Variant switch
+        {
+            "inactive" => "inactive scrollbars",
+            "active-horizontal" => "an active horizontal scrollbar",
+            "active-both" => "active horizontal and vertical scrollbars",
+            _ => "scrollbars",
+        }}",
         "text-decoration" => check.Under is false ? "the filler text has no line under it" : "the filler text has the stated lines",
         "align-right" => $"the filler text is flush with the container's {(check.Side == "left" ? "left" : "right")} edge",
         "cursor" => check.Shape == "same" ? "the cursor is the same over both texts" : $"the cursor over the subject is {check.Shape}",
@@ -2644,6 +3123,14 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
             if (targets.Count == 0)
                 return new(WptRunner.Cat.Unsupported, "Visual check: no element to colour-check below the instructions", 0, 0);
         }
+        else if (check.Anchor is "link" or "a-element")
+        {
+            // "While you are hovering over this link, it should go green": the instruction
+            // is the link's own text, so the link itself is the subject.
+            targets = FirstRenderedLink(root, requireHref: check.Anchor == "link") is { } link ? [link] : [];
+            if (targets.Count == 0)
+                return new(WptRunner.Cat.Unsupported, "Visual check: no rendered link to colour-check", 0, 0);
+        }
         else
         {
             var node = check.Needle is { } needle ? FindNodeByText(root, top, needle) : FindFiller(root, top);
@@ -2653,6 +3140,13 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
             if (node is not null && FindFirst(node, n => n.TagName is "TEXTAREA" or "INPUT" &&
                     Normalize(Text(n)).Contains(check.Needle ?? "filler text", StringComparison.Ordinal)) is { } control)
                 node = control;
+            // A message beside a form control (focus-pseudo-class-001's "Focus received by text
+            // field" span after the textarea) is read in its own element, not the container
+            // holding the control and its focus ring.
+            else if (node is not null && check.Needle is { } beside &&
+                     FindFirst(node, n => n.TagName is "TEXTAREA" or "INPUT") is not null &&
+                     DeepestWithText(root, top, beside) is { } own)
+                node = own;
             targets = node is null ? [] : [node];
             if (targets.Count == 0)
                 return new(WptRunner.Cat.Unsupported, "Visual check: no element to colour-check below the instructions", 0, 0);
@@ -2787,6 +3281,24 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         bool DominantMatches(Dictionary<uint, long> histogram) =>
             histogram.Count > 0 && Matches(check.Color!, new SKColor(histogram.MaxBy(kv => kv.Value).Key));
         if (DominantMatches(counts) || DominantMatches(boxCounts)) return null;
+        // Thin strokes are mostly antialiased blends, so the most common ink pixel can be a
+        // half-tone of the text colour (c21-pseu-cls-000's 16px green link read #7fbf7f), and
+        // a dense bold run can tip the component segmentation's background estimate. Read the
+        // glyph cores instead: against the box's most common colour, the most common of the
+        // pixels at least three quarters as far from it as the farthest one. A pale text colour
+        // has pale cores, so this never turns a pale reading into a saturated one.
+        if (boxCounts.Count > 0)
+        {
+            var boxBackground = new SKColor(boxCounts.MaxBy(kv => kv.Value).Key);
+            var far = boxCounts.Select(kv => (Color: new SKColor(kv.Key), kv.Value, Distance: Distance(new SKColor(kv.Key), boxBackground)))
+                .Where(p => p.Distance > InkThreshold).ToList();
+            if (far.Count > 0)
+            {
+                var reach = far.Max(p => p.Distance);
+                var core = far.Where(p => p.Distance * 4 >= reach * 3).MaxBy(p => p.Value);
+                if (Matches(check.Color!, core.Color)) return null;
+            }
+        }
         var dominant = counts.Count > 0 ? new SKColor(counts.MaxBy(kv => kv.Value).Key) : background;
         return new(WptRunner.Cat.Fail, $"{Describe(check)}: ink is {dominant}", 1, 1,
             [new(Describe(check), 1, $"dominant ink {dominant}, not {check.Color}")], 0);

@@ -387,14 +387,14 @@ public static class ConformanceTests
         {
             // The seam: a scaled render rasterizes scale× the CSS viewport with layout
             // unchanged — the 100px CSS box paints 200 device px at dpr 2.
-            var (scaled, _, _, _, _) = WptVisualPage.Render("lite/harness/dpi-scale.html", scale: 2f);
+            var (scaled, _, _, _, _, _) = WptVisualPage.Render("lite/harness/dpi-scale.html", scale: 2f);
             using (scaled)
             {
                 Equal(1600, scaled.Width);
                 Equal(1200, scaled.Height);
                 Equal(200 * 200, CountRed(scaled));
             }
-            var (unit, _, _, _, _) = WptVisualPage.Render("lite/harness/dpi-scale.html");
+            var (unit, _, _, _, _, _) = WptVisualPage.Render("lite/harness/dpi-scale.html");
             using (unit)
             {
                 Equal(800, unit.Width);

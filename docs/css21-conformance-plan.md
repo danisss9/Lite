@@ -243,9 +243,123 @@ The phases, in order:
     - **Verification:** the screen baseline gained 32 cases with no regressions (official
       7,488, WPT 6,960). It exposed `xml-lang-selectors-002`: `:lang()` counted a
       no-namespace `xml:lang` attribute in HTML, now fixed. The HTML5 gate is net +3.
-    - **Next:** the remaining ~26 dynamic cases (link-as-instruction wording, background/bold
-      variants, first-letter/first-line hover, anchors painting no background), then resize,
-      scrollbars and animation.
+  - **Progress, 18 November.**
+    - **:hover/:active/:focus, 60 done.** Thirty more cases pass, 15 in each suite.
+      - **Judge additions:**
+        - a link-as-subject anchor;
+        - `text-on-background` (stated ink on a stated background);
+        - a `bolder` comparison against the at-rest render;
+        - `Each` (every subject occurrence hovered in turn);
+        - action `every` (hover, focus and press, each judged);
+        - rest `after` (the pressed state unconstrained).
+      - **Glyph-core fallback.** The text-colour judge falls back to reading the glyph cores
+        when the most common pixel is an antialiased half-tone. A pale text colour has pale
+        cores, so this cannot turn a pale reading into a saturated one.
+      - **Engine: dynamic and `:link` rules join the cascade.** `Parser.ApplyCascadeToExtractedRules`
+        drops any declaration that a matching static rule or the style attribute outranks
+        (§6.4.1: origin and importance, then specificity, then order). It merges the
+        surviving dynamic rules in cascade order. `CascadeOrigin.Of` is public for this
+        (AngleSharp.Css fork patch 004).
+      - **Engine: `a:visited` no longer applies.** It used to fall through to the static
+        branch and style every link.
+      - **Engine: inline links paint their background and borders.**
+      - **Optional (§5.11.2 permits treating every link as unvisited):**
+        `link-visited-selector-004`, `specificity-012` and `user-stylesheet-013`. The last
+        one's earlier pass was false: :visited rules then styled every link.
+      - **Deferred:**
+        - `content-178` and `first-letter-selector-029`/`first-line-selector-017` need dynamic
+          pseudo-element rules;
+        - `active-selector-002` and `white-space-mixed-004` have no strict machine reading
+          (Phase 5).
+    - **Resize, 26 cases.** A `resize` list on the check loads the page at 1200, 800, 450 and
+      200px wide (`WptVisualPage.RunResizeProtocol`). The no-red scan and the stated check must
+      hold at each width.
+      - **Families:** "all blue boxes must always be the same size" (`floats-108`–`131`),
+        `inline-block-002`/`003`, and `c544-valgn-002`–`004`. The last uses the new
+        `line-align` judge: the images on each line share their top or middle.
+      - **Engine bug found:** §10.3.9 shrink-to-fit gave an inline-block the whole line, not
+        the line minus its own margins, borders and padding. Fixed.
+      - **`inline-block-004`/`005` stay manual:** their own text says the indented first box
+        wraps differently.
+    - **Scrollbars, 10 of 18.**
+      - **Engine:** an `overflow: scroll` box always shows both tracks (§11.1.1). A track
+        without a thumb is an inactive scrollbar.
+      - **Judge:** the `scrollbars` judge reads tracks and thumbs from the render.
+      - **Eight failed honestly on two engine bugs,** both fixed in the second batch below:
+        - unbreakable text never registered as horizontal overflow (`max-height-109`/`111`,
+          `max-width-108`);
+        - a box's inline text painted over its own scrollbar track (`max-height-108`).
+    - **Verification.**
+      - Units 617/617.
+      - Curated gates 51/1 and 86/2.
+      - **Full screen baseline: +72 passes and 0 losses.** Official 7,521, WPT 6,997.
+        Manual-pending fell from 592/579 to 559/568, and WPT unsupported fell from 168 to 138.
+      - **Obligations:** `css21.18.4.1` reaches implemented, for 28/187.
+        - `css21.18.1` (cursor) has 76 passes and 2 unproven cases.
+        - `css21.5.11.3` has 30 passes, 1 failure and 5 unproven cases.
+  - **Progress, 18 November (second batch): scrolling, +80 with 0 losses.**
+    - **Stale reviews and dead templates.** Several sentences had a template that could never
+      fire, or a reviewed `manual` entry that pinned the case past one:
+      - the 48 "cat images that move … centered at the bottom of the box" cases: the template
+        required a parenthetical the matcher strips first;
+      - `overflow-003`–`005`: an `r''` pattern matched `{COLOR}` literally;
+      - `c535`/`c537` ("Scroll this document…"), `background-bg-pos-207` and `font-size-116`:
+        the prefix gate, a stripped final period, and a stripped parenthetical.
+      Scroll templates now also read the clause before the parenthetical strip.
+    - **The parked "tile-boundary clipping" finding was a judge bug.** `cat.png`'s own feet
+      fill ~19% of its bottom rows, so "no strokes in the outer rows" could never hold for an
+      uncut tile. The judge now matches the case's own `support/cat.png` pixel for pixel
+      (97%, a few pixels of slack) inside the scrollport. Scroll target `bottom-center`
+      centres the view on the scrolled content, as the sentence describes.
+    - **Engine, §11.1.1 scrollbars own their gutters.**
+      - `overflow: scroll` content lays out beside the vertical gutter.
+      - `auto` content that overflows a fixed height is laid out a second time beside it.
+      - An auto-height box grows by its horizontal bar's gutter (`max-height-107`'s
+        reference reserves exactly that).
+      - The scroll extent excludes the gutters, so scrolling to the end reveals the content's
+        far edge. That edge was hidden under the bars.
+      - The content clips to the scrollport, so it can no longer paint over its own bars
+        (`max-height-108`/`109`).
+      - Each shown bar paints an opaque trough, so the box's background never shows in its
+        gutter (`max-height-105`).
+      - Content judges erase the chrome first (`EraseScrollChrome`).
+    - **Engine, scrollable overflow.** A scroll container's extent now spans its descendants
+      as painted: relatively positioned ones (`position-relative-034`/`036`) and an unbreakable
+      word's line width (`OwnTextWidth`, `max-height-109`, `max-width-108`).
+    - **Engine, positioned descendants of scrollers.** They used to paint at the
+      stacking-context root, outside the scroller's clip and scroll offset (`overflow-003`'s
+      square floated outside its box). Now they replay each clip and offset between the root
+      and the item. Absolutely positioned items skip any clipper above their containing block.
+    - **Engine, viewport propagation.** `overflow` on the root (or the body, when the root's
+      is `visible`) applies to the viewport. `hidden` there removes page scrolling
+      (`overflow-root-001`, `overflow-html-body-001`).
+    - **Judges:** `scroll-box-text` reads both axes at the text's painted position, and
+      `scroll-page-box-still` covers "the box/blue stripe does not move when the page is
+      scrolled".
+    - **Optional:** `pseudo-009` and `html-attribute-029` (both suites). Their green needs a
+      visited link, and §5.11.2 permits treating every link as unvisited.
+    - **Verification.**
+      - A 982-case sweep covering every case that mentions `overflow`, plus everything
+        re-proposed: 0 losses. Results: 10 fail → pass, 37 manual-pending → pass,
+        33 unsupported → pass.
+      - Three cases newly fail honestly: `background-bg-pos-207` (both suites; Lite's page
+        scrollbar overlays the viewport edge) and `font-size-116` (real red).
+      - Units 624/624. Curated gates 51/1 and 86/2.
+      - The 18 November full baseline is not rerun yet.
+    - **Next:**
+      - animation/blink (4);
+      - the rest of the scroll sentences:
+        - `c5502`/`c5505` need horizontal page scrolling and a horizontal page bar (engine);
+        - `c5504` asks to scroll to negative x, which no LTR viewport can reach (review);
+        - `block-formatting-contexts-013`/`014`, `overflow-scrollbar-001`,
+          `overflow-visible-viewport-001`, `stack-overflow-001`, `background-bg-pos-205`,
+          `position-004` and `abspos-zero-width-001` need templates;
+      - the viewport's own bar gutter (`background-bg-pos-207`), for Phase 6;
+      - vertical scrolling for `max-height`-clamped `auto` boxes, which are not tracked yet;
+      - `cursor-applies-to-010`;
+      - the other sentences of the resize bucket: `background-root-012`–`014`, `inlines-003`–`006`,
+        `outline-020`, and `first-line-selector-014`/`015`, which say "may still be true after
+        changing the window size".
 - **Phase 5, judges.**
   - An engine-fact side channel: per-edge §17.6.2.1 winner widths for border-conflict-style,
     and the text-align declaring node per line.

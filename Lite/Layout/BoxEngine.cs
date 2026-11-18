@@ -1221,6 +1221,13 @@ internal static class BoxEngine
 
         var nodeDisplay = node.GetDisplay();
         var establishesBfc = EstablishesBlockFormattingContext(node);
+        // CSS 2.1 §11.1.1: "Any space taken up by the scrollbars should be taken out of
+        // (subtracted from the dimensions of) the containing block formed by the element with
+        // the scrollbars." 'overflow: scroll' always shows both bars, so its flow content lays
+        // out in the width left beside the vertical bar's gutter (the box's own border box is
+        // unchanged). The root and body hand their scrolling to the viewport.
+        var alwaysScrollbars = node.GetOverflow() == OverflowType.Scroll && node.TagName is not ("HTML" or "BODY");
+        var flowW = alwaysScrollbars ? Math.Max(0f, contentW - ScrollGutter) : contentW;
         float contentH;
         float trailingMargin = 0f; // last in-flow block child's bottom margin (collapse-through candidate)
         var trailingChain = MarginChain.Empty; // the trailing chain's (maxPositive, minNegative) form
@@ -1235,7 +1242,6 @@ internal static class BoxEngine
             // passed) owns a fresh list; a normal block threads its ancestor BFC's list so floats
             // declared inside it escape into that context rather than being contained here.
             var ownsFloatContext = establishesBfc || bfcFloats is null;
-            var floatCtx = ownsFloatContext ? new List<ActiveFloat>() : bfcFloats!;
             // The root's initial containing block has the viewport height even when the root's
             // own height is auto. Its percentage-height children (notably body) need that size.
             var childContainingH = node.TagName == "HTML" && !hasExplicitH ? viewportHeight : knownContentH;
@@ -1243,13 +1249,30 @@ internal static class BoxEngine
             // (or any first child) must push the content down the canvas, not collapse through
             // the root and escape above the viewport.
             var childBfc = establishesBfc || node.TagName == "HTML";
-            contentH = LayoutChildrenImpl(node.Children, contentX, contentY, contentW, viewportWidth, viewportHeight,
-                childContainingH, border.Top + padding.Top, childBfc, floatCtx, ownsFloatContext,
-                out trailingMargin, out trailingChain, out chainHasCommittedContent,
-                nodeDisplay == DisplayType.ListItem ? node.InsideMarkerIndent() : 0f);
+            // §11.1.1 for 'auto': the vertical bar appears only once the content overflows the
+            // fixed height; the content is then laid out again beside the bar's gutter (as
+            // browsers do), so it neither paints under the bar nor reads as a sideways overflow.
+            var mayGrowVerticalBar = node.GetOverflow() == OverflowType.Auto && hasExplicitH &&
+                node.TagName is not ("HTML" or "BODY") && contentW > ScrollGutter;
+            for (var pass = 0; ; pass++)
+            {
+                var floatCtx = ownsFloatContext ? new List<ActiveFloat>() : bfcFloats!;
+                contentH = LayoutChildrenImpl(node.Children, contentX, contentY, flowW, viewportWidth, viewportHeight,
+                    childContainingH, border.Top + padding.Top, childBfc, floatCtx, ownsFloatContext,
+                    out trailingMargin, out trailingChain, out chainHasCommittedContent,
+                    nodeDisplay == DisplayType.ListItem ? node.InsideMarkerIndent() : 0f);
+                if (pass > 0 || !mayGrowVerticalBar || !ownsFloatContext) break;
+                var extent = ScrollableExtent(node);
+                var naturalRight = extent?.Right ?? contentX;
+                var naturalBottom = extent?.Bottom ?? contentY;
+                var sideways = naturalRight - contentX > contentW;
+                if (MathF.Max(contentH, naturalBottom - contentY) <= knownContentH - (sideways ? ScrollGutter : 0f)) break;
+                flowW = contentW - ScrollGutter;
+            }
         }
 
         // Block elements with no children but own text (e.g. <label>, <p>, <h1>):
+        node.OwnTextWidth = 0f;
         if (contentH == 0 && !string.IsNullOrEmpty(node.DisplayText))
         {
             using var font = TextMeasure.CreateFont(node);
@@ -1258,8 +1281,9 @@ internal static class BoxEngine
             // An 'inside' list marker consumes first-line width the wrap must respect, or the
             // laid-out line count diverges from what the painter draws (§12.5.1).
             var markerIndent = nodeDisplay == DisplayType.ListItem ? node.InsideMarkerIndent() : 0f;
-            var lines = TextMeasure.WrapText(node.RenderedText(), Math.Max(contentW - markerIndent, 1f), font, ws, lh);
+            var lines = TextMeasure.WrapText(node.RenderedText(), Math.Max(flowW - markerIndent, 1f), font, ws, lh);
             contentH = lines.Sum(l => l.Height);
+            node.OwnTextWidth = lines.Count == 0 ? 0f : lines.Max(l => l.Width) + markerIndent;
         }
 
         // Parent–last-child margin collapse-through (CSS 2.1 §8.3.1): when this block has no
@@ -1286,8 +1310,18 @@ internal static class BoxEngine
         // against the constrained width. A nowrap text line's own overflow is not tracked here —
         // the corpus's scroll cases scroll laid-out block children.
         var naturalW = 0f;
-        foreach (var child in node.Children)
-            naturalW = MathF.Max(naturalW, child.Box.MarginBox.Right - contentX);
+        var scrollContentH = contentH;
+        if (node.GetOverflow() is OverflowType.Scroll or OverflowType.Auto && ScrollableExtent(node) is var (extentR, extentB))
+        {
+            // A scroll container's scrollable area spans its descendants as painted —
+            // relatively positioned ones included (position-relative-034: a span shifted
+            // 'left: 200px' out of an 'overflow: auto' box must be scrollable into view).
+            naturalW = extentR - contentX;
+            scrollContentH = MathF.Max(contentH, extentB - contentY);
+        }
+        else
+            foreach (var child in node.Children)
+                naturalW = MathF.Max(naturalW, child.Box.MarginBox.Right - contentX);
         if (naturalW <= 0f) naturalW = contentW;
 
         if (hasExplicitH && node.GetDisplay() is not (DisplayType.Table or DisplayType.InlineTable))
@@ -1300,13 +1334,16 @@ internal static class BoxEngine
             // both axes (the vertical axis was the only one tracked; the background-attachment
             // scroll corpus scrolls horizontally too).
             var overflow = node.GetOverflow();
-            if ((overflow == OverflowType.Scroll || overflow == OverflowType.Auto) && (contentH > clampedH || naturalW > contentW))
+            // The scrollport is the content area minus each shown bar's gutter (§11.1.1), so
+            // scrolling to the end brings the content's far edge out from under the bars.
+            var (portW, portH) = Scrollport(overflow, alwaysScrollbars, contentW, clampedH, naturalW, scrollContentH, flowW);
+            if ((overflow == OverflowType.Scroll || overflow == OverflowType.Auto) && (scrollContentH > portH || naturalW > portW))
             {
                 var ss = node.ScrollState ?? new ElementScrollState();
-                ss.ContentHeight = contentH;
-                ss.ContainerHeight = clampedH;
+                ss.ContentHeight = scrollContentH;
+                ss.ContainerHeight = portH;
                 ss.ContentWidth = naturalW;
-                ss.ContainerWidth = contentW;
+                ss.ContainerWidth = portW;
                 node.ScrollState = ss;
             }
             else
@@ -1326,17 +1363,24 @@ internal static class BoxEngine
             // Horizontal-only overflow with an auto height: the box's height grows to fit the
             // content, so only the width axis can overflow.
             var overflow = node.GetOverflow();
-            if ((overflow == OverflowType.Scroll || overflow == OverflowType.Auto) && naturalW > contentW)
+            var portW = alwaysScrollbars ? flowW : contentW;
+            var sideways = (overflow == OverflowType.Scroll || overflow == OverflowType.Auto) && naturalW > portW;
+            if (sideways)
             {
                 var ss = node.ScrollState ?? new ElementScrollState();
                 ss.ContentWidth = naturalW;
-                ss.ContainerWidth = contentW;
+                ss.ContainerWidth = portW;
                 node.ScrollState = ss;
             }
             else
             {
                 node.ScrollState = null;
             }
+            // A shown horizontal bar takes its gutter from the height (§11.1.1); with an auto
+            // height the box grows to keep its content clear of it (max-height-107's reference
+            // reserves exactly that: a 200px box plus its bar). 'scroll' always shows the bar.
+            if ((alwaysScrollbars || sideways && overflow == OverflowType.Auto) && node.TagName is not ("HTML" or "BODY"))
+                contentH += ScrollGutter;
         }
 
         // A replaced box's height is the image's (or the ratio-derived) one — it has no in-flow
@@ -1375,6 +1419,128 @@ internal static class BoxEngine
                    + contentH
                    + padding.Bottom + border.Bottom + effectiveBottomMargin;
         return (totalH, effectiveBottomChain);
+    }
+
+    /// <summary>CSS 2.1 §11.1.1: "UAs must apply the 'overflow' property set on the root
+    /// element to the viewport. When the root element is an HTML 'html' element … and that
+    /// element has an HTML 'body' element as a child, user agents must instead apply the
+    /// 'overflow' property from the first such child element to the viewport, if the value
+    /// on the root element is 'visible'." <paramref name="root"/> is the HTML box or the
+    /// document box above it.</summary>
+    internal static OverflowType ViewportOverflow(LayoutNode root)
+    {
+        var html = root.TagName == "HTML" ? root : root.Children.FirstOrDefault(c => c.TagName == "HTML");
+        if (html is null) return root.GetOverflow();
+        var overflow = html.GetOverflow();
+        if (overflow == OverflowType.Visible && html.Children.FirstOrDefault(c => c.TagName == "BODY") is { } body)
+            overflow = body.GetOverflow();
+        return overflow;
+    }
+
+    /// <summary>A 'position: relative' box's paint-time shift (§9.4.3): 'left' wins over
+    /// 'right' and 'top' over 'bottom'; percentages resolve against the containing block.</summary>
+    internal static (float Dx, float Dy) RelativeOffset(LayoutNode node)
+    {
+        var fontSize = node.GetFontSize();
+        // Percentage offsets use the containing block, not the positioned box itself.
+        var containingWidth = node.Parent?.Box.ContentBox.Width ?? node.Box.ContentBox.Width;
+        var containingHeight = node.Parent?.Box.ContentBox.Height ?? node.Box.ContentBox.Height;
+        var t = node.GetOffsetTop(containingHeight, fontSize);
+        var l = node.GetOffsetLeft(containingWidth, fontSize);
+        var r = node.GetOffsetRight(containingWidth, fontSize);
+        var b = node.GetOffsetBottom(containingHeight, fontSize);
+        var dx = !float.IsNaN(l) ? l : !float.IsNaN(r) ? -r : 0f;
+        var dy = !float.IsNaN(t) ? t : !float.IsNaN(b) ? -b : 0f;
+        return (dx, dy);
+    }
+
+    /// <summary>The far edges of a scroll container's in-flow content (§11.1.1): every
+    /// descendant box, shifted by the relative offsets on its way down (§9.4.3: "relative
+    /// positioning … may cause boxes to overlap … [and] overflow"). Absolutely positioned
+    /// boxes are left out, and a descendant that clips its own overflow contributes only its
+    /// own box. Returns null when nothing rendered.</summary>
+    internal static (float Right, float Bottom)? ScrollableExtent(LayoutNode box)
+    {
+        float right = float.NegativeInfinity, bottom = float.NegativeInfinity;
+        // A box's own text line can be wider than the box (an unbreakable word, max-height-109).
+        void OwnText(LayoutNode n, float dx)
+        {
+            if (n.OwnTextWidth > 0f) right = MathF.Max(right, n.Box.ContentBox.Left + n.OwnTextWidth + dx);
+        }
+        OwnText(box, 0f);
+        void Walk(LayoutNode n, float dx, float dy)
+        {
+            foreach (var c in n.Children)
+            {
+                var pos = c.GetPosition();
+                if (pos is PositionType.Absolute or PositionType.Fixed || c.GetDisplay() == DisplayType.None) continue;
+                var (rx, ry) = pos == PositionType.Relative ? RelativeOffset(c) : (0f, 0f);
+                var (ox, oy) = (dx + rx, dy + ry);
+                var mb = c.Box.MarginBox;
+                if (mb.Width > 0f || mb.Height > 0f)
+                {
+                    right = MathF.Max(right, mb.Right + ox);
+                    bottom = MathF.Max(bottom, mb.Bottom + oy);
+                }
+                if (c.GetOverflow() != OverflowType.Visible) continue;
+                OwnText(c, ox);
+                Walk(c, ox, oy);
+            }
+        }
+        Walk(box, 0f, 0f);
+        return float.IsNegativeInfinity(right) ? null : (right, bottom);
+    }
+
+    /// <summary>The scrollbars a box shows (§11.1.1): 'scroll' always both; 'auto' the bar of
+    /// each axis that overflows. The root's and body's 'overflow' belongs to the viewport.</summary>
+    internal static (bool Vertical, bool Horizontal) ShownScrollbars(LayoutNode node)
+    {
+        if (node.TagName is "HTML" or "BODY" || node.TagName.StartsWith('#')) return (false, false);
+        return node.GetOverflow() switch
+        {
+            OverflowType.Scroll => (true, true),
+            OverflowType.Auto when node.ScrollState is { } ss => (ss.NeedsScrollbar, ss.NeedsHorizontalScrollbar),
+            _ => (false, false),
+        };
+    }
+
+    /// <summary>The box's scrollport: its padding box less the gutter of each shown bar — the
+    /// area its content is clipped to and scrolls within (the bars own their gutters).</summary>
+    internal static SKRect ScrollportRect(LayoutNode node)
+    {
+        var pb = node.Box.PaddingBox;
+        var (vertical, horizontal) = ShownScrollbars(node);
+        return new SKRect(pb.Left, pb.Top,
+            MathF.Max(pb.Left, pb.Right - (vertical ? ScrollGutter : 0f)),
+            MathF.Max(pb.Top, pb.Bottom - (horizontal ? ScrollGutter : 0f)));
+    }
+
+    /// <summary>The inline space one scrollbar takes from its box: the bar plus its margin.</summary>
+    internal const float ScrollGutter = ElementScrollState.BarWidth + ElementScrollState.BarMargin;
+
+    /// <summary>The scrollport of a box with a fixed content area (§11.1.1): each axis loses
+    /// the gutter of the bar drawn across it — the vertical bar takes width, the horizontal
+    /// bar takes height. 'scroll' always draws both (its flow content already laid out beside
+    /// the vertical gutter). 'auto' lays its content out before knowing whether a bar
+    /// appears: a genuine horizontal overflow takes its gutter from the height (and may make
+    /// the height overflow in turn), and the vertical bar takes its gutter from the width only
+    /// when the content scrolls sideways anyway — content that exactly fills the box keeps the
+    /// vertical bar as an overlay (taking its width would invent a horizontal overflow there;
+    /// browsers re-lay such content out narrower instead).</summary>
+    internal static (float Width, float Height) Scrollport(OverflowType overflow, bool alwaysScrollbars,
+        float contentW, float contentH, float naturalW, float naturalH, float flowW)
+    {
+        if (alwaysScrollbars)
+            return (Math.Max(0f, contentW - ScrollGutter), Math.Max(0f, contentH - ScrollGutter));
+        if (overflow != OverflowType.Auto)
+            return (contentW, contentH);
+        // 'auto' content already laid out beside the vertical gutter (LayoutBlockCore's second
+        // pass) has a vertical bar; its width overflows only past that narrower line.
+        var besideBar = flowW < contentW;
+        var horizontal = naturalW > (besideBar ? flowW : contentW);
+        var vertical = besideBar || naturalH > contentH - (horizontal ? ScrollGutter : 0f);
+        return (Math.Max(0f, contentW - (vertical && (besideBar || horizontal) ? ScrollGutter : 0f)),
+                Math.Max(0f, contentH - (horizontal ? ScrollGutter : 0f)));
     }
 
     /// <summary>Measure a nested flex item's content at its available width before final placement.</summary>
@@ -3840,7 +4006,13 @@ internal static class BoxEngine
                 else if (node.TagName == "METER") { defaultW = FormLayout.MeterWidth; defaultH = FormLayout.MeterHeight; }
                 else
                 {
-                    defaultW = IntrinsicSizer.ShrinkToFit(node, Math.Max(maxWidth, 0f), viewportHeight);
+                    // §10.3.9: shrink-to-fit's available width is the containing block's width
+                    // minus the box's own margins, borders and padding. Passing the whole line
+                    // width let an inline-block of wrapping text grow until its border box
+                    // overflowed the line by those edges (inline-block-002 at a 450px window).
+                    var availableW = maxWidth - margin.Left - margin.Right - border.Left - border.Right
+                                     - padding.Left - padding.Right;
+                    defaultW = IntrinsicSizer.ShrinkToFit(node, Math.Max(availableW, 0f), viewportHeight);
                     // An empty auto-height inline-block is 0 tall (§10.6.6); content measures below.
                     defaultH = 0f;
                     isFormControl = false;

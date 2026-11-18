@@ -146,7 +146,11 @@ internal static class Drawer
         PaintFixedNodes(canvas, root, width);
         AddWrappedAnchorRegions(root);
 
-        viewport.ContentHeight = root.Box.MarginBox.Bottom;
+        // §11.1.1: 'overflow: hidden' propagated to the viewport clips the canvas there — the
+        // page offers no scrolling mechanism, so it has no scroll extent and draws no bar.
+        viewport.ContentHeight = BoxEngine.ViewportOverflow(root) == OverflowType.Hidden
+            ? Math.Min(root.Box.MarginBox.Bottom, height)
+            : root.Box.MarginBox.Bottom;
         DrawScrollbar(canvas, viewport, width, height);
 
         return bitmap;
@@ -196,13 +200,44 @@ internal static class Drawer
         canvas.DrawRoundRect(x, thumbTop + margin, barWidth, thumbH - margin * 2, 3, 3, paint);
     }
 
-    private static void DrawElementScrollbar(SKCanvas canvas, LayoutNode node, ElementScrollState ss)
+    /// <summary>Whether the box always shows its scrolling mechanism: 'overflow: scroll' on an
+    /// element box (the root's and body's 'overflow' belongs to the viewport, §11.1.1).</summary>
+    private static bool HasScrollMechanism(LayoutNode node) =>
+        node.TagName is not ("HTML" or "BODY") && !node.TagName.StartsWith('#') &&
+        node.GetOverflow() == OverflowType.Scroll && node.Box.PaddingBox.Width > 0 && node.Box.PaddingBox.Height > 0;
+
+    /// <summary>The opaque trough a scroll box paints in each shown scrollbar's gutter.</summary>
+    internal static readonly SKColor ScrollTrough = new(0xF0, 0xF0, 0xF0);
+
+    private static void DrawElementScrollbar(SKCanvas canvas, LayoutNode node, ElementScrollState ss, bool always = false)
     {
-        // Each axis draws its own bar only when it overflows (§11.1.1): a horizontal-only
-        // overflow box must not grow a phantom vertical bar.
+        // Each shown bar (BoxEngine.ShownScrollbars: 'scroll' both, 'auto' an overflowing
+        // axis's — a horizontal-only overflow grows no phantom vertical bar) owns its gutter
+        // (§11.1.1: its space is taken out of the box's containing block, BoxEngine.ScrollGutter):
+        // an opaque trough with a track, which the content (clipped to the scrollport) never
+        // covers. The thumb marks an axis that can actually scroll, so a track without one is
+        // an inactive scrollbar.
         var box = node.Box.PaddingBox;
         var barW = ElementScrollState.BarWidth;
         var barM = ElementScrollState.BarMargin;
+        var (vertical, horizontal) = BoxEngine.ShownScrollbars(node);
+        if (!vertical && !horizontal && !always) return;
+        var gutter = BoxEngine.ScrollGutter;
+        using (var trough = new SKPaint { Color = ScrollTrough, IsAntialias = false })
+        {
+            if (vertical)
+                canvas.DrawRect(SKRect.Create(box.Right - gutter, box.Top, gutter, box.Height), trough);
+            if (horizontal)
+                canvas.DrawRect(SKRect.Create(box.Left, box.Bottom - gutter,
+                    Math.Max(0f, box.Width - (vertical ? gutter : 0f)), gutter), trough);
+        }
+        using (var track = new SKPaint { Color = new SKColor(0, 0, 0, 28), IsAntialias = true })
+        {
+            if (vertical)
+                canvas.DrawRoundRect(box.Right - barW - barM, box.Top + barM, barW, Math.Max(0f, box.Height - barW - barM * 3), 3, 3, track);
+            if (horizontal)
+                canvas.DrawRoundRect(box.Left + barM, box.Bottom - barW - barM, Math.Max(0f, box.Width - barW - barM * 3), barW, 3, 3, track);
+        }
         using var paint = new SKPaint { Color = new SKColor(0, 0, 0, 80), IsAntialias = true };
         if (ss.NeedsScrollbar)
         {
@@ -273,16 +308,7 @@ internal static class Drawer
         var pos = node.GetPosition();
         if (pos == PositionType.Relative)
         {
-            var fontSize = node.GetFontSize();
-            // Percentage offsets use the containing block, not the positioned box itself.
-            var containingWidth = node.Parent?.Box.ContentBox.Width ?? node.Box.ContentBox.Width;
-            var containingHeight = node.Parent?.Box.ContentBox.Height ?? node.Box.ContentBox.Height;
-            var t = node.GetOffsetTop(containingHeight, fontSize);
-            var l = node.GetOffsetLeft(containingWidth, fontSize);
-            var r = node.GetOffsetRight(containingWidth, fontSize);
-            var b = node.GetOffsetBottom(containingHeight, fontSize);
-            var dx = !float.IsNaN(l) ? l : !float.IsNaN(r) ? -r : 0f;
-            var dy = !float.IsNaN(t) ? t : !float.IsNaN(b) ? -b : 0f;
+            var (dx, dy) = BoxEngine.RelativeOffset(node);
             if (dx != 0f || dy != 0f)
             {
                 var hitStart = _hitRegions.Count;
@@ -415,6 +441,10 @@ internal static class Drawer
             // Draw background, borders, and shadows at their fixed layout position
             // before the scroll translate so they don't scroll away with the content.
             if (!invisible) PaintBlockDecorations(canvas, node);
+            // The content scrolls within the scrollport: the padding box less the bars'
+            // gutters (§11.1.1), so it never paints under its own scrollbars.
+            canvas.Save();
+            canvas.ClipRect(BoxEngine.ScrollportRect(node));
             canvas.Translate(-scrollState.ScrollX, -scrollState.ScrollY);
             // The content painted inside this translate (including fixed backgrounds of
             // descendants) compensates the box's scroll in its own placement (§14.2.1).
@@ -423,8 +453,20 @@ internal static class Drawer
             PaintNodeContent(canvas, node, viewportWidth);
             _bgFixedScrollX -= scrollState.ScrollX;
             _bgFixedScrollY -= scrollState.ScrollY;
-            canvas.Translate(scrollState.ScrollX, scrollState.ScrollY); // Undo scroll offset for scrollbar
-            if (!invisible) DrawElementScrollbar(canvas, node, scrollState);
+            canvas.Restore(); // undo the scroll offset and the scrollport clip for the bars
+            if (!invisible) DrawElementScrollbar(canvas, node, scrollState, always: HasScrollMechanism(node));
+        }
+        else if (HasScrollMechanism(node))
+        {
+            canvas.Save();
+            canvas.ClipRect(BoxEngine.ScrollportRect(node));
+            PaintNodeContent(canvas, node, viewportWidth);
+            canvas.Restore();
+            // §11.1.1 'scroll': "if a scrolling mechanism is visible on the screen, it should be
+            // displayed whether or not any of its content is clipped" — the bars of a box with
+            // nothing to scroll are shown inactive (a track without a thumb).
+            if (!invisible)
+                DrawElementScrollbar(canvas, node, scrollState ?? new ElementScrollState(), always: true);
         }
         else
         {
@@ -1020,8 +1062,7 @@ internal static class Drawer
         // OrderBy is stable, so equal z-indices keep document order.
         var negativeZ = items.Where(c => c.GetZIndex() < 0).OrderBy(c => c.GetZIndex()).ToList();
         var nonNegativeZ = items.Where(c => c.GetZIndex() >= 0).OrderBy(c => c.GetZIndex()).ToList();
-
-        foreach (var c in negativeZ) PaintNode(canvas, c, viewportWidth);      // step 2
+        foreach (var c in negativeZ) PaintThroughClippers(canvas, node, c, viewportWidth);      // step 2
 
         var savedFloats = _stepFloats;
         var savedInlines = _stepInlines;
@@ -1040,7 +1081,53 @@ internal static class Drawer
         foreach (var f in step4Floats) PaintDeferred(canvas, f, () => PaintNode(canvas, f.Node, viewportWidth));                    // step 4
         foreach (var i in step5Items) PaintDeferred(canvas, i, () => PaintInlineContent(canvas, i.Node, viewportWidth));  // step 5
 
-        foreach (var c in nonNegativeZ) PaintNode(canvas, c, viewportWidth);   // steps 6/7
+        foreach (var c in nonNegativeZ) PaintThroughClippers(canvas, node, c, viewportWidth);   // steps 6/7
+    }
+
+
+    /// <summary>Paints a stacking item from its stacking-context root under the clip and scroll
+    /// offset of every non-'visible' overflow box between the root and the item — the state
+    /// the in-flow pass applied inside those boxes, which a root-level paint would otherwise
+    /// skip (overflow-003: an abspos square inside a scrolled 'overflow: scroll' box painted
+    /// outside it, unclipped and unscrolled). §11.1.1: the clip covers descendants "except
+    /// those whose containing block is the viewport or an ancestor of the element", so an
+    /// absolutely positioned item passes only through boxes that contain its containing block.</summary>
+    private static void PaintThroughClippers(SKCanvas canvas, LayoutNode root, LayoutNode item, int viewportWidth)
+    {
+        List<LayoutNode>? clippers = null;
+        var absolute = item.GetPosition() == PositionType.Absolute;
+        LayoutNode? containingBlock = null;
+        if (absolute)
+            for (var a = item.Parent; a is not null && !ReferenceEquals(a, root); a = a.Parent)
+                if (a.GetPosition() != PositionType.Static) { containingBlock = a; break; }
+        for (var a = item.Parent; a is not null && !ReferenceEquals(a, root); a = a.Parent)
+        {
+            if (a.GetOverflow() == OverflowType.Visible) continue;
+            if (absolute && !IsSelfOrDescendant(containingBlock, a)) continue;
+            (clippers ??= []).Add(a);
+        }
+        if (clippers is null)
+        {
+            PaintNode(canvas, item, viewportWidth);
+            return;
+        }
+        canvas.Save();
+        for (var i = clippers.Count - 1; i >= 0; i--)  // outermost first
+        {
+            var a = clippers[i];
+            canvas.ClipRect(BoxEngine.ScrollportRect(a));
+            if (a.ScrollState is { } ss && (ss.NeedsScrollbar || ss.NeedsHorizontalScrollbar))
+                canvas.Translate(-ss.ScrollX, -ss.ScrollY);
+        }
+        PaintNode(canvas, item, viewportWidth);
+        canvas.Restore();
+    }
+
+    private static bool IsSelfOrDescendant(LayoutNode? node, LayoutNode ancestor)
+    {
+        for (var n = node; n is not null; n = n.Parent)
+            if (ReferenceEquals(n, ancestor)) return true;
+        return false;
     }
 
     private static List<DeferredPaint>? _stepFloats;
@@ -1288,6 +1375,24 @@ internal static class Drawer
         // it links through the anchor it was split from.
         var link = SplitLink(node) ?? node;
         _hitRegions.Add(CursorRegion(node.Box.BorderBox, node, link.Href, link.NodeKey));
+
+        // An inline link is an ordinary inline box (§8.4, §14.2): its background and borders
+        // paint under its text — per line fragment when it was split over lines. The dedicated
+        // link path used to skip them, so 'a:hover { background-color: green }' painted
+        // nothing (dynamic-pseudo-classes-000). Block-level links got theirs in the block pass.
+        if (node.GetDisplay() == DisplayType.Inline && !node.IsInvisible())
+        {
+            var background = node.GetBackgroundColor();
+            if (background != SKColors.Transparent)
+            {
+                using var backgroundPaint = new SKPaint { Color = background };
+                if (node.InlineFragments is { Count: > 1 } fragments)
+                    foreach (var (rect, _) in fragments) canvas.DrawRect(rect, backgroundPaint);
+                else if (!node.Box.PaddingBox.IsEmpty)
+                    canvas.DrawRect(node.Box.PaddingBox, backgroundPaint);
+            }
+            DrawBorders(canvas, node.Box, node);
+        }
 
         if (!string.IsNullOrEmpty(node.DisplayText))
         {

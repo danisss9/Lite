@@ -43,7 +43,7 @@ internal static class WptVisualPage
     }
 
     internal static (SKBitmap Bitmap, Lite.Models.LayoutNode Root, SKBitmap? Mid, SKBitmap? Before,
-        IReadOnlyList<Lite.Rendering.PaintLog.Entry> Paint) Render(string path, string? viewport = null,
+        IReadOnlyList<Lite.Rendering.PaintLog.Entry> Paint, IReadOnlyList<(string Name, SKBitmap Bitmap)>? States) Render(string path, string? viewport = null,
         string waitClass = "reftest-wait", Css21.ScrollSpec? elementScroll = null,
         Func<Lite.Models.LayoutNode, (float ScrollX, float ScrollY)>? pageScroll = null,
         bool testDriver = false, float scale = 1f, Css21.InteractionSpec? interaction = null, string? sentence = null)
@@ -113,7 +113,7 @@ internal static class WptVisualPage
             if (Environment.GetEnvironmentVariable("LITE_RENDER_PAINTLOG") is "1")
                 foreach (var e in plainPaint)
                     Console.WriteLine($"[PAINT] '{(e.Text.Length > 44 ? e.Text[..44] + "…" : e.Text)}' x={e.X:F1} y={e.BaselineY:F1} face={e.Typeface} size={e.Size:F1} bold={e.Bold} italic={e.Italic}");
-            return (plain, root, null, null, plainPaint);
+            return (plain, root, null, null, plainPaint, null);
         }
 
         // Two-render protocols (e.g. a stated condition about the scrolled state): capture
@@ -148,77 +148,113 @@ internal static class WptVisualPage
         {
             var finalBmp = Lite.Drawer.DrawToBitmap(width, height, root, scrolledViewport, scale);
             paint = Lite.Rendering.PaintLog.End();
-            return (finalBmp, root, mid, before, paint);
+            return (finalBmp, root, mid, before, paint, null);
         }
         catch { Lite.Rendering.PaintLog.End(); throw; }
     }
 
-    /// <summary>The interaction protocol's renders: at rest, in the stated state (the final
-    /// render), and — for a press — after the button is released off the subject (so the
-    /// release activates nothing).</summary>
+    /// <summary>The interaction protocol's renders: at rest, each interacted state (the first
+    /// is the final render, the rest are named states — one per subject occurrence for an
+    /// <c>Each</c> protocol, one per action for <c>every</c>), and — after a press — the
+    /// render once the button is released off the subject (so the release activates
+    /// nothing).</summary>
     private static (SKBitmap Bitmap, Lite.Models.LayoutNode Root, SKBitmap? Mid, SKBitmap? Before,
-        IReadOnlyList<Lite.Rendering.PaintLog.Entry> Paint) RenderInteraction(BrowserWindow window,
+        IReadOnlyList<Lite.Rendering.PaintLog.Entry> Paint, IReadOnlyList<(string Name, SKBitmap Bitmap)>? States)
+        RenderInteraction(BrowserWindow window,
         Scripting.JsEngine engine, Lite.Models.LayoutNode root, Css21.InteractionSpec interaction, string? sentence,
         Func<(SKBitmap, IReadOnlyList<Lite.Rendering.PaintLog.Entry>)> draw, int width, int height)
     {
         var (atRest, _) = draw();
-        if (Css21.VisualChecks.InteractionSubject(interaction, root, sentence) is not var (pointer, focus))
+        var subjects = Css21.VisualChecks.InteractionSubjects(interaction, root, sentence);
+        if (subjects.Count == 0)
         {
             atRest.Dispose();
             throw new Css21.InteractionUnavailableException(
                 $"Interaction protocol: no subject '{interaction.Subject}' to {interaction.Action}");
         }
-        var box = pointer.Box.BorderBox;
-        var x = (int)MathF.Round((box.Left + box.Right) / 2);
-        var y = (int)MathF.Round((box.Top + box.Bottom) / 2);
         void Settle()
         {
             HeadlessPage.PumpFrames(engine, 2);
             engine.FlushMicrotasksTree();
         }
-        switch (interaction.Action)
+        var (farX, farY) = (width - 2, height - 2);
+        var pressed = false;
+        var renders = new List<(string Name, SKBitmap Bitmap, IReadOnlyList<Lite.Rendering.PaintLog.Entry> Paint)>();
+        void Drive(string action, Lite.Models.LayoutNode pointer, Lite.Models.LayoutNode? focus)
         {
-            case "hover":
-                window.OnMouseMove(x, y);
-                break;
-            case "active":
-            case "hover-active":
-                window.OnMouseMove(x, y);
-                window.OnMouseDown(x, y);
-                break;
-            case "focus":
+            var box = pointer.Box.BorderBox;
+            var x = (int)MathF.Round((box.Left + box.Right) / 2);
+            var y = (int)MathF.Round((box.Top + box.Bottom) / 2);
+            switch (action)
             {
-                if (focus is null)
+                case "hover":
+                    window.OnMouseMove(x, y);
+                    break;
+                case "active":
+                case "hover-active":
+                    window.OnMouseMove(x, y);
+                    window.OnMouseDown(x, y);
+                    pressed = true;
+                    break;
+                case "focus":
                 {
-                    atRest.Dispose();
-                    throw new Css21.InteractionUnavailableException("Interaction protocol: the subject has no focusable element");
+                    if (focus is null)
+                        throw new Css21.InteractionUnavailableException("Interaction protocol: the subject has no focusable element");
+                    var steps = Lite.BrowserWindow.SequentialFocusOrder(root).Count;
+                    for (var i = 0; i < steps && !ReferenceEquals(root.DocumentState?.ActiveElement, focus); i++)
+                    {
+                        window.OnKey(true, 0x09, default);
+                        window.OnKey(false, 0x09, default);
+                        Settle();
+                    }
+                    break;
                 }
-                var steps = Lite.BrowserWindow.SequentialFocusOrder(root).Count;
-                for (var i = 0; i < steps && !ReferenceEquals(root.DocumentState?.ActiveElement, focus); i++)
-                {
-                    window.OnKey(true, 0x09, default);
-                    window.OnKey(false, 0x09, default);
-                    Settle();
-                }
-                break;
+                default:
+                    throw new Css21.InteractionUnavailableException($"Interaction protocol: unknown action '{action}'");
             }
-            default:
-                atRest.Dispose();
-                throw new Css21.InteractionUnavailableException($"Interaction protocol: unknown action '{interaction.Action}'");
+            Settle();
+            var (bitmap, paint) = draw();
+            renders.Add((action, bitmap, paint));
         }
-        Settle();
-        var (during, paint) = draw();
+        try
+        {
+            if (interaction.Action == "every")
+            {
+                // "Whatever you do to this link": hover it, focus it, then press it — each
+                // state is judged (the earlier states persist, as they would for a tester).
+                var (pointer, focus) = subjects[0];
+                Drive("hover", pointer, focus);
+                Drive("focus", pointer, focus ?? pointer);
+                Drive("active", pointer, focus);
+            }
+            else
+            {
+                foreach (var (pointer, focus) in subjects)
+                    Drive(interaction.Action, pointer, focus);
+            }
+        }
+        catch
+        {
+            atRest.Dispose();
+            foreach (var (_, bitmap, _) in renders) bitmap.Dispose();
+            throw;
+        }
         SKBitmap? released = null;
-        if (interaction.Action is "active" or "hover-active")
+        if (pressed)
         {
             // Release off the subject: the press ends (:active clears) without activating it.
-            var (farX, farY) = (width - 2, height - 2);
             window.OnMouseMove(farX, farY);
             window.OnMouseUp(farX, farY);
             Settle();
             (released, _) = draw();
         }
-        return (during, root, released, atRest, paint);
+        var states = renders.Skip(1).Select(r => (r.Name switch
+        {
+            "focus" => "focused",
+            "active" => "activated",
+            var name => name,
+        }, r.Bitmap)).ToList();
+        return (renders[0].Bitmap, root, released, atRest, renders[0].Paint, states.Count > 0 ? states : null);
     }
 
     internal static WptRunner.RunResult RunCrash(WptCase test)
@@ -226,7 +262,7 @@ internal static class WptVisualPage
         var (scale, scaleNote) = DeviceScale(test.Options);
         try
         {
-            var (bitmap, _, _, _, _) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(), "test-wait",
+            var (bitmap, _, _, _, _, _) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(), "test-wait",
                 testDriver: test.TestDriver, scale: scale);
             using (bitmap)
             {
@@ -261,6 +297,8 @@ internal static class WptVisualPage
         if (test.TestDriver)
             return new(WptRunner.Cat.Unsupported, "Self-test requires test-driver support", 0, 0);
         var (scale, _) = DeviceScale(test.Options);
+        if (statedCheck?.Resize is { Count: > 0 } widths && statedCondition is not null)
+            return RunResizeProtocol(test, widths, statedCondition, scale);
         try
         {
             var scroll = statedCheck?.Scroll;
@@ -276,35 +314,16 @@ internal static class WptVisualPage
             var pageScroll = pageTarget is null
                 ? null
                 : (Func<Lite.Models.LayoutNode, (float, float)>)(root => Css21.VisualChecks.PageScrollExtent(pageTarget, root, width, height));
-            var (bitmap, root, mid, before, paint) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(),
+            var (bitmap, root, mid, before, paint, states) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(),
                 elementScroll: pageTarget is null ? scroll : null, pageScroll: pageScroll, scale: scale,
                 interaction: statedCheck?.Interaction, sentence: sentence);
-            var renders = new Css21.RenderSet(bitmap, mid, before, paint);
+            var renders = new Css21.RenderSet(bitmap, mid, before, paint, states);
             using (bitmap)
             {
-                // The suite's Ahem font-requirement notice ("Ahem_font_required_for_this_test.")
-                // is a red element BY DESIGN (white text on a red background) — it states the
-                // test's font dependency, not a failure. Exclude its box from the red scan.
-                var notices = new List<SKRectI>();
-                CollectNoticeBoxes(root, notices);
-
-                int red = 0;
-                var pixels = bitmap.Pixels;
-                var bitmapWidth = bitmap.Width;
-                for (int i = 0; i < pixels.Length; i++)
-                {
-                    var pixel = pixels[i];
-                    if (pixel.Red == 255 && pixel.Green == 0 && pixel.Blue == 0)
-                    {
-                        int x = i % bitmapWidth, y = i / bitmapWidth;
-                        bool inNotice = false;
-                        foreach (var n in notices)
-                        {
-                            if (n.Contains(x, y)) { inNotice = true; break; }
-                        }
-                        if (!inNotice) red++;
-                    }
-                }
+                // A protocol whose pressed state is unconstrained ("the link should turn red
+                // while clicked", rest "after") is scanned at rest, not in the pressed render.
+                var scanned = statedCheck?.Interaction?.Rest == "after" && before is not null ? before : bitmap;
+                var red = CountFailureRed(scanned, root);
                 const string assertion = "Self-describing test shows no failure red (diagnostic)";
                 if (red == 0 && statedCondition is not null)
                 {
@@ -369,6 +388,71 @@ internal static class WptVisualPage
         catch (TimeoutException ex) { return new(WptRunner.Cat.Timeout, ex.Message, 0, 0); }
         catch (Css21.InteractionUnavailableException ex) { return new(WptRunner.Cat.Unsupported, ex.Message, 0, 0); }
         catch (Exception ex) { return new(WptRunner.Cat.Crash, WptVisualPage.CrashDetail(ex), 0, 0); }
+    }
+
+    /// <summary>The suite's failure red (exact #ff0000) in a render, outside the Ahem
+    /// font-requirement notice — a red element BY DESIGN (white text on a red background) that
+    /// states the test's font dependency, not a failure.</summary>
+    private static int CountFailureRed(SKBitmap bitmap, Lite.Models.LayoutNode root)
+    {
+        var notices = new List<SKRectI>();
+        CollectNoticeBoxes(root, notices);
+        var red = 0;
+        var pixels = bitmap.Pixels;
+        var bitmapWidth = bitmap.Width;
+        for (var i = 0; i < pixels.Length; i++)
+        {
+            var pixel = pixels[i];
+            if (pixel.Red != 255 || pixel.Green != 0 || pixel.Blue != 0) continue;
+            int x = i % bitmapWidth, y = i / bitmapWidth;
+            if (!notices.Any(n => n.Contains(x, y))) red++;
+        }
+        return red;
+    }
+
+    /// <summary>Window heights for the resize protocol: tall enough that a narrow window's
+    /// wrapped content stays inside the render (the judges refuse content clipped at the
+    /// viewport edge).</summary>
+    internal const int ResizeHeight = 2400;
+
+    /// <summary>"Resize the window …; the condition should always hold": the page loads at each
+    /// stated window width (a fresh layout at that width is what a resize to it produces for
+    /// these static pages), and at every width the page shows no failure red and the stated
+    /// check holds. Each width is a subtest.</summary>
+    private static WptRunner.RunResult RunResizeProtocol(WptCase test, IReadOnlyList<int> widths,
+        Func<Css21.RenderSet, Lite.Models.LayoutNode, WptRunner.RunResult> statedCondition, float scale)
+    {
+        var subtests = new List<SubtestEvidence>();
+        try
+        {
+            foreach (var width in widths)
+            {
+                var (bitmap, root, mid, before, paint, states) = Render(test.Path, $"{width}x{ResizeHeight}", scale: scale);
+                using (bitmap)
+                {
+                    var name = $"at a {width}px-wide window";
+                    var red = CountFailureRed(bitmap, root);
+                    if (red > 0)
+                    {
+                        subtests.Add(new(name, 1, $"{red} red pixels"));
+                        return new(WptRunner.Cat.Fail, $"{name}: {red} red pixels", subtests.Count, 1, subtests, 0);
+                    }
+                    var stated = statedCondition(new Css21.RenderSet(bitmap, mid, before, paint, states), root);
+                    if (stated.Cat == WptRunner.Cat.Unsupported)
+                        return stated with { Detail = $"{name}: {stated.Detail}" };
+                    if (!stated.Passed)
+                    {
+                        subtests.Add(new(name, 1, stated.Detail));
+                        return new(WptRunner.Cat.Fail, $"{name}: {stated.Detail}", subtests.Count, 1, subtests, 0);
+                    }
+                    subtests.Add(new($"{name}: {stated.Detail}", 0, null));
+                }
+            }
+        }
+        catch (TimeoutException ex) { return new(WptRunner.Cat.Timeout, ex.Message, 0, 0); }
+        catch (Exception ex) { return new(WptRunner.Cat.Crash, WptVisualPage.CrashDetail(ex), 0, 0); }
+        var assertion = $"the stated condition holds at window widths {string.Join(", ", widths)} (resize protocol)";
+        return new(WptRunner.Cat.Pass, assertion, subtests.Count, 0, subtests, 0);
     }
 
     /// <summary>The device scale a case's DPI options request plus the evidence note naming

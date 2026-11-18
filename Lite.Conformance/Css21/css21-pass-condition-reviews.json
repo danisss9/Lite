@@ -9,150 +9,6 @@
    "note": "the stated condition (\"Test passes if there is the word \"PASS\" in orange inside a filled blue rectangle.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css/CSS2/backgrounds/background-089.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-091.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-099.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-102.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-105.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-108.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-113.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-115.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-123.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-126.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-129.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-132.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-159.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-162.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-165.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-168.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-176.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-178.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-183.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-186.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-189.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-192.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-200.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/backgrounds/background-202.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css/CSS2/backgrounds/background-alpha-005.xht",
    "condition": "manual",
    "manualPending": true,
@@ -699,12 +555,6 @@
    "note": "the stated condition (\"Test passes if the height of the blue box is the same as the orange bar below.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css/CSS2/cascade/html-attribute-029.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below is green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css/CSS2/cascade/html-precedence-003.xht",
    "condition": "manual",
    "manualPending": true,
@@ -757,12 +607,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"This should be blue and underlined.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/css1/c21-pseud-anch-000.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"This sentence should be green. Check that it remains green after you click it. Note: the link should turn red while clicked.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css/CSS2/css1/c23-first-line-000.xht",
@@ -859,18 +703,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"This test should be 12px, sans-serif, and light. There should be 30px between baselines (18px gap between lines). dummy text dummy text dummy text dummy text du\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/css1/c535-bg-fixd-000.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/css1/c537-bgfxps-000.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time, and there should be no red below, just a block of green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css/CSS2/css1/c543-txt-decor-000.xht",
@@ -1297,12 +1129,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"There should be two perfect columns of identical Xs below:\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/fonts/font-size-116.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"There should be no red below (scroll all the way down if necessary).\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css/CSS2/fonts/font-size-117.xht",
@@ -2421,12 +2247,6 @@
    "note": "the stated condition (\"Test passes if there is a large orange rectangle that covers the bottom-right corner of a blue square and continues to the right side and the bottom of the page\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css/CSS2/positioning/position-fixed-003.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the blue stripe does not move when the page is scrolled.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css/CSS2/positioning/position-relative-002.xht",
    "condition": "manual",
    "manualPending": true,
@@ -2479,12 +2299,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if there is a filled green square at the top of the page and a marker bullet on its left-hand side.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/sec5/dynamic-pseudo-classes-002.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"The link in the next paragraph should have a green text color and a bold font weight when it's activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css/CSS2/sec5/first-letter-000.xht",
@@ -2623,12 +2437,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if the \"Filler Text\" below changes to green while the text is activated. (Note: some user agents require you navigate the \"Filler Text\" link before \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/selectors/pseudo-009.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below is green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css/CSS2/syntax/at-charset-013.html",
@@ -3687,46 +3495,10 @@
    "note": "the stated condition (\"Test passes if the blue background overlaps the orange border on the bottom and right sides.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css/CSS2/ui/overflow-003.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/ui/overflow-004.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/ui/overflow-005.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/ui/overflow-ancestors-001.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is an active scrolling mechanism in the box below that can horizontally scroll the \"Filler Text\".\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css/CSS2/ui/overflow-applies-to-010.xht",
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if there is a short black bar and no red . To the left of the bar, there can be a list marker but it is not required.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/ui/overflow-html-body-001.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the horizontal and vertical scrolling mechanism is not available on the page.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/ui/overflow-root-001.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the horizontal and vertical scrolling mechanism is not available on the page.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css/CSS2/ui/overflow-visible-viewport-001.xht",
@@ -3895,150 +3667,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if both lines of \"Filler Text\" below are green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-089.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-091.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-099.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-102.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-105.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-108.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-113.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-115.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-123.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-126.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-129.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-132.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-159.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-162.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-165.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-168.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-176.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-178.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-183.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-186.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-189.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-192.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-200.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/background-202.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/background-alpha-005.htm",
@@ -4515,12 +4143,6 @@
    "note": "the stated condition (\"This should be blue and underlined.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css21-official/html4/c21-pseud-anch-000.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"This sentence should be green. Check that it remains green after you click it. Note: the link should turn red while clicked.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css21-official/html4/c23-first-line-000.htm",
    "condition": "manual",
    "manualPending": true,
@@ -4609,18 +4231,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"This test should be 12px, sans-serif, and light. There should be 30px between baselines (18px gap between lines). dummy text dummy text dummy text dummy text du\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/c535-bg-fixd-000.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/c537-bgfxps-000.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time, and there should be no red below, just a block of green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/c544-valgn-000.htm",
@@ -5337,12 +4947,6 @@
    "note": "the stated condition (\"Test passes if the top edge of the top-most black box is aligned with the top of the blue box and the bottom edge of the bottom-most black box is aligned with t\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css21-official/html4/dynamic-pseudo-classes-002.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"The link in the next paragraph should have a green text color and a bold font weight when it's activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css21-official/html4/empty-cells-004.htm",
    "condition": "manual",
    "manualPending": true,
@@ -5701,12 +5305,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if the height of the blue box is the same as the orange bar below.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/html-attribute-029.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below is green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/html-precedence-003.htm",
@@ -6231,24 +5829,6 @@
    "note": "the stated condition (\"Test passes if the blue background overlaps the orange border on the bottom and right sides.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css21-official/html4/overflow-003.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/overflow-004.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/overflow-005.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css21-official/html4/overflow-006.htm",
    "condition": "manual",
    "manualPending": true,
@@ -6267,28 +5847,10 @@
    "note": "the stated condition (\"none\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css21-official/html4/overflow-ancestors-001.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is an active scrolling mechanism in the box below that can horizontally scroll the \"Filler Text\".\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css21-official/html4/overflow-applies-to-010.htm",
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if there is a black box below and there is no red visible on the page. To the left of the box can be list marker but is it not required.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/overflow-html-body-001.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the horizontal and vertical scrolling mechanism is not available on the page.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/overflow-root-001.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the horizontal and vertical scrolling mechanism is not available on the page.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/overflow-visible-viewport-001.htm",
@@ -6369,40 +5931,16 @@
    "note": "the stated condition (\"Test passes if there is a large orange box that covers the bottom-right corner of the blue box and continues to the right side and the bottom of the page.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css21-official/html4/position-fixed-003.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below does not move when the page is scrolled.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css21-official/html4/position-relative-002.htm",
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if the letter \"a\" is below the blue line and the letter \"b\" is above.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css21-official/html4/position-relative-034.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the words \"Filler Text\".\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/position-relative-036.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the words \"Filler Text\".\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css21-official/html4/positive-integer-001.htm",
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if there is a filled square below.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/pseudo-009.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below is green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/quotes-033.htm",

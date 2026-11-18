@@ -1114,6 +1114,73 @@ public static class Css21CoverageTests
             "green while pressed, black before and after the release passes");
         True(!VisualChecks.Evaluate(cycle, new RenderSet(green, green, black), colorRoot, colorSentence, "p").Passed,
             "still green after the release fails the 'returns to black' phase");
+
+        // text-on-background: the stated background AND ink, absent at rest.
+        const string bgSentence = "The next paragraph should have a green background color and a white text color on :hover.";
+        var bgBody = $"<p>{bgSentence}</p><p>Hover me</p>";
+        var (painted, bgRoot) = RenderPage("p + p { background-color: green; color: white }", bgBody);
+        var (whiteOnly, _) = RenderPage("p + p { color: white }", bgBody);
+        var (unstyled, _) = RenderPage("", bgBody);
+        var onBackground = new VisualCheck("text-on-background", Color: "white", BoxColor: "green", Anchor: "next",
+            Interaction: new InteractionSpec("hover", "next"));
+        True(VisualChecks.Evaluate(onBackground, new RenderSet(painted, null, unstyled), bgRoot, bgSentence, "p").Passed,
+            "white on green while hovered, plain at rest passes");
+        True(!VisualChecks.Evaluate(onBackground, new RenderSet(whiteOnly, null, unstyled), bgRoot, bgSentence, "p").Passed,
+            "white text with no green background fails");
+
+        // bolder: the subject's own ink must grow; an unchanged render is not bold.
+        const string boldSentence = "When you hover over these lines they should go bold:";
+        var boldBody = $"<p>{boldSentence}</p><p>| <span>test test</span> |</p>";
+        var (bolded, boldRoot) = RenderPage("span { font-weight: bold }", boldBody);
+        var (regular, _) = RenderPage("", boldBody);
+        var bolder = new VisualCheck("bolder", Needle: "test test",
+            Interaction: new InteractionSpec("hover", "test test", Each: true));
+        True(VisualChecks.Evaluate(bolder, new RenderSet(bolded, null, regular), boldRoot, boldSentence, "p").Passed,
+            "a bold run while hovered passes");
+        True(!VisualChecks.Evaluate(bolder, new RenderSet(regular, null, regular), boldRoot, boldSentence, "p").Passed,
+            "an unchanged weight fails");
+
+        // 'every' with rest 'same': each state must keep the stated colour.
+        const string stay = "Whatever you do to this link, it should stay green. (hover, focus, activate, follow)";
+        var linkBody = $"<p><a href=''>{stay[..48]}</a> (hover, focus, activate, follow)</p>";
+        var (greenLink, linkRoot) = RenderPage("a { color: green }", linkBody);
+        var (redLink, _) = RenderPage("a { color: red }", linkBody);
+        var every = new VisualCheck("text-color", Color: "green", Anchor: "link",
+            Interaction: new InteractionSpec("every", "link", "same"));
+        True(VisualChecks.Evaluate(every, new RenderSet(greenLink, greenLink, greenLink, null,
+            [("focused", greenLink), ("activated", greenLink)]), linkRoot, stay, "p").Passed, "green in every state passes");
+        True(!VisualChecks.Evaluate(every, new RenderSet(greenLink, greenLink, greenLink, null,
+            [("focused", redLink), ("activated", greenLink)]), linkRoot, stay, "p").Passed, "red while focused fails");
+    }
+
+    [Test]
+    public static void VisualChecks_CenteredCatVariantMatchesTheCasesOwnTile()
+    {
+        // background-089 family: "after scrolling to the bottom of the box, there is a cat image
+        // that is not cut off, and it is centered at the bottom of the box". The tile's own
+        // strokes reach its edges (its feet fill ~19% of its bottom rows), so the judge matches
+        // the case's support/cat.png rather than reading the edges as "cut".
+        const string path = "css21-official/html4/background-089.htm";
+        var catFile = Path.Combine(ConformancePaths.Vendor, "css21-official-20110323", "html4", "support", "cat.png");
+        using var cat = SkiaSharp.SKBitmap.Decode(catFile);
+        True(cat is not null, "the vendored cat.png must exist");
+        var root = ScrollBoxNode();  // content box 100..300 on both axes; a vertical bar only
+        var cx = (100 + 300 - (int)(ElementScrollState.BarWidth + ElementScrollState.BarMargin)) / 2;
+        SkiaSharp.SKBitmap Tiled(int phaseX, int phaseY) => Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(100, 100, 300, 300), Fill(SkiaSharp.SKColors.Green));
+            c.Save();
+            c.ClipRect(new SkiaSharp.SKRect(100, 100, 300, 300));
+            for (var y = 300 - cat!.Height + phaseY; y > 100 - cat.Height; y -= cat.Height)
+                for (var x = cx - cat.Width / 2 + phaseX - 3 * cat.Width; x < 300; x += cat.Width)
+                    c.DrawBitmap(cat, x, y);
+            c.Restore();
+        });
+        var check = new VisualCheck("scroll-cats-moved", Variant: "center", Scroll: new ScrollSpec("bottom-center"));
+        var whole = VisualChecks.Evaluate(check, new RenderSet(Tiled(0, 0), null, Tiled(0, 50)), root, "x", path);
+        True(whole.Passed, whole.Detail);
+        var cut = VisualChecks.Evaluate(check, new RenderSet(Tiled(cat!.Width / 2, 0), null, Tiled(0, 50)), root, "x", path);
+        True(!cut.Passed, "a tile cut at the bottom center must fail");
     }
 
     [Test]
@@ -1355,7 +1422,7 @@ public static class Css21CoverageTests
         }
         var known = new HashSet<string>(StringComparer.Ordinal);
         foreach (var kind in new[] { "one-shape", "same-dimension", "bar-gap", "line-style", "look-same", "solid-line",
-                     "border-ring", "border-sample", "text-color", "text-color-pairs", "text-decoration", "align-right",
+                     "border-ring", "border-sample", "text-color", "text-on-background", "bolder", "line-align", "scrollbars", "text-color-pairs", "text-decoration", "align-right",
                      "shape-relation", "space-between", "stack-three", "two-size", "line-pair", "marker-bullet",
                      "round-dot", "double-line", "slanted-box", "line-marker", "bullet-beside", "bar-stack", "bars-match",
                      "bar-grid", "viewport-bottom", "cell-border", "corners", "box-count", "three-bars", "lines-same",
@@ -1370,7 +1437,7 @@ public static class Css21CoverageTests
                      "scroll-cats-bottom", "scroll-cats-moved", "scroll-cats-bottom-moved", "scroll-cats-top-moved",
                      "scroll-cats-still", "scroll-box-text", "scroll-box-edges-visible", "scroll-no-red",
                      "scroll-page-text", "scroll-page-edges-visible", "scroll-page-always-visible",
-                     "scroll-page-stuck-top", "scroll-page-no-red", "cursor" })
+                     "scroll-page-stuck-top", "scroll-page-box-still", "scroll-page-no-red", "cursor" })
             known.Add(kind);
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var entry in conditions["cases"]!.AsArray())

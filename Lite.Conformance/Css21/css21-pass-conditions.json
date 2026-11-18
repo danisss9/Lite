@@ -453,9 +453,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-091.xht",
@@ -463,9 +468,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-092.xht",
@@ -515,9 +525,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-100.xht",
@@ -539,9 +554,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-105.xht",
@@ -549,9 +569,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-108.xht",
@@ -559,9 +584,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-110.xht",
@@ -597,9 +627,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-115.xht",
@@ -607,9 +642,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-116.xht",
@@ -689,9 +729,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-124.xht",
@@ -728,9 +773,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-127.xht",
@@ -753,9 +803,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-131.xht",
@@ -778,9 +833,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-133.xht",
@@ -991,9 +1051,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-160.xht",
@@ -1015,9 +1080,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-164.xht",
@@ -1039,9 +1109,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-166.xht",
@@ -1078,9 +1153,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-169.xht",
@@ -1161,9 +1241,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-178.xht",
@@ -1171,9 +1256,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-179.xht",
@@ -1211,9 +1301,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-186.xht",
@@ -1221,9 +1316,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-189.xht",
@@ -1231,9 +1331,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-191.xht",
@@ -1256,9 +1361,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-193.xht",
@@ -1311,9 +1421,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-202.xht",
@@ -1321,9 +1436,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-203.xht",
@@ -3269,9 +3389,14 @@
    "condition": "manual",
    "sentence": "There should be a single purple square at the bottom right of the viewport. The square should always be completely visible, regardless of where you scroll the viewport. It should not be covered by the scrollbars, if any.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-always-visible",
+    "color": "purple",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-body-002.xht",
@@ -7841,9 +7966,7 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below is green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below is green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false
   },
   {
    "path": "css/CSS2/cascade/html-precedence-002.xht",
@@ -8297,9 +8420,17 @@
    "condition": "manual",
    "sentence": "While you are activating this link, it should go green. Check that once you have stopped activating it, it goes blue again.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "active",
+     "subject": "link",
+     "rest": "blue"
+    }
+   }
   },
   {
    "path": "css/CSS2/css1/c21-focus-ln-000.xht",
@@ -8307,9 +8438,16 @@
    "condition": "manual",
    "sentence": "If you focus this link, it should go green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "focus",
+     "subject": "link"
+    }
+   }
   },
   {
    "path": "css/CSS2/css1/c21-hover-ln-000.xht",
@@ -8317,9 +8455,16 @@
    "condition": "manual",
    "sentence": "While you are hovering over this link, it should go green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "hover",
+     "subject": "link"
+    }
+   }
   },
   {
    "path": "css/CSS2/css1/c21-pseu-cls-000.xht",
@@ -8327,9 +8472,17 @@
    "condition": "manual",
    "sentence": "Whatever you do to this link, it should stay green. (hover, focus, activate, follow)",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "every",
+     "subject": "link",
+     "rest": "same"
+    }
+   }
   },
   {
    "path": "css/CSS2/css1/c21-pseu-id-000.xht",
@@ -8337,9 +8490,17 @@
    "condition": "manual",
    "sentence": "Whatever you do to this link, it should stay green. (hover, focus, activate, follow)",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "every",
+     "subject": "link",
+     "rest": "same"
+    }
+   }
   },
   {
    "path": "css/CSS2/css1/c21-pseud-anch-000.xht",
@@ -8347,9 +8508,17 @@
    "condition": "manual",
    "sentence": "This sentence should be green. Check that it remains green after you click it. Note: the link should turn red while clicked.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"This sentence should be green. Check that it remains green after you click it. Note: the link should turn red while clicked.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "a-element",
+    "interaction": {
+     "action": "active",
+     "subject": "a-element",
+     "rest": "after"
+    }
+   }
   },
   {
    "path": "css/CSS2/css1/c21-pseud-link-000.xht",
@@ -8769,9 +8938,14 @@
    "condition": "manual",
    "sentence": "Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-stuck-top",
+    "color": "blue",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css/CSS2/css1/c537-bgfxps-000.xht",
@@ -8779,9 +8953,14 @@
    "condition": "manual",
    "sentence": "Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time, and there should be no red below, just a block of green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time, and there should be no red below, just a block of green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-stuck-top",
+    "color": "blue",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css/CSS2/css1/c543-txt-decor-000.xht",
@@ -8809,9 +8988,18 @@
    "condition": "manual",
    "sentence": "Change your window size. However the lines wrap, the blue rectanglues should always have their tops on the same alignment as other blue rectangles on the line.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "line-align",
+    "color": "blue",
+    "variant": "top",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/css1/c544-valgn-003.xht",
@@ -8819,9 +9007,18 @@
    "condition": "manual",
    "sentence": "Change your window size. However the lines wrap, the blue rectanglues should always have their middles on the same alignment as other blue rectangles on the line.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "line-align",
+    "color": "blue",
+    "variant": "middle",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/css1/c544-valgn-004.xht",
@@ -8829,9 +9026,18 @@
    "condition": "manual",
    "sentence": "Change your window size. However the lines wrap, the blue rectanglues should always have their tops on the same alignment as other blue rectangles on the line.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "line-align",
+    "color": "blue",
+    "variant": "top",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/css1/c546-txt-align-000.xht",
@@ -9395,9 +9601,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a filled green rectangle with inactive scrollbars and no red .",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "inactive",
+    "color": "green"
+   }
   },
   {
    "path": "css/CSS2/floats-clear/floating-replaced-height-008.xht",
@@ -9512,9 +9721,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/floats-clear/floats-109.xht",
@@ -9522,9 +9740,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/floats-clear/floats-110.xht",
@@ -9542,9 +9769,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/floats-clear/floats-127.xht",
@@ -9552,9 +9788,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/floats-clear/floats-128.xht",
@@ -9562,9 +9807,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/floats-clear/floats-129.xht",
@@ -9572,9 +9826,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/floats-clear/floats-130.xht",
@@ -9582,9 +9845,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/floats-clear/floats-131.xht",
@@ -9592,9 +9864,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/floats-clear/floats-137.xht",
@@ -10942,9 +11223,13 @@
    "condition": "manual",
    "sentence": "There should be no red below (scroll all the way down if necessary).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"There should be no red below (scroll all the way down if necessary).\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-no-red",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css/CSS2/fonts/font-size-117.xht",
@@ -16249,9 +16534,17 @@
    "condition": "manual",
    "sentence": "Make your window an inch or two bigger than than the width of one inline-block: all inline-blocks should be the same size. Try resizing the window so that inline-blocks wrap in one or two columns.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/normal-flow/inline-block-003.xht",
@@ -16259,9 +16552,18 @@
    "condition": "manual",
    "sentence": "Make your window slightly wider than the width of one blue box: all boxes should be the same size. Try increasing the window width so that boxes wrap in two or more columns: the boxes should remain the same size. Try reducing the window width to less than the width of one blue box: the words inside the boxes should wrap and the boxes resize around them so that the boxes continue to fit inside the window.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/normal-flow/inline-block-004.xht",
@@ -16289,9 +16591,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a filled green rectangle with inactive scrollbars and no red .",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "inactive",
+    "color": "green"
+   }
   },
   {
    "path": "css/CSS2/normal-flow/inline-block-replaced-height-008.xht",
@@ -16474,9 +16779,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a green rectangle with inactive scrollbars and no red square.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "inactive",
+    "color": "green"
+   }
   },
   {
    "path": "css/CSS2/normal-flow/max-height-106.xht",
@@ -16484,9 +16792,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a blue rectangle with scrollbars.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "present",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/normal-flow/max-height-108.xht",
@@ -16494,9 +16805,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a wide green rectangle across the page; such green rectangle should have inactive scrollbars. There should be no wide red rectangle.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "inactive",
+    "color": "green"
+   }
   },
   {
    "path": "css/CSS2/normal-flow/max-height-109.xht",
@@ -16504,9 +16818,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a wide green rectangle across the page; such green rectangle should have an active horizontal scrollbar. There should be no wide red rectangle.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "active-horizontal",
+    "color": "green"
+   }
   },
   {
    "path": "css/CSS2/normal-flow/max-height-111.xht",
@@ -16514,9 +16831,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a green square and no red . Such green square should have active horizontal and vertical scrollbars.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "active-both",
+    "color": "green"
+   }
   },
   {
    "path": "css/CSS2/normal-flow/max-height-applies-to-001.xht",
@@ -16596,9 +16916,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a blue square with scrollbars.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "present",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/normal-flow/max-width-108.xht",
@@ -16606,9 +16929,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a green square and no red . Such green square should have active horizontal and vertical scrollbars.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "active-both",
+    "color": "green"
+   }
   },
   {
    "path": "css/CSS2/normal-flow/max-width-applies-to-010.xht",
@@ -16649,9 +16975,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a wide green bar with scrollbars around it.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "present",
+    "color": "green"
+   }
   },
   {
    "path": "css/CSS2/normal-flow/min-height-applies-to-001.xht",
@@ -17702,9 +18031,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a filled green rectangle with inactive scrollbars and no red .",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "inactive",
+    "color": "green"
+   }
   },
   {
    "path": "css/CSS2/positioning/abspos-003.xht",
@@ -18019,9 +18351,13 @@
    "condition": "manual",
    "sentence": "Test passes if the blue stripe does not move when the page is scrolled.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the blue stripe does not move when the page is scrolled.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-box-still",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css/CSS2/positioning/position-fixed-004.xht",
@@ -18112,7 +18448,7 @@
     "kind": "scroll-box-text",
     "needle": "Filler Text",
     "scroll": {
-     "to": "bottom"
+     "to": "bottom-right"
     }
    }
   },
@@ -18127,7 +18463,7 @@
     "kind": "scroll-box-text",
     "needle": "Filler Text",
     "scroll": {
-     "to": "bottom"
+     "to": "bottom-right"
     }
    }
   },
@@ -18177,9 +18513,17 @@
    "condition": "manual",
    "sentence": "The link in the next paragraph should have a green background color and a white text color on :hover.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-on-background",
+    "color": "white",
+    "boxColor": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "hover",
+     "subject": "link"
+    }
+   }
   },
   {
    "path": "css/CSS2/sec5/dynamic-pseudo-classes-001.xht",
@@ -18187,9 +18531,17 @@
    "condition": "manual",
    "sentence": "The next paragraph should have a green background color and a white text color on :hover.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-on-background",
+    "color": "white",
+    "boxColor": "green",
+    "anchor": "next",
+    "interaction": {
+     "action": "hover",
+     "subject": "next"
+    }
+   }
   },
   {
    "path": "css/CSS2/sec5/dynamic-pseudo-classes-002.xht",
@@ -18197,9 +18549,17 @@
    "condition": "manual",
    "sentence": "The link in the next paragraph should have a green text color and a bold font weight when it's activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"The link in the next paragraph should have a green text color and a bold font weight when it's activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "active",
+     "subject": "link",
+     "bolder": true
+    }
+   }
   },
   {
    "path": "css/CSS2/sec5/dynamic-pseudo-classes-003.xht",
@@ -18207,9 +18567,17 @@
    "condition": "manual",
    "sentence": "The link below should have a white text color and a green background color when it has focus.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-on-background",
+    "color": "white",
+    "boxColor": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "focus",
+     "subject": "link"
+    }
+   }
   },
   {
    "path": "css/CSS2/sec5/first-letter-000.xht",
@@ -18797,9 +19165,16 @@
    "condition": "manual",
    "sentence": "Enter in the text field below with the pointing device or with the keyboard (with the tab key or with the \"T\" accesskey) and then enter some text into it. A message in green should then have appeared on its right-hand side indicating that such text field has received focus. In order to pass this test, the tester should not have to move the pointing device outside the text field.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "focus received by text field",
+    "interaction": {
+     "action": "focus",
+     "subject": "focusable"
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/focus-pseudo-class-002.xht",
@@ -18807,9 +19182,16 @@
    "condition": "manual",
    "sentence": "Enter in the text field below with the pointing device or with the keyboard (with the tab key or with the \"T\" accesskey) and then enter some text into it. A message in green should then have appeared on its right-hand side indicating that such text field has received focus. In order to pass this test, the tester should not have to move the pointing device outside the text field.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "focus received by text field",
+    "interaction": {
+     "action": "focus",
+     "subject": "focusable"
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/focus-pseudo-class-003.xht",
@@ -18817,9 +19199,16 @@
    "condition": "manual",
    "sentence": "With the pointing device (like a mouse left-button click) or with the keyboard (with the tab key or with the \"T\" accesskey), activate the radio button below. The words \"Text sample\" on its right-hand side should then have become highlighted in yellow. In order to pass this test, the tester should not have to move the pointing device out of the radio button in order to see the yellow highlighting.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-on-background",
+    "boxColor": "yellow",
+    "needle": "text sample",
+    "interaction": {
+     "action": "focus",
+     "subject": "focusable"
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/focus-selector-001.xht",
@@ -18861,9 +19250,16 @@
    "condition": "manual",
    "sentence": "Test passes if each \"Text sample\" becomes bold when hovering over it",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "bolder",
+    "needle": "text sample",
+    "interaction": {
+     "action": "hover",
+     "subject": "text sample",
+     "each": true
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/hover-selector-003.xht",
@@ -18871,9 +19267,16 @@
    "condition": "manual",
    "sentence": "When you hover over these lines they should go bold:",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "bolder",
+    "needle": "test test",
+    "interaction": {
+     "action": "hover",
+     "subject": "test test",
+     "each": true
+    }
+   }
   },
   {
    "path": "css/CSS2/selectors/link-visited-selector-001.xht",
@@ -18961,9 +19364,7 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below is green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below is green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false
   },
   {
    "path": "css/CSS2/selectors/pseudo-010.xht",
@@ -30781,9 +31182,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below can be scrolled to the green square in the bottom-right corner.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-box-edges-visible",
+    "color": "green",
+    "scroll": {
+     "to": "bottom-right"
+    }
+   }
   },
   {
    "path": "css/CSS2/ui/overflow-004.xht",
@@ -30791,9 +31197,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below can be scrolled to the green square in the bottom-right corner.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-box-edges-visible",
+    "color": "green",
+    "scroll": {
+     "to": "bottom-right"
+    }
+   }
   },
   {
    "path": "css/CSS2/ui/overflow-005.xht",
@@ -30801,9 +31212,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below can be scrolled to the green square in the bottom-right corner.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-box-edges-visible",
+    "color": "green",
+    "scroll": {
+     "to": "bottom-right"
+    }
+   }
   },
   {
    "path": "css/CSS2/ui/overflow-ancestors-001.xht",
@@ -30811,9 +31227,11 @@
    "condition": "manual",
    "sentence": "Test passes if there is an active scrolling mechanism in the box below that can horizontally scroll the \"Filler Text\".",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is an active scrolling mechanism in the box below that can horizontally scroll the \"Filler Text\".\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "active-horizontal"
+   }
   },
   {
    "path": "css/CSS2/ui/overflow-applies-to-010.xht",
@@ -30831,9 +31249,10 @@
    "condition": "manual",
    "sentence": "Test passes if the horizontal and vertical scrolling mechanism is not available on the page.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the horizontal and vertical scrolling mechanism is not available on the page.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "no-scrollbar"
+   }
   },
   {
    "path": "css/CSS2/ui/overflow-parent-001.xht",
@@ -30861,9 +31280,10 @@
    "condition": "manual",
    "sentence": "Test passes if the horizontal and vertical scrolling mechanism is not available on the page.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the horizontal and vertical scrolling mechanism is not available on the page.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "no-scrollbar"
+   }
   },
   {
    "path": "css/CSS2/ui/overflow-scrollbar-001.xht",
@@ -36074,9 +36494,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-090.htm",
@@ -36092,9 +36517,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-092.htm",
@@ -36186,9 +36616,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-100.htm",
@@ -36223,9 +36658,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-103.htm",
@@ -36254,9 +36694,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-106.htm",
@@ -36285,9 +36730,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-109.htm",
@@ -36344,9 +36794,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-114.htm",
@@ -36362,9 +36817,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-116.htm",
@@ -36460,9 +36920,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-124.htm",
@@ -36499,9 +36964,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-127.htm",
@@ -36532,9 +37002,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-130.htm",
@@ -36565,9 +37040,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-133.htm",
@@ -36904,9 +37384,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-160.htm",
@@ -36941,9 +37426,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-163.htm",
@@ -36978,9 +37468,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-166.htm",
@@ -37017,9 +37512,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-169.htm",
@@ -37126,9 +37626,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-177.htm",
@@ -37149,9 +37654,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-179.htm",
@@ -37210,9 +37720,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-184.htm",
@@ -37241,9 +37756,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-187.htm",
@@ -37272,9 +37792,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-190.htm",
@@ -37305,9 +37830,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-193.htm",
@@ -37402,9 +37932,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-201.htm",
@@ -37425,9 +37960,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box (there can be additional cat images).",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below is filled with cat images that move when the box is scrolled. Also, after scrolling to the bottom of the box, there is a cat image \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-cats-moved",
+    "variant": "center",
+    "scroll": {
+     "to": "bottom-center"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-203.htm",
@@ -39700,9 +40240,14 @@
    "condition": "manual",
    "sentence": "There should be a single purple square at the bottom right of the viewport. The square should always be completely visible, regardless of where you scroll the viewport. It should not be covered by the scrollbars, if any.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-always-visible",
+    "color": "purple",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css21-official/html4/background-bg-pos-208.htm",
@@ -63556,9 +64101,17 @@
    "condition": "manual",
    "sentence": "While you are activating this link, it should go green. Check that once you have stopped activating it, it goes blue again.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "active",
+     "subject": "link",
+     "rest": "blue"
+    }
+   }
   },
   {
    "path": "css21-official/html4/c21-focus-ln-000.htm",
@@ -63566,9 +64119,16 @@
    "condition": "manual",
    "sentence": "If you focus this link, it should go green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "focus",
+     "subject": "link"
+    }
+   }
   },
   {
    "path": "css21-official/html4/c21-hover-ln-000.htm",
@@ -63576,9 +64136,16 @@
    "condition": "manual",
    "sentence": "While you are hovering over this link, it should go green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "hover",
+     "subject": "link"
+    }
+   }
   },
   {
    "path": "css21-official/html4/c21-pseu-cls-000.htm",
@@ -63586,9 +64153,17 @@
    "condition": "manual",
    "sentence": "Whatever you do to this link, it should stay green. (hover, focus, activate, follow)",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "every",
+     "subject": "link",
+     "rest": "same"
+    }
+   }
   },
   {
    "path": "css21-official/html4/c21-pseu-id-000.htm",
@@ -63596,9 +64171,17 @@
    "condition": "manual",
    "sentence": "Whatever you do to this link, it should stay green. (hover, focus, activate, follow)",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "every",
+     "subject": "link",
+     "rest": "same"
+    }
+   }
   },
   {
    "path": "css21-official/html4/c21-pseud-anch-000.htm",
@@ -63606,9 +64189,17 @@
    "condition": "manual",
    "sentence": "This sentence should be green. Check that it remains green after you click it. Note: the link should turn red while clicked.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"This sentence should be green. Check that it remains green after you click it. Note: the link should turn red while clicked.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "a-element",
+    "interaction": {
+     "action": "active",
+     "subject": "a-element",
+     "rest": "after"
+    }
+   }
   },
   {
    "path": "css21-official/html4/c21-pseud-link-000.htm",
@@ -64397,9 +64988,14 @@
    "condition": "manual",
    "sentence": "Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-stuck-top",
+    "color": "blue",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css21-official/html4/c536-bgpos-000.htm",
@@ -64423,9 +65019,14 @@
    "condition": "manual",
    "sentence": "Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time, and there should be no red below, just a block of green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Scroll this document. A line of blue should remain stuck at the top of the viewport the whole time, and there should be no red below, just a block of green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-stuck-top",
+    "color": "blue",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css21-official/html4/c541-word-sp-000.htm",
@@ -64500,9 +65101,18 @@
    "condition": "manual",
    "sentence": "Change your window size. However the lines wrap, the blue rectanglues should always have their tops on the same alignment as other blue rectangles on the line.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "line-align",
+    "color": "blue",
+    "variant": "top",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/c544-valgn-003.htm",
@@ -64510,9 +65120,18 @@
    "condition": "manual",
    "sentence": "Change your window size. However the lines wrap, the blue rectanglues should always have their middles on the same alignment as other blue rectangles on the line.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "line-align",
+    "color": "blue",
+    "variant": "middle",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/c544-valgn-004.htm",
@@ -64520,9 +65139,18 @@
    "condition": "manual",
    "sentence": "Change your window size. However the lines wrap, the blue rectanglues should always have their tops on the same alignment as other blue rectangles on the line.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "line-align",
+    "color": "blue",
+    "variant": "top",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/c545-txttrans-000.htm",
@@ -75904,9 +76532,17 @@
    "condition": "manual",
    "sentence": "The link in the next paragraph should have a green background color and a white text color on :hover.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-on-background",
+    "color": "white",
+    "boxColor": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "hover",
+     "subject": "link"
+    }
+   }
   },
   {
    "path": "css21-official/html4/dynamic-pseudo-classes-001.htm",
@@ -75914,9 +76550,17 @@
    "condition": "manual",
    "sentence": "The next paragraph should have a green background color and a white text color on :hover.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-on-background",
+    "color": "white",
+    "boxColor": "green",
+    "anchor": "next",
+    "interaction": {
+     "action": "hover",
+     "subject": "next"
+    }
+   }
   },
   {
    "path": "css21-official/html4/dynamic-pseudo-classes-002.htm",
@@ -75924,9 +76568,17 @@
    "condition": "manual",
    "sentence": "The link in the next paragraph should have a green text color and a bold font weight when it's activated.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"The link in the next paragraph should have a green text color and a bold font weight when it's activated.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "active",
+     "subject": "link",
+     "bolder": true
+    }
+   }
   },
   {
    "path": "css21-official/html4/dynamic-pseudo-classes-003.htm",
@@ -75934,9 +76586,17 @@
    "condition": "manual",
    "sentence": "The link below should have a white text color and a green background color when it has focus.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-on-background",
+    "color": "white",
+    "boxColor": "green",
+    "anchor": "link",
+    "interaction": {
+     "action": "focus",
+     "subject": "link"
+    }
+   }
   },
   {
    "path": "css21-official/html4/dynamic-sibling-combinator-001.htm",
@@ -83717,9 +84377,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/floats-109.htm",
@@ -83727,9 +84396,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/floats-110.htm",
@@ -83901,9 +84579,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/floats-127.htm",
@@ -83911,9 +84598,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/floats-128.htm",
@@ -83921,9 +84617,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/floats-129.htm",
@@ -83931,9 +84636,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/floats-130.htm",
@@ -83941,9 +84655,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/floats-131.htm",
@@ -83951,9 +84674,18 @@
    "condition": "manual",
    "sentence": "All blue boxes must always be the same size . Make your window an inch or two bigger than than the width of one box to check. Try resizing the window so that the boxes wrap in two or more columns. Try resizing the window to be narrower than the boxes so that the text inside them wraps into two or more lines.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/floats-132.htm",
@@ -84190,9 +84922,16 @@
    "condition": "manual",
    "sentence": "Enter in the text field below with the pointing device or with the keyboard (with the tab key or with the \"T\" accesskey) and then enter some text into it. A message in green should then have appeared on its right-hand side indicating that such text field has received focus. In order to pass this test, the tester should not have to move the pointing device outside the text field.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "focus received by text field",
+    "interaction": {
+     "action": "focus",
+     "subject": "focusable"
+    }
+   }
   },
   {
    "path": "css21-official/html4/focus-pseudo-class-002.htm",
@@ -84200,9 +84939,16 @@
    "condition": "manual",
    "sentence": "Enter in the text field below with the pointing device or with the keyboard (with the tab key or with the \"T\" accesskey) and then enter some text into it. A message in green should then have appeared on its right-hand side indicating that such text field has received focus. In order to pass this test, the tester should not have to move the pointing device outside the text field.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-color",
+    "color": "green",
+    "needle": "focus received by text field",
+    "interaction": {
+     "action": "focus",
+     "subject": "focusable"
+    }
+   }
   },
   {
    "path": "css21-official/html4/focus-pseudo-class-003.htm",
@@ -84210,9 +84956,16 @@
    "condition": "manual",
    "sentence": "With the pointing device (like a mouse left-button click) or with the keyboard (with the tab key or with the \"T\" accesskey), activate the radio button below. The words \"Text sample\" on its right-hand side should then have become highlighted in yellow. In order to pass this test, the tester should not have to move the pointing device out of the radio button in order to see the yellow highlighting.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "text-on-background",
+    "boxColor": "yellow",
+    "needle": "text sample",
+    "interaction": {
+     "action": "focus",
+     "subject": "focusable"
+    }
+   }
   },
   {
    "path": "css21-official/html4/focus-selector-001.htm",
@@ -88224,9 +88977,16 @@
    "condition": "manual",
    "sentence": "When you hover over this text it should go bold: test test |",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "bolder",
+    "needle": "test test",
+    "interaction": {
+     "action": "hover",
+     "subject": "test test",
+     "each": true
+    }
+   }
   },
   {
    "path": "css21-official/html4/hover-selector-003.htm",
@@ -88234,9 +88994,16 @@
    "condition": "manual",
    "sentence": "When you hover over these lines they should go bold:",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "dynamic-state selector (:hover/:active/:focus/:visited) — the stated colour change binds only under user interaction; decided by interacting with the native host (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "bolder",
+    "needle": "test test",
+    "interaction": {
+     "action": "hover",
+     "subject": "test test",
+     "each": true
+    }
+   }
   },
   {
    "path": "css21-official/html4/html-attribute-001.htm",
@@ -88550,9 +89317,7 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below is green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below is green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false
   },
   {
    "path": "css21-official/html4/html-case-sensitivity-001.htm",
@@ -89057,9 +89822,17 @@
    "condition": "manual",
    "sentence": "Make your window an inch or two bigger than than the width of one inline-block. All inline-blocks should be the same size. Try resizing the window so that inline-blocks wrap in one or two columns.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/inline-block-003.htm",
@@ -89067,9 +89840,18 @@
    "condition": "manual",
    "sentence": "Make your window slightly wider than the width of one blue box. All boxes should be the same size. Try increasing the window width so that boxes wrap in two or more columns: the boxes should remain the same size. Try reducing the window width to less than the width of one blue box: the words inside the boxes should wrap and the boxes resize around them so that the boxes continue to fit inside the window.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "same-dimension",
+    "dimension": "size",
+    "colorA": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/inline-block-004.htm",
@@ -98199,9 +98981,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a green square with inactive scrollbars and no red square.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "inactive",
+    "color": "green"
+   }
   },
   {
    "path": "css21-official/html4/max-height-106.htm",
@@ -98209,9 +98994,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a green square with scrollbars.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "present",
+    "color": "green"
+   }
   },
   {
    "path": "css21-official/html4/max-height-107.htm",
@@ -98232,9 +99020,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a wide green rectangle across the page; such green rectangle should have inactive scrollbars. There should be no wide red rectangle.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "inactive",
+    "color": "green"
+   }
   },
   {
    "path": "css21-official/html4/max-height-109.htm",
@@ -98242,9 +99033,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a wide green rectangle across the page; such green rectangle should have an active horizontal scrollbar. There should be no wide red rectangle.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "active-horizontal",
+    "color": "green"
+   }
   },
   {
    "path": "css21-official/html4/max-height-110.htm",
@@ -98260,9 +99054,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a green square and no red . Such green square should have active horizontal and vertical scrollbars.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "active-both",
+    "color": "green"
+   }
   },
   {
    "path": "css21-official/html4/max-height-applies-to-001.htm",
@@ -99171,9 +99968,12 @@
    "condition": "manual",
    "sentence": "Test passes if there is a green square and no red . Such green square should have active horizontal and vertical scrollbars.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "active-both",
+    "color": "green"
+   }
   },
   {
    "path": "css21-official/html4/max-width-109.htm",
@@ -100264,9 +101064,12 @@
    "condition": "manual",
    "sentence": "There should be a green bar below, with scrollbars around it.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "native scrollbar geometry/activeness — host chrome; decided by observing the native scrollbars (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "present",
+    "color": "green"
+   }
   },
   {
    "path": "css21-official/html4/min-height-applies-to-001.htm",
@@ -104583,9 +105386,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below can be scrolled to the green square in the bottom-right corner.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-box-edges-visible",
+    "color": "green",
+    "scroll": {
+     "to": "bottom-right"
+    }
+   }
   },
   {
    "path": "css21-official/html4/overflow-004.htm",
@@ -104593,9 +105401,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below can be scrolled to the green square in the bottom-right corner.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-box-edges-visible",
+    "color": "green",
+    "scroll": {
+     "to": "bottom-right"
+    }
+   }
   },
   {
    "path": "css21-official/html4/overflow-005.htm",
@@ -104603,9 +105416,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below can be scrolled to the green square in the bottom-right corner.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the green square in the bottom-right corner.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-box-edges-visible",
+    "color": "green",
+    "scroll": {
+     "to": "bottom-right"
+    }
+   }
   },
   {
    "path": "css21-official/html4/overflow-006.htm",
@@ -104643,9 +105461,11 @@
    "condition": "manual",
    "sentence": "Test passes if there is an active scrolling mechanism in the box below that can horizontally scroll the \"Filler Text\".",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is an active scrolling mechanism in the box below that can horizontally scroll the \"Filler Text\".\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scrollbars",
+    "variant": "active-horizontal"
+   }
   },
   {
    "path": "css21-official/html4/overflow-applies-to-001.htm",
@@ -104802,9 +105622,10 @@
    "condition": "manual",
    "sentence": "Test passes if the horizontal and vertical scrolling mechanism is not available on the page.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the horizontal and vertical scrolling mechanism is not available on the page.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "no-scrollbar"
+   }
   },
   {
    "path": "css21-official/html4/overflow-parent-001.htm",
@@ -104832,9 +105653,10 @@
    "condition": "manual",
    "sentence": "Test passes if the horizontal and vertical scrolling mechanism is not available on the page.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the horizontal and vertical scrolling mechanism is not available on the page.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "no-scrollbar"
+   }
   },
   {
    "path": "css21-official/html4/overflow-scrollbar-001.htm",
@@ -108705,9 +109527,13 @@
    "condition": "manual",
    "sentence": "Test passes if the box below does not move when the page is scrolled.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below does not move when the page is scrolled.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-box-still",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css21-official/html4/position-fixed-004.htm",
@@ -109034,9 +109860,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below can be scrolled to the words \"Filler Text\".",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the words \"Filler Text\".\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-box-text",
+    "needle": "Filler Text",
+    "scroll": {
+     "to": "bottom-right"
+    }
+   }
   },
   {
    "path": "css21-official/html4/position-relative-035.htm",
@@ -109052,9 +109883,14 @@
    "condition": "manual",
    "sentence": "Test passes if the box below can be scrolled to the words \"Filler Text\".",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the box below can be scrolled to the words \"Filler Text\".\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-box-text",
+    "needle": "Filler Text",
+    "scroll": {
+     "to": "bottom-right"
+    }
+   }
   },
   {
    "path": "css21-official/html4/position-relative-037.htm",
@@ -109196,9 +110032,7 @@
    "condition": "manual",
    "sentence": "Test passes if the \"Filler Text\" below is green.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if the \"Filler Text\" below is green.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false
   },
   {
    "path": "css21-official/html4/pseudo-010.htm",

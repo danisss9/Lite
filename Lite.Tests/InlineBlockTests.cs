@@ -35,6 +35,22 @@ public static class InlineBlockTests
     }
 
     [Test]
+    public static void ShrinkToFit_LeavesRoomForTheBoxsOwnEdges()
+    {
+        // inline-block-002 at a 450px window: §10.3.9's available width excludes the box's
+        // margins, borders and padding, so wrapping text keeps the border box inside the line.
+        var text = string.Concat(Enumerable.Repeat("this is an inline-block ", 3));
+        var page = Parser.ParseChildPage("<!DOCTYPE html><style>body{margin:0} p{margin:0}" +
+            " span{display:inline-block;border:3px solid;margin:8px;padding:8px}</style>" +
+            $"<p><span id=\"s\">{text}</span></p>", isSrcdoc: true, "http://test/", 300, 600);
+        BoxEngine.Layout(page.Root, 300, 600);
+        var s = FindId(page.Root, "s");
+        True(s is not null, "node missing");
+        True(s!.Box.BorderBox.Right <= 300f - 8f + 0.5f,
+            $"the border box must end inside the 300px line minus its 8px margin, got right {s.Box.BorderBox.Right}");
+    }
+
+    [Test]
     public static void InsideListMarkerIndentsTheFirstLineOnly()
     {
         // §12.5.1 with list-style-position: inside — the marker box is the first inline box,

@@ -3437,16 +3437,150 @@ internal static class Parser
     {
         if (element.Owner?.StyleSheets is null) return;
 
+        _ruleOrder = 0;
+        _staticMatches.Clear();
+        _pendingLinkOverrides.Clear();
         foreach (var sheet in element.Owner.StyleSheets.OfType<ICssStyleSheet>())
         {
             ProcessRules(sheet.Rules, element, node, mediaText: null);
         }
+        ApplyCascadeToExtractedRules(element, node);
 
         // Pseudo-element rules were lifted out of the sheets before the cascade ran (see
         // NeutralizePseudoElementRules), so they are applied here from the recorded originals.
         foreach (var (selector, style) in _pseudoElementRules)
             TryExtractPseudoElementRule(element, node, selector, style);
 
+    }
+
+    /// <summary>A rule's place in the §6.4.1 cascade: its declarations, the specificity of
+    /// the selector (the most specific matching part of a list), its source order across the
+    /// document's sheets, and its origin (<see cref="AngleSharp.Css.Dom.CascadeOrigin"/>).</summary>
+    private readonly record struct CascadeEntry(ICssStyleDeclaration Style, AngleSharp.Css.Priority Specificity,
+        int Order, int Origin);
+
+    /// <summary>A :link (or :lang-only) rule's declarations, waiting for the cascade
+    /// post-pass before they reach the override channel.</summary>
+    private sealed record PendingOverride(Dictionary<string, string> Properties, CascadeEntry Entry);
+
+    [ThreadStatic] private static int _ruleOrder;
+    [ThreadStatic] private static List<CascadeEntry>? _staticMatchList;
+    [ThreadStatic] private static List<PendingOverride>? _pendingLinkOverrideList;
+    private static List<CascadeEntry> _staticMatches => _staticMatchList ??= [];
+    private static List<PendingOverride> _pendingLinkOverrides => _pendingLinkOverrideList ??= [];
+
+    private static AngleSharp.Css.Priority SpecificityFor(ICssStyleRule rule, IElement element)
+    {
+        try
+        {
+            var selector = rule.Selector;
+            if (selector is AngleSharp.Css.Dom.IMultiSelector multi)
+            {
+                // A dynamic part matches only in its state: assume every state holds, so the
+                // part the rule would apply through is the one whose specificity counts.
+                using (AngleSharp.Dom.DynamicPseudoState.AssumingAll())
+                    if (multi.GetMatchingSelector(element) is { } part) return part.Specificity;
+            }
+            return selector.Specificity;
+        }
+        catch { return AngleSharp.Css.Priority.Zero; }
+    }
+
+    private static int OriginOf(ICssStyleRule rule) => AngleSharp.Css.Dom.CascadeOrigin.Of(rule);
+
+    /// <summary>§6.4.1 precedence of a declaration: normal declarations rank by origin
+    /// (default sheet, user agent, user, author); author and then user !important outrank
+    /// every normal one.</summary>
+    private static int CascadeRank(int origin, bool important) => !important ? origin : origin switch
+    {
+        AngleSharp.Css.Dom.CascadeOrigin.Author => 4,
+        AngleSharp.Css.Dom.CascadeOrigin.User => 5,
+        _ => origin,
+    };
+
+    /// <summary>Whether declaration <paramref name="a"/> wins over <paramref name="b"/> in the
+    /// cascade: rank, then specificity, then source order (§6.4.1 steps 2–4).</summary>
+    private static bool Outranks(CascadeEntry a, bool aImportant, CascadeEntry b, bool bImportant)
+    {
+        var (ra, rb) = (CascadeRank(a.Origin, aImportant), CascadeRank(b.Origin, bImportant));
+        if (ra != rb) return ra > rb;
+        var bySpecificity = a.Specificity.CompareTo(b.Specificity);
+        if (bySpecificity != 0) return bySpecificity > 0;
+        return a.Order > b.Order;
+    }
+
+    private static bool IsImportant(ICssStyleDeclaration style, string property)
+    {
+        try { return string.Equals(style.GetPropertyPriority(property), "important", StringComparison.OrdinalIgnoreCase); }
+        catch { return false; }
+    }
+
+    /// <summary>The property names a declaration block sets: its longhands, plus the names its
+    /// source text spells (shorthands).</summary>
+    private static HashSet<string> DeclaredNames(ICssStyleDeclaration style)
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var property in style)
+                if (property.Name is { Length: > 0 } name) names.Add(name);
+            foreach (var decl in (style.CssText ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries))
+                if (decl.IndexOf(':') is var colon and > 0) names.Add(decl[..colon].Trim());
+        }
+        catch { /* an unreadable block declares nothing */ }
+        return names;
+    }
+
+    /// <summary>The dynamic (:hover/:active/:focus) and :link/:lang rules leave AngleSharp's
+    /// cascade and reach the style through Lite's own channels, which outrank every rule
+    /// AngleSharp cascades. So each declaration is checked against the static rules that
+    /// match the element, and against its style attribute: one that loses the §6.4.1 cascade
+    /// to them is dropped (c21-pseu-cls-000: 'a:hover { color: red }' loses to the later
+    /// 'a.test { color: green }' of equal specificity, so hovering leaves the link green).
+    /// The surviving dynamic rules are kept in cascade order for the live merge.</summary>
+    private static void ApplyCascadeToExtractedRules(IElement element, LayoutNode node)
+    {
+        if (node.DynamicRules is not { Count: > 0 } && _pendingLinkOverrides.Count == 0) return;
+        var statics = _staticMatches.Select(entry => (Entry: entry, Names: DeclaredNames(entry.Style))).ToList();
+        ICssStyleDeclaration? inline = null;
+        try { if (element.HasAttribute("style")) inline = element.GetStyle(); }
+        catch { inline = null; }
+        var inlineNames = inline is null ? null : DeclaredNames(inline);
+
+        bool Shadowed(string property, CascadeEntry entry)
+        {
+            var important = IsImportant(entry.Style, property);
+            // A shorthand is shadowed when any of its longhands is ('background' by a later
+            // 'background-color'): its unshadowed longhands are carried separately.
+            bool Declares(HashSet<string> names) => names.Contains(property) ||
+                names.Any(n => n.StartsWith(property + "-", StringComparison.OrdinalIgnoreCase));
+            foreach (var (other, names) in statics)
+                if (Declares(names) && Outranks(other, IsImportant(other.Style, property), entry, important))
+                    return true;
+            // The style attribute outranks every normal rule declaration (§6.4.3: specificity
+            // 1,0,0,0); an !important rule declaration loses only to an !important attribute one.
+            return inline is not null && Declares(inlineNames!) && (!important || IsImportant(inline, property));
+        }
+
+        if (node.DynamicRules is { Count: > 0 } rules)
+        {
+            var kept = new List<DynamicRule>(rules.Count);
+            foreach (var rule in rules)
+            {
+                var entry = new CascadeEntry(rule.Style, rule.Specificity, rule.Order, rule.Origin);
+                foreach (var property in rule.Properties.Keys.ToList())
+                    if (Shadowed(property, entry)) rule.Properties.Remove(property);
+                if (rule.Properties.Count > 0) kept.Add(rule);
+            }
+            kept.Sort((a, b) => a.Specificity.CompareTo(b.Specificity) is var c and not 0 ? c : a.Order.CompareTo(b.Order));
+            node.DynamicRules = kept.Count > 0 ? kept : null;
+        }
+        foreach (var pending in _pendingLinkOverrides
+                     .OrderBy(p => p.Entry.Specificity).ThenBy(p => p.Entry.Order))
+            foreach (var (property, value) in pending.Properties)
+                if (!Shadowed(property, pending.Entry))
+                    node.StyleOverrides[property] = value;
+        _pendingLinkOverrides.Clear();
     }
 
     /// <summary>
@@ -3466,6 +3600,7 @@ internal static class Parser
             }
 
             if (rule is not ICssStyleRule styleRule) continue;
+            _ruleOrder++;
 
             // Handle ::before / ::after pseudo-element selectors
             if (TryExtractPseudoElementRule(element, node, styleRule))
@@ -3485,6 +3620,10 @@ internal static class Parser
 
             if (mediaText is null)
             {
+                // A matching static rule may outrank a dynamic/:link rule's declarations
+                // (later at equal specificity, more specific, or !important) — recorded for
+                // the cascade post-pass in ExtractMatchedCssProperties.
+                _staticMatches.Add(new(styleRule.Style, SpecificityFor(styleRule, element), _ruleOrder, OriginOf(styleRule)));
                 // Regular rule — apply directly to overrides
                 var style = styleRule.Style;
                 foreach (var prop in s_extraProps)
@@ -4052,21 +4191,35 @@ internal static class Parser
                 if (couldMatch)
                 {
                     Interaction.PseudoClassState.Install();
-                    (node.DynamicRules ??= []).Add(new DynamicRule(element, live, props));
+                    (node.DynamicRules ??= []).Add(new DynamicRule(element, live, props, rule.Style,
+                        SpecificityFor(rule, element), _ruleOrder, OriginOf(rule)));
                 }
             }
-            // :link applies immediately to unvisited anchors (we treat all as unvisited). It
-            // OVERWRITES like every other author declaration here — the injected UA sheet's
-            // plain `a { color: blue }` went through the same channel earlier, and the TryAdd
-            // form let UA styling beat the author's :link rule (§6.4.1 author beats UA:
-            // case-sensitive-003's anchors stayed blue).
-            // (a :link rule that also names :hover/:active/:focus is a dynamic rule above.)
-            if (hasLink && !hasHover && !hasFocus && !hasActive) foreach (var (p, v) in props) node.StyleOverrides[p] = v;
-            // :visited is ignored (privacy) — no styles applied
-            // A rule whose only dynamic pseudo is :lang matched above — its declarations
-            // apply as ordinary author values (AngleSharp's cascade drops the whole rule).
-            if (!hasHover && !hasFocus && !hasActive && !hasLink)
-                foreach (var (p, v) in props) node.StyleOverrides[p] = v;
+            else if (!hasHover && !hasFocus && !hasActive)
+            {
+                // :link applies to unvisited links (all links are unvisited here) and a rule
+                // whose only dynamic pseudo-class is :lang applies as an ordinary author rule
+                // (AngleSharp's cascade drops both). Every link is unvisited, so a selector
+                // part that also needs :visited never matches: a rule made only of such parts
+                // ('a:visited') applies to nothing — it used to fall through to here and style
+                // every link as visited (c21-pseu-cls-000's red 'a:visited').
+                // A part that strips to nothing (':lang(en)', ':link') is universal: its
+                // pseudo-class was decided above.
+                var staticLive = string.Join(", ", selector.Split(',')
+                    .Where(part => !part.Contains(":visited", StringComparison.OrdinalIgnoreCase))
+                    .Select(part => DynamicStripRegex.Replace(LangPseudoRegex.Replace(part, ""), "").Trim())
+                    .Select(part => part.Length > 0 ? part : "*"));
+                bool liveMatches;
+                try { liveMatches = staticLive.Length > 0 && element.Matches(staticLive); }
+                catch { liveMatches = false; }
+                // The declarations reach the override channel after the cascade post-pass,
+                // which drops any a later or more specific static rule outranks. They still
+                // beat the injected UA sheet's plain `a { color: blue }` (§6.4.1 author beats
+                // UA: case-sensitive-003's anchors stayed blue under the TryAdd form).
+                if (liveMatches)
+                    _pendingLinkOverrides.Add(new(props, new CascadeEntry(rule.Style,
+                        SpecificityFor(rule, element), _ruleOrder, OriginOf(rule))));
+            }
         }
         else
         {

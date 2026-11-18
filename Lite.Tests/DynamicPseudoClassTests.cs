@@ -147,6 +147,73 @@ public static class DynamicPseudoClassTests
     }
 
     [Test]
+    public static void Cascade_ALaterStaticRuleOfEqualSpecificityBeatsTheDynamicAndLinkRules()
+    {
+        // c21-pseu-cls-000: every a:<state> rule says red, the later 'a.test' (equal
+        // specificity 0,1,1) says green, so the link stays green whatever is done to it.
+        var root = Load("a:link {color: red;} a:visited {color: red;} a:hover {color: red;} a:focus {color: red;} " +
+                        "a:active {color: red;} a.test {color: green;}",
+            "<p><a id='a' href='' class='test' style='display:inline-block;height:30px'>link</a></p>");
+        var a = ById(root, "a");
+        True(Color(a) == Green, $"at rest: expected green, got {Color(a)}");
+        HoverOver(root, a);
+        True(Color(a) == Green, $"hovered: expected green, got {Color(a)}");
+        PseudoClassState.SetFocus(a);
+        True(Color(a) == Green, $"focused: expected green, got {Color(a)}");
+        var box = a.Box.BorderBox;
+        PseudoClassState.SetActive(root, box.Left + 2, box.Top + 2);
+        True(Color(a) == Green, $"active: expected green, got {Color(a)}");
+    }
+
+    [Test]
+    public static void InlineLink_PaintsItsBackground()
+    {
+        // dynamic-pseudo-classes-000: 'a:hover { background-color: green; color: white }'.
+        var root = Load("a:hover { background-color: green; color: white } a { padding: 0 6px }",
+            "<p><a id='a' href='http://test/x'>Hover me</a></p>");
+        var a = ById(root, "a");
+        HoverOver(root, a);
+        using var bitmap = Drawer.DrawToBitmap(800, 600, root, new Viewport { ViewportHeight = 600 });
+        var box = a.Box.PaddingBox;
+        // The left padding strip holds no glyph: only the background paints there.
+        var pixel = bitmap.GetPixel((int)box.Left + 2, (int)((box.Top + box.Bottom) / 2));
+        True(pixel == Green, $"the hovered link's background must paint green, got {pixel}");
+    }
+
+    [Test]
+    public static void VisitedOnlyRules_NeverApply()
+    {
+        // Every link is unvisited, so 'a:visited' matches nothing; it must not style every
+        // link as if it were visited.
+        var root = Load("a:visited { color: red }", "<p><a id='a' href='http://test/x'>link</a></p>");
+        True(Color(ById(root, "a")) != new SKColor(0xff, 0, 0), $"a:visited applied: {Color(ById(root, "a"))}");
+    }
+
+    [Test]
+    public static void DynamicRules_MergeBySpecificityNotSourceOrder()
+    {
+        var root = Load("a.test:hover { color: green } a:hover { color: red }",
+            "<p><a id='a' class='test' href='http://test/x' style='display:inline-block;height:30px'>link</a></p>");
+        var a = ById(root, "a");
+        HoverOver(root, a);
+        True(Color(a) == Green, $"the more specific a.test:hover must win, got {Color(a)}");
+    }
+
+    [Test]
+    public static void StyleAttribute_BeatsANormalDynamicRule()
+    {
+        var root = Load("a:hover { color: green } b:hover { color: green !important }",
+            "<p><a id='a' href='http://test/x' style='color: blue; display:inline-block; height:30px'>link</a> " +
+            "<b id='b' style='color: blue; display:inline-block; height:30px'>bold</b></p>");
+        var a = ById(root, "a");
+        HoverOver(root, a);
+        True(Color(a) == Blue, $"the style attribute outranks a normal :hover declaration, got {Color(a)}");
+        var b = ById(root, "b");
+        HoverOver(root, b);
+        True(Color(b) == Green, $"an !important :hover declaration outranks a normal style attribute, got {Color(b)}");
+    }
+
+    [Test]
     public static void Lang_IgnoresANoNamespaceXmlLangInHtml()
     {
         // xml-lang-selectors-002: in an HTML document 'xml:lang' is an ordinary attribute in

@@ -28,7 +28,10 @@ namespace AngleSharp.Css.Dom
         /// <summary>Marks the style element whose sheet belongs to <paramref name="origin"/>.</summary>
         public static void Mark(IElement ownerNode, Int32 origin) => _marked.AddOrUpdate(ownerNode, origin);
 
-        internal static Int32 Of(ICssRule rule)
+        /// <summary>The origin of <paramref name="rule"/>'s style sheet. Public so a host that
+        /// applies some rules through its own channel (dynamic pseudo-classes) can order them
+        /// in the same cascade.</summary>
+        public static Int32 Of(ICssRule rule)
         {
             var sheet = rule.Owner;
             while (sheet?.Parent is { } parent) sheet = parent;

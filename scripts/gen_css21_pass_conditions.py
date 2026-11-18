@@ -360,8 +360,8 @@ SCROLL_TEMPLATES = [
      {'kind': 'scroll-cats-bottom', 'scroll': {'to': 'bottom'}}),
     (re.compile(r'^there is a picture of a cat repeated over a green box the box below\. the cat image also needs to move with the scrolling mechanism when scrolled to the right$'),
      {'kind': 'scroll-cats-moved', 'scroll': {'to': 'right'}}),
-    (re.compile(r'^the box below is filled with cat images that move when the box is scrolled\. also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box \(there can be additional cat images\)$'),
-     {'kind': 'scroll-cats-moved', 'variant': 'center', 'scroll': {'to': 'bottom-right'}}),
+    (re.compile(r'^the box below is filled with cat images that move when the box is scrolled\. also, after scrolling to the bottom of the box, there is a cat image that is not cut off, and it is centered at the bottom of the box(?: \(there can be additional cat images\))?$'),
+     {'kind': 'scroll-cats-moved', 'variant': 'center', 'scroll': {'to': 'bottom-center'}}),
     (re.compile(r'^(?:in the box below, there is a picture of a cat repeated across the bottom of the box|there is a picture of a cat repeated across the bottom of the box below) that moves with the scrollbar when the box is scrolled to the right$'),
      {'kind': 'scroll-cats-bottom-moved', 'scroll': {'to': 'bottom', 'then': 'right'}}),
     (re.compile(r'^(?:scrolling on the box below does not cause the cat image to move|when the box below is scrolled, the cat images do not move)$'),
@@ -379,16 +379,19 @@ SCROLL_TEMPLATES = [
     # Page-level scroll (the viewport scrollbars dragged to their end).
     (re.compile(r'^this page can be scrolled to the words ["\']bottom of page["\']$'),
      {'kind': 'scroll-page-text', 'needle': 'Bottom of page', 'scroll': {'to': 'page-bottom'}}),
-    (re.compile(r'^the box can be scrolled to the words ["\']filler text["\']$'),
-     {'kind': 'scroll-box-text', 'needle': 'Filler Text', 'scroll': {'to': 'bottom'}}),
+    (re.compile(r'^the box (?:below )?can be scrolled to the words ["\']filler text["\']$'),
+     {'kind': 'scroll-box-text', 'needle': 'Filler Text', 'scroll': {'to': 'bottom-right'}}),
     (re.compile(r'^after scrolling down(?: and to the right)?, all four edges of (?:a blue square|the blue box) are visible$'),
      {'kind': 'scroll-page-edges-visible', 'color': 'blue', 'scroll': {'to': 'page-bottom-right'}}),
     (re.compile(r'^scroll this document\. a line of blue should remain stuck at the top of the viewport the whole time'
                 r'(?:, and there should be no red below, just a block of green)?$'),
      {'kind': 'scroll-page-stuck-top', 'color': 'blue', 'scroll': {'to': 'page-bottom'}}),
     (re.compile(r'^there should be a single purple square at the bottom right of the viewport\. the square should always be '
-                r'completely visible, regardless of where you scroll the viewport\. it should not be covered by the scrollbars, if any\.$'),
+                r'completely visible, regardless of where you scroll the viewport\. it should not be covered by the scrollbars, if any\.?$'),
      {'kind': 'scroll-page-always-visible', 'color': 'purple', 'scroll': {'to': 'page-bottom'}}),
+    # A fixed box keeps its viewport position while the page scrolls under it.
+    (re.compile(r'^the (?:box below|blue stripe) does not move when the page is scrolled$'),
+     {'kind': 'scroll-page-box-still', 'scroll': {'to': 'page-bottom'}}),
     (re.compile(r'^there should be no red below \(scroll all the way down if necessary\)$'),
      {'kind': 'scroll-page-no-red', 'scroll': {'to': 'page-bottom'}}),
 ]
@@ -595,6 +598,63 @@ def cursor_check(sentence: str) -> dict | None:
 INTERACTION_STATES = (('is hovered over', 'hover'), ('is activated', 'active'), ('has focus', 'focus'))
 
 
+DYNAMIC_SUBJECTS = {'link in the next paragraph': 'link', 'link below': 'link', 'next paragraph': 'next'}
+DYNAMIC_STATES = {'on :hover': 'hover', "when it's activated": 'active', 'when it has focus': 'focus'}
+
+
+def link_interaction_check(text: str) -> dict | None:
+    """The interaction sentences whose subject is not a "Filler Text" element: the link whose
+    own text is the instruction (c21-*-ln-000, c21-pseu-*-000), "the link/next paragraph
+    should have a <colour> background and <colour> text on :hover", the focus messages of
+    focus-pseudo-class-00x, and "it should go bold" (each subject hovered in turn)."""
+    link = {'anchor': 'link'}
+    if m := re.fullmatch(r'while you are (hovering over|activating) this link, it should go green'
+                         r'(?:\. check that once you have stopped activating it, it goes (blue) again)?', text):
+        spec = {'action': 'hover' if m.group(1) == 'hovering over' else 'active', 'subject': 'link'}
+        if m.group(2):
+            spec['rest'] = m.group(2)
+        return {'kind': 'text-color', 'color': 'green', **link, 'interaction': spec}
+    if text == 'if you focus this link, it should go green':
+        return {'kind': 'text-color', 'color': 'green', **link, 'interaction': {'action': 'focus', 'subject': 'link'}}
+    if text == 'whatever you do to this link, it should stay green. (hover, focus, activate, follow)':
+        # Following an href="" link reloads the same document: the at-rest render.
+        return {'kind': 'text-color', 'color': 'green', **link,
+                'interaction': {'action': 'every', 'subject': 'link', 'rest': 'same'}}
+    if text == ('this sentence should be green. check that it remains green after you click it. '
+                'note: the link should turn red while clicked'):
+        return {'kind': 'text-color', 'color': 'green', 'anchor': 'a-element',
+                'interaction': {'action': 'active', 'subject': 'a-element', 'rest': 'after'}}
+    if m := re.fullmatch(r'the (link in the next paragraph|link below|next paragraph) should have a (\w+) '
+                         r'(background color|text color) and a (\w+) (text color|background color|font weight) '
+                         r"(on :hover|when it's activated|when it has focus)", text):
+        subject = DYNAMIC_SUBJECTS[m.group(1)]
+        spec = {'action': DYNAMIC_STATES[m.group(6)], 'subject': subject}
+        colours = {m.group(3): m.group(2), m.group(5): m.group(4)}
+        if m.group(5) == 'font weight':
+            if m.group(4) != 'bold' or m.group(3) != 'text color':
+                return None
+            return {'kind': 'text-color', 'color': m.group(2), 'anchor': subject, 'interaction': {**spec, 'bolder': True}}
+        return {'kind': 'text-on-background', 'color': colours['text color'], 'boxColor': colours['background color'],
+                'anchor': subject, 'interaction': spec}
+    if re.fullmatch(r'enter in the text field below .* a message in green should then have appeared on its '
+                    r'right-hand side indicating that such text field has received focus\. .*', text):
+        return {'kind': 'text-color', 'color': 'green', 'needle': 'focus received by text field',
+                'interaction': {'action': 'focus', 'subject': 'focusable'}}
+    if re.fullmatch(r'with the pointing device .* activate the radio button below\. the words "text sample" on its '
+                    r'right-hand side should then have become highlighted in yellow\. .*', text):
+        return {'kind': 'text-on-background', 'boxColor': 'yellow', 'needle': 'text sample',
+                'interaction': {'action': 'focus', 'subject': 'focusable'}}
+    bold = None
+    if text == 'when you hover over this text it should go bold: test test |' or \
+            text == 'when you hover over these lines they should go bold:':
+        bold = 'test test'
+    elif text == 'test passes if each "text sample" becomes bold when hovering over it':
+        bold = 'text sample'
+    if bold:
+        return {'kind': 'bolder', 'needle': bold, 'interaction': {'action': 'hover', 'subject': bold, 'each': True}}
+    return None
+
+
 def interaction_check(sentence: str) -> dict | None:
     """CSS 2.1 5.11.3: a stated condition that holds in a dynamic state ("turns green when it
     is hovered over"). The harness drives the real input pipeline of a headless window —
@@ -603,6 +663,8 @@ def interaction_check(sentence: str) -> dict | None:
     to", "turns"), or must show the stated rest colour ("initially black ... returns to
     black"). Only whole sentences naming the "Filler Text" subject and one state match."""
     text = ' '.join(sentence.lower().split()).rstrip('.')
+    if check := link_interaction_check(text):
+        return check
     subject = {'needle': 'filler text'}
     if m := re.fullmatch(r'test passes if the "filler text" below (?:changes to|turns) green (?:when|while) '
                          r'(?:the text|it|the element containing the text) (is hovered over|is activated|has focus)', text):
@@ -624,6 +686,69 @@ def interaction_check(sentence: str) -> dict | None:
     return None
 
 
+# Window widths for the resize protocol: wide (more columns), the default, about "an inch or
+# two bigger than one box", and narrower than a box (its text wraps).
+RESIZE_WIDTHS = [1200, 800, 450, 200]
+
+
+def resize_check(sentence: str) -> dict | None:
+    """'Resize the window …; the condition should always hold': the harness loads the page at
+    each of RESIZE_WIDTHS (Lite.Conformance WptVisualPage.RunResizeProtocol) and the stated
+    check must hold at every width. Only whole sentences of the known families match."""
+    text = ' '.join(sentence.lower().split()).rstrip('.')
+    resize = {'resize': RESIZE_WIDTHS}
+    if text == ('all blue boxes must always be the same size . make your window an inch or two bigger than than '
+                'the width of one box to check. try resizing the window so that the boxes wrap in two or more '
+                'columns. try resizing the window to be narrower than the boxes so that the text inside them wraps '
+                'into two or more lines'):
+        return {'kind': 'same-dimension', 'dimension': 'size', 'colorA': 'blue', **resize}
+    if re.fullmatch(r'make your window an inch or two bigger than than the width of one inline-block[.:] all '
+                    r'inline-blocks should be the same size\. try resizing the window so that inline-blocks wrap in '
+                    r'one or two columns', text):
+        return {'kind': 'same-dimension', 'dimension': 'size', **resize}
+    if re.fullmatch(r'make your window slightly wider than the width of one blue box[.:] all boxes should be the same '
+                    r'size\. try increasing the window width so that boxes wrap in two or more columns: the boxes '
+                    r'should remain the same size\..*', text):
+        return {'kind': 'same-dimension', 'dimension': 'size', 'colorA': 'blue', **resize}
+    if m := re.fullmatch(r'change your window size\. however the lines wrap, the blue rectanglues should always have '
+                         r'their (tops|middles) on the same alignment as other blue rectangles on the line', text):
+        return {'kind': 'line-align', 'color': 'blue', 'variant': 'top' if m.group(1) == 'tops' else 'middle', **resize}
+    return None
+
+
+SCROLLBAR_SENTENCES = [
+    # (pattern over the normalized sentence, variant)
+    (r'test passes if there is a (?:filled )?(green|blue) (?:square|rectangle) with inactive scrollbars and no red(?: square)? ?',
+     'inactive'),
+    (r'test passes if there is a (green|blue) (?:square|rectangle) with scrollbars', 'present'),
+    (r'test passes if there is a wide (green) rectangle across the page; such green rectangle should have inactive '
+     r'scrollbars\. there should be no wide red rectangle', 'inactive'),
+    (r'test passes if there is a wide (green) rectangle across the page; such green rectangle should have an active '
+     r'horizontal scrollbar\. there should be no wide red rectangle', 'active-horizontal'),
+    (r'test passes if there is a (green) square and no red ?\. such green square should have active horizontal and '
+     r'vertical scrollbars', 'active-both'),
+    (r'there should be a (green) bar below, with scrollbars around it', 'present'),
+    (r'test passes if there is a wide (green) bar with scrollbars around it', 'present'),
+    # "An active scrolling mechanism … that can horizontally scroll": an active horizontal bar
+    # (no colour is stated; the empty group keeps the shape).
+    (r'test passes if there is an active scrolling mechanism in the box below that can horizontally scroll the '
+     r'"filler text"()', 'active-horizontal'),
+]
+
+
+def scrollbar_check(sentence: str) -> dict | None:
+    """CSS 2.1 11.1.1 'scroll': the scrolling mechanism is displayed whether or not anything
+    is clipped. The stated box (its colour) shows both scrollbars: inactive (a track without
+    a thumb) when nothing overflows, active (a thumb) on an axis that scrolls. Only whole
+    sentences of the known shapes match (VisualChecks 'scrollbars')."""
+    text = ' '.join(sentence.lower().split()).rstrip('.')
+    for pattern, variant in SCROLLBAR_SENTENCES:
+        if m := re.fullmatch(pattern, text):
+            check = {'kind': 'scrollbars', 'variant': variant, 'color': m.group(1)}
+            return {k: v for k, v in check.items() if v}
+    return None
+
+
 def visual_check(sentence: str | None) -> dict | None:
     """A machine check for the stated condition, when the whole sentence matches a known
     template (Css21/VisualChecks.cs evaluates it). Anything unmatched stays unchecked."""
@@ -633,6 +758,10 @@ def visual_check(sentence: str | None) -> dict | None:
         return check
     if check := cursor_check(sentence):
         return check
+    if check := resize_check(sentence):
+        return check
+    if check := scrollbar_check(sentence):
+        return check
     match = passes_re.search(sentence)
     if match:
         clause = ' '.join(match.group(1).strip().lower().rstrip('.!').split())
@@ -640,11 +769,17 @@ def visual_check(sentence: str | None) -> dict | None:
         # Some cases state the condition without "passes if": sentences that begin
         # "To pass, ..." or "This ..." (the test element speaks about itself).
         stripped = TO_PASS_PREFIX.sub('', sentence.strip())
-        if re.match(r'^(?:the|there|both|this|you|only|a)\b', stripped, re.I):
+        # "Scroll this document. …" opens with the stated interaction itself.
+        if re.match(r'^(?:the|there|both|this|you|only|a|scroll)\b', stripped, re.I):
             clause = ' '.join(stripped.lower().rstrip('.!').split())
         else:
             return None
     clause = NO_RED_CONJUNCT.sub('', clause)
+    # Scroll protocols read the clause as written too: some name their interaction in a
+    # trailing parenthetical ("… no red below (scroll all the way down if necessary)") that
+    # the general strip below removes.
+    if check := scroll_check(clause.rstrip('. ').rstrip('.!')):
+        return check
     # Trailing parentheticals are meta-commentary ("(Note the marker bullet …)", "(so there
     # should be 7 blue lines on this page)"), not part of the stated condition — except the
     # ones that state a condition themselves ("(followed by a bullet on the right)").
@@ -1000,7 +1135,7 @@ def visual_check(sentence: str | None) -> dict | None:
         return {'kind': 'scrollbar-visible'}
     if re.match(r'^there\s+is\s+no\s+red\s+visible\s+on\s+the\s+page\s+even\s+when\s+scrolling\s+the\s+box\s+below$', clause):
         return {'kind': 'scroll-no-red', 'scroll': {'to': 'bottom-right'}}
-    if m := re.match(r'^the\s+box\s+below\s+can\s+be\s+scrolled\s+to\s+the\s+{COLOR}\s+square\s+in\s+the\s+bottom-right\s+corner$', clause):
+    if m := re.match(rf'^the\s+box\s+below\s+can\s+be\s+scrolled\s+to\s+the\s+{COLOR}\s+square\s+in\s+the\s+bottom-right\s+corner$', clause):
         return {'kind': 'scroll-box-edges-visible', 'color': m.group(1), 'scroll': {'to': 'bottom-right'}}
     # --- tranche 5: font-face sentences through the paint log, and the inset family. ---
     if re.match(r'^the\s+sentence\s+below\s+is\s+(?:bold|italic)$', clause):
@@ -1092,8 +1227,17 @@ def main() -> None:
             # lookup (the hit regions the native window reads), so it too performs the
             # stated interaction mechanically.
             # An interaction check drives the stated pointer/keyboard interaction through
-            # the real input pipeline of a headless window (the same reason).
-            if check.get('kind', '').startswith(('scroll-', 'painted-', 'cursor')) or 'interaction' in check                     or 'userstyle' in flags:
+            # the real input pipeline of a headless window (the same reason), and a resize
+            # check loads the page at each stated window width.
+            # A page that qualifies the resize statement in its own text ("the first block on
+            # the first line … should end up wrapping onto two lines internally", the indented
+            # inline-block-004/005) is not "all the same size": it keeps its manual reading.
+            if 'resize' in check and 'should end up wrapping onto two lines internally' in ' '.join(text.lower().split()):
+                pass
+            # Whether the page shows a scrolling mechanism ('no-scrollbar') is the engine's own
+            # viewport fact, read like the 'scrollbars' chrome — no interaction is needed.
+            elif check.get('kind', '').startswith(('scroll-', 'painted-', 'cursor', 'scrollbars', 'no-scrollbar')) \
+                    or 'interaction' in check or 'resize' in check or 'userstyle' in flags:
                 entry['check'] = check
         entries.append(entry)
 

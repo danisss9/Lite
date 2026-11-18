@@ -19361,14 +19361,11 @@
     },
     {
       "path": "css/CSS2/cascade/html-attribute-029.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.4. flags: history interact. cites later specifications: http://www.w3.org/TR/css-cascade-3/#preshint; http://www.w3.org/TR/css-cascade-4/#preshint.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.6.4.4"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.4. flags: history interact. cites later specifications: http://www.w3.org/TR/css-cascade-3/#preshint; http://www.w3.org/TR/css-cascade-4/#preshint. Reviewed 2026-11-18: reclassified optional - the stated green comes from '*:visited' beating the 'vlink' hint, which only a visited link can show, and 5.11.2 permits a UA to treat every link as unvisited.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 5.11.2: \"UAs may therefore treat all links as unvisited links, or implement other measures to preserve the user's privacy while rendering visited and unvisited links differently.\" Lite treats every link as unvisited, so a :visited rule never applies."
     },
     {
       "path": "css/CSS2/cascade/html-precedence-001.xht",
@@ -19660,14 +19657,11 @@
     },
     {
       "path": "css/CSS2/cascade/specificity-012.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.3. flags: history interact. cites later specifications: http://www.w3.org/TR/css3-selectors/#specificity; http://www.w3.org/TR/selectors4/#specificity.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.6.4.3"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.3. flags: history interact. cites later specifications: http://www.w3.org/TR/css3-selectors/#specificity; http://www.w3.org/TR/selectors4/#specificity. Reviewed 2026-11-18: reclassified optional - it passes only when the link renders as visited ('This text should be green' comes from a:visited); the specificity it exercises is covered by its applicable siblings, and 5.11.2 permits a UA to treat every link as unvisited.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 5.11.2: \"UAs may therefore treat all links as unvisited links, or implement other measures to preserve the user's privacy while rendering visited and unvisited links differently.\" Lite treats every link as unvisited, so a :visited rule never applies."
     },
     {
       "path": "css/CSS2/cascade/specificity-013.xht",
@@ -19814,14 +19808,11 @@
     },
     {
       "path": "css/CSS2/cascade/user-stylesheet-013.xht",
-      "classification": "applicable",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.ua.user-stylesheet"
-      ],
-      "rationale": "Reviewed 2026-10-07: no resolvable anchor; classified by test cluster \"user-stylesheet\" (the user stylesheet UA control)."
+      "classification": "optional",
+      "media": [],
+      "requirementIds": [],
+      "rationale": "Reviewed 2026-10-07: no resolvable anchor; classified by test cluster \"user-stylesheet\" (the user stylesheet UA control). Reviewed 2026-11-18: reclassified optional - its green comes only from '#user-stylesheet-013:visited' (the prerequisite is to navigate the link first), and 5.11.2 permits a UA to treat every link as unvisited. Its earlier pass was false: :visited rules then styled every link.",
+      "permits": "CSS 2.1 5.11.2: \"UAs may therefore treat all links as unvisited links, or implement other measures to preserve the user's privacy while rendering visited and unvisited links differently.\" Lite treats every link as unvisited, so a :visited rule never applies."
     },
     {
       "path": "css/CSS2/cascade/user-stylesheet-014.xht",
@@ -74186,14 +74177,11 @@
     },
     {
       "path": "css/CSS2/selectors/link-visited-selector-004.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.5.11.2. flags: interact.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.5.11.2"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.5.11.2. flags: interact. Reviewed 2026-11-18: reclassified optional - ':visited:active' can only match a visited link, and 5.11.2 permits a UA to treat every link as unvisited.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 5.11.2: \"UAs may therefore treat all links as unvisited links, or implement other measures to preserve the user's privacy while rendering visited and unvisited links differently.\" Lite treats every link as unvisited, so a :visited rule never applies."
     },
     {
       "path": "css/CSS2/selectors/link-visited-selector-005.xht",
@@ -74277,14 +74265,11 @@
     },
     {
       "path": "css/CSS2/selectors/pseudo-009.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.5.12.1. flags: interact.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.5.12.1"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.5.12.1. flags: interact. Reviewed 2026-11-18: reclassified optional - its 'PREREQUSITE: Navigate to the link' makes the stated green a ':visited' rule (':ViSiTed { color: green }'), and 5.11.2 permits a UA to treat every link as unvisited.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 5.11.2: \"UAs may therefore treat all links as unvisited links, or implement other measures to preserve the user's privacy while rendering visited and unvisited links differently.\" Lite treats every link as unvisited, so a :visited rule never applies."
     },
     {
       "path": "css/CSS2/selectors/pseudo-010.xht",
@@ -164713,14 +164698,11 @@
     },
     {
       "path": "css21-official/html4/html-attribute-029.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.6.4.4. flags: history interact. requires interaction; manual execution evidence pending.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.6.4.4"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.6.4.4. flags: history interact. requires interaction; manual execution evidence pending. Reviewed 2026-11-18: reclassified optional - the stated green comes from '*:visited' beating the 'vlink' hint, which only a visited link can show, and 5.11.2 permits a UA to treat every link as unvisited.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 5.11.2: \"UAs may therefore treat all links as unvisited links, or implement other measures to preserve the user's privacy while rendering visited and unvisited links differently.\" Lite treats every link as unvisited, so a :visited rule never applies."
     },
     {
       "path": "css21-official/html4/html-case-sensitivity-001.htm",
@@ -169134,14 +169116,11 @@
     },
     {
       "path": "css21-official/html4/link-visited-selector-004.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.5.11.2. flags: interact. requires interaction; manual execution evidence pending.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.5.11.2"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.5.11.2. flags: interact. requires interaction; manual execution evidence pending. Reviewed 2026-11-18: reclassified optional - ':visited:active' can only match a visited link, and 5.11.2 permits a UA to treat every link as unvisited.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 5.11.2: \"UAs may therefore treat all links as unvisited links, or implement other measures to preserve the user's privacy while rendering visited and unvisited links differently.\" Lite treats every link as unvisited, so a :visited rule never applies."
     },
     {
       "path": "css21-official/html4/link-visited-selector-005.htm",
@@ -188967,14 +188946,11 @@
     },
     {
       "path": "css21-official/html4/pseudo-009.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.5.12.1. flags: interact. requires interaction; manual execution evidence pending.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.5.12.1"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.5.12.1. flags: interact. requires interaction; manual execution evidence pending. Reviewed 2026-11-18: reclassified optional - its 'PREREQUSITE: Navigate to the link' makes the stated green a ':visited' rule (':ViSiTed { color: green }'), and 5.11.2 permits a UA to treat every link as unvisited.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 5.11.2: \"UAs may therefore treat all links as unvisited links, or implement other measures to preserve the user's privacy while rendering visited and unvisited links differently.\" Lite treats every link as unvisited, so a :visited rule never applies."
     },
     {
       "path": "css21-official/html4/pseudo-010.htm",
@@ -199939,14 +199915,11 @@
     },
     {
       "path": "css21-official/html4/user-stylesheet-013.htm",
-      "classification": "applicable",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.ua.user-stylesheet"
-      ],
-      "rationale": "Reviewed 2026-10-05: no spec-anchor metadata; classified by test cluster \"user-stylesheet\" and its recorded assertion (the user stylesheet UA control)."
+      "classification": "optional",
+      "media": [],
+      "requirementIds": [],
+      "rationale": "Reviewed 2026-10-05: no spec-anchor metadata; classified by test cluster \"user-stylesheet\" and its recorded assertion (the user stylesheet UA control). Reviewed 2026-11-18: reclassified optional - its green comes only from '#user-stylesheet-013:visited' (the prerequisite is to navigate the link first), and 5.11.2 permits a UA to treat every link as unvisited. Its earlier pass was false: :visited rules then styled every link.",
+      "permits": "CSS 2.1 5.11.2: \"UAs may therefore treat all links as unvisited links, or implement other measures to preserve the user's privacy while rendering visited and unvisited links differently.\" Lite treats every link as unvisited, so a :visited rule never applies."
     },
     {
       "path": "css21-official/html4/user-stylesheet-014.htm",
