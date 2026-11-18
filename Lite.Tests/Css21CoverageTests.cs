@@ -1423,7 +1423,7 @@ public static class Css21CoverageTests
         var known = new HashSet<string>(StringComparer.Ordinal);
         foreach (var kind in new[] { "one-shape", "same-dimension", "bar-gap", "line-style", "look-same", "solid-line",
                      "border-ring", "border-sample", "text-color", "text-on-background", "bolder", "line-align", "scrollbars", "text-color-pairs", "text-decoration", "align-right",
-                     "scrollbox-same-size", "scrollbar-gap", "twin-squares", "page-scroll-text", "grid-aligned", "tile-centered", "outline-around",
+                     "scrollbox-same-size", "scrollbar-gap", "twin-squares", "page-scroll-text", "grid-aligned", "tile-centered", "outline-around", "first-line-case", "page-horizontal-bar", "cursor-marker",
                      "shape-relation", "space-between", "stack-three", "two-size", "line-pair", "marker-bullet",
                      "round-dot", "double-line", "slanted-box", "line-marker", "bullet-beside", "bar-stack", "bars-match",
                      "bar-grid", "viewport-bottom", "cell-border", "corners", "box-count", "three-bars", "lines-same",
@@ -1438,7 +1438,7 @@ public static class Css21CoverageTests
                      "scroll-cats-bottom", "scroll-cats-moved", "scroll-cats-bottom-moved", "scroll-cats-top-moved",
                      "scroll-cats-still", "scroll-box-text", "scroll-box-edges-visible", "scroll-no-red",
                      "scroll-page-text", "scroll-page-edges-visible", "scroll-page-always-visible",
-                     "scroll-page-stuck-top", "scroll-page-box-still", "scroll-page-no-red", "cursor" })
+                     "scroll-page-stuck-top", "scroll-page-box-still", "scroll-page-fixed-below", "scroll-page-square-visible", "scroll-page-line-and-box", "scroll-page-no-red", "cursor" })
             known.Add(kind);
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var entry in conditions["cases"]!.AsArray())

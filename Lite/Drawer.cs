@@ -131,8 +131,15 @@ internal static class Drawer
 
         // The propagated background image paints at the root's padding box (its positioning area
         // is the canvas's origin), scrolling with the document, under all content.
+        // §14.2: the canvas background "covers the entire canvas" — positioned against the root
+        // box, painted (and repeated) over the whole page, not clipped to the root's box
+        // (abspos-zero-width-001's 2000px image under a short root).
+        var (canvasRight, canvasBottom) = BoxEngine.PageExtent(root);
+        _canvasRoot = root;
+        _canvasArea = new SKRect(MathF.Min(0f, root.Box.BorderBox.Left), MathF.Min(0f, root.Box.BorderBox.Top),
+            MathF.Max(canvasRight, width + viewport.ScrollX), MathF.Max(canvasBottom, height + viewport.ScrollY));
         if (_propagatedBackgroundNode is { } bgNode && bgNode.GetBackgroundImage() != null)
-            DrawBackgroundImage(canvas, bgNode, root.Box);
+            DrawBackgroundImage(canvas, bgNode, root.Box, _canvasArea);
 
         PaintNode(canvas, root, width);
 
@@ -148,9 +155,19 @@ internal static class Drawer
 
         // §11.1.1: 'overflow: hidden' propagated to the viewport clips the canvas there — the
         // page offers no scrolling mechanism, so it has no scroll extent and draws no bar.
-        viewport.ContentHeight = BoxEngine.ViewportOverflow(root) == OverflowType.Hidden
-            ? Math.Min(root.Box.MarginBox.Bottom, height)
-            : root.Box.MarginBox.Bottom;
+        // The page scrolls over everything it paints, absolutely positioned content included,
+        // on both axes (BoxEngine.PageExtent).
+        if (BoxEngine.ViewportOverflow(root) == OverflowType.Hidden)
+        {
+            viewport.ContentHeight = Math.Min(root.Box.MarginBox.Bottom, height);
+            viewport.ContentWidth = Math.Min(root.Box.MarginBox.Right, width);
+        }
+        else
+        {
+            var (pageRight, pageBottom) = BoxEngine.PageExtent(root);
+            viewport.ContentHeight = pageBottom;
+            viewport.ContentWidth = pageRight;
+        }
         DrawScrollbar(canvas, viewport, width, height);
 
         return bitmap;
@@ -186,18 +203,29 @@ internal static class Drawer
 
     private static void DrawScrollbar(SKCanvas canvas, Viewport viewport, int width, int height)
     {
-        if (viewport.ContentHeight <= viewport.ViewportHeight) return;
-
+        if (viewport.HideScrollbars) return;
         const float barWidth = 6f;
         const float margin = 2f;
-        var ratio = viewport.ViewportHeight / viewport.ContentHeight;
-        var trackH = viewport.ViewportHeight;
-        var thumbH = Math.Max(trackH * ratio, 24f);
-        var thumbTop = viewport.ScrollY / viewport.ContentHeight * trackH;
-        var x = width - barWidth - margin;
-
         using var paint = new SKPaint { Color = new SKColor(0, 0, 0, 80), IsAntialias = true };
-        canvas.DrawRoundRect(x, thumbTop + margin, barWidth, thumbH - margin * 2, 3, 3, paint);
+        if (viewport.ContentHeight > viewport.ViewportHeight)
+        {
+            var ratio = viewport.ViewportHeight / viewport.ContentHeight;
+            var trackH = viewport.ViewportHeight;
+            var thumbH = Math.Max(trackH * ratio, 24f);
+            var thumbTop = viewport.ScrollY / viewport.ContentHeight * trackH;
+            var x = width - barWidth - margin;
+            canvas.DrawRoundRect(x, thumbTop + margin, barWidth, thumbH - margin * 2, 3, 3, paint);
+        }
+        // §11.1.1: content overflowing the viewport sideways gets a horizontal scrolling
+        // mechanism too (c5505-mrgn-002: "This page should have a horizontal scroll bar").
+        if (viewport.ContentWidth > width + 0.5f)
+        {
+            var ratio = width / viewport.ContentWidth;
+            var thumbW = Math.Max(width * ratio, 24f);
+            var thumbLeft = viewport.ScrollX / viewport.ContentWidth * width;
+            var y = height - barWidth - margin;
+            canvas.DrawRoundRect(thumbLeft + margin, y, thumbW - margin * 2, barWidth, 3, 3, paint);
+        }
     }
 
     /// <summary>Whether the box always shows its scrolling mechanism: 'overflow: scroll' on an
@@ -2158,6 +2186,11 @@ internal static class Drawer
 
         DrawBorders(canvas, box, node);
 
+        // §18.1: a list item's box shows its own cursor like any block (cursor-applies-to-010:
+        // 'cursor: pointer' on a display:list-item box showed the default arrow).
+        if (!node.GetPointerEventsNone())
+            _hitRegions.Add(CursorRegion(box.BorderBox, node, nodeKey: node.NodeKey));
+
         var listStyleType = node.GetListStyleType();
         var listStylePos = node.GetListStylePosition();
         float insideMarkerWidth = 0f; // track width consumed by inside marker
@@ -2762,7 +2795,18 @@ internal static class Drawer
 
     // ---- Background image ----
 
-    private static void DrawBackgroundImage(SKCanvas canvas, LayoutNode node, BoxDimensions box)
+    private static void DrawBackgroundImage(SKCanvas canvas, LayoutNode node, BoxDimensions box) =>
+        DrawBackgroundImage(canvas, node, box, ReferenceEquals(node, _canvasRoot) ? _canvasArea : null);
+
+    /// <summary>This frame's root element and the canvas it covers (§14.2: the root's
+    /// background — its own, or the body's propagated one — covers the entire canvas).</summary>
+    private static LayoutNode? _canvasRoot;
+    private static SKRect _canvasArea;
+
+    /// <summary><paramref name="paintArea"/> overrides where the image paints (and repeats):
+    /// the canvas background (§14.2) is positioned against the root box but "covers the entire
+    /// canvas", so it paints over the whole page, not just the root's padding box.</summary>
+    private static void DrawBackgroundImage(SKCanvas canvas, LayoutNode node, BoxDimensions box, SKRect? paintArea)
     {
         var imageUrl = node.GetBackgroundImage();
         if (imageUrl == null) return;
@@ -2781,7 +2825,7 @@ internal static class Drawer
         // clipped to the element's padding box, but its placement is independent of where the
         // element scrolled to.
         bool fixedBg = node.IsBackgroundFixed();
-        var clipArea = box.PaddingBox;
+        var clipArea = paintArea ?? box.PaddingBox;
         var area = fixedBg
             ? new SKRect(_bgFixedScrollX, _viewportScrollY + _bgFixedScrollY,
                          _bgFixedScrollX + _viewportWidth, _viewportScrollY + _bgFixedScrollY + _viewportHeight)
@@ -2809,7 +2853,7 @@ internal static class Drawer
         float offY = ResolveBgPosition(posY, area.Height, drawH, fontSize);
 
         canvas.Save();
-        var (rx, ry) = node.GetBorderRadius(clipArea.Width, clipArea.Height);
+        var (rx, ry) = paintArea is null ? node.GetBorderRadius(clipArea.Width, clipArea.Height) : (0f, 0f);
         if (rx > 0 || ry > 0)
             canvas.ClipRoundRect(new SKRoundRect(clipArea, rx, ry), antialias: true);
         else
@@ -2818,10 +2862,13 @@ internal static class Drawer
         bool repeatX = repeat is "repeat" or "repeat-x";
         bool repeatY = repeat is "repeat" or "repeat-y";
 
-        float startX = repeatX ? area.Left + offX - (float)Math.Ceiling((offX) / drawW) * drawW : area.Left + offX;
-        float startY = repeatY ? area.Top + offY - (float)Math.Ceiling((offY) / drawH) * drawH : area.Top + offY;
-        float endX = repeatX ? area.Right : startX + drawW;
-        float endY = repeatY ? area.Bottom : startY + drawH;
+        // Repeated tiles cover the painted area: the box's own (its padding box) or, for the
+        // canvas background, the whole page.
+        var tiled = paintArea ?? area;
+        float startX = repeatX ? area.Left + offX - (float)Math.Ceiling((area.Left + offX - tiled.Left) / drawW) * drawW : area.Left + offX;
+        float startY = repeatY ? area.Top + offY - (float)Math.Ceiling((area.Top + offY - tiled.Top) / drawH) * drawH : area.Top + offY;
+        float endX = repeatX ? tiled.Right : startX + drawW;
+        float endY = repeatY ? tiled.Bottom : startY + drawH;
 
         for (float py = startY; py < endY; py += drawH)
         {
@@ -2944,8 +2991,9 @@ internal static class Drawer
         // ::first-line styles are resolved from the node or its parent block. CSS 2.1 §5.12.1:
         // they do not apply inside descendant floats — a float's content is not part of the
         // block's first formatted line, so `div:first-line` must not style a floated span's text.
-        var firstLineStyles = node.FirstLineStyles ?? node.Parent?.FirstLineStyles;
+        var firstLineStyles = BoxEngine.FirstLineStylesOf(node);
         if (firstLineStyles is not null && DescendsFromFloat(node)) firstLineStyles = null;
+        var firstLineTransform = firstLineStyles is null ? TextTransform.None : BoxEngine.FirstLineTransform(node);
 
         // Apply text-transform (§16.5; language-sensitive rules read the inherited lang)
         text = StyleExtensions.ApplyTextTransform(text, textTransform, node.GetLanguage());
@@ -2954,8 +3002,10 @@ internal static class Drawer
         // §9.5). Painting has to use exactly the same bands or the lines break in different places
         // than they were measured.
         var bands = node.LineBands;
-        var lines = TextMeasure.WrapText(text, maxWidth, font, whiteSpace, node.GetLineHeight(node.GetFontSize()),
-                                          bands?.Select(b => b.Width).ToList());
+        // A ::first-line 'text-transform' re-breaks the first line with the transformed text,
+        // exactly as layout measured it (BoxEngine's own-text wrap).
+        var lines = TextMeasure.WrapTextWithFirstLine(text, firstLineTransform, node.GetLanguage(), maxWidth, font, whiteSpace,
+                                          node.GetLineHeight(node.GetFontSize()), bands?.Select(b => b.Width).ToList());
 
         // text-overflow: ellipsis — when overflow is clipped and only one line, truncate with "…"
         // Check node itself OR its parent block (text-overflow is non-inherited; inline children

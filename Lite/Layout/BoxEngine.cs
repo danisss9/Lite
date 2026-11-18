@@ -1281,7 +1281,9 @@ internal static class BoxEngine
             // An 'inside' list marker consumes first-line width the wrap must respect, or the
             // laid-out line count diverges from what the painter draws (§12.5.1).
             var markerIndent = nodeDisplay == DisplayType.ListItem ? node.InsideMarkerIndent() : 0f;
-            var lines = TextMeasure.WrapText(node.RenderedText(), Math.Max(flowW - markerIndent, 1f), font, ws, lh);
+            // A ::first-line 'text-transform' re-breaks the first line (uppercase is wider).
+            var lines = TextMeasure.WrapTextWithFirstLine(node.RenderedText(), FirstLineTransform(node), node.GetLanguage(),
+                Math.Max(flowW - markerIndent, 1f), font, ws, lh);
             contentH = lines.Sum(l => l.Height);
             node.OwnTextWidth = lines.Count == 0 ? 0f : lines.Max(l => l.Width) + markerIndent;
         }
@@ -1459,7 +1461,19 @@ internal static class BoxEngine
     /// positioning … may cause boxes to overlap … [and] overflow"). Absolutely positioned
     /// boxes are left out, and a descendant that clips its own overflow contributes only its
     /// own box. Returns null when nothing rendered.</summary>
-    internal static (float Right, float Bottom)? ScrollableExtent(LayoutNode box)
+    internal static (float Right, float Bottom)? ScrollableExtent(LayoutNode box) => ScrollableExtent(box, page: false);
+
+    /// <summary>The page's scrollable extent (§11.1.1 applied to the viewport): the root's
+    /// descendants as painted, absolutely positioned ones included (abspos-zero-width-001's
+    /// 2000px-tall box makes the page scroll); fixed boxes stay with the viewport, and the
+    /// root's and body's 'overflow' belongs to the viewport, so they never clip here.</summary>
+    internal static (float Right, float Bottom) PageExtent(LayoutNode root)
+    {
+        var extent = ScrollableExtent(root, page: true);
+        return (MathF.Max(root.Box.MarginBox.Right, extent?.Right ?? 0f), MathF.Max(root.Box.MarginBox.Bottom, extent?.Bottom ?? 0f));
+    }
+
+    private static (float Right, float Bottom)? ScrollableExtent(LayoutNode box, bool page)
     {
         float right = float.NegativeInfinity, bottom = float.NegativeInfinity;
         // A box's own text line can be wider than the box (an unbreakable word, max-height-109).
@@ -1473,16 +1487,18 @@ internal static class BoxEngine
             foreach (var c in n.Children)
             {
                 var pos = c.GetPosition();
-                if (pos is PositionType.Absolute or PositionType.Fixed || c.GetDisplay() == DisplayType.None) continue;
+                if (pos is PositionType.Fixed || pos is PositionType.Absolute && !page || c.GetDisplay() == DisplayType.None) continue;
                 var (rx, ry) = pos == PositionType.Relative ? RelativeOffset(c) : (0f, 0f);
                 var (ox, oy) = (dx + rx, dy + ry);
-                var mb = c.Box.MarginBox;
+                // The page's scrollable area reaches the border boxes it paints: a negative margin
+                // must not pull a box that overflows the viewport back inside (c5502-mrgn-r-002).
+                var mb = page ? c.Box.BorderBox : c.Box.MarginBox;
                 if (mb.Width > 0f || mb.Height > 0f)
                 {
                     right = MathF.Max(right, mb.Right + ox);
                     bottom = MathF.Max(bottom, mb.Bottom + oy);
                 }
-                if (c.GetOverflow() != OverflowType.Visible) continue;
+                if (c.GetOverflow() != OverflowType.Visible && !(page && c.TagName is "HTML" or "BODY")) continue;
                 OwnText(c, ox);
                 Walk(c, ox, oy);
             }
@@ -1514,6 +1530,38 @@ internal static class BoxEngine
             MathF.Max(pb.Left, pb.Right - (vertical ? ScrollGutter : 0f)),
             MathF.Max(pb.Top, pb.Bottom - (horizontal ? ScrollGutter : 0f)));
     }
+
+    /// <summary>The ::first-line styles that govern <paramref name="node"/>'s first line
+    /// (§5.12.1): its own, or its parent block's. An inline-level node (a text run) shares the
+    /// parent's first formatted line; a block-level child opens it only when it is the parent's
+    /// first in-flow child (`ul:first-line` styles the first list item's first line, not every
+    /// item's).</summary>
+    internal static Dictionary<string, string>? FirstLineStylesOf(LayoutNode node)
+    {
+        if (node.FirstLineStyles is { } own) return own;
+        if (node.Parent?.FirstLineStyles is not { } inherited) return null;
+        if (node.TagName.StartsWith('#') || node.GetDisplay() is DisplayType.Inline) return inherited;
+        foreach (var c in node.Parent.Children)
+        {
+            if (c.GetDisplay() == DisplayType.None || c.GetPosition() is PositionType.Absolute or PositionType.Fixed ||
+                c.GetFloat() != FloatType.None) continue;
+            if (c.TagName.StartsWith('#') && string.IsNullOrWhiteSpace(c.DisplayText)) continue;
+            return ReferenceEquals(c, node) ? inherited : null;
+        }
+        return null;
+    }
+
+    /// <summary>The ::first-line 'text-transform' of <paramref name="node"/>'s first line.</summary>
+    internal static TextTransform FirstLineTransform(LayoutNode node) =>
+        FirstLineStylesOf(node) is { } styles && styles.TryGetValue("text-transform", out var value)
+            ? value.Trim().ToLowerInvariant() switch
+            {
+                "uppercase" => TextTransform.Uppercase,
+                "lowercase" => TextTransform.Lowercase,
+                "capitalize" => TextTransform.Capitalize,
+                _ => TextTransform.None,
+            }
+            : TextTransform.None;
 
     /// <summary>The inline space one scrollbar takes from its box: the bar plus its margin.</summary>
     internal const float ScrollGutter = ElementScrollState.BarWidth + ElementScrollState.BarMargin;

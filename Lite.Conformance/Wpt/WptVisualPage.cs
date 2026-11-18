@@ -46,7 +46,8 @@ internal static class WptVisualPage
         IReadOnlyList<Lite.Rendering.PaintLog.Entry> Paint, IReadOnlyList<(string Name, SKBitmap Bitmap)>? States) Render(string path, string? viewport = null,
         string waitClass = "reftest-wait", Css21.ScrollSpec? elementScroll = null,
         Func<Lite.Models.LayoutNode, (float ScrollX, float ScrollY)>? pageScroll = null,
-        bool testDriver = false, float scale = 1f, Css21.InteractionSpec? interaction = null, string? sentence = null)
+        bool testDriver = false, float scale = 1f, Css21.InteractionSpec? interaction = null, string? sentence = null,
+        bool hideScrollbars = false)
     {
         var width = 800;
         var height = 600;
@@ -86,7 +87,7 @@ internal static class WptVisualPage
 
         // Mirrors the two animation-frame waits in the pinned executors/test-wait.js.
         HeadlessPage.PumpFrames(engine, 2);
-        using (Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height }, scale)) { }
+        using (Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height, HideScrollbars = hideScrollbars }, scale)) { }
         bool Waiting() => root.Attributes.GetValueOrDefault("class", "")
             .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Contains(waitClass);
         if (Waiting())
@@ -99,7 +100,7 @@ internal static class WptVisualPage
         {
             List<Lite.Rendering.PaintLog.Entry> paint;
             Lite.Rendering.PaintLog.Begin();
-            try { var bmp = Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height }, scale); paint = Lite.Rendering.PaintLog.End(); return (bmp, paint); }
+            try { var bmp = Lite.Drawer.DrawToBitmap(width, height, root, new Viewport { ViewportHeight = height, HideScrollbars = hideScrollbars }, scale); paint = Lite.Rendering.PaintLog.End(); return (bmp, paint); }
             catch { Lite.Rendering.PaintLog.End(); throw; }
         }
         if (interaction is not null && window is not null)
@@ -134,9 +135,10 @@ internal static class WptVisualPage
             }
         }
         var (pageX, pageY) = pageScroll is { } ps ? ps(root) : (0f, 0f);
-        var documentWidth = root.Box.BorderBox.Right;
-        var documentHeight = root.Box.BorderBox.Bottom;
-        var scrolledViewport = new Viewport { ViewportHeight = height, ContentHeight = documentHeight, ContentWidth = documentWidth };
+        // The page's scrollable extent, absolutely positioned content included (§11.1.1).
+        var (documentWidth, documentHeight) = Lite.Layout.BoxEngine.PageExtent(root);
+        var scrolledViewport = new Viewport { ViewportHeight = height, ContentHeight = documentHeight, ContentWidth = documentWidth,
+            HideScrollbars = hideScrollbars };
         if (pageY > 0 || pageX > 0)
         {
             scrolledViewport.ScrollTo(pageY);

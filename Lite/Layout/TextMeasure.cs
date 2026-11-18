@@ -101,6 +101,41 @@ internal static class TextMeasure
     }
 
     /// <summary>
+    /// <see cref="WrapText"/> with a ::first-line 'text-transform' (§5.12.1): the first line is
+    /// broken with the transformed text (uppercase glyphs are wider, so fewer words may fit),
+    /// and the rest of the text wraps untransformed from the word after it. Preserved white
+    /// space and length-changing transforms (ß → SS) keep the plain wrap with the first line
+    /// transformed in place.
+    /// </summary>
+    internal static List<TextLine> WrapTextWithFirstLine(string text, TextTransform firstLine, string? lang,
+        float maxWidth, SKFont font, WhiteSpace whiteSpace, float lineHeight, IReadOnlyList<float>? lineWidths = null)
+    {
+        if (firstLine == TextTransform.None)
+            return WrapText(text, maxWidth, font, whiteSpace, lineHeight, lineWidths);
+        var transformed = StyleExtensions.ApplyTextTransform(text, firstLine, lang);
+        if (whiteSpace is WhiteSpace.Pre or WhiteSpace.PreWrap or WhiteSpace.PreLine || transformed.Length != text.Length)
+        {
+            var plain = WrapText(text, maxWidth, font, whiteSpace, lineHeight, lineWidths);
+            if (plain.Count > 0)
+            {
+                var head = StyleExtensions.ApplyTextTransform(plain[0].Text, firstLine, lang);
+                plain[0] = plain[0] with { Text = head, Width = font.MeasureText(head) };
+            }
+            return plain;
+        }
+        var firstPass = WrapText(transformed, maxWidth, font, whiteSpace, lineHeight, lineWidths);
+        if (firstPass.Count <= 1) return firstPass;
+        // The first line holds the transformed text's first k words; the rest is the plain
+        // text after the same k words.
+        var k = firstPass[0].Text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+        var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (k <= 0 || k >= words.Length) return firstPass;
+        var rest = string.Join(' ', words.Skip(k));
+        var tail = WrapText(rest, maxWidth, font, whiteSpace, lineHeight, lineWidths?.Skip(1).ToList());
+        return [firstPass[0], .. tail];
+    }
+
+    /// <summary>
     /// Wraps text into lines that fit within maxWidth, respecting the node's white-space mode.
     /// Each TextLine carries the text, measured width, line height, and baseline ascent.
     /// </summary>

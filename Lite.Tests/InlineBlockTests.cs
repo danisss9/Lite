@@ -77,6 +77,35 @@ public static class InlineBlockTests
     }
 
     [Test]
+    public static void FirstLineTextTransform_RebreaksOnlyTheFirstLine()
+    {
+        // first-line-selector-014: 'div:first-line { text-transform: uppercase }' uppercases the
+        // first line, broken with the wider uppercase glyphs; the rest wraps untransformed.
+        using var font = new SkiaSharp.SKFont(SkiaSharp.SKTypeface.Default, 16);
+        var text = string.Join(' ', Enumerable.Repeat("lorem ipsum dolor", 12));
+        var lines = TextMeasure.WrapTextWithFirstLine(text, TextTransform.Uppercase, "en", 200f, font, WhiteSpace.Normal, 20f);
+        True(lines.Count >= 2, "the text must wrap");
+        True(lines[0].Text.Any(char.IsLetter) && !lines[0].Text.Any(char.IsLower), $"line 1 must be uppercase, got '{lines[0].Text}'");
+        True(lines[1].Text.Any(char.IsLower), $"line 2 must stay lowercase, got '{lines[1].Text}'");
+        True(lines[0].Width <= 200.5f, $"the uppercase first line must fit its width, got {lines[0].Width}");
+        var words = string.Join(' ', lines.Select(l => l.Text)).Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        True(words == 36, $"no word may be lost or repeated, got {words}");
+    }
+
+    [Test]
+    public static void ListFirstLine_StylesOnlyTheFirstItem()
+    {
+        // first-line-selector-015: 'ul:first-line' is the first item's first line only.
+        var page = Parser.ParseChildPage("<!DOCTYPE html><style>ul:first-line{text-transform:uppercase}</style>" +
+            "<ul><li id=\"a\">one</li><li id=\"b\">two</li></ul>", isSrcdoc: true, "http://test/", 800, 600);
+        var a = FindId(page.Root, "a");
+        var b = FindId(page.Root, "b");
+        True(a is not null && b is not null, "items missing");
+        True(BoxEngine.FirstLineTransform(a!) == TextTransform.Uppercase, "the first item opens the list's first line");
+        True(BoxEngine.FirstLineTransform(b!) == TextTransform.None, "the second item is not on the list's first line");
+    }
+
+    [Test]
     public static void InsideListMarkerIndentsTheFirstLineOnly()
     {
         // §12.5.1 with list-style-position: inside — the marker box is the first inline box,

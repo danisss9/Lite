@@ -155,7 +155,7 @@ internal static class VisualChecks
         // Scrollbars are UA chrome, not the content a sentence describes ("a green square"):
         // the content judges read the render with each 'overflow: scroll' gutter erased. The
         // scrollbar judges read the chrome itself.
-        if (check.Kind is not ("scrollbars" or "scrollbar-visible" or "scrollbar-gap"))
+        if (check.Kind is not ("scrollbars" or "scrollbar-visible" or "scrollbar-gap" or "no-scrollbar" or "page-horizontal-bar" or "page-scroll-text"))
             bitmap = EraseScrollChrome(bitmap, root);
         if (InstructionBottom(root, sentence) is not { } top)
             return new(WptRunner.Cat.Unsupported, "Visual check: instruction paragraph not found in the layout tree", 0, 0);
@@ -221,6 +221,11 @@ internal static class VisualChecks
             "bar-grid" => BarGrid(check, bitmap, top, path),
             "viewport-bottom" => ViewportBottom(check, bitmap),
             "cursor" => CursorCheck(check, bitmap, root, top),
+            // cursor-applies-to-010: "the cursor changes to a pointer cursor over the blue box and
+            // there is a marker bullet on the left-hand side of the blue box" — both readings hold.
+            "cursor-marker" => CursorCheck(check with { Kind = "cursor" }, bitmap, root, top) is { Passed: true }
+                ? ComponentCheck(check with { Kind = "marker-bullet", Shape = null }, bitmap, top, path)
+                : CursorCheck(check with { Kind = "cursor" }, bitmap, root, top),
             "cell-border" => CellBorder(check, bitmap, root, top, path),
             "corners" => Corners(check, bitmap, top, path),
             "box-count" => BoxCount(check, bitmap, top, path),
@@ -242,6 +247,8 @@ internal static class VisualChecks
             "grid-aligned" => GridAligned(check, root, top),
             "tile-centered" => TileCentered(check, bitmap, root),
             "outline-around" => OutlineAround(check, bitmap, top),
+            "first-line-case" => FirstLineCase(check, renders.Paint, top),
+            "page-horizontal-bar" => PageHorizontalBar(check, bitmap, root),
             _ => ComponentCheck(check, bitmap, top, path),
         };
         // Same switch as the reftest survey's failure dumps: read the render, not the numbers.
@@ -604,8 +611,9 @@ internal static class VisualChecks
         // A viewport clipped by a propagated 'overflow: hidden' (§11.1.1) offers the tester
         // no scrollbars to drag.
         if (BoxEngine.ViewportOverflow(root) == OverflowType.Hidden) return (0f, 0f);
-        var maxX = MathF.Max(0f, root.Box.BorderBox.Right - width);
-        var maxY = MathF.Max(0f, root.Box.BorderBox.Bottom - height);
+        var (extentRight, extentBottom) = BoxEngine.PageExtent(root);
+        var maxX = MathF.Max(0f, extentRight - width);
+        var maxY = MathF.Max(0f, extentBottom - height);
         return (to.Contains("right") ? maxX : 0f, to.Contains("bottom") ? maxY : 0f);
     }
 
@@ -768,6 +776,14 @@ internal static class VisualChecks
                 foreach (var b in new[] { afterBounds, beforeBounds })
                     if (b.Left < 2 || b.Top < 2 || b.Right > after.Width - 2 || b.Bottom > after.Height - 2)
                         return Fail($"the {check.Color} box is clipped by the viewport ({b.Left},{b.Top})..({b.Right},{b.Bottom})");
+                // "It should not be covered by the scrollbars, if any": the page's bars paint
+                // along the right (vertical scroll) and bottom (horizontal scroll) edges.
+                var (pageRight, pageBottom) = BoxEngine.PageExtent(root);
+                var barStrip = (int)MathF.Ceiling(BoxEngine.ScrollGutter);
+                foreach (var b in new[] { afterBounds, beforeBounds })
+                    if (pageBottom > after.Height + 0.5f && b.Right >= after.Width - barStrip ||
+                        pageRight > after.Width + 0.5f && b.Bottom >= after.Height - barStrip)
+                        return Fail($"the {check.Color} box lies under the page scrollbar ({b.Left},{b.Top})..({b.Right},{b.Bottom})");
                 return Pass("the box is completely visible before and after scrolling");
             }
             case "scroll-page-stuck-top":
@@ -779,6 +795,73 @@ internal static class VisualChecks
                 if (Math.Abs(beforeTop.Top - afterTop.Top) > EdgeTolerance || Math.Abs(beforeTop.Bottom - afterTop.Bottom) > EdgeTolerance)
                     return Fail($"the top band moved with the page (before {beforeTop.Top}..{beforeTop.Bottom}, after {afterTop.Top}..{afterTop.Bottom})");
                 return Pass("the top band holds the same position before and after scrolling");
+            }
+            case "scroll-page-fixed-below":
+            {
+                // position-004: "the blue box shrinks to the size of its contents and is completely
+                // shifted below the orange line; when scrolling the blue box stays at its same
+                // position on the screen, all other content can scroll".
+                if (before is null) return new(WptRunner.Cat.Unsupported, "Visual check: no before render", 0, 0);
+                if (!Named.TryGetValue(check.Color ?? "", out var boxColor) || !Named.TryGetValue(check.ColorB ?? "", out var lineColor))
+                    return new(WptRunner.Cat.Unsupported, "Visual check: stated colours are not named colours", 0, 0);
+                var fixedBox = FindFirst(root, n => !n.TagName.StartsWith('#') && HasBackground(n, boxColor));
+                if (fixedBox is null)
+                    return new(WptRunner.Cat.Unsupported, $"Visual check: no {check.Color} box in the layout tree", 0, 0);
+                // Shrink-to-fit: the content box is as wide as its text, measured with the box's own font.
+                var content = fixedBox.Box.ContentBox;
+                var words = string.Join(" ", (string.IsNullOrWhiteSpace(fixedBox.DisplayText)
+                        ? string.Concat(fixedBox.Children.Where(c => c.TagName.StartsWith('#')).Select(c => c.DisplayText))
+                        : fixedBox.DisplayText).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+                using var font = Lite.Layout.TextMeasure.CreateFont(fixedBox);
+                var textWidth = words.Length == 0 ? 0f : font.MeasureText(words);
+                if (words.Length == 0 || MathF.Abs(textWidth - content.Width) > 2f)
+                    return Fail($"the {check.Color} box is {content.Width:0.#}px wide, its text {textWidth:0.#}px");
+                var (pageX, pageY) = PageScrollExtent("page-bottom", root, after.Width, after.Height);
+                if (pageY <= 0f)
+                    return new(WptRunner.Cat.Unsupported, "Visual check: the page does not scroll", 0, 0);
+                if (ColorBoundsOf(before, boxColor) is not { } was || ColorBoundsOf(before, lineColor) is not { } line)
+                    return Fail($"the {check.Color} box or the {check.ColorB} line is not visible before scrolling");
+                if (was.Top <= line.Bottom)
+                    return Fail($"the {check.Color} box (top {was.Top}) is not below the {check.ColorB} line (bottom {line.Bottom})");
+                if (ColorBoundsOf(after, boxColor) is not { } now ||
+                    Math.Abs(was.Left - now.Left) > EdgeTolerance || Math.Abs(was.Top - now.Top) > EdgeTolerance ||
+                    Math.Abs(was.Right - now.Right) > EdgeTolerance || Math.Abs(was.Bottom - now.Bottom) > EdgeTolerance)
+                    return Fail($"the {check.Color} box moved while the page scrolled {pageY:0}px");
+                if (ColorBoundsOf(after, lineColor) is { } lineAfter && Math.Abs(lineAfter.Top - line.Top) <= EdgeTolerance)
+                    return Fail($"the {check.ColorB} line did not scroll with the page");
+                return Pass($"the {check.Color} box hugs its text below the {check.ColorB} line and stays put while the page scrolls");
+            }
+            case "scroll-page-square-visible":
+            {
+                // c5502-mrgn-r-002: "you can scroll to the right and see a green square" — the
+                // page scrolls sideways and a whole stated-colour square shows (a cut square is
+                // not square).
+                if (!Named.TryGetValue(check.Color ?? "", out var squareColor))
+                    return new(WptRunner.Cat.Unsupported, "Visual check: stated colour is not a named colour", 0, 0);
+                var (scrolledX, scrolledY) = PageScrollExtent(check.Scroll?.To ?? "page-right", root, after.Width, after.Height);
+                if (scrolledX <= 0f && scrolledY <= 0f)
+                    return Fail("the page does not scroll");
+                if (ColorBoundsOf(after, squareColor) is not { } sq || sq.Width < 7 || Math.Abs(sq.Width - sq.Height) > 1)
+                    return Fail($"no whole {check.Color} square is visible after scrolling");
+                return Pass($"a whole {check.Color} square ({sq.Width + 1}px) is visible after scrolling");
+            }
+            case "scroll-page-line-and-box":
+            {
+                // abspos-zero-width-001: "a blue line above this text and a green box visible when
+                // the page is scrolled to its full extent vertically".
+                if (before is null) return new(WptRunner.Cat.Unsupported, "Visual check: no before render", 0, 0);
+                if (!Named.TryGetValue(check.Color ?? "", out var lineInk) || !Named.TryGetValue(check.ColorB ?? "", out var boxInk))
+                    return new(WptRunner.Cat.Unsupported, "Visual check: stated colours are not named colours", 0, 0);
+                var paragraph = FindFirst(root, n => n.TagName == "P");
+                if (paragraph is null) return new(WptRunner.Cat.Unsupported, "Visual check: no paragraph to read above", 0, 0);
+                if (ColorBoundsOf(before, lineInk, minHits: 20) is not { } lineBounds || lineBounds.Bottom > paragraph.Box.BorderBox.Top + 1)
+                    return Fail($"no {check.Color} line above the text before scrolling");
+                var (_, downY) = PageScrollExtent("page-bottom", root, after.Width, after.Height);
+                if (downY <= 0f)
+                    return Fail("the page does not scroll vertically");
+                if (ColorBoundsOf(after, boxInk) is not { } boxBounds || boxBounds.Width < 7 || Math.Abs(boxBounds.Width - boxBounds.Height) > 1)
+                    return Fail($"no whole {check.ColorB} box is visible after scrolling {downY:0}px");
+                return Pass($"the {check.Color} line shows above the text and the {check.ColorB} box after scrolling {downY:0}px");
             }
             case "scroll-page-box-still":
             {
@@ -817,7 +900,7 @@ internal static class VisualChecks
     private static SKRectI? ColorBounds(SKBitmap bitmap, string colorName, int bandHeight = 0) =>
         Named.TryGetValue(colorName, out var target) ? ColorBoundsOf(bitmap, target, bandHeight) : null;
 
-    private static SKRectI? ColorBoundsOf(SKBitmap bitmap, SKColor target, int bandHeight = 0)
+    private static SKRectI? ColorBoundsOf(SKBitmap bitmap, SKColor target, int bandHeight = 0, int minHits = 200)
     {
         int minL = bitmap.Width, minT = bitmap.Height, maxR = 0, maxB = 0;
         long hits = 0;
@@ -833,7 +916,7 @@ internal static class VisualChecks
                     maxR = Math.Max(maxR, x); maxB = Math.Max(maxB, y);
                 }
             }
-        return hits >= 200 ? new SKRectI(minL, minT, maxR, maxB) : null;
+        return hits >= minHits ? new SKRectI(minL, minT, maxR, maxB) : null;
     }
 
     /// <summary>The first layout node whose text contains the needle (whitespace-normalized),
@@ -1195,7 +1278,8 @@ internal static class VisualChecks
             ChannelDistance(n.GetBorderTopColor(), borderColor) <= 48);
         if (box is null)
             return new(WptRunner.Cat.Unsupported, $"Visual check: no box with a {check.ColorB} border", 0, 0);
-        if (ColorBoundsOf(bitmap, tile) is not { } ink || ink.Width < 8 || ink.Height < 8)
+        // The tile is small (17px) and text may run across it: a lower ink floor.
+        if (ColorBoundsOf(bitmap, tile, minHits: 20) is not { } ink || ink.Width < 8 || ink.Height < 8)
             return Fail2(assertion, $"no {check.Color} tile paints");
         var pb = box.Box.PaddingBox;
         float cx = (ink.Left + ink.Right + 1) / 2f, cy = (ink.Top + ink.Bottom + 1) / 2f;
@@ -1230,6 +1314,45 @@ internal static class VisualChecks
             if (!rings.Any(r => r.Contains(b)))
                 return Fail2(assertion, $"a {boxName} rectangle at ({b.Left},{b.Top})..({b.Right},{b.Bottom}) protrudes from its {ringName} ring");
         return Passed(assertion);
+    }
+
+    /// <summary>"The first line (and only the first line) of the paragraph below has all
+    /// characters of each word in uppercase" (first-line-selector-014/015, at each resize
+    /// width): the first painted line below the instructions has letters and no lowercase
+    /// letter, and the second has lowercase letters (the transform stopped at the line).</summary>
+    private static WptRunner.RunResult FirstLineCase(VisualCheck check, IReadOnlyList<Lite.Rendering.PaintLog.Entry>? paint, int top)
+    {
+        var assertion = Describe(check);
+        var lines = PaintedLines(paint?.Where(e => e.BaselineY > top).ToList())
+            .Select(NormalizeLine).Where(l => l.Any(char.IsLetter)).ToList();
+        if (lines.Count < 2)
+            return new(WptRunner.Cat.Unsupported, "Visual check: fewer than two painted lines below the instructions", 0, 0);
+        if (lines[0].Count(char.IsLetter) < 5 || lines[0].Any(char.IsLower))
+            return Fail2(assertion, $"the first line is not all uppercase: '{Truncate(lines[0])}'");
+        if (!lines[1].Any(char.IsLower))
+            return Fail2(assertion, $"the second line is uppercase too: '{Truncate(lines[1])}'");
+        return Passed(assertion);
+    }
+
+    /// <summary>"This page should have a horizontal scroll bar" (c5505-mrgn-002): the page's
+    /// content reaches past the viewport's right edge and a horizontal page scrollbar thumb
+    /// paints along the bottom edge.</summary>
+    private static WptRunner.RunResult PageHorizontalBar(VisualCheck check, SKBitmap bitmap, LayoutNode root)
+    {
+        var assertion = Describe(check);
+        if (BoxEngine.ViewportOverflow(root) == OverflowType.Hidden)
+            return Fail2(assertion, "the viewport clips: no scrolling mechanism");
+        var (right, _) = BoxEngine.PageExtent(root);
+        if (right <= bitmap.Width + 0.5f)
+            return Fail2(assertion, $"the page's content ends at x={right:0.#}, inside the {bitmap.Width}px viewport");
+        long dark = 0;
+        var y = bitmap.Height - 5;
+        for (var x = 0; x < bitmap.Width; x++)
+        {
+            var c = bitmap.GetPixel(x, y);
+            if (c.Red < 0xD0 && c.Green < 0xD0 && c.Blue < 0xD0 && ChannelSpread(c) < 24) dark++;
+        }
+        return dark >= 20 ? Passed(assertion) : Fail2(assertion, "no horizontal page scrollbar paints along the bottom edge");
     }
 
     private static WptRunner.RunResult Fail2(string assertion, string detail) =>
@@ -1951,8 +2074,22 @@ internal static class VisualChecks
             foreach (var c in n.Children) Walk(c);
         }
         Walk(root);
-        if (boxes.Count == 0) return bitmap;
+        // The page's horizontal bar (Drawer.DrawScrollbar) is chrome too: a page that overflows
+        // sideways must not read as an extra line of content (content-counters-008's nowrap
+        // line). The vertical page thumb predates these judges and stays as it was.
+        var pageBar = BoxEngine.ViewportOverflow(root) != OverflowType.Hidden &&
+                      BoxEngine.PageExtent(root).Right > bitmap.Width + 0.5f && bitmap.Height > gutter + 1;
+        if (boxes.Count == 0 && !pageBar) return bitmap;
         var copy = bitmap.Copy();
+        if (pageBar)
+        {
+            var innerRow = bitmap.Height - gutter - 1;
+            for (var x = 0; x < copy.Width; x++)
+            {
+                var fill = copy.GetPixel(x, innerRow);
+                for (var y = innerRow + 1; y < copy.Height; y++) copy.SetPixel(x, y, fill);
+            }
+        }
         foreach (var (pb, vertical, horizontal) in boxes)
         {
             int innerX = pb.Right - (vertical ? gutter : 0) - 1, innerY = pb.Bottom - (horizontal ? gutter : 0) - 1;
@@ -2188,6 +2325,8 @@ internal static class VisualChecks
         "same-dimension" => $"{(check.Count is { } n ? n.ToString() : "all")} shapes share {check.Dimension}",
         "line-style" => $"one {check.Dimension ?? ""} {(check.Color is null ? "" : check.Color + " ")}{check.Shape} line".Replace("  ", " "),
         "look-same" => "the two shapes render identically",
+        "page-horizontal-bar" => "the page has a horizontal scroll bar",
+        "first-line-case" => "only the first line is uppercase",
         "grid-aligned" => "the items line up in a grid",
         "tile-centered" => $"the {check.Color} tile is centred in the {check.ColorB}-bordered box",
         "outline-around" => $"{check.Count} {check.ColorA} rings each enclose a {check.ColorB} rectangle",
@@ -2219,6 +2358,7 @@ internal static class VisualChecks
         "two-size" => "one box is much larger than the other",
         "line-pair" => $"a {check.FirstShape} line and a {check.SecondShape} line ({check.Arrangement})",
         "marker-bullet" => "a marker bullet sits to the left of the box",
+        "cursor-marker" => $"the cursor over the {check.Color} box is {check.Shape} and a marker bullet sits to its left",
         "round-dot" => "one small round dot",
         "double-line" => "one double line",
         "slanted-box" => "one slanted box",

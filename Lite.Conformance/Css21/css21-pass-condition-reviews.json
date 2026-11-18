@@ -723,22 +723,10 @@
    "note": "the stated condition (\"This sentence should be left-justified.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css/CSS2/css1/c5502-mrgn-r-002.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if you can scroll to the right and see a green square.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css/CSS2/css1/c5504-mrgn-l-002.xht",
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if you can scroll to the left and see a green box.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/css1/c5505-mrgn-002.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"This page should have a horizontal scroll bar.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css/CSS2/css1/c5511-brdr-tw-000.xht",
@@ -2151,12 +2139,6 @@
    "note": "the stated condition (\"none\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css/CSS2/positioning/abspos-zero-width-001.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is a blue line above this text and a green box visible when the page is scrolled to its full extent vertically.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css/CSS2/positioning/bottom-applies-to-008.xht",
    "condition": "manual",
    "manualPending": true,
@@ -2194,12 +2176,6 @@
   },
   {
    "path": "css/CSS2/positioning/position-003.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is no red, if the blue stripe is just as wide and just as tall as its text and if the blue stripe is completely shifted below the orange li\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/positioning/position-004.xht",
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if there is no red, if the blue stripe is just as wide and just as tall as its text and if the blue stripe is completely shifted below the orange li\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
@@ -4215,22 +4191,10 @@
    "note": "the stated condition (\"This sentence should be left-justified.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css21-official/html4/c5502-mrgn-r-002.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if you can scroll to the right and see a green square.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css21-official/html4/c5504-mrgn-l-002.htm",
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if you can scroll to the left and see a green box.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/c5505-mrgn-002.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"This page should have a horizontal scroll bar.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/c5511-brdr-tw-000.htm",
@@ -5857,12 +5821,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if there is no red visible on the page, and the blue box shrinks to the size of the contents and is completely shifted below the orange line.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/position-004.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is no red visible on the page, the blue box shrinks to the size of the contents and is completely shifted below the orange line. Also when \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/position-005.htm",

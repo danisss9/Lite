@@ -358,8 +358,9 @@ The phases, in order:
       - `page-scroll-text`: `overflow-visible-viewport-001`.
     - **Resize:**
       - `grid-aligned`: `inlines-004`–`006`;
-      - `tile-centered`: `background-root-012`/`013`, which fail honestly because the
-        propagated body background image never paints (the parked background-root finding);
+      - `tile-centered`: `background-root-012`/`013`. These first read as failures, wrongly
+        blamed on the engine; the fourth batch found the judge's ink floor at fault, and both
+        pass;
       - `outline-around`: `outline-020`, which fails honestly because the second line of
         outlined spans sits about half a line-height too high, so the rings merge.
     - **Engine: clipping boxes paint their own borders.** The padding-box clip of
@@ -396,6 +397,55 @@ The phases, in order:
           yet.
       - **Resize, remaining:** `inlines-003`, `background-root-014` and
         `first-line-selector-014`/`015`.
+  - **Progress, 18 November (fourth batch): the page itself, ::first-line case, and the rest of the bucket.**
+    - **Correction to the third batch:** `background-root-012`/`013` did not fail on an engine
+      bug. The tile painted, but the instruction text crossed it and the judge's 200-pixel ink
+      floor hid a 17px tile. `tile-centered` (and the 3px line of `abspos-zero-width-001`) use a
+      20-pixel floor. Both cases pass, as do their WPT `012a`/`013a` copies.
+    - **Engine, §14.2 the canvas background covers the whole canvas.** The root's own
+      background image and the body's propagated one were clipped to the root's padding box.
+      They now paint (and repeat) over the whole page, positioned against the root box.
+      22 failing `background-root`/`background-bg-pos` cases pass.
+    - **Engine, the page's scroll extent.** It now spans everything the page paints:
+      absolutely positioned boxes (`abspos-zero-width-001`) and border boxes a negative margin
+      pushes past the edge (`c5502`). A page that overflows sideways gets a horizontal bar
+      (`c5505`). The harness's page-scroll protocol uses the same extent.
+    - **Harness: page scrollbars are chrome.**
+      - Reftest comparisons render without them (`Viewport.HideScrollbars`): WPT's reference
+        renders draw no scrollbars, and a bar on one side only had turned matches into failures.
+        For example, `abspos-containing-block-initial-007` shifts its root with
+        `position: relative`.
+      - Content judges erase the horizontal page bar.
+    - **Engine, ::first-line `text-transform`.** The first line is broken with the transformed
+      text, in layout and paint alike, and the rest wraps untransformed
+      (`first-line-selector-014`/`015`). A block child takes its parent's ::first-line styles
+      only when it opens the parent's first line, so `ul:first-line` is the first item's
+      first line, not every item's.
+    - **Engine, a list item shows its own cursor** (`cursor-applies-to-010`, through the new
+      compound `cursor-marker` check).
+    - **Judges:** `first-line-case`, `scroll-page-fixed-below` (`position-004`),
+      `scroll-page-square-visible`, `page-horizontal-bar` and `scroll-page-line-and-box`.
+      `scroll-page-always-visible` now also rejects a box under a page scrollbar, so
+      `background-bg-pos-207` fails honestly: Lite's page bar overlays the viewport edge.
+    - **Found, not fixed:** a `data:` URL in `background` is cut at its `;`
+      (`data:image/png;base64,…` reads as `data:image/png`).
+    - **Verification.**
+      - **Full screen baseline, WPT through upstream `wpt serve`, against the third batch's:**
+        official 7,571 → 7,593 and WPT 7,048 → 7,070, with 0 losses.
+      - Units 628/628. Curated gates 51/1 and 86/2.
+      - **Obligations:** `css21.18.1` (cursor) reaches implemented, for 30/187.
+    - **Next:**
+      - **Phase 6:**
+        - the viewport bar's own gutter (`background-bg-pos-207`; it changes the
+          initial containing block of every tall page);
+        - vertical scrolling for `max-height`-clamped `auto` boxes;
+        - the `data:` URL split;
+        - the `outline-020` line height.
+      - **Deferred:**
+        - `floats-137`: Phase 5;
+        - `background-animated-001`: the exclusion review;
+        - `c5504-mrgn-l-002`: the exclusion review (scrolling to negative x);
+        - `background-bg-pos-205`, `background-root-014` and `inlines-003`.
 - **Phase 5, judges.**
   - An engine-fact side channel: per-edge §17.6.2.1 winner widths for border-conflict-style,
     and the text-align declaring node per line.

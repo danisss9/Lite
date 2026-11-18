@@ -389,6 +389,19 @@ SCROLL_TEMPLATES = [
     (re.compile(r'^there should be a single purple square at the bottom right of the viewport\. the square should always be '
                 r'completely visible, regardless of where you scroll the viewport\. it should not be covered by the scrollbars, if any\.?$'),
      {'kind': 'scroll-page-always-visible', 'color': 'purple', 'scroll': {'to': 'page-bottom'}}),
+    # position-004: a shrink-wrapped fixed box below a line that scrolls away under it.
+    (re.compile(r'^there is no red(?: visible on the page)?, (?:the blue box shrinks to the size of the contents and is|'
+                r'if the blue stripe is just as wide and just as tall as its text and if the blue stripe is) completely '
+                r'shifted below the orange line\. also when scrolling,? the blue (?:box|stripe) (?:stays|must stay) at its '
+                r'same position on the screen, all other content can scroll$'),
+     {'kind': 'scroll-page-fixed-below', 'color': 'blue', 'colorB': 'orange', 'scroll': {'to': 'page-bottom'}}),
+    # c5502-mrgn-r-002: a negative right margin pushes the swatch past the viewport's edge.
+    (re.compile(r'^you can scroll to the right and see a green square$'),
+     {'kind': 'scroll-page-square-visible', 'color': 'green', 'scroll': {'to': 'page-right'}}),
+    # abspos-zero-width-001: a zero-width abspos box 2000px tall makes the page scroll.
+    (re.compile(r'^there is a blue line above this text and a green box visible when the page is scrolled to its '
+                r'full extent vertically$'),
+     {'kind': 'scroll-page-line-and-box', 'color': 'blue', 'colorB': 'green', 'scroll': {'to': 'page-bottom'}}),
     # A fixed box keeps its viewport position while the page scrolls under it.
     (re.compile(r'^the (?:box below|blue stripe) does not move when the page is scrolled$'),
      {'kind': 'scroll-page-box-still', 'scroll': {'to': 'page-bottom'}}),
@@ -519,8 +532,11 @@ SCROLLBOX_TEMPLATES = [
     (re.compile(r"^the\s+page\s+has\s+an\s+active\s+scrolling\s+mechanism\s+available\s+to\s+scroll\s+the\s+page\s+and\s+the"
                 r"\s+word\s+'(\w+)'\s+is\s+inside\s+the\s+box\s+below$"),
      lambda m: {'kind': 'page-scroll-text', 'needle': m.group(1)}),
+    # c5505-mrgn-002: content past the viewport's right edge gives the page a horizontal bar.
+    (re.compile(r'^this\s+page\s+should\s+have\s+a\s+horizontal\s+scroll\s+bar$'),
+     lambda m: {'kind': 'page-horizontal-bar'}),
 ]
-SCROLLBOX_KINDS = ('scrollbox-same-size', 'scrollbar-gap', 'twin-squares', 'page-scroll-text')
+SCROLLBOX_KINDS = ('scrollbox-same-size', 'scrollbar-gap', 'twin-squares', 'page-scroll-text', 'page-horizontal-bar')
 
 
 def scrollbox_check(clause: str) -> dict | None:
@@ -598,6 +614,10 @@ def cursor_check(sentence: str) -> dict | None:
                  r'moving as you move the mouse', text):
         # The page's own cursor is a url() image: the pointer anywhere on the page shows it.
         return {'kind': 'cursor', 'shape': 'image', 'target': 'page'}
+    # cursor-applies-to-010: the list-item box states both its cursor and its marker.
+    if text == ('test passes if the cursor changes to a pointer cursor when it is over the blue box and there is a '
+                'marker bullet on the left-hand side of the blue box.'):
+        return {'kind': 'cursor-marker', 'shape': 'pointer', 'target': 'box', 'color': 'blue'}
     if 'cursor' not in text or 'marker bullet' in text:
         return None
     if m := re.search(r'the cursor is the same when it is over "([^"]+)" and when it is over "([^"]+)"', text):
@@ -756,6 +776,11 @@ def resize_check(sentence: str) -> dict | None:
     if text == ('in the middle of this green box with the bright green border, there should be a purple tile. '
                 'resizing the window should make its position relative to this inner box stay the same'):
         return {'kind': 'tile-centered', 'color': 'purple', 'colorB': 'lime', **resize}
+    # first-line-selector-014/015: '::first-line { text-transform: uppercase }' at each width.
+    if re.fullmatch(r'test passes if the first line \(and only the first line\) of the (?:latin paragraph|first list-item '
+                    r'\(a latin paragraph starting with "lorem ipsum\.\.\."\)) below has all characters of each word in '
+                    r'uppercase\. this may still be true after changing the window size', text):
+        return {'kind': 'first-line-case', **resize}
     # outline-020: every outlined span keeps its whole outline around it at each width.
     if m := re.fullmatch(r'a thick (orange) border should be drawn around each of the (\d+) small (blue) rectangles\. each '
                          r'of the blue rectangles must not protrude out of each of their respective orange borders\. this '

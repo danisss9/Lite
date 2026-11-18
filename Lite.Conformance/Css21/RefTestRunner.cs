@@ -59,8 +59,8 @@ internal static class RefTestRunner
             var artifacts = new List<EvidenceArtifact>();
             try
             {
-                using var testBitmap = Render(entry.Path);
-                using var refBitmap = Render(reference);
+                using var testBitmap = Render(entry.Path, hideScrollbars: true);
+                using var refBitmap = Render(reference, hideScrollbars: true);
                 var diff = PixelDiff.Compare(refBitmap, testBitmap);
                 // rel="mismatch": the renderings must DIFFER for the test to pass.
                 passed = mismatch ? !diff.Match : diff.Match;
@@ -188,8 +188,8 @@ internal static class RefTestRunner
 
             try
             {
-                using var testBmp = Render(urlPath);
-                using var refBmp = Render(reference);
+                using var testBmp = Render(urlPath, hideScrollbars: true);
+                using var refBmp = Render(reference, hideScrollbars: true);
                 var diff = PixelDiff.Compare(refBmp, testBmp);
                 var ok = mismatch ? !diff.Match : diff.Match;
                 if (ok) { pass++; if (listPasses) passedTests.Add(urlPath); }
@@ -307,11 +307,12 @@ internal static class RefTestRunner
     /// that the element with that id sits at the top of the viewport (as following its in-page
     /// link would) — this is how Acid2 is meant to be viewed: the smiley face is assembled
     /// ~2600px down the page and only comes into view after jumping to <c>#top</c>.</summary>
-    internal static SKBitmap Render(string path, int width = Width, int height = Height, float scrollY = 0, string? anchor = null)
-        => Render(new NavigationRequest(ResolveRenderUrl(path)), width, height, scrollY, anchor);
+    internal static SKBitmap Render(string path, int width = Width, int height = Height, float scrollY = 0, string? anchor = null,
+        bool hideScrollbars = false)
+        => Render(new NavigationRequest(ResolveRenderUrl(path)), width, height, scrollY, anchor, hideScrollbars);
 
     internal static SKBitmap Render(NavigationRequest request, int width = Width, int height = Height,
-        float scrollY = 0, string? anchor = null)
+        float scrollY = 0, string? anchor = null, bool hideScrollbars = false)
     {
         // The official userstyle family states its prerequisite sheet through the same
         // flags/PREREQUISITE form the WPT twins use; without the session the renders read
@@ -321,7 +322,7 @@ internal static class RefTestRunner
             : request.Url;
         var (root, engine) = HeadlessPage.Load(request, width, height, Wpt.WptVisualPage.UserStyleSession(renderPath));
         HeadlessPage.PumpUntilIdle(engine, 2_000);
-        var viewport = new Viewport { ViewportHeight = height };
+        var viewport = new Viewport { ViewportHeight = height, HideScrollbars = hideScrollbars };
         if (anchor is not null)
         {
             // First layout establishes box positions (and ContentHeight for the scroll clamp).

@@ -3893,9 +3893,18 @@
    "condition": "manual",
    "sentence": "In the middle of the bright blue rectangle, there should be a purple tile. Resizing the window should make its position relative to this outer box stay the same.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "tile-centered",
+    "color": "purple",
+    "colorB": "blue",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-root-013a.xht",
@@ -3903,9 +3912,18 @@
    "condition": "manual",
    "sentence": "In the middle of this green box with the bright green border, there should be a purple tile. Resizing the window should make its position relative to this inner box stay the same.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "tile-centered",
+    "color": "purple",
+    "colorB": "lime",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-root-014a.xht",
@@ -9055,9 +9073,14 @@
    "condition": "manual",
    "sentence": "Test passes if you can scroll to the right and see a green square.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if you can scroll to the right and see a green square.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-square-visible",
+    "color": "green",
+    "scroll": {
+     "to": "page-right"
+    }
+   }
   },
   {
    "path": "css/CSS2/css1/c5504-mrgn-l-002.xht",
@@ -9075,9 +9098,10 @@
    "condition": "manual",
    "sentence": "This page should have a horizontal scroll bar.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"This page should have a horizontal scroll bar.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "page-horizontal-bar"
+   }
   },
   {
    "path": "css/CSS2/css1/c5511-brdr-tw-000.xht",
@@ -18204,9 +18228,15 @@
    "condition": "manual",
    "sentence": "Test passes if there is a blue line above this text and a green box visible when the page is scrolled to its full extent vertically.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is a blue line above this text and a green box visible when the page is scrolled to its full extent vertically.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-line-and-box",
+    "color": "blue",
+    "colorB": "green",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css/CSS2/positioning/bottom-applies-to-008.xht",
@@ -18318,9 +18348,15 @@
    "condition": "manual",
    "sentence": "Test passes if there is no red, if the blue stripe is just as wide and just as tall as its text and if the blue stripe is completely shifted below the orange line. Also when scrolling, the blue stripe must stay at its same position on the screen, all other content can scroll.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is no red, if the blue stripe is just as wide and just as tall as its text and if the blue stripe is completely shifted below the orange li\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-fixed-below",
+    "color": "blue",
+    "colorB": "orange",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css/CSS2/positioning/position-005.xht",
@@ -19149,22 +19185,36 @@
   {
    "path": "css/CSS2/selectors/first-line-selector-014.xht",
    "suite": "css21-wpt",
-   "condition": "manual",
+   "condition": "visual",
    "sentence": "Test passes if the first line (and only the first line) of the latin paragraph below has all characters of each word in uppercase. This may still be true after changing the window size.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "first-line-case",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/selectors/first-line-selector-015.xht",
    "suite": "css21-wpt",
-   "condition": "manual",
+   "condition": "visual",
    "sentence": "Test passes if the first line (and only the first line) of the first list-item (a latin paragraph starting with \"Lorem ipsum...\") below has all characters of each word in uppercase. This may still be true after changing the window size.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "first-line-case",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css/CSS2/selectors/first-line-selector-016.xht",
@@ -29540,9 +29590,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue box and there is a marker bullet on the left-hand side of the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor-marker",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css/CSS2/ui/cursor-applies-to-012.xht",
@@ -65424,9 +65478,14 @@
    "condition": "manual",
    "sentence": "Test passes if you can scroll to the right and see a green square.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if you can scroll to the right and see a green square.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-square-visible",
+    "color": "green",
+    "scroll": {
+     "to": "page-right"
+    }
+   }
   },
   {
    "path": "css21-official/html4/c5502-mrgn-r-003.htm",
@@ -65585,9 +65644,10 @@
    "condition": "manual",
    "sentence": "This page should have a horizontal scroll bar.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"This page should have a horizontal scroll bar.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "page-horizontal-bar"
+   }
   },
   {
    "path": "css21-official/html4/c5505-mrgn-003.htm",
@@ -75376,9 +75436,13 @@
    "condition": "manual",
    "sentence": "Test passes if the cursor changes to a pointer cursor when it is over the blue box and there is a marker bullet on the left-hand side of the blue box.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "cursor rendering over an element: CSS 2.1 §18.1 states the cursor type with \"should\"/\"may\" strength and the on-screen cursor shape is host UI — decided by observing the native cursor (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "cursor-marker",
+    "shape": "pointer",
+    "target": "box",
+    "color": "blue"
+   }
   },
   {
    "path": "css21-official/html4/cursor-applies-to-012.htm",
@@ -83436,22 +83500,36 @@
   {
    "path": "css21-official/html4/first-line-selector-014.htm",
    "suite": "css21-official",
-   "condition": "manual",
+   "condition": "visual",
    "sentence": "Test passes if the first line (and only the first line) of the latin paragraph below has all characters of each word in uppercase. This may still be true after changing the window size.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "first-line-case",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/first-line-selector-015.htm",
    "suite": "css21-official",
-   "condition": "manual",
+   "condition": "visual",
    "sentence": "Test passes if the first line (and only the first line) of the first list-item (a latin paragraph starting with \"Lorem ipsum...\") below has all characters of each word in uppercase. This may still be true after changing the window size.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "viewport-resize behaviour — the stated invariants bind across window sizes; decided by resizing the native window (manual evidence pending)"
+   "reviewed": false,
+   "check": {
+    "kind": "first-line-case",
+    "resize": [
+     1200,
+     800,
+     450,
+     200
+    ]
+   }
   },
   {
    "path": "css21-official/html4/first-line-selector-016.htm",
@@ -109398,9 +109476,15 @@
    "condition": "manual",
    "sentence": "Test passes if there is no red visible on the page, the blue box shrinks to the size of the contents and is completely shifted below the orange line. Also when scrolling the blue box stays at its same position on the screen, all other content can scroll.",
    "twin": null,
-   "reviewed": true,
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is no red visible on the page, the blue box shrinks to the size of the contents and is completely shifted below the orange line. Also when \") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "reviewed": false,
+   "check": {
+    "kind": "scroll-page-fixed-below",
+    "color": "blue",
+    "colorB": "orange",
+    "scroll": {
+     "to": "page-bottom"
+    }
+   }
   },
   {
    "path": "css21-official/html4/position-005.htm",

@@ -9,6 +9,11 @@ internal class Viewport
     public float ViewportHeight { get; set; }
     public float ViewportWidth { get; set; }
 
+    /// <summary>Paint the page without its scrollbars. Reftest comparisons render this way:
+    /// page chrome is not part of what a reftest compares (WPT's reference renders draw no
+    /// scrollbars), so a bar on one side only must not decide the match.</summary>
+    public bool HideScrollbars { get; set; }
+
     private float MaxScroll => Math.Max(0, ContentHeight - ViewportHeight);
     private float MaxScrollX => Math.Max(0, ContentWidth - ViewportWidth);
 
