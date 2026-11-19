@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Lite.Conformance.Css21;
+using Lite.Extensions;
 using Lite.Conformance.Harness;
 using Lite.Conformance.Wpt;
 using Lite.Layout;
@@ -1151,6 +1152,44 @@ public static class Css21CoverageTests
             [("focused", greenLink), ("activated", greenLink)]), linkRoot, stay, "p").Passed, "green in every state passes");
         True(!VisualChecks.Evaluate(every, new RenderSet(greenLink, greenLink, greenLink, null,
             [("focused", redLink), ("activated", greenLink)]), linkRoot, stay, "p").Passed, "red while focused fails");
+    }
+
+    [Test]
+    public static void ApprovedRenders_DecideByHashAndNeverOnAStaleApproval()
+    {
+        using var render = new SkiaSharp.SKBitmap(10, 10);
+        render.Erase(SkiaSharp.SKColors.Green);
+        var approved = new ApprovedRenders.Entry("p", ApprovedRenders.Platform, "10x10", ApprovedRenders.Hash(render), "s", "op", "2026-11-19");
+        True(ApprovedRenders.Judge(approved, render).Passed, "the approved pixels pass");
+        using var drifted = render.Copy();
+        drifted.SetPixel(3, 3, SkiaSharp.SKColors.Red);
+        True(ApprovedRenders.Judge(approved, drifted).Cat == WptRunner.Cat.ManualPending, "a one-pixel drift needs re-review");
+        True(ApprovedRenders.Judge(approved with { Platform = "other-arch" }, render).Cat == WptRunner.Cat.ManualPending,
+            "an approval on another platform is not evidence here");
+        True(ApprovedRenders.Judge(approved with { Viewport = "800x600" }, render).Cat == WptRunner.Cat.ManualPending,
+            "an approval at another viewport is not evidence here");
+    }
+
+    [Test]
+    public static void VisualChecks_BorderSampleReadsTheResolvedEdges()
+    {
+        // border-conflict-style: the center cell's §17.6.2.1 winners against the one-cell sample.
+        var lime = new SkiaSharp.SKColor(0, 0xff, 0);
+        Dictionary<string, EdgeBorder> Edges(BorderStyle style, float width, SkiaSharp.SKColor color) =>
+            new[] { "top", "right", "bottom", "left" }.ToDictionary(s => s, _ => new EdgeBorder(width, style, color));
+        var inked = new VisualChecks.Ring("dotted", 5, lime, [lime], 1, 4, 20);
+        var blank = new VisualChecks.Ring("none", 0, SkiaSharp.SKColors.White, [], 0, 0, 0);
+        var sample = Edges(BorderStyle.Dotted, 5, lime);
+        True(VisualChecks.BorderSampleFromEngine("a", Edges(BorderStyle.Dotted, 5, lime), sample, inked).Passed,
+            "a matching resolution that paints the winning color passes");
+        True(!VisualChecks.BorderSampleFromEngine("a", Edges(BorderStyle.Double, 5, lime), sample, inked).Passed,
+            "a different winning style fails");
+        True(!VisualChecks.BorderSampleFromEngine("a", Edges(BorderStyle.Dotted, 3, lime), sample, inked).Passed,
+            "a different winning width fails");
+        True(!VisualChecks.BorderSampleFromEngine("a", Edges(BorderStyle.Dotted, 5, lime), sample, blank).Passed,
+            "a visible winner that paints nothing fails");
+        True(VisualChecks.BorderSampleFromEngine("a", Edges(BorderStyle.Hidden, 5, lime), Edges(BorderStyle.None, 0, lime), blank).Passed,
+            "hidden against none (both absent) with no ink passes");
     }
 
     [Test]

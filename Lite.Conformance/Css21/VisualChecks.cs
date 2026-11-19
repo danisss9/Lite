@@ -3290,7 +3290,18 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
             centerBox.Left - centerBorder - 2, centerBox.Top - centerBorder - 2,
             centerBox.Right + centerBorder + 2, centerBox.Bottom + centerBorder + 2));
         var centerRing = RingSignature(bitmap, centerCrop, center.Box.PaddingBox, centerBorder);
-        if (!centerRing.Readable)
+        // The "has no border" variant read from the engine: every resolved edge is none/hidden
+        // (or zero wide), and the band carries no ink.
+        if (check.Variant == "none" && center.CollapsedEdgeBorders is { } noneWon)
+        {
+            var anyVisible = noneWon.Values.Any(e => e.Style is not (BorderStyle.None or BorderStyle.Hidden) && e.Width > 0f);
+            var inked = centerRing.Readable && centerRing.Style != "none";
+            return !anyVisible && !inked
+                ? new(WptRunner.Cat.Pass, $"{assertion} (every resolved edge is none/hidden)", 1, 0, [new(assertion, 0, null)], 0)
+                : new(WptRunner.Cat.Fail, $"{assertion}: {(anyVisible ? "a resolved edge is visible" : "the band paints ink")}", 1, 1,
+                    [new(assertion, 1, "the center box has a border")], 0);
+        }
+        if (!centerRing.Readable && center.CollapsedEdgeBorders is null)
             return new(WptRunner.Cat.Unsupported, $"Visual check: {centerRing.Note}", 0, 0);
 
         // The "has no border" variant states the whole condition: the center cell's own
@@ -3307,6 +3318,27 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         var sampleCell = FirstLeafCell(sample);
         if (sampleCell is null)
             return new(WptRunner.Cat.Unsupported, "Visual check: the sample table has no readable cell", 0, 0);
+
+        // Collapsing borders (§17.6.2.1): the table engine records each cell edge's resolved
+        // winner. The sample is a one-cell table, so its winners are its own declared border —
+        // the stated style. The center cell's winners are the conflict's outcome. Comparing them
+        // edge by edge reads the resolution exactly, where the pixel reading misreads thin
+        // dotted/double strokes; the render must still show the winning color in the center
+        // band (or no ink when every winner is none/hidden).
+        if (center.CollapsedEdgeBorders is { } won && sampleCell.CollapsedEdgeBorders is { } stated)
+        {
+            // The sample ring paints the stated style itself: shaded styles (groove, inset, …)
+            // paint tones of the color, not the color, and must match the sample's tones.
+            var sb = Math.Max(sampleCell.Box.Border.MaxEdge(), 1f);
+            var sbox = sampleCell.Box.BorderBox;
+            var sampleTones = RingSignature(bitmap, SKRectI.Round(new SKRect(sbox.Left - sb - 2, sbox.Top - sb - 2,
+                sbox.Right + sb + 2, sbox.Bottom + sb + 2)), sampleCell.Box.PaddingBox, sb);
+            // A shaded ring's sides read as different styles; its tones still decide the ink.
+            var painted = centerRing.Readable || centerRing.ToneColors.Count > 0
+                ? centerRing
+                : centerRing with { ToneColors = BandTones(bitmap, centerCrop, center.Box.PaddingBox) };
+            return BorderSampleFromEngine(assertion, won, stated, painted, sampleTones);
+        }
 
         var sampleBorder = Math.Max(sampleCell.Box.Border.MaxEdge(), 1f);
         var sampleBox = sampleCell.Box.BorderBox;
@@ -3340,12 +3372,86 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
             a.All(ta => b.Any(tb => Distance(ta, tb) <= 48)) && b.All(tb => a.Any(ta => Distance(ta, tb) <= 48));
     }
 
+    /// <summary>The significant colors of a border band: the pixels of <paramref name="outer"/>
+    /// outside <paramref name="inner"/>, each color holding at least 8% of them, the background
+    /// (the dominant color of the crop's outermost frame) left out.</summary>
+    private static List<SKColor> BandTones(SKBitmap bitmap, SKRectI outer, SKRect inner)
+    {
+        outer.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+        var frame = new Dictionary<uint, int>();
+        var counts = new Dictionary<uint, int>();
+        var total = 0;
+        for (var y = outer.Top; y < outer.Bottom; y++)
+            for (var x = outer.Left; x < outer.Right; x++)
+            {
+                var c = (uint)bitmap.GetPixel(x, y);
+                if (y == outer.Top || y == outer.Bottom - 1 || x == outer.Left || x == outer.Right - 1)
+                    frame[c] = frame.GetValueOrDefault(c) + 1;
+                if (inner.Contains(x + 0.5f, y + 0.5f)) continue;
+                total++;
+                counts[c] = counts.GetValueOrDefault(c) + 1;
+            }
+        if (total == 0) return [];
+        var background = frame.Count == 0 ? SKColors.White : new SKColor(frame.MaxBy(kv => kv.Value).Key);
+        return counts.Where(kv => kv.Value * 100 >= total * 8 && Distance(new SKColor(kv.Key), background) > PixelTolerance)
+            .Select(kv => new SKColor(kv.Key)).ToList();
+    }
+
+    /// <summary>The engine-fact reading of <see cref="BorderSample"/>: every center edge's
+    /// resolved winner has the sample edge's style, width (within half a pixel) and color
+    /// (within the 48-step tolerance), and the painted center ring agrees — ink of the winning
+    /// color when the winners are visible, none when they are none/hidden.</summary>
+    internal static WptRunner.RunResult BorderSampleFromEngine(string assertion,
+        IReadOnlyDictionary<string, EdgeBorder> won, IReadOnlyDictionary<string, EdgeBorder> stated, Ring painted, Ring? sample = null)
+    {
+        static bool Invisible(EdgeBorder e) => e.Style is BorderStyle.None or BorderStyle.Hidden || e.Width <= 0f;
+        // The painted band carries the winner's ink: the plain color, or — for the shaded
+        // styles, which paint tones of it — the sample ring's own tones.
+        bool InkMatches(SKColor winning) =>
+            painted.ToneColors.Any(t => Distance(t, winning) <= 48) ||
+            sample is { ToneColors.Count: > 0 } && painted.ToneColors.Count > 0 &&
+            painted.ToneColors.All(t => sample.ToneColors.Any(u => Distance(t, u) <= 48)) &&
+            sample.ToneColors.All(u => painted.ToneColors.Any(t => Distance(t, u) <= 48));
+        foreach (var side in new[] { "top", "right", "bottom", "left" })
+        {
+            if (!won.TryGetValue(side, out var w) || !stated.TryGetValue(side, out var s))
+                return new(WptRunner.Cat.Unsupported, $"Visual check: no resolved {side} edge", 0, 0);
+            var sameStyle = Invisible(w) && Invisible(s) || w.Style == s.Style;
+            if (!sameStyle || !Invisible(w) && (MathF.Abs(w.Width - s.Width) > 0.5f || Distance(w.Color, s.Color) > 48))
+            {
+                var detail = $"the {side} edge resolves to {w.Width:0.#}px {w.Style} {w.Color}, the sample is {s.Width:0.#}px {s.Style} {s.Color}";
+                return new(WptRunner.Cat.Fail, $"{assertion}: {detail}", 1, 1, [new(assertion, 1, detail)], 0);
+            }
+        }
+        var visible = won.Values.Any(e => !Invisible(e));
+        if (!painted.Readable)
+        {
+            // The band's per-side styles differ or it is too thin to classify: the winning
+            // color must still be among its tones.
+            if (visible && !InkMatches(won.Values.First(e => !Invisible(e)).Color))
+                return new(WptRunner.Cat.Unsupported, $"Visual check: {painted.Note}", 0, 0);
+            return new(WptRunner.Cat.Pass, $"{assertion} (resolved edges match the sample)", 1, 0, [new(assertion, 0, null)], 0);
+        }
+        var paintedVisible = painted.Style != "none";
+        if (visible != paintedVisible)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the resolved border is {(visible ? "visible" : "absent")} but the center ring paints {(paintedVisible ? "ink" : "nothing")}", 1, 1,
+                [new(assertion, 1, "the paint disagrees with the resolved border")], 0);
+        if (visible && painted.ToneColors.Count > 0)
+        {
+            var winning = won.Values.First(e => !Invisible(e)).Color;
+            if (!InkMatches(winning))
+                return new(WptRunner.Cat.Fail, $"{assertion}: the center ring paints no {winning} ink", 1, 1,
+                    [new(assertion, 1, "the paint lacks the winning color")], 0);
+        }
+        return new(WptRunner.Cat.Pass, $"{assertion} (resolved edges match the sample)", 1, 0, [new(assertion, 0, null)], 0);
+    }
+
     /// <summary>How one border ring reads from the render. <see cref="Style"/> is the
     /// readable style word (solid/double/dashed/dotted, or none for no ink) and is null when
     /// the band is structured but not classifiable (the shaded styles); the structure fields
     /// still describe it. <see cref="Readable"/> is false only when the render cannot decide
     /// at all (content clipped at the crop edge, an unscannable band).</summary>
-    private sealed record Ring(string? Style, float Thickness, SKColor Color, List<SKColor> ToneColors, int Groups, int Runs,
+    internal sealed record Ring(string? Style, float Thickness, SKColor Color, List<SKColor> ToneColors, int Groups, int Runs,
         int Count, bool Readable = true, string? Note = null);
 
     /// <summary>Reads the border ring around one box by scanline: the ring ink is whatever
@@ -3962,13 +4068,43 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         var filler = FindFiller(root, top);
         if (filler is null)
             return new(WptRunner.Cat.Unsupported, "Visual check: no filler-text element below the instructions", 0, 0);
-        // The container is an ancestor materially wider than the text.
-        var container = filler.Parent;
-        while (container is { } parent && parent.Box.BorderBox.Width < filler.Box.BorderBox.Width * 1.5 && parent.Parent is not null)
-            container = parent.Parent;
-        if (container is null)
-            return new(WptRunner.Cat.Unsupported, "Visual check: no container box around the filler text", 0, 0);
-        var ink = ElementInk(bitmap, filler, 1, out _);
+        // The line box holding the text lives in its nearest block container (§9.4.2): the
+        // filler itself when it is block-level, else the closest such ancestor — an inline
+        // 'text-align' declaration does not apply (text-align-applies-to-001's inline #test
+        // aligns by its 500px #parent, not by the body). The glyph ink is read inside that
+        // container's content box (the container's own border paints in the element's ink).
+        // A walk that crosses a table box keeps the earlier rule — the first ancestor materially
+        // wider than the text, all of the element's ink: Lite sizes a 'display: table' box's
+        // percentage width as content-box, so table geometry is not yet a trustworthy line edge
+        // (text-align-applies-to-008; the table-width reading is a Phase 6 item).
+        LayoutNode? container = filler;
+        var crossesTable = false;
+        while (container is not null && (container.TagName.StartsWith('#') || container.GetDisplay() is not (
+                   DisplayType.Block or DisplayType.ListItem or DisplayType.InlineBlock)))
+        {
+            if (container.GetDisplay() is DisplayType.Table or DisplayType.InlineTable or DisplayType.TableRowGroup
+                or DisplayType.TableRow or DisplayType.TableCell) crossesTable = true;
+            container = container.Parent;
+        }
+        List<Component> ink;
+        if (crossesTable || container is null)
+        {
+            container = filler.Parent;
+            while (container is { } parent && parent.Box.BorderBox.Width < filler.Box.BorderBox.Width * 1.5 && parent.Parent is not null)
+                container = parent.Parent;
+            if (container is null)
+                return new(WptRunner.Cat.Unsupported, "Visual check: no container box around the filler text", 0, 0);
+            ink = ElementInk(bitmap, filler, 1, out _);
+        }
+        else
+        {
+            var box = container.Box.ContentBox;
+            var allInk = ElementInk(bitmap, filler, 1, out _);
+            var inside = allInk.Where(c => c.Left >= box.Left - 1 && c.Right <= box.Right + 1 &&
+                                           c.Top >= box.Top - 1 && c.Bottom <= box.Bottom + 1).ToList();
+            ink = inside.Count > 0 ? inside : allInk;
+        }
+        var content = container.Box.ContentBox;
         if (ink.Count == 0)
             return new(WptRunner.Cat.Fail, $"{Describe(check)}: the filler text painted no ink", 1, 1,
                 [new(Describe(check), 1, "no ink")], 0);
@@ -3976,14 +4112,14 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         if (check.Side == "left")
         {
             var inkLeft = ink.Min(c => c.Left);
-            var contentLeft = container.Box.ContentBox.Left;
+            var contentLeft = content.Left;
             return Math.Abs(inkLeft - contentLeft) <= 2
                 ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
                 : new(WptRunner.Cat.Fail, $"{assertion}: ink starts at {inkLeft}, container content edge is {contentLeft}", 1, 1,
                     [new(assertion, 1, $"ink left {inkLeft}, content left {contentLeft}")], 0);
         }
         var inkRight = ink.Max(c => c.Right);
-        var contentRight = container.Box.ContentBox.Right;
+        var contentRight = content.Right;
         return Math.Abs(inkRight - contentRight) <= 2
             ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
             : new(WptRunner.Cat.Fail, $"{assertion}: ink ends at {inkRight}, container content edge is {contentRight}", 1, 1,

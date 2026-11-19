@@ -29,6 +29,9 @@ internal static class SelfTestOracle
             ? (Func<RenderSet, Lite.Models.LayoutNode, WptRunner.RunResult>)((renders, root) =>
                 VisualChecks.Evaluate(c, renders, root, sentence, test.Path))
             : null;
+        // No machine reading and no twin: a person's approved render decides it by hash.
+        if (check is null && twin is null && ApprovedRenders.Find(test.Path) is { } approval)
+            check = (renders, _) => ApprovedRenders.Judge(approval, renders.Final);
         var result = WptVisualPage.RunSelfTest(test, embeddedRequired: stated.Condition == "same-color",
             statedCondition: check, statedCheck: stated.Check, sentence: stated.Sentence);
         return Decide(test.Path, stated.Condition, result, twin, lookup, checkedCondition: check is not null,

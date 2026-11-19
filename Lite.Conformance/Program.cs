@@ -64,6 +64,8 @@ internal static class Program
                 case "--survey-list" when i + 1 < args.Length:
                     surveyList = args[++i];
                     break;
+                case "--dump-renders" when i + 2 < args.Length:
+                    return Css21.ApprovedRenders.DumpForReview(args[i + 1], args[i + 2]);
                 case "--compare" when i + 2 < args.Length:
                     return WptRefTestRunner.CompareDocuments(args[i + 1], args[i + 2]);
                 case "--geom" when i + 2 < args.Length:

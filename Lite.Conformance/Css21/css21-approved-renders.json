@@ -1,0 +1,5 @@
+{
+ "schemaVersion": 1,
+ "description": "Renders a person approved against the stated condition; written only by scripts/review-css21-renders.py and decided by hash in Css21/ApprovedRenders.cs.",
+ "entries": []
+}

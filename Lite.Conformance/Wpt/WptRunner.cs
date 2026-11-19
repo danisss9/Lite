@@ -384,7 +384,7 @@ internal static class WptRunner
     /// interaction mechanically, so it runs through the self-describing oracle instead of
     /// waiting for a person.</summary>
     internal static bool IsMachineCheckedManual(WptCase? test, string path) =>
-        test is { Kind: "manual" } && SelfTestOracle.Condition(path).Check is not null;
+        test is { Kind: "manual" } && (SelfTestOracle.Condition(path).Check is not null || Css21.ApprovedRenders.Find(path) is not null);
 
     /// <summary>The kind of route that actually decides a case, for evidence: the catalog
     /// kind names what the suite promised, this names what ran. Self-describing visual
@@ -393,6 +393,10 @@ internal static class WptRunner
     internal static string EvidenceKind(WptCase? test, string path) => test?.Kind switch
     {
         null => "testharness",
+        // A self-describing case with no machine reading, decided by its approved render's hash.
+        "selftest" or "visual" or "manual" when SelfTestOracle.Condition(path).Check is null &&
+            Css21.ApprovedRenders.Find(path) is not null &&
+            (test.Kind == "selftest" || IsSelfDescribingVisual(test) || IsMachineCheckedManual(test, path)) => "approved-render",
         "testharness" or "reftest" or "crashtest" or "selftest" => test.Kind,
         _ when IsSelfDescribingVisual(test) || IsMachineCheckedManual(test, path) => "selftest",
         _ => "unexecuted",

@@ -480,6 +480,41 @@ The phases, in order:
       - **a resize protocol at a normal window height:** `background-root-014`/`014a`;
       - **kept manual on review:** `inline-block-004`/`005`.
       - Phase 4 is otherwise complete.
+- **Phase 5 progress, 19 November.**
+  - **Engine-fact side channel: border-conflict-style.** The `border-sample` judge reads the
+    table engine's resolved §17.6.2.1 winner per cell edge (`CollapsedEdgeBorders`). The
+    center cell's edges must equal the one-cell sample's (style, width within half a pixel,
+    color). The paint must agree: ink of the winning color, or, for the shaded styles, the
+    sample ring's own tones, or no ink when every winner is none/hidden. This replaces a
+    pixel reading that misread thin dotted/double strokes. 68 of the family's 70 open cases
+    pass; `066` stays unreadable.
+  - **text-align judge.** The line box is read in the text's nearest block container: the
+    filler itself when it is block-level, else the closest block ancestor. The glyph ink is
+    read inside that container's content box. +14.
+    - Cases whose walk crosses a table box keep the earlier rule. Lite sizes a
+      `display: table` box's percentage width as content-box, so a bordered 100%-wide
+      table's cells record boxes past the table's border (`text-align-applies-to-008`).
+      Settle that reading against browsers in Phase 6.
+  - **The approved-render ledger.**
+    - `Css21/css21-approved-renders.json` holds path, platform, viewport, the render's RGBA
+      SHA-256, sentence, operator and date. Its only writer is
+      `scripts/review-css21-renders.py`.
+    - A self-describing case with no machine check and no twin is decided by hash
+      (`Css21/ApprovedRenders.cs`). The evidence route kind is `approved-render`, and the
+      validator rejects such a pass without a ledger entry. A changed pixel, platform or
+      viewport returns the case to manual-pending.
+    - The review flow:
+      1. `--dump-renders <list> <dir>` renders exactly as the self-test route does;
+      2. `review-css21-renders.py sheet <dir>` builds a local contact sheet, where
+         pixel-identical twins share one decision;
+      3. `review-css21-renders.py apply <dir> approvals.json` merges the approvals and checks
+         each hash against the dump.
+    - A dump of all 1,091 awaiting cases (687 groups) sits in
+      `Lite.Conformance/artifacts/css21-review/review.html`. Approving is a person's call;
+      the ledger holds no entries yet.
+  - **Verification:** a full screen baseline (WPT via upstream `wpt serve`): official
+    7,599 → 7,640 and WPT 7,087 → 7,128, with 0 losses; the shards are complete. Units 630/630.
+    Curated gates 51/1 and 86/2. The obligations stay at 30/187.
 - **Phase 5, judges.**
   - An engine-fact side channel: per-edge §17.6.2.1 winner widths for border-conflict-style,
     and the text-align declaring node per line.

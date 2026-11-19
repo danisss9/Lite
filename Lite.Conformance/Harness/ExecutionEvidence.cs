@@ -176,9 +176,13 @@ internal static class ExecutionEvidence
                     // CSS evidence names the route that decided the case (the catalog kind
                     // rides along in CatalogKind); a case no route executed can never pass.
                     if (test.Suite is "css21-wpt" or "css21-official" &&
-                        (test.Kind is not ("reftest" or "selftest" or "crashtest" or "testharness" or "manual" or "unexecuted") ||
+                        (test.Kind is not ("reftest" or "selftest" or "crashtest" or "testharness" or "manual" or "unexecuted" or "approved-render") ||
                          test.Kind == "unexecuted" && test.Outcome == "pass"))
                         throw new InvalidDataException($"CSS evidence names no executed route: {test.Path} ({test.Kind}/{test.Outcome}).");
+                    // An approved-render pass stands on a reviewed ledger entry (the route compared
+                    // the render's hash with it; a case the ledger no longer names cannot pass).
+                    if (test.Kind == "approved-render" && test.Outcome == "pass" && Css21.ApprovedRenders.Find(test.Path) is null)
+                        throw new InvalidDataException($"Approved-render evidence without a ledger entry: {test.Path}.");
                     if (test.DurationMs is < 0)
                         throw new InvalidDataException("Invalid execution duration.");
                     if (string.IsNullOrWhiteSpace(test.Context) || string.IsNullOrWhiteSpace(test.Kind))
