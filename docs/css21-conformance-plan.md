@@ -218,6 +218,10 @@ The phases, in order:
       plus 1,991 WPT.
     - The 13 defective exclusions now hold: their WPT replacements count.
     - 179 obligations unimplemented, plus the xhtml1 variant.
+  - **Re-check, 19 November (after Phases 4 and 5 changed the engine).** A locally served
+    full baseline on the Phase 5 tree, diffed per case against the same tree's upstream run:
+    **zero WPT differences** across 8,883 cases. The one difference overall is the known
+    `tables-102` worker-state flake, an official case served locally either way. Phase 3 holds.
   - **Generator.** 19 more obligations reach implemented (27/187). The 16 hand flips return
     on real evidence, and 5.2, 6.1.1 and 12.4.1 are new. 146 are failing. 14 are untested
     with no failing case, only manual-pending or unsupported cases: for example 18.1

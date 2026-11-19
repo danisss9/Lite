@@ -11,8 +11,10 @@ manual-pending for re-review.
        dotnet run --project Lite.Conformance -c Release -- --dump-renders <list.txt> <dump-dir>
   2. Build the contact sheet and review it in a browser:
        python scripts/review-css21-renders.py sheet <dump-dir>
-     Open <dump-dir>/review.html, mark each group Approve or Reject, and press Export: the
-     browser saves approvals.json. Pixel-identical renders (typically an official case and its
+       python scripts/review-css21-renders.py serve <dump-dir>
+     Open the printed http://127.0.0.1 address (a file:// page cannot load the renders in
+     every viewer), mark each group Approve or Reject, and press Export: approvals.json is
+     saved in <dump-dir>. Pixel-identical renders (typically an official case and its
      WPT twin) form one group, decided once.
   3. Merge the approvals:
        python scripts/review-css21-renders.py apply <dump-dir> <approvals.json> [--operator NAME]
@@ -115,16 +117,59 @@ document.querySelectorAll('.card button').forEach(b => b.addEventListener('click
   try {{ localStorage.setItem(key, JSON.stringify(state)); }} catch (e) {{}}
   paint();
 }}));
-document.getElementById('export').addEventListener('click', () => {{
+document.getElementById('export').addEventListener('click', async () => {{
   const out = [];
   for (const [sha, v] of Object.entries(state)) for (const p of members[sha] || []) out.push({{path: p, sha256: sha, decision: v}});
-  const blob = new Blob([JSON.stringify(out, null, 1)], {{type: 'application/json'}});
+  const body = JSON.stringify(out, null, 1);
+  // Served by `review-css21-renders.py serve`: the decisions are saved next to the renders.
+  try {{
+    const r = await fetch('approvals', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body}});
+    if (r.ok) {{ alert(`Saved ${{out.length}} decisions to approvals.json in the review folder.`); return; }}
+  }} catch (e) {{}}
+  const blob = new Blob([body], {{type: 'application/json'}});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'approvals.json'; a.click();
 }});
 paint();
 </script></body></html>'''
     (dump / 'review.html').write_text(page, encoding='utf-8')
     print(f'{dump / "review.html"}: {len(groups)} groups, {len(entries)} renders')
+
+
+def serve(dump: Path, port: int) -> int:
+    """Serve the dump folder on 127.0.0.1 so the sheet loads its renders in any browser, and
+    save an exported decision list (POST /approvals) as approvals.json in the same folder."""
+    import http.server
+    import functools
+
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def do_POST(self):
+            if self.path.rstrip('/') != '/approvals':
+                self.send_error(404)
+                return
+            length = int(self.headers.get('Content-Length') or 0)
+            data = self.rfile.read(length)
+            try:
+                decisions = json.loads(data)
+                if not isinstance(decisions, list):
+                    raise ValueError('expected a list')
+            except ValueError as error:
+                self.send_error(400, str(error))
+                return
+            (dump / 'approvals.json').write_text(json.dumps(decisions, indent=1), encoding='utf-8')
+            self.send_response(204)
+            self.end_headers()
+            print(f'saved {len(decisions)} decisions to {dump / "approvals.json"}', flush=True)
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.ThreadingHTTPServer(('127.0.0.1', port), functools.partial(Handler, directory=str(dump)))
+    print(f'review sheet: http://127.0.0.1:{server.server_address[1]}/review.html', flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    return 0
 
 
 def default_operator() -> str:
@@ -180,6 +225,9 @@ def main() -> int:
     sub = parser.add_subparsers(dest='command', required=True)
     s = sub.add_parser('sheet')
     s.add_argument('dump', type=Path)
+    v = sub.add_parser('serve')
+    v.add_argument('dump', type=Path)
+    v.add_argument('--port', type=int, default=8765)
     a = sub.add_parser('apply')
     a.add_argument('dump', type=Path)
     a.add_argument('approvals', type=Path)
@@ -189,6 +237,8 @@ def main() -> int:
     if args.command == 'sheet':
         sheet(args.dump)
         return 0
+    if args.command == 'serve':
+        return serve(args.dump, args.port)
     return apply(args.dump, args.approvals, args.operator if args.operator is not None else default_operator(), args.ledger)
 
 
