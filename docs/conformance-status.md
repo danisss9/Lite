@@ -149,6 +149,26 @@ therefore now has exact counts for 83.4% of the reviewed queue and three named b
 an unmeasured gate; the tooling to re-bank it on a quiet tree is `scripts/run-html5-baseline.ps1`
 plus `scripts/aggregate-html5-baseline.py`.
 
+Snapshot updated 19 November 2026: the HTML5 evidence debt is banked. The 18–19 November
+phase-bounded baseline ran to completion on one identity (merge build `e803607e`, worktree
+`Lite-html5-bank`): **7,743 executed reviewed cases (94.7% of the 8,177-path queue), reviewed
+gate 1,648 accepted (21.3%), and the no-regression gate held its 1,426 banked passing paths
+with 0 regressions and 222 new passes** — editing/ and the multi-gigabyte encoding legacy-mb
+families completed inside bounded phases, closing the three named blockers of the 12 November
+diagnostic. The roster flips drained **791 reviewed-failing entries whose full case sets pass
+on the run** (623 first closure notes, 168 re-confirmations; append-only, marker-guarded),
+leaving 2,795 still-failing roster entries plus the non-roster reviewed-failing set as the
+exact Milestone 4 queue (the merged CSV lists every case per cluster). The 17 November gate
+run (1,634/7,867, 20.8%) is superseded as banked evidence. Off the HTML5 track: the CSS 2.1
+side landed its 18 November interaction batches through the fourth (official 7,593, WPT 7,070,
+0 losses; obligations 30/187 screen `implemented`), and ES2020 stays at maintenance — its
+readiness flag reads false only in evaluator probes run without evidence attached, fail-closed
+working as designed. K1 (parser-integrated script execution) slice 1 landed on the `html5-k1`
+branch: the html5-parse gate is fully decided at 1,891/1,891 with **+0 runner-exclusions** —
+the two `scripted_webkit01` streaming-insertion exclusions are retired — with inline
+parser-inserted scripts executing at the live insertion point behind the parse-gate flag
+(19 November worktree commits `36688eba`, `bd5548d6`).
+
 ## Track status at a glance
 
 Measured 11 November 2026. The CSS official number comes from that day's validating sweep and
@@ -166,7 +186,7 @@ crashes never count as success. `releaseReady` stays a separate final decision.
 | --- | --- | --- |
 | ES2020 | **`es2020ProfileReady` true**, enforced by compatibility CI and NuGet release validation | 67,235/67,235 required Test262 executions, with zero failures, zero expected failures and no dependency exception. Host suite 20/20. All 2,115 ECMA-262 clauses reviewed. Maintenance only. |
 | CSS 2.1 | `css21ProfileReady` false (screen-only scope; print removed 9 October) | 13 November baseline: official **7,426/9,039 (82.2%)**, WPT `css/CSS2` **6,709/8,904 (75.3%)**. Obligations 18/202 screen `implemented`. Gap: 922 + 1,151 fails, **1,220 manual-pending** (the baseline report printed 0 through an aggregator outcome-name mismatch, fixed 15 November), 505 unsupported (411 WPT `manual` kind), 8 empty, 1 timeout, 1 crash. The 15 November review found the evidence layer blocking readiness before the engine does; its phased plan is the [roadmap to css21ProfileReady](css21-conformance-plan.md#roadmap-to-css21profileready-review-of-15-november-2026). |
-| HTML5 | `html5ProfileReady` false | Milestones 1–3 closed (`inventoryComplete` true). The manifest has 12,575 entries and 5,848 are `included`. Of those, **~3,800 carry reviewed-failing reasons** and ~2,000 have a pass state unknown until the next run. Profile `html5.*`: 192 of 202 `untested`. Section review 0/762. Milestone 4 packages and increments landed 5–11 November, but **no cluster has been rerun and no manifest entries flipped** (evidence debt). The 12 November diagnostic baseline prices that debt: **1,351/6,538 accepted (20.7%)** over 83.4% of the expanded queue (`editing/` partial at 600 of 729 paths, `encoding/legacy-mb` blocked by memory, identity drifted by the parallel CSS track), so the flip review has per-cluster counts to work from; it is not banked evidence. |
+| HTML5 | `html5ProfileReady` false | Milestones 1–3 closed (`inventoryComplete` true). The manifest has 12,575 entries, 5,742 `included`; the 18–19 November single-identity banking baseline executed **7,743 reviewed cases (94.7% of the expanded queue)** — 1,648 pass / 5,250 fail / 339 empty / 345 unsupported / 157 timeout / 4 crash — and held the no-regression gate (1,426 banked passes, 0 regressed, 222 new passes banked). The roster flips closed **791 reviewed-failing entries** (append-only notes), leaving 2,795 still-failing roster entries as the exact Milestone 4 queue. Profile `html5.*`: 192 of 202 `untested`. Section review 0/762. K1 slice 1 landed on the `html5-k1` branch (parse gate 1,891/1,891 decided, +0 exclusions; the streaming-insertion exclusions retired). |
 
 The HTML5 reviewed-failing queue by area (static recount, 11 November):
 

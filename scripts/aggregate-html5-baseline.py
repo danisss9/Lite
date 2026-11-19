@@ -191,12 +191,12 @@ def main() -> int:
         for test in report.get("tests", []):
             prior = seen.get(test["path"])
             if prior is not None:
-                # Phases overlap at root boundaries (dom/ also matches html/dom, encoding/ also
-                # matches fetch/content-encoding). A re-run that reached the same verdict is
-                # redundant, not conflicting; a differing verdict would make the queue
-                # ambiguous and stays visible in the report.
-                if (prior["outcome"] != test["outcome"] or prior["detail"] != test["detail"]
-                        or prior["subtests"] != test["subtests"]):
+                # Phases overlap at root boundaries (dom/ also matches html/dom, editing/ also
+                # matches html/editing). A re-run that reached the same verdict is redundant,
+                # not conflicting — a failing page's detail and subtest messages differ between
+                # worker states (the same page fails differently run to run), so only a
+                # differing OUTCOME would make the queue ambiguous; that stays visible.
+                if prior["outcome"] != test["outcome"]:
                     problems.append(f"conflicting outcomes for {test['path']} "
                                     f"({prior['outcome']} in {sources.get(test['path'], '?')} vs "
                                     f"{test['outcome']} in {report['_name']})")

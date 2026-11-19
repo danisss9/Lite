@@ -19,13 +19,19 @@ applicability_path = Path('Lite.Conformance/Wpt/html5-applicability.json')
 roster_path = Path('Lite.Conformance/artifacts/m1-queue-dom.txt')
 report_path = Path(sys.argv[1] if len(sys.argv) > 1
                    else 'Lite.Conformance/artifacts/html5-results.json')
-closed_note = (' Closed 2026-11-08: the DOM authority package landed (live collection '
+closed_note = (' Closed 2026-11-18: the DOM authority package landed (live collection '
                'platform-object semantics, getElementsByTagNameNS, the verbatim DOMTokenList '
                'stringifier and per-interface coverage, DOMStringMap/NamedNodeMap enumeration, '
                'the title engine-tree authority, initial-parse comment projection, the '
                'wrong-typed-wrapper TypeError, query-path origin-sheet exclusion, and the '
                'TreeWalker/NodeIterator residuals) and this entry\'s full case set passes on '
-               'the cluster rerun.')
+               'the single-identity worktree banking baseline (html5-track merge build '
+               'e803607e; the merged phase evidence carries the run identity).')
+
+
+def already_closed(reason):
+    """An earlier evidence run already appended a closure note; never append twice."""
+    return 'Closed 2026-' in reason
 
 
 def main():
@@ -49,7 +55,7 @@ def main():
             unmatched.append(entry['path'])
             continue
         if all(row.get('outcome') == 'pass' for row in rows):
-            if 'Closed 2026-11-08' not in entry['reason']:
+            if not already_closed(entry['reason']):
                 entry['reason'] = entry['reason'] + closed_note
             flipped.append(entry['path'])
         else:
