@@ -526,6 +526,48 @@ internal class JsEngine : IDisposable
               if (v && typeof v === 'object') __lite_brand(v, name);
             }
             """, "lite/brand-globals.js");
+
+        // HTML5 §7.3.3 named access on the Window object:
+        // globalThis -> Window.prototype -> WindowProperties -> Object.prototype.
+        // WindowProperties is an ordinary object (not a Proxy, because QuickJS's global
+        // variable lookup skips ReferenceError when a Proxy sits in globalThis's prototype
+        // chain) whose configurable accessors are synced from the document's named elements.
+        // Own properties on globalThis and Window.prototype are checked first, so named DOM
+        // elements never shadow globals, var/function declarations, or user-assigned properties.
+        _engine.SetValue("__lite_namedWindowProperty", new Func<string, object?>(ResolveNamedWindowProperty));
+        _engine.Execute("""
+            (() => {
+              const namedGetter = globalThis.__lite_namedWindowProperty;
+              delete globalThis.__lite_namedWindowProperty;
+              const baseProto = Object.getPrototypeOf(globalThis);
+              const windowProperties = Object.create(baseProto);
+              Object.defineProperty(windowProperties, Symbol.toStringTag, {
+                value: 'WindowProperties', configurable: true
+              });
+              globalThis.__lite_addWindowName = (name) => {
+                if (name in baseProto || Object.prototype.hasOwnProperty.call(Window.prototype, name)) return;
+                Object.defineProperty(windowProperties, name, {
+                  configurable: true,
+                  enumerable: false,
+                  get() { return namedGetter(name); },
+                  set(v) {
+                    Object.defineProperty(this, name, {
+                      value: v, writable: true, enumerable: true, configurable: true
+                    });
+                  },
+                });
+              };
+              globalThis.__lite_removeWindowName = (name) => {
+                delete windowProperties[name];
+              };
+              Object.setPrototypeOf(Window.prototype, windowProperties);
+              Object.setPrototypeOf(globalThis, Window.prototype);
+            })();
+            """, "lite/window-properties.js");
+        _addWindowName = _engine.GetValue("__lite_addWindowName");
+        _removeWindowName = _engine.GetValue("__lite_removeWindowName");
+        _engine.Execute("delete globalThis.__lite_addWindowName; delete globalThis.__lite_removeWindowName;", "lite/window-properties-cleanup.js");
+        SyncWindowNamedProperties();
     }
 
     private const string InterfaceBootstrap = """
@@ -1062,6 +1104,7 @@ internal class JsEngine : IDisposable
     internal void Execute(string script, string sourceUrl, string? requestedUrl = null)
     {
         if (string.IsNullOrWhiteSpace(script)) return;
+        SyncWindowNamedProperties();
         var previousScript = CurrentScriptNode;
         CurrentScriptNode = FindScriptNode(script, sourceUrl, requestedUrl);
         try { _engine.Execute(script, sourceUrl); }
@@ -1365,6 +1408,120 @@ internal class JsEngine : IDisposable
         AddFrames(_root);
         frames["length"] = index;
         return frames;
+    }
+
+    private JsValue? _addWindowName;
+    private JsValue? _removeWindowName;
+    private readonly HashSet<string> _syncedWindowNames = new(StringComparer.Ordinal);
+
+    internal void SyncWindowNamedProperties()
+    {
+        if (_disposed || _addWindowName is null || _removeWindowName is null) return;
+        var current = new HashSet<string>(StringComparer.Ordinal);
+        var stack = new Stack<LayoutNode>();
+        stack.Push(_root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            if (!node.TagName.StartsWith('#'))
+            {
+                if (node.Id is { Length: > 0 } id) current.Add(id);
+                if ((node.TagName == "IFRAME" && node.ChildPage is not null) || IsWindowNamedElement(node.TagName))
+                {
+                    if (node.Attributes.GetValueOrDefault("name") is { Length: > 0 } elName)
+                        current.Add(elName);
+                }
+            }
+            for (var i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
+        }
+
+        foreach (var name in current)
+        {
+            if (_syncedWindowNames.Add(name))
+                _engine.Invoke(_addWindowName, name);
+        }
+        if (_syncedWindowNames.Count > current.Count)
+        {
+            foreach (var stale in _syncedWindowNames.Where(n => !current.Contains(n)).ToArray())
+            {
+                _syncedWindowNames.Remove(stale);
+                _engine.Invoke(_removeWindowName, stale);
+            }
+        }
+    }
+
+    private static bool IsWindowNamedElement(string tagName) => tagName is
+        "A" or "APPLET" or "AREA" or "EMBED" or "FORM" or "FRAMESET" or "IMG" or "OBJECT";
+
+    private static bool MatchesNamedWindowElement(LayoutNode node, string name)
+    {
+        if (node.TagName.StartsWith('#')) return false;
+        if (string.Equals(node.Id, name, StringComparison.Ordinal)) return true;
+        return IsWindowNamedElement(node.TagName)
+            && string.Equals(node.Attributes.GetValueOrDefault("name"), name, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// HTML5 §7.3.3 named access on the Window object: returns the first child browsing context
+    /// (<c>iframe</c>) whose <c>name</c> matches, else the single matching element (by <c>id</c> or
+    /// named-element <c>name</c>), else a live <see cref="JsHtmlCollection"/> of all matching
+    /// elements in tree order, or <c>null</c> if nothing matches.
+    /// </summary>
+    internal object? ResolveNamedWindowProperty(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return null;
+
+        LayoutNode? firstMatch = null;
+        bool multiple = false;
+
+        var stack = new Stack<LayoutNode>();
+        stack.Push(_root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+
+            if (node.TagName == "IFRAME" && node.ChildPage is { } childPage
+                && string.Equals(node.Attributes.GetValueOrDefault("name"), name, StringComparison.Ordinal))
+            {
+                return GetWindowProxy(childPage.Engine);
+            }
+
+            if (MatchesNamedWindowElement(node, name))
+            {
+                if (firstMatch is null) firstMatch = node;
+                else multiple = true;
+            }
+
+            for (var i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
+        }
+
+        if (firstMatch is null) return null;
+        if (!multiple) return JsElement.For(_engine, firstMatch);
+        return new JsHtmlCollection(() => CollectNamedWindowElements(name));
+    }
+
+    private IReadOnlyList<JsElement> CollectNamedWindowElements(string name)
+    {
+        var results = new List<JsElement>();
+        var stack = new Stack<LayoutNode>();
+        stack.Push(_root);
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            if (!visited.Add(node)) continue;
+            if (MatchesNamedWindowElement(node, name))
+                results.Add(JsElement.For(_engine, node));
+            for (var i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
+        }
+        return results;
     }
 
     /// <summary>Wires this (child) engine into a parent browsing context: sets <c>parent</c>,

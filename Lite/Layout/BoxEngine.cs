@@ -1078,6 +1078,37 @@ internal static class BoxEngine
             Border = border,
             Margin = margin,
         };
+
+        // Positioned scroll containers (overflow: scroll | auto | hidden) compute their scroll
+        // state after node.Box is set so descendant relative-position percentage offsets resolve
+        // against this box's final content dimensions (§9.4.3 / §11.1.1).
+        var absOverflow = node.GetOverflow();
+        if (absOverflow is OverflowType.Scroll or OverflowType.Auto or OverflowType.Hidden
+            && ScrollableExtent(node) is var (absExtentR, absExtentB))
+        {
+            var absNaturalW = MathF.Max(contentW, absExtentR - contentX);
+            var absScrollH = MathF.Max(contentH, absExtentB - contentY);
+            var absAlwaysBars = absOverflow == OverflowType.Scroll;
+            var absFlowW = absAlwaysBars ? MathF.Max(0f, contentW - ScrollGutter) : contentW;
+            var (absPortW, absPortH) = Scrollport(absOverflow, absAlwaysBars, contentW, contentH, absNaturalW, absScrollH, absFlowW);
+            if (absScrollH > absPortH || absNaturalW > absPortW)
+            {
+                var ss = node.ScrollState ?? new ElementScrollState();
+                ss.ContentHeight = absScrollH;
+                ss.ContainerHeight = absPortH;
+                ss.ContentWidth = absNaturalW;
+                ss.ContainerWidth = absPortW;
+                node.ScrollState = ss;
+            }
+            else
+            {
+                node.ScrollState = null;
+            }
+        }
+        else
+        {
+            node.ScrollState = null;
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1313,7 +1344,7 @@ internal static class BoxEngine
         // the corpus's scroll cases scroll laid-out block children.
         var naturalW = 0f;
         var scrollContentH = contentH;
-        if (node.GetOverflow() is OverflowType.Scroll or OverflowType.Auto && ScrollableExtent(node) is var (extentR, extentB))
+        if (node.GetOverflow() is OverflowType.Scroll or OverflowType.Auto or OverflowType.Hidden && ScrollableExtent(node) is var (extentR, extentB))
         {
             // A scroll container's scrollable area spans its descendants as painted —
             // relatively positioned ones included (position-relative-034: a span shifted
@@ -1334,12 +1365,13 @@ internal static class BoxEngine
 
             // Per-element overflow scroll: track natural content vs. constrained extent on
             // both axes (the vertical axis was the only one tracked; the background-attachment
-            // scroll corpus scrolls horizontally too).
+            // scroll corpus scrolls horizontally too). 'hidden' is programmatically scrollable
+            // via scrollTop/scrollLeft without displaying scrollbars (§11.1.1 / CSSOM View).
             var overflow = node.GetOverflow();
             // The scrollport is the content area minus each shown bar's gutter (§11.1.1), so
             // scrolling to the end brings the content's far edge out from under the bars.
             var (portW, portH) = Scrollport(overflow, alwaysScrollbars, contentW, clampedH, naturalW, scrollContentH, flowW);
-            if ((overflow == OverflowType.Scroll || overflow == OverflowType.Auto) && (scrollContentH > portH || naturalW > portW))
+            if ((overflow is OverflowType.Scroll or OverflowType.Auto or OverflowType.Hidden) && (scrollContentH > portH || naturalW > portW))
             {
                 var ss = node.ScrollState ?? new ElementScrollState();
                 ss.ContentHeight = scrollContentH;
@@ -1366,7 +1398,7 @@ internal static class BoxEngine
             // content, so only the width axis can overflow.
             var overflow = node.GetOverflow();
             var portW = alwaysScrollbars ? flowW : contentW;
-            var sideways = (overflow == OverflowType.Scroll || overflow == OverflowType.Auto) && naturalW > portW;
+            var sideways = (overflow is OverflowType.Scroll or OverflowType.Auto or OverflowType.Hidden) && naturalW > portW;
             if (sideways)
             {
                 var ss = node.ScrollState ?? new ElementScrollState();

@@ -35695,14 +35695,10 @@
     },
     {
       "path": "css/CSS2/linebox/animations/line-height-interpolation.html",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.8.1.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.8.1"
-      ]
+      "classification": "later-feature",
+      "media": [],
+      "requirementIds": [],
+      "rationale": "Reviewed 2026-11-19: interpolation/animation behavior defined by Web Animations and CSS Animations/Transitions, outside CSS 2.1."
     },
     {
       "path": "css/CSS2/linebox/anonymous-inline-inherit-001.html",
@@ -99532,14 +99528,10 @@
     },
     {
       "path": "css/CSS2/visufx/animation/visibility-interpolation.html",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.11.2.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.11.2"
-      ]
+      "classification": "later-feature",
+      "media": [],
+      "requirementIds": [],
+      "rationale": "Reviewed 2026-11-19: interpolation/animation behavior defined by Web Animations and CSS Animations/Transitions, outside CSS 2.1."
     },
     {
       "path": "css/CSS2/visufx/clip-001.xht",

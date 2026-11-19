@@ -4683,10 +4683,33 @@ internal static class Parser
     /// order after every mutation; the normalizers then regenerate their anonymous boxes from
     /// the repaired tree on the next layout pass.
     /// </summary>
+    private static bool IsInLiveLayoutTree(LayoutNode node)
+    {
+        var cur = node;
+        while (cur.Parent is { } parent)
+        {
+            if (!parent.Children.Contains(cur)) return false;
+            cur = parent;
+        }
+        return true;
+    }
+
     internal static void ReProjectChildren(IElement context, DocumentState owner)
     {
         var layout = owner.FindBound(context);
         if (layout is null) return; // never rendered — nothing to re-project
+
+        // A layout normalizer (e.g. block-in-inline splitting) may have evicted this element's
+        // LayoutNode from its parent's Children and replaced it with split pieces. Re-projecting
+        // the detached node alone would leave the live tree stale; walk up to the nearest
+        // ancestor still connected in the live layout tree so the whole split container rebuilds.
+        while (!IsInLiveLayoutTree(layout) && context.ParentElement is { } parentEl)
+        {
+            var parentLayout = owner.FindBound(parentEl);
+            if (parentLayout is null) break;
+            context = parentEl;
+            layout = parentLayout;
+        }
 
         var previous = Current;
         Current = owner.ParserContext ?? new ParseState

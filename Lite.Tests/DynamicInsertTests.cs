@@ -246,4 +246,25 @@ public static class DynamicInsertTests
         True(inserted!.GetColor() == new SkiaSharp.SKColor(255, 0, 0), $"inherited color {inserted.GetColor()}");
         True(Math.Abs(inserted.GetFontSize() - 32f) < 0.01f, $"inherited font size {inserted.GetFontSize()}");
     }
+
+    [Test]
+    public static void InsertBlock_BetweenBlocksInsideSplitInline_LaysOutInDomOrder()
+    {
+        // block-in-inline-insert-018: after an initial layout splits <span> around its block
+        // children b2 and b4, inserting b3 into <span> before b4 must rebuild the split parent
+        // so b3 participates in layout between b2 and b4.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body>" +
+            "<div>1</div><span><div id=\"b2\">2</div><div id=\"b4\">4</div></span>" +
+            "<script>" +
+            "document.body.offsetTop;" +
+            "const b3 = document.createElement('div');" +
+            "b3.id = 'b3';" +
+            "b3.appendChild(document.createTextNode('3'));" +
+            "b4.parentElement.insertBefore(b3, b4);" +
+            "window.__result = (b3.offsetTop > b2.offsetTop) && (b3.offsetTop < b4.offsetTop);" +
+            "</script></body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        True(page.Engine.RawEngine.GetValue("__result").AsBoolean(),
+            "b3.offsetTop must lie strictly between b2.offsetTop and b4.offsetTop");
+    }
 }

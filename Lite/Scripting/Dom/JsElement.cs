@@ -2348,6 +2348,7 @@ public class JsElement
             var node = target ?? Node;
             if (node.DomNode is IElement parentElement && node.DocumentState is { } owner)
                 Parser.ReProjectChildren(parentElement, owner);
+            JsEngine.For(_engine)?.SyncWindowNamedProperties();
         }
 
         /// <summary>Runs the inserted-content hooks (script execution, iframe load) after the whole
