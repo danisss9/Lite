@@ -249,6 +249,11 @@ internal static class VisualChecks
             "outline-around" => OutlineAround(check, bitmap, top),
             "first-line-case" => FirstLineCase(check, renders.Paint, top),
             "page-horizontal-bar" => PageHorizontalBar(check, bitmap, root),
+            "word-boxes" => WordBoxes(check, bitmap, root, top),
+            "viewport-half-square" => ViewportHalfSquare(check, bitmap),
+            // "There should be no red after resizing viewport": the resize protocol's red scan at
+            // every width is the whole stated condition.
+            "resize-no-red" => Passed("no red at this window width"),
             _ => ComponentCheck(check, bitmap, top, path),
         };
         // Same switch as the reftest survey's failure dumps: read the render, not the numbers.
@@ -1355,6 +1360,71 @@ internal static class VisualChecks
         return dark >= 20 ? Passed(assertion) : Fail2(assertion, "no horizontal page scrollbar paints along the bottom edge");
     }
 
+    /// <summary>"Each word should be enclosed in a blue rectangle and there should be no stray
+    /// pieces of blue rectangle anywhere else on the page" (inlines-003, at each resize width):
+    /// the stated-colour components below the instructions are exactly one ring per word span
+    /// (each matching its span's border box within a few pixels) and nothing else.</summary>
+    private static WptRunner.RunResult WordBoxes(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top)
+    {
+        var assertion = Describe(check);
+        if (check.Color is not { } colorName || !Named.ContainsKey(colorName))
+            return new(WptRunner.Cat.Unsupported, "Visual check: the word-box check names no colour", 0, 0);
+        var words = new List<SKRect>();
+        void Walk(LayoutNode n)
+        {
+            if (n.TagName == "SPAN" && n.Box.BorderBox.Top >= top && n.Box.Border.Top > 0 &&
+                n.Children.All(c => c.TagName.StartsWith('#')))
+            {
+                if (n.InlineFragments is { Count: > 1 })
+                {
+                    words.Add(SKRect.Empty);  // a word split across lines is not one rectangle
+                    return;
+                }
+                words.Add(n.Box.BorderBox);
+                return;
+            }
+            foreach (var c in n.Children) Walk(c);
+        }
+        Walk(root);
+        if (words.Count == 0)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no bordered word spans below the instructions", 0, 0);
+        if (words.Any(w => w.IsEmpty))
+            return Fail2(assertion, "a word's box is split across lines");
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped)
+            return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var rings = components.Where(c => Matches(colorName, c.Color)).ToList();
+        if (rings.Count != words.Count)
+            return Fail2(assertion, $"{rings.Count} {colorName} pieces paint for {words.Count} words");
+        foreach (var w in words)
+            if (!rings.Any(r => MathF.Abs(r.Left - w.Left) <= 3 && MathF.Abs(r.Right - w.Right) <= 3 &&
+                                MathF.Abs(r.Top - w.Top) <= 3 && MathF.Abs(r.Bottom - w.Bottom) <= 3))
+                return Fail2(assertion, $"no {colorName} rectangle matches the word box at ({w.Left:0},{w.Top:0})..({w.Right:0},{w.Bottom:0})");
+        return Passed($"{assertion} ({words.Count} words)");
+    }
+
+    /// <summary>"A big blue square half the width of the window and centered / aligned flush with
+    /// the right hand side" (c43-rpl-bbx-000/001): the stated colour's ink is a square half the
+    /// viewport wide, centred on the viewport or ending at its right edge.</summary>
+    private static WptRunner.RunResult ViewportHalfSquare(VisualCheck check, SKBitmap bitmap)
+    {
+        var assertion = Describe(check);
+        if (!Named.TryGetValue(check.Color ?? "", out var ink))
+            return new(WptRunner.Cat.Unsupported, "Visual check: stated colour is not a named colour", 0, 0);
+        if (ColorBoundsOf(bitmap, ink) is not { } b)
+            return Fail2(assertion, $"no {check.Color} square paints");
+        float w = b.Width + 1, h = b.Height + 1, half = bitmap.Width / 2f;
+        if (MathF.Abs(w - half) > 2f)
+            return Fail2(assertion, $"the square is {w:0}px wide, not half the {bitmap.Width}px window");
+        if (MathF.Abs(w - h) > 2f)
+            return Fail2(assertion, $"the box is {w:0}x{h:0}, not a square");
+        var placed = check.Variant == "right"
+            ? MathF.Abs(b.Right + 1 - bitmap.Width) <= 2f
+            : MathF.Abs((b.Left + b.Right + 1) / 2f - half) <= 2f;
+        return placed ? Passed(assertion)
+            : Fail2(assertion, $"the square spans x={b.Left}..{b.Right + 1}, not {(check.Variant == "right" ? "flush right" : "centred")}");
+    }
+
     private static WptRunner.RunResult Fail2(string assertion, string detail) =>
         new(WptRunner.Cat.Fail, $"{assertion}: {detail}", 1, 1, [new(assertion, 1, detail)], 0);
 
@@ -2325,6 +2395,9 @@ internal static class VisualChecks
         "same-dimension" => $"{(check.Count is { } n ? n.ToString() : "all")} shapes share {check.Dimension}",
         "line-style" => $"one {check.Dimension ?? ""} {(check.Color is null ? "" : check.Color + " ")}{check.Shape} line".Replace("  ", " "),
         "look-same" => "the two shapes render identically",
+        "viewport-half-square" => $"a {check.Color} square half the window wide, {(check.Variant == "right" ? "flush right" : "centred")}",
+        "resize-no-red" => "no red at any window width",
+        "word-boxes" => $"each word sits in its own {check.Color} rectangle",
         "page-horizontal-bar" => "the page has a horizontal scroll bar",
         "first-line-case" => "only the first line is uppercase",
         "grid-aligned" => "the items line up in a grid",

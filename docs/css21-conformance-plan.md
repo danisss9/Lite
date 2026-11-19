@@ -446,6 +446,40 @@ The phases, in order:
         - `background-animated-001`: the exclusion review;
         - `c5504-mrgn-l-002`: the exclusion review (scrolling to negative x);
         - `background-bg-pos-205`, `background-root-014` and `inlines-003`.
+  - **Phase 4 close-out, 18 November (fifth batch).**
+    - **Checks for the last readable sentences:**
+      - `word-boxes`: `inlines-003`;
+      - `viewport-half-square`: `c43-rpl-bbx-000`/`001`;
+      - `resize-no-red`: `abspos-inline-003`–`006`;
+      - `same-dimension` with five squares across resizing: `floating-`, `inline-` and
+        `inline-block-replaced-height-008`;
+      - the leading comma of "passes if, after scrolling down" no longer hides
+        `position-relative-020`–`022`;
+      - sentences opening with "Below this paragraph" now read.
+    - **Engine:** a percentage `height` on an inline replaced box resolved against the
+      viewport. It now resolves against its containing block's specified height, and an
+      auto height makes it `auto` (§10.5). This fixes `inline-replaced-height-008` and ten
+      older failures.
+    - **New honest failures (Phase 6):**
+      - `inlines-003`, where wrapped word boxes overlap, as in `outline-020`. Lite sizes a
+        non-replaced inline box's content area from the line height, not the font (§10.6.1):
+        a 32px font on a 64px line paints 71px-tall boxes.
+      - `inline-block-replaced-height-008`: an `<object>` whose `style` sets
+        `width: 15%` together with a height keeps its intrinsic 60px.
+    - **Verification:** a full screen baseline (WPT via upstream `wpt serve`) against the
+      fourth batch: official 7,593 → 7,599 and WPT 7,070 → 7,087, with 0 losses. Units
+      628/628. Curated gates 51/1 and 86/2. Another session committed to this checkout
+      mid-run, so the shards are marked incomplete. The comparison stands, but the
+      obligation statuses wait for a quiet re-run.
+    - **What is left of the interaction bucket (14 names, every one routed elsewhere):**
+      - **Phase 5:** `floats-137`, `background-bg-pos-205`, `floats-110` (compares
+        against other pages), `active-selector-002` and `white-space-mixed-004`;
+      - **dynamic pseudo-element rules:** `content-178`, `first-letter-selector-029`
+        and `first-line-selector-017`;
+      - **the exclusion review:** `background-animated-001` and `c5504-mrgn-l-002`;
+      - **a resize protocol at a normal window height:** `background-root-014`/`014a`;
+      - **kept manual on review:** `inline-block-004`/`005`.
+      - Phase 4 is otherwise complete.
 - **Phase 5, judges.**
   - An engine-fact side channel: per-edge §17.6.2.1 winner widths for border-conflict-style,
     and the text-align declaring node per line.

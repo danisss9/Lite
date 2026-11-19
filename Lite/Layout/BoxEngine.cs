@@ -1647,6 +1647,24 @@ internal static class BoxEngine
         return (iw, ih);
     }
 
+    /// <summary>The height a percentage 'height' on an inline replaced box resolves against
+    /// (§10.5): the specified height of its containing block — the nearest block ancestor. When
+    /// that height depends on content ('auto', or a percentage of an auto height) the percentage
+    /// computes to 'auto', signalled by 0 (inline-replaced-height-008: 'height: 1%' resolved
+    /// against the viewport and squashed the image to 24px). The root's containing block is the
+    /// initial one, the viewport's height.</summary>
+    private static float InlineContainingHeight(LayoutNode node, float viewportHeight)
+    {
+        for (var a = node.Parent; a is not null; a = a.Parent)
+        {
+            if (a.TagName.StartsWith('#') || a.GetDisplay() is DisplayType.Inline) continue;
+            if (a.TagName == "HTML" && a.IsAutoHeight()) return viewportHeight;
+            if (a.IsAutoHeight() || RawStyle(a, "height")?.Trim().EndsWith('%') == true) return 0f;
+            return Math.Max(0f, a.GetHeight(0f, 0, viewportHeight));
+        }
+        return viewportHeight;
+    }
+
     /// <summary>The size an INLINE replaced item reserves: <see cref="TryResolveReplacedSize"/>'s
     /// answer is final whenever a dimension was specified (a specified 0 is a size, not 'auto' —
     /// empty-cells-007's 0x0 image); the intrinsic fallbacks only cover the auto case where
@@ -1654,7 +1672,7 @@ internal static class BoxEngine
     private static (float Width, float Height) InlineReplacedSize(
         LayoutNode node, float maxWidth, float viewportHeight)
     {
-        var sized = TryResolveReplacedSize(node, maxWidth, viewportHeight, viewportHeight) ?? default;
+        var sized = TryResolveReplacedSize(node, maxWidth, InlineContainingHeight(node, viewportHeight), viewportHeight) ?? default;
         var specW = !node.IsAutoWidth() && RawStyle(node, "width")?.Trim().EndsWith('%') != true;
         var specH = !node.IsAutoHeight() && RawStyle(node, "height")?.Trim().EndsWith('%') != true;
         var w = sized.Width > 0 ? sized.Width

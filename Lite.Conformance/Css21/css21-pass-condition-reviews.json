@@ -663,18 +663,6 @@
    "note": "the stated condition (\"There should be a single small column of blue below with no red:\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
-   "path": "css/CSS2/css1/c43-rpl-bbx-000.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is a big blue square half the width of the window and centered.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/css1/c43-rpl-bbx-001.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if there is a big blue square half the width of the window and aligned flush with the right hand side (⇨).\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
    "path": "css/CSS2/css1/c522-font-family-000.xht",
    "condition": "manual",
    "manualPending": true,
@@ -2221,24 +2209,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"Test passes if a blue square is on the right-hand side of an orange square.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/positioning/position-relative-020.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if, after scrolling down, all four edges of a blue square are visible.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/positioning/position-relative-021.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if, after scrolling down, all four edges of a blue square are visible.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css/CSS2/positioning/position-relative-022.xht",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Test passes if, after scrolling down and to the right, all four edges of a blue square are visible.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css/CSS2/positioning/right-applies-to-008.xht",
@@ -4135,18 +4105,6 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"There should be a single small column of blue below with no red:\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/c43-rpl-bbx-000.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Below this paragraph there should be a big blue square half the width of the window and centered.\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
-  },
-  {
-   "path": "css21-official/html4/c43-rpl-bbx-001.htm",
-   "condition": "manual",
-   "manualPending": true,
-   "note": "the stated condition (\"Below this paragraph there should be a big blue square half the width of the window, aligned flush with the right hand side (⇨).\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
    "path": "css21-official/html4/c522-font-family-000.htm",

@@ -532,11 +532,16 @@ SCROLLBOX_TEMPLATES = [
     (re.compile(r"^the\s+page\s+has\s+an\s+active\s+scrolling\s+mechanism\s+available\s+to\s+scroll\s+the\s+page\s+and\s+the"
                 r"\s+word\s+'(\w+)'\s+is\s+inside\s+the\s+box\s+below$"),
      lambda m: {'kind': 'page-scroll-text', 'needle': m.group(1)}),
+    # c43-rpl-bbx-000/001: a 50%-wide block image with auto margins (or flush right).
+    (re.compile(r'^(?:there is|below this paragraph there should be) a big (blue) square half the width of the window'
+                r'(?:,? and|,) (centered|aligned flush with the right hand side)(?: \(⇨\))?$'),
+     lambda m: {'kind': 'viewport-half-square', 'color': m.group(1), 'variant': 'center' if m.group(2) == 'centered' else 'right'}),
     # c5505-mrgn-002: content past the viewport's right edge gives the page a horizontal bar.
     (re.compile(r'^this\s+page\s+should\s+have\s+a\s+horizontal\s+scroll\s+bar$'),
      lambda m: {'kind': 'page-horizontal-bar'}),
 ]
-SCROLLBOX_KINDS = ('scrollbox-same-size', 'scrollbar-gap', 'twin-squares', 'page-scroll-text', 'page-horizontal-bar')
+SCROLLBOX_KINDS = ('scrollbox-same-size', 'scrollbar-gap', 'twin-squares', 'page-scroll-text', 'page-horizontal-bar',
+                   'viewport-half-square')
 
 
 def scrollbox_check(clause: str) -> dict | None:
@@ -776,6 +781,19 @@ def resize_check(sentence: str) -> dict | None:
     if text == ('in the middle of this green box with the bright green border, there should be a purple tile. '
                 'resizing the window should make its position relative to this inner box stay the same'):
         return {'kind': 'tile-centered', 'color': 'purple', 'colorB': 'lime', **resize}
+    # floating/inline/inline-block-replaced-height-008: five percentage-sized images stay alike.
+    if re.fullmatch(r'there should be 5 filled green squares with the same width and the same height ?\. the 5 filled '
+                    r'green squares should be identical to each other\. this should still remain true even after a '
+                    r'window resize', text):
+        return {'kind': 'same-dimension', 'dimension': 'size', 'colorA': 'green', 'count': 5, **resize}
+    # abspos-inline-003..006: the resize protocol's red scan at each width is the condition.
+    if text == 'there should be no red after resizing viewport':
+        return {'kind': 'resize-no-red', **resize}
+    # inlines-003: bordered word spans stay whole rectangles however the line wraps.
+    if re.fullmatch(r'slowly resize the window, causing the text below to wrap into multiple lines at different points '
+                    r'in the text\. at all points in time, each word should be enclosed in (?:a|an hollow) (blue) rectangle '
+                    r'and there should be no stray pieces of blue rectangle anywhere else on the page', text):
+        return {'kind': 'word-boxes', 'color': 'blue', **resize}
     # first-line-selector-014/015: '::first-line { text-transform: uppercase }' at each width.
     if re.fullmatch(r'test passes if the first line \(and only the first line\) of the (?:latin paragraph|first list-item '
                     r'\(a latin paragraph starting with "lorem ipsum\.\.\."\)) below has all characters of each word in '
@@ -843,11 +861,13 @@ def visual_check(sentence: str | None) -> dict | None:
         # "To pass, ..." or "This ..." (the test element speaks about itself).
         stripped = TO_PASS_PREFIX.sub('', sentence.strip())
         # "Scroll this document. …" opens with the stated interaction itself.
-        if re.match(r'^(?:the|there|both|this|you|only|a|scroll)\b', stripped, re.I):
+        if re.match(r'^(?:the|there|both|this|you|only|a|scroll|below)\b', stripped, re.I):
             clause = ' '.join(stripped.lower().rstrip('.!').split())
         else:
             return None
     clause = NO_RED_CONJUNCT.sub('', clause)
+    # "Test passes if, after scrolling down, …": the comma after "if" is not part of the clause.
+    clause = clause.lstrip(', ')
     # Scroll protocols read the clause as written too: some name their interaction in a
     # trailing parenthetical ("… no red below (scroll all the way down if necessary)") that
     # the general strip below removes.
