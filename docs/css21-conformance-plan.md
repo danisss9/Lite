@@ -137,6 +137,42 @@ The phases, in order:
       - 2 route-specific mappings;
       - the xhtml1 variant.
   - Inline-svg (4 WPT cases) remains the one open scope call.
+  - **Follow-up review, 19 November.** All 115 unsupported cases of the Phase 6 run (39
+    official, 76 WPT) and its 6 empty renders were sorted. Only five were spec questions. The
+    rest have a definite assertion and stay applicable blockers: 48 have no route yet (WPT
+    `manual`-kind copies, same-color pairs, an external reference origin), 64 have a judge
+    that cannot read the render, and 4 need named window properties.
+    - **min/max-height on tables, inline-tables and rows → optional** (`min-`/`max-height-applies-to-004`,
+      `013`, `014`, both suites; 12 rows). `permits` quotes §10.7's "undefined" sentence. Their
+      row-group and cell siblings (`001`–`003`, `007`) were already optional through the `may`
+      flag; these three lacked it.
+    - **`link-visited-selector-001` (both suites) → optional.** It wants the link orange after a
+      visit; §5.11.2 lets a UA treat all links as unvisited, and Lite does (`Parser.cs`). `-002`
+      passes under either behavior and stays applicable.
+    - **`at-import-008` (WPT) → print.** Its prerequisite is print preview, and the official twin
+      was already print.
+    - **`line-height-interpolation`, `visibility-interpolation` → later-feature** (Web
+      Animations), like their `*-no-interpolation` siblings.
+    - **`background-animated-001` → implemented, not excluded** (project decision, 19 November).
+      CSS 2.1 has no sentence permitting a still image, so Lite animates GIFs.
+      - **Engine (`Lite/Media/AnimatedImages.cs`).** A multi-frame image's cached bitmap is the
+        animation's display surface: frames are composited once, and the window timer copies
+        in the frame due now, so every painter animates unchanged. Timing follows browsers:
+        delays of 10ms or less count as 100ms, a GIF's own NETSCAPE2.0/ANIMEXTS1.0 block sets
+        the loop count (SkiaSharp reports a GIF with none as looping forever, but browsers play
+        it once), and a finished animation rests on its last frame. Only images painted since
+        the last tick, or held by the page's nodes, keep the timer alive. With no clock advance
+        a render shows frame 0, so static renders are unchanged.
+      - **Judge (`Css21/AnimatedImageCheck.cs`, kind `image-animates`).** A time protocol
+        renders the page at the middle of each frame of the first loop. Each render must show
+        exactly that frame composited over what lies beneath, with zero pixel slack, because a
+        small animation's frames may differ in only a few pixels. A unit test shows a frozen
+        image fails.
+      - **Verified:** both copies pass with 5/5 frames on a filtered run (WPT served locally).
+        Units: Css21 61/61, AnimatedImage 8/8.
+    - **Still open, for a decision:** `c5504-mrgn-l-002` (defective if a replacement covers its
+      margin obligation, else optional) and inline-svg. `background-position-201` animates by
+      `setInterval`: it is timed-render work, not an exclusion.
 - **Phase 2, obligations (landed 16 November).**
   - **Mappings are derived, not copied.**
     - The gate (`Css21Inventory.DerivedTests`) maps each obligation to every reviewed case
@@ -519,6 +555,160 @@ The phases, in order:
   - **Verification:** a full screen baseline (WPT via upstream `wpt serve`): official
     7,599 → 7,640 and WPT 7,087 → 7,128, with 0 losses; the shards are complete. Units 630/630.
     Curated gates 51/1 and 86/2. The obligations stay at 30/187.
+- **Phase 6 progress, 19 November.**
+  - **P1 robustness.**
+    - `line-height-201` no longer crashes. A multi-layer `background` whose later layer
+      omits a component left a null in the longhand list, and computing it threw (fork patch
+      007, `CssListValue<T>.Compute`).
+    - `table-anonymous-objects-214` no longer times out: `document.fonts` now exists as a
+      loaded, empty `FontFaceSet` stub in `JsDocument`. This engine is shared with the HTML5
+      track.
+    - `inline-static-position-001` and `vertical-align-top-bottom-001` now render and fail
+      honestly.
+    - The remaining empty renders need named window properties (the
+      `relpos-percentage-*-in-scrollable` trio and `block-in-inline-insert-018`, HTML5 track)
+      or Web Animations (the two `*-interpolation` cases, now later-feature: see the Phase 1
+      follow-up review).
+  - **§10.6.1 inline content area.**
+    - A non-replaced inline box's background, border and outline now paint around its font's
+      ascent plus descent, centred in the line-height box (`BoxEngine.InlineContentArea`).
+      Before, they wrapped the whole line-height box, so in a tall line (`font: 2em/2`) the
+      boxes of two wrapped lines met.
+    - The inline's `Box` and its fragments stay the line-height box that layout placed and the
+      text paints from. Boxless wrapper fragments fold the wrapper's own content area at each
+      text item's baseline.
+    - The `word-boxes` judge reads the same engine helper.
+  - **Verification:**
+    - Full screen baseline (WPT via upstream `wpt serve`): official 7,640 → 7,650 and WPT
+      7,128 → 7,144, with 0 losses. The gains are inlines-003, outline-020, the font-044..050
+      family, inline-non-replaced-height-002/003, content-height-001..003, font-size-118,
+      line-height-201 and table-anonymous-objects-214.
+    - Units 632/632; curated gates 51/1 and 86/2; the obligations stay at 30/187.
+  - **Line breaking around inline-box edges (§8.3, §16.6.1).**
+    - **Closing edges.** An inline box's closing margin, border or padding is glued to the
+      box's last word. When that edge overflows, the line now ends at the last break
+      opportunity inside the box's text, and only the last word moves down with the edge.
+      Before, the whole run moved down, leaving the line with only what preceded the span
+      (`c5502-imrgn-r-001`).
+    - **Floats in a rewound run.** A float met in that run is placed beside the line where it
+      was first met, as the reference shows, and is not placed again
+      (`float-nowrap-hyphen-rewind-1`).
+    - **End-of-line spaces.** The collapsible spaces at a line's end no longer count:
+      - the inline boxes around them don't reach over them (`c5502-imrgn-r-002`'s notch);
+      - right and center alignment measures the line without them (`c5525-fltblck-000`).
+    - **Painting.** A painted slice still gets its text's own width, so trimming its rect
+      doesn't re-wrap it. A slice whose text doesn't fit even without its trailing spaces
+      keeps its rect.
+    - **Wrapped items.** A wrapped text item is recognized by its height, not only by its
+      `WrappedLines`, which exist only when floats gave it bands.
+    - **Fixed along the way:** the `LITE_TRACE_LINE` trace no longer splits items as a side
+      effect of printing.
+    - **Verification:** full screen baseline (upstream WPT): official 7,650 → 7,658 and WPT
+      7,144 → 7,154, with 0 losses. Units 634/634; gates 51/1 and 86/2; obligations 30/187.
+  - **Per-line text items (§9.4.2, §16.6).**
+    - **Splitting.** An overflowing `white-space: normal` run now breaks at its last
+      opportunity that fits (`SplitToFit`). The rest starts the next line box as an item of
+      its own, so what follows the run sits beside its last line. Before, the run was
+      re-measured as one tall wrapped item and the next content started past its full width.
+    - **Partial fits.** A run whose first words fit beside what the line already holds keeps
+      them there rather than moving down whole (`c5502-imrgn-r-004`, `c5504-imrgn-l-004`,
+      `c5509-ipadn-l-001`, `inlines-017`, `c548-leadin-000`).
+    - **Still wrapped:** justified text keeps the single wrapped item, because the painter
+      justifies across the lines of one item. Pre-wrap and pre-line text keeps it too.
+    - **Hit testing.** An inline split over lines is hit only inside one of its line fragments
+      (`BoxEngine.HitsBorderBox`, used by `PseudoClassState` and `JsDocument`'s
+      `elementFromPoint`). Its `Box` is the fragments' bounding union, and that union covered
+      a link earlier on its first line, so pressing the link hit the text after it
+      (`c21-activ-ln-000`). `JsDocument` is shared with the HTML5 track.
+    - **Still open:** `c5502-imrgn-r-003/005/006` and `c5504-imrgn-l-003/005/006`. The layout
+      of `003` now matches its reference. What remains is a 1px offset on the reference's
+      "I" bar, which is placed with a default-font space plus 25px of padding, so it depends
+      on that font's space width.
+    - **Verification:** full screen baseline: official 7,658 → 7,663 and WPT 7,154 → 7,159,
+      with 0 losses. Units 635/635; gates 51/1 and 86/2; obligations 30/187.
+  - **Glyph baselines snap to device pixels.**
+    - `DrawWrappedText` rounds each line's baseline to a whole device pixel under the canvas
+      transform, as browsers place glyph runs. A line box at a fractional y no longer blends
+      every glyph edge.
+    - **Judge fix.** The `stack-three` judge now builds its wide-band candidates from
+      rectangles taller than a hairline only. Crisp glyphs and underlines in a closing
+      paragraph had outgrown the real bands (`margin-collapse-107..109`).
+    - **Verification:** official 7,663 → 7,665 and WPT 7,159 → 7,161
+      (`c21-pseud-link-000/001`), with 0 losses.
+  - **min/max-height clamps (§10.7).**
+    - `BoxEngine.ClampContentHeight` is now applied to inline-blocks
+      (`max-height-applies-to-012`), floats (`018`) and table captions (`015`, both
+      properties); before, only normal-flow blocks were clamped.
+    - **Percentage heights.** An inline-block's percentage height resolves against its
+      containing block's height when that is known, and the containing block height is now
+      passed into inline runs. A 100% child of a clamped inline-block is the clamped height
+      (`017`).
+    - **Left undefined:** min/max-height on tables, inline-tables and rows (`004`, `013`,
+      `014`), which CSS 2.1 leaves undefined. Now classified optional, with their `min-height`
+      twins (Phase 1 follow-up review); not engine work.
+    - **Verification:** official 7,665 → 7,669 and WPT 7,161 → 7,167, with 0 losses. The
+      gains include `min-height-106`. Units 636/636; gates 51/1 and 86/2; obligations
+      30/187.
+  - **Inline/line box package, 19–20 November.**
+    - **Scope:** the WPT `linebox/` and `text/` directories, the inline cases of
+      `normal-flow/`, `visudet/` and `visuren/`, and their official twins. It held 183
+      failing WPT cases and now holds 90. Every change below was checked with a full upstream
+      baseline and 0 losses.
+    - **Split inlines (§9.2.1.1).**
+      - A piece of an inline broken around blocks keeps its start edges only if it is the
+        first piece, and its end edges only if it is the last.
+      - An empty piece survives when it carries a horizontal edge.
+    - **Empty inline elements are inline boxes (§10.8, §9.4.2).**
+      - A zero-width `Strut` item carries the element's line-height.
+      - Its background and borders paint through the wrapper fragments.
+      - On its own it makes no line exist.
+    - **Inline backgrounds.**
+      - Inline wrappers paint their background per line fragment.
+      - A split fragment masks its padding as well as its borders at the join sides.
+      - Wrappers fold their own font's content area (§10.6.1) for text, struts and
+        baseline-aligned atomic boxes.
+    - **White space (§16.6.1).**
+      - A line still starts while only inline-box edges sit on it.
+      - Whitespace followed only by closing edges or more collapsible whitespace collapses.
+      - Preserved white space and no-break spaces count as content.
+      - The intrinsic and table text measures split on CSS white space only: U+00A0 is
+        content.
+    - **vertical-align.**
+      - `middle` uses the parent's x-height.
+      - `text-top` and `text-bottom` align to the parent's content area instead of the line
+        box.
+      - The `two-size` judge splits two touching boxes.
+    - **text-indent (§16.1).** Negative values are parsed, and layout now applies the indent
+      to the block's first line, for inline runs and a block's own text alike. The painter
+      no longer re-indents line-positioned slices. Intrinsic widths include the indent.
+      `LineBands` X values are relative to the content box.
+    - **Inline-blocks.**
+      - Replaced inline-blocks take the replaced path.
+      - The baseline is the last line box's (`FindLastBaselineY`); a scroll-container child
+        bases at its bottom margin edge.
+    - **Replaced sizing:** §10.4's min/max constraint table, using the intrinsic ratio when
+      the tentative size is 0.
+    - **Margins and borders.**
+      - In-flow vertical `auto` margins are 0 (§10.6.3).
+      - The per-side border shorthands (`border-left: none`) expand in style attributes, and
+        a multi-value `border-style` maps per side.
+    - **Text-only tables.** They are sized by their text and keep their specified height.
+    - **Text.**
+      - Floats narrow a block's own text, so it wraps around them.
+      - `capitalize` leaves a word continued from an earlier inline alone.
+      - Georgian Mkhedruli stays unchanged under `uppercase`.
+      - Letter-spacing follows every character.
+      - Text-transform is no longer applied twice.
+    - **Hit testing:** split inlines are hit only inside a line fragment.
+    - **Classification candidates found:**
+      - `inherit-computed-001`: Chrome also paints the inherited currentColor border red,
+        which contradicts `border-color-012`.
+      - `inline-block-baseline-003..006`: they assert a CSS 2.2 proposal that both CSS 2.1
+        and Chrome contradict.
+      - `vertical-align-sub/super-001`: antialiasing fringe from red text under identical
+        green text.
+    - **Verification:** official 7,669 → 7,737 and WPT 7,167 → 7,303 across the batch, with
+      0 losses in the final runs. Units 647/647; gates 51/1 and 86/2.
 - **Phase 5, judges.**
   - An engine-fact side channel: per-edge §17.6.2.1 winner widths for border-conflict-style,
     and the text-align declaring node per line.

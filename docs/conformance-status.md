@@ -156,7 +156,7 @@ gate 1,648 accepted (21.3%), and the no-regression gate held its 1,426 banked pa
 with 0 regressions and 222 new passes** — editing/ and the multi-gigabyte encoding legacy-mb
 families completed inside bounded phases, closing the three named blockers of the 12 November
 diagnostic. The roster flips drained **791 reviewed-failing entries whose full case sets pass
-on the run** (623 first closure notes, 168 re-confirmations; append-only, marker-guarded),
+on the run** (760 first closure notes, 31 re-confirmations; append-only, marker-guarded),
 leaving 2,795 still-failing roster entries plus the non-roster reviewed-failing set as the
 exact Milestone 4 queue (the merged CSV lists every case per cluster). The 17 November gate
 run (1,634/7,867, 20.8%) is superseded as banked evidence. Off the HTML5 track: the CSS 2.1

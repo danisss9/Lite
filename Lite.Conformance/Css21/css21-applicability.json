@@ -18843,9 +18843,9 @@
     {
       "path": "css/CSS2/cascade/at-import-008.xht",
       "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.3. cites later specifications: http://www.w3.org/TR/css-cascade-3/#at-import; http://www.w3.org/TR/css-cascade-4/#at-import.",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.3. cites later specifications: http://www.w3.org/TR/css-cascade-3/#at-import; http://www.w3.org/TR/css-cascade-4/#at-import. Reviewed 2026-11-19: media corrected to print - its PREREQUISITE is print preview or a paged view, and its official twin is print-applicable; print is out of scope (9 October), so it stays a published print blocker.",
       "media": [
-        "screen"
+        "print"
       ],
       "requirementIds": [
         "css21.6.3"
@@ -55049,14 +55049,11 @@
     },
     {
       "path": "css/CSS2/normal-flow/max-height-applies-to-004.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a max-height result on a 'display: table-row' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css/CSS2/normal-flow/max-height-applies-to-005.xht",
@@ -55133,25 +55130,19 @@
     },
     {
       "path": "css/CSS2/normal-flow/max-height-applies-to-013.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a max-height result on a 'display: table' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css/CSS2/normal-flow/max-height-applies-to-014.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a max-height result on a 'display: inline-table' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css/CSS2/normal-flow/max-height-applies-to-015.xht",
@@ -57100,14 +57091,11 @@
     },
     {
       "path": "css/CSS2/normal-flow/min-height-applies-to-004.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a min-height result on a 'display: table-row' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css/CSS2/normal-flow/min-height-applies-to-005.xht",
@@ -57184,25 +57172,19 @@
     },
     {
       "path": "css/CSS2/normal-flow/min-height-applies-to-013.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a min-height result on a 'display: table' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css/CSS2/normal-flow/min-height-applies-to-014.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a min-height result on a 'display: inline-table' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css/CSS2/normal-flow/min-height-applies-to-015.xht",
@@ -74140,14 +74122,11 @@
     },
     {
       "path": "css/CSS2/selectors/link-visited-selector-001.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.5.11.2. flags: interact.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.5.11.2"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.5.11.2. flags: interact. Reviewed 2026-11-19: reclassified optional - it asserts the link turns orange after navigation, but a UA may treat all links as unvisited, and Lite does (Parser.cs, link/vlink handling); link-visited-selector-005 already records that permission, and -002 stays applicable because it passes under either behavior.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 5.11.2: \"UAs may therefore treat all links as unvisited links, or implement other measures to preserve the user's privacy while rendering visited and unvisited links differently.\""
     },
     {
       "path": "css/CSS2/selectors/link-visited-selector-002.xht",
@@ -169075,14 +169054,11 @@
     },
     {
       "path": "css21-official/html4/link-visited-selector-001.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.5.11.2. flags: interact. requires interaction; manual execution evidence pending.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.5.11.2"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.5.11.2. flags: interact. requires interaction; manual execution evidence pending. Reviewed 2026-11-19: reclassified optional - it asserts the link turns orange after navigation, but a UA may treat all links as unvisited, and Lite does (Parser.cs, link/vlink handling); link-visited-selector-005 already records that permission, and -002 stays applicable because it passes under either behavior.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 5.11.2: \"UAs may therefore treat all links as unvisited links, or implement other measures to preserve the user's privacy while rendering visited and unvisited links differently.\""
     },
     {
       "path": "css21-official/html4/link-visited-selector-002.htm",
@@ -176143,14 +176119,11 @@
     },
     {
       "path": "css21-official/html4/max-height-applies-to-004.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a max-height result on a 'display: table-row' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css21-official/html4/max-height-applies-to-005.htm",
@@ -176227,25 +176200,19 @@
     },
     {
       "path": "css21-official/html4/max-height-applies-to-013.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a max-height result on a 'display: table' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css21-official/html4/max-height-applies-to-014.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a max-height result on a 'display: inline-table' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css21-official/html4/max-height-applies-to-015.htm",
@@ -178312,14 +178279,11 @@
     },
     {
       "path": "css21-official/html4/min-height-applies-to-004.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a min-height result on a 'display: table-row' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css21-official/html4/min-height-applies-to-005.htm",
@@ -178396,25 +178360,19 @@
     },
     {
       "path": "css21-official/html4/min-height-applies-to-013.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a min-height result on a 'display: table' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css21-official/html4/min-height-applies-to-014.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.7"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.10.7. Reviewed 2026-11-19: reclassified optional - it asserts a min-height result on a 'display: inline-table' box, which 10.7 leaves undefined; its siblings 001-003 and 007 (row groups, cells) were already optional.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 10.7: \"In CSS 2.1, the effect of 'min-height' and 'max-height' on tables, inline tables, table cells, table rows, and row groups is undefined.\""
     },
     {
       "path": "css21-official/html4/min-height-applies-to-015.htm",

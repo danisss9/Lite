@@ -461,6 +461,10 @@ internal static class TableEngine
             var h = caption.GetHeight(0f, 0f, viewportH);
             if (h > 0f) contentH = h;
         }
+        // §10.7: min/max-height apply to a caption (CSS 2.1 leaves them undefined only for
+        // tables, rows, row groups and cells) — 'height: 3in; max-height: 1in' is 1in
+        // (max-height-applies-to-015, min-height-applies-to-015).
+        contentH = BoxEngine.ClampContentHeight(caption, contentH, 0f, bord, pad, fs);
 
         caption.Box = new BoxDimensions
         {
@@ -1130,11 +1134,24 @@ internal static class TableEngine
     /// <paramref name="availW"/> but never below the columns' min-content sum. An explicit table
     /// <c>width</c> wins. Used to size an inline-table (which shrink-wraps like inline-block).
     /// </summary>
+    /// <summary>The white space CSS collapses and breaks at (§16.6.1); a no-break space is
+    /// content and must not split a cell's words (inline-table-zorder-004).</summary>
+    private static readonly char[] CssWhiteSpace = [' ', '\t', '\n', '\r', '\f'];
+
     public static float MeasureTableWidth(LayoutNode table, float availW, float viewportW, float viewportH)
     {
         var explicitTableW = table.GetWidth(availW);
         if (explicitTableW > 0f) return explicitTableW;
         var (sumMin, sumMax, colCount) = MeasureTableContentWidths(table, availW, viewportH);
+        // §17.2.1: a table whose content is only its own text wraps it in an anonymous row and
+        // cell — the text sizes the table. It measured 0 columns and shrank to nothing, so an
+        // inline-table holding '&nbsp;x&nbsp;' came out one glyph wide (inline-table-zorder-004).
+        if (colCount == 0 && !string.IsNullOrEmpty(table.DisplayText) &&
+            !table.Children.Any(c => !c.TagName.StartsWith('#')))
+        {
+            (sumMin, sumMax) = IntrinsicSizer.LeafTextMinMax(table);
+            colCount = 1;
+        }
         var width = colCount == 0 ? 0f : Math.Max(sumMin, Math.Min(sumMax, availW));
         // §10.4 on the shrink-wrapped width: max-width caps it, min-width (which wins) floors it
         // (min-width-applies-to-013: an empty-celled table with min-width 1in is 1in wide).
@@ -1458,16 +1475,16 @@ internal static class TableEngine
                         var w = font.MeasureText(line);
                         max = Math.Max(max, w);
                         if (ws == WhiteSpace.PreWrap)
-                            foreach (var word in line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                            foreach (var word in line.Split(CssWhiteSpace, StringSplitOptions.RemoveEmptyEntries))
                                 min = Math.Max(min, font.MeasureText(word));
                     }
                     if (ws == WhiteSpace.Pre) min = max; // pre never wraps: min = max
                 }
                 else
                 {
-                    var text = string.Join(' ', raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+                    var text = string.Join(' ', raw.Split(CssWhiteSpace, StringSplitOptions.RemoveEmptyEntries));
                     max = font.MeasureText(text);
-                    foreach (var word in text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                    foreach (var word in text.Split(CssWhiteSpace, StringSplitOptions.RemoveEmptyEntries))
                         min = Math.Max(min, font.MeasureText(word));
                 }
             }

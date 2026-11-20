@@ -70,9 +70,23 @@ internal static class IntrinsicSizer
             return (contentW, contentW);
         }
 
+        // §16.1: 'text-indent' widens the box's FIRST line, so its intrinsic widths carry it
+        // (an inline-block with 'text-indent: 10em' shrink-to-fits around indent + text,
+        // text-indent-applies-to-005 / text-indent-intrinsic-*). A negative indent shortens the
+        // first line but never below its own content, so it does not shrink the box here.
+        var indent = node.GetDirection() != "rtl" ? Math.Max(0f, node.GetTextIndent(0f, node.GetFontSize())) : 0f;
+
         // Leaf text: measure directly.
         if (node.Children.Count == 0 && !string.IsNullOrEmpty(node.DisplayText))
-            return TextMinMax(node);
+        {
+            var (tMin, tMax) = TextMinMax(node);
+            if (indent > 0f)
+            {
+                tMin = Math.Max(tMin, FirstUnitWidth(node) + indent);
+                tMax += indent;
+            }
+            return (tMin, tMax);
+        }
 
         // A table is sized by its COLUMNS, not by a line of inline content. Its rows and row
         // groups are neither block-level nor inline, so the generic walk below collected them
@@ -88,6 +102,7 @@ internal static class IntrinsicSizer
         float min = 0f, max = 0f;
         var children = node.Children;
         var i = 0;
+        var firstLinePending = indent > 0f;
         while (i < children.Count)
         {
             var child = children[i];
@@ -108,6 +123,7 @@ internal static class IntrinsicSizer
                 var (cMin, cMax) = OuterMinMax(child, viewportHeight);
                 min = Math.Max(min, cMin);
                 max = Math.Max(max, cMax);
+                if (isBlockLevel) firstLinePending = false;
                 i++;
             }
             else
@@ -125,6 +141,11 @@ internal static class IntrinsicSizer
                     FlattenInline(c, viewportHeight, toks, ref pendingBoundarySpace, ref atLineStart);
                     i++;
                 }
+                // The block's first line opens this run: its first unit carries the indent.
+                var firstTok = toks.FindIndex(t => !t.IsBreak);
+                if (firstLinePending && firstTok >= 0)
+                    toks[firstTok] = toks[firstTok] with { Min = toks[firstTok].Min + indent, Max = toks[firstTok].Max + indent };
+                firstLinePending = false;
                 var (rMin, rMax) = RunMinMax(toks);
                 min = Math.Max(min, rMin);
                 max = Math.Max(max, rMax);
@@ -364,6 +385,21 @@ internal static class IntrinsicSizer
     /// word. When white-space forbids wrapping (nowrap/pre) the two are equal; when it preserves line
     /// breaks (pre/pre-wrap/pre-line) max-content is the widest hard line.
     /// </summary>
+    /// <summary>The width of a leaf's first unbreakable unit (its first word, or the whole
+    /// text when it does not wrap).</summary>
+    private static float FirstUnitWidth(LayoutNode node)
+    {
+        var text = node.RenderedText().TrimStart();
+        if (text.Length == 0) return 0f;
+        using var font = TextMeasure.CreateFont(node);
+        if (node.GetWhiteSpace() is WhiteSpace.NoWrap or WhiteSpace.Pre) return font.MeasureText(text);
+        var end = text.IndexOfAny(CssWhiteSpace);
+        return font.MeasureText(end < 0 ? text : text[..end]);
+    }
+
+    /// <summary>The min/max-content widths of a node's own text (its DisplayText).</summary>
+    internal static (float Min, float Max) LeafTextMinMax(LayoutNode node) => TextMinMax(node);
+
     private static (float Min, float Max) TextMinMax(LayoutNode node)
     {
         var text = node.RenderedText();
@@ -382,7 +418,7 @@ internal static class IntrinsicSizer
         {
             var line = ws is WhiteSpace.Pre or WhiteSpace.PreWrap
                 ? raw
-                : string.Join(' ', raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+                : string.Join(' ', raw.Split(CssWhiteSpace, StringSplitOptions.RemoveEmptyEntries));
             max = Math.Max(max, font.MeasureText(line));
         }
         // A whitespace-only leaf still renders one collapsible space when it sits between inline
@@ -395,12 +431,17 @@ internal static class IntrinsicSizer
         if (noWrap) return (max, max);
 
         float min = 0f;
-        foreach (var word in text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+        foreach (var word in text.Split(CssWhiteSpace, StringSplitOptions.RemoveEmptyEntries))
             min = Math.Max(min, font.MeasureText(word));
         return (min, max);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>The white space CSS collapses and breaks at (§16.6.1). A no-break space is
+    /// content: splitting on char.IsWhiteSpace measured '&amp;nbsp;x&amp;nbsp;' as 'x' and shrank
+    /// its inline-block below the text it draws (inline-block-zorder-004).</summary>
+    private static readonly char[] CssWhiteSpace = [' ', '\t', '\n', '\r', '\f'];
 
     /// <summary>True when the property's resolved value is a percentage (indefinite here).</summary>
     private static bool IsPercent(LayoutNode node, string prop)

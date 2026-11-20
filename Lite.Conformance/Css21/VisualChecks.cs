@@ -145,6 +145,9 @@ internal static class VisualChecks
 
     internal static WptRunner.RunResult Evaluate(VisualCheck check, RenderSet renders, LayoutNode root, string sentence, string path)
     {
+        // Time protocol: one render per animation frame (AnimatedImageCheck).
+        if (check.Kind == AnimatedImageCheck.Kind)
+            return AnimatedImageCheck.Judge(renders, root);
         if (check.Interaction is { } interaction)
             return InteractionCheck(check, interaction, renders, root, sentence, path);
         // Scroll-protocol checks judge the scrolled render against the initial one; the
@@ -1380,7 +1383,8 @@ internal static class VisualChecks
                     words.Add(SKRect.Empty);  // a word split across lines is not one rectangle
                     return;
                 }
-                words.Add(n.Box.BorderBox);
+                // §10.6.1: the border wraps the content area, not the line-height box.
+                words.Add(BoxEngine.InlineContentArea(n, n.Box).BorderBox);
                 return;
             }
             foreach (var c in n.Children) Walk(c);
@@ -2344,7 +2348,7 @@ internal static class VisualChecks
                 "shape-relation" => ShapeRelation(check, shapes, nested, bitmap),
                 "space-between" => bitmap is null ? "no render" : SpaceBetween(check, shapes, bitmap),
                 "stack-three" => StackThree(check, shapes, nested, bitmap, top),
-                "two-size" => TwoSize(shapes),
+                "two-size" => TwoSize(shapes, bitmap),
                 "line-pair" => LinePair(check, shapes),
                 "marker-bullet" => MarkerBullet(check, shapes),
                 "round-dot" => RoundDot(shapes),
@@ -3112,7 +3116,13 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         // into dozens of components. Find the stack among the shapes: rectangular shapes at
         // least half the widest shape's width (the stacked rectangles dominate; glyph fragments
         // are narrow), then the three-band read below on whatever candidates assemble.
-        var wide = shapes.Where(s => s.Rectangular && s.Width >= shapes.Max(x => x.Width) / 2f).ToList();
+        // Only rectangles taller than a hairline are candidate bands: a link's underline or a
+        // line of glyphs in the closing paragraph, wider than the stack, excluded every real
+        // band from the wide set (margin-collapse-107..109 once glyph baselines snap to device
+        // pixels and the glyph ink turns crisp).
+        var bands = shapes.Where(s => s.Rectangular && s.Height > 3f).ToList();
+        var widest = bands.Count > 0 ? bands.Max(x => x.Width) : 0f;
+        var wide = bands.Where(s => s.Rectangular && s.Width >= widest / 2f).ToList();
         if (wide.Count >= 3)
         {
             // The wide-candidate stack read is INLINED (not a recursive StackThree call):
@@ -3145,13 +3155,49 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         return Math.Abs(gap0 - gap1) > 2 * EdgeTolerance ? $"the gaps differ: {gap0}px and {gap1}px" : null;
     }
 
-    private static string? TwoSize(IReadOnlyList<Component> shapes)
+    private static string? TwoSize(IReadOnlyList<Component> shapes, SKBitmap? bitmap = null)
     {
+        // Two boxes that TOUCH side by side (a small Ahem box aligned against a large one,
+        // vertical-align-112..120) read as one L-shaped component: split it into its runs of
+        // columns with the same vertical extent, which recovers the two boxes when each run
+        // is a filled rectangle.
+        if (shapes.Count == 1 && !shapes[0].Rectangular && bitmap is not null &&
+            SplitSideBySide(shapes[0], bitmap) is { } pair)
+            shapes = pair;
         if (shapes.Count != 2) return $"{shapes.Count} top-level shapes below the instructions";
         var areaA = (long)shapes[0].Width * shapes[0].Height;
         var areaB = (long)shapes[1].Width * shapes[1].Height;
         var (big, small) = areaA >= areaB ? (areaA, areaB) : (areaB, areaA);
         return small * 3 / 2 > big ? $"both boxes are about the same size ({areaA} vs {areaB} px)" : null;
+    }
+
+    /// <summary>Splits one component into exactly two side-by-side filled rectangles: the
+    /// columns group into runs of equal ink extent (top and bottom within a pixel), and each run
+    /// must be solid in the component's color. Null when the component is not two such boxes.</summary>
+    private static IReadOnlyList<Component>? SplitSideBySide(Component shape, SKBitmap bitmap)
+    {
+        bool Ink(int x, int y) => y >= 0 && y < bitmap.Height && x >= 0 && x < bitmap.Width &&
+            Math.Abs(bitmap.GetPixel(x, y).Red - shape.Color.Red) <= 24 &&
+            Math.Abs(bitmap.GetPixel(x, y).Green - shape.Color.Green) <= 24 &&
+            Math.Abs(bitmap.GetPixel(x, y).Blue - shape.Color.Blue) <= 24;
+        var runs = new List<(int Left, int Right, int Top, int Bottom)>();
+        for (var x = shape.Left; x < shape.Right; x++)
+        {
+            int top = -1, bottom = -1;
+            for (var y = shape.Top; y < shape.Bottom; y++)
+                if (Ink(x, y)) { if (top < 0) top = y; bottom = y + 1; }
+            if (top < 0) return null;
+            if (runs.Count > 0 && Math.Abs(runs[^1].Top - top) <= 1 && Math.Abs(runs[^1].Bottom - bottom) <= 1)
+                runs[^1] = (runs[^1].Left, x + 1, runs[^1].Top, runs[^1].Bottom);
+            else
+                runs.Add((x, x + 1, top, bottom));
+        }
+        if (runs.Count != 2) return null;
+        foreach (var r in runs)
+            for (var x = r.Left; x < r.Right; x++)
+                for (var y = r.Top + 1; y < r.Bottom - 1; y++)
+                    if (!Ink(x, y)) return null;
+        return runs.Select(r => new Component(r.Left, r.Top, r.Right, r.Bottom, true, shape.Color)).ToList();
     }
 
     /// <summary>A line pair with stated styles, colors and arrangement: each stated color

@@ -179,7 +179,10 @@ internal static class TextMeasure
             // §16.4: word spacing applies to every space and no-break space.
             if (ch is ' ' or '\u00A0') w += wordSpacing;
         }
-        return Math.Max(0f, w - letterSpacing);
+        // §16.4: the spacing follows EVERY character, the run's last one included, as browsers
+        // apply it — dropping the last one closed the gap where a word continues into the next
+        // inline ('T<span>his</span>' under letter-spacing, text-transform-cap-002).
+        return Math.Max(0f, w);
     }
 
     /// <summary>The spacing a node's text is laid out with, so measurement and painting agree.</summary>

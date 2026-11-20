@@ -746,8 +746,53 @@ public static class StyleExtensions
         var text = node.DisplayText;
         if (string.IsNullOrEmpty(text)) return text;
         var transform = node.GetTextTransform();
-        text = transform == TextTransform.None ? text : StyleExtensions.ApplyTextTransform(text, transform, node.GetLanguage());
+        if (transform == TextTransform.Capitalize && text.Length > 0 && !char.IsWhiteSpace(text[0]) &&
+            ContinuesAWord(node))
+        {
+            // §16.5 'capitalize' upper-cases the first letter of each WORD: text that continues
+            // a word begun in an earlier inline ('T<span>his</span>') keeps its first letter
+            // (text-transform-cap-002).
+            var rest = StyleExtensions.ApplyTextTransform(text[1..], transform, node.GetLanguage());
+            text = text[0] + (rest.Length > 0 && !char.IsWhiteSpace(text[0]) ? LowerFirstIfWordContinues(text, rest) : rest);
+        }
+        else
+            text = transform == TextTransform.None ? text : StyleExtensions.ApplyTextTransform(text, transform, node.GetLanguage());
         return node.BidiReversesContent() ? ReverseText(text) : text;
+    }
+
+    /// <summary>After keeping the continued word's first letter, the rest of that word must not
+    /// be capitalized either: re-attach the original continuation of the word.</summary>
+    private static string LowerFirstIfWordContinues(string original, string capitalizedRest)
+    {
+        var wordEnd = 1;
+        while (wordEnd < original.Length && !char.IsWhiteSpace(original[wordEnd])) wordEnd++;
+        return original[1..wordEnd] + capitalizedRest[(wordEnd - 1)..];
+    }
+
+    /// <summary>True when the inline text right before this node, within the same block, ends
+    /// in a non-space character — this node's text continues that word.</summary>
+    private static bool ContinuesAWord(LayoutNode node)
+    {
+        for (var n = node; n.Parent is { } parent; n = parent)
+        {
+            var index = parent.Children.IndexOf(n);
+            for (var i = index - 1; i >= 0; i--)
+            {
+                if (LastRenderedChar(parent.Children[i]) is { } c) return !char.IsWhiteSpace(c);
+            }
+            if (parent.GetDisplay() != DisplayType.Inline) return false;
+        }
+        return false;
+    }
+
+    private static char? LastRenderedChar(LayoutNode node)
+    {
+        if (node.GetDisplay() == DisplayType.None) return null;
+        if (node.TagName != "#text" && node.GetDisplay() != DisplayType.Inline) return ' ';
+        if (!string.IsNullOrEmpty(node.DisplayText) && node.Children.Count == 0) return node.DisplayText[^1];
+        for (var i = node.Children.Count - 1; i >= 0; i--)
+            if (LastRenderedChar(node.Children[i]) is { } c) return c;
+        return null;
     }
 
     /// <summary>The block's own text as it paints under the paragraph-level bidi reordering
@@ -821,8 +866,23 @@ public static class StyleExtensions
         return CssUnits.TryParse(raw, fontSize, 0f, 0f, 0f, out var px) ? px : 0f;
     }
 
+    /// <summary>CSS 2.1 §16.1 'text-indent': a length or a percentage of the containing block's
+    /// width, and NEGATIVE values are allowed (a hanging indent). The size reader this used
+    /// clamps negatives to its default, so 'text-indent: -100em' indented by 0
+    /// (text-indent-010).</summary>
     public static float GetTextIndent(this LayoutNode node, float totalWidth = 0, float fontSize = 16)
-        => GetSizeOrDefault(node, "text-indent", totalWidth, fontSize, 0f);
+    {
+        using var font = CssUnits.ForFont(node);
+        if (node.TryResolveStyle("text-indent", out var overrideStr))
+        {
+            overrideStr = overrideStr.Trim();
+            if (TryEvalCalc(overrideStr, totalWidth, fontSize, totalWidth, out var calcPx)) return calcPx;
+            return CssUnits.TryParse(overrideStr, fontSize, totalWidth, totalWidth, totalWidth, out var lp) ? lp : 0f;
+        }
+        return node.Style.GetProperty("text-indent")?.RawValue is CssLengthValue length
+            ? CssUnits.ToPx(length, fontSize, totalWidth, totalWidth, totalWidth)
+            : 0f;
+    }
 
     public static BorderStyle GetBorderStyleTop(this LayoutNode node) => GetBorderStyleSide(node, "border-top-style");
     public static BorderStyle GetBorderStyleRight(this LayoutNode node) => GetBorderStyleSide(node, "border-right-style");
@@ -835,9 +895,23 @@ public static class StyleExtensions
             ? ov : node.Style.GetPropertyValueSafe(prop);
         if (string.IsNullOrWhiteSpace(raw))
         {
-            // Try shorthand 'border-style'
-            raw = node.TryResolveStyle("border-style", out var ov2)
+            // Try shorthand 'border-style' — its 1-4 values map to top/right/bottom/left like
+            // any box shorthand. Reading the whole value turned 'solid none solid none' (the
+            // expansion of 'border: 5px solid; border-left: none; border-right: none') into a
+            // solid LEFT side through the unknown-keyword fallback (block-in-inline-empty-001's
+            // span grew 3px side borders).
+            var shorthand = node.TryResolveStyle("border-style", out var ov2)
                 ? ov2 : node.Style.GetPropertyValueSafe("border-style");
+            var parts = (shorthand ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            var side = prop switch { "border-top-style" => 0, "border-right-style" => 1, "border-bottom-style" => 2, _ => 3 };
+            raw = parts.Length switch
+            {
+                0 => shorthand,
+                1 => parts[0],
+                2 => parts[side % 2],
+                3 => parts[side == 3 ? 1 : side],
+                _ => parts[side],
+            };
         }
         // 'inherit' takes the parent's used style for the side (border-top-style-011).
         if (raw?.Trim() == "inherit")
@@ -1329,6 +1403,14 @@ public static class StyleExtensions
                 continue;
             }
             var c = text[i++];
+            // Georgian Mkhedruli has had Mtavruli capitals since Unicode 11, but text-transform
+            // leaves it alone, as browsers do (the script is unicameral in use): .NET's tables
+            // uppercased U+10D0 (text-transform-unicase-001).
+            if (c is >= '\u10D0' and <= '\u10FA' or >= '\u10FD' and <= '\u10FF')
+            {
+                sb.Append(c);
+                continue;
+            }
             // The Turkish/Azerbaijani i-rule: dotted/dotless i swap (Unicode SpecialCasing tr).
             if (LangMatches(lang, "tr") || LangMatches(lang, "az"))
             {
@@ -1613,9 +1695,16 @@ public static class StyleExtensions
     }
 
     // Margins
-    public static float GetMarginTop(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginTop, total, size);
+    // §10.6.3/§10.6.4: an 'auto' top or bottom margin is 0 wherever the vertical axis is not
+    // over-determined; the one case that shares out leftover space (an abs-pos box with top,
+    // height and bottom all given) reads the IsAutoMargin* flags and solves it itself. The
+    // generic 'auto' size here centred in the viewport, so margin collapsing read 384px for a
+    // 'margin: auto 2px' block (inline-formatting-context-023-ref).
+    public static float GetMarginTop(this LayoutNode node, float total = 0, float size = 0) =>
+        node.IsAutoMarginTop() ? 0f : GetSize(node, PropertyNames.MarginTop, total, size);
     public static float GetMarginRight(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginRight, total, size);
-    public static float GetMarginBottom(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginBottom, total, size);
+    public static float GetMarginBottom(this LayoutNode node, float total = 0, float size = 0) =>
+        node.IsAutoMarginBottom() ? 0f : GetSize(node, PropertyNames.MarginBottom, total, size);
     public static float GetMarginLeft(this LayoutNode node, float total = 0, float size = 0) => GetSize(node, PropertyNames.MarginLeft, total, size);
 
     // CSS 2.1 §8.3 / §8.4: percentage margins AND padding resolve against the containing
@@ -1623,9 +1712,9 @@ public static class StyleExtensions
     // signature for callers but is intentionally not used as the percentage basis here.)
     public static EdgeSizes GetMargin(this LayoutNode node, float totalWidth = 0, float totalHeight = 0, float fontSize = 16) => new()
     {
-        Top = GetSize(node, PropertyNames.MarginTop, totalWidth, fontSize),
+        Top = node.GetMarginTop(totalWidth, fontSize),
         Right = GetSize(node, PropertyNames.MarginRight, totalWidth, fontSize),
-        Bottom = GetSize(node, PropertyNames.MarginBottom, totalWidth, fontSize),
+        Bottom = node.GetMarginBottom(totalWidth, fontSize),
         Left = GetSize(node, PropertyNames.MarginLeft, totalWidth, fontSize),
     };
 

@@ -25,6 +25,18 @@ public static class DynamicStyleTests
     }
 
     [Test]
+    public static void LayeredBackground_WithAnOmittedComponent_Computes()
+    {
+        // line-height-201: the second layer ('red') has no size; computing the size list must
+        // not throw, and the element keeps its other declarations.
+        var root = Layout("<!DOCTYPE html><style>div{width:50px;height:100px;" +
+            "background:url(x.png) 0 0 / 50px 100px no-repeat, red}</style><div id=\"d\">x</div>");
+        LayoutNode? Find(LayoutNode n) => n.Id == "d" ? n : n.Children.Select(Find).FirstOrDefault(f => f is not null);
+        var d = Find(root);
+        True(d is not null && d.Box.BorderBox.Width == 50f, $"the div lays out at its declared width, got {d?.Box.BorderBox.Width}");
+    }
+
+    [Test]
     public static void FlowRoot_EstablishesABfcBesideAFloat()
     {
         var root = Layout("<!DOCTYPE html><style>body{margin:0} .f{float:left;width:7px;height:8px;margin:0 3px 0 2px}" +
@@ -45,6 +57,28 @@ public static class DynamicStyleTests
         True(x is not null, "created element missing");
         True(x!.GetBorderWidth().Top == 3f, $"border must apply, got {x.GetBorderWidth().Top}");
         True(x.GetBackgroundColor() == new SkiaSharp.SKColor(0, 255, 255), $"background must apply, got {x.GetBackgroundColor()}");
+    }
+
+    [Test]
+    public static void MaxHeight_ClampsInlineBlocksFloatsAndCaptions()
+    {
+        // §10.7: 'height: 200px; max-height: 100px' is 100px tall on an inline-block
+        // (max-height-applies-to-012), a float (018) and a table caption (015); a 100% child of
+        // the clamped inline-block is 100px too (017).
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            ".c{height:200px;max-height:100px;width:50px}" +
+            "#ib{display:inline-block} #f{float:left} #cap{display:table-caption}" +
+            "#kid{display:inline-block;width:10px;height:100%}</style>" +
+            "<div><span id=\"ib\" class=\"c\"><span id=\"kid\"></span></span></div>" +
+            "<div id=\"f\" class=\"c\"></div>" +
+            "<div style=\"display:table\"><div id=\"cap\" class=\"c\"></div><div style=\"display:table-row\"><div style=\"display:table-cell\">x</div></div></div>");
+        LayoutNode? Find(LayoutNode n, string id) => n.Id == id ? n : n.Children.Select(c => Find(c, id)).FirstOrDefault(f => f is not null);
+        foreach (var id in new[] { "ib", "f", "cap", "kid" })
+        {
+            var node = Find(root, id);
+            True(node is not null && MathF.Abs(node.Box.ContentBox.Height - 100f) < 0.5f,
+                $"#{id} is clamped to 100px, got {node?.Box.ContentBox.Height}");
+        }
     }
 
     private static void True(bool condition, string message)

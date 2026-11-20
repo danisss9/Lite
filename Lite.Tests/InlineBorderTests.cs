@@ -166,4 +166,69 @@ public static class InlineBorderTests
                 $"line 2's border box starts at the content edge, left of line 1's (which carries the leading edges), got {boxes[1].BorderBox.Left} vs {boxes[0].BorderBox.Left}");
         }
     }
+
+    [Test]
+    public static void InlineBorder_WrapsTheFontContentArea_NotTheLineHeight()
+    {
+        // §10.6.1 (inlines-003, outline-020): in a 16px Ahem line with line-height 4 (64px), a
+        // bordered span's content area is the font's 16px (ascent 12.8 + descent 3.2), centred
+        // in the line box — its border must not reach the 64px line edges, or the boxes of two
+        // wrapped lines meet.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div style='font:16px/4 Ahem'><span style='border:8px solid blue'>X</span></div></body></html>");
+        var span = FindNode(root, n => n.TagName == "SPAN")!;
+        var area = BoxEngine.InlineContentArea(span, span.Box);
+        True(MathF.Abs(area.ContentBox.Height - 16f) < 0.5f,
+            $"the content area is the font's 16px, got {area.ContentBox.Height}");
+        True(MathF.Abs(area.ContentBox.Top - 24f) < 0.5f,
+            $"the half-leading (24px) sits above the content area, got top {area.ContentBox.Top}");
+        True(area.BorderBox.Top > 0f && area.BorderBox.Bottom < 64f,
+            $"the border box stays inside the 64px line, got {area.BorderBox.Top}..{area.BorderBox.Bottom}");
+    }
+
+    [Test]
+    public static void ClosingMargin_BreaksInsideTheSpansText_NotBeforeIt()
+    {
+        // c5502-imrgn-r-001: in a 13em box, 'x <span margin-right:4em>xxxxx xxxxx</span> x'
+        // fills line 1 up to 'x xxxxx' — the closing margin is glued to the span's last word,
+        // so that word moves down with it, not the whole span. Two lines, not three.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<p style='font:15px/1 Ahem;width:13em;margin:0'>x <span style='margin-right:4em'>xxxxx xxxxx</span> x</p></body></html>");
+        var p = FindNode(root, n => n.TagName == "P")!;
+        True(MathF.Abs(p.Box.ContentBox.Height - 30f) < 0.5f,
+            $"the paragraph takes two 15px lines, got height {p.Box.ContentBox.Height}");
+    }
+
+    [Test]
+    public static void TrailingSpaceAtALineEnd_IsNotCoveredByTheInlineBox()
+    {
+        // c5502-imrgn-r-002 (§16.6.1): a span broken after 'xx ' does not reach over the
+        // removed end-of-line space — its first fragment is one 'xx' (30px) wide, not 45px.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<p style='font:15px/1 Ahem;width:5em;margin:0'>xx xx <span style='margin-right:4em;background:red'>xx xx</span> xx xx</p></body></html>");
+        var span = FindNode(root, n => n.TagName == "SPAN")!;
+        var widths = (span.InlineFragments ?? []).Select(f => f.Rect.Width).ToList();
+        if (widths.Count == 0 && span.InlineFragmentBoxes is { } boxes) widths = boxes.Select(b => b.ContentBox.Width).ToList();
+        True(widths.Count >= 2 && MathF.Abs(widths[0] - 30f) < 0.5f,
+            $"the span's first fragment is 30px wide, got [{string.Join(", ", widths)}]");
+    }
+
+    [Test]
+    public static void ContentAfterAWrappedRun_SitsBesideItsLastLine()
+    {
+        // A run that wraps breaks into one item per line, so what follows it continues its LAST
+        // line: in a 5em (75px) box 'xx xx xx<span>Y</span>' is 'xx xx' / 'xx' + 'Y', the Y at
+        // x=30 on line 2 — not past the whole run's width (c5502-imrgn-r-003/004).
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<p style='font:15px/1 Ahem;width:5em;margin:0'>xx xx xx<span>Y</span></p></body></html>");
+        var span = FindNode(root, n => n.TagName == "SPAN")!;
+        var box = span.Box.ContentBox;
+        if (box.IsEmpty && span.InlineFragmentBoxes is { Count: > 0 } frags) box = frags[0].ContentBox;
+        True(MathF.Abs(box.Left - 30f) < 0.5f && MathF.Abs(box.Top - 15f) < 0.5f,
+            $"Y follows 'xx' on line 2 at (30,15), got ({box.Left},{box.Top})");
+    }
 }

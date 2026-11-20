@@ -3222,12 +3222,14 @@
   {
    "path": "css/CSS2/backgrounds/background-animated-001.xht",
    "suite": "css21-wpt",
-   "condition": "manual",
+   "condition": "visual",
    "sentence": "There should be an animated construction sign below.",
    "twin": null,
    "reviewed": true,
-   "manualPending": true,
-   "note": "animated/blink rendering — a UA-permitted animation the suite flags \"may animated\"; decided by observing the animation (manual evidence pending)"
+   "note": "time protocol (AnimatedImageCheck): the page is rendered at the middle of each frame of the GIF's first loop and each render must show exactly that frame composited over the page; reviewed 2026-11-19 when Lite implemented animated GIFs",
+   "check": {
+    "kind": "image-animates"
+   }
   },
   {
    "path": "css/CSS2/backgrounds/background-applies-to-008.xht",
@@ -39979,12 +39981,14 @@
   {
    "path": "css21-official/html4/background-animated-001.htm",
    "suite": "css21-official",
-   "condition": "manual",
+   "condition": "visual",
    "sentence": "There should be an animated construction sign below.",
    "twin": null,
    "reviewed": true,
-   "manualPending": true,
-   "note": "animated/blink rendering — a UA-permitted animation the suite flags \"may animated\"; decided by observing the animation (manual evidence pending)"
+   "note": "time protocol (AnimatedImageCheck): the page is rendered at the middle of each frame of the GIF's first loop and each render must show exactly that frame composited over the page; reviewed 2026-11-19 when Lite implemented animated GIFs",
+   "check": {
+    "kind": "image-animates"
+   }
   },
   {
    "path": "css21-official/html4/background-applies-to-001.htm",

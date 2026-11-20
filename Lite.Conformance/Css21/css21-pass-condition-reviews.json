@@ -15,6 +15,14 @@
    "note": "the stated condition (\"This document has a white background overlayed with a fixed-positioned image with a multi-bit alpha channel. In the middle of the page is a square div with a he\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
   },
   {
+   "path": "css/CSS2/backgrounds/background-animated-001.xht",
+   "condition": "visual",
+   "check": {
+    "kind": "image-animates"
+   },
+   "note": "time protocol (AnimatedImageCheck): the page is rendered at the middle of each frame of the GIF's first loop and each render must show exactly that frame composited over the page; reviewed 2026-11-19 when Lite implemented animated GIFs"
+  },
+  {
    "path": "css/CSS2/backgrounds/background-applies-to-008.xht",
    "condition": "manual",
    "manualPending": true,
@@ -3601,6 +3609,14 @@
    "condition": "manual",
    "manualPending": true,
    "note": "the stated condition (\"This document has a white background overlayed with a fixed-positioned image with a multi-bit alpha channel. In the middle of the page is a square div with a he\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+  },
+  {
+   "path": "css21-official/html4/background-animated-001.htm",
+   "condition": "visual",
+   "check": {
+    "kind": "image-animates"
+   },
+   "note": "time protocol (AnimatedImageCheck): the page is rendered at the middle of each frame of the GIF's first loop and each render must show exactly that frame composited over the page; reviewed 2026-11-19 when Lite implemented animated GIFs"
   },
   {
    "path": "css21-official/html4/background-attachment-004.htm",

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Lite.Animation;
 using Lite.Interaction;
 using Lite.Layout;
+using Lite.Media;
 using Lite.Models;
 using Lite.Network;
 using Lite.Platform;
@@ -209,6 +210,9 @@ public class BrowserWindow
             {
                 (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
                 _host.Invalidate();
+                // A script that brought an animated image on screen needs the timer running.
+                if (AnimatedImages.Pending(Environment.TickCount64))
+                    StartAnimationTimer();
             }
             // If a drained task queued more work, make sure we come back for it.
             if (taskEngine.HasPendingTreeTasks)
@@ -260,6 +264,8 @@ public class BrowserWindow
         if (_rootNode != null)
         {
             var stillRunning = AnimationEngine.Tick(_rootNode);
+            // Animated images (GIF): show each one's frame due now.
+            stillRunning |= AnimatedImages.Advance(Environment.TickCount64, _rootNode);
 
             // Dispatch animation/transition lifecycle events
             foreach (var ev in AnimationEngine.DrainEvents())
@@ -271,7 +277,8 @@ public class BrowserWindow
 
             (_pixels, _hitRegions) = Drawer.Draw(_width, _height, _rootNode, _viewport);
             _host.Invalidate();
-            if (!stillRunning && !(engine?.HasPendingTreeRAF ?? false))
+            // The paint itself may have reached an animated image for the first time.
+            if (!stillRunning && !(engine?.HasPendingTreeRAF ?? false) && !AnimatedImages.Pending(Environment.TickCount64))
                 StopAnimationTimer();
         }
     }

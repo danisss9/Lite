@@ -351,10 +351,12 @@ public class LayoutNode
     public List<BoxDimensions>? InlineFragmentBoxes { get; set; }
 
     /// <summary>
-    /// Per-line-box band for this text node when floats make the available width vary down the
-    /// paragraph (CSS 2.1 §9.5): the absolute left edge and width of each successive line. Layout
-    /// wraps against these, and the painter draws each line at its own X, so both agree. Null when
-    /// no float shortens the text.
+    /// Per-line-box band for this text node when floats (CSS 2.1 §9.5) or the first line's
+    /// 'text-indent' (§16.1) make the available width vary down the paragraph: each successive
+    /// line's left edge, RELATIVE to the content box's left edge, and its width. Layout wraps
+    /// against these, and the painter draws each line at content left + X, so both agree even
+    /// when the box was measured at a provisional position (an inline-block). Null when every
+    /// line has the full width.
     /// </summary>
     public List<(float X, float Width)>? LineBands { get; set; }
 

@@ -47,7 +47,7 @@ internal static class WptVisualPage
         string waitClass = "reftest-wait", Css21.ScrollSpec? elementScroll = null,
         Func<Lite.Models.LayoutNode, (float ScrollX, float ScrollY)>? pageScroll = null,
         bool testDriver = false, float scale = 1f, Css21.InteractionSpec? interaction = null, string? sentence = null,
-        bool hideScrollbars = false)
+        bool hideScrollbars = false, bool animation = false)
     {
         var width = 800;
         var height = 600;
@@ -105,6 +105,8 @@ internal static class WptVisualPage
         }
         if (interaction is not null && window is not null)
             return RenderInteraction(window, engine, root, interaction, sentence, Draw, width, height);
+        if (animation && Css21.AnimatedImageCheck.Find(root) is { } animated)
+            return RenderAnimation(root, animated.Surface, Draw);
         if (elementScroll is null && pageScroll is null)
         {
             var (plain, plainPaint) = Draw();
@@ -153,6 +155,34 @@ internal static class WptVisualPage
             return (finalBmp, root, mid, before, paint, null);
         }
         catch { Lite.Rendering.PaintLog.End(); throw; }
+    }
+
+    /// <summary>The time protocol's renders (<see cref="Css21.AnimatedImageCheck"/>): the page's
+    /// animated image is shown at the middle of each frame of its first loop. The final render
+    /// is frame 0; the states are the later frames, in order. The clock returns to 0 after.</summary>
+    private static (SKBitmap Bitmap, Lite.Models.LayoutNode Root, SKBitmap? Mid, SKBitmap? Before,
+        IReadOnlyList<Lite.Rendering.PaintLog.Entry> Paint, IReadOnlyList<(string Name, SKBitmap Bitmap)>? States)
+        RenderAnimation(Lite.Models.LayoutNode root, SKBitmap surface,
+        Func<(SKBitmap, IReadOnlyList<Lite.Rendering.PaintLog.Entry>)> draw)
+    {
+        var times = Css21.AnimatedImageCheck.SampleTimes(surface);
+        var now = Environment.TickCount64;
+        try
+        {
+            Lite.Media.AnimatedImages.SeekAll(times[0], now);
+            var (first, paint) = draw();
+            var states = new List<(string Name, SKBitmap Bitmap)>();
+            foreach (var t in times.Skip(1))
+            {
+                Lite.Media.AnimatedImages.SeekAll(t, now);
+                states.Add(($"t={t}ms", draw().Item1));
+            }
+            return (first, root, null, null, paint, states);
+        }
+        finally
+        {
+            Lite.Media.AnimatedImages.SeekAll(0, now);
+        }
     }
 
     /// <summary>The interaction protocol's renders: at rest, each interacted state (the first
@@ -318,7 +348,8 @@ internal static class WptVisualPage
                 : (Func<Lite.Models.LayoutNode, (float, float)>)(root => Css21.VisualChecks.PageScrollExtent(pageTarget, root, width, height));
             var (bitmap, root, mid, before, paint, states) = Render(test.Path, test.Options?["viewport_size"]?.GetValue<string>(),
                 elementScroll: pageTarget is null ? scroll : null, pageScroll: pageScroll, scale: scale,
-                interaction: statedCheck?.Interaction, sentence: sentence);
+                interaction: statedCheck?.Interaction, sentence: sentence,
+                animation: statedCheck?.Kind == Css21.AnimatedImageCheck.Kind);
             var renders = new Css21.RenderSet(bitmap, mid, before, paint, states);
             using (bitmap)
             {

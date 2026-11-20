@@ -215,20 +215,44 @@ public class JsStyle
             yield return (longhands[3], left);
             yield break;
         }
-        if (property == "border")
+        // 'border' sets all four sides; 'border-top' / '-right' / '-bottom' / '-left' set one
+        // (§8.5.4), each omitted component resetting to its initial value. The per-side forms
+        // were not expanded, so 'border: 5px solid; border-left: none' kept a solid left side
+        // (block-in-inline-empty-001's span drew 3px side borders).
+        string[]? borderSides = property switch
         {
+            "border" => ["top", "right", "bottom", "left"],
+            "border-top" => ["top"],
+            "border-right" => ["right"],
+            "border-bottom" => ["bottom"],
+            "border-left" => ["left"],
+            _ => null,
+        };
+        if (borderSides is not null)
+        {
+            // A CSS-wide keyword applies to every longhand as is (it is not a color).
+            if (value.Trim().ToLowerInvariant() is "inherit" or "initial" or "unset" or "revert" is var keyword && keyword)
+            {
+                foreach (var side in borderSides)
+                {
+                    yield return ($"border-{side}-width", value.Trim());
+                    yield return ($"border-{side}-style", value.Trim());
+                    yield return ($"border-{side}-color", value.Trim());
+                }
+                yield break;
+            }
             string? width = null, style = null, color = null;
             foreach (var part in TopLevelParts(value))
             {
                 var lower = part.Trim().ToLowerInvariant();
+                if (lower.Length == 0) continue;
                 if (BorderStyleKeywords.Contains(lower)) style = part;
                 else if (BorderWidthKeywords.Contains(lower) ||
                          char.IsDigit(lower[0]) || lower[0] == '.' || lower[0] == '-')
                     width = part;
                 else color = part;
             }
-            var sides = new[] { "top", "right", "bottom", "left" };
-            foreach (var side in sides)
+            foreach (var side in borderSides)
             {
                 yield return ($"border-{side}-width", width ?? "medium");
                 yield return ($"border-{side}-style", style ?? "none");

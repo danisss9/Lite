@@ -38,6 +38,18 @@ public class JsDocument
         _all = new JsHtmlAllCollection(engine, root);
     }
 
+    /// <summary>document.fonts — CSS Font Loading's FontFaceSet, reduced to what pages wait on.
+    /// Lite loads a document's fonts synchronously while it styles and lays out, so the set is
+    /// always "loaded" and <c>ready</c> is already resolved (table-anonymous-objects-214 and the
+    /// css/CSS2 pages that take their screenshot after <c>document.fonts.ready</c>). One object
+    /// per realm, so every facade answers the same set.</summary>
+    public object fonts => _engine.Evaluate(
+        "globalThis.__liteFontFaceSet ??= (() => { const s = { status: 'loaded', size: 0, " +
+        "check() { return true; }, load() { return Promise.resolve([]); }, forEach() {}, has() { return false; }, " +
+        "add() { return s; }, delete() { return false; }, clear() {}, addEventListener() {}, removeEventListener() {}, " +
+        "dispatchEvent() { return true; }, onloading: null, onloadingdone: null, onloadingerror: null }; " +
+        "s.ready = Promise.resolve(s); return s; })()");
+
     /// <summary>document.implementation (DOM §4.5): the DOMImplementation of this document.</summary>
     public JsDomImplementation implementation => new(_engine, _document ?? State?.Document);
 
@@ -134,8 +146,7 @@ public class JsDocument
     {
         for (var i = node.Children.Count - 1; i >= 0; i--)
             if (NodeAtPoint(node.Children[i], x, y) is { } hit) return hit;
-        var box = node.Box.BorderBox;
-        return box.Width > 0 && box.Height > 0 && box.Contains(x, y) ? node : null;
+        return Lite.Layout.BoxEngine.HitsBorderBox(node, x, y) ? node : null;
     }
 
     public JsElement? head => _document?.Head is { } head ? Wrap(head) :

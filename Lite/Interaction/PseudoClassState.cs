@@ -221,10 +221,7 @@ internal static class PseudoClassState
             if (result != null) return result;
         }
 
-        var box = root.Box.BorderBox;
-        if (box.Width > 0 && box.Height > 0 && box.Contains(x, y))
-            return root;
-        return null;
+        return Lite.Layout.BoxEngine.HitsBorderBox(root, x, y) ? root : null;
     }
 
     /// <summary>Finds a node by its NodeKey (iterative, cycle-safe).</summary>

@@ -710,9 +710,9 @@ internal static class Drawer
                     if (bgColor != SKColors.Transparent)
                     {
                         using var fragBg = new SKPaint { Color = bgColor };
-                        canvas.DrawRect(rect, fragBg);
+                        canvas.DrawRect(BoxEngine.InlineContentArea(node, rect), fragBg);
                     }
-                    DrawWrappedText(canvas, node, text, rect.Left, rect.Top, rect.Width, font, paint, lineAligned: true);
+                    DrawWrappedText(canvas, node, text, rect.Left, rect.Top, SliceWidth(node, text, font, rect.Width), font, paint, lineAligned: true);
                 }
                 return;
             }
@@ -722,7 +722,7 @@ internal static class Drawer
                 // §14.2: a background paints over the PADDING box. For an inline box that is the
                 // text plus whatever horizontal padding the line reserved for it (§8.4).
                 using var bgPaint = new SKPaint { Color = bgColor };
-                canvas.DrawRect(node.Box.PaddingBox, bgPaint);
+                canvas.DrawRect(BoxEngine.InlineContentArea(node, node.Box).PaddingBox, bgPaint);
             }
             // NOTE: an inline box's BORDERS are still not drawn. Reserving room for them in the
             // line and stroking them here was measured against the CSS 2.1 suite and came out
@@ -740,7 +740,8 @@ internal static class Drawer
             var paintedText = node.InlineFragments is { Count: > 0 } fs ? fs[^1].Text : node.RenderedText();
             DrawWrappedText(canvas, node, paintedText,
                 node.Box.ContentBox.Left, node.Box.ContentBox.Top,
-                node.Box.ContentBox.Width, font, paint, lineAligned: true);
+                node.InlineFragments is { Count: > 0 } ? SliceWidth(node, paintedText, font, node.Box.ContentBox.Width) : node.Box.ContentBox.Width,
+                font, paint, lineAligned: true);
             return;
         }
 
@@ -1275,6 +1276,18 @@ internal static class Drawer
         // the element that produced them — painting "their" borders would paint the HOST's
         // border as an inner ring (content-white-space-001's bordered div around a :before).
         var paintsOwnBorders = !node.TagName.StartsWith('#');
+        // §14.2: a boxless inline wrapper's BACKGROUND paints over each line fragment's padding
+        // box too — it was never painted, so an inline whose content is another inline showed
+        // no background at all, not even under its child's margin (inline-formatting-context-002:
+        // the black stripe left of 'Filler Text').
+        var wrapperBackground = paintsOwnBorders && bgColor != SKColors.Transparent &&
+                                node.InlineFragmentBoxes is { Count: > 0 };
+        if (wrapperBackground)
+        {
+            using var wrapperBg = new SKPaint { Color = bgColor };
+            foreach (var wrapperBox in node.InlineFragmentBoxes!)
+                canvas.DrawRect(wrapperBox.PaddingBox, wrapperBg);
+        }
         // §8.4/§8.6: a boxless inline wrapper's borders paint per line from the fragments line
         // layout assembled (side masks included) — this is the only border geometry a wrapper
         // has, since its painted geometry lives in its content rather than its own Box.
@@ -1293,42 +1306,57 @@ internal static class Drawer
             // left, the right border at the LAST fragment's right, and the top/bottom borders on
             // EVERY fragment (a fragment's join sides stay empty). Zero-width sides are skipped
             // inside DrawBorderSide, so masking through the Border edges is the whole rule.
-            var fragPadding = node.GetPadding(0, 0, node.GetFontSize());
+            // Anonymous boxes (#text) resolve styles from their parent element: they have no
+            // padding or border of their own (taking the parent's 3em padding spread each line's
+            // background over the line above it, background-root-017-ref).
+            var fragPadding = paintsOwnBorders ? node.GetPadding(0, 0, node.GetFontSize()) : default;
             var fragBorder = paintsOwnBorders ? node.GetBorderWidth() : default;
+            // The join sides carry no PADDING either: line 1 of a split padded span ends at its
+            // text and line 2 starts at its text (inline-formatting-context-022 drew both join
+            // sides 1em too wide). The background covers each fragment's padding box (§14.2).
+            BoxDimensions FragmentBox(int fi, SKRect area) => new()
+            {
+                ContentBox = area,
+                Padding = new EdgeSizes
+                {
+                    Top = fragPadding.Top,
+                    Bottom = fragPadding.Bottom,
+                    Left = fi == 0 ? fragPadding.Left : 0f,
+                    Right = fi == fragments.Count - 1 ? fragPadding.Right : 0f,
+                },
+                Border = new EdgeSizes
+                {
+                    Top = fragBorder.Top,
+                    Bottom = fragBorder.Bottom,
+                    Left = fi == 0 ? fragBorder.Left : 0f,
+                    Right = fi == fragments.Count - 1 ? fragBorder.Right : 0f,
+                },
+            };
             for (var fi = 0; fi < fragments.Count; fi++)
             {
                 var (rect, text) = fragments[fi];
                 if (hitTarget) _hitRegions.Add(CursorRegion(rect, node, nodeKey: node.NodeKey));
+                var box = FragmentBox(fi, BoxEngine.InlineContentArea(node, rect));
                 if (bgColor != SKColors.Transparent)
                 {
                     using var fragBg = new SKPaint { Color = bgColor };
-                    canvas.DrawRect(rect, fragBg);
+                    canvas.DrawRect(box.PaddingBox, fragBg);
                 }
-                DrawBorders(canvas, new BoxDimensions
-                {
-                    ContentBox = rect,
-                    Padding = fragPadding,
-                    Border = new EdgeSizes
-                    {
-                        Top = fragBorder.Top,
-                        Bottom = fragBorder.Bottom,
-                        Left = fi == 0 ? fragBorder.Left : 0f,
-                        Right = fi == fragments.Count - 1 ? fragBorder.Right : 0f,
-                    },
-                }, node);
-                DrawWrappedText(canvas, node, text, rect.Left, rect.Top, rect.Width, font, paint, lineAligned: true);
+                DrawBorders(canvas, box, node);
+                DrawWrappedText(canvas, node, text, rect.Left, rect.Top, SliceWidth(node, text, font, rect.Width), font, paint, lineAligned: true);
             }
             // §18.4: an inline element's outline is drawn around each line fragment (the
             // UA may also draw the union; per-fragment is the common rendering).
             if (paintsOwnBorders)
                 for (var fi = 0; fi < fragments.Count; fi++)
-                    DrawOutline(canvas, new BoxDimensions { ContentBox = fragments[fi].Rect, Padding = fragPadding, Border = fragBorder }, node);
+                    DrawOutline(canvas, FragmentBox(fi, BoxEngine.InlineContentArea(node, fragments[fi].Rect)), node);
             return true;
         }
-        if (bgColor != SKColors.Transparent)
+        var decorated = string.IsNullOrEmpty(node.DisplayText) ? node.Box : BoxEngine.InlineContentArea(node, node.Box);
+        if (bgColor != SKColors.Transparent && !wrapperBackground)
         {
             using var bgPaint = new SKPaint { Color = bgColor };
-            canvas.DrawRect(node.Box.PaddingBox, bgPaint);
+            canvas.DrawRect(decorated.PaddingBox, bgPaint);
         }
         if (hitTarget && !node.Box.BorderBox.IsEmpty)
             _hitRegions.Add(CursorRegion(node.Box.BorderBox, node, nodeKey: node.NodeKey));
@@ -1336,7 +1364,7 @@ internal static class Drawer
         // line layout recorded (borders were laid out but never painted: a 90px border on
         // display:inline painted nothing, border-width-applies-to-008). A boxless inline wrapper
         // (its geometry lives in its fragments) carries zero Border edges and paints nothing here.
-        DrawBorders(canvas, node.Box, node);
+        DrawBorders(canvas, decorated, node);
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
             // Line-positioned rect (see the generic inline path): no re-alignment, and the
@@ -1344,8 +1372,9 @@ internal static class Drawer
             // not the raw RenderedText an XML-served document still carries.
             var paintedText = node.InlineFragments is { Count: > 0 } fs ? fs[^1].Text : node.RenderedText();
             DrawWrappedText(canvas, node, paintedText,
-                node.Box.ContentBox.Left, node.Box.ContentBox.Top, node.Box.ContentBox.Width, font, paint,
-                lineAligned: true);
+                node.Box.ContentBox.Left, node.Box.ContentBox.Top,
+                node.InlineFragments is { Count: > 0 } ? SliceWidth(node, paintedText, font, node.Box.ContentBox.Width) : node.Box.ContentBox.Width,
+                font, paint, lineAligned: true);
         }
         // §18.4 outlines apply to inline elements too (outline-pseudo-selector-002's hovered
         // span): around the unsplit border box, or each fragment a boxless wrapper assembled.
@@ -1354,7 +1383,7 @@ internal static class Drawer
             if (node.InlineFragmentBoxes is { Count: > 0 } wrapperBoxes)
                 foreach (var wrapperBox in wrapperBoxes) DrawOutline(canvas, wrapperBox, node);
             else if (!node.Box.BorderBox.IsEmpty)
-                DrawOutline(canvas, node.Box, node);
+                DrawOutline(canvas, decorated, node);
         }
         return false;
     }
@@ -1458,7 +1487,7 @@ internal static class Drawer
             // table row when both measurements sit on the same pixel boundary.
             var lineHeight = node.GetLineHeight(node.GetFontSize());
             var paintWidth = box.ContentBox.Height <= lineHeight + 0.5f
-                ? box.ContentBox.Width + 1f : box.ContentBox.Width;
+                ? SliceWidth(node, node.RenderedText(), font, box.ContentBox.Width) + 1f : box.ContentBox.Width;
             DrawWrappedText(canvas, node, node.RenderedText(), box.ContentBox.Left, box.ContentBox.Top,
                             paintWidth, font, paint, lineAligned: true);
             if (!box.BorderBox.IsEmpty) DrawOutline(canvas, box, node);
@@ -2995,8 +3024,9 @@ internal static class Drawer
         if (firstLineStyles is not null && DescendsFromFloat(node)) firstLineStyles = null;
         var firstLineTransform = firstLineStyles is null ? TextTransform.None : BoxEngine.FirstLineTransform(node);
 
-        // Apply text-transform (§16.5; language-sensitive rules read the inherited lang)
-        text = StyleExtensions.ApplyTextTransform(text, textTransform, node.GetLanguage());
+        // Text-transform (§16.5) is already applied: every caller passes RenderedText or a
+        // slice of it. Transforming again re-capitalized a word continued from an earlier
+        // inline ('T<span>his</span>' painted 'THis', text-transform-cap-002).
 
         // Layout may have wrapped this text against a per-line band (text beside a float, CSS 2.1
         // §9.5). Painting has to use exactly the same bands or the lines break in different places
@@ -3058,7 +3088,7 @@ internal static class Drawer
             if (!lineAligned && bands is { Count: > 0 })
             {
                 var band = bands[Math.Min(lineIndex, bands.Count - 1)];
-                lineX0 = band.X;
+                lineX0 = x + band.X;
                 lineMaxW = band.Width;
             }
             var drawX = lineAligned ? lineX0 : textAlign switch
@@ -3071,14 +3101,20 @@ internal static class Drawer
             // A justified line visually spans the full width (used for underline/strike extents).
             var drawnWidth = justified ? LineBandWidth(bands, lineIndex, maxWidth) : lineWidth;
 
-            // Apply text-indent on first line
-            if (isFirstLine && textIndent != 0f)
+            // Apply text-indent on first line. A line-positioned slice (lineAligned) already
+            // sits where layout indented its line (§16.1): shifting it again indented the first
+            // line of every inline text node, not just the block's first line.
+            if (isFirstLine && textIndent != 0f && !lineAligned && node.GetDirection() != "rtl")
             {
                 drawX += textIndent;
             }
 
-            // SkiaSharp draws at baseline; add ascent to convert top→baseline
-            var baseline = lineY + line.Ascent;
+            // SkiaSharp draws at baseline; add ascent to convert top→baseline. The baseline
+            // snaps to a whole DEVICE pixel, as browsers place glyph runs: a line box at a
+            // fractional y (a 17.875px paragraph above it) otherwise blended every glyph edge,
+            // so Ahem squares never matched a reference built from pixel-aligned images
+            // (c5502-imrgn-r-003's "HI").
+            var baseline = SnapToDevicePixelY(canvas, lineY + line.Ascent);
 
             // Determine paint/font for this line (::first-line override)
             var linePaint = paint;
@@ -3199,6 +3235,16 @@ internal static class Drawer
     }
 
     /// <summary>Draws text with custom letter-spacing and word-spacing.</summary>
+    /// <summary>Rounds a y coordinate to the nearest whole device pixel under the canvas's
+    /// current transform (translation and scale only; any other transform leaves it as is).</summary>
+    private static float SnapToDevicePixelY(SKCanvas canvas, float y)
+    {
+        var m = canvas.TotalMatrix;
+        if (m.SkewX != 0 || m.SkewY != 0 || m.ScaleY == 0 || m.Persp0 != 0 || m.Persp1 != 0) return y;
+        var device = y * m.ScaleY + m.TransY;
+        return (MathF.Round(device) - m.TransY) / m.ScaleY;
+    }
+
     private static void DrawTextWithSpacing(SKCanvas canvas, string text, float x, float y,
                                             SKFont font, SKPaint paint, float letterSpacing, float wordSpacing)
     {
@@ -3284,6 +3330,22 @@ internal static class Drawer
 
     /// <summary>Measures text width including letter-spacing and word-spacing. Shared with layout
     /// (<see cref="TextMeasure.MeasureWithSpacing"/>) so the two agree on how wide the text is.</summary>
+    /// <summary>The width a laid-out line slice paints its text in: never narrower than the
+    /// slice's own text. Layout trims the end-of-line collapsible space off a fragment's rect
+    /// (§16.6.1: the inline box does not reach over it), but the slice is already one line, so
+    /// re-wrapping its spaced text into the trimmed rect would split it and strip the leading
+    /// space of " d " (table-anonymous-objects-177). Only a slice whose text fits the rect once
+    /// its trailing spaces are dropped is widened.</summary>
+    private static float SliceWidth(LayoutNode node, string text, SKFont font, float rectWidth)
+    {
+        if (text.Length == 0 || !char.IsWhiteSpace(text[^1])) return rectWidth;
+        var shown = text; // already transformed (RenderedText or a slice of it)
+        var (ls, ws) = (node.GetLetterSpacing(font.Size), node.GetWordSpacing(font.Size));
+        // Only the trimmed space is given back: text wider than its rect without it still wraps.
+        if (MeasureWithSpacing(shown.TrimEnd(), font, ls, ws) > rectWidth + 0.5f) return rectWidth;
+        return Math.Max(rectWidth, MeasureWithSpacing(shown, font, ls, ws));
+    }
+
     private static float MeasureWithSpacing(string text, SKFont font, float letterSpacing, float wordSpacing)
         => TextMeasure.MeasureWithSpacing(text, font, letterSpacing, wordSpacing);
 }

@@ -244,16 +244,34 @@ internal static class BoxEngine
     {
         var result = new List<LayoutNode>();
         var piece = CloneInlineShell(inline);
+        // §9.2.1.1 with §8.6: the box's start edges (margin, border, padding) belong to its FIRST
+        // piece and its end edges to its LAST one; a piece between two blocks has neither. Every
+        // piece used to paint as a whole box, closing the first piece with a right border and
+        // opening the last with a left one (block-in-inline-insert-001a: 'OneTwoThree' boxed on
+        // all four sides, 'Six' between blocks boxed too).
+        var afterBlock = false;
+        var emitted = new List<(LayoutNode Piece, bool AfterBlock)>();
+        // An empty piece is still an inline box when it carries a horizontal edge (the last
+        // piece's 'padding-right: 10px', block-in-inline-empty-001): it is kept tentatively and
+        // dropped below once its sides are known to be zero.
+        var emptyPieces = new List<LayoutNode>();
 
         void FlushPiece()
         {
-            if (PieceHasVisibleContent(piece)) result.Add(piece);
+            var visible = PieceHasVisibleContent(piece);
+            if (visible || IsSplittableInline(piece))
+            {
+                result.Add(piece);
+                emitted.Add((piece, afterBlock));
+                if (!visible) emptyPieces.Add(piece);
+            }
             piece = CloneInlineShell(inline);
         }
 
         void EmitBlock(LayoutNode block)
         {
             FlushPiece();
+            afterBlock = true;
             // §9.2.1.1 last sentence: relative positioning of the inline (and its inline ancestors)
             // also translates the block-level box it was broken around.
             PropagateRelativePosition(inline, block);
@@ -294,8 +312,36 @@ internal static class BoxEngine
             }
             else AddToPiece(child);
         }
+        var beforeAnyBlock = !afterBlock;
         FlushPiece();
+        if (!beforeAnyBlock)
+        {
+            // Pieces flushed before the last hoisted block do not close the box.
+            var lastBlockIndex = result.FindLastIndex(IsInFlowBlockLevel);
+            var rtl = inline.GetDirection() == "rtl";
+            foreach (var (p, opensAfterBlock) in emitted)
+            {
+                var closesBeforeBlock = result.IndexOf(p) < lastBlockIndex;
+                if (opensAfterBlock) DropInlineSide(p, rtl ? "right" : "left");
+                if (closesBeforeBlock) DropInlineSide(p, rtl ? "left" : "right");
+            }
+        }
+        // §9.4.2 as browsers apply it: an empty piece with no horizontal margin, border or
+        // padding generates no line box worth keeping (a piece between two blocks never has one).
+        foreach (var empty in emptyPieces)
+        {
+            var (lead, trail) = InlineBoxEdges(empty, 0f, 0f);
+            if (lead == 0f && trail == 0f) result.Remove(empty);
+        }
         return result;
+    }
+
+    /// <summary>Removes one side's margin, padding and border from a broken inline's piece.</summary>
+    private static void DropInlineSide(LayoutNode piece, string side)
+    {
+        piece.StyleOverrides["margin-" + side] = "0";
+        piece.StyleOverrides["padding-" + side] = "0";
+        piece.StyleOverrides["border-" + side + "-style"] = "none";
     }
 
     /// <summary>True for a floated element (never a #text node, which cannot float even if it shares
@@ -1150,6 +1196,11 @@ internal static class BoxEngine
         // lengths here can shrink an auto-width block to its font size before max-width applies.
         if (node.IsAutoMarginLeft()) margin.Left = 0f;
         if (node.IsAutoMarginRight()) margin.Right = 0f;
+        // §10.6.3: an in-flow block's 'auto' top and bottom margins are 0. GetMargin's generic
+        // 'auto' centres in the viewport, which sank a 'margin: auto 2px' block to mid-page
+        // (inline-formatting-context-023-ref).
+        if (node.IsAutoMarginTop()) margin.Top = 0f;
+        if (node.IsAutoMarginBottom()) margin.Bottom = 0f;
         var padding = node.GetPadding(availableWidth, viewportHeight, fontSize);
         var border = node.GetBorderWidth();
 
@@ -1312,9 +1363,29 @@ internal static class BoxEngine
             // An 'inside' list marker consumes first-line width the wrap must respect, or the
             // laid-out line count diverges from what the painter draws (§12.5.1).
             var markerIndent = nodeDisplay == DisplayType.ListItem ? node.InsideMarkerIndent() : 0f;
+            // §9.5: a block's own text flows around the floats of its formatting context like
+            // any line box — each line takes the band the floats leave it. Wrapping at the full
+            // width put 'X X' on a line a right float narrowed to 2em (inline-formatting-
+            // context-009). The painter reads the same bands from LineBands.
+            List<(float X, float Width)>? textBands = null;
+            if (!establishesBfc && bfcFloats is { Count: > 0 } textFloats && markerIndent == 0f)
+            {
+                var (bx, bw) = AvailableBand(textFloats, contentY, Math.Max(lh, 1f), contentX, flowW);
+                textBands = LineBandsFor(textFloats, bx, contentY, lh, contentX, flowW, bw);
+            }
+            // §16.1: the first line is 'text-indent' narrower (wider, when negative); the
+            // painter shifts it by the same amount. A huge negative indent therefore holds the
+            // whole paragraph on one line, off to the left (text-indent-010..014).
+            var ownIndent = node.GetDirection() != "rtl" ? node.GetTextIndent(flowW, node.GetFontSize()) : 0f;
+            if (ownIndent != 0f && markerIndent == 0f)
+            {
+                textBands ??= [(contentX, flowW), (contentX, flowW)];
+                textBands[0] = (textBands[0].X, Math.Max(0f, textBands[0].Width - ownIndent));
+            }
+            node.LineBands = textBands?.Select(b => (b.X - contentX, b.Width)).ToList();
             // A ::first-line 'text-transform' re-breaks the first line (uppercase is wider).
             var lines = TextMeasure.WrapTextWithFirstLine(node.RenderedText(), FirstLineTransform(node), node.GetLanguage(),
-                Math.Max(flowW - markerIndent, 1f), font, ws, lh);
+                Math.Max(flowW - markerIndent, 1f), font, ws, lh, textBands?.Select(b => b.Width).ToList());
             contentH = lines.Sum(l => l.Height);
             node.OwnTextWidth = lines.Count == 0 ? 0f : lines.Max(l => l.Width) + markerIndent;
         }
@@ -1356,6 +1427,20 @@ internal static class BoxEngine
             foreach (var child in node.Children)
                 naturalW = MathF.Max(naturalW, child.Box.MarginBox.Right - contentX);
         if (naturalW <= 0f) naturalW = contentW;
+
+        // §17.5.3: a table's specified height is a MINIMUM. LayoutTable stretches its rows to
+        // it, but a table whose only content is its own text has no rows to stretch: the
+        // height was dropped, so a 'display: table; height: 2em' box with one nbsp was one
+        // line tall (inline-table-zorder-001-ref).
+        if (hasExplicitH && node.GetDisplay() is DisplayType.Table or DisplayType.InlineTable &&
+            !node.Children.Any(c => !c.TagName.StartsWith('#')) &&
+            !(RawStyle(node, "height")?.Trim().EndsWith('%') ?? false))
+        {
+            var minTableH = isBorderBox
+                ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
+                : explicitH;
+            contentH = Math.Max(contentH, minTableH);
+        }
 
         if (hasExplicitH && node.GetDisplay() is not (DisplayType.Table or DisplayType.InlineTable))
         {
@@ -1673,10 +1758,62 @@ internal static class BoxEngine
         var hasSpecH = !node.IsAutoHeight() && !(rawH?.EndsWith('%') == true && cbHeight <= 0f);
         var specH = hasSpecH ? Math.Max(0f, node.GetHeight(cbHeight, 0, viewportHeight)) : 0f;
 
-        if (hasSpecW && hasSpecH) return (specW, specH);
-        if (hasSpecW) return (specW, iw > 0 && ih > 0 ? specW * ih / iw : ih);
-        if (hasSpecH) return (iw > 0 && ih > 0 ? specH * iw / ih : iw, specH);
-        return (iw, ih);
+        float w, h;
+        if (hasSpecW && hasSpecH) (w, h) = (specW, specH);
+        else if (hasSpecW) (w, h) = (specW, iw > 0 && ih > 0 ? specW * ih / iw : ih);
+        else if (hasSpecH) (w, h) = (iw > 0 && ih > 0 ? specH * iw / ih : iw, specH);
+        else (w, h) = (iw, ih);
+        return ConstrainReplaced(node, w, h, hasSpecW && hasSpecH, cbWidth, cbHeight,
+                                 iw > 0 && ih > 0 ? ih / iw : 0f);
+    }
+
+    /// <summary>§10.4's table for replaced elements: min/max-width and min/max-height constrain
+    /// the tentative size, keeping the intrinsic ratio when either dimension was 'auto' (with
+    /// both specified each axis clamps on its own). Replaced sizing ignored them, so
+    /// 'width: 12.5em; max-width: 6.25em; height: auto' drew a 200px image instead of 100px
+    /// (inline-replaced-height-010). Percentages without a containing-block size are 'none'
+    /// (max) or 0 (min).</summary>
+    private static (float Width, float Height) ConstrainReplaced(
+        LayoutNode node, float w, float h, bool bothSpecified, float cbWidth, float cbHeight,
+        float ratio = 0f)
+    {
+        var fs = node.GetFontSize();
+        float Limit(string prop, float basis, float none, float value) =>
+            IsPercentValue(node, prop) && basis <= 0f ? none : value;
+        var maxW = Limit("max-width", cbWidth, float.PositiveInfinity, node.GetMaxWidth(cbWidth, fs));
+        var minW = Limit("min-width", cbWidth, 0f, node.GetMinWidth(cbWidth, fs));
+        var maxH = Limit("max-height", cbHeight, float.PositiveInfinity, node.GetMaxHeight(cbHeight, fs));
+        var minH = Limit("min-height", cbHeight, 0f, node.GetMinHeight(cbHeight, fs));
+        maxW = Math.Max(maxW, minW);
+        maxH = Math.Max(maxH, minH);
+        if (float.IsPositiveInfinity(maxW) && minW <= 0f && float.IsPositiveInfinity(maxH) && minH <= 0f)
+            return (w, h);
+        // The height:width ratio the table preserves: the tentative size's own, or — when that
+        // collapsed to 0 ('width: 0; height: auto; min-width: 6.25em') — the intrinsic one, so a
+        // zero-sized image grows back to its shape (inline-replaced-height-011/width-017).
+        var r = w > 0f && h > 0f ? h / w : ratio;
+        if (bothSpecified || r <= 0f)
+            return (Math.Clamp(w, minW, maxW), Math.Clamp(h, minH, maxH));
+
+        var wBig = w > maxW; var wSmall = w < minW;
+        var hBig = h > maxH; var hSmall = h < minH;
+        if (wBig && hBig)
+            return maxW / w <= maxH / h
+                ? (maxW, Math.Max(minH, maxW * r))
+                : (Math.Max(minW, maxH / r), maxH);
+        // Both too small: grow along whichever minimum needs the larger scale — the height's
+        // when minH reaches past minW at this ratio (minW/w <= minH/h, also defined at 0).
+        if (wSmall && hSmall)
+            return minH >= minW * r
+                ? (Math.Min(maxW, minH / r), minH)
+                : (minW, Math.Min(maxH, minW * r));
+        if (wSmall && hBig) return (minW, maxH);
+        if (wBig && hSmall) return (maxW, minH);
+        if (wBig) return (maxW, Math.Max(maxW * r, minH));
+        if (wSmall) return (minW, Math.Min(minW * r, maxH));
+        if (hBig) return (Math.Max(maxH / r, minW), maxH);
+        if (hSmall) return (Math.Min(minH / r, maxW), minH);
+        return (w, h);
     }
 
     /// <summary>The height a percentage 'height' on an inline replaced box resolves against
@@ -2078,6 +2215,24 @@ internal static class BoxEngine
     /// </summary>
     /// <param name="openLineY">Top of the line box the float would join (NaN when none is open),
     /// with <paramref name="openLineUsedW"/> the width its content already occupies.</param>
+    /// <summary>§10.7: clamps a used content height to 'max-height', then 'min-height' (min
+    /// wins). A percentage resolves against the containing block's height; when that is not
+    /// known (<paramref name="cbHeight"/> &lt;= 0) it computes to 'none' (max) or 0 (min).
+    /// Under 'box-sizing: border-box' the limits bound the border box.</summary>
+    internal static float ClampContentHeight(LayoutNode node, float contentH, float cbHeight,
+                                            EdgeSizes border, EdgeSizes padding, float fontSize)
+    {
+        var borderBox = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
+        var edges = border.Top + border.Bottom + padding.Top + padding.Bottom;
+        var max = node.GetMaxHeight(Math.Max(cbHeight, 0f), fontSize);
+        if (max < float.PositiveInfinity && !(IsPercentValue(node, "max-height") && cbHeight <= 0f))
+            contentH = Math.Min(contentH, borderBox ? Math.Max(0f, max - edges) : max);
+        var min = node.GetMinHeight(Math.Max(cbHeight, 0f), fontSize);
+        if (min > 0f && !(IsPercentValue(node, "min-height") && cbHeight <= 0f))
+            contentH = Math.Max(contentH, borderBox ? Math.Max(0f, min - edges) : min);
+        return contentH;
+    }
+
     private static ActiveFloat LayoutFloat(
         LayoutNode child, FloatType side,
         List<ActiveFloat> floats,
@@ -2184,6 +2339,9 @@ internal static class BoxEngine
         var knownH = explicitH > 0
             ? (isBorderBox ? Math.Max(0, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitH)
             : 0f;
+        // §10.7: the children see the CLAMPED height (a 100% child of a 'height: 200px;
+        // max-height: 100px' float is 100px tall).
+        if (knownH > 0f) knownH = ClampContentHeight(child, knownH, parentContentHeight, border, padding, fontSize);
 
         var nodeDisplay = child.GetDisplay();
         var childContentH = (nodeDisplay == DisplayType.Flex || nodeDisplay == DisplayType.InlineFlex)
@@ -2204,6 +2362,10 @@ internal static class BoxEngine
                 ? Math.Max(0, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
                 : explicitH;
         if (replaced.HasValue) childContentH = replaced.Value.Height;
+        // §10.7: a float's used height clamps to min/max-height like any block's — the float
+        // path skipped it, so 'height: 200px; max-height: 100px' stayed 200px
+        // (max-height-applies-to-018).
+        else childContentH = ClampContentHeight(child, childContentH, parentContentHeight, border, padding, fontSize);
 
         // The float's placement already sits at the running collapsed-margin chain's bottom
         // (placeY = runY + pendingMargin) — recorded so the self-collapsing re-anchoring shift
@@ -2650,9 +2812,16 @@ internal static class BoxEngine
                 chainFloatStart = floats.Count; // a new chain starts after committed content
                 // §12.5.1: an 'inside' list marker is the first inline box of the first line —
                 // the run's first line starts past it (lines 2+ realign with the content edge).
+                // §16.1: 'text-indent' indents the FIRST formatted line of the block container
+                // (a negative value hangs it out to the left). Layout ignored it — only the
+                // painter shifted the first line's ink, past where its line was measured.
+                var blockIndent = 0f;
+                if (opensFirstLine && run.Count > 0 && run[0].Parent is { } runContainer &&
+                    runContainer.GetDirection() != "rtl")
+                    blockIndent = runContainer.GetTextIndent(contentW, runContainer.GetFontSize());
                 var runH = LayoutInlineRun(run, contentX, runY, contentW, viewportWidth, viewportHeight,
                                            floats, out var lastLineTop, out var lastLineWidth,
-                                           opensFirstLine ? firstLineIndent : 0f);
+                                           opensFirstLine ? firstLineIndent + blockIndent : 0f, parentContentHeight);
                 // Remember where the run's last line box sits: a float that comes right after it
                 // belongs ON that line, not below it (§9.5.1).
                 openLineY = runY + lastLineTop;
@@ -2706,7 +2875,7 @@ internal static class BoxEngine
         float viewportWidth, float viewportHeight,
         List<ActiveFloat> floats,
         out float lastLineTop, out float lastLineWidth,
-        float firstLineIndent = 0f)
+        float firstLineIndent = 0f, float containingBlockHeight = 0f)
     {
         lastLineTop = 0f;
         lastLineWidth = 0f;
@@ -2723,7 +2892,7 @@ internal static class BoxEngine
         // (bidi-box-model, the unicode-bidi-applies-to families), so the routing stays.
         if (nodes.Count > 0 && nodes[0].Parent is { } runBlock && runBlock.BidiIsRtlOverride())
             nodes = nodes.AsEnumerable().Reverse().ToList();
-        CollectInlineItems(nodes, items, firstW, viewportWidth, viewportHeight);
+        CollectInlineItems(nodes, items, firstW, viewportWidth, viewportHeight, containingBlockHeight);
 
         // §16.2 / UAX #9: an RTL paragraph or an embed scope reorders its inline content
         // visually. The paragraph-level pass runs before the line loop — it engages only when
@@ -2815,8 +2984,12 @@ internal static class BoxEngine
             for (var k = lineStart; k < placed.Count; k++)
             {
                 var it = placed[k].item;
-                if (it.Kind == InlineItemKind.OutOfFlow) continue;
-                if (it.Kind == InlineItemKind.Text && string.IsNullOrWhiteSpace(it.Text)) continue;
+                if (it.Kind is InlineItemKind.OutOfFlow or InlineItemKind.Strut) continue;
+                // A no-break space is content (§16.6.1 collapses only CSS white space), and so
+                // is PRESERVED white space (§9.4.2): a 'white-space: pre' span holding one space
+                // makes a real line (white-space-processing-046).
+                if (it.Kind == InlineItemKind.Text && (it.Text ?? "").IsCssWhiteSpaceOnly() &&
+                    it.Node.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap)) continue;
                 return true;
             }
             return false;
@@ -2828,6 +3001,8 @@ internal static class BoxEngine
             // then grow outward (below for 'top', above for 'bottom') if those need more room.
             var above = maxAbove;
             var below = maxBelow;
+            // §9.4.2: a line with no content (only empty edgeless inline boxes) is zero-height.
+            if (!LineHasContent()) { above = 0f; below = 0f; maxTopH = 0f; maxBottomH = 0f; }
 
             // The strut only counts on a line that actually has content. §9.4.2: a line box with
             // no text, no in-flow content and no inline box with non-zero edges is a ZERO-height
@@ -2857,6 +3032,17 @@ internal static class BoxEngine
                 if (it.Kind is InlineItemKind.Text or InlineItemKind.LineBreak &&
                     string.IsNullOrWhiteSpace(it.Text)) continue;
                 lineRight = rx + it.Width;
+                // The last text run's own trailing collapsible spaces are removed too: a
+                // right-aligned 'x ' line set its glyph one space short of the line end
+                // (c5525-fltblck-000's third line).
+                if (k == placed.Count - 1 && IsSingleLineText(it) &&
+                    it.Text is { Length: > 0 } lastText && IsBreakSpace(lastText[^1]) &&
+                    it.Node.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+                {
+                    using var endFont = TextMeasure.CreateFont(it.Node);
+                    var (endLs, endWsp) = TextMeasure.SpacingOf(it.Node);
+                    lineRight = rx + TextMeasure.MeasureSingleLine(lastText.TrimEndCss(), endFont, -1f, endLs, endWsp).Width;
+                }
                 break;
             }
             committedLineTop = lineY;
@@ -2879,8 +3065,8 @@ internal static class BoxEngine
                 var vAlign = it.Node.GetVerticalAlign();
                 float yOffset = it.Kind == InlineItemKind.OutOfFlow ? 0f : vAlign switch
                 {
-                    VerticalAlignType.Top or VerticalAlignType.TextTop => 0f,
-                    VerticalAlignType.Bottom or VerticalAlignType.TextBottom => thisLineHeight - it.Height,
+                    VerticalAlignType.Top => 0f,
+                    VerticalAlignType.Bottom => thisLineHeight - it.Height,
                     _ => above - AboveBaselineComponent(it, vAlign),
                 };
                 placed[k] = (it, rx + dx, lineY + yOffset);
@@ -2978,8 +3164,10 @@ internal static class BoxEngine
             // document's raw text nodes expose (bidi-box-model-019's 20px navy tail). The gap a
             // space renders MID-line comes from the surrounding items' own trailing spaces, so
             // dropping this one loses nothing.
+            // Closing inline-box edges after it do not keep it: 'Eleven</span> </span>' ends the
+            // line at the border with no space before it (block-in-inline-insert-001's refs).
             if (item.Kind == InlineItemKind.Text && item.Text != null && item.Text.IsCssWhiteSpaceOnly() &&
-                itemIndex == items.Count - 1 &&
+                OnlyClosingEdgesFollow(items, itemIndex) &&
                 item.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
             {
                 continue;
@@ -3028,7 +3216,18 @@ internal static class BoxEngine
                     placed.FindIndex(lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow)) < 0;
                 if (Environment.GetEnvironmentVariable("LITE_TRACE_LINE") == "1")
                     File.AppendAllText("line-trace.txt",
-                        $"  -> breakAllowed={BreakAllowedBefore(placed, lineStart, item)} split={SplitAtFirstOpportunity(items, itemIndex)} glued={gluedToLineStart}\n");
+                        $"  -> breakAllowed={BreakAllowedBefore(placed, lineStart, item)} glued={gluedToLineStart}\n");
+                if (!gluedToLineStart && SplitsPerLine(item, lineAlign) &&
+                    SplitToFit(item, bandRight - lineX, requireFit: true) is { } partial)
+                {
+                    // The run's first words fit beside what the line already holds: they stay,
+                    // and the rest starts the next line (c5502-imrgn-r-003's span begins with
+                    // 'xx' at the end of line 1, not on line 2).
+                    items[itemIndex] = partial.Head;
+                    items.Insert(itemIndex + 1, partial.Tail);
+                    itemIndex--;
+                    continue;
+                }
                 if (!gluedToLineStart && BreakAllowedBefore(placed, lineStart, item))
                 {
                     // The opening edges of the inline boxes this item starts go down with it: a
@@ -3063,6 +3262,39 @@ internal static class BoxEngine
                     itemIndex--;
                     continue;
                 }
+                else if (!gluedToLineStart && LastContentIndex(placed, lineStart) is { } last &&
+                         SplitAtLastOpportunity(placed[last].item) is { } split)
+                {
+                    // The overflowing item is glued to the line's last text run (a span's
+                    // closing margin, §8.3, or a word continuing past an element boundary), and
+                    // that run has a break opportunity of its own: the line ends there, and the
+                    // run's last word moves down with what is glued to it. Moving the whole run
+                    // down (the cut below) left the line holding only what came before the span
+                    // (c5502-imrgn-r-001: 'x <span style="margin-right: 4em">xxxxx xxxxx</span> x'
+                    // in a 13em box breaks after 'x xxxxx', not after 'x').
+                    // A float inside the glued run was met while this line still held the whole
+                    // run: it is placed beside THIS line (rule 4: the line it was generated in)
+                    // and does not come round again when the run is re-placed below
+                    // (float-nowrap-hyphen-rewind-1's reference).
+                    foreach (var fj in FloatsInGluedRun(items, itemIndex))
+                    {
+                        PlaceInRunFloat(items[fj], floats, originX, originY, lineY, lineX,
+                                        Math.Max(maxAbove + maxBelow, strutAbove + strutBelow), maxWidth,
+                                        viewportWidth, viewportHeight, bandLeft);
+                        items.RemoveAt(fj);
+                    }
+                    var src = placedSource[last];
+                    placed[last] = (split.Head, placed[last].relX, placed[last].relY);
+                    items[src] = split.Head;
+                    items.Insert(src + 1, split.Tail);
+                    placed.RemoveRange(last + 1, placed.Count - last - 1);
+                    placedSource.RemoveRange(last + 1, placedSource.Count - last - 1);
+                    if (placedLine.Count > last + 1) placedLine.RemoveRange(last + 1, placedLine.Count - last - 1);
+                    (maxAbove, maxBelow, maxTopH, maxBottomH, hasBaselineItem) = LineMetrics(placed, lineStart);
+                    CommitLine();
+                    itemIndex = src;
+                    continue;
+                }
                 else if (LastOpportunity(placed, lineStart) is { } cut && cut > lineStart)
                 {
                     // No opportunity here: the unbreakable run moves down whole, from the line's
@@ -3081,10 +3313,17 @@ internal static class BoxEngine
                 // Otherwise nothing on this line can break: the content overflows it.
             }
 
+            // A line still "starts" while only inline-box edges sit on it: a collapsible space
+            // right after a span's opening border is at the line's start (§16.6.1) and goes, as
+            // in browsers — keeping it opened ' OneTwoThree' one space past the border
+            // (block-in-inline-insert-001-nosplit-ref).
+            var atLineStart = lineX <= bandLeft ||
+                placed.FindIndex(lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow)) < 0;
+
             // Skip whitespace-only text at the start of a line — a COLLAPSING one (§16.6.1):
             // under white-space:pre/pre-wrap a preserved space at a line's start renders, and
             // a cell whose content is exactly that space ("a <cellws> </cellws> d") lost it.
-            if (lineX <= bandLeft && item.Kind == InlineItemKind.Text &&
+            if (atLineStart && item.Kind == InlineItemKind.Text &&
                 item.Text != null && item.Text.IsCssWhiteSpaceOnly())
             {
                 var wsMode = item.Node?.GetWhiteSpace() ?? WhiteSpace.Normal;
@@ -3096,7 +3335,7 @@ internal static class BoxEngine
             // parser collapses each source text node to " x ", and a bare-text node landing at
             // a line boundary painted one space too far right (white-space-12 reftests).
             // Preserved spaces (pre/pre-wrap) are content and stay.
-            if (lineX <= bandLeft && item.Kind == InlineItemKind.Text && item.Text is { } leading &&
+            if (atLineStart && item.Kind == InlineItemKind.Text && item.Text is { } leading &&
                 leading.Length > 0 && char.IsWhiteSpace(leading[0]))
             {
                 var wsMode = item.Node?.GetWhiteSpace() ?? WhiteSpace.Normal;
@@ -3104,9 +3343,11 @@ internal static class BoxEngine
                 {
                     var stripped = leading.TrimStartCss();
                     if (stripped.Length == 0) continue;
-                    using (var stripFont = TextMeasure.CreateFont(item.Node))
-                        item = item with { Text = stripped, Width = stripFont.MeasureText(stripped),
-                                       ContentW = stripFont.MeasureText(stripped) };
+                    // Re-measured WITH the node's letter/word spacing, like every other text
+                    // measure — plain MeasureText dropped it, so a spaced 'T' ran into the next
+                    // inline's first letter (text-transform-cap-002).
+                    var stripW = StrippedWidth(item.Node, stripped);
+                    item = item with { Text = stripped, Width = stripW, ContentW = stripW };
                 }
             }
 
@@ -3128,9 +3369,8 @@ internal static class BoxEngine
                     {
                         var stripped = lt.TrimStartCss();
                         if (stripped.Length == 0) continue;
-                        using (var stripFont = TextMeasure.CreateFont(item.Node))
-                            item = item with { Text = stripped, Width = stripFont.MeasureText(stripped),
-                                           ContentW = stripFont.MeasureText(stripped) };
+                        var stripW = StrippedWidth(item.Node, stripped);
+                        item = item with { Text = stripped, Width = stripW, ContentW = stripW };
                     }
                     break;
                 }
@@ -3146,7 +3386,22 @@ internal static class BoxEngine
                 // a rect sized without that space, and the wrap's own line-start strip then ate
                 // the LEADING space of " d " — the abs-pos overlays of the white-space band drew
                 // their last word one space left of the text-run reference.
-                if (availW > 0 && fitWidth > availW)
+                if (availW > 0 && fitWidth > availW && SplitsPerLine(item, lineAlign) &&
+                    SplitToFit(item, availW) is { } fit)
+                {
+                    // §9.4.2/§16.6: an overflowing run breaks at its last opportunity that fits;
+                    // the rest starts a new line box as an item of its own, so whatever follows
+                    // the run sits beside its LAST line. Re-measuring it as one tall wrapped item
+                    // instead placed the next content past the item's full width
+                    // (c5502-imrgn-r-003: 'xx' + a span's closing margin + ' xx' on the run's
+                    // last line).
+                    items[itemIndex] = fit.Head;
+                    items.Insert(itemIndex + 1, fit.Tail);
+                    item = fit.Head;
+                    effectiveItem = item;
+                    item.Node.LineBands = null;
+                }
+                else if (availW > 0 && fitWidth > availW)
                 {
                     using var font = TextMeasure.CreateFont(item.Node);
                     var ws = item.Node.GetWhiteSpace();
@@ -3172,7 +3427,7 @@ internal static class BoxEngine
                                                          bands?.Select(b => b.Width).ToList());
                     var wrappedH = wrapLines.Sum(l => l.Height);
                     var usedW = wrapLines.Count > 0 ? wrapLines.Max(l => l.Width) : availW;
-                    item.Node.LineBands = bands;
+                    item.Node.LineBands = bands?.Select(b => (b.X - (originX + lineX), b.Width)).ToList();
                     // Per-line slices with their band-anchored x, for the painter's fragment
                     // records: a wrapped item paints one fragment per line (the background of
                     // an indented span covers line 1 from the margin edge and the rest from the
@@ -3203,10 +3458,10 @@ internal static class BoxEngine
             var va = effectiveItem.Node.GetVerticalAlign();
             switch (va)
             {
-                case VerticalAlignType.Top or VerticalAlignType.TextTop:
+                case VerticalAlignType.Top:
                     maxTopH = Math.Max(maxTopH, effectiveItem.Height);
                     break;
-                case VerticalAlignType.Bottom or VerticalAlignType.TextBottom:
+                case VerticalAlignType.Bottom:
                     maxBottomH = Math.Max(maxBottomH, effectiveItem.Height);
                     break;
                 default:
@@ -3241,8 +3496,22 @@ internal static class BoxEngine
         for (var pi = 0; pi < placed.Count; pi++)
         {
             var (item, relX, relY) = placed[pi];
-            ApplyInlineItem(item, originX + relX, originY + relY, viewportWidth, viewportHeight);
-            AccumulateWrapperFragment(wrapperFragments, item, originX + relX, originY + relY, placedLine[pi]);
+            // §16.6.1: collapsible spaces at the END of a line are removed, so the inline boxes
+            // around them do not reach over them: a span broken after 'xx ' painted its
+            // background under the hanging space (c5502-imrgn-r-002's red notch). The text
+            // still paints its spaces; they are invisible ink at the line's end.
+            var folded = item;
+            if (IsSingleLineText(item) && item.Text is { Length: > 0 } t && IsBreakSpace(t[^1]) &&
+                item.Node.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap) &&
+                (pi + 1 >= placed.Count || placedLine[pi + 1] != placedLine[pi]))
+            {
+                using var trimFont = TextMeasure.CreateFont(item.Node);
+                var (trimLs, trimWsp) = TextMeasure.SpacingOf(item.Node);
+                var trimmed = TextMeasure.MeasureSingleLine(t.TrimEndCss(), trimFont, -1f, trimLs, trimWsp).Width;
+                folded = item with { Width = trimmed, ContentW = trimmed };
+            }
+            ApplyInlineItem(folded, originX + relX, originY + relY, viewportWidth, viewportHeight);
+            AccumulateWrapperFragment(wrapperFragments, folded, originX + relX, originY + relY, placedLine[pi]);
         }
         FlushWrapperFragments(wrapperFragments);
 
@@ -3279,15 +3548,80 @@ internal static class BoxEngine
             return;
         }
         var rect = new SKRect(absX, absY, absX + item.Width, absY + item.Height);
-        for (var node = item.Node.Parent; node is not null; node = node.Parent)
+        // A strut is its own element's (empty) content: it folds onto that element first.
+        for (var node = item.Kind == InlineItemKind.Strut ? item.Node : item.Node.Parent; node is not null; node = node.Parent)
         {
             // Anonymous boxes (a :before/:after pseudo's inline box, synthesized text) resolve
             // their styles from the element that produced them — folding the host's border onto
             // their fragment painted the host's box INSIDE its own border (the :before of a
             // bordered div grew an inner ring). They are transparent to the fold.
             if (node.TagName.StartsWith('#') || node.GetDisplay() != DisplayType.Inline) break;
-            Fold(acc, node, lineIndex, rect, null, null);
+            // §10.6.1: a non-replaced inline box's content area is its OWN font's ascent and
+            // descent about the baseline — not the line-height box its text was laid out in.
+            // Folding the text's line-height rect made the background, border and outline of
+            // a span in a tall line ('font: 2em/2') span the whole line, so the boxes of two
+            // wrapped lines met and overlapped (inlines-003, outline-020).
+            var folded = rect;
+            // A baseline-aligned atomic box (an image in a span) does not stretch the span's
+            // content area either: the span's background covers its own font's content area,
+            // which reaches below the image's baseline (line-height-122's green line).
+            if (item.Kind is InlineItemKind.Text or InlineItemKind.Strut ||
+                IsAtomicInline(item) && item.Node.GetVerticalAlign() == VerticalAlignType.Baseline)
+            {
+                var (ascent, descent) = ContentAreaMetrics(node);
+                var baseline = absY + item.Ascent;
+                folded = new SKRect(rect.Left, baseline - ascent, rect.Right, baseline + descent);
+            }
+            Fold(acc, node, lineIndex, folded, null, null);
         }
+    }
+
+    /// <summary>The font ascent and descent (both positive) that bound an inline box's content
+    /// area (§10.6.1).</summary>
+    private static (float Ascent, float Descent) ContentAreaMetrics(LayoutNode node)
+    {
+        using var font = TextMeasure.CreateFont(node);
+        return (-font.Metrics.Ascent, font.Metrics.Descent);
+    }
+
+    /// <summary>§10.6.1: a non-replaced inline box's content area is its font's ascent plus
+    /// descent, centred in the line-height box its text was laid out in (the half-leading sits
+    /// outside it). A text-bearing inline's <see cref="LayoutNode.Box"/> (and each of its
+    /// <see cref="LayoutNode.InlineFragments"/>) stays the line-height box layout placed and the
+    /// text paints from; its background, borders and outline paint around the content area this
+    /// returns. Painting them around the line-height box made a span in a tall line
+    /// ('font: 2em/2') span the whole line, so the boxes of wrapped lines met (inlines-003,
+    /// outline-020). A rect that is not one line-height tall is returned unchanged.</summary>
+    public static SKRect InlineContentArea(LayoutNode node, SKRect lineRect)
+    {
+        var lh = node.GetLineHeight(node.GetFontSize());
+        if (MathF.Abs(lineRect.Height - lh) > 0.5f) return lineRect;
+        var (ascent, descent) = ContentAreaMetrics(node);
+        var top = lineRect.Top + (lh - (ascent + descent)) / 2f;
+        return new SKRect(lineRect.Left, top, lineRect.Right, top + ascent + descent);
+    }
+
+    /// <summary>Whether a point falls inside a node's border box for hit testing. An inline
+    /// box split over several lines is hit only inside one of its line fragments: its
+    /// <see cref="LayoutNode.Box"/> is their bounding union, which also spans whatever sits
+    /// beside its first and last lines (a link earlier on the first line was hit as the text
+    /// after it, so pressing it did not activate it — c21-activ-ln-000).</summary>
+    public static bool HitsBorderBox(LayoutNode node, float x, float y)
+    {
+        var box = node.Box.BorderBox;
+        if (box.Width <= 0 || box.Height <= 0 || !box.Contains(x, y)) return false;
+        if (node.InlineFragments is not { Count: > 1 } fragments) return true;
+        foreach (var (rect, _) in fragments)
+            if (rect.Contains(x, y)) return true;
+        return false;
+    }
+
+    /// <summary><see cref="InlineContentArea(LayoutNode, SKRect)"/> applied to a box's content
+    /// rect; padding and border extend outward from it.</summary>
+    public static BoxDimensions InlineContentArea(LayoutNode node, BoxDimensions box)
+    {
+        box.ContentBox = InlineContentArea(node, box.ContentBox);
+        return box;
     }
 
     private static void Fold(
@@ -3366,8 +3700,8 @@ internal static class BoxEngine
     /// For an item aligned baseline/sub/super/middle/length/percentage, the distance from ITS
     /// OWN top down to wherever it aligns against the line's shared baseline (CSS 2.1 §10.8.1).
     /// 'baseline' uses the item's intrinsic ascent directly; 'sub'/'super' shift it down/up by
-    /// ~0.15em; 'middle' aligns the item's vertical centre with the baseline plus half an
-    /// x-height (approximated as a quarter of the font size); a &lt;length&gt;/&lt;percentage&gt;
+    /// ~0.15em; 'middle' aligns the item's vertical centre with the baseline plus half the
+    /// PARENT box's x-height (its first font's, Ahem's 0.8em); a &lt;length&gt;/&lt;percentage&gt;
     /// raises (positive) or lowers (negative) the box's baseline by that distance.
     /// </summary>
     private static float AboveBaselineComponent(InlineItem item, VerticalAlignType vAlign)
@@ -3375,7 +3709,12 @@ internal static class BoxEngine
         var fontSize = item.Node.GetFontSize();
         var above = vAlign switch
         {
-            VerticalAlignType.Middle => item.Height / 2f + fontSize * 0.25f,
+            VerticalAlignType.Middle => item.Height / 2f + HalfParentXHeight(item.Node),
+            // §10.8.1: 'text-top'/'text-bottom' align with the PARENT's content area (its font's
+            // ascent above / descent below the baseline) — baseline-relative, not the line box's
+            // top/bottom they were treated as (vertical-align-117a, vertical-align-top-bottom-001).
+            VerticalAlignType.TextTop => ParentContentArea(item.Node).Ascent,
+            VerticalAlignType.TextBottom => item.Height - ParentContentArea(item.Node).Descent,
             VerticalAlignType.Sub => item.Ascent - fontSize * 0.15f,
             VerticalAlignType.Super => item.Ascent + fontSize * 0.15f,
             _ => item.Ascent, // baseline
@@ -3383,6 +3722,26 @@ internal static class BoxEngine
         if (vAlign is VerticalAlignType.Length or VerticalAlignType.Percentage)
             above += item.Node.GetVerticalAlignOffset();
         return above;
+    }
+
+    /// <summary>The ascent and descent (both positive) of the aligned box's PARENT's first
+    /// font — its content area about the baseline (§10.6.1), which 'text-top' and
+    /// 'text-bottom' align with.</summary>
+    private static (float Ascent, float Descent) ParentContentArea(LayoutNode node)
+    {
+        var aligned = node.TagName.StartsWith('#') ? node.Parent ?? node : node;
+        return ContentAreaMetrics(aligned.Parent ?? aligned);
+    }
+
+    /// <summary>§10.8.1 'middle': half the x-height of the aligned box's PARENT. A text item
+    /// is aligned through the element that holds it, so its parent is that element's parent.
+    /// A quarter of the item's own font size stood in for it, lowering a middle-aligned Ahem
+    /// box 7px against its 48px parent (vertical-align-114).</summary>
+    private static float HalfParentXHeight(LayoutNode node)
+    {
+        var aligned = node.TagName.StartsWith('#') ? node.Parent ?? node : node;
+        var parent = aligned.Parent ?? aligned;
+        return parent.GetFontSize() * TextMeasure.XHeightRatio(parent) / 2f;
     }
 
     /// <summary>White-space modes that allow soft wrapping (CSS 2.1 16.6): 'nowrap' and 'pre' never do.</summary>
@@ -3518,6 +3877,140 @@ internal static class BoxEngine
         return true;
     }
 
+    /// <summary>The placed index of the line's last content item (not an inline edge or an
+    /// out-of-flow record), or null when the line holds none after its start.</summary>
+    private static int? LastContentIndex(List<(InlineItem item, float relX, float relY)> placed, int lineStart)
+    {
+        for (var k = placed.Count - 1; k >= lineStart; k--)
+            if (placed[k].item.Kind is not (InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow))
+                return k;
+        return null;
+    }
+
+    /// <summary>The indices of the floats in the run glued to item <paramref name="index"/>
+    /// (up to the next break opportunity), last first so they can be removed in turn.</summary>
+    private static List<int> FloatsInGluedRun(List<InlineItem> items, int index)
+    {
+        var found = new List<int>();
+        for (var j = index; j < items.Count; j++)
+        {
+            var it = items[j];
+            if (it.Kind == InlineItemKind.Float) { found.Add(j); continue; }
+            if (j > index && it.Kind == InlineItemKind.Text && it.Text is { Length: > 0 } t &&
+                WrapsLines(it.Node) && IsBreakSpace(t[0]))
+                break;
+            if (it.Kind is InlineItemKind.LineBreak) break;
+        }
+        found.Reverse();
+        return found;
+    }
+
+    /// <summary>Whether an overflowing text item breaks into one item per line (see
+    /// <see cref="SplitToFit"/>) rather than being re-measured as one wrapped block. Justified
+    /// text keeps the wrapped form: the painter spreads a justified line's gaps across the lines
+    /// of one item, and a one-line slice has no "last line" to leave ragged.</summary>
+    private static bool SplitsPerLine(InlineItem item, TextAlign lineAlign) =>
+        item.Kind == InlineItemKind.Text && WrapsLines(item.Node) &&
+        item.Node.GetWhiteSpace() == WhiteSpace.Normal &&
+        lineAlign != TextAlign.Justify && item.Node.GetTextAlign() != TextAlign.Justify;
+
+    /// <summary>Breaks a text item at its last opportunity whose text (trailing spaces
+    /// hanging, §16.6.1) fits <paramref name="availW"/>; when not even the first word fits, at
+    /// the first opportunity (that word overflows alone). The head keeps the spaces after its
+    /// last word. Null when the text has no opportunity before its last word.</summary>
+    private static (InlineItem Head, InlineItem Tail)? SplitToFit(InlineItem item, float availW, bool requireFit = false)
+    {
+        if (item.Text is not { Length: > 1 } text) return null;
+        using var font = TextMeasure.CreateFont(item.Node);
+        var lh = item.Node.GetLineHeight(item.Node.GetFontSize());
+        var (ls, wsp) = TextMeasure.SpacingOf(item.Node);
+        var start = 0;
+        while (start < text.Length && IsBreakSpace(text[start])) start++;   // leading spaces are no opportunity
+        var cut = -1;
+        for (var i = start; i < text.Length; i++)
+        {
+            if (!IsBreakSpace(text[i])) continue;
+            var wordEnd = i;
+            while (i < text.Length && IsBreakSpace(text[i])) i++;
+            if (i >= text.Length) break;                                    // trailing spaces only
+            var width = TextMeasure.MeasureSingleLine(text[..wordEnd], font, lh, ls, wsp).Width;
+            if (width > availW + 0.01f)
+            {
+                if (cut < 0 && !requireFit) cut = i;   // not even the first word fits: it overflows alone
+                break;
+            }
+            cut = i;
+            i--;
+        }
+        if (cut <= 0 || cut >= text.Length) return null;
+        var head = text[..cut];
+        var tail = text[cut..];
+        var (hw, hh, ha) = TextMeasure.MeasureSingleLine(head, font, lh, ls, wsp);
+        var (tw, th, ta) = TextMeasure.MeasureSingleLine(tail, font, lh, ls, wsp);
+        return (item with { Text = head, Width = hw, Height = hh, ContentW = hw, ContentH = hh, Ascent = ha, WrappedLines = null },
+                item with { Text = tail, Width = tw, Height = th, ContentW = tw, ContentH = th, Ascent = ta, WrappedLines = null });
+    }
+
+    /// <summary>True when everything after item <paramref name="index"/> is a closing
+    /// inline-box edge, an out-of-flow marker or more collapsible whitespace — nothing that
+    /// renders on the line.</summary>
+    private static bool OnlyClosingEdgesFollow(List<InlineItem> items, int index)
+    {
+        for (var j = index + 1; j < items.Count; j++)
+        {
+            var it = items[j];
+            if (it.Kind is InlineItemKind.OutOfFlow || it is { Kind: InlineItemKind.InlineEdge, TrailingEdge: true })
+                continue;
+            // More collapsible whitespace collapses into this one.
+            if (it.Kind == InlineItemKind.Text && it.Text is { } t && t.IsCssWhiteSpaceOnly() &&
+                it.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+                continue;
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>The width of a text slice with its node's font and letter/word spacing.</summary>
+    private static float StrippedWidth(LayoutNode node, string text)
+    {
+        using var font = TextMeasure.CreateFont(node);
+        var (ls, wsp) = TextMeasure.SpacingOf(node);
+        return TextMeasure.MeasureWithSpacing(text, font, ls, wsp);
+    }
+
+    /// <summary>A text item laid out as ONE line. A re-measured item that wrapped carries
+    /// <see cref="InlineItem.WrappedLines"/> only when floats gave it bands; its height (the sum
+    /// of its lines) is what always tells.</summary>
+    private static bool IsSingleLineText(InlineItem item) =>
+        item.Kind == InlineItemKind.Text && item.WrappedLines is null &&
+        item.Height <= item.Node.GetLineHeight(item.Node.GetFontSize()) + 0.5f;
+
+    /// <summary>Splits a single-line, wrapping text item after its LAST run of break spaces
+    /// (the head keeps those spaces, which hang at the line end, §16.6.1). Null when the text
+    /// has no break opportunity before its final word.</summary>
+    private static (InlineItem Head, InlineItem Tail)? SplitAtLastOpportunity(InlineItem item)
+    {
+        if (!IsSingleLineText(item) || item.Text is not { Length: > 1 } text || !WrapsLines(item.Node))
+            return null;
+        var end = text.Length;
+        while (end > 0 && IsBreakSpace(text[end - 1])) end--;   // trailing spaces are not a split
+        var start = end;
+        while (start > 0 && !IsBreakSpace(text[start - 1])) start--;
+        if (start == 0 || start >= end) return null;
+        var spacesStart = start;
+        while (spacesStart > 0 && IsBreakSpace(text[spacesStart - 1])) spacesStart--;
+        if (spacesStart == 0) return null;                       // only leading spaces
+        using var font = TextMeasure.CreateFont(item.Node);
+        var lh = item.Node.GetLineHeight(item.Node.GetFontSize());
+        var (ls, wsp) = TextMeasure.SpacingOf(item.Node);
+        var head = text[..start];
+        var tail = text[start..];
+        var (hw, hh, ha) = TextMeasure.MeasureSingleLine(head, font, lh, ls, wsp);
+        var (tw, th, ta) = TextMeasure.MeasureSingleLine(tail, font, lh, ls, wsp);
+        return (item with { Text = head, Width = hw, Height = hh, ContentW = hw, ContentH = hh, Ascent = ha },
+                item with { Text = tail, Width = tw, Height = th, ContentW = tw, ContentH = th, Ascent = ta });
+    }
+
     /// <summary>Recomputes the line's baseline accumulators from what is placed on it — needed
     /// after the line is cut back to an earlier break opportunity.</summary>
     private static (float Above, float Below, float TopH, float BottomH, bool HasBaseline) LineMetrics(
@@ -3532,10 +4025,10 @@ internal static class BoxEngine
             var va = it.Node.GetVerticalAlign();
             switch (va)
             {
-                case VerticalAlignType.Top or VerticalAlignType.TextTop:
+                case VerticalAlignType.Top:
                     topH = Math.Max(topH, it.Height);
                     break;
-                case VerticalAlignType.Bottom or VerticalAlignType.TextBottom:
+                case VerticalAlignType.Bottom:
                     bottomH = Math.Max(bottomH, it.Height);
                     break;
                 default:
@@ -3547,6 +4040,28 @@ internal static class BoxEngine
         }
         return (above, below, topH, bottomH, hasBaseline);
     }
+
+    /// <summary>A child that puts nothing on the line: collapsible whitespace, a comment or a
+    /// display:none element (a &lt;script&gt; left alone in a split inline's first piece,
+    /// block-in-inline-insert-015).</summary>
+    private static bool RendersNothingInline(LayoutNode node) =>
+        IsCollapsibleWhitespaceText(node) || node.TagName is "#comment" or "#pi" ||
+        node.GetDisplay() == DisplayType.None;
+
+    /// <summary>A text node holding only collapsible whitespace (no rendered glyph; a no-break
+    /// space is content).</summary>
+    private static bool IsCollapsibleWhitespaceText(LayoutNode node) =>
+        node.TagName == "#text" && (node.DisplayText ?? "").IsCssWhiteSpaceOnly() &&
+        node.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap);
+
+    /// <summary>An element that is an empty, non-replaced inline box (no children, no text):
+    /// replaced and form elements keep their own paths.</summary>
+    private static bool IsEmptyNonReplacedInline(LayoutNode node) =>
+        !node.TagName.StartsWith('#') && string.IsNullOrEmpty(node.DisplayText) &&
+        node.TagName is not ("IMG" or "CANVAS" or "VIDEO" or "AUDIO" or "IFRAME" or "OBJECT" or "EMBED"
+            or "SVG" or "svg" or "INPUT" or "TEXTAREA" or "SELECT" or "BUTTON" or "METER" or "PROGRESS"
+            or "SCRIPT" or "STYLE" or "TEMPLATE") &&
+        !IsReplacedImage(node);
 
     private static InlineItem EdgeItem(LayoutNode node, float width, bool trailing = false) =>
         new(InlineItemKind.InlineEdge, node, null, width, 0, default, default, default, width, 0, 0, trailing);
@@ -3967,7 +4482,7 @@ internal static class BoxEngine
         IEnumerable<LayoutNode> nodes,
         List<InlineItem> items,
         float maxWidth,
-        float viewportWidth, float viewportHeight)
+        float viewportWidth, float viewportHeight, float containingBlockHeight = 0f)
     {
         foreach (var node in nodes)
         {
@@ -4090,7 +4605,11 @@ internal static class BoxEngine
                 continue;
             }
 
-            if (display == DisplayType.InlineBlock)
+            // §10.3.10 / §10.6.2: an inline-block REPLACED element is sized exactly like an
+            // inline replaced one — 'display: inline-block' on an <img> sent it down the
+            // non-replaced path, which knows no intrinsic height (a 15x15 image laid out 0px
+            // tall, inline-block-replaced-height-001).
+            if (display == DisplayType.InlineBlock && !IsReplacedImage(node))
             {
                 var fontSize = node.GetFontSize();
                 var margin = node.GetMargin(0, viewportHeight, fontSize);
@@ -4102,7 +4621,11 @@ internal static class BoxEngine
                 // baseline-aligned against it by 20px (border-top-width-006: 'height: 0' with a
                 // 96px top border). Auto is the only "no explicit height".
                 var hasExplicitH = !node.IsAutoHeight();
-                var explicitH = hasExplicitH ? node.GetHeight(viewportHeight) : 0f;
+                // §10.5: a percentage height resolves against the containing block's height when
+                // that is known (a 100% child of a max-height-clamped inline-block is the clamped
+                // height, max-height-applies-to-017); otherwise the viewport stands in, as before.
+                var explicitH = hasExplicitH
+                    ? node.GetHeight(containingBlockHeight > 0f ? containingBlockHeight : viewportHeight) : 0f;
 
                 node.Attributes.TryGetValue("type", out var iType);
                 var inputType = iType?.ToLowerInvariant() ?? "text";
@@ -4178,6 +4701,13 @@ internal static class BoxEngine
                                      - border.Top - border.Bottom - padding.Top - padding.Bottom);
                 }
 
+                // §10.7: the used height clamps to 'max-height', then 'min-height' — an
+                // inline-block with 'height: 3in; max-height: 1in' is 1in tall
+                // (max-height-applies-to-012). A percentage resolves against the containing
+                // block's height, which for an inline-level box is not known here: it computes
+                // to 'none' (max) or 0 (min), as for an auto-height containing block.
+                if (!isFormControl) h = ClampContentHeight(node, h, containingBlockHeight, border, padding, fontSize);
+
                 var totalW = margin.Left + border.Left + padding.Left + w + padding.Right + border.Right + margin.Right;
                 var totalH = margin.Top + border.Top + padding.Top + h + padding.Bottom + border.Bottom + margin.Bottom;
 
@@ -4216,6 +4746,17 @@ internal static class BoxEngine
                         var firstTop = node.Children
                             .Select(c => c.Box.BorderBox.Top).DefaultIfEmpty(baselineY).Min();
                         ascent = margin.Top + border.Top + padding.Top + (baselineY - firstTop);
+                    }
+                    // A box holding BLOCK children bases on its LAST line box too: the provisional
+                    // measure put this box's margin box at y = 0, so the last line's baseline in that
+                    // layout is the ascent. The bottom-edge fallback lowered a 'x' / 'bcd' block pair's
+                    // second line below its neighbours' baseline (inline-block-valign-001).
+                    else if (node.Children.Count > 0)
+                    {
+                        // An explicit height skipped the measure above: lay the subtree out
+                        // provisionally first, or the boxes read here are stale.
+                        if (hasExplicitH) MeasureBlockHeight(node, Math.Max(w, 0f), viewportWidth, viewportHeight);
+                        if (FindLastBaselineY(node) is { } lastBaselineY) ascent = lastBaselineY;
                     }
                 }
 
@@ -4293,6 +4834,25 @@ internal static class BoxEngine
                 }
                 if (trailing != 0f) items.Add(EdgeItem(node, trailing, trailing: true));
             }
+            else if (display == DisplayType.Inline && IsEmptyNonReplacedInline(node) &&
+                     (node.Children.Count == 0 || node.Children.All(RendersNothingInline)))
+            {
+                // §10.8/§9.4.2: an EMPTY inline element is still an inline box — its horizontal
+                // edges are laid out, its line-height enters the line box (an empty
+                // 'line-height: 5' span makes the line 5em tall, empty-inline-003) and its
+                // background and borders paint around its zero-width content area
+                // (empty-inline-002). It emitted nothing at all.
+                var (leading, trailing) = InlineBoxEdges(node, maxWidth, viewportHeight);
+                if (leading != 0f) items.Add(EdgeItem(node, leading, trailing: false));
+                using var strutFont = TextMeasure.CreateFont(node);
+                var strutLh = node.GetLineHeight(node.GetFontSize());
+                items.Add(new InlineItem(InlineItemKind.Strut, node, null, 0f, strutLh,
+                           default, default, default, 0f, strutLh, TextMeasure.ComputeAscent(strutFont, strutLh)));
+                // Its whitespace still collapses with its neighbours like any other (§16.6.1).
+                if (node.Children.Count > 0)
+                    CollectInlineItems(node.Children, items, maxWidth, viewportWidth, viewportHeight, containingBlockHeight);
+                if (trailing != 0f) items.Add(EdgeItem(node, trailing, trailing: true));
+            }
             else if (node.Children.Count > 0)
             {
                 var (leading, trailing) = InlineBoxEdges(node, maxWidth, viewportHeight);
@@ -4309,7 +4869,7 @@ internal static class BoxEngine
                 // reverses (the scope's character stream reverses as a whole), while the box's
                 // own edge items stay at its physical boundaries.
                 var children = node.BidiReversesContent() ? node.Children.AsEnumerable().Reverse() : node.Children;
-                CollectInlineItems(children, items, maxWidth, viewportWidth, viewportHeight);
+                CollectInlineItems(children, items, maxWidth, viewportWidth, viewportHeight, containingBlockHeight);
                 if (!isRtlBox && trailing != 0f) items.Add(EdgeItem(node, trailing, trailing: true));
                 if (isRtlBox && (leading != 0f || trailing != 0f))
                 {
@@ -4372,6 +4932,47 @@ internal static class BoxEngine
             if (child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText)) continue;
             var y = FindFirstBaselineY(child);
             if (y.HasValue) return y;
+        }
+        return null;
+    }
+
+    /// <summary>The baseline of the LAST in-flow line box under <paramref name="node"/> (§10.8.1
+    /// for inline-blocks), in the coordinate space its subtree was just laid out in; null when it
+    /// has none. Floats and out-of-flow boxes do not count; visibility:hidden ones do.</summary>
+    internal static float? FindLastBaselineY(LayoutNode node)
+    {
+        if (node.GetDisplay() == DisplayType.None) return null;
+        var pos = node.GetPosition();
+        if (pos == PositionType.Absolute || pos == PositionType.Fixed) return null;
+        if (node.TagName != "#text" && node.GetFloat() != FloatType.None) return null;
+
+        if (!string.IsNullOrEmpty(node.DisplayText) && node.Children.Count == 0)
+        {
+            if (node.DisplayText.Trim().Length == 0) return null;
+            using var font = TextMeasure.CreateFont(node);
+            var lh = node.GetLineHeight(node.GetFontSize());
+            var ascent = TextMeasure.ComputeAscent(font, lh);
+            if (node.InlineFragments is { Count: > 0 } fragments) return fragments[^1].Rect.Top + ascent;
+            // A block's own wrapped text stacks its lines from the top: the last one ends the box.
+            return node.GetDisplay() is DisplayType.Inline
+                ? node.Box.ContentBox.Top + ascent
+                : node.Box.ContentBox.Bottom - lh + ascent;
+        }
+        if (IsReplacedImage(node)) return node.Box.ContentBox.Bottom;
+
+        for (var i = node.Children.Count - 1; i >= 0; i--)
+        {
+            var child = node.Children[i];
+            if (child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText)) continue;
+            // A box whose 'overflow' is not 'visible' keeps its line boxes to itself and bases at
+            // its bottom margin edge (§10.8.1) — inline-block or block alike, empty or not, as
+            // browsers synthesize a scroll container's baseline (baseline-block-with-overflow-001
+            // matches each block against an inline-block of the same shape).
+            if (child.TagName != "#text" && child.GetOverflow() != OverflowType.Visible &&
+                child.GetPosition() is not (PositionType.Absolute or PositionType.Fixed) &&
+                child.GetDisplay() != DisplayType.None && child.GetFloat() == FloatType.None)
+                return child.Box.MarginBox.Bottom;
+            if (FindLastBaselineY(child) is { } y) return y;
         }
         return null;
     }
@@ -4446,6 +5047,22 @@ internal static class BoxEngine
                     // Records only — the box itself is laid out later by the positioned pass.
                     node.StaticX = absX;
                     node.StaticY = absY;
+                    break;
+                }
+            case InlineItemKind.Strut:
+                {
+                    // An empty inline box: a zero-width content area of its own font about the
+                    // baseline (§10.6.1), with its padding and border around it — what paints its
+                    // background and borders.
+                    // Geometry only: its background, padding and borders paint through the
+                    // per-line wrapper fragments the strut folds (AccumulateWrapperFragment).
+                    var (strutAscent, strutDescent) = ContentAreaMetrics(node);
+                    var strutBaseline = absY + item.Ascent;
+                    if (node.Children.Count == 0)
+                        node.Box = new BoxDimensions
+                        {
+                            ContentBox = new SKRect(absX, strutBaseline - strutAscent, absX, strutBaseline + strutDescent),
+                        };
                     break;
                 }
             case InlineItemKind.InlineEdge:
@@ -4535,7 +5152,7 @@ internal static class BoxEngine
     /// line position it lands on is the box's static position (§10.3.7 / §10.6.4).</summary>
     /// <summary><see cref="InlineEdge"/> is the leading or trailing margin+border+padding of a
     /// non-replaced inline box: it advances the line but has no height of its own (§8.4).</summary>
-    private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, InlineTable, LineBreak, OutOfFlow, InlineEdge, Float }
+    private enum InlineItemKind { Text, Image, InlineBlock, InlineFlex, InlineTable, LineBreak, OutOfFlow, InlineEdge, Float, Strut }
 
     /// <summary><see cref="Ascent"/> is the distance from this item's own top (margin edge) down
     /// to the baseline it should align on (CSS 2.1 §10.8). Text uses the font's half-leading

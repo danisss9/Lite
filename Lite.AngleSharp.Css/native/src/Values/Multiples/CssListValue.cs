@@ -90,7 +90,10 @@ namespace AngleSharp.Css.Values
 
         ICssValue ICssValue.Compute(ICssComputeContext context)
         {
-            var items = _items.Select(v => (T)v.Compute(context)).ToArray();
+            // A layer that omits a component stores no value for it (the trailing 'red' layer
+            // of 'url(x) 0 0 / 50px 100px no-repeat, red' has no size): it stays absent
+            // (Lite patch 007; computing it threw and crashed the whole element's cascade).
+            var items = _items.Select(v => v is null ? default : (T)v.Compute(context)).ToArray();
             return new CssListValue<T>(items);
         }
 
