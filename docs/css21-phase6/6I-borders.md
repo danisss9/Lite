@@ -39,3 +39,11 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - **Moved (+1 official, +1 WPT):** `css21-official/html4/clip-001.htm`, `css/CSS2/visufx/clip-001.xht`.
 - **Change:** `Lite/Scripting/Dom/JsStyle.cs` adds `public string clip { get => Get("clip"); set => Set("clip", value); }` so dynamic `el.style.clip = "auto"` writes to `StyleOverrides["clip"]` and clears a stylesheet `clip: rect(...)`. Added `BorderStyleTests.StyleClipProperty_OverridesStylesheetClipToAuto`.
 - **Checks:** units 650/0; curated `css21` 51/1, `wpt` 86/2; lane `I` 2/72 official, 4/54 WPT; canary 300/300 (154/154 official, 146/146 WPT).
+
+### 2026-11-20 — Remaining 120 cases triaged and handed to owning lanes
+- **To 6.M (78 cases, engine renders verified):** groove/ridge 2-shade split (20), thin double / dotted ring judge (14), nested dashed boxes & twin dashed lines (17), 1px/1pt thin lines (8), `-width-047` short/twin green lines (4), `-applies-to-010` list-item bullet + border line (11), `outline-style-applies-to-008` inner text glyphs (2), `clipping-017` side-by-side bands (2).
+- **To 6.E (18 cases):** `border-*-applies-to-004` collapsed `table-row` interior border winner (16), `outline-applies-to-016/017` replaced `table-column(-group)` layout (2).
+- **To 6.K (10 cases):** `border-*-color-030` + `outline-color-030` 4-digit hex `#1000` (5), `border-width-010` negative shorthand drop (2), `border-width-011/012` + `outline-width-096` `StyleResolver.EffectiveValue` computed `0px` under `style: none/hidden` (3).
+- **To 6.D (6 cases):** `clipping-006/007` fixed-in-overflow containing block (4), `outline-layout-002` Appendix E §E.2 step 10 outline paint order (2).
+- **To 6.C (4 cases):** `border-dynamic-001/002` bordered block auto height with self-collapsing empty child margin (4).
+- **To 6.A (4 cases):** `border-001/003` WPT reference Ahem `word-spacing` wrapping (4).

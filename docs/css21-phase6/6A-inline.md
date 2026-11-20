@@ -22,7 +22,7 @@ Branch `css21/p6-a`, worktree `C:\Repos\Lite-p6-a`. Case list `Lite.Conformance/
 
 ## Handed in
 
-_(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- `border-001`, `border-003` (official+WPT, 4): the bordered test box renders pixel-perfectly; the WPT reference (`border-001-ref.xht` / `border-003-ref.xht`) uses Ahem text with `word-spacing` which mis-wraps in inline layout (from 6.I).
 
 ## Edits outside owned files
 

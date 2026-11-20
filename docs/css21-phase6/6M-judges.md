@@ -24,7 +24,14 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
 
 ## Handed in
 
-_(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- `border-{top,right,bottom,left}-style-007/008` (official+WPT, 16) and `border-style-rendering-001/002` (official+WPT, 4): engine renders groove/ridge green lines and boxes cleanly; judge splits the two touching shades of green into `2 top-level shapes below the instructions` (from 6.I).
+- `border-style-002/003/004/006/007/008` (official, 6) and `border-style-shorthand-001/002/003/004` (official+WPT, 8): engine renders thin double and dotted borders cleanly; ring judge reads thin double as `solid` and dotted as `none` (from 6.I).
+- `border-016/017/018` (official+WPT, 6), `border-{left,right}-016/017` (official+WPT, 8), `border-bottom-017` (official+WPT, 2), `border-top-017` (official, 1): engine renders nested dashed boxes and parallel pairs of dashed lines cleanly; judge expects a single box or merges parallel dashed lines into one non-straight cluster (from 6.I).
+- `border-{top,right,bottom,left}-width-092` (official+WPT, 6) and `border-{top,bottom}-width-014` (official, 2): engine renders 1px/1pt thin solid lines cleanly; judge misses 1px-thin lines (`0 top-level shapes`) (from 6.I).
+- `border-{top,right,bottom,left}-width-047` (WPT, 4): engine renders the short 50x8 green line (top/bottom) and 2 green lines (left/right) with no red; judge rejects `50x8` as not a line and expects 1 line instead of 2 on left/right (from 6.I).
+- `border-{top,bottom}-applies-to-010`, `border-{top,bottom}-color-applies-to-010`, `border-{top,right,bottom,left}-style-applies-to-010` (official + WPT `border-bottom-style-applies-to-010`), `border-left-width-applies-to-010` (official+WPT) (11 total): engine renders both the border line and the list-item marker bullet cleanly; judge misses the bullet when vertically offset from a top/bottom border or fails to detect dashed lines (from 6.I).
+- `outline-style-applies-to-008` (official+WPT, 2): engine renders the blue dotted outline around the inline box; judge treats the inner "Filler Text" glyphs as shapes not on the box perimeter (from 6.I).
+- `clipping-017` (official+WPT, 2): `#test-outer` (`left:60px;top:60px`) and `#control-outer` (`margin:20px 0 0 200px`) sit side-by-side horizontally on the same band; judge expects 2 vertically stacked ink bands (`the two lines render identically: 1 ink bands`) (from 6.I).
 
 ## Edits outside owned files
 

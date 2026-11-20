@@ -21,7 +21,8 @@ Branch `css21/p6-e`, worktree `C:\Repos\Lite-p6-e`. Case list `Lite.Conformance/
 
 ## Handed in
 
-_(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- `border-applies-to-004`, `border-color-applies-to-004`, `border-{left,right}-applies-to-004`, `border-{left,right}-color-applies-to-004`, `border-{left,right}-width-applies-to-004` (official+WPT, 16): in `border-collapse: collapse`, a `table-row`'s left/right border is resolved onto the interior boundary between adjacent cells in `TableEngine` instead of only the row's outer left/right edges (from 6.I).
+- `outline-applies-to-016`, `outline-applies-to-017` (WPT, 2): replaced `<img>` with `display: table-column-group` / `table-column` produces no laid-out box, so nothing paints (from 6.I).
 
 ## Edits outside owned files
 

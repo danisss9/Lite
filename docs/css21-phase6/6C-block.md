@@ -19,7 +19,7 @@ Branch `css21/p6-c`, worktree `C:\Repos\Lite-p6-c`. Case list `Lite.Conformance/
 
 ## Handed in
 
-_(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- `border-dynamic-001`, `border-dynamic-002` (official+WPT, 4): even statically (without JS), a bordered `#test` containing an empty child with `margin: 10em 0` collapses to 0 height instead of including the child's self-collapsed 10em margin inside the bordered block's auto height (from 6.I).
 
 ## Edits outside owned files
 

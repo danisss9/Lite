@@ -21,7 +21,8 @@ Branch `css21/p6-d`, worktree `C:\Repos\Lite-p6-d`. Case list `Lite.Conformance/
 
 ## Handed in
 
-_(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- `clipping-006`, `clipping-007` (official+WPT, 4): `overflow: hidden` on a `position: fixed` ancestor clips a `position: fixed` descendant whose containing block is the viewport (`PaintThroughClippers` / containing-block clipping in `Drawer.cs`) (from 6.I).
+- `outline-layout-002` (official+WPT, 2): `span1`'s 50px solid white outline paints before `span2`'s red text instead of after inline siblings in the stacking context (CSS 2.1 Appendix E §E.2 step 10) (from 6.I).
 
 ## Edits outside owned files
 
