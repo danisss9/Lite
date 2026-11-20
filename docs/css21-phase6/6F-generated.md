@@ -62,6 +62,19 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - **Checks:** units 652 passed; css21 51/1; wpt 86/2; lane list official 10→27, WPT 0→17 (44
   total, 0 losses); canary 300/300.
 
+### The implicit 'list-item' counter (§12.4)
+
+- **Moved:** `counter-reset-increment-002` (official + WPT). Every list element now implicitly
+  resets `list-item` (0, or `start`-1 from HTML's hint) and every list item implicitly increments
+  it; the marker's ordinal and the inside-marker text read that counter, so
+  `ol { counter-reset: list-item -3 }` / `start="-3"` render -3, -2, ... instead of 1, 2, ...
+  (`list-style-type-017` now renders the right numbers; its remaining failure is the official
+  self-describing check below).
+- **Still fails:** `list-style-type-017` (official only) reports "8 ink bands" from the
+  self-describing check although its twin reftest passes — a 6.M pass-condition issue.
+- **Checks:** units 656; css21 51/1; wpt 86/2; lane list 44→46 (official 28, WPT 18), 0 losses;
+  canary 300/300.
+
 ### Round-dot pass conditions (handed to 6.M)
 
 `list-style-type-001`, `list-style-applies-to-005/006`, `list-style-type-applies-to-005/006` (and

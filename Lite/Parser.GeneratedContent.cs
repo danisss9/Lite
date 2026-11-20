@@ -40,7 +40,27 @@ internal static partial class Parser
             // (content-counter-007's span style="counter-reset: c 48").
             var inline = element.GetAttribute("style") is { Length: > 0 } css ? ParseDeclarations(css).Item1 : null;
             string? Counter(string prop) => inline?.GetValueOrDefault(prop) ?? node.StyleOverrides.GetValueOrDefault(prop);
-            ApplyCounterProperties(Counter("counter-reset"), Counter("counter-increment"), enclosing);
+            var reset = Counter("counter-reset");
+            ApplyCounterProperties(reset, Counter("counter-increment"), enclosing);
+
+            // §12.4: "the 'list-item' counter is automatically created and incremented for every
+            // list item". It is reset by the item's list — 0, or start-1 from HTML's 'start'
+            // hint — unless the author's own counter-reset names it (list-style-type-017's
+            // `ol { counter-reset: list-item -3 }` must win).
+            if (display.Trim().Equals("list-item", StringComparison.OrdinalIgnoreCase))
+                ApplyCounterProperties(null, "list-item", enclosing);
+            else if (TagOf(element) is "OL" or "UL" or "DIR" or "MENU")
+            {
+                // HTML's 'start' hint sets the list's first ordinal (start-1 before the item's
+                // increment) and is applied after the author's own reset — list-style-type-017
+                // writes both `counter-reset: list-item -3` and `start="-3"` and expects -3.
+                // Without 'start', the author's reset (if it names list-item) stands, else the
+                // list restarts the counter at 0 for its items (§12.4's implicit reset).
+                if (TagOf(element) == "OL" && int.TryParse(element.GetAttribute("start"), out var parsedStart))
+                    ApplyCounterProperties($"list-item {parsedStart - 1}", null, enclosing);
+                else if (reset is null || !reset.Contains("list-item", StringComparison.OrdinalIgnoreCase))
+                    ApplyCounterProperties("list-item 0", null, enclosing);
+            }
         }
         var (values, stacks) = SnapshotCounters();
         node.CounterValues = values;
@@ -267,10 +287,14 @@ internal static partial class Parser
             }
             else
             {
+                // §12.4: the ordinal is the implicit 'list-item' counter (falling back to the
+                // sibling position for a node with no snapshot).
                 var index = 1;
-                for (var sibling = element.PreviousElementSibling; sibling is not null;
-                     sibling = sibling.PreviousElementSibling)
-                    if (TagOf(sibling) == "LI") index++;
+                if (node.CounterValues?.TryGetValue("list-item", out var count) == true) index = count;
+                else
+                    for (var sibling = element.PreviousElementSibling; sibling is not null;
+                         sibling = sibling.PreviousElementSibling)
+                        if (TagOf(sibling) == "LI") index++;
                 var keyword = CssCounterStyles.Keyword(type);
                 if (CssCounterStyles.InsideMarkerText(index, keyword) is not { } text) return;
                 marker.TextOverride = text;

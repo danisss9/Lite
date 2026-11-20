@@ -258,6 +258,12 @@ internal static partial class Drawer
 
     private static int GetOrderedIndex(LayoutNode node)
     {
+        // CSS 2.1 §12.4: the marker's ordinal is the 'list-item' counter — the parser
+        // implicitly resets it at the list and increments it per item, and an author's
+        // `counter-reset: list-item -3` participates (list-style-type-017's negative numbers
+        // and counter-reset-increment-002). The sibling count is only the fallback for a node
+        // with no counter snapshot (a projected/script-created box).
+        if (node.CounterValues?.TryGetValue("list-item", out var counter) == true) return counter;
         if (node.Parent == null) return 1;
         var index = 1;
         foreach (var sibling in node.Parent.Children)

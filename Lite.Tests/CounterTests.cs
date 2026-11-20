@@ -69,6 +69,52 @@ public static class CounterTests
         True(texts.SequenceEqual(["", ">", "x", "<", "[", "]", ">"]), string.Join(",", texts));
     }
 
+    [Test]
+    public static void ListItems_ImplicitlyIncrementTheListItemCounter()
+    {
+        // §12.4: a list element implicitly resets 'list-item' and every list item increments it.
+        var texts = Generated("li:before { content: counter(list-item); }",
+            "<ol><li></li><li></li><li></li></ol>");
+        True(texts.SequenceEqual(["1", "2", "3"]), string.Join(",", texts));
+    }
+
+    [Test]
+    public static void AuthorResetOfListItem_ParticipatesInTheOrdinal()
+    {
+        // counter-reset-increment-002: reset -4, then the item's own implicit increment → -3.
+        var texts = Generated("ol { counter-reset: list-item -4; } li:before { content: counter(list-item); }",
+            "<ol><li></li><li></li></ol>");
+        True(texts.SequenceEqual(["-3", "-2"]), string.Join(",", texts));
+    }
+
+    [Test]
+    public static void Markers_UseTheListItemCounter()
+    {
+        // list-style-type-017: `start="-3"` sets the first ordinal, and the marker follows it.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>ol { counter-reset: list-item -3; " +
+            "list-style-position: inside; }</style></head>" +
+            "<body><ol start=\"-3\"><li>a</li><li>b</li></ol></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        Lite.Layout.BoxEngine.Layout(page.Root, 800, 600);
+        var markers = new List<string>();
+        void Walk(LayoutNode node)
+        {
+            if (node.TagName == "#pseudo-marker") markers.Add(node.DisplayText.Trim());
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(page.Root);
+        True(markers.SequenceEqual(["-3.", "-2."]), string.Join("|", markers));
+    }
+
+    [Test]
+    public static void NestedLists_RestartTheListItemCounter()
+    {
+        var texts = Generated("li:before { content: counter(list-item); }",
+            "<ol><li><ol><li></li></ol></li><li></li></ol>");
+        True(texts.SequenceEqual(["1", "1", "2"]), string.Join(",", texts));
+    }
+
     private static List<string> Generated(string css, string body)
     {
         var page = Parser.ParseChildPage($"<!DOCTYPE html><html><head><style>{css}</style></head><body>{body}</body></html>",
