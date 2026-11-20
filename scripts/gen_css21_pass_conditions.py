@@ -918,8 +918,8 @@ def visual_check(sentence: str | None) -> dict | None:
     if m := TEXT_COLOR.match(clause):
         return {'kind': 'text-color', 'color': m.group(1)}
     if m := TEXT_DECORATION.match(clause):
-        if m.group(1):  # "does not have a line under it"
-            return {'kind': 'text-decoration', 'under': False}
+        if m.group(1):  # "has [not] a line under it" — the group carries the polarity
+            return {'kind': 'text-decoration', 'under': m.group(1) == 'has'}
         return {'kind': 'text-decoration', 'over': True, 'under': True, 'through': True}
     if re.match(r'^the\s+words\s+["\']filler\s+text["\']\s+below\s+does\s+not,?\s+blink,\s+has\s+no\s+line\s+over\s+it,'
                 r'\s+has\s+no\s+line\s+under\s+it\s+and\s+has\s+no\s+line\s+through\s+it$', clause):
@@ -976,7 +976,10 @@ def visual_check(sentence: str | None) -> dict | None:
     if DOUBLE_LINE.match(clause):
         return {'kind': 'double-line'}
     if NO_THROUGH.match(clause):
-        return {'kind': 'text-decoration', 'through': False}
+        # "…a line through the text below": the subject is the first text element below the
+        # instruction line (the family has no "Filler Text" element, and its text may sit in
+        # a float or an inline-block, so a wrapper's box would not cover the glyphs).
+        return {'kind': 'text-decoration', 'through': False, 'anchor': 'next'}
     if m := THIS_LINE_COLOR.match(clause):
         return {'kind': 'text-color', 'color': m.group(1), 'anchor': 'instruction'}
     if APPROX_SAME.match(clause):
@@ -1005,7 +1008,12 @@ def visual_check(sentence: str | None) -> dict | None:
         count = 2 if clause.startswith('there are two') else 1
         return {'kind': 'border-ring', 'shape': style, 'color': color, 'count': count}
     if m := FIRST_LINE_MARKER.match(clause):
-        return {k: v for k, v in {'kind': 'first-line-marker', 'color': m.group(1)}.items() if v}
+        # Only the longer sentence states the second line's flow; the plain "has a square
+        # bullet" family is satisfied by a single line whose bullet starts it.
+        check = {'kind': 'first-line-marker', 'color': m.group(1)}
+        if 'second line of text flows below' in clause:
+            check['mode'] = 'flow-below'
+        return {k: v for k, v in check.items() if v}
     if MARKER_ITS.match(clause):
         return {k: v for k, v in {'kind': 'marker-bullet', 'color': MARKER_ITS.match(clause).group(1)}.items() if v}
     if m := LINE_MARKER.match(clause):
@@ -1294,7 +1302,8 @@ def main() -> None:
             entry = dict(existing.get(path) or {
                 'path': path, 'suite': suite, 'condition': 'unstated', 'sentence': None, 'twin': None,
             })
-            entry.update({k: v for k, v in review.items() if k in ('condition', 'sentence', 'check', 'twin', 'note', 'manualPending')})
+            entry.update({k: v for k, v in review.items() if k in ('condition', 'sentence', 'check', 'twin', 'note',
+                                                                   'manualPending', 'redScan')})
             entry['reviewed'] = True
             entries.append(entry)
             return

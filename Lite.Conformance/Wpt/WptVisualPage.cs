@@ -324,7 +324,7 @@ internal static class WptVisualPage
     /// one (before it is handed to the check as <c>before</c>).</summary>
     internal static WptRunner.RunResult RunSelfTest(WptCase test, bool embeddedRequired = false,
         Func<Css21.RenderSet, Lite.Models.LayoutNode, WptRunner.RunResult>? statedCondition = null,
-        Css21.VisualCheck? statedCheck = null, string? sentence = null)
+        Css21.VisualCheck? statedCheck = null, string? sentence = null, bool redScan = true)
     {
         if (test.TestDriver)
             return new(WptRunner.Cat.Unsupported, "Self-test requires test-driver support", 0, 0);
@@ -356,7 +356,11 @@ internal static class WptVisualPage
                 // A protocol whose pressed state is unconstrained ("the link should turn red
                 // while clicked", rest "after") is scanned at rest, not in the pressed render.
                 var scanned = statedCheck?.Interaction?.Rest == "after" && before is not null ? before : bitmap;
-                var red = CountFailureRed(scanned, root);
+                // A reviewed manual-pending entry whose stated condition holds only in a later
+                // state (hover, scroll, an interaction) turns the at-rest scan off: red is that
+                // state's input, not its verdict. It still never passes, and a crash or timeout
+                // still reports.
+                var red = redScan ? CountFailureRed(scanned, root) : 0;
                 const string assertion = "Self-describing test shows no failure red (diagnostic)";
                 if (red == 0 && statedCondition is not null)
                 {

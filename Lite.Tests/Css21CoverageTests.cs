@@ -53,8 +53,9 @@ public static class Css21CoverageTests
     [Test]
     public static void Evidence_KindNamesTheRouteThatRan()
     {
-        // A css/CSS2 "visual" page is decided by the selftest oracle; a manual case runs only
-        // when its stated condition has a machine check, and otherwise has no route at all.
+        // A css/CSS2 "visual" page is decided by the selftest oracle; a manual case runs when
+        // its stated condition has a machine check, or — reviewed manual-pending — through the
+        // fail-closed self-test oracle, and otherwise has no route at all.
         Equal("selftest", WptRunner.EvidenceKind(new WptCase("css/CSS2/a.xht", "css/CSS2/a.xht", "visual", "window", false, false, []), "css/CSS2/a.xht"));
         Equal("reftest", WptRunner.EvidenceKind(RefCase("css/CSS2/b.xht", null), "css/CSS2/b.xht"));
         const string checkedManual = "css/CSS2/backgrounds/background-012.xht";
@@ -1430,6 +1431,95 @@ public static class Css21CoverageTests
         ss.ScrollXTo(-5);
         True(ss.ScrollX == 0);
         True(ss.NeedsHorizontalScrollbar && !new ElementScrollState().NeedsHorizontalScrollbar);
+    }
+
+    [Test]
+    public static void WptRunner_ManualPendingRouteRunsTheOracleButCannotPass()
+    {
+        // A reviewed manual-pending entry with no machine check (outline-019 awaits native
+        // observation) runs its WPT manual-kind copy through the fail-closed oracle: failure
+        // red fails it, a clean render stays manual-pending. It is never "unexecuted".
+        const string pending = "css/CSS2/ui/outline-019.xht";
+        var manual = new WptCase(pending, pending, "manual", "window", false, false, []);
+        True(SelfTestOracle.Condition(pending) is { ManualPending: true, Check: null });
+        True(WptRunner.IsManualPendingRoute(manual, pending));
+        Equal("selftest", WptRunner.EvidenceKind(manual, pending));
+        // A machine-checked manual copy already has the stronger route; a visual copy is the
+        // selftest route; an unreviewed manual case still has none.
+        const string checkedManual = "css/CSS2/backgrounds/background-012.xht";
+        True(!WptRunner.IsManualPendingRoute(new WptCase(checkedManual, checkedManual, "manual", "window", false, false, []), checkedManual));
+        True(!WptRunner.IsManualPendingRoute(new WptCase(pending, pending, "visual", "window", false, false, []), pending));
+        const string noCheck = "css/CSS2/ui/no-such-manual-case.xht";
+        True(!WptRunner.IsManualPendingRoute(new WptCase(noCheck, noCheck, "manual", "window", false, false, []), noCheck));
+        // The oracle can only leave it pending, never a pass.
+        var clean = new WptRunner.RunResult(WptRunner.Cat.Pass, "no failure red", 1, 0,
+            [new("no failure red", 0, null)], 0);
+        var decided = SelfTestOracle.Decide(pending, "manual", clean, null, _ => null, manualPending: true);
+        True(decided.Cat == WptRunner.Cat.ManualPending && !decided.Passed);
+        // A reviewed state-dependent entry turns the at-rest red scan off (its subject is red
+        // BY DESIGN until the stated hover/removal state); an ordinary entry scans.
+        True(!SelfTestOracle.Condition("css/CSS2/selectors/dom-hover-001.xht").RedScan);
+        True(SelfTestOracle.Condition(pending).RedScan);
+    }
+
+    [Test]
+    public static void VisualChecks_FirstLineMarkerReadsThePlainAndFlowBelowVariants()
+    {
+        // list-style-001/016: "the text below has a square bullet" is satisfied by a single
+        // line whose bullet starts it; the longer "second line flows below that bullet"
+        // sentence still needs the second line.
+        const string sentence = "Test passes if the text below has a square bullet.";
+        using var oneLine = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 28, 38), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(36, 30, 120, 40), Fill(SkiaSharp.SKColors.Black));
+        });
+        var root = Node("html", "block");
+        var instructions = Node("p", "block");
+        instructions.TextOverride = sentence;
+        instructions.Box = new Lite.Layout.BoxDimensions { ContentBox = new SkiaSharp.SKRect(0, 0, 400, 20) };
+        root.AddChild(instructions);
+        var plain = VisualChecks.Evaluate(new VisualCheck("first-line-marker"),
+            new RenderSet(oneLine, null, null), root, sentence, "x");
+        True(plain.Passed);
+        var flowBelow = VisualChecks.Evaluate(new VisualCheck("first-line-marker", Mode: "flow-below"),
+            new RenderSet(oneLine, null, null), root, sentence, "x");
+        True(flowBelow.Cat == WptRunner.Cat.Unsupported);
+    }
+
+    [Test]
+    public static void VisualChecks_PaintedFontReadsTheInstructionParagraphAndFailsClosed()
+    {
+        // c527: the instruction paragraph IS the tested face, so with nothing painted below
+        // the instructions the judge reads the runs inside the instruction node. A run set
+        // that honours size, pitch and family passes; a later baseline fails; the two
+        // unreadable families (small-caps, an unconstrained sentence) stay unsupported.
+        const string sentence = "This text should be 18px serif.";
+        var root = Node("html", "block");
+        var paragraph = Node("p", "block");
+        paragraph.TextOverride = sentence;
+        paragraph.Box = new Lite.Layout.BoxDimensions
+        {
+            ContentBox = new SkiaSharp.SKRect(0, 0, 400, 60),
+        };
+        root.AddChild(paragraph);
+        using var bitmap = Render(_ => { });
+        var paint = new List<Lite.Rendering.PaintLog.Entry>
+        {
+            new(sentence, 0, 18, "Liberation Serif", 18, "left", false, false),
+            new("second line", 0, 45, "Liberation Serif", 18, "left", false, false),
+        };
+        var faithful = new VisualCheck("painted-font", Count: 18, Edge: "27", Shape: "serif");
+        True(VisualChecks.Evaluate(faithful, new RenderSet(bitmap, null, null, paint), root, sentence, "x").Passed);
+        var strained = new List<Lite.Rendering.PaintLog.Entry> { paint[0], paint[1] with { BaselineY = 60 } };
+        True(!VisualChecks.Evaluate(faithful, new RenderSet(bitmap, null, null, strained), root, sentence, "x").Passed);
+        var smallCaps = new VisualCheck("painted-font", Count: 18, Mode: "small-caps");
+        True(VisualChecks.Evaluate(smallCaps, new RenderSet(bitmap, null, null, paint), root, sentence, "x").Cat == WptRunner.Cat.Unsupported);
+        var empty = new VisualCheck("painted-font");
+        True(VisualChecks.Evaluate(empty, new RenderSet(bitmap, null, null, paint), root, sentence, "x").Cat == WptRunner.Cat.Unsupported);
+        // The strict decoration templates keep their stated polarity and subject route.
+        True(SelfTestOracle.Condition("css21-official/html4/text-decoration-propagation-003.htm").Check is { Under: true });
+        True(SelfTestOracle.Condition("css21-official/html4/text-decoration-071.htm").Check is { Through: false, Anchor: "next" });
     }
 
     [Test]

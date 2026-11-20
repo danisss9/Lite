@@ -24,6 +24,10 @@ Branch `css21/p6-d`, worktree `C:\Repos\Lite-p6-d`. Case list `Lite.Conformance/
 - `clipping-006`, `clipping-007` (official+WPT, 4): `overflow: hidden` on a `position: fixed` ancestor clips a `position: fixed` descendant whose containing block is the viewport (`PaintThroughClippers` / containing-block clipping in `Drawer.cs`) (from 6.I).
 - `outline-layout-002` (official+WPT, 2): `span1`'s 50px solid white outline paints before `span2`'s red text instead of after inline siblings in the stacking context (CSS 2.1 Appendix E §E.2 step 10) (from 6.I).
 
+- `css/CSS2/box-display/containing-block-017.xht`, `containing-block-018.xht` — the WPT manual copy now runs the
+  fail-closed selftest route and fails on a large visible red box (the page's stated condition is "no red visible");
+  the abspos containing-block placement is wrong. Render evidence: `artifacts/cb17.png` in the 6.M worktree. From 6.M.
+
 ## Edits outside owned files
 
 - 682105b0: `Lite/Layout/BoxEngine.Block.cs` (6.C's area) — the natural-extent fallback now skips

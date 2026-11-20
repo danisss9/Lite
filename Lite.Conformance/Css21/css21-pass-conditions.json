@@ -15019,7 +15019,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -15042,7 +15043,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -15065,7 +15067,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -15077,7 +15080,8 @@
    "reviewed": false,
    "check": {
     "kind": "first-line-marker",
-    "color": "green"
+    "color": "green",
+    "mode": "flow-below"
    }
   },
   {
@@ -15101,7 +15105,8 @@
    "reviewed": false,
    "check": {
     "kind": "first-line-marker",
-    "color": "green"
+    "color": "green",
+    "mode": "flow-below"
    }
   },
   {
@@ -15112,7 +15117,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -15123,7 +15129,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -15134,7 +15141,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -15145,7 +15153,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -15156,7 +15165,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -15167,7 +15177,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -15189,7 +15200,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -15200,7 +15212,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -18895,7 +18908,8 @@
    "twin": null,
    "reviewed": true,
    "manualPending": true,
-   "note": "the stated condition (\"none\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "note": "the stated condition (\"none\") names a visual property with no strict machine reading in the current judge set - the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence. The at-rest page paints its subject red BY DESIGN (#green { color: red }) and the stated condition is the hover-then-removal state (\"at that point there should be no red\"), so the at-rest failure-red scan is not a verdict and is off; the case stays manual-pending.",
+   "redScan": false
   },
   {
    "path": "css/CSS2/selectors/dom-hover-002.xht",
@@ -28602,7 +28616,8 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": false
+    "through": false,
+    "anchor": "next"
    }
   },
   {
@@ -28614,7 +28629,8 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": false
+    "through": false,
+    "anchor": "next"
    }
   },
   {
@@ -28626,7 +28642,8 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": false
+    "through": false,
+    "anchor": "next"
    }
   },
   {
@@ -28638,7 +28655,8 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": false
+    "through": false,
+    "anchor": "next"
    }
   },
   {
@@ -28744,7 +28762,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -28964,7 +28982,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -93461,7 +93479,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -93484,7 +93503,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -93507,7 +93527,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -93519,7 +93540,8 @@
    "reviewed": false,
    "check": {
     "kind": "first-line-marker",
-    "color": "green"
+    "color": "green",
+    "mode": "flow-below"
    }
   },
   {
@@ -93543,7 +93565,8 @@
    "reviewed": false,
    "check": {
     "kind": "first-line-marker",
-    "color": "green"
+    "color": "green",
+    "mode": "flow-below"
    }
   },
   {
@@ -93554,7 +93577,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -93565,7 +93589,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -93576,7 +93601,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -93587,7 +93613,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -93598,7 +93625,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -93609,7 +93637,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -93631,7 +93660,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -93642,7 +93672,8 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "first-line-marker"
+    "kind": "first-line-marker",
+    "mode": "flow-below"
    }
   },
   {
@@ -116872,7 +116903,8 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": false
+    "through": false,
+    "anchor": "next"
    }
   },
   {
@@ -116884,7 +116916,8 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": false
+    "through": false,
+    "anchor": "next"
    }
   },
   {
@@ -116896,7 +116929,8 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": false
+    "through": false,
+    "anchor": "next"
    }
   },
   {
@@ -116908,7 +116942,8 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "through": false
+    "through": false,
+    "anchor": "next"
    }
   },
   {
@@ -117014,7 +117049,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117026,7 +117061,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117038,7 +117073,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117060,7 +117095,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117072,7 +117107,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117084,7 +117119,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117096,7 +117131,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117108,7 +117143,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117120,7 +117155,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117132,7 +117167,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117168,7 +117203,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117180,7 +117215,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {
@@ -117364,7 +117399,7 @@
    "reviewed": false,
    "check": {
     "kind": "text-decoration",
-    "under": false
+    "under": true
    }
   },
   {

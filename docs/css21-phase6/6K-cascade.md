@@ -41,6 +41,11 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
 - `border-width-010` (official+WPT, 2): `border: red solid -1px` has a negative border width and must drop the entire shorthand declaration during cascade so the prior green 8px solid border wins (from 6.I).
 - `border-width-011/012` (official, 2) and `outline-width-096` (official, 1): `StyleResolver.EffectiveValue` passes the parent's raw width instead of computed `0px` when the parent's `border-style` is `none`/`hidden` (§8.5.1) or `outline-style` is `none` (§18.4). Note: for `border-width-011/012`, once `StyleResolver` writes `"0px"` into `StyleOverrides`, coordinate with 6.I if `GetBorderSideWidth` also needs to read inherited `"0px"` (from 6.I).
 
+- `css/CSS2/cascade/html-precedence-003.xht` — the WPT manual copy now runs the fail-closed selftest route and fails:
+  `<font color="green">` inside a red `div` paints red. The file's assert says the presentational `color` attribute
+  trumps the author `div` rule and the user sheet's universal selector (§6.4.4 cascade order); the attribute seems
+  ignored. Render evidence: `artifacts/hp3.png` in the 6.M worktree. From 6.M.
+
 ## Edits outside owned files
 
 - `Lite/Parser.cs`: removed the old regex-based `InlineImports` method body (36 lines) so the spec-compliant `InlineImports` lives in owned `Lite/Parser.Cascade.cs`. The HTML5 gate was not rerun (per lane rules).

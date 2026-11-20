@@ -46,6 +46,11 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - **6.A/6.J (text/fonts):** `background-root-006/007` (WPT + official): the test and its reference wrap the same text differently (`* { margin:1em; padding:1em }` vs the reference's fixed 72px padding), so the tile grid and text bands differ; the background painter is not implicated.
 - **6.X/6.K:** `background-20.xml` (other-formats): 465888 red pixels; the XML variant still paints red. Needs a first diagnosis before it can be assigned.
 
+- `css/CSS2/backgrounds/background-attachment-006.xht`, `background-attachment-007.xht` — the WPT manual copy now
+  runs the fail-closed selftest route and fails on visible red: 006's `.outer` red top border should be covered by
+  the `-10px`-margin inner box, and 007's red background should be covered by the tiled image. Both are layout/paint
+  coverage of the background layer, not the judge. Render evidence: `artifacts/ba6.png` in the 6.M worktree. From 6.M.
+
 ## Edits outside owned files
 
 - `Lite.Conformance/Css21/SelfTestOracle.cs` (6.M) — commit `cbe1d649`: parse `scroll.then` into `ScrollSpec`. One-line route fix; 6.M owns the file.

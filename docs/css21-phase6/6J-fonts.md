@@ -26,6 +26,8 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   default font (empty font-family → Liberation Sans) the 10pt/20pt/30pt inks spread ~5px. Needs a
   default font whose ascent sits at the cap line (Ahem-like) or a metrics-aware judge.
 
+- `css/CSS2/css1/c527-font-008.xht` (and the official `c527-font-008.htm`) — `.nine { font: oblique normal 700 18px/200% sans-serif; }` paints every run at 12px: the `font` shorthand's size (and the 200% line-height) is not applied. The judge now reads the instruction paragraph's own runs and reports "every painted run is 12px, the sentence states 18px". From 6.M.
+
 ## Edits outside owned files
 
 - `Lite/Parser.cs`: 3 lines wiring `ComputedFontWeight` on parsed elements (CSS 2.1 §15.6); `ResolveFontSizeValue` steps `larger`/`smaller` through the §15.7 absolute-size table; reject invalid `font` shorthands in `FontSizeOf`/`OwnFontLineHeightDeclaration` and reset leaked `font-family`/`line-height` (§15.8 / §10.8.1 / §6.2.1).
