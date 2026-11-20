@@ -217,6 +217,7 @@ internal static partial class Parser
             // it into its ::before and the first line grew by the disagreement with the strut
             // (content-037's green "PASS PASS" sat 2px below the same text in the reference cell).
             pseudoNode.StyleOverrides.TryAdd("vertical-align", "baseline");
+            InheritHintProperties(node, pseudoNode);
             NormalizeGeneratedWhitespace(pseudoNode);
             pseudoNode.Parent = node;
             node.Children.Insert(0, pseudoNode);
@@ -239,6 +240,7 @@ internal static partial class Parser
             // §10.8.1: 'vertical-align' does not inherit; the generated box starts at 'baseline',
             // not at the originating element's value (see the ::before case above).
             pseudoNode.StyleOverrides.TryAdd("vertical-align", "baseline");
+            InheritHintProperties(node, pseudoNode);
             NormalizeGeneratedWhitespace(pseudoNode);
             pseudoNode.Parent = node;
             node.Children.Add(pseudoNode);
@@ -380,6 +382,7 @@ internal static partial class Parser
         // §10.8.1: the ::first-letter box is its own inline box, so its undeclared
         // 'vertical-align' is the initial 'baseline', not the host element's value.
         letter.StyleOverrides.TryAdd("vertical-align", "baseline");
+        InheritHintProperties(node, letter);
 
         var rest = new LayoutNode(null, "#text", text[len..], host.Style);
         rest.ResetNonInheritedStyles();
@@ -481,6 +484,38 @@ internal static partial class Parser
             : hostDisplay;
     }
 
+    /// <summary>The inherited properties an HTML presentational hint may set. A hint lives in
+    /// the host's StyleOverrides and the generated box shares only the Style object, so an
+    /// inherited hint (body text="green" → color) has to be handed to the pseudo explicitly
+    /// (§6.2.1; content-145's ::before was black on a green body).</summary>
+    private static readonly HashSet<string> InheritedHintProps = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "color", "font-family", "font-size", "font-style", "font-weight", "font-variant",
+        "line-height", "letter-spacing", "word-spacing", "text-align", "text-indent",
+        "text-transform", "white-space", "direction", "visibility", "cursor", "quotes",
+        "list-style-type", "list-style-position", "list-style-image",
+    };
+
+    private static void InheritHintProperties(LayoutNode host, LayoutNode generated)
+    {
+        foreach (var property in host.HintAppliedProps)
+            if (InheritedHintProps.Contains(property) &&
+                host.StyleOverrides.TryGetValue(property, out var value))
+                generated.StyleOverrides.TryAdd(property, value);
+    }
+
+    /// <summary>CSS 2.1 §12.2 attr(X): the named attribute's value. An exact match is preferred;
+    /// HTML's attribute names are ASCII case-insensitive, so `attr(Title)` finds `title`
+    /// (content-attr-case-001). XML keeps an exact match first, which is all an XML document
+    /// can distinguish anyway.</summary>
+    private static string AttributeValue(LayoutNode node, string name)
+    {
+        if (node.Attributes.TryGetValue(name, out var exact)) return exact;
+        foreach (var (key, value) in node.Attributes)
+            if (string.Equals(key, name, StringComparison.OrdinalIgnoreCase)) return value;
+        return "";
+    }
+
     /// <summary>CSS 2.1 §6.2.1: 'inherit' on a generated box takes the originating element's
     /// computed value. Pseudo declarations are copied straight into StyleOverrides, so leaving
     /// the literal token there reached the property readers as an unknown value — `white-space:
@@ -547,7 +582,7 @@ internal static partial class Parser
             !value[5..].Contains("attr(") && !value.Contains(' '))
         {
             var attrName = value[5..^1].Trim();
-            return node?.Attributes.GetValueOrDefault(attrName) ?? "";
+            return node is null ? "" : AttributeValue(node, attrName);
         }
 
         // Tokenize concatenated content value: "text" counter(name) "more"
@@ -609,7 +644,7 @@ internal static partial class Parser
                 var paren = value.IndexOf(')', i);
                 if (paren < 0) break;
                 var attrName = value[(i + 5)..paren].Trim();
-                if (node?.Attributes.TryGetValue(attrName, out var av) == true) sb.Append(av);
+                if (node is not null) sb.Append(AttributeValue(node, attrName));
                 i = paren + 1;
                 continue;
             }

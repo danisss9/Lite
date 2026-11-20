@@ -67,6 +67,15 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - **Checks:** units 652 passed; css21 51/1; wpt 86/2; lane list official 10→27, WPT 0→17 (44
   total, 0 losses); canary 300/300.
 
+### attr() case folding and inherited presentational hints (§12.2, §6.2.1)
+
+- **Moved:** `content-attr-case-001` (official + WPT; `attr(Title)` now finds HTML's `title`) and
+  `content-145` (official + WPT; the body's `text="green"` hint now reaches the `body:before`,
+  which shares the Style object but not the host's hint override). The hint propagation covers
+  only inherited hint properties.
+- **Checks:** units 662; css21 51/1; wpt 86/2; lane list 51→55 (official 32, WPT 23), 0 losses;
+  canary 300/300.
+
 ### 'inherit' on a generated box takes the host's computed value (§6.2.1)
 
 - **Moved:** `first-letter-inherit-001` (official + WPT; `float: inherit` on ::first-letter now

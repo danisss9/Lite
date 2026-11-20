@@ -118,6 +118,29 @@ public static class GeneratedContentTests
     }
 
     [Test]
+    public static void GeneratedBox_InheritsAPresentationalHint()
+    {
+        // content-145: the body's HTML text="green" hint is an inherited colour; the ::before
+        // shares the Style object, not the hint override, so it must be copied explicitly.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body:before { content: 'x' }</style></head>" +
+            "<body text=\"green\">text</body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        var pseudo = Find(page.Root, "#pseudo-before")!;
+        True(pseudo.GetColor() == new SkiaSharp.SKColor(0, 128, 0), pseudo.GetColor().ToString());
+    }
+
+    [Test]
+    public static void Attr_FindsAnHtmlAttributeCaseInsensitively()
+    {
+        // content-attr-case-001: HTML attribute names are ASCII case-insensitive, so
+        // `content: attr(Title)` reads the `title` attribute.
+        var pseudo = Find(Parse("<div title=\"PASS\"></div>", "div:before { content: attr(Title); }"),
+            "#pseudo-before");
+        True(pseudo is not null, "no ::before");
+        Equal("PASS", pseudo!.DisplayText);
+    }
+
+    [Test]
     public static void PseudoInherit_TakesTheHostsComputedValue()
     {
         // §6.2.1: 'inherit' on a generated box is the originating element's computed value.
