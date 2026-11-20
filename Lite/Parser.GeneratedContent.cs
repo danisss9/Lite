@@ -32,7 +32,7 @@ internal static partial class Parser
         // §12.4: an element that is not displayed cannot increment or reset a counter. The
         // authored keyword decides: table-column(-group) maps to no box internally, yet such
         // elements are displayed and their counters apply (counter-increment-applies-to-005).
-        var display = node.TryResolveStyle("display", out var ov) ? ov : node.Style.GetPropertyValueSafe("display");
+        var display = HostDisplay(node);
         if (!display.Trim().Equals("none", StringComparison.OrdinalIgnoreCase))
         {
             // The rule channel only carries matched style rules; an inline declaration outranks
@@ -73,13 +73,23 @@ internal static partial class Parser
     private static (Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) PseudoCounters(
         LayoutNode node, Dictionary<string, string>? pseudoStyles, List<string> scope)
     {
-        if (pseudoStyles is null || !pseudoStyles.ContainsKey("content") ||
+        // §12.1/§12.4: an element with 'display: none' generates no boxes at all, so its
+        // ::before/::after do not exist and cannot increment or reset a counter either
+        // (counter-increment-display-004: the hidden div's `div:before` skipped a number).
+        if (pseudoStyles is null || !pseudoStyles.ContainsKey("content") || HostIsNotDisplayed(node) ||
             ResolvePseudoDisplay(node, pseudoStyles).Equals("none", StringComparison.OrdinalIgnoreCase))
             return (node.CounterValues, node.CounterStacks);
         ApplyCounterProperties(pseudoStyles.GetValueOrDefault("counter-reset"),
             pseudoStyles.GetValueOrDefault("counter-increment"), scope);
         return SnapshotCounters();
     }
+
+    /// <summary>The element's own authored 'display' keyword (the override channel first).</summary>
+    private static string HostDisplay(LayoutNode node) =>
+        node.TryResolveStyle("display", out var ov) ? ov : node.Style.GetPropertyValueSafe("display");
+
+    private static bool HostIsNotDisplayed(LayoutNode node) =>
+        HostDisplay(node).Trim().Equals("none", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>§12.4.1: a counter-reset's scope is the element, its descendants AND its following
     /// siblings with theirs, so the instance joins <paramref name="scope"/> — the enclosing
@@ -91,18 +101,26 @@ internal static partial class Parser
     /// on the same box, scoped the same way.</summary>
     private static void ApplyCounterProperties(string? reset, string? increment, List<string>? scope)
     {
+        // §12.4: "If the same counter is specified more than once in the value of the
+        // 'counter-reset' and 'counter-increment' properties, each reset/increment of the counter
+        // is processed in the order specified" — a repeated name resets the instance this
+        // declaration already created; it does not nest a new one under it (counters-root-000's
+        // `html { counter-reset: c 0 c 4 c 0 }` is one instance whose value ends at 0).
+        HashSet<string>? resetHere = null;
         if (reset is not null && !reset.Equals("none", StringComparison.OrdinalIgnoreCase))
             foreach (var part in ParseCounterSpec(reset, 0))
             {
                 if (!_counters.TryGetValue(part.Name, out var stack))
                     _counters[part.Name] = stack = new List<int>();
-                if (scope is not null && scope.Contains(part.Name) && stack.Count > 0)
+                if (stack.Count > 0 && (resetHere?.Contains(part.Name) == true ||
+                                        (scope is not null && scope.Contains(part.Name))))
                     stack[^1] = part.Value;         // a later sibling's reset replaces the instance
                 else
                 {
                     stack.Add(part.Value);          // push a new nested instance
                     scope?.Add(part.Name);
                 }
+                (resetHere ??= new HashSet<string>(StringComparer.Ordinal)).Add(part.Name);
             }
 
         if (increment is not null && !increment.Equals("none", StringComparison.OrdinalIgnoreCase))

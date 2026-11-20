@@ -182,6 +182,39 @@ public static class GeneratedContentTests
         True(letter.GetFloat() == FloatType.Left, letter.GetFloat().ToString());
     }
 
+    [Test]
+    public static void CounterReset_RepeatedNameResetsOneInstance()
+    {
+        // §12.4: "If the same counter is specified more than once in the value of the
+        // 'counter-reset' and 'counter-increment' properties, each reset/increment of the counter
+        // is processed in the order specified" — the repeated name acts on the one instance this
+        // declaration created (counters-root-000: `c 0 c 4 c 0` then `c 1 c 3` is 4, not 0.4.4.8).
+        var root = Parse("<div><span class=\"c\"></span></div>",
+            "html { counter-reset: c 0 c 4 c 0; counter-increment: c 1 c 3; } " +
+            "body { counter-reset: c 3; counter-increment: c 5; } " +
+            "span.c:before { content: counters(c, \".\"); }");
+        Equal("4.8", Find(root, "#pseudo-before")!.DisplayText);
+    }
+
+    [Test]
+    public static void HiddenElementsPseudo_DoesNotIncrement()
+    {
+        // §12.1/§12.4: a 'display: none' element generates no boxes, so its ::before does not
+        // exist and cannot increment a counter either (counter-increment-display-004 renders
+        // 1, 2, 3 with the hidden div's `div:before` skipped).
+        var root = Parse("<div></div><div style=\"display: none\"></div><div></div><div></div>",
+            "body { counter-reset: n; } div:before { counter-increment: n 1; content: counter(n); }");
+        var texts = new List<string>();
+        void Walk(LayoutNode node)
+        {
+            if (node.TagName == "#pseudo-before" && node.Parent?.GetDisplay() != DisplayType.None)
+                texts.Add(node.DisplayText);
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        Equal("1,2,3", string.Join(",", texts));
+    }
+
     private static LayoutNode Parse(string body, string css)
     {
         var page = Parser.ParseChildPage(
