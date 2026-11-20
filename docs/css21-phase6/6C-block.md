@@ -97,6 +97,9 @@ needs a look at the test's positioned layer before I can say the cause is one th
   6.K merges before 6.C — trivial conflict surface. Unit-tested
   (`CascadeTests.Inherit_MarginTakesParentComputedLengthNotRawEm`); the served
   em-inherit family needs the parse-time AngleSharp fix above and stays red.
+  **Fix round (commit 8dcc06a3):** one more line in the same function. `EffectiveValue`
+  opens `CssUnits.ForFont(node)` around the em/ex conversion, so `ex` reads the declaring
+  element's x-height and not the 0.5em fallback.
 
 
 ## Progress
@@ -165,5 +168,43 @@ needs a look at the test's positioned layer before I can say the cause is one th
   cause and the parse-time fix direction are in "Opens with (parked findings)"; handed to 6.K.
 - **Checks:** units 655/0 (1 new test); gates css21 51/1, wpt 86/2; canary 300/300.
 
+## Fix round (after the first trial integration)
 
+The integrator's full baseline of the merged batch found 13 cases that passed at the lane base
+`05228a26` and fail on `css21/p6-c` alone (`fix-losses.txt`). I bisected each one by building
+every lane commit and running the list.
 
+| Lost case (official + WPT twins) | Broken by | Root cause | Fixed by |
+| --- | --- | --- | --- |
+| `margin-collapse-128`, `-129`, `-135` | 7bbc83bc | That commit counts a chain behind a top boundary in the content height. That is right, but it exposed two places that cut a chain to its scalar value: a trailing chain worth 0 (1em with -1em) was dropped, and a self-collapser's effective top folded in as a float. Both lost the cancelling member. | c15ff277 |
+| `height-114` | 7bbc83bc | A net-negative chain inside a bordered box gave a negative content height (-160px). §10.6.3 heights are never negative, so it clamps at 0. | 452bab08 |
+| `margin-collapse-038` | 7bbc83bc | The 'max-height' half of the separation. §8.3.1 asks only for an 'auto' computed height, which a max-height cut leaves in place. | d46f240d |
+| `new-fc-separates-from-float` (WPT only) | 2edcae6b | The chain now runs through a float-only box, so a following 200px BFC's 200px top margin joined it and dragged the float down. A BFC that cannot fit beside the chain's floats goes below them (§9.5), which separates its margin like clearance (§9.5.2). | 03fd69de |
+| `word-spacing-101` | c80a206f | The inherited em/ex conversion ran outside a font scope, so 'ex' used 0.5em, not Ahem's 0.8em x-height. | 8dcc06a3 (StyleResolver.cs, outside owned files) |
+
+**One lane gain dropped: `max-height-separates-margin` (WPT).** It and `margin-collapse-038`
+are mutually exclusive. Both have a max-height cap over a taller last child that has a bottom
+margin: one expects the margin separated, the other expects it collapsed through. wpt.fyi
+stable (20 November) shows Chrome, Edge and Firefox pass max-height-separates-margin and fail
+-038, with Safari the other way round. The CSS 2.1 text ("'auto' computed height") and the
+0-loss rule (-038 is two cases, in both suites) settle it for -038. The min-height half of
+7bbc83bc is untouched: the CSS 2.2 s.8.3.1c change covers it, and no case contradicts it.
+
+**Moved:**
+- all 13 losses back to pass;
+- bonus `c5505-mrgn-003` (official + WPT), with 452bab08;
+- lane list C.txt 9 → 10 passes: -1 max-height-separates-margin, +2 c5505-mrgn-003. Every
+  other lane gain is held: `margin-collapse-min-height-001` (html + xht), `-002` (html + xht),
+  `min-height-separates-margin`, `margin-collapse-through-percentage-height-block`,
+  `margin-auto-on-block-box`, `auto-margins-root-element`.
+
+**Checks (series head 8dcc06a3):**
+- units 659/0 (5 new, 1 replaced);
+- gates: css21 51/1 expected-fail, wpt 86/2;
+- `fix-losses.txt` 13/13;
+- `C.txt` 10/222;
+- `C-pass.txt` 2,944/2,944;
+- `B-pass.txt` 444/444;
+- `canary.txt` 960/960.
+
+Each new unit test fails on the pre-fix engine.
