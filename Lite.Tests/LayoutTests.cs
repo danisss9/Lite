@@ -492,6 +492,25 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void TextInsideTopAlignedInline_KeepsItsBoxAlignment()
+    {
+        // §10.8.1: a #text inside an INLINE element is that inline box's content, so it aligns
+        // with the box's 'vertical-align: top' (vertical-align-nested-top-001). Only text sitting
+        // directly in a block container's (or cell's) root inline box aligns 'baseline'.
+        Lite.Layout.FontRegistry.RegisterFile(
+            Path.Combine(FindRepoRoot(), "Lite.Conformance", "vendor", "wpt", "fonts", "Ahem.ttf"));
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0; font:18px/20px Ahem}" +
+            " #big{font-size:60px; line-height:60px} #hb{font-size:12px; vertical-align:top}</style>" +
+            "<div><span id=\"big\">X</span><span id=\"hb\">X<span>X</span></span></div>");
+        var hb = FindNode(root, "SPAN", "hb");
+        True(hb is not null, "span missing");
+        var text = FindNode(hb!, n => n.TagName == "#text" && ReferenceEquals(n.Parent, hb));
+        True(text is not null, "the span's own text run missing");
+        True(text!.Box.ContentBox.Top < 5f,
+            $"the top-aligned span's text must sit at the line top (got y={text.Box.ContentBox.Top})");
+    }
+
+    [Test]
     public static void NestedTable_IntrinsicIncludesSpacingAndCellEdges()
     {
         // §17.5.2: a table's shrink-wrap width is the sum of its columns — each carrying its

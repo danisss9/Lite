@@ -935,9 +935,14 @@ internal static partial class BoxEngine
     /// 'vertical-align: middle' is the §17.5.3 CELL-in-row alignment, not a line-box one —
     /// so reading it here shifted the whole cell's text and grew every line to the shifted
     /// reach (table-height-algorithm-004's ten 20px Ahem lines measured 22px, 220 against
-    /// the 200px reference).</summary>
+    /// the 200px reference). That holds only for text directly in a block container's root
+    /// inline box: a #text inside an INLINE element is that inline box's content and is placed
+    /// with it, so it keeps the element's alignment (vertical-align-nested-top-001's first 'X'
+    /// inside a 'vertical-align: top' span dropped to the baseline).</summary>
     private static VerticalAlignType LineItemVerticalAlign(LayoutNode node) =>
-        node.TagName == "#text" ? VerticalAlignType.Baseline : node.GetVerticalAlign();
+        node.TagName == "#text" && node.Parent is { } host && host.GetDisplay() != DisplayType.Inline
+            ? VerticalAlignType.Baseline
+            : node.GetVerticalAlign();
 
     private static float AboveBaselineComponent(InlineItem item, VerticalAlignType vAlign)
     {

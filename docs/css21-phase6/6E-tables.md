@@ -38,6 +38,10 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   `TableEngine.TryGetCellAreaBackgrounds`; collapsed rows' background layer paints while
   borders stay suppressed) and PaintColumnBackgrounds draws the per-cell rects. 6.H: the
   PaintColumnBackgrounds change is in your file — take a look before editing that method.
+- `Lite/Layout/BoxEngine.Inline.cs` (6.A's file; commits 3e222489, b2b4595e and the fix-round
+  commit): `LineItemVerticalAlign` (cell text aligns baseline, scoped in the fix round to text
+  directly in a non-inline container), the `<br>` item's font and line-height, and the
+  `FindFirstBaselineY` caption skip. 6.A: the fix round touches only `LineItemVerticalAlign`.
 
 ## Progress
 
@@ -101,3 +105,20 @@ Still failing, with causes:
   table-header/footer-group-005, table-vertical-align-baseline-009, border-collapse-006,
   border-collapse-empty-row, border-collapse-offset-001/002,
   border-collapse-visibility-collapse-001/002 (tentative).
+
+### Fix round (batch-1 loss)
+
+- **Loss:** `css/CSS2/linebox/vertical-align-nested-top-001.html` (passed at 05228a26), caused by
+  3e222489. That commit made every `#text` item align 'baseline', so cell text stops reading the
+  cell's §17.5.3 'vertical-align: middle'. But a `#text` inside an INLINE element is that inline
+  box's content and is placed with it (§10.8.1): the first 'X' inside the 'vertical-align: top'
+  span dropped to the baseline, below the nested top-aligned 'X'.
+- **Fix:** `LineItemVerticalAlign` aligns a `#text` 'baseline' only when its parent is not an
+  inline box (a table cell, a block: text in the root inline box). Text inside an inline element
+  keeps that element's alignment, as before 3e222489.
+- **Moved:** the loss passes again. No other change on the lane list.
+- **Gains kept:** all 43 lane passes hold (E.txt 43 pass / 124 fail / 1 manualpending, same as
+  after b2b4595e), including 3e222489's `table-height-algorithm-004/009/010`. No gain had to go.
+- **Checks:** units 656/0 (new `LayoutTests.TextInsideTopAlignedInline_KeepsItsBoxAlignment`,
+  which fails without the fix at y=34); css21 51/1 expected-fail; wpt 86/2 expected-fail;
+  `fix-losses.txt` 1/1; `E-pass.txt` 1729/1729; `canary.txt` 960/960.
