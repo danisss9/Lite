@@ -30,6 +30,19 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Progress
 
+### 2026-11-20 — Commit 3: §16.1 + §10.3.5 intrinsic sizing for negative text-indent, preserved newlines, U+200B, and leaf inline edges
+- **Moved (+8: 3 official, 5 WPT, 0 losses; cumulative +18: 8 official, 10 WPT):**
+  - `text-indent-intrinsic-001` (official + WPT)
+  - `text-indent-intrinsic-002` (official + WPT)
+  - `text-indent-intrinsic-003` (WPT)
+  - `text-indent-intrinsic-004` (WPT)
+  - `white-space-mixed-003` (official + WPT)
+- **What changed:**
+  - `Lite/Layout/IntrinsicSizer.cs`: allow signed (negative) `text-indent` on the first line's min/max intrinsic widths (clamping min at 0 and keeping `max >= min`); split preserved newlines (`pre`/`pre-wrap`/`pre-line`) into forced breaks in `FlattenInline`; restrict the space-width fallback in `TextMinMax` to CSS whitespace-only leaves so U+200B stays zero-width; include horizontal margin/border/padding on leaf inline elements in `FlattenInline`.
+- **Still failing (`text-indent-intrinsic`):** `css21-official/html4/text-indent-intrinsic-003.htm` and `004.htm` fail only because the 20110323 official snapshot's `-ref.htm` files had an upstream ref bug (`width: 0` / `width: 1em` instead of `1em` / `3em` for the `&#x200B;` lines) that WPT later fixed — both WPT twins now pass.
+- **Handed to other lanes:** Note `text-indent-intrinsic-003/004` official ref discrepancy for 6.X.
+- **Checks:** Units 650/650; `css21` 51/1; `wpt` 86/2; Lane A 8/74 official, 10/90 WPT (+8, 0 losses); Canary 300/300 (154/154 official, 146/146 WPT).
+
 ### 2026-11-20 — Commit 2: §16.6 preserve white-space on mixed-children text nodes (`Parser.cs`, edit outside owned files)
 - **Moved (+4: 2 official, 2 WPT, 0 losses; cumulative +10: 5 official, 5 WPT):**
   - `c562-white-sp-000` (official + WPT)

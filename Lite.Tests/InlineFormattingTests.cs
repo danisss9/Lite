@@ -64,4 +64,32 @@ public static class InlineFormattingTests
         True(spans[1].Box.ContentBox.Top > spans[0].Box.ContentBox.Top + 10f,
             $"second span should sit on a new line below first (y0={spans[0].Box.ContentBox.Top}, y1={spans[1].Box.ContentBox.Top})");
     }
+
+    [Test]
+    public static void TextIndentIntrinsic_PositiveAndNegative_WithPreAndZeroWidthSpace()
+    {
+        // CSS 2.1 §16.1 + §10.3.5: text-indent (positive and negative) shifts the first line's
+        // intrinsic min-content and max-content widths; <pre> newlines break lines, U+200B has
+        // zero width, and leaf inline elements include their own horizontal margins.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='font-size:12px'>" +
+            "<style>body > div, body > pre { float:left; clear:left; height:2em; border:3px solid; } span.ib { display:inline-block; height:1em; width:1em; }</style>" +
+            "<div id='d1' style='text-indent:-3em'><span class='ib' style='width:1em'></span>&#8203;<span class='ib' style='width:3em'></span>&#8203;<span class='ib' style='width:3em'></span></div>" +
+            "<div id='d2' style='text-indent:3em'><span class='ib' style='width:1em'></span>&#8203;<span class='ib' style='width:2em'></span></div>" +
+            "<pre id='p1' style='text-indent:3em'><span class='ib' style='width:1em'></span>\n<span class='ib' style='width:2em'></span></pre>" +
+            "<div id='m1'><span style='margin-left:3em'>X</span></div>" +
+            "</body></html>");
+        var d1 = FindNode(root, n => n.Id == "d1")!;
+        var d2 = FindNode(root, n => n.Id == "d2")!;
+        var p1 = FindNode(root, n => n.Id == "p1")!;
+        var m1 = FindNode(root, n => n.Id == "m1")!;
+        True(Math.Abs(d1.Box.ContentBox.Width - 48f) < 0.5f,
+            $"d1 max-content = (-3+1+3+3)em = 48px, got {d1.Box.ContentBox.Width}");
+        True(Math.Abs(d2.Box.ContentBox.Width - 72f) < 0.5f,
+            $"d2 max-content = (3+1+2)em = 72px, got {d2.Box.ContentBox.Width}");
+        True(Math.Abs(p1.Box.ContentBox.Width - 48f) < 0.5f,
+            $"p1 max-content = max(3+1, 2)em = 48px, got {p1.Box.ContentBox.Width}");
+        True(m1.Box.ContentBox.Width > 36f,
+            $"m1 includes leaf span's 3em margin-left (>36px), got {m1.Box.ContentBox.Width}");
+    }
 }
