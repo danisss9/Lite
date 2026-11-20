@@ -265,7 +265,12 @@ internal static partial class BoxEngine
         // out) rather than adding to the content height. Otherwise it stays inside the content.
         // The decision is final only once min/max-height have run (below): a candidate whose
         // height they change keeps the margin inside.
-        var collapseThroughCandidate = trailingMargin != 0f && padding.Bottom == 0f && border.Bottom == 0f
+        // The candidate test reads the CHAIN, not its value: a chain whose members cancel out
+        // (1em with -1em) still carries both members to collapse with this box's own bottom
+        // margin and onward (§8.3.1: the collapsed margin is max(positives) + min(negatives) over
+        // ALL the adjoining margins) — dropping it at value 0 left the -1em out of the outer
+        // chain (margin-collapse-128/135: a bordered box of empty children grew 1em tall).
+        var collapseThroughCandidate = trailingChain != MarginChain.Empty && padding.Bottom == 0f && border.Bottom == 0f
             && node.IsAutoHeight() && !establishesBfc;
         // When the whole content self-collapsed into one chain (§8.3.1) and that chain escaped
         // through this box's TOP (no top border/padding, not a BFC: the first child's margins
@@ -971,7 +976,10 @@ internal static partial class BoxEngine
                 // with the running margin, so it materialises as space ABOVE the child rather than
                 // being absorbed inside it. (Positioning below still uses the child's OWN margin,
                 // since the propagated grandchild margins are placed by the child's own recursion.)
-                var childEffectiveTop = GetEffectiveTopMargin(child, contentW);
+                // Kept as a (maxPositive, minNegative) chain: a first-child chain whose members
+                // cancel (-1em with 1em) still has to carry its -1em into the running chain
+                // (margin-collapse-129: the container of empty blocks stays 0 tall).
+                var childEffectiveTopChain = GetEffectiveTopMarginChain(child, contentW);
 
                 // First in-flow child: its top margin collapses with the parent's (the child is
                 // placed at the parent's content-box top) when the parent has no border/padding top
@@ -991,13 +999,13 @@ internal static partial class BoxEngine
                 // there; opening the chain here too double-counted the join
                 // (margin-collapse-033/034/035 red-walled).
                 if (firstChildCollapse && clear == ClearType.None && SelfCollapses(child, contentW))
-                    childEffectiveTop = (MarginChain.Of(childEffectiveTop) +
-                        SelfCollapserBottomJoin(child, contentW)).Value;
+                    childEffectiveTopChain += SelfCollapserBottomJoin(child, contentW);
+                var childEffectiveTop = childEffectiveTopChain.Value;
                 // A cleared box's effective top margin never escapes its parent (the chain stops
                 // at it, see GetEffectiveTopMargin), so it applies as the gap below even when the
                 // box is its parent's first — the first-child escape shortcut would drop it.
                 var gap = firstChildCollapse && clear == ClearType.None
-                    ? 0f : (pending + childEffectiveTop).Value;
+                    ? 0f : (pending + childEffectiveTopChain).Value;
                 firstBlockSeen = true;
 
                 // A sibling following a re-anchored self-collapser joins the chain already spent
@@ -1082,7 +1090,7 @@ internal static partial class BoxEngine
                 // margin, and the box contributes no height (so neighbouring margins collapse through).
                 if (borderBoxH <= 0.01f && !EstablishesBlockFormattingContext(child))
                 {
-                    var own = MarginChain.Empty + childEffectiveTop + childBottomMargin;
+                    var own = childEffectiveTopChain + childBottomMargin;
                     pending = firstChildCollapse && !clearanceSevered ? own : pending + own;
                     // §8.3.1: a self-collapsing box's border box sits at the BOTTOM of its
                     // collapsed margin chain — the chain is spent above the box, so its

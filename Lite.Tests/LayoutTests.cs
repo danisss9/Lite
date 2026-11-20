@@ -358,6 +358,31 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void SelfCollapsedChain_CancellingMembers_KeepsBorderedBoxEmpty()
+    {
+        // margin-collapse-128/129 (§8.3.1: the collapsed margin is max(positives) +
+        // min(negatives) over ALL adjoining margins): a box bounded by padding (the tests use
+        // borders — the same §8.3.1 boundary) whose content is only
+        // empty blocks forms one chain; with a 1em and a -1em member it collapses to 0, so the
+        // box's content height is 0 — even when a nested chain's members cancel to 0 on their
+        // own (128: d's 1em with e's -1em) or a first child's own -1em is cancelled by its
+        // children's 1em (129). Dropping the zero-valued nested chain lost its -1em.
+        LayoutNode Empty(string top, string bottom, params LayoutNode[] kids) =>
+            Block(new() { ["margin-top"] = top, ["margin-bottom"] = bottom }, kids);
+        var c128 = Block(new() { ["width"] = "100px", ["padding-top"] = "16px", ["padding-bottom"] = "16px" },
+            Empty("16px", "16px", Empty("16px", "16px"), Empty("16px", "16px")),
+            Empty("16px", "16px", Empty("16px", "-16px"), Empty("16px", "16px")));
+        var c129 = Block(new() { ["width"] = "100px", ["padding-top"] = "16px", ["padding-bottom"] = "16px" },
+            Empty("-16px", "16px", Empty("16px", "16px"), Empty("16px", "16px")),
+            Empty("16px", "16px", Empty("16px", "16px"), Empty("16px", "16px")));
+        LayoutTree(Block(new(), c128, c129));
+        True(Math.Abs(c128.Box.ContentBox.Height) < 0.5f,
+            $"expected the 1em/-1em chain to collapse to 0 (128), got {c128.Box.ContentBox.Height}");
+        True(Math.Abs(c129.Box.ContentBox.Height) < 0.5f,
+            $"expected the -1em/1em chain to collapse to 0 (129), got {c129.Box.ContentBox.Height}");
+    }
+
+    [Test]
     public static void SelfCollapsedChain_BehindTopBoundary_CountsInHeight()
     {
         // WPT margin-collapse-through-percentage-height-block: an 'overflow: hidden' box (a BFC)
