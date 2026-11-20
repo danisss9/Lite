@@ -921,9 +921,9 @@ internal static partial class Parser
         ApplyCascadeToExtractedRules(element, node);
 
         // Pseudo-element rules were lifted out of the sheets before the cascade ran (see
-        // NeutralizePseudoElementRules), so they are applied here from the recorded originals.
-        foreach (var (selector, style) in _pseudoElementRules)
-            TryExtractPseudoElementRule(element, node, selector, style);
+        // NeutralizePseudoElementRules), so they are applied here in CSS 2.1 §6.4.1/§6.4.3
+        // cascade order (origin, !important, specificity, source order).
+        ApplyPseudoElementRules(element, node);
 
     }
 
@@ -1448,6 +1448,135 @@ internal static partial class Parser
     }
 
     /// <summary>
+    /// Extracts the element-matching base selector from a single pseudo-element selector part
+    /// (CSS 2.1 §5.10 / §5.12). Preserves the implicit universal selector when a combinator or
+    /// descendant whitespace precedes the pseudo-element (<c>div :after</c> → <c>div *</c>, not
+    /// <c>div</c>; specificity-011).
+    /// </summary>
+    internal static string ExtractPseudoElementBaseSelector(string part)
+    {
+        var m = PseudoElementRegex.Match(part);
+        if (!m.Success) return part.Trim();
+        var before = part[..m.Index];
+        var trimmedBefore = before.TrimEnd();
+        if (trimmedBefore.Length == 0) return string.Empty;
+        if (before.Length > trimmedBefore.Length || trimmedBefore[^1] is '>' or '+' or '~')
+            return trimmedBefore + " *";
+        return trimmedBefore;
+    }
+
+    private readonly record struct PseudoWinner(int Rank, int Specificity, int Order)
+    {
+        public bool OutranksOrTies(PseudoWinner other) =>
+            Rank != other.Rank ? Rank > other.Rank :
+            Specificity != other.Specificity ? Specificity > other.Specificity :
+            Order >= other.Order;
+    }
+
+    /// <summary>
+    /// Applies all neutralized pseudo-element rules to <paramref name="node"/> in CSS 2.1 §6.4.1 /
+    /// §6.4.3 cascade order: origin &amp; !important rank, then selector specificity, then source
+    /// order (specificity-005, specificity-008, specificity-009, specificity-011).
+    /// </summary>
+    private static void ApplyPseudoElementRules(IElement element, LayoutNode node)
+    {
+        if (_pseudoElementRules.Count == 0) return;
+
+        Dictionary<string, PseudoWinner>? beforeWinners = null;
+        Dictionary<string, PseudoWinner>? afterWinners = null;
+        Dictionary<string, PseudoWinner>? firstLetterWinners = null;
+        Dictionary<string, PseudoWinner>? firstLineWinners = null;
+
+        for (var order = 0; order < _pseudoElementRules.Count; order++)
+        {
+            var (selector, ruleStyle) = _pseudoElementRules[order];
+            if (string.IsNullOrEmpty(selector)) continue;
+            var origin = AngleSharp.Css.Dom.CascadeOrigin.Of(ruleStyle.Parent as ICssRule);
+
+            foreach (var rawPart in SplitSelectorList(selector))
+            {
+                var part = rawPart.Trim();
+                if (part.Length == 0) continue;
+                var lower = part.ToLowerInvariant();
+                bool isBefore = lower.Contains("::before") || lower.Contains(":before");
+                bool isAfter = lower.Contains("::after") || lower.Contains(":after");
+                bool isFirstLetter = lower.Contains("::first-letter") || lower.Contains(":first-letter");
+                bool isFirstLine = lower.Contains("::first-line") || lower.Contains(":first-line");
+                if (!isBefore && !isAfter && !isFirstLetter && !isFirstLine) continue;
+
+                var baseSelector = ExtractPseudoElementBaseSelector(part);
+                if (baseSelector.Length > 0)
+                {
+                    try { if (!element.Matches(baseSelector)) continue; }
+                    catch { continue; }
+                }
+
+                var cssText = ruleStyle.CssText;
+                if (string.IsNullOrEmpty(cssText)) continue;
+
+                var (props, important) = ParseDeclarations(cssText);
+                foreach (var longhand in ruleStyle)
+                {
+                    if (string.IsNullOrEmpty(longhand.Value)) continue;
+                    if (!props.ContainsKey(longhand.Name))
+                    {
+                        props[longhand.Name] = longhand.Value;
+                        if (IsImportant(ruleStyle, longhand.Name))
+                            important.Add(longhand.Name);
+                    }
+                }
+
+                var specificity = ComputeSpecificity(part);
+
+                if (isBefore)
+                {
+                    node.BeforeStyles ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    beforeWinners ??= new Dictionary<string, PseudoWinner>(StringComparer.OrdinalIgnoreCase);
+                    MergePseudoProps(node.BeforeStyles, beforeWinners, props, important, origin, specificity, order);
+                }
+                if (isAfter)
+                {
+                    node.AfterStyles ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    afterWinners ??= new Dictionary<string, PseudoWinner>(StringComparer.OrdinalIgnoreCase);
+                    MergePseudoProps(node.AfterStyles, afterWinners, props, important, origin, specificity, order);
+                }
+                if (isFirstLetter)
+                {
+                    node.FirstLetterStyles ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    firstLetterWinners ??= new Dictionary<string, PseudoWinner>(StringComparer.OrdinalIgnoreCase);
+                    MergePseudoProps(node.FirstLetterStyles, firstLetterWinners, props, important, origin, specificity, order);
+                }
+                if (isFirstLine)
+                {
+                    node.FirstLineStyles ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    firstLineWinners ??= new Dictionary<string, PseudoWinner>(StringComparer.OrdinalIgnoreCase);
+                    MergePseudoProps(node.FirstLineStyles, firstLineWinners, props, important, origin, specificity, order);
+                }
+            }
+        }
+    }
+
+    private static void MergePseudoProps(
+        Dictionary<string, string> target,
+        Dictionary<string, PseudoWinner> winners,
+        Dictionary<string, string> props,
+        HashSet<string> important,
+        int origin,
+        int specificity,
+        int order)
+    {
+        foreach (var (p, v) in props)
+        {
+            var candidate = new PseudoWinner(CascadeRank(origin, important.Contains(p)), specificity, order);
+            if (!winners.TryGetValue(p, out var existing) || candidate.OutranksOrTies(existing))
+            {
+                winners[p] = candidate;
+                target[p] = v;
+            }
+        }
+    }
+
+    /// <summary>
     /// Detects ::before / ::after pseudo-element selectors, strips them,
     /// matches the base selector, and stores all properties for later synthetic child creation.
     /// </summary>
@@ -1464,7 +1593,7 @@ internal static partial class Parser
         // puts content on ::before of .bef and ::after of .af — handling the list whole gave
         // every matching element BOTH pseudos and doubled the sentences).
         var handled = false;
-        foreach (var rawPart in selector.Split(','))
+        foreach (var rawPart in SplitSelectorList(selector))
         {
             var part = rawPart.Trim();
             var lower = part.ToLowerInvariant();
@@ -1475,7 +1604,7 @@ internal static partial class Parser
             if (!isBefore && !isAfter && !isFirstLetter && !isFirstLine) continue;
 
             // Strip the pseudo-element to get the part's base selector.
-            var baseSelector = PseudoElementRegex.Replace(part, "").Trim();
+            var baseSelector = ExtractPseudoElementBaseSelector(part);
             if (baseSelector.Length > 0)
             {
                 try { if (!element.Matches(baseSelector)) { handled = true; continue; } }
@@ -2320,7 +2449,11 @@ internal static partial class Parser
     private static bool IsIllegalPropertyValue(string prop, string value) =>
         NonNegativeProperties.Contains(prop) && ContainsNegativeNumber(value);
 
-    /// <summary>Computes a CSS specificity score (a*100 + b*10 + c) for a compound/complex selector.</summary>
+    /// <summary>
+    /// Computes a CSS 2.1 §6.4.3 specificity score ((a &lt;&lt; 16) | (b &lt;&lt; 8) | c) for a
+    /// compound/complex selector. Single-colon CSS 2.1 pseudo-elements (:before, :after,
+    /// :first-letter, :first-line) count in c (element/pseudo-element), not b (pseudo-class).
+    /// </summary>
     internal static int ComputeSpecificity(string selector)
     {
         int a = 0, b = 0, c = 0;
@@ -2333,13 +2466,35 @@ internal static partial class Parser
             else if (ch == ':')
             {
                 i++;
-                if (i < selector.Length && selector[i] == ':') { c++; i++; SkipIdent(selector, ref i); } // ::pseudo-element
-                else { b++; SkipIdent(selector, ref i); if (i < selector.Length && selector[i] == '(') SkipTo(selector, ref i, ')'); }
+                if (i < selector.Length && selector[i] == ':')
+                {
+                    c++;
+                    i++;
+                    SkipIdent(selector, ref i);
+                }
+                else
+                {
+                    var nameStart = i;
+                    SkipIdent(selector, ref i);
+                    var name = selector.AsSpan(nameStart, i - nameStart);
+                    if (name.Equals("before", StringComparison.OrdinalIgnoreCase) ||
+                        name.Equals("after", StringComparison.OrdinalIgnoreCase) ||
+                        name.Equals("first-letter", StringComparison.OrdinalIgnoreCase) ||
+                        name.Equals("first-line", StringComparison.OrdinalIgnoreCase))
+                    {
+                        c++;
+                    }
+                    else
+                    {
+                        b++;
+                        if (i < selector.Length && selector[i] == '(') SkipTo(selector, ref i, ')');
+                    }
+                }
             }
             else if (char.IsLetter(ch)) { c++; SkipIdent(selector, ref i); } // type selector
             else i++; // combinators, '*', whitespace
         }
-        return a * 100 + b * 10 + c;
+        return (Math.Min(a, 255) << 16) | (Math.Min(b, 255) << 8) | Math.Min(c, 255);
     }
 
     private static void SkipIdent(string s, ref int i)

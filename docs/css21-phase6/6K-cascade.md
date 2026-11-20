@@ -29,6 +29,22 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Progress
 
+### 3. Pseudo-element cascade specificity and descendant universal base selector (`Parser.Cascade.cs`)
+- **Spec:** CSS 2.1 §6.4.1 / §6.4.3 (pseudo-element rules cascade by origin, `!important`, specificity, and source order; single-colon `:before`/`:after`/`:first-letter`/`:first-line` count in `c`, not `b`), §5.10 / §5.12 (combinator or descendant space before a pseudo-element implies `*`, e.g. `div :after` → `div *`).
+- **Moved (8 cases: +3 official, +5 WPT):**
+  - `css21-official/html4/specificity-005.htm`, `css/CSS2/cascade/specificity-005.xht`
+  - `css21-official/html4/specificity-008.htm`, `css/CSS2/cascade/specificity-008.xht`
+  - `css21-official/html4/specificity-009.htm`, `css/CSS2/cascade/specificity-009.xht`
+  - `css/CSS2/cascade/cascade-009a.xht`
+  - `css/CSS2/cascade/cascade-009b.xht`
+- **Still failing (related):** `specificity-011` (likely `border-top`/`border-bottom` rendering or shorthand expansion on `::after` box — needs a closer look if not cascade).
+- **Handed to other lanes:** None yet.
+- **Checks:**
+  - Units: `CascadeTests` 11/11 passed (including new `PseudoElementCascade_RespectsSpecificityAndDescendantUniversal`).
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 15/62 official, 17/89 WPT (from 12/62, 12/89; +8 cases).
+  - Canary: 300/300 (154/154 official, 146/146 WPT).
+
 ### 2. `@import` leading-position enforcement, EOF closure, and `data:` URLs (`Parser.Cascade.cs`)
 - **Spec:** CSS 2.1 §6.3 (ignore `@import` after any non-ignored statement other than `@charset` or `@import`), §4.2 (close open strings, `url(` and statements at EOF), §4.3.4 (unescape `url()` tokens), RFC 2397 (`data:` URIs in `FetchCssText`).
 - **Moved (18 cases: +9 official, +9 WPT):**
