@@ -132,4 +132,21 @@ public static class FloatSizingTests
             $"the inline-block must start at the float's right edge, got {ib.Box.ContentBox.Left}");
         True(ib.Box.ContentBox.Top < 0.5f, $"it stays on the float's line, got top {ib.Box.ContentBox.Top}");
     }
+
+    [Test]
+    public static void IndentedLineBesideLeadingFloat_ShiftsBelowWithItsIndent()
+    {
+        // line-break-after-leading-float's shape: a 40px text-indent plus a 60px inline-block do
+        // not fit beside a 60px float in a 100px block. §9.5 rule 7 shifts the (still empty)
+        // first line below the float, and it keeps its first-line indent (§16.1).
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div style='width:100px;text-indent:40px'>\n  <div style='float:left;width:60px;height:10px'></div>\n" +
+            "  <div id='ib' style='display:inline-block;width:60px;height:20px'></div>\n</div></body></html>");
+        var ib = FindNode(root, n => n.Id == "ib")!;
+        True(ib is not null, "inline-block not found");
+        True(Math.Abs(ib.Box.ContentBox.Left - 40f) < 0.5f,
+            $"the shifted first line keeps its 40px indent, got left {ib.Box.ContentBox.Left}");
+        True(ib.Box.ContentBox.Top >= 9.5f, $"the line moves below the float, got top {ib.Box.ContentBox.Top}");
+    }
 }

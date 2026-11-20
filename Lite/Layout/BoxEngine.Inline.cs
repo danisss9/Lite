@@ -421,7 +421,12 @@ internal static partial class BoxEngine
             // vertically) — floats-wrap-top-below-inline-002l's second span drops below the
             // second float, and floats-zero-height-wrap's 1px-tall float still shortens the
             // line it starts inside. Only an empty line shifts: content already placed stays.
-            if (floats.Count > 0 && lineX <= bandLeft &&
+            // The line's start offset (a first line's text-indent, an opening inline edge) is
+            // part of what must fit and rides along with the shifted line — line-break-after-
+            // leading-float's 40px-indented line beside a leading 60px float in a 100px block
+            // moves below the float with its indent, rather than wrapping its inline-block onto
+            // an unindented second line.
+            if (floats.Count > 0 &&
                 placed.FindIndex(lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge
                     or InlineItemKind.OutOfFlow or InlineItemKind.Float)) < 0)
             {
@@ -451,7 +456,11 @@ internal static partial class BoxEngine
             if (item.Kind == InlineItemKind.Text && item.Text != null && item.Text.IsCssWhiteSpaceOnly() &&
                 lineX + item.Width > bandRight && WrapsLines(item.Node))
             {
-                if (lineX > bandLeft) CommitLine();
+                // A line holding no content yet (only its text-indent, beside a float that
+                // narrowed it) is not ended by the space: the space is removed at the line's
+                // start (§16.6.1) and the line stays open for §9.5 rule 7 to shift it below the
+                // float with its indent (line-break-after-leading-float).
+                if (lineX > bandLeft && LineHasContent()) CommitLine();
                 continue;
             }
 
