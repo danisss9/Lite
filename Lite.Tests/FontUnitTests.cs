@@ -206,6 +206,28 @@ public static class FontUnitTests
         True(TextMeasure.ComputedFontWeight(Find(page, "a")!) == 900, $"weight {TextMeasure.ComputedFontWeight(Find(page, "a")!)}");
     }
 
+    [Test]
+    public static void BidiParagraph_BreakBetweenRtlRuns_StartsANewLine()
+    {
+        // CSS 2.1 §16.2 / UAX #9 L2: the paragraph reorder moves fragments at their logical
+        // positions — a <br> between two RTL runs stays between them, so each run opens its own
+        // line at the same left edge. Appending the non-text fragments after the text ones let
+        // the L2 pass carry both breaks past the runs, and 'ע<br>ע' painted side by side on one
+        // line (font-family-015's two overlapping zero-height lines).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head></head><body style=\"margin:0\">" +
+            "<p style=\"font-size:40px;line-height:50px\">" +
+            "<span id=\"a\">&#x05e2;</span><br/><span id=\"b\">&#x05e2;</span></p>" +
+            "</body></html>", isSrcdoc: true, "http://test/", 800, 600).Root;
+        BoxEngine.Layout(page, 800, 600);
+        var a = Find(page, "a")!;
+        var b = Find(page, "b")!;
+        True(MathF.Abs(a.Box.ContentBox.Left - b.Box.ContentBox.Left) < 0.5f,
+            $"both runs start at the line's left edge, got {a.Box.ContentBox.Left} vs {b.Box.ContentBox.Left}");
+        True(b.Box.ContentBox.Top > a.Box.ContentBox.Top + 1f,
+            $"second run must sit on its own line below the first, got tops {a.Box.ContentBox.Top} and {b.Box.ContentBox.Top}");
+    }
+
     private static LayoutNode Parse(string body) => Parser.ParseChildPage(
         $"<!DOCTYPE html><html><head></head><body>{body}</body></html>", isSrcdoc: true, "http://test/", 800, 600).Root;
 

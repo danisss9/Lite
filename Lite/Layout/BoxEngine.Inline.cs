@@ -1672,19 +1672,6 @@ internal static partial class BoxEngine
             }
             return chain;
         }
-        static int ChainLevel(List<LayoutNode> chain, bool baseLtr)
-        {
-            // X2/X3 down the chain: each scope takes the least (odd|even) level above the level
-            // its parent scope established.
-            var level = baseLtr ? 0 : 1;
-            foreach (var scope in chain)
-            {
-                var rtl = scope.GetDirection() == "rtl";
-                if (rtl) level = level % 2 == 0 ? level + 1 : level + 2;
-                else level = level % 2 == 0 ? level + 2 : level + 1;
-            }
-            return level;
-        }
 
         // Compose the stream and record each text item's range; adjacent text items with the
         // same scope chain merge into one span (a scope's items are contiguous — collection
@@ -1742,27 +1729,48 @@ internal static partial class BoxEngine
         var (levels, _) = Bidi.Reorder(stream.ToString(), baseLtr, spans);
 
         // Split every text item at its level-run boundaries, then run the L2 passes at fragment
-        // granularity (order only) and reverse each odd-level fragment's own chars.
+        // granularity (order only) and reverse each odd-level fragment's own chars. Fragments
+        // keep the LOGICAL item order — a <br> or image between two RTL runs sits between them,
+        // not after the last text item: appended non-text fragments let the L2 pass displace the
+        // breaks past the runs they separate, and 'ע<br>ע' collapsed onto one line
+        // (font-family-015's two zero-height lines painted side by side).
         var fragments = new List<BidiFragment>();
-        foreach (var (itemIndex, start, length) in ranges)
-        {
-            var source = items[itemIndex];
-            var logical = source.Text!;
-            var runStart = 0;
-            for (var k = 1; k <= length; k++)
-            {
-                if (k < length && levels[start + k] == levels[start + runStart]) continue;
-                var slice = logical[runStart..k];
-                var level = levels[start + runStart];
-                fragments.Add(new BidiFragment(source, slice, level, MeasureSlice(source, slice)));
-                runStart = k;
-            }
-        }
-        // Non-text items ride at their innermost scope's level (base level when none).
+        var rangeAt = 0;
+        var pos = 0;
         for (var i = 0; i < items.Count; i++)
         {
-            if (items[i].Kind == InlineItemKind.Text) continue;
-            fragments.Add(new BidiFragment(items[i], null, ChainLevel(ScopeChain(items[i].Node), baseLtr), items[i].Width));
+            if (items[i].Kind == InlineItemKind.Text)
+            {
+                var (itemIndex, start, length) = ranges[rangeAt++];
+                var source = items[itemIndex];
+                var logical = source.Text!;
+                var runStart = 0;
+                for (var k = 1; k <= length; k++)
+                {
+                    if (k < length && levels[start + k] == levels[start + runStart]) continue;
+                    var slice = logical[runStart..k];
+                    var level = levels[start + runStart];
+                    fragments.Add(new BidiFragment(source, slice, level, MeasureSlice(source, slice)));
+                    runStart = k;
+                }
+                pos += length;
+            }
+            else
+            {
+                // Non-text items ride between the runs they separate. A <br> is a line
+                // terminator: reordering never crosses a line box, so it always takes the base
+                // level and the runs on either side reverse individually (an RTL paragraph's
+                // line order would flip if the break joined the run). Every other inline box is
+                // a neutral (UAX #9 N1/N2): when the characters on both sides share one level it
+                // joins them — an empty span between two Hebrew runs must not split the run
+                // (bidi-span-001) — otherwise it takes the base level.
+                int? before = pos > 0 ? levels[pos - 1] : null;
+                int? after = pos < levels.Length ? levels[pos] : null;
+                var level = before.HasValue && after.HasValue && before == after ? before.Value
+                    : baseLtr ? 0 : 1;
+                if (items[i].Kind == InlineItemKind.LineBreak) level = 0;
+                fragments.Add(new BidiFragment(items[i], null, level, items[i].Width));
+            }
         }
 
         // Fragment-granularity L2: reverse maximal runs at each level, highest first. Only the
