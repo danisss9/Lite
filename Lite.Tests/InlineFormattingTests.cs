@@ -122,4 +122,19 @@ public static class InlineFormattingTests
         True(fl is not null && allLines,
             "text inside an inline-block on parent's first line inherits ::first-line for all lines");
     }
+
+    [Test]
+    public static void WhiteSpacePre_TabStopsAdvanceTo8SpaceMultiples()
+    {
+        // CSS 2.1 §16.6.1: tabs (U+0009) in preserved whitespace advance to multiples of 8 space widths.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0;font:16px/1 Ahem'>" +
+            "<div id='d' style='white-space:pre'>XX&#09;XX</div>" +
+            "</body></html>");
+        var d = FindNode(root, n => n.Id == "d")!;
+        using var font = TextMeasure.CreateFont(d);
+        var w = TextMeasure.MeasureWithSpacing("XX\tXX", font, 0f, 0f);
+        // 2em ("XX") + 6em (tab to 8em stop) + 2em ("XX") = 10em = 160px.
+        True(Math.Abs(w - 160f) < 0.5f, $"expected 10em = 160px for 'XX\\tXX' in 16px Ahem, got {w}");
+    }
 }

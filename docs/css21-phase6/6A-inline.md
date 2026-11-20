@@ -30,6 +30,20 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Progress
 
+### 2026-11-20 — Commit 5: §16.6.1 8-space tab stops measured from containing block's starting content edge
+- **Moved (+2 pass, 0 losses; cumulative +24 pass, +4 fail→manualpending):**
+  - `white-space-processing-042` (official + WPT)
+- **What changed:**
+  - `Lite/Layout/TextMeasure.cs`: added `NextTabStop(offsetFromLineStart, font)` (multiples of `8 * spaceWidth`) and updated `MeasureWithSpacing` (with optional `lineStartOffset`) and `SplitPreserved` to measure U+0009 tabs accurately.
+  - `Lite/Layout/BoxEngine.Inline.cs`: re-measure mid-line text items containing `\t` at their actual `lineX - bandLeft` offset from the block's starting content edge (keeps `word-spacing-characters-001` passing alongside `white-space-processing-042`).
+  - `Lite/Drawer.Text.cs`: draw `\t` segments aligned to 8-space tab stops measured from the containing block's `ContentBox.Left`.
+- **Coordination note for 6.G (bidi):** `ReorderForBidi` was not altered and remains intact; line assembly changes in `BoxEngine.Inline.cs` were limited to §16.6.1 boundary-space restoration/collapsing, empty inline `Strut` transparency, mid-line tab re-measurement, and `FirstLineStylesOf` scoping.
+- **Handed to other lanes:**
+  - 6.X (`6X-evidence.md`): `inherit-computed-001`, `inline-block-baseline-003..006`, `vertical-align-sub-001`, `vertical-align-super-001`, and official `text-indent-intrinsic-003/004` (20110323 `-ref.htm` bug; WPT twins pass).
+  - 6.M (`6M-judges.md`): `text-align-applies-to-007/012/013/015` (judge checks viewport edge 0/800 instead of table/body content edge 8/792).
+  - 6.K (`6K-cascade.md`): `first-line-selector-016` (`span, div:first-line { color: white; }` neutralized as a whole in `Parser.Cascade.cs`).
+- **Checks:** Units 652/652; `css21` 51/1; `wpt` 86/2; Lane A 11/74 official (+11 pass, +2 manualpending vs before), 13/90 WPT (+13 pass, +2 manualpending vs before), 0 losses; Canary 300/300 (154/154 official, 146/146 WPT). Note: `Parser.cs` was edited in Commit 2 (HTML5 gate not rerun per lane rules).
+
 ### 2026-11-20 — Commit 4: §5.12.1 ::first-line scoping across preceding blocks, `<br>`, and inline-blocks
 - **Moved (+4 pass, +4 fail→manualpending, 0 losses; cumulative +22 pass, +4 fail→manualpending):**
   - `first-line-selector-010` (official + WPT): fail → pass

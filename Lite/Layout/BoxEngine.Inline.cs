@@ -680,6 +680,19 @@ internal static partial class BoxEngine
 
             // For text items wider than the available space, re-measure with wrapping
             var effectiveItem = item;
+            // §16.6.1: tab stops are measured from the block's starting content edge, so a
+            // mid-line text item carrying U+0009 must re-measure its tab width at its actual
+            // lineX offset (word-spacing-characters-001's pre line with preceding inline spacers).
+            if (item.Kind == InlineItemKind.Text && item.Text is { } tabText && tabText.IndexOf('\t') >= 0 &&
+                lineX > bandLeft)
+            {
+                using var tabFont = TextMeasure.CreateFont(item.Node);
+                var (tabLs, tabWsp) = TextMeasure.SpacingOf(item.Node);
+                var tabW = TextMeasure.MeasureWithSpacing(tabText, tabFont, tabLs, tabWsp, lineX - bandLeft);
+                item = item with { Width = tabW, ContentW = tabW };
+                effectiveItem = item;
+                fitWidth = tabW;
+            }
             if (item.Kind == InlineItemKind.Text && item.Text != null)
             {
                 var availW = bandRight - lineX;
