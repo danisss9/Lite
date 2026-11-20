@@ -67,6 +67,18 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - **Checks:** units 652 passed; css21 51/1; wpt 86/2; lane list official 10→27, WPT 0→17 (44
   total, 0 losses); canary 300/300.
 
+### 'inherit' on a generated box takes the host's computed value (§6.2.1)
+
+- **Moved:** `first-letter-inherit-001` (official + WPT; `float: inherit` on ::first-letter now
+  floats the letter). Pseudo declarations are copied into StyleOverrides, so the literal
+  `inherit` reached the property readers as an unknown value; `white-space: inherit` also
+  collapsed a 'pre' item's "\A" to a space (content-172's .pre row now renders the step pattern).
+- **Still fails:** `content-172` (the .normal row's cell shrinks to its longest `\A` line — a
+  table max-content measure of a pseudo child, 6.E-adjacent), `content-173/174/175`,
+  `content-white-space-002`.
+- **Checks:** units 660; css21 51/1; wpt 86/2; lane list 49→51 (official 30, WPT 21), 0 losses;
+  canary 300/300.
+
 ### `content: url(...)` is a replaced inline box (§12.2)
 
 - **Moved:** `content-004` (official + WPT). The pseudo box got the fetched bitmap and laid out

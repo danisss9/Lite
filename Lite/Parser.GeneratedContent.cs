@@ -208,7 +208,8 @@ internal static partial class Parser
             {
                 // 'display' is skipped: it was already resolved above (css-wide keywords), and
                 // copying the raw value here would overwrite that with e.g. the literal "inherit".
-                if (p != "content" && p != "display") pseudoNode.StyleOverrides[p] = v;
+                if (p != "content" && p != "display")
+                    pseudoNode.StyleOverrides[p] = ResolvePseudoValue(node, p, v);
             }
             // CSS 2.1 §10.8.1: 'vertical-align' does not inherit and its initial value is
             // 'baseline'. The generated box borrows the originating element's style object, so an
@@ -232,7 +233,8 @@ internal static partial class Parser
             {
                 // 'display' is skipped: it was already resolved above (css-wide keywords), and
                 // copying the raw value here would overwrite that with e.g. the literal "inherit".
-                if (p != "content" && p != "display") pseudoNode.StyleOverrides[p] = v;
+                if (p != "content" && p != "display")
+                    pseudoNode.StyleOverrides[p] = ResolvePseudoValue(node, p, v);
             }
             // §10.8.1: 'vertical-align' does not inherit; the generated box starts at 'baseline',
             // not at the originating element's value (see the ::before case above).
@@ -373,7 +375,8 @@ internal static partial class Parser
         letter.ResetNonInheritedStyles();
         letter.StyleOverrides["display"] = "inline";
         foreach (var (p, v) in styles)
-            if (p != "content" && p != "display") letter.StyleOverrides[p] = v;
+            if (p != "content" && p != "display")
+                letter.StyleOverrides[p] = ResolvePseudoValue(node, p, v);
         // §10.8.1: the ::first-letter box is its own inline box, so its undeclared
         // 'vertical-align' is the initial 'baseline', not the host element's value.
         letter.StyleOverrides.TryAdd("vertical-align", "baseline");
@@ -476,6 +479,23 @@ internal static partial class Parser
                || hostDisplay.Equals("inherit", StringComparison.OrdinalIgnoreCase)
             ? "inline"
             : hostDisplay;
+    }
+
+    /// <summary>CSS 2.1 §6.2.1: 'inherit' on a generated box takes the originating element's
+    /// computed value. Pseudo declarations are copied straight into StyleOverrides, so leaving
+    /// the literal token there reached the property readers as an unknown value — `white-space:
+    /// inherit` on `:before` collapsed a 'pre' item's "\A" to a space instead of a forced break
+    /// (content-172), and `float: inherit` on `:first-letter` never floated.</summary>
+    private static string ResolvePseudoValue(LayoutNode host, string property, string value)
+    {
+        if (!value.Trim().Equals("inherit", StringComparison.OrdinalIgnoreCase)) return value;
+        var inherited = host.TryResolveStyle(property, out var ov)
+            ? ov : host.Style.GetPropertyValueSafe(property);
+        inherited = inherited?.Trim();
+        return string.IsNullOrEmpty(inherited) ||
+               inherited.Equals("inherit", StringComparison.OrdinalIgnoreCase)
+            ? value
+            : inherited;
     }
 
     /// <summary>The image URL when a content value is a single url(...) token (§12.2), else

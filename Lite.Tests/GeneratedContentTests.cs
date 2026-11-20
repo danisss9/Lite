@@ -117,6 +117,21 @@ public static class GeneratedContentTests
         True(painted, "the content image painted nothing");
     }
 
+    [Test]
+    public static void PseudoInherit_TakesTheHostsComputedValue()
+    {
+        // §6.2.1: 'inherit' on a generated box is the originating element's computed value.
+        var root = Parse("<div>text</div>",
+            "div { white-space: pre } div:before { content: 'a'; white-space: inherit }");
+        var pseudo = Find(root, "#pseudo-before")!;
+        True(pseudo.GetWhiteSpace() == WhiteSpace.Pre, pseudo.GetWhiteSpace().ToString());
+
+        // first-letter-inherit-001: `div:first-letter { float: inherit }` floats the letter.
+        var letter = Find(Parse("<div>text</div>", "div { float: left } div:first-letter { float: inherit }"),
+            "#pseudo-first-letter")!;
+        True(letter.GetFloat() == FloatType.Left, letter.GetFloat().ToString());
+    }
+
     private static LayoutNode Parse(string body, string css)
     {
         var page = Parser.ParseChildPage(
