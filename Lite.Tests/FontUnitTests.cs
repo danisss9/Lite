@@ -165,6 +165,14 @@ public static class FontUnitTests
         True(MathF.Abs(l1 - l2) < 0.01f, $"large={l1}, larger={l2}");
         True(MathF.Abs(Find(page, "top")!.GetFontSize() - 32f) < 0.01f, $"top={Find(page, "top")!.GetFontSize()}");
         True(MathF.Abs(Find(page, "bot")!.GetFontSize() - 9f) < 0.01f, $"bot={Find(page, "bot")!.GetFontSize()}");
+
+        // Outside the table the ratio applies: 'smaller' from 320px is 320/1.2, not xx-large
+        // (font-size-119), and 'larger' past xx-large keeps growing.
+        var outside = Parse(
+            "<div style=\"font-size: 320px\"><span id=\"s\" style=\"font-size: smaller\">X</span></div>" +
+            "<div style=\"font-size: 40px\"><span id=\"g\" style=\"font-size: larger\">X</span></div>");
+        True(MathF.Abs(Find(outside, "s")!.GetFontSize() - 320f / 1.2f) < 0.05f, $"smaller={Find(outside, "s")!.GetFontSize()}");
+        True(MathF.Abs(Find(outside, "g")!.GetFontSize() - 48f) < 0.05f, $"larger={Find(outside, "g")!.GetFontSize()}");
     }
 
     [Test]

@@ -2080,13 +2080,18 @@ internal static partial class Parser
             case "large": return AbsoluteFontSizes[4];
             case "x-large": return AbsoluteFontSizes[5];
             case "xx-large": return AbsoluteFontSizes[6];
+            // The table steps apply only while the parent's size lies within the table's range;
+            // outside it (a 20em parent, font-size-119) the 1.2 ratio applies, so 'smaller' from
+            // 320px is 266.67px, not the table's top entry.
             case "larger":
-                for (var i = 0; i < AbsoluteFontSizes.Length; i++)
-                    if (AbsoluteFontSizes[i] > parentPx + 0.01f) return AbsoluteFontSizes[i];
+                if (parentPx >= AbsoluteFontSizes[0] - 0.01f)
+                    for (var i = 0; i < AbsoluteFontSizes.Length; i++)
+                        if (AbsoluteFontSizes[i] > parentPx + 0.01f) return AbsoluteFontSizes[i];
                 return parentPx * 1.2f;
             case "smaller":
-                for (var i = AbsoluteFontSizes.Length - 1; i >= 0; i--)
-                    if (AbsoluteFontSizes[i] < parentPx - 0.01f) return AbsoluteFontSizes[i];
+                if (parentPx <= AbsoluteFontSizes[^1] + 0.01f)
+                    for (var i = AbsoluteFontSizes.Length - 1; i >= 0; i--)
+                        if (AbsoluteFontSizes[i] < parentPx - 0.01f) return AbsoluteFontSizes[i];
                 return parentPx / 1.2f;
             case "inherit": case "unset": return parentPx;
             case "initial": return DefaultFontSizePx;
