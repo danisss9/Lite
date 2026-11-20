@@ -1171,10 +1171,13 @@ internal static partial class Drawer
     /// <para>A 'z-index: auto' positioned ancestor between the root and the item (whose
     /// positioned descendants join the root's context, Appendix E) still moves its subtree:
     /// its relative offset (§9.4.3) is replayed here as well, outermost first, interleaved with
-    /// the clips in tree order.</para></summary>
+    /// the clips in tree order. So is an absolutely positioned ancestor's 'clip: rect()'
+    /// (§11.1.2), which clips the box's descendants too; a 'z-index: auto' box with a clip no
+    /// longer paints those positioned descendants itself (clipping-009's red abspos child
+    /// painted outside its clipped parent).</para></summary>
     private static void PaintThroughClippers(SKCanvas canvas, LayoutNode root, LayoutNode item, int viewportWidth)
     {
-        List<(LayoutNode Box, bool Clip, float Dx, float Dy)>? chain = null;
+        List<(LayoutNode Box, bool Clip, SKRect? CssClip, float Dx, float Dy)>? chain = null;
         var absolute = OwnPosition(item) == PositionType.Absolute;
         LayoutNode? containingBlock = null;
         if (absolute)
@@ -1185,9 +1188,12 @@ internal static partial class Drawer
         {
             var clips = a.GetOverflow() != OverflowType.Visible
                         && (!absolute || IsSelfOrDescendant(containingBlock, a));
-            var (dx, dy) = OwnPosition(a) == PositionType.Relative ? BoxEngine.RelativeOffset(a) : (0f, 0f);
-            if (!clips && dx == 0f && dy == 0f) continue;
-            (chain ??= []).Add((a, clips, dx, dy));
+            var aPos = OwnPosition(a);
+            var (dx, dy) = aPos == PositionType.Relative ? BoxEngine.RelativeOffset(a) : (0f, 0f);
+            // §11.1.2: 'clip' applies only to absolutely positioned elements (fixed included).
+            var cssClip = aPos is PositionType.Absolute or PositionType.Fixed ? a.GetClipRect() : null;
+            if (!clips && cssClip is null && dx == 0f && dy == 0f) continue;
+            (chain ??= []).Add((a, clips, cssClip, dx, dy));
             shiftX += dx;
             shiftY += dy;
         }
@@ -1200,8 +1206,11 @@ internal static partial class Drawer
         canvas.Save();
         for (var i = chain.Count - 1; i >= 0; i--)  // outermost first
         {
-            var (a, clips, dx, dy) = chain[i];
+            var (a, clips, cssClip, dx, dy) = chain[i];
             if (dx != 0f || dy != 0f) canvas.Translate(dx, dy);
+            // The 'clip' rectangle is relative to the border box, so it applies before (outside)
+            // the box's own overflow clip, as PaintNode orders them.
+            if (cssClip is { } cr) canvas.ClipRect(cr);
             if (!clips) continue;
             canvas.ClipRect(BoxEngine.ScrollportRect(a));
             if (a.ScrollState is { } ss && (ss.NeedsScrollbar || ss.NeedsHorizontalScrollbar))

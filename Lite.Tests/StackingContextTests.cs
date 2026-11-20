@@ -98,6 +98,26 @@ public static class StackingContextTests
         }
     }
 
+    [Test]
+    public static void AutoZIndexClippedAncestor_ClipsItsPositionedDescendants()
+    {
+        // clipping-009: a 'z-index: auto' abs-pos box with 'clip: rect()' no longer paints its
+        // abs-pos child itself (Appendix E step 8: the child joins the parent context), but
+        // §11.1.2's clip still covers every descendant, so the child paints under that clip.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}</style>" +
+            "<div style=\"position:absolute; top:0; left:0; width:100px; height:100px; background:green; clip:rect(0px 100px 100px 0px)\">" +
+            "<div style=\"position:absolute; margin:100px 0 0 100px; width:100px; height:100px; background:red\"></div>" +
+            "</div>");
+        var bitmap = Drawer.DrawToBitmap(300, 300, root, new Viewport { ViewportHeight = 300 });
+        using (bitmap)
+        {
+            True(bitmap.GetPixel(50, 50) == SKColors.Green,
+                $"the clipped box paints green at 50,50, got {bitmap.GetPixel(50, 50)}");
+            True(bitmap.GetPixel(150, 150) != SKColors.Red,
+                $"the abs-pos child outside the clip must not paint, got {bitmap.GetPixel(150, 150)}");
+        }
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);

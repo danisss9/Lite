@@ -100,3 +100,21 @@ parses it against the inheritor's own basis, like the border-style getter alread
 - Units 654/0 (new `RelativePositioningTests.InheritedTop_TakesTheParentSComputedValue`, served-page
   pipeline because srcdoc parsing resolves the keyword; fails pre-fix); css21 51+1; wpt 86+2;
   lane list +4, 0 losses; canary 300/300.
+
+### 20 November 2026 — Fix round (batch-1 loss)
+
+**`clipping-009` (official + WPT), lost by eaa168a9.** §11.1.2 / Appendix E step 8. Since
+eaa168a9 a positioned 'z-index: auto' box is a stacking item, not a context, so its abs-pos
+children join the enclosing context and paint from its root through `PaintThroughClippers`. That
+chain replayed the overflow clips and relative offsets of the boxes in between, but not an
+abs-pos ancestor's `clip: rect()`, which §11.1.2 applies to the box's descendants too. In
+`clipping-009` the green box (abs-pos, z auto, clipped) no longer painted its red abs-pos child
+itself, and the child painted unclipped. `PaintThroughClippers` now also replays the 'clip'
+rectangle of every absolutely or fixed positioned ancestor between the root and the item, before
+that ancestor's own overflow clip (the order `PaintNode` uses).
+- Moved: `clipping-009` ×2 corpora pass again. No other change on the lane list.
+- Gains kept: all 33 lane gains hold (D.txt 33 pass / 136 fail, same as after ffb6318b). No gain
+  had to go.
+- Units 655/0 (new `StackingContextTests.AutoZIndexClippedAncestor_ClipsItsPositionedDescendants`,
+  fails pre-fix); css21 51+1; wpt 86+2; `fix-losses.txt` 2/2; `D-pass.txt` 1155/1155;
+  `canary.txt` 960/960.
