@@ -34,6 +34,12 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
     blockification made them hit the block-level break first), and a whitespace+float run keeps
     the pending margin chain adjoining (§8.3.1) while laying its floats at the flow point.
   Both edits were verified against the canary (300/300) and the curated gates after each step.
+- **Fix round** (see "Fix round" under Progress), `Lite/Layout/BoxEngine.Inline.cs` (6.A) only:
+  - commit 412ad54f: both `PlaceInRunFloat` call sites pass the run's `containingBlockHeight`
+    (argument only);
+  - commit 43909242: the empty-line rule-7 hook no longer requires the pen at the
+    band's start edge (it carries the line's start offset, e.g. text-indent), and a collapsible
+    space that overflows a line with no content no longer commits that line (§16.6.1).
 
 ## Progress
 
@@ -115,3 +121,44 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   investigated and re-run on their own per the README (`float-replaced-width-007/008`,
   `floats-placement-vertical-003` — contention failures that pass standalone; the 003 pair was
   additionally fixed properly by the rule-7 left-side gate).
+
+### Fix round — the 35 cases 6e7088af lost
+
+The integrator's baseline of the merged batch found 35 cases (official + WPT) that passed at the
+lane base `05228a26` and fail on this branch alone (`fix-losses.txt`). The lane checks missed them:
+they ran only `B.txt` and the 300-case canary.
+
+- **Bisect:** all 35 pass at `05228a26`, `9a58beff` and `af86209c`; all 35 fail from `6e7088af`
+  on. That commit made a float that follows whitespace or inline content join the inline run
+  (`PlaceInRunFloat`) instead of the block-level path (`LayoutFloat`). That exposed two weaknesses
+  of the in-run path and one in the line loop. Three root causes, three commits:
+  1. **412ad54f, the in-run float laid out differently from a direct-child float** (§10.3.5, §10.6,
+     §10.7). With an explicit height it never laid out its children. A floated table or flex box
+     skipped its engine. Percentage heights resolved against 0 and min/max-height was not
+     clamped. Both paths now share `MeasureFloat` and `LayoutFloatBox`.
+     **Moved (5):** official `stack-floats-001/003`; WPT `stack-floats-001/003`,
+     `border-conflict-style-107`.
+  2. **f0a11d34, a leading in-run float did not move an empty line's start edge** (§9.5). The
+     reflow shift was returned only when the line already held content, so whatever followed a
+     float at the start of a line was laid out under it.
+     **Moved (29):** official `c414-flt-fit-000/001`, `c5525-fltwidth-001`,
+     `clear-applies-to-012/014`, `clear-inline-001`, `floats-040/122/132/133/134/136`,
+     `inline-replaced-width-013`; their 13 WPT twins; and WPT `floats-placement-004`,
+     `floats-placement-vertical-004`, `font-size-122`.
+  3. **43909242, an indented empty line beside a leading float did not shift below it**
+     (§9.5 rule 7, §16.6.1). Two parts in `BoxEngine.Inline.cs`: the empty-line rule-7 hook
+     required the pen at the band edge, which a text-indented line never is, and the collapsible
+     space after the float committed the still-empty line.
+     **Moved (1):** WPT `line-break-after-leading-float`.
+- **Lane gains:** none had to go. `B.txt` reads 22/62 official + 24/112 WPT, the same 46 cases as
+  the lane's last run.
+- **Font-size-119:** named in the hand-over but not in `fix-losses.txt`. Only `font-size-122`
+  (WPT) is listed, and it is fixed.
+- **Checks (final state):** units 653/653; css21 51 + 1 expected-fail; wpt 86 + 2 expected-fail;
+  `fix-losses` 35/35; `B` 22/62 + 24/112; `B-pass` 444/444; `C-pass` 2944/2944;
+  `D-pass` 1155/1155; `canary` 960/960. In the intermediate state after commit 1, 3 canary cases
+  failed (`floats-134`, WPT `clear-applies-to-014` and `floats-040`). All 3 are loss-list members
+  that commit 2 fixes.
+- **Process note for the next batch:** run `B-pass.txt` (and the neighbouring lanes' pass lists
+  when a commit touches their files), not just the canary. Of the 35 losses, 24 sat in
+  `B-pass`, 5 in `D-pass`, 2 in `C-pass` and 1 in `J-pass`; the canary held only 3.
