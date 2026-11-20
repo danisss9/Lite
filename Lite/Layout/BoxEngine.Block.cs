@@ -410,16 +410,21 @@ internal static partial class BoxEngine
             if (contentH < minContent) contentH = minContent;
         }
 
-        // §8.3.1 (CSS 2.2 "Collapsing margins"): the last in-flow child's bottom margin adjoins
-        // this box's bottom margin only while the box's height is the auto height its content
-        // gives it. When 'min-height' or 'max-height' changes that height, the bottom border
-        // edge is no longer at the content's end, so the margins are separated: the child's
-        // margin stays inside — neither escaping below the box nor growing it past the clamped
-        // height (min-height-separates-margin, max-height-separates-margin,
-        // margin-collapse-min-height-001: a 550px margin under 'min-height: 100px' leaves the
-        // box 100px tall and the following box directly below it).
+        // §8.3.1 (CSS 2.2 "Collapsing margins", change s.8.3.1c): a non-zero computed
+        // 'min-height' that RAISES the auto height separates the last in-flow child's bottom
+        // margin from this box's: the bottom border edge is no longer at the content's end, so
+        // the child's margin stays inside — neither escaping below the box nor growing it past
+        // the clamped height (min-height-separates-margin, margin-collapse-min-height-001: a
+        // 550px margin under 'min-height: 100px' leaves the box 100px tall and the following
+        // box directly below it).
+        // 'max-height' does NOT: §8.3.1 asks only for an 'auto' COMPUTED height, which a
+        // max-height cut leaves in place, so the child's bottom margin still collapses through
+        // the capped box (margin-collapse-038: a 300px child with a 100px bottom margin under
+        // 'max-height: 99px' gives a 199px-tall bordered grandparent). Chrome and Firefox
+        // separate here as well (WPT max-height-separates-margin) — that test and -038 are
+        // mutually exclusive, and the CSS 2.1 text sides with -038.
         var effectiveBottomChain = MarginChain.Of(margin.Bottom);
-        if (collapseThroughCandidate && MathF.Abs(contentH - unclampedH) < 0.01f)
+        if (collapseThroughCandidate && contentH <= unclampedH + 0.01f)
             effectiveBottomChain += trailingChain;
         var effectiveBottomMargin = effectiveBottomChain.Value;
 

@@ -341,20 +341,24 @@ public static class LayoutTests
     }
 
     [Test]
-    public static void MaxHeight_SeparatesLastChildBottomMargin()
+    public static void MaxHeight_KeepsLastChildBottomMarginCollapsing()
     {
-        // WPT max-height-separates-margin: 'max-height' cuts the auto height (61) to 50, which
-        // equally separates the box's bottom margin from the last child's 10px one — the footer
-        // sits directly at 50, not 10px lower (§8.3.1: adjoining needs the content-given height).
-        var child = Block(new() { ["height"] = "51px", ["margin-bottom"] = "10px" });
-        var parent = Block(new() { ["width"] = "100px", ["max-height"] = "50px" }, child);
-        var footer = Block(new() { ["width"] = "100px", ["height"] = "50px" });
-        var container = Block(new() { ["width"] = "100px" }, parent, footer);
-        LayoutTree(container);
-        var h = parent.Box.ContentBox.Height;
-        True(Math.Abs(h - 50f) < 1f, $"expected parent content height 50 (max-height cap), got {h}");
-        True(Math.Abs(footer.Box.ContentBox.Top - 50f) < 1f,
-            $"expected the footer directly below the parent (50), got {footer.Box.ContentBox.Top}");
+        // margin-collapse-038 (§8.3.1: the last child's bottom margin adjoins its parent's when
+        // the parent has an 'auto' COMPUTED height — a max-height cut leaves it auto): the 300px
+        // child's 100px bottom margin collapses through the 99px-capped parent and lands inside
+        // the grandparent (bounded below by padding), which is 99 + 100 = 199px tall. (Chrome and Firefox
+        // separate here, per WPT max-height-separates-margin; the two tests are mutually
+        // exclusive and the CSS 2.1 text sides with -038.)
+        var child = Block(new() { ["height"] = "300px", ["margin-bottom"] = "100px" });
+        var parent = Block(new() { ["max-height"] = "99px" }, child);
+        var grand = Block(new() { ["width"] = "100px", ["padding-bottom"] = "1px" }, parent);
+        LayoutTree(grand);
+        True(Math.Abs(parent.Box.ContentBox.Height - 99f) < 1f,
+            $"expected the parent capped at 99, got {parent.Box.ContentBox.Height}");
+        True(Math.Abs(parent.Box.Margin.Bottom - 100f) < 0.5f,
+            $"expected the child's 100px margin collapsed into the parent's bottom margin, got {parent.Box.Margin.Bottom}");
+        True(Math.Abs(grand.Box.ContentBox.Height - 199f) < 1f,
+            $"expected the grandparent to hold 99 + 100 = 199, got {grand.Box.ContentBox.Height}");
     }
 
     [Test]
