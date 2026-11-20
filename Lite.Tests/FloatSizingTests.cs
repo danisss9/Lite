@@ -90,4 +90,29 @@ public static class FloatSizingTests
         True(c.Box.ContentBox.Top >= b.Box.ContentBox.Top - 0.5f,
             $"C's top must not be above B's (§9.5.1 rule 5), got C {c.Box.ContentBox.Top} vs B {b.Box.ContentBox.Top}");
     }
+
+    [Test]
+    public static void InRunFloat_LaysOutContentLikeDirectChildFloat()
+    {
+        // stack-floats-001's shape: a float met inside an inline run (text before it) with an
+        // explicit height still lays out its block child, and a floated table met the same way
+        // lays out through the table engine (border-conflict-style-107's floated tables).
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div style='width:200px;font:20px/1 Ahem'>x" +
+            "<div id='f' style='float:left;width:50px;height:60px;padding:20px 0'>" +
+            "<div id='inner' style='height:60px'></div></div>" +
+            "<table id='t' style='float:right;border-spacing:0'><tr><td id='cell' style='width:30px;height:30px;padding:0'></td></tr></table>" +
+            "x</div></body></html>");
+        var f = FindNode(root, n => n.Id == "f")!;
+        var inner = FindNode(root, n => n.Id == "inner")!;
+        var cell = FindNode(root, n => n.Id == "cell")!;
+        True(f is not null && inner is not null && cell is not null, "nodes not found");
+        True(Math.Abs(inner.Box.ContentBox.Height - 60f) < 0.5f,
+            $"the float's block child must be laid out, got height {inner.Box.ContentBox.Height}");
+        True(Math.Abs(inner.Box.ContentBox.Top - f.Box.ContentBox.Top) < 0.5f,
+            $"the child must sit at the float's content top, got {inner.Box.ContentBox.Top} vs {f.Box.ContentBox.Top}");
+        True(cell.Box.ContentBox.Width > 29.5f && cell.Box.ContentBox.Right > 199.5f - 0.5f,
+            $"the floated table's cell must be laid out at the right edge, got {cell.Box.ContentBox}");
+    }
 }

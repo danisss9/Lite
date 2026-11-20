@@ -393,7 +393,7 @@ internal static partial class BoxEngine
                                 Math.Max(maxAbove + maxBelow, strutAbove + strutBelow), maxWidth,
                                 viewportWidth, viewportHeight, bandLeft,
                                 hasCommittedLine && lineIsEmpty ? committedLineTop : float.NaN,
-                                committedLineWidth);
+                                committedLineWidth, containingBlockHeight);
                 if (rf.Shift > 0f)
                 {
                     for (var k = lineStart; k < placed.Count; k++)
@@ -579,7 +579,8 @@ internal static partial class BoxEngine
                     {
                         PlaceInRunFloat(items[fj], floats, originX, originY, lineY, lineX,
                                         Math.Max(maxAbove + maxBelow, strutAbove + strutBelow), maxWidth,
-                                        viewportWidth, viewportHeight, bandLeft);
+                                        viewportWidth, viewportHeight, bandLeft,
+                                        containingBlockHeight: containingBlockHeight);
                         items.RemoveAt(fj);
                     }
                     var src = placedSource[last];
