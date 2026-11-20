@@ -2065,6 +2065,10 @@ internal static partial class BoxEngine
         foreach (var child in node.Children)
         {
             if (child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText)) continue;
+            // §17.4: a CAPTION sits in the table wrapper, outside the table box — it does not
+            // set the table's baseline (§17.5.3; table-height-algorithm-031's nested table
+            // aligned its sibling cell to the caption's text instead of its cell's).
+            if (child.TagName == "CAPTION" || TableEngine.IsCaption(child)) continue;
             var y = FindFirstBaselineY(child);
             if (y.HasValue) return y;
         }

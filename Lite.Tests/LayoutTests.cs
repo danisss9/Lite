@@ -491,6 +491,72 @@ public static class LayoutTests
             $"two 20px/1em lines must make a 40px cell (got {td.Box.BorderBox.Height})");
     }
 
+    [Test]
+    public static void NestedTable_IntrinsicIncludesSpacingAndCellEdges()
+    {
+        // §17.5.2: a table's shrink-wrap width is the sum of its columns — each carrying its
+        // cells' padding and borders — plus the border-spacing. Measuring a nested table by
+        // plain recursion into its cells' text dropped the inner boxes, so the outer cell
+        // clamped the inner table narrower and its cell wrapped the very text the table was
+        // sized from (table-height-algorithm-031's nested "Filler Text").
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0} td{padding:0; border:0}" +
+            " table{border-spacing:0}</style>" +
+            "<table style=\"border-spacing:0\"><tr><td>" +
+            "<table><tr><td id=\"inner\">Filler Text filler text</td></tr></table>" +
+            "</td></tr></table>");
+        var inner = FindNode(root, "TD", "inner");
+        True(inner is not null, "inner cell missing");
+        True(inner!.Box.BorderBox.Height < 30f,
+            $"the nested cell's text must fit one line (got {inner.Box.BorderBox.Height}px tall)");
+    }
+
+    [Test]
+    public static void Caption_DoesNotSetTheTableBaseline()
+    {
+        // §17.4/§17.5.3: a caption sits in the table wrapper, outside the table box, and does
+        // not set the table's baseline — the sibling baseline-aligned cell aligns with the
+        // table's first CELL line (table-height-algorithm-031: the right cell aligned to the
+        // caption's text line and the two visible texts' bottoms drifted apart).
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0} td{border:1px solid black;" +
+            " height:100px; vertical-align:baseline} caption{color:white} table{border-spacing:0}</style>" +
+            "<table><tr><td><table><caption>Filler Text</caption>" +
+            "<tr><td id=\"inner\">Filler Text</td></tr></table></td>" +
+            "<td id=\"sibling\">Filler Text</td></tr></table>");
+        var inner = FindNode(root, "TD", "inner");
+        var sibling = FindNode(root, "TD", "sibling");
+        True(inner is not null && sibling is not null, "cells missing");
+        var innerBaseline = BoxEngine.FindFirstBaselineY(inner!);
+        var siblingBaseline = BoxEngine.FindFirstBaselineY(sibling!);
+        True(innerBaseline is not null && siblingBaseline is not null, "baselines missing");
+        True(Math.Abs(innerBaseline!.Value - siblingBaseline!.Value) < 1f,
+            $"baseline-aligned cells must share the row baseline (inner {innerBaseline} vs sibling {siblingBaseline})");
+    }
+
+    [Test]
+    public static void RowspanningCell_JoinsTheRowBaseline()
+    {
+        // §17.5.3: a cell spanning rows aligns its first-line baseline with the FIRST row it
+        // spans, and it helps establish that row's baseline alongside the cells originating
+        // in it (table-height-algorithm-012: the large-text rowspan=2 cell set the baseline;
+        // excluding it left the two filler texts' bottoms 4px apart).
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0} td{vertical-align:baseline;" +
+            " padding:0; border:0} table{border-spacing:0} #small{font-size:12px} #large{font-size:32px}</style>" +
+            "<table><tr><td id=\"small\">Filler Text</td>" +
+            "<td rowspan=\"2\" colspan=\"2\"><div id=\"large\">Filler Text</div></td></tr>" +
+            "<tr><td></td></tr></table>");
+        var small = FindNode(root, "TD", "small");
+        True(small is not null, "small cell missing");
+        // The row baseline is the LOWEST first-line baseline — the large spanning cell's. The
+        // small cell's content shifts down to it, so the two texts' first baselines coincide.
+        var smallBaseline = BoxEngine.FindFirstBaselineY(small!);
+        var large = FindNode(root, "DIV", "large");
+        True(large is not null, "spanning cell content missing");
+        var largeBaseline = BoxEngine.FindFirstBaselineY(large!);
+        True(smallBaseline is not null && largeBaseline is not null, "baselines missing");
+        True(Math.Abs(smallBaseline!.Value - largeBaseline!.Value) < 1f,
+            $"the small cell must share the spanning cell's baseline (small {smallBaseline} vs large {largeBaseline})");
+    }
+
     private static string FindRepoRoot()
     {
         var dir = Directory.GetCurrentDirectory();
