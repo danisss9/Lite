@@ -137,4 +137,25 @@ public static class InlineFormattingTests
         // 2em ("XX") + 6em (tab to 8em stop) + 2em ("XX") = 10em = 160px.
         True(Math.Abs(w - 160f) < 0.5f, $"expected 10em = 160px for 'XX\\tXX' in 16px Ahem, got {w}");
     }
+
+    [Test]
+    public static void WhiteSpaceCollapse_LineEndSpaceBeforeClosingEdgesIsRemoved()
+    {
+        // CSS 2.1 §16.6.1 step 4: a collapsible space at the end of a line is removed even when
+        // closing inline-box edges follow it, so the wrapper's border closes up on the last glyph
+        // (border-color-012, block-in-inline-append-002's references).
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0;font:20px/1 Ahem'>" +
+            "<div><span id='o' style='border-right:10px solid'><span id='t'>XX </span> </span></div>" +
+            "</body></html>");
+        var t = FindNode(root, n => n.Id == "t")!;
+        var o = FindNode(root, n => n.Id == "o")!;
+        True(Math.Abs(t.Box.ContentBox.Width - 40f) < 0.5f,
+            $"the leaf span's line-end space is removed (2em = 40px), got {t.Box.ContentBox.Width}");
+        var outerRight = o.InlineFragmentBoxes is { Count: > 0 } frags
+            ? frags[^1].BorderBox.Right
+            : o.Box.BorderBox.Right;
+        True(Math.Abs(outerRight - 50f) < 0.5f,
+            $"the wrapper's right border closes on the glyphs (40 + 10 = 50), got {outerRight}");
+    }
 }

@@ -288,8 +288,41 @@ internal static partial class BoxEngine
             return false;
         }
 
+        // §16.6.1 (step 4 of the white-space processing model): a collapsible space at the END
+        // of a line is removed, also when closing inline-box edges follow it on that line, so
+        // those edges close up on the last glyph. Since leaf inline text keeps its boundary
+        // spaces (CollectInlineItems), '...text </span></span>' ended the line with a space
+        // the span's border then reached over (border-color-012, the block-in-inline-append
+        // references). The run that is the line's very last item is handled where its line
+        // width and wrapper fragments are folded.
+        void TrimSpaceBeforeClosingEdges()
+        {
+            for (var k = placed.Count - 1; k >= lineStart; k--)
+            {
+                var it = placed[k].item;
+                if (it.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow or
+                    InlineItemKind.Float or InlineItemKind.Strut) continue;
+                if (it.Kind == InlineItemKind.Text && it.Width <= 0f && (it.Text ?? "").IsCssWhiteSpaceOnly()) continue;
+                if (k == placed.Count - 1 || !IsSingleLineText(it) || it.Text is not { Length: > 0 } text ||
+                    !IsBreakSpace(text[^1]) || it.Node.GetWhiteSpace() is WhiteSpace.Pre or WhiteSpace.PreWrap)
+                    return;
+                var trimmedText = text.TrimEndCss();
+                using var trimFont = TextMeasure.CreateFont(it.Node);
+                var (trimLs, trimWsp) = TextMeasure.SpacingOf(it.Node);
+                var trimmedW = TextMeasure.MeasureSingleLine(trimmedText, trimFont, -1f, trimLs, trimWsp).Width;
+                var delta = it.Width - trimmedW;
+                if (delta <= 0f) return;
+                placed[k] = (it with { Text = trimmedText, Width = trimmedW, ContentW = trimmedW },
+                             placed[k].relX, placed[k].relY);
+                for (var j = k + 1; j < placed.Count; j++)
+                    placed[j] = (placed[j].item, placed[j].relX - delta, placed[j].relY);
+                return;
+            }
+        }
+
         void CommitLine()
         {
+            TrimSpaceBeforeClosingEdges();
             // Resolve the final line-box height: start from the baseline-aligned items' reach,
             // then grow outward (below for 'top', above for 'bottom') if those need more room.
             var above = maxAbove;

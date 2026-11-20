@@ -30,6 +30,13 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Progress
 
+### 2026-11-20 — Fix round: §16.6.1 line-end space before closing inline edges
+- **Losses from the batch-1 baseline, both caused by commit 1 (`5e148b2c`):** `css21-official/html4/block-in-inline-append-002.htm` and `css/CSS2/borders/border-color-012.xht`. Commit 1 restores the parser-trimmed boundary spaces on leaf inline boxes, so `...text </span></span>` now ends its line with a real space. The line-end trim only fired when that text was the line's LAST placed item, and here closing inline edges follow it, so the space stayed and the wrapper borders reached one space past the glyphs. (In `block-in-inline-append-002` it was the static reference that grew the space; the DOM-built test has none.)
+- **Fix:** `CommitLine` first removes a trailing collapsible space from the line's last content run when only inline edges, out-of-flow markers, floats, struts or collapsed whitespace follow it, and shifts those trailing items left by the removed width. The case where the run is itself the last item keeps its existing path.
+- **Moved:** both losses pass again; also new passes `inline-box-001` (official + WPT, in A.txt) and `css/CSS2/normal-flow/block-in-inline-append-002.xht` (WPT, in C.txt; it failed at base).
+- **Gains kept:** all 24 earlier lane gains hold. No gain had to go.
+- **Checks:** units 653/653 (new `WhiteSpaceCollapse_LineEndSpaceBeforeClosingEdgesIsRemoved`, which fails without the fix); css21 51/1; wpt 86/2; `fix-losses.txt` 2/2; `A.txt` 26 pass / 134 fail / 4 manualpending (was 24/136/4); `A-pass.txt` 1358/1358; `canary.txt` 960/960.
+
 ### 2026-11-20 — Commit 5: §16.6.1 8-space tab stops measured from containing block's starting content edge
 - **Moved (+2 pass, 0 losses; cumulative +24 pass, +4 fail→manualpending):**
   - `white-space-processing-042` (official + WPT)
