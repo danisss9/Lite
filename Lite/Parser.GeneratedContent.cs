@@ -91,6 +91,58 @@ internal static partial class Parser
     private static bool HostIsNotDisplayed(LayoutNode node) =>
         HostDisplay(node).Trim().Equals("none", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// CSS 2.1 §12.2: attr(X) "returns as a string the value of attribute X for the subject of the
+    /// selector". The value is read from the document as it stands now, not when the box was
+    /// generated, so a generated box whose 'content' uses attr() follows an attribute change; its
+    /// parse-time text otherwise stays frozen (before-after-dynamic-attr-001 sets the body's
+    /// my-attr after load and expects "before"). Only attr() text is re-evaluated: counters and
+    /// quotes are snapshots of other state, and a content value without attr() cannot have
+    /// changed with an attribute.
+    /// </summary>
+    internal static void RefreshGeneratedAttributeContent(LayoutNode node)
+    {
+        var previous = Current;
+        if (node.DocumentState?.ParserContext is { } context) Current = context;
+        try
+        {
+            Recompute(node, "#pseudo-before", node.BeforeStyles);
+            Recompute(node, "#pseudo-after", node.AfterStyles);
+        }
+        finally
+        {
+            Current = previous;
+        }
+
+        // The pseudo box is a direct child of the element; a table/layout normalizer may have
+        // wrapped it in an anonymous box, so look through those (never into another element).
+        static void Recompute(LayoutNode host, string pseudoTag, Dictionary<string, string>? styles)
+        {
+            if (styles is null || !styles.TryGetValue("content", out var content) ||
+                !content.Contains("attr(", StringComparison.OrdinalIgnoreCase))
+                return;
+            if (FindGeneratedChild(host, pseudoTag) is not { } pseudo) return;
+            var text = ParseContentValue(content, host, new QuoteState(QuotePairs(host, styles), 0));
+            if (text is null) return;
+            pseudo.TextOverride = text;
+            NormalizeGeneratedWhitespace(pseudo);
+        }
+    }
+
+    /// <summary>The element's generated child, looking through the anonymous boxes the layout
+    /// normalizers wrap around children (never into another element's subtree).</summary>
+    private static LayoutNode? FindGeneratedChild(LayoutNode node, string pseudoTag)
+    {
+        foreach (var child in node.Children)
+        {
+            if (child.TagName == pseudoTag) return child;
+            if (child.DomNode is null && child.TagName.StartsWith("#anon", StringComparison.Ordinal) &&
+                FindGeneratedChild(child, pseudoTag) is { } nested)
+                return nested;
+        }
+        return null;
+    }
+
     /// <summary>§12.4.1: a counter-reset's scope is the element, its descendants AND its following
     /// siblings with theirs, so the instance joins <paramref name="scope"/> — the enclosing
     /// element's list, popped when the PARENT ends (never popped when null: the root). A reset of
@@ -212,6 +264,18 @@ internal static partial class Parser
             textChild.Parent = node;
             node.Children.Add(textChild);
             node.TextOverride = "";
+        }
+        else if (hasBefore && hasAfter && string.IsNullOrWhiteSpace(directTextRaw) && directTextRaw.Length > 0)
+        {
+            // §16.6.1: a whitespace-only text node between the two generated boxes is mid-line,
+            // so it keeps one collapsed space (the body's "\n" in before-after-dynamic-attr-001
+            // renders "before after!"). At the start or end of a line the spaces are removed,
+            // which is why only the ::before+::after form keeps it.
+            var space = new LayoutNode(null, "#text", " ", node.Style);
+            space.ResetNonInheritedStyles();
+            space.StyleOverrides["display"] = "inline";
+            space.Parent = node;
+            node.Children.Add(space);       // ::before lands at 0 below, ::after is appended
         }
 
         if (hasBefore)

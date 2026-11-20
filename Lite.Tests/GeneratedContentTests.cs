@@ -215,6 +215,22 @@ public static class GeneratedContentTests
         Equal("1,2,3", string.Join(",", texts));
     }
 
+    [Test]
+    public static void Attr_InGeneratedContent_FollowsAnAttributeChange()
+    {
+        // §12.2: attr(X) returns the attribute's value for the subject; a generated box reads it
+        // as the document stands now, so an attribute set after load re-evaluates the text
+        // (before-after-dynamic-attr-001: body's my-attr becomes "before" after onload).
+        var root = Parse("<div id=\"d\" data-b=\"xyz\"></div>" +
+                         "<script>var d = document.getElementById('d'); d.setAttribute('data-a', 'before');" +
+                         "d.setAttribute('data-b', 'after!');</script>",
+            "#d:before { content: attr(data-a); } #d:after { content: attr(data-b); }");
+        var div = Find(root, "DIV");
+        True(div is not null, "no DIV");
+        Equal("before", Find(div!, "#pseudo-before")!.DisplayText);
+        Equal("after!", Find(div!, "#pseudo-after")!.DisplayText);
+    }
+
     private static LayoutNode Parse(string body, string css)
     {
         var page = Parser.ParseChildPage(

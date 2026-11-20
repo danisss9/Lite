@@ -1425,6 +1425,10 @@ public class JsElement
             StyleResolver.Apply(node, lost.Distinct().ToList());
             RecascadeDependents(node, name, oldValue);
         }
+        // CSS 2.1 §12.2: attr() reads the attribute's current value, so a generated box whose
+        // 'content' uses attr() must re-evaluate its text after the change
+        // (before-after-dynamic-attr-001).
+        if (!name.StartsWith('_')) Parser.RefreshGeneratedAttributeContent(node);
         if ((node.OwningDocument?.Engine ?? JsEngine.Instance) is { } eng)
         {
             MutationObserverRegistry.NotifyAttribute(eng.RawEngine, node, name, oldValue);
