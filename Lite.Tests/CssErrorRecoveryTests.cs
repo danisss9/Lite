@@ -1,4 +1,4 @@
-using AngleSharp.Css.Dom;
+﻿using AngleSharp.Css.Dom;
 using AngleSharp.Css.Parser;
 using static Lite.Tests.TestRunner;
 
@@ -156,6 +156,56 @@ public static class CssErrorRecoveryTests
             Fetch);
         Equal(1, fetched.Count);
         Equal("data:text/css,@import%20url(data:text/css,p%7Bcolor:red%7D);", fetched[0]);
+    }
+
+    [Test]
+    public static void AtImport_IgnoredStatementsDoNotEndTheImportPrologue()
+    {
+        // CSS 2.1 §6.3: only a NON-IGNORED statement other than @charset/@import makes a later
+        // @import ignored; §4.2 ignores unknown at-rules, malformed known at-rules and rule sets
+        // with an invalid selector, so an @import after them still applies.
+        const string Base = "http://example.test/page.html";
+        var fetched = new List<string>();
+        (string Css, string Charset)? Fetch(string url, string? _)
+        {
+            fetched.Add(url);
+            return (".import { color: green; }", "utf-8");
+        }
+
+        string Inline(string css)
+        {
+            fetched.Clear();
+            return Lite.Parser.InlineImportsCore(css, Base, Fetch);
+        }
+
+        // at-import-009: known but invalid at-rules.
+        var known = Inline("@media;\n@page;\n@charset;\n@import \"green.css\";");
+        Equal(1, fetched.Count);
+        True(known.Contains(".import { color: green; }"), "@import after '@media;' and '@page;' expands");
+        // at-rule-008: an unknown at-rule, with or without a block.
+        Inline("@badat-rule foo;\n@import \"green.css\";");
+        Equal(1, fetched.Count);
+        Inline("@unknown-block x { a: b; }\n@import \"green.css\";");
+        Equal(1, fetched.Count);
+        // at-import-010 / at-rule-009: rule sets with an invalid selector, block included.
+        Inline("# { background: red; }\n:unknownpseudo { background: red; }\n@import \"green.css\";");
+        Equal(1, fetched.Count);
+        Inline("1badselector\n{\n someprop:someval;\n}\n@import \"green.css\";");
+        Equal(1, fetched.Count);
+
+        // Valid statements still end the prologue: an empty rule set (at-rule-007), a valid
+        // @media block (at-rule-004) and @font-face.
+        Inline("foo{}\n@import \"red.css\";");
+        Equal(0, fetched.Count);
+        Inline("@media print { p { color: red; } }\n@import \"red.css\";");
+        Equal(0, fetched.Count);
+        Inline("@font-face { font-family: x; }\n@import \"red.css\";");
+        Equal(0, fetched.Count);
+        // at-import-011: an ignored rule set's prelude runs through ';' to its '{', so the
+        // @import inside it belongs to the ignored statement, and 'p {...}' ends the prologue.
+        var garbage = Inline("# :unknownpseudo\n@import \"red.css\";\n.import { color: red; }\np { color: green; }\n@import \"red.css\";");
+        Equal(0, fetched.Count);
+        True(garbage.Contains("# :unknownpseudo"), "the ignored statement is kept for the CSS parser");
     }
 
     [Test]

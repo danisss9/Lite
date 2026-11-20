@@ -320,10 +320,20 @@ internal static partial class Parser
 
             if (css[i] != '@')
             {
-                // First non-ignored statement (or malformed prelude such as '# :unknownpseudo'):
-                // per CSS 2.1 §6.3 no further @import may take effect; keep the remainder verbatim.
-                sb.Append(css, stmtStart, css.Length - stmtStart);
-                return expandedAny ? sb.ToString() : css;
+                // A rule set: its prelude runs through any ';' up to the '{' of its block (§4.2,
+                // at-import-011's '# :unknownpseudo @import ...; .import {...}' is one statement).
+                // CSS 2.1 §6.3 ends the @import prologue only at a NON-IGNORED statement, so a
+                // rule set the CSS parser drops (invalid selector: at-import-010, at-rule-009)
+                // is kept verbatim and the scan goes on.
+                SkipStatementTail(css, ref i, semicolonEndsStatement: false);
+                if (!IsIgnoredStatement(css, stmtStart, i))
+                {
+                    sb.Append(css, stmtStart, css.Length - stmtStart);
+                    return expandedAny ? sb.ToString() : css;
+                }
+                sb.Append(css, stmtStart, i - stmtStart);
+                sb.Append('\n');
+                continue;
             }
 
             var kwStart = i + 1;
@@ -342,9 +352,19 @@ internal static partial class Parser
 
             if (!kw.Equals("import", StringComparison.OrdinalIgnoreCase))
             {
-                // Any other at-rule (@media, @page, @font-face, …) ends the @import prologue.
-                sb.Append(css, stmtStart, css.Length - stmtStart);
-                return expandedAny ? sb.ToString() : css;
+                // Any other VALID at-rule (@media {...}, @page {...}, @font-face, …) ends the
+                // @import prologue. An unknown at-rule or a known one that is invalid ('@media;',
+                // '@page;') is ignored per §4.2, so it does not (at-import-009, at-rule-008).
+                i = kwEnd;
+                SkipStatementTail(css, ref i);
+                if (!IsIgnoredStatement(css, stmtStart, i))
+                {
+                    sb.Append(css, stmtStart, css.Length - stmtStart);
+                    return expandedAny ? sb.ToString() : css;
+                }
+                sb.Append(css, stmtStart, i - stmtStart);
+                sb.Append('\n');
+                continue;
             }
 
             i = kwEnd;
@@ -463,7 +483,32 @@ internal static partial class Parser
         }
     }
 
-    private static void SkipStatementTail(string css, ref int i)
+    /// <summary>
+    /// True when the CSS parser drops the statement <c>css[start..end]</c> entirely: an unknown
+    /// or malformed at-rule, or a rule set whose selector is invalid. Such a statement is
+    /// "ignored" in the sense of CSS 2.1 §6.3 and does not end the @import prologue. The
+    /// decision is the parser's own (the same AngleSharp.Css fork that later reads the sheet),
+    /// so the prologue and the cascade agree on what was ignored.
+    /// </summary>
+    private static bool IsIgnoredStatement(string css, int start, int end)
+    {
+        var statement = css[start..end];
+        try
+        {
+            // A rule set with an invalid selector survives in the sheet with a null Selector
+            // (the builder keeps it, the cascade never matches it), so it counts as ignored.
+            foreach (var rule in new AngleSharp.Css.Parser.CssParser().ParseStyleSheet(statement).Rules)
+                if (rule is not ICssStyleRule { Selector: null })
+                    return false;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void SkipStatementTail(string css, ref int i, bool semicolonEndsStatement = true)
     {
         var depthParen = 0;
         var depthBracket = 0;
@@ -478,7 +523,7 @@ internal static partial class Parser
             if (c == ']' && depthBracket > 0) { depthBracket--; i++; continue; }
             if (depthParen == 0 && depthBracket == 0)
             {
-                if (c == ';') { i++; return; }
+                if (c == ';' && semicolonEndsStatement) { i++; return; }
                 if (c == '{') { SkipBalancedBlock(css, ref i); return; }
             }
             i++;

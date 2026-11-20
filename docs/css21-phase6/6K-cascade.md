@@ -29,6 +29,20 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Progress
 
+### Fix round (batch 1 losses): ignored statements no longer end the `@import` prologue (`Parser.Cascade.cs`)
+- **Losses found by the integrator** (`fix-losses.txt`, each passing at base `05228a26`): `at-import-009`, `at-import-010`, `at-rule-008`, `at-rule-009`, official and WPT (8 cases).
+- **Root cause:** commit 2 (`526976c7`). Its prologue scanner ended the `@import` prologue at the first statement other than `@charset`/`@import`, whether or not that statement was ignored. CSS 2.1 §6.3 only counts a *non-ignored* statement, and §4.2 ignores unknown at-rules (`@badat-rule foo;`), malformed known at-rules (`@media;`, `@page;`) and rule sets with an invalid selector (`# {…}`, `:unknownpseudo {…}`, `1badselector {…}`).
+- **Fix:** the scanner now measures each statement (an at-rule to its `;` or block; a rule set through any `;` to the end of its block, as the fork's patch 001 does), then asks the AngleSharp.Css parser whether anything survives. A statement that yields no rule, or only a style rule with a null selector, is kept verbatim and the scan goes on. Any other statement still ends the prologue and leaves later `@import` rules to the CSS parser. No fork patch changed.
+- **Moved:** all 8 losses pass again. No lane gain was given up. `at-import-001/011`, `at-rule-006/007`, `c11-import-000`, `import-000`, `eof-005/006` and `uri-018` still pass, because `foo{}`, `div {…}`, `p {…}` and `body {…}` are valid rule sets, and at-import-011's `# :unknownpseudo @import …; .import {…}` is one ignored statement.
+- **Checks:**
+  - Build: `dotnet build Lite.sln -c Release` succeeded.
+  - Units: full suite 655 passed, 0 failed, including the new `CssErrorRecoveryTests.AtImport_IgnoredStatementsDoNotEndTheImportPrologue`.
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - `fix-losses.txt`: 8/8 (4/4 official, 4/4 WPT).
+  - Lane K: 24/62 official, 25/89 WPT (unchanged; the gains held).
+  - `K-pass.txt`: 1,117/1,117 (587/587 official, 530/530 WPT).
+  - Canary: 960/960 (490/490 official, 470/470 WPT).
+
 ### 6. Declaration property-name validation & recovery + escaped newlines in selector strings (AngleSharp.Css patch 012)
 - **Spec:** CSS 2.1 §4.1.1 (declaration property name must be an `IDENT`, not a `STRING` or `NUMBER`), §4.2 (malformed declaration starting with `:` skips to `;` rather than entering CSS nesting), §4.3.7 (backslash-escaped newline in a selector string is removed).
 - **Moved (6 cases: +3 official, +3 WPT):**
