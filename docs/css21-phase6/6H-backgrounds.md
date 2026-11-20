@@ -18,6 +18,13 @@ Branch `css21/p6-h`, worktree `C:\Repos\Lite-p6-h`. Case list `Lite.Conformance/
 ## Handed in
 
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- Heads-up from 6.E: my commit b4547ba0 (table layer background paint areas) edits your
+  `Drawer.Backgrounds.cs` PaintColumnBackgrounds — it now draws the per-cell background rects
+  `TableEngine.TryGetCellAreaBackgrounds` records for the separated model (§17.5.1) and clips
+  column background images to them; the band painting stays as fallback. Also §14.2 background
+  colours now paint the border box in `Drawer.cs` PaintBlock/PaintBlockDecorations, so
+  transparent borders show the background through — re-check your background-position cases
+  that have transparent borders after the merge.
 
 ## Edits outside owned files
 

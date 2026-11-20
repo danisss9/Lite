@@ -183,7 +183,11 @@ internal static class TableEngine
             !(table.TryResolveStyle("height", out var tableHeightRaw) ? tableHeightRaw : table.Style.GetPropertyValueSafe("height")).Contains('%'))
         {
             var tableBorder = table.GetBorderWidth();
-            var tablePadding = table.GetPadding(contentW, viewportH, table.GetFontSize());
+            // §17.6.2: a collapsed table has no padding — the height distributed to the rows
+            // must not subtract it (the wrapper already laid out without it).
+            var tablePadding = collapse
+                ? default
+                : table.GetPadding(contentW, viewportH, table.GetFontSize());
             var target = table.GetHeight(0f, 0f, viewportH) - tableBorder.Top - tableBorder.Bottom
                          - tablePadding.Top - tablePadding.Bottom;
             var used = rowHeights.Sum() + verticalSpacing * (rowCount + 1);
@@ -307,6 +311,7 @@ internal static class TableEngine
         // A column spans the rows top to bottom; a group spans its columns. The painter draws
         // their backgrounds above the table's and below the rows' (they had no box at all, so a
         // col { background: orange } painted nothing — fixed-table-layout-017).
+        var columnExtents = new List<(LayoutNode Node, int First, int Last)>();
         if (rowCount > 0)
         {
             var gridTop = rowYs[0];
@@ -331,6 +336,7 @@ internal static class TableEngine
                     var left = CellX(contentX, colWidths, first, spacing);
                     var right = CellX(contentX, colWidths, last, spacing) + colWidths[last];
                     child.Box = new BoxDimensions { ContentBox = new SKRect(left, gridTop, right, gridBottom) };
+                    columnExtents.Add((child, first, last));
                 }
             }
             ColumnBoxes(table);
@@ -353,6 +359,40 @@ internal static class TableEngine
         if (caption is not null && captionBottom)
             captionBottomH = LayoutCaptionBlock(caption, contentX, ry, contentW, viewportW, viewportH);
         ry += captionBottomH;
+
+        // §17.5.1, separated borders model: the background of a row, row group, column or column
+        // group "covers exactly the full area of the cells that originate" in it — even where a
+        // cell spans outside — and the 'border-spacing' between the cells belongs to the table's
+        // background layer (§17.6.1), so it shows through the gaps. The band boxes the layers
+        // otherwise paint cover the spacing, so the painter draws these per-cell rects instead
+        // (the table-backgrounds bs row/group/column suites). In the collapsing model the layer
+        // edges sit on the grid lines and the full band paints, so no rects are recorded there.
+        var cellAreas = new Dictionary<LayoutNode, List<SKRect>>();
+        if (!collapse)
+        {
+            void AddCellRect(LayoutNode layer, SKRect rect)
+            {
+                if (!cellAreas.TryGetValue(layer, out var list)) cellAreas[layer] = list = new List<SKRect>();
+                list.Add(rect);
+            }
+            foreach (var p in placements)
+            {
+                if (p.Row >= rows.Count) continue;
+                var rect = p.Cell.Box.BorderBox;
+                var rowNode = rows[p.Row].Row;
+                AddCellRect(rowNode, rect);
+                var group = rowNode.Parent;
+                if (group is not null && !ReferenceEquals(group, table)
+                    && group.GetDisplay() == DisplayType.TableRowGroup)
+                    AddCellRect(group, rect);
+            }
+            foreach (var (node, first, last) in columnExtents)
+                foreach (var p in placements)
+                    if (p.Col >= first && p.Col <= last)
+                        AddCellRect(node, p.Cell.Box.BorderBox);
+        }
+        s_cellAreaBackgrounds.AddOrUpdate(table,
+            new CellAreaBackgrounds(cellAreas, BoxEngine.Generation));
 
         s_captionInsets.AddOrUpdate(table,
             new CaptionInsets(captionTopH, captionBottomH, BoxEngine.Generation));
@@ -425,7 +465,7 @@ internal static class TableEngine
     }
 
     /// <summary>The table's caption: the HTML CAPTION element or any 'display: table-caption' box.</summary>
-    private static bool IsCaption(LayoutNode node) => node.TagName == "CAPTION" || RawDisplay(node) == "table-caption";
+    internal static bool IsCaption(LayoutNode node) => node.TagName == "CAPTION" || RawDisplay(node) == "table-caption";
 
     private static float LayoutCaptionBlock(LayoutNode caption, float x, float y, float width,
         float viewportW, float viewportH)
@@ -973,11 +1013,18 @@ internal static class TableEngine
         for (var r = 0; r < rowCount; r++)
         {
             var rowCells = placements.Where(p => p.Row == r && p.RowSpan == 1).ToList();
-            if (rowCells.Count == 0) continue;
+            if (rowCells.Count == 0 && !placements.Any(p => p.Row == r && p.RowSpan > 1)) continue;
+
+            // §17.5.3: a cell spanning rows r..n aligns its first-line baseline with ROW r's
+            // baseline, and it helps establish that baseline alongside the cells originating
+            // in the row (table-height-algorithm-012: a large-text rowspan=2 cell anchored in
+            // row 0 set the row's baseline; excluding it left the two filler texts' bottoms
+            // 4px apart).
+            var baselineCandidates = placements.Where(p => p.Row == r).ToList();
 
             float? rowBaseline = null;
             var baselineCells = new List<(CellPlacement P, float BaselineY, float ContentH)>();
-            foreach (var p in rowCells)
+            foreach (var p in baselineCandidates)
             {
                 var va = p.Cell.GetVerticalAlign();
                 // §17.5.3: only baseline/top/middle/bottom are defined for cells — sub, super,
@@ -986,7 +1033,6 @@ internal static class TableEngine
                 if (va is VerticalAlignType.Sub or VerticalAlignType.Super
                     or VerticalAlignType.TextTop or VerticalAlignType.TextBottom)
                     va = VerticalAlignType.Baseline;
-                var contentTop = p.Cell.Box.ContentBox.Top;
                 var contentH = p.Cell.Box.ContentBox.Height;
                 switch (va)
                 {
@@ -1001,26 +1047,33 @@ internal static class TableEngine
                         break;
                 }
             }
-            var growth = 0f;
+            var growths = new Dictionary<int, float>();
             var shifts = new List<(CellPlacement P, float Delta)>();
             foreach (var (p, b, contentH) in baselineCells)
             {
                 var delta = rowBaseline!.Value - b;
                 if (delta > 0f) shifts.Add((p, delta));
-                // The shifted content must fit inside the row: content top + shift + height
-                // (plus the cell's bottom padding/border) may exceed the committed row height.
+                // The shifted content must fit inside the cell's SPAN: content top + shift +
+                // height (plus the cell's bottom padding/border) may exceed the committed
+                // spanned height, and the excess grows the LAST spanned row (rows at the
+                // table's end only, as before — a growing interior row would move everything
+                // below it for space the §17.5.3 height pass already distributed).
+                var lastSpanned = Math.Min(p.Row + p.RowSpan - 1, rowCount - 1);
                 var cellBottomEdge = p.Cell.Box.ContentBox.Top + delta + contentH + p.Pad.Bottom + p.Bord.Bottom;
-                var rowBottom = rowYs[r] + rowHeights[r];
-                if (r + 1 >= rowCount || p.Row + p.RowSpan >= rowCount)
-                    growth = Math.Max(growth, cellBottomEdge - rowBottom);
+                var spanBottom = rowYs[lastSpanned] + rowHeights[lastSpanned];
+                if (lastSpanned + 1 >= rowCount)
+                    growths[lastSpanned] = Math.Max(growths.GetValueOrDefault(lastSpanned), cellBottomEdge - spanBottom);
             }
-            if (growth > 0.5f)
+            var grew = false;
+            foreach (var (growRow, g) in growths)
             {
-                rowHeights[r] += growth;
-                // Rows below this one move down.
-                for (var rr = r + 1; rr < rowCount; rr++) rowYs[rr] += growth;
-                recommit();
+                if (g <= 0.5f) continue;
+                rowHeights[growRow] += g;
+                // Rows below the grown one move down.
+                for (var rr = growRow + 1; rr < rowCount; rr++) rowYs[rr] += g;
+                grew = true;
             }
+            if (grew) recommit();
             foreach (var (p, delta) in shifts)
             {
                 if (delta <= 0f) continue;
@@ -1258,6 +1311,29 @@ internal static class TableEngine
     private sealed record CaptionInsets(float Top, float Bottom, int Generation);
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<LayoutNode, CaptionInsets> s_captionInsets = new();
 
+    /// <summary>Per-table cache of the §17.5.1 separated-model background areas: for each row,
+    /// row group, column and column-group node, the border boxes of the cells originating in it.
+    /// Empty (and the painter falls back to the layer's band box) for collapsed tables.</summary>
+    private sealed record CellAreaBackgrounds(Dictionary<LayoutNode, List<SKRect>> ByLayer, int Generation);
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<LayoutNode, CellAreaBackgrounds> s_cellAreaBackgrounds = new();
+
+    /// <summary>The separated-model background rects for <paramref name="layer"/> (a row, row
+    /// group, column or column group) under <paramref name="table"/>, or false when the table
+    /// is collapsed or the layer has no cells.</summary>
+    internal static bool TryGetCellAreaBackgrounds(LayoutNode table, LayoutNode layer, out IReadOnlyList<SKRect> rects)
+    {
+        if (s_cellAreaBackgrounds.TryGetValue(table, out var cached)
+            && cached.Generation == BoxEngine.Generation
+            && cached.ByLayer.TryGetValue(layer, out var list)
+            && list.Count > 0)
+        {
+            rects = list;
+            return true;
+        }
+        rects = Array.Empty<SKRect>();
+        return false;
+    }
+
     /// <summary>§17.4: a caption sits in the anonymous table wrapper, OUTSIDE the table box —
     /// the table's own background, borders and outline paint only on the band between the
     /// captions. The layout Box keeps the full wrapper extent (the caption takes part in the
@@ -1335,22 +1411,26 @@ internal static class TableEngine
         var widths = new float[colCount];
 
         // Gather explicit widths from cells with colspan=1 (these columns are fixed).
+        // §17.5.2.2 step 1: the column's minimum is the LARGEST minimum cell width among its
+        // single-column cells, "or the column 'width', whichever is larger" — a 0.5in cell
+        // under a 1in column element sits in a 1in column (column-width-001/002), and a
+        // second, wider fixed cell further down the column widens it too.
         foreach (var p in placements)
         {
             if (p.ColSpan != 1) continue;
-            if (widths[p.Col] == 0f)
+            // A cell's 'width' is its content width: the column also holds the cell's
+            // padding and borders (§17.5.2.2) — a td { width: 200px; border: 3px } is 206px.
+            var w = p.Cell.GetWidth(availableW);
+            if (w > 0f)
             {
-                // A cell's 'width' is its content width: the column also holds the cell's
-                // padding and borders (§17.5.2.2) — a td { width: 200px; border: 3px } is 206px.
-                var w = p.Cell.GetWidth(availableW);
-                if (w > 0f)
-                {
-                    var pad = p.Cell.GetPadding(availableW, viewportH, p.Cell.GetFontSize());
-                    var bord = p.Cell.GetBorderWidth();
-                    widths[p.Col] = w + pad.Left + pad.Right + bord.Left + bord.Right;
-                }
+                var pad = p.Cell.GetPadding(availableW, viewportH, p.Cell.GetFontSize());
+                var bord = p.Cell.GetBorderWidth();
+                widths[p.Col] = Math.Max(widths[p.Col], w + pad.Left + pad.Right + bord.Left + bord.Right);
             }
         }
+        var columnElementWidths = ColumnElementWidths(table, colCount, availableW);
+        for (var c = 0; c < colCount; c++)
+            if (widths[c] > 0f) widths[c] = Math.Max(widths[c], columnElementWidths[c]);
 
         var autoCols = Enumerable.Range(0, colCount).Where(c => widths[c] == 0f).ToList();
         if (autoCols.Count == 0) return widths;
@@ -1377,7 +1457,7 @@ internal static class TableEngine
             }
         }
         // A column (group) 'width' is a minimum for its column in automatic layout.
-        var elementWidths = ColumnElementWidths(table, colCount, availableW);
+        var elementWidths = columnElementWidths;
         foreach (var c in autoCols)
             if (elementWidths[c] > 0f)
             {
@@ -1514,11 +1594,12 @@ internal static class TableEngine
                 if (chWs is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
                 { pendingBoundarySpace = true; continue; }
             }
-            // An inline-table child is consumed ATOMICALLY by the inline-run collector (sized
-            // by MeasureTableWidth, cell padding and border-spacing included), so its intrinsic
-            // measure must come from the same table model — recursing into it as plain inline
-            // text under-measures the cell and clamps the inner table narrower than its content.
-            var (cMin, cMax) = d == DisplayType.InlineTable
+            // A table child (block-level or inline) is sized by the table model — the sum of its
+            // columns, whose widths carry the cells' padding/borders, plus the border-spacing.
+            // Plain recursion measured only the cells' text and dropped the inner boxes, so the
+            // shrink-wrap clamp starved the nested table: its cell then wrapped text the table
+            // was sized from (table-height-algorithm-031's nested "Filler Text" cell).
+            var (cMin, cMax) = d is DisplayType.Table or DisplayType.InlineTable
                 ? IntrinsicSizer.ContentMinMax(ch, viewportH)
                 : MeasureIntrinsic(ch, viewportH);
             // Anonymous nodes (#text, generated content, anonymous table parts) resolve their

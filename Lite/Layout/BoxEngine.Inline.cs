@@ -388,7 +388,7 @@ internal static partial class BoxEngine
             for (var k = lineStart; k < placed.Count; k++)
             {
                 var (it, rx, _) = placed[k];
-                var vAlign = it.Node.GetVerticalAlign();
+                var vAlign = LineItemVerticalAlign(it.Node);
                 float yOffset = it.Kind == InlineItemKind.OutOfFlow ? 0f : vAlign switch
                 {
                     VerticalAlignType.Top => 0f,
@@ -803,7 +803,7 @@ internal static partial class BoxEngine
                 continue;
             }
 
-            var va = effectiveItem.Node.GetVerticalAlign();
+            var va = LineItemVerticalAlign(effectiveItem.Node);
             switch (va)
             {
                 case VerticalAlignType.Top:
@@ -1053,6 +1053,22 @@ internal static partial class BoxEngine
     /// PARENT box's x-height (its first font's, Ahem's 0.8em); a &lt;length&gt;/&lt;percentage&gt;
     /// raises (positive) or lowers (negative) the box's baseline by that distance.
     /// </summary>
+    /// <summary>The §10.8.1 line-box alignment of a placed item. 'vertical-align' does not
+    /// inherit (§5.5): a bare text run carries none of its own, so its alignment is the
+    /// initial 'baseline'. A synthesized #text resolves property values through the shared
+    /// style of its ELEMENT — for cell text that element is the table cell, whose UA default
+    /// 'vertical-align: middle' is the §17.5.3 CELL-in-row alignment, not a line-box one —
+    /// so reading it here shifted the whole cell's text and grew every line to the shifted
+    /// reach (table-height-algorithm-004's ten 20px Ahem lines measured 22px, 220 against
+    /// the 200px reference). That holds only for text directly in a block container's root
+    /// inline box: a #text inside an INLINE element is that inline box's content and is placed
+    /// with it, so it keeps the element's alignment (vertical-align-nested-top-001's first 'X'
+    /// inside a 'vertical-align: top' span dropped to the baseline).</summary>
+    private static VerticalAlignType LineItemVerticalAlign(LayoutNode node) =>
+        node.TagName == "#text" && node.Parent is { } host && host.GetDisplay() != DisplayType.Inline
+            ? VerticalAlignType.Baseline
+            : node.GetVerticalAlign();
+
     private static float AboveBaselineComponent(InlineItem item, VerticalAlignType vAlign)
     {
         var fontSize = item.Node.GetFontSize();
@@ -1371,7 +1387,7 @@ internal static partial class BoxEngine
         {
             var it = placed[k].item;
             if (it.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow) continue;
-            var va = it.Node.GetVerticalAlign();
+            var va = LineItemVerticalAlign(it.Node);
             switch (va)
             {
                 case VerticalAlignType.Top:
@@ -1758,9 +1774,20 @@ internal static partial class BoxEngine
             // <br> → forced line break item
             if (node.TagName == "BR")
             {
-                using var brFont = TextMeasure.CreateFont(node);
-                // 'normal' line-height is the font's natural box, consistent with GetLineHeight.
-                var brH = -brFont.Metrics.Ascent + brFont.Metrics.Descent;
+                // §15.2: 'font-family' (and the other font longhands) INHERIT — the br element's
+                // own style object resolves no family, and measuring its inline box in the UA
+                // default put every break-ended line above the strut
+                // (table-height-algorithm-004: ten 20px Ahem lines read 22px each, 220 against
+                // the 200px reference). A br that declares its own font keeps it.
+                var brSource = node.Style.GetProperty(AngleSharp.Css.PropertyNames.FontFamily) is null
+                    ? node.Parent ?? node
+                    : node;
+                using var brFont = TextMeasure.CreateFont(brSource);
+                // §10.8.1: the br's inline box contributes its LINE-HEIGHT, not the raw font
+                // box — with a length line-height the break inflated every line it ends by
+                // the leading. 'normal' stays the font's natural box, consistent with
+                // GetLineHeight, so this only changes length/unitless values.
+                var brH = node.GetLineHeight(node.GetFontSize());
                 items.Add(new InlineItem(InlineItemKind.LineBreak, node, null, 0, brH,
                            default, default, default, 0, brH, TextMeasure.ComputeAscent(brFont, brH)));
                 continue;
@@ -2185,6 +2212,10 @@ internal static partial class BoxEngine
         foreach (var child in node.Children)
         {
             if (child.TagName == "#text" && string.IsNullOrWhiteSpace(child.DisplayText)) continue;
+            // §17.4: a CAPTION sits in the table wrapper, outside the table box — it does not
+            // set the table's baseline (§17.5.3; table-height-algorithm-031's nested table
+            // aligned its sibling cell to the caption's text instead of its cell's).
+            if (child.TagName == "CAPTION" || TableEngine.IsCaption(child)) continue;
             var y = FindFirstBaselineY(child);
             if (y.HasValue) return y;
         }

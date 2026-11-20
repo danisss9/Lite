@@ -567,6 +567,231 @@ public static class LayoutTests
         True(Math.Abs((w1 + w2) - 300f) < 1.5f, $"columns should fill the 300px table (got {w1 + w2})");
     }
 
+    [Test]
+    public static void AutoTable_ColumnElementWidthFloorsNarrowerCells()
+    {
+        // CSS 2.1 §17.5.2.2 step 1: with automatic layout a column's width is the LARGEST minimum
+        // cell width among its single-column cells "or the column 'width', whichever is larger" —
+        // a 48px cell under a 96px column element sits in a 96px column (column-width-001/002),
+        // and a second, wider cell further down the column widens it (previously only the first
+        // fixed cell sized the column).
+        var col = new LayoutNode(null, "COL", "", _styleCache.Style);
+        col.StyleOverrides["width"] = "96px";
+        var group = new LayoutNode(null, "COLGROUP", "", _styleCache.Style);
+        group.StyleOverrides["display"] = "table-column-group";
+        group.AddChild(col);
+        var c1 = TableCell("first");
+        c1.StyleOverrides["width"] = "48px";
+        var c2 = TableCell("second");
+        c2.StyleOverrides["width"] = "72px";
+        var table = new LayoutNode(null, "TABLE", "", _styleCache.Style);
+        table.StyleOverrides["display"] = "table";
+        table.StyleOverrides["width"] = "300px";
+        table.StyleOverrides["border-spacing"] = "0";
+        table.AddChild(group);
+        foreach (var row in new[] { c1, c2 })
+        {
+            var r = new LayoutNode(null, "TR", "", _styleCache.Style);
+            r.StyleOverrides["display"] = "table-row";
+            r.AddChild(row);
+            table.AddChild(r);
+        }
+        LayoutTree(table);
+
+        var w1 = c1.Box.ContentBox.Width;
+        var w2 = c2.Box.ContentBox.Width;
+        True(Math.Abs(w1 - 96f) < 1f, $"the 96px column element should floor its 48px cell (got {w1})");
+        True(Math.Abs(w2 - 96f) < 1f, $"the wider cell below must not shrink the column below 96px (got {w2})");
+    }
+
+    // -- §14.2 / §17.5.1 / §17.6.2 table background paint areas (table-backgrounds suites) --
+
+    private static LayoutNode LayoutPage(string html)
+    {
+        var page = Parser.ParseChildPage(html, isSrcdoc: true, "http://test/", 400, 300);
+        BoxEngine.Layout(page.Root, 400, 300);
+        return page.Root;
+    }
+
+    private static LayoutNode? FindNode(LayoutNode node, string tag, string? id = null)
+    {
+        if (node.TagName == tag && (id is null || node.Id == id)) return node;
+        foreach (var c in node.Children)
+        {
+            var found = FindNode(c, tag, id);
+            if (found is not null) return found;
+        }
+        return null;
+    }
+
+    [Test]
+    public static void TableBackground_FillsTransparentBorder()
+    {
+        // §14.2: the background paints the content, padding AND border areas — a transparent
+        // border shows it through (table-backgrounds-bs-table-001's aqua table stopped at its
+        // padding box and came out 5px narrower than its reference on every side).
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0}</style>" +
+            "<table style=\"border-collapse:separate; border-spacing:0; margin:0; border:5px solid transparent; background:aqua\">" +
+            "<tr><td style=\"padding:0; border:0; width:100px; height:20px\"></td></tr></table>");
+        var bitmap = Drawer.DrawToBitmap(140, 60, root, new Viewport { ViewportHeight = 60 });
+        using (bitmap)
+            True(bitmap.GetPixel(2, 15) == SKColors.Aqua,
+                $"the transparent border band must show the table background (got {bitmap.GetPixel(2, 15)})");
+    }
+
+    [Test]
+    public static void RowBackground_CoversCellsAreaNotBorderSpacing()
+    {
+        // §17.5.1 (separated model): a row's background "covers exactly the full area of the
+        // cells that originate in it", and §17.6.1 leaves the border-spacing to the table's
+        // background layer (table-backgrounds-bs-row-001 painted one continuous band).
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0}</style>" +
+            "<table style=\"border-collapse:separate; border-spacing:10px; margin:0; border:0; padding:0\">" +
+            "<tr style=\"background:aqua\">" +
+            "<td style=\"padding:0; border:0; width:40px; height:20px\"></td>" +
+            "<td style=\"padding:0; border:0; width:40px; height:20px\"></td></tr></table>");
+        var bitmap = Drawer.DrawToBitmap(140, 60, root, new Viewport { ViewportHeight = 60 });
+        using (bitmap)
+        {
+            True(bitmap.GetPixel(20, 10) == SKColors.Aqua,
+                $"the cell area must paint the row background (got {bitmap.GetPixel(20, 10)})");
+            True(bitmap.GetPixel(50, 10) != SKColors.Aqua,
+                $"the border-spacing gap must show the table's layer, not the row background (got {bitmap.GetPixel(50, 10)})");
+        }
+    }
+
+    [Test]
+    public static void CollapsedTable_IgnoresItsPadding()
+    {
+        // §17.6.2: "in this model, a table does not have padding" — the collapsed twin of the
+        // same box must be the padding narrower than the separated one
+        // (table-backgrounds-bc-table-001 painted 13px/11px of ignored padding).
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0} table{margin:0; padding:10px; border:2px solid transparent}" +
+            " td{padding:0; border:0}</style>" +
+            "<table id=\"col\" style=\"border-collapse:collapse; border-spacing:0\">" +
+            "<tr><td style=\"width:80px; height:20px\"></td></tr></table>" +
+            "<table id=\"sep\" style=\"border-collapse:separate; border-spacing:0\">" +
+            "<tr><td style=\"width:80px; height:20px\"></td></tr></table>");
+        var col = FindNode(root, "TABLE", "col");
+        var sep = FindNode(root, "TABLE", "sep");
+        True(col is not null && sep is not null, "tables missing");
+        True(Math.Abs(col!.Box.BorderBox.Width + 20f - sep!.Box.BorderBox.Width) < 1f,
+            $"the collapsed table must ignore its 20px of padding (collapsed {col.Box.BorderBox.Width} vs separated {sep.Box.BorderBox.Width})");
+    }
+
+    [Test]
+    public static void CellTextLineBoxes_IgnoreTheCellRowAlignment()
+    {
+        // §17.5.3's 'vertical-align' on a table cell aligns the CELL in its ROW (the HTML UA
+        // default is 'middle'); it is not a line-box alignment — 'vertical-align' does not
+        // inherit (§5.5), so a #text run aligns 'baseline'. Reading the cell's value shifted
+        // the whole cell's text and grew every line to the shifted reach
+        // (table-height-algorithm-004: ten 20px/1em Ahem lines measured 22px each, 220
+        // against the 200px reference).
+        Lite.Layout.FontRegistry.RegisterFile(
+            Path.Combine(FindRepoRoot(), "Lite.Conformance", "vendor", "wpt", "fonts", "Ahem.ttf"));
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0} td{padding:0}" +
+            " #ref{font:20px/1em Ahem} table{border-spacing:0}</style>" +
+            "<div id=\"ref\"><table><tr><td>X<br>X<br></td></tr></table></div>");
+        var td = FindNode(root, "TD");
+        True(td is not null, "cell missing");
+        True(Math.Abs(td!.Box.BorderBox.Height - 40f) < 1f,
+            $"two 20px/1em lines must make a 40px cell (got {td.Box.BorderBox.Height})");
+    }
+
+    [Test]
+    public static void TextInsideTopAlignedInline_KeepsItsBoxAlignment()
+    {
+        // §10.8.1: a #text inside an INLINE element is that inline box's content, so it aligns
+        // with the box's 'vertical-align: top' (vertical-align-nested-top-001). Only text sitting
+        // directly in a block container's (or cell's) root inline box aligns 'baseline'.
+        Lite.Layout.FontRegistry.RegisterFile(
+            Path.Combine(FindRepoRoot(), "Lite.Conformance", "vendor", "wpt", "fonts", "Ahem.ttf"));
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0; font:18px/20px Ahem}" +
+            " #big{font-size:60px; line-height:60px} #hb{font-size:12px; vertical-align:top}</style>" +
+            "<div><span id=\"big\">X</span><span id=\"hb\">X<span>X</span></span></div>");
+        var hb = FindNode(root, "SPAN", "hb");
+        True(hb is not null, "span missing");
+        var text = FindNode(hb!, n => n.TagName == "#text" && ReferenceEquals(n.Parent, hb));
+        True(text is not null, "the span's own text run missing");
+        True(text!.Box.ContentBox.Top < 5f,
+            $"the top-aligned span's text must sit at the line top (got y={text.Box.ContentBox.Top})");
+    }
+
+    [Test]
+    public static void NestedTable_IntrinsicIncludesSpacingAndCellEdges()
+    {
+        // §17.5.2: a table's shrink-wrap width is the sum of its columns — each carrying its
+        // cells' padding and borders — plus the border-spacing. Measuring a nested table by
+        // plain recursion into its cells' text dropped the inner boxes, so the outer cell
+        // clamped the inner table narrower and its cell wrapped the very text the table was
+        // sized from (table-height-algorithm-031's nested "Filler Text").
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0} td{padding:0; border:0}" +
+            " table{border-spacing:0}</style>" +
+            "<table style=\"border-spacing:0\"><tr><td>" +
+            "<table><tr><td id=\"inner\">Filler Text filler text</td></tr></table>" +
+            "</td></tr></table>");
+        var inner = FindNode(root, "TD", "inner");
+        True(inner is not null, "inner cell missing");
+        True(inner!.Box.BorderBox.Height < 30f,
+            $"the nested cell's text must fit one line (got {inner.Box.BorderBox.Height}px tall)");
+    }
+
+    [Test]
+    public static void Caption_DoesNotSetTheTableBaseline()
+    {
+        // §17.4/§17.5.3: a caption sits in the table wrapper, outside the table box, and does
+        // not set the table's baseline — the sibling baseline-aligned cell aligns with the
+        // table's first CELL line (table-height-algorithm-031: the right cell aligned to the
+        // caption's text line and the two visible texts' bottoms drifted apart).
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0} td{border:1px solid black;" +
+            " height:100px; vertical-align:baseline} caption{color:white} table{border-spacing:0}</style>" +
+            "<table><tr><td><table><caption>Filler Text</caption>" +
+            "<tr><td id=\"inner\">Filler Text</td></tr></table></td>" +
+            "<td id=\"sibling\">Filler Text</td></tr></table>");
+        var inner = FindNode(root, "TD", "inner");
+        var sibling = FindNode(root, "TD", "sibling");
+        True(inner is not null && sibling is not null, "cells missing");
+        var innerBaseline = BoxEngine.FindFirstBaselineY(inner!);
+        var siblingBaseline = BoxEngine.FindFirstBaselineY(sibling!);
+        True(innerBaseline is not null && siblingBaseline is not null, "baselines missing");
+        True(Math.Abs(innerBaseline!.Value - siblingBaseline!.Value) < 1f,
+            $"baseline-aligned cells must share the row baseline (inner {innerBaseline} vs sibling {siblingBaseline})");
+    }
+
+    [Test]
+    public static void RowspanningCell_JoinsTheRowBaseline()
+    {
+        // §17.5.3: a cell spanning rows aligns its first-line baseline with the FIRST row it
+        // spans, and it helps establish that row's baseline alongside the cells originating
+        // in it (table-height-algorithm-012: the large-text rowspan=2 cell set the baseline;
+        // excluding it left the two filler texts' bottoms 4px apart).
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0} td{vertical-align:baseline;" +
+            " padding:0; border:0} table{border-spacing:0} #small{font-size:12px} #large{font-size:32px}</style>" +
+            "<table><tr><td id=\"small\">Filler Text</td>" +
+            "<td rowspan=\"2\" colspan=\"2\"><div id=\"large\">Filler Text</div></td></tr>" +
+            "<tr><td></td></tr></table>");
+        var small = FindNode(root, "TD", "small");
+        True(small is not null, "small cell missing");
+        // The row baseline is the LOWEST first-line baseline — the large spanning cell's. The
+        // small cell's content shifts down to it, so the two texts' first baselines coincide.
+        var smallBaseline = BoxEngine.FindFirstBaselineY(small!);
+        var large = FindNode(root, "DIV", "large");
+        True(large is not null, "spanning cell content missing");
+        var largeBaseline = BoxEngine.FindFirstBaselineY(large!);
+        True(smallBaseline is not null && largeBaseline is not null, "baselines missing");
+        True(Math.Abs(smallBaseline!.Value - largeBaseline!.Value) < 1f,
+            $"the small cell must share the spanning cell's baseline (small {smallBaseline} vs large {largeBaseline})");
+    }
+
+    private static string FindRepoRoot()
+    {
+        var dir = Directory.GetCurrentDirectory();
+        while (dir is not null && !File.Exists(Path.Combine(dir, "Lite.sln")))
+            dir = Path.GetDirectoryName(dir);
+        return dir ?? throw new InvalidOperationException("repo root not found");
+    }
+
     // -- §8.3.1/§9.5.2 clearance (the margin-collapse-clear-* reftest family) --
 
     // A style object carrying a real 1px black top border (GetBorderWidth reads node.Style,

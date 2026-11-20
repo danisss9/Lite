@@ -47,6 +47,12 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
   components only.
 
 - `text-align-applies-to-007`, `012`, `013`, `015` (official + WPT) — filler text is flush with the table/body content box (`x=8` left / `x=792` right with 8px body margin), but the judge compares against viewport edges `0` / `800`. — from 6.A
+_(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- table-height-algorithm-031/032 (from 6.E): the engine now renders the assert correctly (the two
+  visible "Filler Text" bottoms share the row baseline; the caption is intentionally invisible
+  via `color: white`), but the selftest judge still reports "a filler text painted no ink" — it
+  appears to count the intentionally-white caption as a missing text. Needs a verdict route that
+  accepts an explicitly-white filler text.
 
 ## Edits outside owned files
 

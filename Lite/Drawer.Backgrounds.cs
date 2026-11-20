@@ -17,15 +17,32 @@ internal static partial class Drawer
     {
         void Paint(LayoutNode n)
         {
-            if (n.Box.ContentBox.Width <= 0 || n.Box.ContentBox.Height <= 0) return;
             if (n.GetVisibility() != Visibility.Visible) return;
+            // §17.5.1, separated borders model: a column/group background covers exactly the
+            // cells originating in it (border-spacing gaps stay on the table's layer), while a
+            // collapsed table's columns paint their full band on the grid lines.
+            var cellArea = TableEngine.TryGetCellAreaBackgrounds(table, n, out var rects) ? rects : null;
+            if (cellArea is null && (n.Box.ContentBox.Width <= 0 || n.Box.ContentBox.Height <= 0)) return;
             var color = n.GetBackgroundColor();
             if (color.Alpha > 0)
             {
                 using var paint = new SKPaint { Color = color };
-                canvas.DrawRect(n.Box.ContentBox, paint);
+                if (cellArea is not null)
+                    foreach (var rect in cellArea) canvas.DrawRect(rect, paint);
+                else
+                    canvas.DrawRect(n.Box.ContentBox, paint);
             }
-            DrawBackgroundImage(canvas, n, n.Box);
+            if (cellArea is not null)
+            {
+                canvas.Save();
+                using var clipPath = new SKPath();
+                foreach (var rect in cellArea) clipPath.AddRect(rect);
+                canvas.ClipPath(clipPath);
+                DrawBackgroundImage(canvas, n, n.Box);
+                canvas.Restore();
+            }
+            else
+                DrawBackgroundImage(canvas, n, n.Box);
         }
         foreach (var group in table.Children.Where(TableEngine.IsColumnGroup)) Paint(group);
         foreach (var child in table.Children)

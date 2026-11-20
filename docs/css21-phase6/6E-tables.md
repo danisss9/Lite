@@ -31,11 +31,104 @@ Branch `css21/p6-e`, worktree `C:\Repos\Lite-p6-e`. Case list `Lite.Conformance/
   list): the table-display variants — 'table-column-group', 'table-column', 'table-caption' —
   offset/position questions land in the table box geometry, not the positioning walk. From 6.D,
   20 November 2026.
+_(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- To 6.J: table-height-algorithm-013/014 — the engine geometry is right; the failure is the
+  default font's (ascent − cap-top) × size ink offset in the selftest judge's ink measurement.
+- To 6.M: table-height-algorithm-031/032 — the engine renders the assert (bottoms aligned,
+  caption intentionally white-invisible); the judge counts the white caption as "no ink".
+- To 6.G (unchanged, parked): border-conflict-element-029 waits on RTL column order.
 
 ## Edits outside owned files
 
-_(None yet.)_
+- `Lite/Layout/BoxEngine.Block.cs` (commit c62d5c02): LayoutBlockCore zeroes the wrapper
+  padding for collapsed tables — §17.6.2 "a table does not have padding". Minimal: 4 lines at
+  the padding resolution.
+- `Lite/Drawer.cs` + `Lite/Drawer.Backgrounds.cs` (commit b4547ba0): PaintBlock paint areas
+  (§14.2 border-box background colour; per-cell row/row-group rects from
+  `TableEngine.TryGetCellAreaBackgrounds`; collapsed rows' background layer paints while
+  borders stay suppressed) and PaintColumnBackgrounds draws the per-cell rects. 6.H: the
+  PaintColumnBackgrounds change is in your file — take a look before editing that method.
+- `Lite/Layout/BoxEngine.Inline.cs` (6.A's file; commits 3e222489, b2b4595e and the fix-round
+  commit): `LineItemVerticalAlign` (cell text aligns baseline, scoped in the fix round to text
+  directly in a non-inline container), the `<br>` item's font and line-height, and the
+  `FindFirstBaselineY` caption skip. 6.A: the fix round touches only `LineItemVerticalAlign`.
 
 ## Progress
 
-_(None yet.)_
+### Batch 1 (5 commits, lane list 168 → 43 passing)
+
+- **`d6bb821a` — column element width floors cells (§17.5.2.2)**: ComputeColumnWidths kept only
+  the first fixed cell per column and let it override the column element's width. Moved
+  column-width-001/002 (both corpora). Units 648, gates 51/1 + 86/2, canary 300/300.
+- **`c62d5c02` — collapsed table padding ignored (§17.6.2)**: the wrapper resolved the table's
+  padding in the collapse model, shifting the whole cell band 13px/11px off the reference.
+  Moved table-backgrounds-bc-colgroup/column-001 (both corpora), collapsing-border-model-004
+  (both), 011/012 (WPT). Units 649, gates green, canary 300/300.
+- **`b4547ba0` — table layer background paint areas (§14.2/§17.5.1/§17.6.1)**: background
+  colour now paints the border box (transparent borders show it through); rows/groups/columns
+  paint the per-cell area rects in the separated model (spacing stays on the table's layer);
+  collapsed rows' background layer paints its band again (only borders stay suppressed).
+  Moved all 20 table-backgrounds-* cases, table-layer-transparency-006/007,
+  table-visual-layout-017. Units 651, gates green, canary 300/300.
+- **`3e222489` — cell text line boxes align baseline; br box uses its own font (§17.5.3, §5.5,
+  §10.8.1, §15.2)**: the line loop read the CELL's `vertical-align: middle` (the §17.5.3 row
+  alignment, a UA default on the shared style object) as every text item's line alignment —
+  shifted the text and grew each line to the shifted reach; and a br's inline box measured the
+  UA default font and the raw font box instead of the inherited font and its line-height.
+  Moved table-height-algorithm-004/009/010 (official). Units 652, gates green, canary 300/300.
+- **`b2b4595e` — row baselines cover spanning cells, nested tables and captions (§17.5.3,
+  §17.5.2, §17.4)**: rowspanning cells join the row baseline they anchor (and their growth
+  measures against the whole span); nested-table children measure through the table model
+  (spacing + cell edges, so the shrink-wrap no longer starves them); captions don't set the
+  table's baseline in FindFirstBaselineY. Moved table-height-algorithm-012 (both corpora).
+  Units 655, gates green, canary 300/300.
+
+Edits outside owned files so far: `BoxEngine.Block.cs` (commit 2), `Drawer.cs` +
+`Drawer.Backgrounds.cs` (commit 3), `BoxEngine.Inline.cs` (commits 4 and 5) — all named above.
+
+Still failing, with causes:
+
+- **table-height-algorithm-013/014 (both corpora)**: engine geometry right (the three
+  `vertical-align: top` divs share a top); the judge measures text INK tops, whose offset below
+  the box scales with font size — default-font metrics, handed to 6.J.
+- **table-height-algorithm-031/032 (both corpora)**: engine renders the assert (bottoms aligned,
+  caption intentionally white); the selftest judge counts the white caption as missing — handed
+  to 6.M.
+- **fixed-table-layout-025/028-031, table-columns-example-003, anonymous-table-box-width-001**:
+  fixed-layout width distribution cases — next group, not yet diagnosed this batch.
+- **border-collapse-dynamic-*** (row/rowgroup/colgroup/column/cell/table 002-003): dynamic
+  border re-resolve after DOM/style changes — not yet diagnosed this batch.
+- **border-conflict-element-001d/002/021/029/038, border-conflict-example-001,
+  border-conflict-resolution-006, collapsing-table-borders-008/010, collapsing-border-model-
+  010b/013/014**: §17.6.2.1 conflict-resolution probes — 029 is parked for 6.G (RTL).
+- **border-spacing-003/083/084/095, border-spacing-applies-to-014/015**: spacing paint/apply
+  probes — not yet diagnosed.
+- **table-anonymous-objects-008/211/213, table-anonymous-text-indent,
+  table-anonymous-block-015**: anonymous boxes (the parked 134/203/204 stale-row-band findings
+  are not on the lane list; 211/213 are queued as the next group).
+- **row-visibility-001/002/003, column-visibility-004**: visibility handling.
+- **captions**: caption-position-001, caption-side-applies-to-006/007, caption-vs-table-box-001/002.
+- **inline-tables**: inline-table-002a/002b/003, inline-table-valign-001, inline-table-zorder-005.
+- **floats**: table-among-floats-001, table-sizing-with-adjacent-floats, c5525-fltwidth-003 (×2).
+- **rest**: table-visual-layout-002/007/008/012, table-valign-001, tables-102,
+  basic-css-table-001, column-horizontal-alignment-003/005, separated-border-model-004c/004d,
+  table-header/footer-group-005, table-vertical-align-baseline-009, border-collapse-006,
+  border-collapse-empty-row, border-collapse-offset-001/002,
+  border-collapse-visibility-collapse-001/002 (tentative).
+
+### Fix round (batch-1 loss)
+
+- **Loss:** `css/CSS2/linebox/vertical-align-nested-top-001.html` (passed at 05228a26), caused by
+  3e222489. That commit made every `#text` item align 'baseline', so cell text stops reading the
+  cell's §17.5.3 'vertical-align: middle'. But a `#text` inside an INLINE element is that inline
+  box's content and is placed with it (§10.8.1): the first 'X' inside the 'vertical-align: top'
+  span dropped to the baseline, below the nested top-aligned 'X'.
+- **Fix:** `LineItemVerticalAlign` aligns a `#text` 'baseline' only when its parent is not an
+  inline box (a table cell, a block: text in the root inline box). Text inside an inline element
+  keeps that element's alignment, as before 3e222489.
+- **Moved:** the loss passes again. No other change on the lane list.
+- **Gains kept:** all 43 lane passes hold (E.txt 43 pass / 124 fail / 1 manualpending, same as
+  after b2b4595e), including 3e222489's `table-height-algorithm-004/009/010`. No gain had to go.
+- **Checks:** units 656/0 (new `LayoutTests.TextInsideTopAlignedInline_KeepsItsBoxAlignment`,
+  which fails without the fix at y=34); css21 51/1 expected-fail; wpt 86/2 expected-fail;
+  `fix-losses.txt` 1/1; `E-pass.txt` 1729/1729; `canary.txt` 960/960.
