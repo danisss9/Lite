@@ -9,7 +9,10 @@ Branch `css21/p6-i`, worktree `C:\Repos\Lite-p6-i`. Case list `Lite.Conformance/
 
 ## Opens with (parked findings)
 
-- Thin double sub-lines (width/3 is about 1.67px) and dotted duty cycles read wrongly in the ring judges. The engine paints them. Check each case's render before touching the painter, and hand judge-side issues to 6.M.
+- Thin double sub-lines (width/3 is about 1.67px) read wrongly in the ring judges: their
+  component pass drops 1px-tall components, so a crisp 3px `double` vanishes. The dotted duty
+  cycle was a painter bug too and is fixed (see Progress, 20 November); the engine now paints
+  both. Check each case's render before touching the painter, and hand judge-side issues to 6.M.
 
 ## Coordination
 
@@ -47,3 +50,23 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - **To 6.D (6 cases):** `clipping-006/007` fixed-in-overflow containing block (4), `outline-layout-002` Appendix E §E.2 step 10 outline paint order (2).
 - **To 6.C (4 cases):** `border-dynamic-001/002` bordered block auto height with self-collapsing empty child margin (4).
 - **To 6.A (4 cases):** `border-001/003` WPT reference Ahem `word-spacing` wrapping (4).
+
+### 2026-11-20 — §8.5.3 border-style painting: crisp double, even dotted cycle
+- **Moved (+10 = 6 official / 4 WPT):** `border-style-002`, `border-style-006`,
+  `border-style-shorthand-001..004` (official and WPT).
+- **Change:** `Drawer.Borders.cs` `DrawBorderSide`: a `double` side is painted as two filled
+  crisp bands on whole device rows (integer thirds, gap = the declared width minus the two
+  lines) instead of two centred antialiased 1px strokes — a 1px stroke at a fractional
+  position covers two rows at about half strength each, and the fringes merged the pair into
+  one grey band that read as `solid`. `ApplyBorderStyle`: `dotted` now uses a `[w, w]` dash
+  cycle (browsers' equal dot and gap) instead of `[w, 2w]`; the 1:3 cycle inked only a third
+  of the band, below the 2/5 ink a mid-side reading needs, so a dotted side read as `none`.
+  Added `BorderStyleTests.DoubleBorder_PaintsTwoCrispSubLinesWithAGap` and
+  `BorderStyleTests.DottedBorder_UsesEqualDotAndGapLengths`.
+- **Still failing, judge-side (6.M):** official `border-style-003/007` now report "bottom
+  reads none, not double" — the ring judge's `Components` pass skips components whose bbox
+  height (or width) is 1px, so the two crisp sub-lines of a 3px double are dropped.
+  Official `border-style-004/008` also carry the pass-condition word `single` for the solid
+  left side where the judge spells `solid`. Handed to 6.M.
+- **Checks:** units 652/0; curated `css21` 51 passed/1 expected-fail, `wpt` 86/2; lane `I`
+  8/72 official, 8/54 WPT (was 2/72, 4/54); canary 300/300 (154/154 official, 146/146 WPT).
