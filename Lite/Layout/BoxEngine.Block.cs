@@ -52,6 +52,11 @@ internal static partial class BoxEngine
         if (node.IsAutoMarginBottom()) margin.Bottom = 0f;
         var padding = node.GetPadding(availableWidth, viewportHeight, fontSize);
         var border = node.GetBorderWidth();
+        // §17.6.2: "in this model, a table does not have padding" — the collapsed frame's
+        // half-borders span the outer cells and the table's 'padding' is ignored (the
+        // table-backgrounds bc table rendered 13px/11px wider and taller than its reference).
+        if (node.GetDisplay() is DisplayType.Table or DisplayType.InlineTable && TableEngine.IsBorderCollapse(node))
+            padding = default;
 
         // Explicit width or fill available (pass size=0 so unset width returns 0, not fontSize).
         // "Specified" is IsAutoWidth, not "> 0": 'width: 0' is a used width of zero, and reading it

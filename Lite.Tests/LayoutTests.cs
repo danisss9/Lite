@@ -396,6 +396,45 @@ public static class LayoutTests
         True(Math.Abs(w2 - 96f) < 1f, $"the wider cell below must not shrink the column below 96px (got {w2})");
     }
 
+    // -- §17.6.2 collapsed-model geometry --
+
+    private static LayoutNode LayoutPage(string html)
+    {
+        var page = Parser.ParseChildPage(html, isSrcdoc: true, "http://test/", 400, 300);
+        BoxEngine.Layout(page.Root, 400, 300);
+        return page.Root;
+    }
+
+    private static LayoutNode? FindNode(LayoutNode node, string tag, string? id = null)
+    {
+        if (node.TagName == tag && (id is null || node.Id == id)) return node;
+        foreach (var c in node.Children)
+        {
+            var found = FindNode(c, tag, id);
+            if (found is not null) return found;
+        }
+        return null;
+    }
+
+    [Test]
+    public static void CollapsedTable_IgnoresItsPadding()
+    {
+        // §17.6.2: "in this model, a table does not have padding" — the collapsed twin of the
+        // same box must be the padding narrower than the separated one
+        // (table-backgrounds-bc-table-001 painted 13px/11px of ignored padding).
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0} table{margin:0; padding:10px; border:2px solid transparent}" +
+            " td{padding:0; border:0}</style>" +
+            "<table id=\"col\" style=\"border-collapse:collapse; border-spacing:0\">" +
+            "<tr><td style=\"width:80px; height:20px\"></td></tr></table>" +
+            "<table id=\"sep\" style=\"border-collapse:separate; border-spacing:0\">" +
+            "<tr><td style=\"width:80px; height:20px\"></td></tr></table>");
+        var col = FindNode(root, "TABLE", "col");
+        var sep = FindNode(root, "TABLE", "sep");
+        True(col is not null && sep is not null, "tables missing");
+        True(Math.Abs(col!.Box.BorderBox.Width + 20f - sep!.Box.BorderBox.Width) < 1f,
+            $"the collapsed table must ignore its 20px of padding (collapsed {col.Box.BorderBox.Width} vs separated {sep.Box.BorderBox.Width})");
+    }
+
     // -- §8.3.1/§9.5.2 clearance (the margin-collapse-clear-* reftest family) --
 
     // A style object carrying a real 1px black top border (GetBorderWidth reads node.Style,

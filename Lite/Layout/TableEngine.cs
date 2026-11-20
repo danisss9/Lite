@@ -183,7 +183,11 @@ internal static class TableEngine
             !(table.TryResolveStyle("height", out var tableHeightRaw) ? tableHeightRaw : table.Style.GetPropertyValueSafe("height")).Contains('%'))
         {
             var tableBorder = table.GetBorderWidth();
-            var tablePadding = table.GetPadding(contentW, viewportH, table.GetFontSize());
+            // §17.6.2: a collapsed table has no padding — the height distributed to the rows
+            // must not subtract it (the wrapper already laid out without it).
+            var tablePadding = collapse
+                ? default
+                : table.GetPadding(contentW, viewportH, table.GetFontSize());
             var target = table.GetHeight(0f, 0f, viewportH) - tableBorder.Top - tableBorder.Bottom
                          - tablePadding.Top - tablePadding.Bottom;
             var used = rowHeights.Sum() + verticalSpacing * (rowCount + 1);
