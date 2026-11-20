@@ -46,6 +46,19 @@ public static class GeneratedContentTests
     }
 
     [Test]
+    public static void FloatedListItemWithText_IsNotTreatedAsEmpty()
+    {
+        // The out-of-flow exclusion is for the item's DESCENDANTS: a floated list item with its
+        // own text has content, so it takes no zero-width marker slot and its text still lays
+        // out and paints (list-style-image-005 lost its 'TEST').
+        var item = Find(Parse("<div>TEST</div>", "div { display: list-item; list-style: square; float: left; }"), "DIV")!;
+        True(item is not null, "no DIV");
+        True(!item.Children.Any(c => c.TagName == "#pseudo-marker"),
+            string.Join(",", item.Children.Select(c => $"{c.TagName}:{c.DisplayText}")));
+        True(item.DisplayText == "TEST", $"own text '{item.DisplayText}'");
+    }
+
+    [Test]
     public static void EmptyOutsideListItem_HasItsMarkerLineBox()
     {
         // An empty list item is one marker line tall (§12.5.1: the marker box is an inline box of

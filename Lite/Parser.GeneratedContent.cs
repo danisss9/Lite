@@ -324,7 +324,9 @@ internal static partial class Parser
         }
         else
         {
-            if (HasInFlowContent(node)) return;
+            // The item's own float/position never makes it empty: only out-of-flow DESCENDANTS
+            // contribute nothing to its lines (a floated list item with text, list-style-image-005).
+            if (!string.IsNullOrEmpty(node.DisplayText) || node.Children.Any(HasInFlowContent)) return;
             // The marker paints outside the box, so its line slot is zero-width; a zero-width
             // space is content that creates the line (§9.4.2: a line exists only if something
             // on it renders) without advancing the pen or painting ink.
