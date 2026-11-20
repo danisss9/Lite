@@ -274,7 +274,15 @@ internal static partial class BoxEngine
         }
         else
             foreach (var child in node.Children)
+            {
+                // §11.1.1's clip exception runs both ways: a box whose containing block is an
+                // ancestor of this one (an abspos child of a scroll box, abspos-overflow-001..009)
+                // escapes the clip and does not scroll with it, so it widens no scrollable area —
+                // the same out-of-flow rule ScrollableExtent applies. Its box may still carry the
+                // previous pass's geometry here, so the read would not even be consistent.
+                if (child.GetPosition() is PositionType.Absolute or PositionType.Fixed) continue;
                 naturalW = MathF.Max(naturalW, child.Box.MarginBox.Right - contentX);
+            }
         if (naturalW <= 0f) naturalW = contentW;
 
         // §17.5.3: a table's specified height is a MINIMUM. LayoutTable stretches its rows to
