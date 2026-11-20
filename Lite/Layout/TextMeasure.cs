@@ -48,6 +48,26 @@ internal static class TextMeasure
                 }
             }
         }
+        else if (!string.IsNullOrEmpty(text) && IsOnlyDefaultIgnorable(text) && !MapsEveryChar(typeface, text))
+        {
+            // Default-ignorable code points render invisibly (Unicode §5.21) and never decide
+            // the face of a run that has visible text (the branch above skips them). A run made
+            // ONLY of them — the zero-width U+FEFF that holds an empty list item's line for its
+            // generated marker (§12.5.1, §9.4.2) — still has to be drawn by a face that maps
+            // them: the primary face's .notdef box would paint a visible rectangle beside the
+            // marker and give the slot its advance (list-style-applies-to-*).
+            foreach (var candidate in families.Skip(1).Select(f => ResolveTypeface(f, weight, italic))
+                         .Concat(PlatformFonts.SymbolFallbacks
+                             .Select(f => SystemTypeface(f, (SKFontStyleWeight)weight, Slant(italic)))
+                             .OfType<SKTypeface>()))
+            {
+                if (MapsEveryChar(candidate, text))
+                {
+                    typeface = candidate;
+                    break;
+                }
+            }
+        }
 
         var font = new SKFont(typeface, size);
         // §15.6 synthesis: a bold weight (600 and up) asked of a family whose best face is
@@ -169,6 +189,24 @@ internal static class TextMeasure
           or (>= '\u200B' and <= '\u200F')
           or (>= '\u202A' and <= '\u202E')
           or (>= '\u2060' and <= '\u206F');
+
+    private static bool IsOnlyDefaultIgnorable(string text)
+    {
+        foreach (var c in text)
+            if (!IsDefaultIgnorable(c)) return false;
+        return true;
+    }
+
+    /// <summary>Whether the face has a real glyph (not .notdef) for every character.</summary>
+    private static bool MapsEveryChar(SKTypeface typeface, string text)
+    {
+        foreach (var c in text)
+        {
+            if (typeface.GetGlyphs(c.ToString()) is not ushort[] glyphs || glyphs.Length == 0 || glyphs[0] == 0)
+                return false;
+        }
+        return true;
+    }
 
     private static bool ContainsAllGlyphs(SKTypeface typeface, string text)
     {

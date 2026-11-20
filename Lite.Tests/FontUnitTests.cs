@@ -128,6 +128,30 @@ public static class FontUnitTests
     }
 
     [Test]
+    public static void OnlyDefaultIgnorableText_IsDrawnByAFaceThatMapsIt()
+    {
+        // An empty list item holds its line for the generated marker with a lone U+FEFF
+        // (§12.5.1, §9.4.2). Default-ignorables never pick the face of visible text, but a run
+        // made only of them must not fall to the primary face's .notdef box, which painted a
+        // hollow rectangle beside every such marker (list-style-applies-to-*).
+        var page = Parse("<div id=\"li\" style=\"display: list-item; list-style: square\"></div>");
+        var slot = FindText(Find(page, "li")!, "﻿");
+        True(slot is not null, "the empty list item should carry its zero-width line slot");
+        using var font = TextMeasure.CreateFont(slot!);
+        var glyphs = font.Typeface.GetGlyphs("﻿");
+        True(glyphs.Length > 0 && glyphs[0] != 0,
+            $"U+FEFF must be drawn by a face that maps it, got .notdef from {font.Typeface.FamilyName}");
+    }
+
+    private static LayoutNode? FindText(LayoutNode node, string text)
+    {
+        if (node.DisplayText == text) return node;
+        foreach (var child in node.Children)
+            if (FindText(child, text) is { } hit) return hit;
+        return null;
+    }
+
+    [Test]
     public static void FontSize_LargerAndSmallerStepThroughAbsoluteSizeTable()
     {
         // CSS 2.1 §15.7: 'larger' from 'medium' equals 'large' (font-size-rule-002), and six
