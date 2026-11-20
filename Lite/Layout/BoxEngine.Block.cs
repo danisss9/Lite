@@ -688,6 +688,13 @@ internal static partial class BoxEngine
             var isBlock = d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex or DisplayType.Table;
             if (!isBlock) return bottom;
             if (sibling.GetClear() != ClearType.None) return bottom;
+            // A self-collapser chains through its floats (they are out of flow), but those
+            // floats sit at the chain's position: a following box that establishes a new block
+            // formatting context and cannot fit beside them (§9.5: its border box must not
+            // overlap their margin boxes) is pushed below them, and that separates its top
+            // margin from the chain the way clearance does (§9.5.2) — it must not join the
+            // chain and drag the floats down with it (new-fc-separates-from-float).
+            if (BfcCannotFitBesideFloats(empty, sibling, cbWidth)) return bottom;
             var joined = bottom + GetEffectiveTopMarginChain(sibling, cbWidth);
             // §8.3.1: adjoining is transitive. When the sibling self-collapses too, its own
             // bottom margin adjoins the NEXT in-flow sibling's top margin, so the chain runs on
@@ -700,6 +707,36 @@ internal static partial class BoxEngine
                 : joined;
         }
         return bottom;
+    }
+
+    /// <summary>Whether <paramref name="bfc"/> establishes a new block formatting context that
+    /// cannot fit beside the floats <paramref name="floatHolder"/> (a self-collapser) holds:
+    /// their margin boxes and its margin box together are wider than the containing block.
+    /// Only definite widths decide — an auto width (a shrink-to-fit float, a BFC that narrows
+    /// to the band) answers false.</summary>
+    private static bool BfcCannotFitBesideFloats(LayoutNode floatHolder, LayoutNode bfc, float cbWidth)
+    {
+        if (!EstablishesBlockFormattingContext(bfc) || bfc.IsAutoWidth()) return false;
+        var floatsW = 0f;
+        foreach (var child in floatHolder.Children)
+        {
+            if (child.TagName == "#text" || child.GetFloat() == FloatType.None) continue;
+            if (child.GetDisplay() == DisplayType.None) continue;
+            if (child.IsAutoWidth()) return false;
+            floatsW += OuterWidth(child, cbWidth);
+        }
+        return floatsW > 0f && floatsW + OuterWidth(bfc, cbWidth) > cbWidth + 0.01f;
+
+        static float OuterWidth(LayoutNode n, float cb)
+        {
+            var fs = n.GetFontSize();
+            var pad = n.GetPadding(cb, 0, fs);
+            var bord = n.GetBorderWidth();
+            var w = n.GetWidth(cb);
+            if (n.Style.GetPropertyValueSafe("box-sizing") != "border-box")
+                w += pad.Left + pad.Right + bord.Left + bord.Right;
+            return w + n.GetMarginLeft(total: cb, size: fs) + n.GetMarginRight(total: cb, size: fs);
+        }
     }
 
     /// <summary>Whether <paramref name="node"/> self-collapses: no in-flow content, no

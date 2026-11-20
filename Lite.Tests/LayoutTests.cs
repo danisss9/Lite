@@ -404,6 +404,29 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void NewFormattingContext_ThatCannotFitBesideChainFloat_SeparatesItsMargin()
+    {
+        // WPT new-fc-separates-from-float (§9.5, §9.5.2): the float-only first child chains
+        // through (its float is out of flow), but a following 200px 'overflow: hidden' box
+        // cannot fit beside the 200px float in a 200px container, so — as with clearance — its
+        // 200px top margin is separated from the chain: the float stays at the top, and the
+        // new formatting context sits below it at 200.
+        var floatBox = Block(new() { ["width"] = "200px", ["height"] = "200px" });
+        floatBox.StyleOverrides["float"] = "left";
+        var holder = Block(new(), floatBox);
+        var fc = Block(new() { ["width"] = "200px", ["height"] = "1px", ["margin-top"] = "200px",
+                               ["overflow"] = "hidden" });
+        var middle = Block(new(), holder, fc);
+        var outer = Block(new() { ["width"] = "200px", ["overflow"] = "hidden" }, middle);
+        LayoutTree(outer);
+        var top = outer.Box.ContentBox.Top;
+        True(Math.Abs(floatBox.Box.ContentBox.Top - top) < 0.5f,
+            $"expected the float at the container's top ({top}), got {floatBox.Box.ContentBox.Top}");
+        True(Math.Abs(fc.Box.BorderBox.Top - (top + 200f)) < 0.5f,
+            $"expected the new formatting context below the float ({top + 200}), got {fc.Box.BorderBox.Top}");
+    }
+
+    [Test]
     public static void SelfCollapsedChain_BehindTopBoundary_CountsInHeight()
     {
         // WPT margin-collapse-through-percentage-height-block: an 'overflow: hidden' box (a BFC)
