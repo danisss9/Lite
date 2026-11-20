@@ -36,7 +36,10 @@ try { dotnet build (Join-Path $repo 'Lite.Tests\Lite.Tests.csproj') -c Release |
 # Build the official catalog once before the shards start: when the vendored tree changes (a
 # restore re-pins its hash), every shard otherwise races to rebuild css21-official-catalog.json
 # and all but one die on the locked file. A filter that selects no case runs only the catalog step.
-dotnet run --project $project -c Release --no-build -- --suite css21-full --media $Media --catalog official --filter '__catalog-warmup__' | Out-Null
+# The empty selection reports on stderr; under 'Stop' Windows PowerShell would treat that as fatal.
+$ErrorActionPreference = 'Continue'
+dotnet run --project $project -c Release --no-build -- --suite css21-full --media $Media --catalog official --filter '__catalog-warmup__' 2>&1 | Out-Null
+$ErrorActionPreference = 'Stop'
 if (-not (Test-Path (Join-Path $artifacts 'css21-official-catalog.json'))) { throw 'Official catalog warm-up failed; not collecting evidence.' }
 
 $wptServe = $null
