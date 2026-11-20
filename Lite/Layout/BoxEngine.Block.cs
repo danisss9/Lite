@@ -1258,25 +1258,44 @@ internal static partial class BoxEngine
                     var outOfFlow = childPos == PositionType.Absolute || childPos == PositionType.Fixed;
                     if (!outOfFlow)
                     {
-                        if (d == DisplayType.Block || d == DisplayType.ListItem || d == DisplayType.Flex || d == DisplayType.Table) break;
-                        if (children[i].TagName != "#text" && children[i].GetFloat() != FloatType.None) break;
+                        // §9.5.1: a float generated while a line box is open joins that line — it
+                        // stays IN the run (as an InlineItemKind.Float item handled by
+                        // PlaceInRunFloat) so the line's earlier content can re-flow beside it.
+                        // Splitting the run here placed the float on top of the line's content
+                        // instead (floats-placement-vertical-001a, floats-006). §9.7 blockifies
+                        // floated boxes for their own layout, so this test must precede the
+                        // block-level one — as it does for out-of-flow boxes. A float with
+                        // 'clear' keeps the block-level branch above, which owns ApplyClear and
+                        // the margin-chain interaction.
+                        var joinsRunAsFloat = children[i].TagName != "#text" &&
+                            children[i].GetFloat() != FloatType.None &&
+                            children[i].GetClear() == ClearType.None;
+                        if (!joinsRunAsFloat &&
+                            (d == DisplayType.Block || d == DisplayType.ListItem || d == DisplayType.Flex || d == DisplayType.Table)) break;
                     }
                     run.Add(children[i]);
                     i++;
                 }
                 // Skip runs with no real inline content — whitespace-only #TEXT around
-                // out-of-flow boxes. Neither creates a line box (out-of-flow boxes are removed
-                // from the line, whitespace-only text builds none), so the pending margin keeps
-                // collapsing across them (§8.3.1; margin-collapse-162's absolute .a must not
-                // spend the chain). The out-of-flow members take their static position at the
-                // flow point, exactly as the direct-child abs branch records it.
+                // out-of-flow boxes and floats. Neither creates a line box (out-of-flow boxes
+                // are removed from the line, whitespace-only text builds none, and a float is
+                // out of the flow — §8.3.1 keeps the surrounding siblings' margins adjoining
+                // across it), so the pending margin keeps collapsing across them (§8.3.1;
+                // margin-collapse-162's absolute .a must not spend the chain;
+                // clear-clearance-calculation-003's whitespace + float run between #div1 and the
+                // cleared #div3 must not commit #div1's collapsed margin-bottom). The
+                // out-of-flow members take their static position at the flow point, exactly as
+                // the direct-child abs branch records it, and the float members lay out at the
+                // flow point exactly as the direct-child float branch places them — riding the
+                // pending chain (LayoutFloat's chainOffset), never committing it.
                 var runHasInlineContent = run.Any(n => n.TagName == "#text"
                     ? n.DisplayText.Trim().Length > 0
-                    : n.GetPosition() is not (PositionType.Absolute or PositionType.Fixed));
+                    : n.GetFloat() == FloatType.None &&
+                      n.GetPosition() is not (PositionType.Absolute or PositionType.Fixed));
                 if (!runHasInlineContent)
                 {
                     var flowPointY = runY + pending.Value - (chainSpentAbove ? chainEscapedAbove : 0f);
-                    foreach (var oof in run.Where(n => n.TagName != "#text"))
+                    foreach (var oof in run.Where(n => n.TagName != "#text" && n.GetFloat() == FloatType.None))
                     {
                         var (staticBandX, staticBandW) = AvailableBand(floats, flowPointY, 1, contentX, contentW);
                         // Same edge convention as the direct-child branch: the band's RIGHT edge
@@ -1284,6 +1303,13 @@ internal static partial class BoxEngine
                         oof.StaticX = (oof.Parent ?? oof).GetDirection() == "rtl"
                             ? staticBandX + staticBandW : staticBandX;
                         oof.StaticY = flowPointY;
+                    }
+                    foreach (var f in run.Where(n => n.TagName != "#text" && n.GetFloat() != FloatType.None))
+                    {
+                        var af = LayoutFloat(f, f.GetFloat(), floats, contentX, flowPointY, contentW,
+                                             viewportWidth, viewportHeight, parentContentHeight,
+                                             float.NaN, 0, pending.Value);
+                        floats.Add(af);
                     }
                     continue;
                 }

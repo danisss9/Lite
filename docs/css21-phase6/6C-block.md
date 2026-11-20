@@ -81,6 +81,15 @@ the detector's minimum height.
 block, verified by unit test); the case still fails on the abs-pos overlay geometry, which
 needs a look at the test's positioned layer before I can say the cause is one thing.
 
+- `css21-official/html4/margin-collapse-clear-000.htm`, `-001`, `-004`, `-006`, `-007`, `-010` and
+  the WPT twins under `css/CSS2/margin-padding-clear/`: these contain no `float` and no `clear` at
+  all — the failing bar is the collapsed-through parent's background ("each coloured bar matches a
+  same-coloured box", the #c0c0c0 bar at 19,151). Pure §8.3.1 margin collapsing, BoxEngine.Block.cs.
+  From 6.B (they landed on B by test-name stem).
+- `floats-wrap-bfc-with-margin-001..010` (WPT): shared — the §10.3.3 negative-margin "prop-up" of an
+  auto-width BFC beside a float is the Block-side width resolution in the
+  `EstablishesBlockFormattingContext` branch; 6.B owns the float side of the same cases. From 6.B.
+
 ## Edits outside owned files
 
 - **Lite/Scripting/Dom/JsElement.cs** (commit a6f13280, one getter pair): `offsetLeft`/

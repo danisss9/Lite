@@ -68,6 +68,13 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - `outline-style-applies-to-008` (official+WPT, 2): engine renders the blue dotted outline around the inline box; judge treats the inner "Filler Text" glyphs as shapes not on the box perimeter (from 6.I).
 - `clipping-017` (official+WPT, 2): `#test-outer` (`left:60px;top:60px`) and `#control-outer` (`margin:20px 0 0 200px`) sit side-by-side horizontally on the same band; judge expects 2 vertically stacked ink bands (`the two lines render identically: 1 ink bands`) (from 6.I).
 
+- `css/CSS2/floats/hit-test-floats-003.html`, `-005`: the checks call `elementFromPoint` over
+  floats and get "error" instead of a target — hit-testing protocol/implementation, not float
+  layout (no layout-side fix moves them). From 6.B.
+- `css/CSS2/floats/computed-float-position-absolute.html`: the check reads
+  `getComputedStyle(...).float` and gets `undefined` — the computed style does not expose `float`,
+  a CSSOM/protocol gap, not float layout. From 6.B.
+
 ## Edits outside owned files
 
 - `Lite.Conformance/Wpt/WptRunner.cs`: the manual-pending dispatch (`IsManualPendingRoute`, two route checks and `EvidenceKind`). The route cannot be expressed from the owned files (the kind switch lives here); it is 13 lines and one concern.
