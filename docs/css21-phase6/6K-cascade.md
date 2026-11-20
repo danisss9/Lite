@@ -36,6 +36,8 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
   `counter-increment-display-004`, `counters-root-000`). Dynamic pseudo/rule generation is parked
   to 6.K per the README; 6.F has not touched it.
 
+- `first-line-selector-016` (official + WPT) — `span, div:first-line { color: white; }` is neutralized as a whole in `Parser.Cascade.cs`, leaving `<span>FAIL</span>` inheriting `div`'s `color: red` (40 red px). — from 6.A
+
 ## Edits outside owned files
 
 - `Lite/Parser.cs`: removed the old regex-based `InlineImports` method body (36 lines) so the spec-compliant `InlineImports` lives in owned `Lite/Parser.Cascade.cs`. The HTML5 gate was not rerun (per lane rules).

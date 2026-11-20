@@ -46,6 +46,8 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
   result). Suggest ignoring a band whose component is the box border, or grouping text
   components only.
 
+- `text-align-applies-to-007`, `012`, `013`, `015` (official + WPT) — filler text is flush with the table/body content box (`x=8` left / `x=792` right with 8px body margin), but the judge compares against viewport edges `0` / `800`. — from 6.A
+
 ## Edits outside owned files
 
 _(None yet.)_

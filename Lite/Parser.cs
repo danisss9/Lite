@@ -1496,7 +1496,9 @@ internal static partial class Parser
                     // <script> is a raw-text element: its content is never collapsed — scripts
                     // read it back verbatim (document.currentScript.text) and whitespace can be
                     // syntactically significant (template strings, ASI hazards).
-                    var text = tag == "SCRIPT" ? textNode.Data : CollapseWhitespace(textNode.Data);
+                    // CSS 2.1 §16.6: honor white-space (pre / pre-wrap / pre-line) on mixed-child
+                    // text nodes too, not just leaf elements (line 1078).
+                    var text = tag == "SCRIPT" ? textNode.Data : NormalizeTextWhitespace(textNode.Data, ws);
                     // Include any non-empty text — whitespace-only nodes (" ") between
                     // inline siblings need to produce a space; purely empty strings are skipped.
                     // Whitespace-only nodes between block siblings are filtered out later in

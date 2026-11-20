@@ -313,7 +313,7 @@ internal static partial class Drawer
         // ::first-line styles are resolved from the node or its parent block. CSS 2.1 §5.12.1:
         // they do not apply inside descendant floats — a float's content is not part of the
         // block's first formatted line, so `div:first-line` must not style a floated span's text.
-        var firstLineStyles = BoxEngine.FirstLineStylesOf(node);
+        var firstLineStyles = BoxEngine.FirstLineStylesOf(node, out var firstLineAllLines);
         if (firstLineStyles is not null && DescendsFromFloat(node)) firstLineStyles = null;
         var firstLineTransform = firstLineStyles is null ? TextTransform.None : BoxEngine.FirstLineTransform(node);
 
@@ -415,7 +415,7 @@ internal static partial class Drawer
             SKPaint? tempPaint = null;
             SKFont? tempFont = null;
 
-            if (isFirstLine && firstLineStyles != null)
+            if ((isFirstLine || firstLineAllLines) && firstLineStyles != null)
             {
                 tempPaint = new SKPaint { Color = paint.Color, IsAntialias = true };
                 if (firstLineStyles.TryGetValue("color", out var flColor))
@@ -455,6 +455,20 @@ internal static partial class Drawer
             }
             var runX = synthItalic ? 0f : drawX;
             var runY = synthItalic ? 0f : baseline;
+            // §16.6.1: tab stops are measured from the containing block's starting content edge.
+            var tabOriginX = drawX;
+            if (lineAligned && line.Text.IndexOf('\t') >= 0)
+            {
+                for (var a = node.Parent; a is not null; a = a.Parent)
+                {
+                    if (!a.TagName.StartsWith('#') && a.GetDisplay() != DisplayType.Inline)
+                    {
+                        tabOriginX = a.Box.ContentBox.Left;
+                        break;
+                    }
+                }
+            }
+            var runTabOriginX = synthItalic ? tabOriginX - drawX : tabOriginX;
             // text-shadow drawn before (behind) the main text
             if (textShadow.HasValue)
             {
@@ -469,7 +483,7 @@ internal static partial class Drawer
                 if (smallCaps)
                     DrawTextSmallCaps(canvas, line.Text, runX + ts.OffsetX, runY + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing);
                 else
-                    DrawTextWithSpacing(canvas, line.Text, runX + ts.OffsetX, runY + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing);
+                    DrawTextWithSpacing(canvas, line.Text, runX + ts.OffsetX, runY + ts.OffsetY, lineFont, sp, letterSpacing, lineWordSpacing, runTabOriginX + ts.OffsetX);
             }
 
             // ::first-letter is not handled here: the Parser splits it into a real inline box
@@ -478,7 +492,7 @@ internal static partial class Drawer
             if (smallCaps)
                 DrawTextSmallCaps(canvas, line.Text, runX, runY, lineFont, linePaint, letterSpacing, lineWordSpacing);
             else
-                DrawTextWithSpacing(canvas, line.Text, runX, runY, lineFont, linePaint, letterSpacing, lineWordSpacing);
+                DrawTextWithSpacing(canvas, line.Text, runX, runY, lineFont, linePaint, letterSpacing, lineWordSpacing, runTabOriginX);
             if (synthItalic) canvas.Restore();
             // §18.1 'auto': the UA picks the cursor by context — a text cursor over text. The
             // fragment's region only informs the cursor lookup (clicks and hover skip it).
@@ -539,8 +553,33 @@ internal static partial class Drawer
     }
 
     private static void DrawTextWithSpacing(SKCanvas canvas, string text, float x, float y,
-                                            SKFont font, SKPaint paint, float letterSpacing, float wordSpacing)
+                                            SKFont font, SKPaint paint, float letterSpacing, float wordSpacing,
+                                            float? tabOriginX = null)
     {
+        if (text.IndexOf('\t') >= 0)
+        {
+            // CSS 2.1 §16.6.1: tabs render as a horizontal shift to the next 8-space tab stop
+            // measured from the containing block's starting content edge.
+            Rendering.PaintLog.Record(text, x, y, font, SKTextAlign.Left);
+            var originX = tabOriginX ?? x;
+            var tabX = x;
+            var start = 0;
+            while (start <= text.Length)
+            {
+                var tab = text.IndexOf('\t', start);
+                var seg = tab < 0 ? text[start..] : text[start..tab];
+                if (seg.Length > 0)
+                {
+                    DrawTextWithSpacing(canvas, seg, tabX, y, font, paint, letterSpacing, wordSpacing);
+                    tabX += MeasureWithSpacing(seg, font, letterSpacing, wordSpacing);
+                }
+                if (tab < 0) break;
+                tabX = originX + TextMeasure.NextTabStop(tabX - originX, font);
+                start = tab + 1;
+            }
+            return;
+        }
+
         if (letterSpacing == 0f && wordSpacing == 0f)
         {
             canvas.DrawText(text, x, y, SKTextAlign.Left, font, paint);

@@ -70,21 +70,16 @@ internal static class IntrinsicSizer
             return (contentW, contentW);
         }
 
-        // §16.1: 'text-indent' widens the box's FIRST line, so its intrinsic widths carry it
-        // (an inline-block with 'text-indent: 10em' shrink-to-fits around indent + text,
-        // text-indent-applies-to-005 / text-indent-intrinsic-*). A negative indent shortens the
-        // first line but never below its own content, so it does not shrink the box here.
-        var indent = node.GetDirection() != "rtl" ? Math.Max(0f, node.GetTextIndent(0f, node.GetFontSize())) : 0f;
+        // §16.1: 'text-indent' shifts the box's FIRST line, so its intrinsic widths carry it
+        // (both positive and negative indents — text-indent-intrinsic-001..004). A negative
+        // indent can shrink the first line's contribution (clamped at 0) while subsequent lines
+        // and later soft-wrap units keep their own widths, and max-content stays >= min-content.
+        var indent = node.GetDirection() != "rtl" ? node.GetTextIndent(0f, node.GetFontSize()) : 0f;
 
         // Leaf text: measure directly.
         if (node.Children.Count == 0 && !string.IsNullOrEmpty(node.DisplayText))
         {
-            var (tMin, tMax) = TextMinMax(node);
-            if (indent > 0f)
-            {
-                tMin = Math.Max(tMin, FirstUnitWidth(node) + indent);
-                tMax += indent;
-            }
+            var (tMin, tMax) = TextMinMax(node, indent);
             return (tMin, tMax);
         }
 
@@ -102,7 +97,7 @@ internal static class IntrinsicSizer
         float min = 0f, max = 0f;
         var children = node.Children;
         var i = 0;
-        var firstLinePending = indent > 0f;
+        var firstLinePending = indent != 0f;
         while (i < children.Count)
         {
             var child = children[i];
@@ -141,10 +136,17 @@ internal static class IntrinsicSizer
                     FlattenInline(c, viewportHeight, toks, ref pendingBoundarySpace, ref atLineStart);
                     i++;
                 }
-                // The block's first line opens this run: its first unit carries the indent.
+                // The block's first line opens this run: its first unit carries the indent (§16.1).
+                // For min-content the first unit's indented width clamps at 0; for max-content
+                // keep the signed indent so later tokens on the same first line add to it, and
+                // RunMinMax ensures max >= min.
                 var firstTok = toks.FindIndex(t => !t.IsBreak);
                 if (firstLinePending && firstTok >= 0)
-                    toks[firstTok] = toks[firstTok] with { Min = toks[firstTok].Min + indent, Max = toks[firstTok].Max + indent };
+                    toks[firstTok] = toks[firstTok] with
+                    {
+                        Min = Math.Max(0f, toks[firstTok].Min + indent),
+                        Max = toks[firstTok].Max + indent
+                    };
                 firstLinePending = false;
                 var (rMin, rMax) = RunMinMax(toks);
                 min = Math.Max(min, rMin);
@@ -286,12 +288,86 @@ internal static class IntrinsicSizer
             // the next atom double-counted every interior boundary and inflated the columns
             // of the infer-cells anonymous tables.
             var ws = node.GetWhiteSpace();
-            if (string.IsNullOrWhiteSpace(node.DisplayText) && ws is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+            var preservesLines = ws is WhiteSpace.Pre or WhiteSpace.PreWrap or WhiteSpace.PreLine;
+            // §8.3/§8.4: a leaf non-replaced inline element (e.g. '<span style="margin-left:3em">X</span>')
+            // contributes its own horizontal margin, border and padding to the inline run's
+            // intrinsic widths, just like a wrapper inline with children below. Anonymous #text
+            // nodes carry the parent's style and have no own box edges.
+            float leafLeft = 0f, leafRight = 0f;
+            if (!node.TagName.StartsWith('#') && display == DisplayType.Inline)
             {
+                var lfs = node.GetFontSize();
+                var lpad = node.GetPadding(0, viewportHeight, lfs);
+                var lbord = node.GetBorderWidth();
+                var lmarg = node.GetMargin(0, viewportHeight, lfs);
+                leafLeft = lpad.Left + lbord.Left + Math.Max(0f, lmarg.Left);
+                leafRight = lpad.Right + lbord.Right + Math.Max(0f, lmarg.Right);
+            }
+            if (preservesLines && node.RenderedText().Contains('\n'))
+            {
+                // §16.6: preserved newlines (pre / pre-wrap / pre-line) are forced line breaks
+                // in intrinsic sizing too — without splitting here, lines inside <pre> summed
+                // into one max-content line (text-indent-intrinsic-001..004).
+                var rawLines = node.RenderedText().Split('\n');
+                using var font = TextMeasure.CreateFont(node);
+                var noWrap = ws == WhiteSpace.Pre;
+                if (leafLeft > 0f)
+                {
+                    if (!atLineStart && pendingBoundarySpace) { leafLeft += SpaceWidth(node); pendingBoundarySpace = false; }
+                    atLineStart = false;
+                    toks.Add(new InlineTok(false, leafLeft, leafLeft));
+                }
+                for (var li = 0; li < rawLines.Length; li++)
+                {
+                    if (li > 0)
+                    {
+                        toks.Add(new InlineTok(true, 0f, 0f));
+                        atLineStart = true;
+                        pendingBoundarySpace = false;
+                    }
+                    var seg = rawLines[li];
+                    if (seg.Length == 0) continue;
+                    var lineText = ws is WhiteSpace.Pre or WhiteSpace.PreWrap
+                        ? seg
+                        : string.Join(' ', seg.Split(CssWhiteSpace, StringSplitOptions.RemoveEmptyEntries));
+                    var segMax = font.MeasureText(lineText);
+                    var segMin = noWrap ? segMax : 0f;
+                    if (!noWrap)
+                        foreach (var w in seg.Split(CssWhiteSpace, StringSplitOptions.RemoveEmptyEntries))
+                            segMin = Math.Max(segMin, font.MeasureText(w));
+                    if (segMax > 0f || segMin > 0f)
+                    {
+                        atLineStart = false;
+                        toks.Add(new InlineTok(false, segMin, segMax));
+                    }
+                }
+                if (leafRight > 0f)
+                {
+                    if (pendingBoundarySpace) { leafRight += SpaceWidth(node); pendingBoundarySpace = false; }
+                    toks.Add(new InlineTok(false, leafRight, leafRight));
+                }
+                return;
+            }
+            if (node.DisplayText.IsCssWhiteSpaceOnly() && ws is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+            {
+                if (leafLeft + leafRight > 0f)
+                {
+                    var edges = leafLeft + leafRight;
+                    if (!atLineStart && pendingBoundarySpace) { edges += SpaceWidth(node); pendingBoundarySpace = false; }
+                    atLineStart = false;
+                    toks.Add(new InlineTok(false, edges, edges));
+                }
                 pendingBoundarySpace = true;
                 return;
             }
             var (m, x) = TextMinMax(node);
+            if (leafLeft > 0f || leafRight > 0f)
+            {
+                // Keep leading edge glued to the first word (or whole text) so min-content reflects
+                // 'margin-left + X' as a single unbreakable unit (text-indent-intrinsic-001-ref).
+                m += leafLeft + leafRight;
+                x += leafLeft + leafRight;
+            }
             AppendTextToken(node, toks, m, x, ref pendingBoundarySpace, ref atLineStart);
             return;
         }
@@ -375,7 +451,7 @@ internal static class IntrinsicSizer
             maxLine += t.Max;
         }
         maxBest = Math.Max(maxBest, maxLine);
-        return (min, maxBest);
+        return (min, Math.Max(min, maxBest));
     }
 
     // ── Text ───────────────────────────────────────────────────────────────────
@@ -400,7 +476,7 @@ internal static class IntrinsicSizer
     /// <summary>The min/max-content widths of a node's own text (its DisplayText).</summary>
     internal static (float Min, float Max) LeafTextMinMax(LayoutNode node) => TextMinMax(node);
 
-    private static (float Min, float Max) TextMinMax(LayoutNode node)
+    private static (float Min, float Max) TextMinMax(LayoutNode node, float firstLineIndent = 0f)
     {
         var text = node.RenderedText();
         if (string.IsNullOrEmpty(text)) return (0f, 0f);
@@ -414,26 +490,34 @@ internal static class IntrinsicSizer
         // pre keeps them — but pre's newlines are the only breaks that matter for width here).
         float max = 0f;
         var rawLines = preservesLines ? text.Split('\n') : [text];
-        foreach (var raw in rawLines)
+        for (var li = 0; li < rawLines.Length; li++)
         {
+            var raw = rawLines[li];
             var line = ws is WhiteSpace.Pre or WhiteSpace.PreWrap
                 ? raw
                 : string.Join(' ', raw.Split(CssWhiteSpace, StringSplitOptions.RemoveEmptyEntries));
-            max = Math.Max(max, font.MeasureText(line));
+            var lineW = font.MeasureText(line);
+            if (li == 0 && firstLineIndent != 0f) lineW = Math.Max(0f, lineW + firstLineIndent);
+            max = Math.Max(max, lineW);
         }
-        // A whitespace-only leaf still renders one collapsible space when it sits between inline
+        // A CSS whitespace-only leaf still renders one collapsible space when it sits between inline
         // content (§16.6.1) — shrink-to-fit widths that exclude it under-measure the run and force
-        // spurious wraps inside abs-pos/float boxes. (A whitespace sequence at a LINE boundary
-        // collapses to zero; max-content assumes no breaking, so the space counts.)
-        if (max <= 0f && rawLines.Any(l => l.Length > 0))
+        // spurious wraps inside abs-pos/float boxes. Do not widen zero-width characters (U+200B).
+        if (max <= 0f && firstLineIndent == 0f && text.IsCssWhiteSpaceOnly())
             max = font.MeasureText(" ");
 
         if (noWrap) return (max, max);
 
         float min = 0f;
+        var isFirstWord = true;
         foreach (var word in text.Split(CssWhiteSpace, StringSplitOptions.RemoveEmptyEntries))
-            min = Math.Max(min, font.MeasureText(word));
-        return (min, max);
+        {
+            var w = font.MeasureText(word);
+            if (isFirstWord && firstLineIndent != 0f) w = Math.Max(0f, w + firstLineIndent);
+            isFirstWord = false;
+            min = Math.Max(min, w);
+        }
+        return (min, Math.Max(min, max));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

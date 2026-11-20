@@ -287,10 +287,37 @@ internal static class TextMeasure
     /// will actually draw. Spacing goes after each character (and after each space for
     /// word-spacing); the trailing letter-space is dropped, as it is when painting.
     /// </summary>
-    public static float MeasureWithSpacing(string text, SKFont font, float letterSpacing, float wordSpacing)
+    /// <summary>CSS 2.1 §16.6.1: next tab stop at a multiple of 8 times the width of U+0020
+    /// from the block's starting content edge.</summary>
+    public static float NextTabStop(float offsetFromLineStart, SKFont font)
+    {
+        var tabStop = 8f * font.MeasureText(" ");
+        if (tabStop <= 0f) return offsetFromLineStart;
+        return (MathF.Floor((offsetFromLineStart + 0.001f) / tabStop) + 1f) * tabStop;
+    }
+
+    public static float MeasureWithSpacing(string text, SKFont font, float letterSpacing, float wordSpacing,
+        float lineStartOffset = 0f)
     {
         if (string.IsNullOrEmpty(text)) return 0f;
-        if (letterSpacing == 0f && wordSpacing == 0f) return font.MeasureText(text);
+        if (letterSpacing == 0f && wordSpacing == 0f && text.IndexOf('\t') < 0) return font.MeasureText(text);
+
+        if (text.IndexOf('\t') >= 0)
+        {
+            float wTab = 0f;
+            var start = 0;
+            while (start <= text.Length)
+            {
+                var tab = text.IndexOf('\t', start);
+                var seg = tab < 0 ? text[start..] : text[start..tab];
+                if (seg.Length > 0)
+                    wTab += MeasureWithSpacing(seg, font, letterSpacing, wordSpacing);
+                if (tab < 0) break;
+                wTab = NextTabStop(lineStartOffset + wTab, font) - lineStartOffset;
+                start = tab + 1;
+            }
+            return Math.Max(0f, wTab);
+        }
 
         float w = 0f;
         foreach (var ch in text)
@@ -429,9 +456,10 @@ internal static class TextMeasure
         var rawLines = text.Split('\n');
         foreach (var raw in rawLines)
         {
-            if (!wrap || font.MeasureText(raw) <= maxWidth)
+            var rawW = MeasureWithSpacing(raw, font, 0f, 0f);
+            if (!wrap || rawW <= maxWidth)
             {
-                lines.Add(new TextLine(raw, font.MeasureText(raw), lineHeight, ascent));
+                lines.Add(new TextLine(raw, rawW, lineHeight, ascent));
             }
             else
             {

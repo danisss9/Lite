@@ -7,23 +7,92 @@ namespace Lite.Layout;
 internal static partial class BoxEngine
 {
     /// <summary>The ::first-line styles that govern <paramref name="node"/>'s first line
-    /// (§5.12.1): its own, or its parent block's. An inline-level node (a text run) shares the
-    /// parent's first formatted line; a block-level child opens it only when it is the parent's
-    /// first in-flow child (`ul:first-line` styles the first list item's first line, not every
-    /// item's).</summary>
-    internal static Dictionary<string, string>? FirstLineStylesOf(LayoutNode node)
+    /// (§5.12.1): its own, or an ancestor block's when <paramref name="node"/> sits on that
+    /// ancestor's first formatted line. A preceding block child, &lt;br&gt;, or preserved newline
+    /// already consumed/ended the parent's first line (first-line-pseudo-002/005,
+    /// first-line-selector-010). When <paramref name="node"/> is inside an inline-block on an
+    /// ancestor's first line, <paramref name="appliesToAllLines"/> is true because the entire
+    /// atomic inline sits inside the ancestor's ::first-line and inherits from it
+    /// (first-line-selector-011).</summary>
+    internal static Dictionary<string, string>? FirstLineStylesOf(LayoutNode node) =>
+        FirstLineStylesOf(node, out _);
+
+    internal static Dictionary<string, string>? FirstLineStylesOf(LayoutNode node, out bool appliesToAllLines)
     {
+        appliesToAllLines = false;
         if (node.FirstLineStyles is { } own) return own;
-        if (node.Parent?.FirstLineStyles is not { } inherited) return null;
-        if (node.TagName.StartsWith('#') || node.GetDisplay() is DisplayType.Inline) return inherited;
-        foreach (var c in node.Parent.Children)
+
+        var cur = node;
+        var insideAtomicInline = false;
+        while (cur.Parent is { } parent)
         {
-            if (c.GetDisplay() == DisplayType.None || c.GetPosition() is PositionType.Absolute or PositionType.Fixed ||
-                c.GetFloat() != FloatType.None) continue;
-            if (c.TagName.StartsWith('#') && string.IsNullOrWhiteSpace(c.DisplayText)) continue;
-            return ReferenceEquals(c, node) ? inherited : null;
+            var parentDisp = parent.GetDisplay();
+            var parentIsAtomic = !parent.TagName.StartsWith('#') &&
+                parentDisp is DisplayType.InlineBlock or DisplayType.InlineTable or DisplayType.InlineFlex;
+
+            // Inside an atomic inline (e.g. inline-block), every line of the atomic box inherits
+            // from an ancestor's ::first-line if the atomic box itself sits on that ancestor's
+            // first formatted line (§5.12.1).
+            if (parentIsAtomic)
+            {
+                insideAtomicInline = true;
+                cur = parent;
+                continue;
+            }
+
+            if (!IsOnParentsFirstLine(cur, parent)) return null;
+
+            if (parent.FirstLineStyles is { } inherited)
+            {
+                appliesToAllLines = insideAtomicInline ||
+                    (!cur.TagName.StartsWith('#') &&
+                     cur.GetDisplay() is DisplayType.InlineBlock or DisplayType.InlineTable or DisplayType.InlineFlex);
+                return inherited;
+            }
+
+            // Continue climbing only through inline wrappers or first-child blocks.
+            if (parentDisp is not (DisplayType.Inline or DisplayType.Block or DisplayType.ListItem))
+                return null;
+            cur = parent;
         }
         return null;
+    }
+
+    private static bool IsOnParentsFirstLine(LayoutNode node, LayoutNode parent)
+    {
+        var nodeIsBlock = !node.TagName.StartsWith('#') &&
+            node.GetDisplay() is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex
+                or DisplayType.Table or DisplayType.TableRowGroup or DisplayType.TableRow or DisplayType.TableCell;
+
+        foreach (var c in parent.Children)
+        {
+            if (ReferenceEquals(c, node)) return true;
+            if (c.TagName is "#comment" or "#pi") continue;
+            if (c.GetDisplay() == DisplayType.None || c.GetPosition() is PositionType.Absolute or PositionType.Fixed ||
+                c.GetFloat() != FloatType.None) continue;
+
+            if (c.TagName == "BR") return false;
+
+            if (c.TagName.StartsWith('#'))
+            {
+                var ws = c.GetWhiteSpace();
+                if (ws is WhiteSpace.Pre or WhiteSpace.PreWrap or WhiteSpace.PreLine && c.DisplayText.Contains('\n'))
+                    return false;
+                if (c.DisplayText.IsCssWhiteSpaceOnly() && ws is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+                    continue;
+                // Non-empty inline text precedes a block-level node → anonymous block consumed line 1.
+                if (nodeIsBlock) return false;
+                continue;
+            }
+
+            var d = c.GetDisplay();
+            if (d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex
+                or DisplayType.Table or DisplayType.TableRowGroup or DisplayType.TableRow or DisplayType.TableCell)
+                return false;
+
+            if (nodeIsBlock) return false;
+        }
+        return false;
     }
 
     /// <summary>The ::first-line 'text-transform' of <paramref name="node"/>'s first line.</summary>
@@ -219,8 +288,41 @@ internal static partial class BoxEngine
             return false;
         }
 
+        // §16.6.1 (step 4 of the white-space processing model): a collapsible space at the END
+        // of a line is removed, also when closing inline-box edges follow it on that line, so
+        // those edges close up on the last glyph. Since leaf inline text keeps its boundary
+        // spaces (CollectInlineItems), '...text </span></span>' ended the line with a space
+        // the span's border then reached over (border-color-012, the block-in-inline-append
+        // references). The run that is the line's very last item is handled where its line
+        // width and wrapper fragments are folded.
+        void TrimSpaceBeforeClosingEdges()
+        {
+            for (var k = placed.Count - 1; k >= lineStart; k--)
+            {
+                var it = placed[k].item;
+                if (it.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow or
+                    InlineItemKind.Float or InlineItemKind.Strut) continue;
+                if (it.Kind == InlineItemKind.Text && it.Width <= 0f && (it.Text ?? "").IsCssWhiteSpaceOnly()) continue;
+                if (k == placed.Count - 1 || !IsSingleLineText(it) || it.Text is not { Length: > 0 } text ||
+                    !IsBreakSpace(text[^1]) || it.Node.GetWhiteSpace() is WhiteSpace.Pre or WhiteSpace.PreWrap)
+                    return;
+                var trimmedText = text.TrimEndCss();
+                using var trimFont = TextMeasure.CreateFont(it.Node);
+                var (trimLs, trimWsp) = TextMeasure.SpacingOf(it.Node);
+                var trimmedW = TextMeasure.MeasureSingleLine(trimmedText, trimFont, -1f, trimLs, trimWsp).Width;
+                var delta = it.Width - trimmedW;
+                if (delta <= 0f) return;
+                placed[k] = (it with { Text = trimmedText, Width = trimmedW, ContentW = trimmedW },
+                             placed[k].relX, placed[k].relY);
+                for (var j = k + 1; j < placed.Count; j++)
+                    placed[j] = (placed[j].item, placed[j].relX - delta, placed[j].relY);
+                return;
+            }
+        }
+
         void CommitLine()
         {
+            TrimSpaceBeforeClosingEdges();
             // Resolve the final line-box height: start from the baseline-aligned items' reach,
             // then grow outward (below for 'top', above for 'bottom') if those need more room.
             var above = maxAbove;
@@ -418,7 +520,7 @@ internal static partial class BoxEngine
             // shrink-to-fit box.
             var fitWidth = item.Width;
             if (item.Kind == InlineItemKind.Text && item.Text is { } fitText && fitText.Length > 0 &&
-                char.IsWhiteSpace(fitText[^1]) &&
+                IsCssSpace(fitText[^1]) &&
                 item.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
             {
                 using var fitFont = TextMeasure.CreateFont(item.Node);
@@ -542,7 +644,7 @@ internal static partial class BoxEngine
             // in browsers — keeping it opened ' OneTwoThree' one space past the border
             // (block-in-inline-insert-001-nosplit-ref).
             var atLineStart = lineX <= bandLeft ||
-                placed.FindIndex(lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow)) < 0;
+                placed.FindIndex(lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow or InlineItemKind.Float or InlineItemKind.Strut)) < 0;
 
             // Skip whitespace-only text at the start of a line — a COLLAPSING one (§16.6.1):
             // under white-space:pre/pre-wrap a preserved space at a line's start renders, and
@@ -560,7 +662,7 @@ internal static partial class BoxEngine
             // a line boundary painted one space too far right (white-space-12 reftests).
             // Preserved spaces (pre/pre-wrap) are content and stay.
             if (atLineStart && item.Kind == InlineItemKind.Text && item.Text is { } leading &&
-                leading.Length > 0 && char.IsWhiteSpace(leading[0]))
+                leading.Length > 0 && IsCssSpace(leading[0]))
             {
                 var wsMode = item.Node?.GetWhiteSpace() ?? WhiteSpace.Normal;
                 if (wsMode is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
@@ -578,30 +680,52 @@ internal static partial class BoxEngine
             // §16.6.1: consecutive collapsible spaces across an inline boundary collapse to
             // one — the previous item's trailing space has already advanced the line, so this
             // item's leading space must not render a second one (float-nowrap-3's 'my parent.'
-            // sat one ch right of the reference's). Preserved spaces (pre/pre-wrap) stay.
+            // sat one ch right of the reference's). When stripping leaves an empty run, drop
+            // the item from the line entirely so its wrapper does not paint a background over
+            // collapsed whitespace (white-space-normal-007/008, white-space-collapsing-004/005).
+            // Preserved spaces (pre/pre-wrap) and non-CSS spaces (&nbsp;) stay.
             if (lineX > bandLeft && item.Kind == InlineItemKind.Text && item.Text is { Length: > 0 } lt &&
-                char.IsWhiteSpace(lt[0]) &&
+                IsCssSpace(lt[0]) &&
                 item.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
             {
+                var collapsedAway = false;
                 for (var k = placed.Count - 1; k >= lineStart; k--)
                 {
                     var pit = placed[k].item;
-                    if (pit.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow or InlineItemKind.Float) continue;
+                    if (pit.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow or InlineItemKind.Float or InlineItemKind.Strut) continue;
                     if (pit.Kind == InlineItemKind.Text && pit.Text is { Length: > 0 } pt &&
-                        char.IsWhiteSpace(pt[^1]) &&
+                        IsCssSpace(pt[^1]) &&
                         pit.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
                     {
                         var stripped = lt.TrimStartCss();
-                        if (stripped.Length == 0) continue;
+                        if (stripped.Length == 0)
+                        {
+                            collapsedAway = true;
+                            break;
+                        }
                         var stripW = StrippedWidth(item.Node, stripped);
                         item = item with { Text = stripped, Width = stripW, ContentW = stripW };
                     }
                     break;
                 }
+                if (collapsedAway) continue;
             }
 
             // For text items wider than the available space, re-measure with wrapping
             var effectiveItem = item;
+            // §16.6.1: tab stops are measured from the block's starting content edge, so a
+            // mid-line text item carrying U+0009 must re-measure its tab width at its actual
+            // lineX offset (word-spacing-characters-001's pre line with preceding inline spacers).
+            if (item.Kind == InlineItemKind.Text && item.Text is { } tabText && tabText.IndexOf('\t') >= 0 &&
+                lineX > bandLeft)
+            {
+                using var tabFont = TextMeasure.CreateFont(item.Node);
+                var (tabLs, tabWsp) = TextMeasure.SpacingOf(item.Node);
+                var tabW = TextMeasure.MeasureWithSpacing(tabText, tabFont, tabLs, tabWsp, lineX - bandLeft);
+                item = item with { Width = tabW, ContentW = tabW };
+                effectiveItem = item;
+                fitWidth = tabW;
+            }
             if (item.Kind == InlineItemKind.Text && item.Text != null)
             {
                 var availW = bandRight - lineX;
@@ -729,10 +853,11 @@ internal static partial class BoxEngine
                 item.Node.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap) &&
                 (pi + 1 >= placed.Count || placedLine[pi + 1] != placedLine[pi]))
             {
+                var trimmedText = t.TrimEndCss();
                 using var trimFont = TextMeasure.CreateFont(item.Node);
                 var (trimLs, trimWsp) = TextMeasure.SpacingOf(item.Node);
-                var trimmed = TextMeasure.MeasureSingleLine(t.TrimEndCss(), trimFont, -1f, trimLs, trimWsp).Width;
-                folded = item with { Width = trimmed, ContentW = trimmed };
+                var trimmed = TextMeasure.MeasureSingleLine(trimmedText, trimFont, -1f, trimLs, trimWsp).Width;
+                folded = item with { Text = trimmedText, Width = trimmed, ContentW = trimmed };
             }
             ApplyInlineItem(folded, originX + relX, originY + relY, viewportWidth, viewportHeight);
             AccumulateWrapperFragment(wrapperFragments, folded, originX + relX, originY + relY, placedLine[pi]);
@@ -755,10 +880,10 @@ internal static partial class BoxEngine
         InlineItem item, float absX, float absY, int lineIndex)
     {
         if (item.Kind is InlineItemKind.OutOfFlow or InlineItemKind.LineBreak) return;
-        // A whitespace-only text item paints no ink and (§16.6.1) holds no line slot — folding
-        // its rect gave the wrapper a border fragment around collapsed space (the XML-served
-        // border-color-012 markup's inter-span whitespace grew an inner border box).
-        if (item.Kind == InlineItemKind.Text && (item.Text ?? "").IsCssWhiteSpaceOnly()) return;
+        // §16.6.1: a collapsed (zero-width) whitespace item holds no line slot and must not grow
+        // a wrapper's fragment; a surviving rendered space (e.g. '<span> </span>' between two
+        // words) DOES occupy advance width and its wrapper's background covers it.
+        if (item.Kind == InlineItemKind.Text && (item.Text ?? "").IsCssWhiteSpaceOnly() && item.Width <= 0f) return;
         if (item.Kind == InlineItemKind.InlineEdge)
         {
             var span = new SKRect(absX, absY, absX + item.Width, absY);
@@ -1271,6 +1396,10 @@ internal static partial class BoxEngine
     private static bool RendersNothingInline(LayoutNode node) =>
         IsCollapsibleWhitespaceText(node) || node.TagName is "#comment" or "#pi" ||
         node.GetDisplay() == DisplayType.None;
+
+    /// <summary>CSS 2.1 §16.6.1 collapsible white-space characters (excludes U+00A0 NBSP and
+    /// Unicode spaces such as U+2000 en quad).</summary>
+    private static bool IsCssSpace(char c) => c is ' ' or '\t' or '\n' or '\r' or '\f';
 
     /// <summary>A text node holding only collapsible whitespace (no rendered glyph; a no-break
     /// space is content).</summary>
@@ -1929,6 +2058,19 @@ internal static partial class BoxEngine
                 // §16.2/UAX #9 subset reversal), so measuring it keeps width and fragments
                 // in agreement with what painting draws.
                 var rendered = node.RenderedText();
+                // §16.6.1: collapsible spaces are removed only at line start/end or after another
+                // collapsible space — not at inline element boundaries. The parser trims leaf
+                // text as if it stood alone; restore those boundary spaces for inline elements so
+                // the first space stays in its own inline box (keeping its background) and the
+                // line loop collapses consecutive or line-edge spaces across siblings.
+                if (display == DisplayType.Inline && !node.TagName.StartsWith('#') &&
+                    ws is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+                {
+                    if (node.TrimmedLeadingSpace && (rendered.Length == 0 || !IsCssSpace(rendered[0])))
+                        rendered = " " + rendered;
+                    if (node.TrimmedTrailingSpace && (rendered.Length == 0 || !IsCssSpace(rendered[^1])))
+                        rendered += " ";
+                }
                 var segments = ws is WhiteSpace.Pre or WhiteSpace.PreWrap or WhiteSpace.PreLine
                                && rendered.Contains('\n')
                     ? rendered.Split('\n')
