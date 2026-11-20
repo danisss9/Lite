@@ -26,9 +26,19 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Edits outside owned files
 
-_(None yet.)_
+- `Lite/Parser.cs` (1-line fix in `Traverse` mixed-children loop: call `NormalizeTextWhitespace(textNode.Data, ws)` instead of `CollapseWhitespace(textNode.Data)`, matching the leaf-text path at line 1078, so `white-space: pre`/`pre-wrap`/`pre-line` preserves newlines and spaces in mixed-children elements).
 
 ## Progress
+
+### 2026-11-20 — Commit 2: §16.6 preserve white-space on mixed-children text nodes (`Parser.cs`, edit outside owned files)
+- **Moved (+4: 2 official, 2 WPT, 0 losses; cumulative +10: 5 official, 5 WPT):**
+  - `c562-white-sp-000` (official + WPT)
+  - `word-spacing-characters-001` (official + WPT)
+- **What changed:**
+  - `Lite/Parser.cs` (1 line): mixed-children `#text` nodes now normalize via `NormalizeTextWhitespace(textNode.Data, ws)` instead of `CollapseWhitespace(textNode.Data)`.
+- **Still failing (pre/mixed):** `white-space-mixed-001..003` (still needs mixed `normal`/`pre`/`nowrap` boundary handling), `text-indent-intrinsic-001..004` (addressed next in Commit 3 via `IntrinsicSizer.cs`).
+- **Handed to other lanes:** None yet.
+- **Checks:** Units 649/649; `css21` 51/1; `wpt` 86/2; Lane A 5/74 official, 5/90 WPT (+4, 0 losses); Canary 300/300 (154/154 official, 146/146 WPT).
 
 ### 2026-11-20 — Commit 1: §16.6.1 collapsible whitespace across inline boundaries and empty inline struts
 - **Moved (+6: 3 official, 3 WPT, 0 losses):**

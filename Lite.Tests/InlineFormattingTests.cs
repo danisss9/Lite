@@ -48,4 +48,20 @@ public static class InlineFormattingTests
         True(Math.Abs(b.Box.ContentBox.Width - 20f) < 0.5f,
             $"second span's leading space collapsed away (1em = 20px), got {b.Box.ContentBox.Width}");
     }
+
+    [Test]
+    public static void MixedChildrenPre_PreservesNewlinesAndSpaces()
+    {
+        // CSS 2.1 §16.6: text nodes inside a mixed-children element with white-space: pre
+        // must preserve newlines and spaces (not collapse them via CollapseWhitespace).
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0;font:20px/1 Ahem'>" +
+            "<pre id='p'><span>A</span>\n<span>B</span></pre>" +
+            "</body></html>");
+        var pre = FindNode(root, n => n.Id == "p")!;
+        var spans = pre.Children.Where(c => c.TagName == "SPAN").ToList();
+        True(spans.Count == 2, $"expected 2 spans, got {spans.Count}");
+        True(spans[1].Box.ContentBox.Top > spans[0].Box.ContentBox.Top + 10f,
+            $"second span should sit on a new line below first (y0={spans[0].Box.ContentBox.Top}, y1={spans[1].Box.ContentBox.Top})");
+    }
 }
