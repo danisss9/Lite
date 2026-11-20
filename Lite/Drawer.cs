@@ -763,14 +763,18 @@ internal static partial class Drawer
         var bgColor = node != _propagatedBackgroundNode ? node.GetBackgroundColor() : SKColors.Transparent;
         if (bgColor != SKColors.Transparent)
         {
-            var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
+            // §14.2: the background style covers the content, padding AND border areas — a
+            // transparent border shows the background through (the table-backgrounds bs/bc
+            // suites' transparent table borders over an aqua table). Positioning of background
+            // images keeps the padding-box origin; only the colour's painted area is the border box.
+            var (rx, ry) = node.GetBorderRadius(box.BorderBox.Width, box.BorderBox.Height);
             // A square background is snapped to whole device pixels (no anti-aliasing), which is
             // what a browser does and what replaced content already does here. Anti-aliasing a
             // box that lands on a fractional y left a half-covered fringe row, so a background
             // and an image of the same size in the same place did not paint the same pixels.
             using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
-            if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
-            else canvas.DrawRect(box.PaddingBox, bgPaint);
+            if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.BorderBox, rx, ry, bgPaint);
+            else canvas.DrawRect(box.BorderBox, bgPaint);
         }
         var gradient = node.GetLinearGradient();
         if (gradient != null && node != _propagatedBackgroundNode)
@@ -820,26 +824,37 @@ internal static partial class Drawer
 
         // Decorations are drawn before the scroll translate for scrollable elements;
         // skip them here to avoid painting them twice. empty-cells:hide also suppresses them.
-        // In a collapsed table the row/group/column boxes paint NO borders of their own —
-        // the cells carry the §17.6.2.1 resolved winners, and a row border painted at the
-        // row's box would draw an inner duplicate line (border-conflict-element-003/004/012).
-        // Only the row's own decorations are suppressed: its children (the cells) still paint.
-        var noDecorations = false;
+        // In a collapsed table the row/group boxes paint NO borders of their own — the cells
+        // carry the §17.6.2.1 resolved winners, and a row border painted at the row's box
+        // would draw an inner duplicate line (border-conflict-element-003/004/012). Only the
+        // borders and outline are suppressed: the row's own §17.5.1 background layer (whose
+        // edges sit on the grid lines there — table-backgrounds-bc-row-001) still paints, and
+        // the row's children (the cells) paint in full.
+        var suppressTableLayerBorders = false;
         if (!_predecorated.Contains(node) && node.ScrollState?.NeedsScrollbar != true && !IsEmptyCellHidden(node))
         {
             var propagated = node == _propagatedBackgroundNode;
+            LayoutNode? ownerTable = null;
             if (node.GetDisplay() is DisplayType.TableRow or DisplayType.TableRowGroup
                 || TableEngine.IsColumn(node) || TableEngine.IsColumnGroup(node))
             {
                 for (var a = node.Parent; a is not null; a = a.Parent)
                 {
                     if (a.GetDisplay() != DisplayType.Table) continue;
-                    noDecorations = TableEngine.IsBorderCollapse(a);
+                    ownerTable = a;
+                    suppressTableLayerBorders = TableEngine.IsBorderCollapse(a);
                     break;
                 }
             }
-            if (!noDecorations)
+            // §17.5.1, separated borders model: a row/group/column background "covers exactly
+            // the full area of the cells that originate" in it, so the border-spacing gaps
+            // (the table's layer, §17.6.1) show through. TableEngine records the per-cell
+            // rects; a collapsed table paints its full band and gets none.
+            IReadOnlyList<SKRect>? cellArea =
+                ownerTable is not null && TableEngine.TryGetCellAreaBackgrounds(ownerTable, node, out var rects)
+                    ? rects : null;
             {
+                if (!propagated && !suppressTableLayerBorders) DrawBoxShadows(canvas, box, node);
                 if (!propagated) DrawBoxShadows(canvas, box, node);
 
                 // Background — a body whose background propagated to the canvas (§14.2) paints
@@ -849,10 +864,21 @@ internal static partial class Drawer
                     var bgColor = node.GetBackgroundColor();
                     if (bgColor != SKColors.Transparent)
                     {
-                        var (rx, ry) = node.GetBorderRadius(box.PaddingBox.Width, box.PaddingBox.Height);
-                        using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
-                        if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.PaddingBox, rx, ry, bgPaint);
-                        else canvas.DrawRect(box.PaddingBox, bgPaint);
+                        // §14.2: the background paints the content, padding AND border areas —
+                        // a transparent border shows the colour through (table-backgrounds bs/bc
+                        // tables). Images and gradients keep the padding-box origin.
+                        if (cellArea is not null)
+                        {
+                            using var bgPaint = new SKPaint { Color = bgColor };
+                            foreach (var rect in cellArea) canvas.DrawRect(rect, bgPaint);
+                        }
+                        else
+                        {
+                            var (rx, ry) = node.GetBorderRadius(box.BorderBox.Width, box.BorderBox.Height);
+                            using var bgPaint = new SKPaint { Color = bgColor, IsAntialias = rx > 0 || ry > 0 };
+                            if (rx > 0 || ry > 0) canvas.DrawRoundRect(box.BorderBox, rx, ry, bgPaint);
+                            else canvas.DrawRect(box.BorderBox, bgPaint);
+                        }
                     }
 
                     // Linear gradient background
@@ -860,8 +886,18 @@ internal static partial class Drawer
                     if (gradient != null)
                         DrawLinearGradient(canvas, box, node, gradient);
 
-                    // Background image
-                    DrawBackgroundImage(canvas, node, box);
+                    // Background image — clipped to the cells' area like the colour.
+                    if (cellArea is not null)
+                    {
+                        canvas.Save();
+                        using var clipPath = new SKPath();
+                        foreach (var rect in cellArea) clipPath.AddRect(rect);
+                        canvas.ClipPath(clipPath);
+                        DrawBackgroundImage(canvas, node, box);
+                        canvas.Restore();
+                    }
+                    else
+                        DrawBackgroundImage(canvas, node, box);
 
                     if (node.GetDisplay() is DisplayType.Table or DisplayType.InlineTable)
                         PaintColumnBackgrounds(canvas, node);
@@ -873,8 +909,9 @@ internal static partial class Drawer
                 // the winner at the frame (border-conflict-element-039's red sides).
                 var suppressTableBorder = node.GetDisplay() is DisplayType.Table or DisplayType.InlineTable
                                           && TableEngine.IsBorderCollapse(node);
-                if (!suppressTableBorder) DrawBorders(canvas, box, node);
-                DrawOutline(canvas, box, node);            }
+                if (!suppressTableBorder && !suppressTableLayerBorders) DrawBorders(canvas, box, node);
+                if (!suppressTableLayerBorders) DrawOutline(canvas, box, node);
+            }
         }
 
         if (!node.GetPointerEventsNone())

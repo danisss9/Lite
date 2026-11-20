@@ -311,6 +311,7 @@ internal static class TableEngine
         // A column spans the rows top to bottom; a group spans its columns. The painter draws
         // their backgrounds above the table's and below the rows' (they had no box at all, so a
         // col { background: orange } painted nothing — fixed-table-layout-017).
+        var columnExtents = new List<(LayoutNode Node, int First, int Last)>();
         if (rowCount > 0)
         {
             var gridTop = rowYs[0];
@@ -335,6 +336,7 @@ internal static class TableEngine
                     var left = CellX(contentX, colWidths, first, spacing);
                     var right = CellX(contentX, colWidths, last, spacing) + colWidths[last];
                     child.Box = new BoxDimensions { ContentBox = new SKRect(left, gridTop, right, gridBottom) };
+                    columnExtents.Add((child, first, last));
                 }
             }
             ColumnBoxes(table);
@@ -357,6 +359,40 @@ internal static class TableEngine
         if (caption is not null && captionBottom)
             captionBottomH = LayoutCaptionBlock(caption, contentX, ry, contentW, viewportW, viewportH);
         ry += captionBottomH;
+
+        // §17.5.1, separated borders model: the background of a row, row group, column or column
+        // group "covers exactly the full area of the cells that originate" in it — even where a
+        // cell spans outside — and the 'border-spacing' between the cells belongs to the table's
+        // background layer (§17.6.1), so it shows through the gaps. The band boxes the layers
+        // otherwise paint cover the spacing, so the painter draws these per-cell rects instead
+        // (the table-backgrounds bs row/group/column suites). In the collapsing model the layer
+        // edges sit on the grid lines and the full band paints, so no rects are recorded there.
+        var cellAreas = new Dictionary<LayoutNode, List<SKRect>>();
+        if (!collapse)
+        {
+            void AddCellRect(LayoutNode layer, SKRect rect)
+            {
+                if (!cellAreas.TryGetValue(layer, out var list)) cellAreas[layer] = list = new List<SKRect>();
+                list.Add(rect);
+            }
+            foreach (var p in placements)
+            {
+                if (p.Row >= rows.Count) continue;
+                var rect = p.Cell.Box.BorderBox;
+                var rowNode = rows[p.Row].Row;
+                AddCellRect(rowNode, rect);
+                var group = rowNode.Parent;
+                if (group is not null && !ReferenceEquals(group, table)
+                    && group.GetDisplay() == DisplayType.TableRowGroup)
+                    AddCellRect(group, rect);
+            }
+            foreach (var (node, first, last) in columnExtents)
+                foreach (var p in placements)
+                    if (p.Col >= first && p.Col <= last)
+                        AddCellRect(node, p.Cell.Box.BorderBox);
+        }
+        s_cellAreaBackgrounds.AddOrUpdate(table,
+            new CellAreaBackgrounds(cellAreas, BoxEngine.Generation));
 
         s_captionInsets.AddOrUpdate(table,
             new CaptionInsets(captionTopH, captionBottomH, BoxEngine.Generation));
@@ -1261,6 +1297,29 @@ internal static class TableEngine
 
     private sealed record CaptionInsets(float Top, float Bottom, int Generation);
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<LayoutNode, CaptionInsets> s_captionInsets = new();
+
+    /// <summary>Per-table cache of the §17.5.1 separated-model background areas: for each row,
+    /// row group, column and column-group node, the border boxes of the cells originating in it.
+    /// Empty (and the painter falls back to the layer's band box) for collapsed tables.</summary>
+    private sealed record CellAreaBackgrounds(Dictionary<LayoutNode, List<SKRect>> ByLayer, int Generation);
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<LayoutNode, CellAreaBackgrounds> s_cellAreaBackgrounds = new();
+
+    /// <summary>The separated-model background rects for <paramref name="layer"/> (a row, row
+    /// group, column or column group) under <paramref name="table"/>, or false when the table
+    /// is collapsed or the layer has no cells.</summary>
+    internal static bool TryGetCellAreaBackgrounds(LayoutNode table, LayoutNode layer, out IReadOnlyList<SKRect> rects)
+    {
+        if (s_cellAreaBackgrounds.TryGetValue(table, out var cached)
+            && cached.Generation == BoxEngine.Generation
+            && cached.ByLayer.TryGetValue(layer, out var list)
+            && list.Count > 0)
+        {
+            rects = list;
+            return true;
+        }
+        rects = Array.Empty<SKRect>();
+        return false;
+    }
 
     /// <summary>§17.4: a caption sits in the anonymous table wrapper, OUTSIDE the table box —
     /// the table's own background, borders and outline paint only on the band between the

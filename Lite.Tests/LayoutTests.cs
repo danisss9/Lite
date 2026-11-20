@@ -396,7 +396,7 @@ public static class LayoutTests
         True(Math.Abs(w2 - 96f) < 1f, $"the wider cell below must not shrink the column below 96px (got {w2})");
     }
 
-    // -- §17.6.2 collapsed-model geometry --
+    // -- §14.2 / §17.5.1 / §17.6.2 table background paint areas (table-backgrounds suites) --
 
     private static LayoutNode LayoutPage(string html)
     {
@@ -414,6 +414,42 @@ public static class LayoutTests
             if (found is not null) return found;
         }
         return null;
+    }
+
+    [Test]
+    public static void TableBackground_FillsTransparentBorder()
+    {
+        // §14.2: the background paints the content, padding AND border areas — a transparent
+        // border shows it through (table-backgrounds-bs-table-001's aqua table stopped at its
+        // padding box and came out 5px narrower than its reference on every side).
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0}</style>" +
+            "<table style=\"border-collapse:separate; border-spacing:0; margin:0; border:5px solid transparent; background:aqua\">" +
+            "<tr><td style=\"padding:0; border:0; width:100px; height:20px\"></td></tr></table>");
+        var bitmap = Drawer.DrawToBitmap(140, 60, root, new Viewport { ViewportHeight = 60 });
+        using (bitmap)
+            True(bitmap.GetPixel(2, 15) == SKColors.Aqua,
+                $"the transparent border band must show the table background (got {bitmap.GetPixel(2, 15)})");
+    }
+
+    [Test]
+    public static void RowBackground_CoversCellsAreaNotBorderSpacing()
+    {
+        // §17.5.1 (separated model): a row's background "covers exactly the full area of the
+        // cells that originate in it", and §17.6.1 leaves the border-spacing to the table's
+        // background layer (table-backgrounds-bs-row-001 painted one continuous band).
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0}</style>" +
+            "<table style=\"border-collapse:separate; border-spacing:10px; margin:0; border:0; padding:0\">" +
+            "<tr style=\"background:aqua\">" +
+            "<td style=\"padding:0; border:0; width:40px; height:20px\"></td>" +
+            "<td style=\"padding:0; border:0; width:40px; height:20px\"></td></tr></table>");
+        var bitmap = Drawer.DrawToBitmap(140, 60, root, new Viewport { ViewportHeight = 60 });
+        using (bitmap)
+        {
+            True(bitmap.GetPixel(20, 10) == SKColors.Aqua,
+                $"the cell area must paint the row background (got {bitmap.GetPixel(20, 10)})");
+            True(bitmap.GetPixel(50, 10) != SKColors.Aqua,
+                $"the border-spacing gap must show the table's layer, not the row background (got {bitmap.GetPixel(50, 10)})");
+        }
     }
 
     [Test]
