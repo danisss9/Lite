@@ -198,6 +198,9 @@ internal static partial class BoxEngine
         // from inside a local function.
         var committedLineTop = 0f;
         var committedLineWidth = 0f;
+        // Whether any line box has committed yet: a float following the first line may join it
+        // (§9.5.1 rule 6), but before any commit there is no open line to join.
+        var hasCommittedLine = false;
 
         // §9.4.2's test for a line box that "exists": any in-flow content at all — text that is
         // not purely collapsible whitespace, a replaced box, an inline-block/flex/table, or a
@@ -296,6 +299,7 @@ internal static partial class BoxEngine
                 placed[k] = (it, rx + dx, lineY + yOffset);
             }
             lineY += thisLineHeight;
+            hasCommittedLine = true;
             maxAbove = maxBelow = maxTopH = maxBottomH = 0f;
             hasBaselineItem = false;
             lineEndsWithBreak = false;
@@ -356,16 +360,87 @@ internal static partial class BoxEngine
             // top (rule 4: the float's top aligns with the line box it was generated in), beside
             // the band's start or end edge per its side, and the line's remaining width shrinks
             // beside it. The float's node lays out its own content here; the line loop continues
-            // with the narrowed band.
+            // with the narrowed band. When the float takes the band's edge where the line's
+            // earlier content already sits, that content re-flows right of the float (§9.5: the
+            // current line box is shortened by the float's margin box — floats-placement-
+            // vertical-001a's "Hello" moves beside the float, floats-006's X re-flows right of
+            // the two floated squares).
             if (item.Kind == InlineItemKind.Float)
             {
-                PlaceInRunFloat(item, floats, originX, originY, lineY, lineX,
+                // §9.5.1 rules 6+8: on an empty current line the run's just-committed line box
+                // is still the float's open line — it may join that line's top when it fits
+                // beside the width the line used (a <br> between float groups, the strut-only
+                // line a cleared break ended). The open-line decision itself lives in
+                // PlaceInRunFloat.
+                var lineIsEmpty = placed.FindIndex(lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge
+                    or InlineItemKind.OutOfFlow or InlineItemKind.Float)) < 0;
+                // §16.6.1: trailing collapsible whitespace at the line's end is removed — it is
+                // not line content, so the float's overlap, re-flow and drop-below decisions
+                // measure the line's extent without it (floats-006: the space between the span
+                // and the floated divs would otherwise inflate the used width and drop the
+                // second float below the first instead of packing beside it).
+                var lineContentRight = lineX;
+                for (var k = placed.Count - 1; k >= lineStart; k--)
+                {
+                    var (pit, prx, _) = placed[k];
+                    if (pit.Kind == InlineItemKind.OutOfFlow || pit.Kind == InlineItemKind.Float) continue;
+                    if (pit.Kind is InlineItemKind.Text or InlineItemKind.LineBreak &&
+                        string.IsNullOrWhiteSpace(pit.Text)) continue;
+                    lineContentRight = prx + pit.Width;
+                    break;
+                }
+                var rf = PlaceInRunFloat(item, floats, originX, originY, lineY, lineContentRight,
                                 Math.Max(maxAbove + maxBelow, strutAbove + strutBelow), maxWidth,
-                                viewportWidth, viewportHeight, bandLeft);
-                var (nbx, nbw) = AvailableBand(floats, originY + lineY, 1, originX, maxWidth);
+                                viewportWidth, viewportHeight, bandLeft,
+                                hasCommittedLine && lineIsEmpty ? committedLineTop : float.NaN,
+                                committedLineWidth);
+                if (rf.Shift > 0f)
+                {
+                    for (var k = lineStart; k < placed.Count; k++)
+                    {
+                        var (it, rx, ry) = placed[k];
+                        if (it.WrappedLines is { } slices)
+                            it = it with { WrappedLines =
+                                slices.Select(s => (s.Text, s.X + rf.Shift, s.Width, s.Height)).ToList() };
+                        placed[k] = (it, rx + rf.Shift, ry);
+                    }
+                    lineX += rf.Shift;
+                }
+                var (nbx, nbw) = AvailableBand(floats, originY + lineY,
+                    Math.Max(Math.Max(maxAbove + maxBelow, strutAbove + strutBelow), 1f), originX, maxWidth);
                 bandLeft = nbx - originX;
                 bandRight = bandLeft + nbw;
                 continue;
+            }
+
+            // §9.5 rule 7 for EVERY line box, not just the run's first: a line whose band —
+            // measured over the extent the line will actually occupy — is too small for its
+            // content is shifted downward until it fits or no floats remain below. The band
+            // uses the coming item's height, so a float whose top starts partway down the line
+            // box still shortens it (§9.5: a line box is "next to" a float when they overlap
+            // vertically) — floats-wrap-top-below-inline-002l's second span drops below the
+            // second float, and floats-zero-height-wrap's 1px-tall float still shortens the
+            // line it starts inside. Only an empty line shifts: content already placed stays.
+            if (floats.Count > 0 && lineX <= bandLeft &&
+                placed.FindIndex(lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge
+                    or InlineItemKind.OutOfFlow or InlineItemKind.Float)) < 0)
+            {
+                var pieceW = FirstPieceWidth(item) + (lineX - bandLeft);
+                var contentH = Math.Max(Math.Max(Math.Max(strutAbove + strutBelow, maxAbove + maxBelow),
+                    item.Height), 1f);
+                if (pieceW > bandRight - bandLeft + 0.5f)
+                {
+                    var (dxb, dwb) = AvailableBand(floats, originY + lineY, contentH, originX, maxWidth);
+                    var keepIndent = lineX - bandLeft;
+                    while (pieceW > dwb + 0.5f && NextFloatBottom(floats, originY + lineY) is { } nextY)
+                    {
+                        lineY = nextY - originY;
+                        (dxb, dwb) = AvailableBand(floats, originY + lineY, contentH, originX, maxWidth);
+                    }
+                    bandLeft = dxb - originX;
+                    bandRight = bandLeft + dwb;
+                    lineX = bandLeft + keepIndent;
+                }
             }
 
             // A whitespace-only text item that would cross the line's end collapses there

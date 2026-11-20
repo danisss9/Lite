@@ -97,6 +97,23 @@ internal static partial class BoxEngine
         return 0f;
     }
 
+    /// <summary><see cref="FirstUnbreakableWidth"/> for a single item: the first word of a text
+    /// item (whitespace-only items measure 0), or the whole width of an atomic one. This is the
+    /// piece a line box must be able to hold before it may stop shifting downward past float
+    /// bottoms (§9.5 rule 7).</summary>
+    private static float FirstPieceWidth(InlineItem item)
+    {
+        if (item.Kind != InlineItemKind.Text) return item.Width;
+        if (item.Text is not { } t) return 0f;
+        var trimmed = t.TrimStartCss();
+        if (trimmed.Length == 0) return 0f;
+        if (item.Node.GetWhiteSpace() is WhiteSpace.NoWrap or WhiteSpace.Pre) return item.Width;
+        var end = trimmed.IndexOf(' ');
+        var word = end < 0 ? trimmed : trimmed[..end];
+        using var font = TextMeasure.CreateFont(item.Node);
+        return font.MeasureText(word);
+    }
+
     /// <summary>
     /// The band (absolute left edge and width) of each successive line box of a wrapped text run
     /// starting at <paramref name="startY"/>, ending once no float reaches any lower — from there
@@ -301,14 +318,28 @@ internal static partial class BoxEngine
         return new ActiveFloat(outerLeft, outerTop, outerRight, outerBottom, side, chainOffset, child);
     }
 
+    /// <summary>The outcome of placing a float that was met inside an inline run: a positive
+    /// <see cref="Shift"/> moves the current line box's already-laid-out content right of the
+    /// float (§9.5 — the line box created next to the float is shortened by its margin box, and
+    /// content that was already on the line re-flows into the remaining band).</summary>
+    private readonly record struct RunFloatPlacement(float Shift)
+    {
+        public static readonly RunFloatPlacement None = default;
+    }
+
     /// <summary>Lays out a float met inside an inline run: the node's content (a subtree or a
     /// text run) lays out at the float's box, and the returned active float narrows every band
-    /// from the float's top down. Sizing follows §10.3.5 (explicit width or shrink-to-fit,
-    /// clamped by min/max); the Y placement follows §9.5.1 rule 4 — the float's top aligns
-    /// with the current line box's top.</summary>
-    private static void PlaceInRunFloat(InlineItem item, List<ActiveFloat> floats,
+    /// from the float's top down. Sizing follows §10.3.5 / §10.3.2 (explicit width, replaced
+    /// intrinsic size, or shrink-to-fit, clamped by min/max); the Y placement follows §9.5.1
+    /// rules 4-9 — as high as the current line box allows (or, when the run's last line box was
+    /// just committed empty of content, on THAT line's top — rule 6 + rule 8, the same open-line
+    /// join the direct-child path applies), no higher than an earlier float (rule 5), as far to
+    /// its side as the band permits (rule 9), dropping below the line when there is not enough
+    /// horizontal room (rule 7).</summary>
+    private static RunFloatPlacement PlaceInRunFloat(InlineItem item, List<ActiveFloat> floats,
         float originX, float originY, float lineY, float lineX, float lineHeight, float maxWidth,
-        float viewportWidth, float viewportHeight, float bandLeft)
+        float viewportWidth, float viewportHeight, float bandLeft,
+        float openLineY = float.NaN, float openLineUsedW = 0f)
     {
         var node = item.Node!;
         var side = node.GetFloat();
@@ -321,10 +352,14 @@ internal static partial class BoxEngine
         var padding = node.GetPadding(maxWidth, viewportHeight, fontSize);
         var border = node.GetBorderWidth();
 
-        // §10.3.5 sizing: explicit width or shrink-to-fit, clamped by min/max (the same
-        // discipline the direct-child float path applies).
+        // §10.3.5 sizing: explicit width, the replaced intrinsic size (§10.3.2 — a floated
+        // replaced box is sized from the image, not shrink-to-fit over children it does not
+        // have), or shrink-to-fit, clamped by min/max — the same discipline the direct-child
+        // float path applies.
         var hasExplicitW = !node.IsAutoWidth();
         var explicitW = hasExplicitW ? node.GetWidth(maxWidth) : 0f;
+        var replaced = TryResolveReplacedSize(node, maxWidth, 0, viewportHeight);
+        if (replaced.HasValue) { explicitW = replaced.Value.Width; hasExplicitW = true; }
         float childContentW;
         if (hasExplicitW)
         {
@@ -350,12 +385,90 @@ internal static partial class BoxEngine
         childContentW = Math.Max(0, childContentW);
         var outerW = margin.Left + border.Left + padding.Left + childContentW + padding.Right + border.Right + margin.Right;
 
-        // The float's box: beside the band's end edge for its side, at the current line's top
-        // (§9.5.1 rules 4-5: as high as the line permits, as far to its side as possible). When
-        // the float would overlap the line's already-placed content (the content's extent
-        // reaches past the float's inner edge — the overflowing nowrap line), it drops below
-        // the line box (§9.5.1: a float never overlaps the line's content).
-        var (bx, bw) = AvailableBand(floats, originY + lineY, 1, originX, maxWidth);
+        // §9.5.1: the float joins the current line box (rules 4/6 — its outer top is the line's
+        // top) but may not be higher than an earlier float's outer top (rule 5). Past that floor
+        // it is no longer beside the line and the placement becomes the plain slide-down form.
+        // The band is measured over the extent the line actually occupies: a float whose top
+        // starts partway down the line box still shortens it (§9.5 — a line box is "next to" a
+        // float when they overlap vertically).
+        var lineTopAbs = originY + lineY;
+        var lineH = Math.Max(lineHeight, 1f);
+        // §9.5.1 rules 6+8: a float generated while the run's last line box is still "open" in
+        // source order — the line a <br> just ended, or the run's last line before a following
+        // float — belongs on that line when it fits beside what the line already holds (the
+        // same open-line join the direct-child float path applies). The line is closed, so its
+        // content cannot re-flow: the fit test below is the whole join condition.
+        var joinedLine = false;
+        if (!float.IsNaN(openLineY) && originY + openLineY < lineTopAbs - 0.5f)
+        {
+            var (jx, jw) = AvailableBand(floats, originY + openLineY, lineH, originX, maxWidth);
+            if (outerW <= jw - openLineUsedW + 0.5f)
+            {
+                lineTopAbs = originY + openLineY;
+                joinedLine = true;
+            }
+        }
+        var outerTop = lineTopAbs;
+        foreach (var f in floats) outerTop = Math.Max(outerTop, f.Top);
+        var dropped = outerTop > lineTopAbs + 0.5f;
+        var (bx, bw) = AvailableBand(floats, dropped ? outerTop : lineTopAbs, lineH, originX, maxWidth);
+        var contentLeftAbs = originX + bandLeft;
+        var contentRightAbs = originX + lineX;
+        if (!dropped && outerW > bw + 0.5f)
+        {
+            // Rule 7: not enough horizontal room beside the line — it moves below the line box.
+            dropped = true;
+            outerTop = lineTopAbs + lineH;
+            (bx, bw) = AvailableBand(floats, outerTop, lineH, originX, maxWidth);
+        }
+        if (!dropped && side == FloatType.Right)
+        {
+            // A right float cannot move the line's content leftward: overlapping the line's
+            // already-laid-out content (the overflowing nowrap line) drops it below the line.
+            var provRight = bx + bw;
+            var provLeft = provRight - outerW;
+            if (provLeft < contentRightAbs && provRight > contentLeftAbs && contentRightAbs > contentLeftAbs)
+            {
+                dropped = true;
+                outerTop = lineTopAbs + lineH;
+                (bx, bw) = AvailableBand(floats, outerTop, lineH, originX, maxWidth);
+            }
+        }
+        if (!dropped && side == FloatType.Left && !joinedLine)
+        {
+            // Rule 7 on the left side too: re-flowing the line's content beside the float is
+            // only possible while the content still fits the remaining band. When it does not
+            // — floats-placement-vertical-003's 100px float beside a 5px "H" in a 100px body —
+            // the float drops below the line box instead of pushing the content out.
+            var contentWOnLine = Math.Max(0f, contentRightAbs - contentLeftAbs);
+            if (bx < contentRightAbs && contentRightAbs > contentLeftAbs &&
+                contentWOnLine + outerW > bw + 0.5f)
+            {
+                dropped = true;
+                outerTop = lineTopAbs + lineH;
+                (bx, bw) = AvailableBand(floats, outerTop, lineH, originX, maxWidth);
+            }
+        }
+        if (dropped)
+        {
+            // Rule 7 continued: slide downward until either it fits or there are no more floats
+            // present (LayoutFloat's loop).
+            for (var attempt = 0; attempt < 50; attempt++)
+            {
+                (bx, bw) = AvailableBand(floats, outerTop, lineH, originX, maxWidth);
+                if (outerW <= bw + 0.5f) break;
+                var nearest = float.MaxValue;
+                foreach (var f in floats)
+                    if (f.Bottom > outerTop) nearest = Math.Min(nearest, f.Bottom);
+                if (nearest == float.MaxValue) break;
+                outerTop = nearest;
+            }
+        }
+        // Rule 9: as far to its side as the band permits (the band at the final outerTop).
+        if (!dropped)
+        {
+            (bx, bw) = AvailableBand(floats, outerTop, lineH, originX, maxWidth);
+        }
         float outerLeft;
         float outerRight;
         if (side == FloatType.Right)
@@ -368,11 +481,17 @@ internal static partial class BoxEngine
             outerLeft = bx;
             outerRight = outerLeft + outerW;
         }
-        var outerTop = originY + lineY;
-        var contentLeftAbs = originX + bandLeft;
-        var contentRightAbs = originX + lineX;
-        if (outerLeft < contentRightAbs && outerRight > contentLeftAbs && contentRightAbs > contentLeftAbs)
-            outerTop = originY + lineY + lineHeight;
+        // §9.5: the current line box — created next to the float — is shortened by the float's
+        // margin box, and content that was already on the line re-flows into the remaining band
+        // (floats-placement-vertical-001a, floats-006, c414-flt-wrap-001). A dropped float is
+        // below the line and displaces nothing on it; a float joined to the run's just-committed
+        // line cannot move that closed line's content, and the join's fit test already excludes
+        // the overlap.
+        var reflow = RunFloatPlacement.None;
+        if (!dropped && !joinedLine && side == FloatType.Left && outerLeft < contentRightAbs &&
+            contentRightAbs > contentLeftAbs)
+            reflow = new RunFloatPlacement(outerRight - contentLeftAbs);
+
         var placeContentX = outerLeft + margin.Left + border.Left + padding.Left;
         var placeContentY = outerTop + margin.Top + border.Top + padding.Top;
 
@@ -384,6 +503,10 @@ internal static partial class BoxEngine
             childContentH = isBBH
                 ? Math.Max(0, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom)
                 : explicitH;
+        }
+        else if (replaced.HasValue)
+        {
+            childContentH = replaced.Value.Height;
         }
         else
         {
@@ -414,5 +537,6 @@ internal static partial class BoxEngine
             outerLeft, outerTop,
             outerRight, outerTop + margin.Top + border.Top + padding.Top + childContentH + padding.Bottom + border.Bottom + margin.Bottom,
             side, 0, node));
+        return reflow;
     }
 }
