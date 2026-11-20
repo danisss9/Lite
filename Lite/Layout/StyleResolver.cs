@@ -230,6 +230,19 @@ internal static class StyleResolver
             var node = stack.Pop();
             foreach (var prop in node.StyleOverrides.Keys.ToList())
                 ResolveCssWideKeyword(node, prop);
+            // A keyword arriving through the DECLARED channel never reaches the override-channel
+            // resolution above: margins and padding are not in the parser's extracted property
+            // list, so a stylesheet 'margin: inherit' stays a raw 'inherit' in the computed
+            // declaration, which the length getters read as 0. Stamp it into the override
+            // channel — the same channel the box getters prefer — so the §6.2.1 resolution
+            // applies uniformly (margin-em-inherit-001: #child { margin: inherit } takes the
+            // parent's computed 56px, not 0). Non-keyword declared values are left where they
+            // are: the getters already resolve them against this element.
+            foreach (var side in new[] { "top", "right", "bottom", "left" })
+            {
+                StampDeclaredKeyword(node, $"margin-{side}");
+                StampDeclaredKeyword(node, $"padding-{side}");
+            }
             foreach (var child in node.Children)
                 stack.Push(child);
         }
@@ -240,6 +253,18 @@ internal static class StyleResolver
 
     private static string? InheritedOrNull(LayoutNode node, string prop) =>
         node.Parent is { } p ? EffectiveValue(p, prop) : null;
+
+    /// <summary>Lifts a css-wide keyword found on the DECLARED channel into the override
+    /// channel and resolves it there (see <see cref="ResolvePendingCssWideKeywords"/>).</summary>
+    private static void StampDeclaredKeyword(LayoutNode node, string prop)
+    {
+        if (node.StyleOverrides.ContainsKey(prop)) return;
+        var declared = node.Style.GetPropertyValueSafe(prop);
+        if (string.IsNullOrEmpty(declared)) return;
+        if (declared.Trim().ToLowerInvariant() is not ("inherit" or "initial" or "unset")) return;
+        node.StyleOverrides[prop] = declared;
+        ResolveCssWideKeyword(node, prop);
+    }
 
     /// <summary>A node's value for <paramref name="prop"/> as the getters read it: the
     /// override channel first, then the parse-time computed declaration. A parent styled by
@@ -254,9 +279,25 @@ internal static class StyleResolver
     {
         if (prop == "font-size")
             return node.GetFontSize().ToString(System.Globalization.CultureInfo.InvariantCulture) + "px";
-        if (node.TryResolveStyle(prop, out var value) && !string.IsNullOrEmpty(value)) return value;
-        var declared = node.Style.GetPropertyValueSafe(prop);
-        return string.IsNullOrEmpty(declared) || RelativeLength.IsMatch(declared) ? null : declared;
+        string? raw;
+        if (node.TryResolveStyle(prop, out var value) && !string.IsNullOrEmpty(value)) raw = value;
+        else
+        {
+            raw = node.Style.GetPropertyValueSafe(prop);
+            if (string.IsNullOrEmpty(raw)) return null;
+        }
+        // §6.2.1: inheritance passes the COMPUTED value. An 'em'/'ex' length computes against
+        // the declaring element's font-size, so it resolves here before it is copied — a child
+        // re-resolving the raw "2em" at its own font-size doubles it (margin-em-inherit-001:
+        // #child { margin: inherit } takes the parent's 56px, not 2em at the child's 40px).
+        // Percentages stay relative: §8.3 keeps them in the computed value and the child's
+        // containing block governs them.
+        var trimmed = raw.Trim();
+        if ((trimmed.EndsWith("em", StringComparison.Ordinal) ||
+             trimmed.EndsWith("ex", StringComparison.Ordinal)) &&
+            CssUnits.TryParse(trimmed, node.GetFontSize(), 0f, 0f, 0f, out var px))
+            return px.ToString(System.Globalization.CultureInfo.InvariantCulture) + "px";
+        return raw;
     }
 
     private static readonly System.Text.RegularExpressions.Regex RelativeLength =
