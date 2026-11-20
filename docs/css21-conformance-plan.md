@@ -747,6 +747,38 @@ The phases, in order:
       and the 0-loss rule after each batch.
     - **Docs.** The rules, file ownership and per-lane notes are in
       [css21-phase6/](css21-phase6/README.md). Batch results are folded in here.
+  - **Batch 1 (20 November): 12 lanes, 89 commits, merged at `823c9bcc`.**
+    - **Result.** A full upstream baseline against the 20 November split commit: official
+      7,737 → **7,949**, WPT 7,303 → **7,543** (452 new passes), with **0 losses**. Units 735/735;
+      curated gates 51/1 and 86/2. Obligations: 30 → **37** implemented (3.3, 4.1.2, 4.1.5, 4.1.7,
+      4.1.9, 9.3, 10.3.6). Ten move from failing to untested, because they now have only
+      manual-pending or unsupported cases left. 15.5 moves from untested to failing.
+    - **The first trial merge lost 132 cases** that every lane had missed. Lane checks ran only the
+      lane's failing list and a 300-case canary, and none of the 132 was in either.
+      - **Single-lane losses (65):** floats 35, block flow 13, cascade 8, and 9 more spread over
+        five lanes. Each lane fixed its own in a fix round.
+      - **One interaction (67):** fonts with generated content. 6.F holds an empty list item's
+        line with a lone U+FEFF. 6.J's fallback stopped default-ignorable characters from
+        choosing a face, which left U+FEFF on Arial, and Arial drew its `.notdef` box beside
+        every such marker. Fixed on `css21/p6-fj`: a run made only of default-ignorables takes a
+        face that maps them.
+      - **Since then,** every lane checks its own pass list (`<lane>-pass.txt`, 200–2,900 cases) and
+        a 960-case canary. `run-css21-baseline.ps1` builds the official catalog once before the
+        shards (after the xhtml1 re-pin, 7 of 10 shards died racing to rebuild it).
+    - **Deliberately not kept:**
+      - `max-height-separates-margin` (WPT). It requires the opposite of `margin-collapse-038`,
+        and §8.3.1's "auto computed height" sides with `-038`; the WPT case encodes CSS 2.2's
+        change. It is a candidate for 6.X's out-of-profile review.
+      - Two first-trial gains the fixes gave back, `new-fc-beside-adjoining-float` and
+        `anonymous-inline-inherit-001`. They are queued for batch 2.
+    - **Evidence.** 6.X restored the `xhtml1` variant (9,595 documents plus 392 support files from
+      csswg-test@fa448700877, with a byte-exact build-transform proof), which clears
+      `css21-official-variant-unavailable`. It also recorded `c5504-mrgn-l-002` as optional
+      (§11.1.1).
+      - Found, not fixed: 25 vendored `html4` files are gzip bodies (for example
+        `block-in-inline-001`).
+    - **Open review item.** 6.H's route fix in `SelfTestOracle.cs` turned 48 background
+      scroll cases into passes. 6.M audits those renders by eye in batch 2.
 - **Phase 7, the flip.**
   1. Freeze inventory edits and run the upstream-mode baseline on the committed tree.
   2. Commit the generator's flips, then run a second baseline (any edit changes the identity).
