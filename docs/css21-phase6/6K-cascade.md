@@ -37,6 +37,9 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
   to 6.K per the README; 6.F has not touched it.
 
 - `first-line-selector-016` (official + WPT) — `span, div:first-line { color: white; }` is neutralized as a whole in `Parser.Cascade.cs`, leaving `<span>FAIL</span>` inheriting `div`'s `color: red` (40 red px). — from 6.A
+- `border-{top,right,bottom,left}-color-030` (official, 4) and `outline-color-030` (official, 1): 4-digit hex `#1000` is parsed as transparent instead of rejected as invalid CSS 2.1 color (already listed in your Opens with) (from 6.I).
+- `border-width-010` (official+WPT, 2): `border: red solid -1px` has a negative border width and must drop the entire shorthand declaration during cascade so the prior green 8px solid border wins (from 6.I).
+- `border-width-011/012` (official, 2) and `outline-width-096` (official, 1): `StyleResolver.EffectiveValue` passes the parent's raw width instead of computed `0px` when the parent's `border-style` is `none`/`hidden` (§8.5.1) or `outline-style` is `none` (§18.4). Note: for `border-width-011/012`, once `StyleResolver` writes `"0px"` into `StyleOverrides`, coordinate with 6.I if `GetBorderSideWidth` also needs to read inherited `"0px"` (from 6.I).
 
 ## Edits outside owned files
 

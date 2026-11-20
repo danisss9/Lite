@@ -620,6 +620,9 @@ public static class StyleExtensions
     /// for <c>auto</c>/unset. <c>auto</c> on an edge means that edge of the border box.</summary>
     public static SkiaSharp.SKRect? GetClipRect(this LayoutNode node)
     {
+        // CSS 2.1 §11.1.2: 'clip' applies only to absolutely positioned elements
+        // ('position: absolute' or 'position: fixed' per §9.3.1).
+        if (node.GetPosition() is not (PositionType.Absolute or PositionType.Fixed)) return null;
         var raw = node.TryResolveStyle("clip", out var ov)
             ? ov : node.Style.GetPropertyValueSafe("clip");
         if (string.IsNullOrEmpty(raw)) return null;

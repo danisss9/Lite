@@ -37,6 +37,8 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - To 6.M: table-height-algorithm-031/032 — the engine renders the assert (bottoms aligned,
   caption intentionally white-invisible); the judge counts the white caption as "no ink".
 - To 6.G (unchanged, parked): border-conflict-element-029 waits on RTL column order.
+- `border-applies-to-004`, `border-color-applies-to-004`, `border-{left,right}-applies-to-004`, `border-{left,right}-color-applies-to-004`, `border-{left,right}-width-applies-to-004` (official+WPT, 16): in `border-collapse: collapse`, a `table-row`'s left/right border is resolved onto the interior boundary between adjacent cells in `TableEngine` instead of only the row's outer left/right edges (from 6.I).
+- `outline-applies-to-016`, `outline-applies-to-017` (WPT, 2): replaced `<img>` with `display: table-column-group` / `table-column` produces no laid-out box, so nothing paints (from 6.I).
 
 ## Edits outside owned files
 
