@@ -38,21 +38,22 @@ so they belong to 6.X.
 - `<lane>.txt`: the lane's failing, crashing, timing-out and empty cases;
 - `<lane>.tsv`: the same cases with their cluster and the runner's detail;
 - `judges.txt`: the unsupported and manual-pending cases, which belong to 6.M;
-- `canary.txt`: 300 passing cases, 25 per lane;
+- `<lane>-pass.txt`: the lane's own passing cases, its regression list (200–2,900 cases);
+- `canary.txt`: 960 passing cases, 80 per lane;
 - `summary.md`: counts per lane.
 
 Assignment goes by test-name stem first, then by WPT directory. A case that belongs to another lane
 moves there: add a line to the other lane's notes under "Handed in". Do not edit the list files.
 The integrator regenerates them after every batch.
 
-**`artifacts/` is ignored by git, so the lists are not in your worktree.** Read them from the main
-checkout, `C:\Repos\Lite\Lite.Conformance\artifacts\lanes\`. Copy the `.txt` files you run into
-your own worktree's `Lite.Conformance\artifacts\lanes\` (create it), because `--filter @file`
-takes a path.
+`artifacts/` is ignored by git. The integrator copies each batch's lists, the official catalog
+and the WPT manifest into every lane worktree's `Lite.Conformance\artifacts\`. The master copies
+live in the main checkout, `C:\Repos\Lite\Lite.Conformance\artifacts\lanes\`.
 
 ## Rules for every lane
 
-1. **Work in your own worktree and branch** (`C:\Repos\Lite-p6-<lane>`, branch `css21/p6-<lane>`).
+1. **Work in your own worktree and branch** (`C:\Repos\Lite\.claude\worktrees\p6-<lane>`, branch
+   `css21/p6-<lane>`).
    Never commit in `C:\Repos\Lite`. That is the integrator's checkout.
 2. **Edit only the files your notes file lists as owned.** If a fix needs a file you do not own:
    - keep the edit minimal and put it in a commit of its own;
@@ -81,13 +82,17 @@ takes a path.
    dotnet run --project Lite.Conformance/Lite.Conformance.csproj -c Release --no-build -- --suite css21
    dotnet run --project Lite.Conformance/Lite.Conformance.csproj -c Release --no-build -- --suite wpt
    dotnet run --project Lite.Conformance/Lite.Conformance.csproj -c Release --no-build -- --suite css21-full --media screen --filter "@Lite.Conformance/artifacts/lanes/<lane>.txt" --report Lite.Conformance/artifacts/<lane>-after.json
+   dotnet run --project Lite.Conformance/Lite.Conformance.csproj -c Release --no-build -- --suite css21-full --media screen --filter "@Lite.Conformance/artifacts/lanes/<lane>-pass.txt" --report Lite.Conformance/artifacts/<lane>-pass-after.json
    dotnet run --project Lite.Conformance/Lite.Conformance.csproj -c Release --no-build -- --suite css21-full --media screen --filter "@Lite.Conformance/artifacts/lanes/canary.txt" --report Lite.Conformance/artifacts/canary-after.json
    ```
 
    - **Units:** all pass.
    - **Curated gates:** css21 51 passes with 1 published expected-fail, wpt 86 with 2.
    - **Lane list:** report what moved, case by case.
-   - **Canary:** all 300 still pass. A loss on the canary or the curated gates blocks the commit.
+   - **Your pass list (`<lane>-pass.txt`) and the canary:** every case still passes. When a commit
+     touches a file another lane owns, also run that lane's pass list. A loss on any pass list, the
+     canary or the curated gates blocks the commit. (Batch 1: the 300-case canary caught 3 of the
+     132 losses the merge found; the lanes' own pass lists held most of the rest.)
 
    A case that times out or flakes under contention counts only after a re-run on its own. The
    known worker-state flake is `tables-102`. Local serving matches upstream for css/CSS2 (checked
@@ -100,7 +105,7 @@ takes a path.
    - what moved, with case names;
    - what still fails and why, honestly;
    - what was handed to another lane;
-   - the reading of each check (units, gates, lane list, canary).
+   - the reading of each check (units, gates, lane list, pass lists, canary).
 7. **Finish a batch, then stop.** After a coherent batch, or when the lane runs out of fixable
    cases, end your turn with a short report. The integrator merges, runs the full baseline, and
    sends you the next queue.
