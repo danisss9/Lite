@@ -383,6 +383,23 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void SelfCollapsedChain_NetNegative_ClampsHeightToZero()
+    {
+        // height-114 (§10.6.3): a box with top and bottom padding (the test's borders — the same
+        // boundary) holding one empty child with 'margin-bottom: -10em' — the chain stays
+        // inside, and the
+        // bottom edge of that collapsed margin lies above the content top. A height is never
+        // negative, so the content height is 0 and the two padding bands touch.
+        var test = Block(new() { ["width"] = "100px", ["padding-top"] = "16px", ["padding-bottom"] = "16px" },
+            Block(new() { ["margin-bottom"] = "-160px" }));
+        LayoutTree(test);
+        True(Math.Abs(test.Box.ContentBox.Height) < 0.5f,
+            $"expected a zero content height, got {test.Box.ContentBox.Height}");
+        True(Math.Abs(test.Box.BorderBox.Height - 32f) < 0.5f,
+            $"expected the border box to be the two 16px padding bands (32), got {test.Box.BorderBox.Height}");
+    }
+
+    [Test]
     public static void SelfCollapsedChain_BehindTopBoundary_CountsInHeight()
     {
         // WPT margin-collapse-through-percentage-height-block: an 'overflow: hidden' box (a BFC)

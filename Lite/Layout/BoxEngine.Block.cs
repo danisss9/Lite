@@ -284,7 +284,11 @@ internal static partial class BoxEngine
         var chainStayedInside = chainHasCommittedContent || border.Top + padding.Top != 0f ||
                                 establishesBfc || node.TagName == "HTML";
         if (!collapseThroughCandidate && chainStayedInside)
-            contentH += trailingMargin;
+            // §10.6.3: the auto height reaches the bottom edge of the last child's (possibly
+            // collapsed) bottom margin — and a height is never negative: a net-negative chain
+            // inside a bordered box (an empty child with 'margin-bottom: -10em') leaves the box
+            // with a zero content height, its borders touching (height-114).
+            contentH = MathF.Max(0f, contentH + trailingMargin);
 
         // Explicit height overrides — respect box-sizing: border-box.
         // NOT for a CSS table box: §17.5.3 makes the specified height a MINIMUM the row stretch
