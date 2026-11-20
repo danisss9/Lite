@@ -107,17 +107,37 @@ internal static partial class BoxEngine
         var widthIsKnown = hasUsedW || clampedW != contentW;
         contentW = clampedW;
 
-        // margin: auto centering — when the used width is known and one or both horizontal margins are auto
+        // CSS 2.1 §10.3.3: auto horizontal margins resolve against the containing block's
+        // leftover once the used width, borders, padding and the SPECIFIED opposite margin
+        // are taken out. Under the containing block's 'direction', an auto on the START side
+        // never goes negative — it resolves to 0 and the over-constraint is dropped on the
+        // END side, which may go negative; both auto with room to spare split it equally
+        // (centering). Both auto with an overflow ('width: 200px' in a 100px container) is
+        // 0/-100 under 'ltr', not clamped to 0, and 'margin-left: auto' beside a specified
+        // 'margin-right: -125px' is 175px (margin-auto-on-block-box,
+        // auto-margins-used-values-with-floats).
         if (widthIsKnown)
         {
             var leftAuto = node.IsAutoMarginLeft();
             var rightAuto = node.IsAutoMarginRight();
             if (leftAuto || rightAuto)
             {
-                var remaining = availableWidth - contentW - border.Left - border.Right - padding.Left - padding.Right;
-                if (leftAuto && rightAuto) { margin.Left = margin.Right = MathF.Max(0, remaining / 2f); }
-                else if (leftAuto) { margin.Left = MathF.Max(0, remaining); }
-                else { margin.Right = MathF.Max(0, remaining); }
+                var rtl = (node.Parent ?? node).GetDirection() == "rtl";
+                bool startAuto, endAuto;
+                float startSpecified, endSpecified;
+                if (rtl) { startAuto = rightAuto; endAuto = leftAuto; startSpecified = margin.Right; endSpecified = margin.Left; }
+                else { startAuto = leftAuto; endAuto = rightAuto; startSpecified = margin.Left; endSpecified = margin.Right; }
+                var slack = availableWidth - contentW - border.Left - border.Right - padding.Left - padding.Right;
+                float start, end;
+                if (startAuto && endAuto)
+                {
+                    if (slack >= 0) start = end = slack / 2f;
+                    else { start = 0f; end = slack; }
+                }
+                else if (startAuto) { start = MathF.Max(0f, slack - endSpecified); end = endSpecified; }
+                else { start = startSpecified; end = slack - startSpecified; }
+                if (rtl) { margin.Right = start; margin.Left = end; }
+                else { margin.Left = start; margin.Right = end; }
             }
         }
 
@@ -654,7 +674,16 @@ internal static partial class BoxEngine
             var isBlock = d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex or DisplayType.Table;
             if (!isBlock) return bottom;
             if (sibling.GetClear() != ClearType.None) return bottom;
-            return bottom + GetEffectiveTopMarginChain(sibling, cbWidth);
+            var joined = bottom + GetEffectiveTopMarginChain(sibling, cbWidth);
+            // §8.3.1: adjoining is transitive. When the sibling self-collapses too, its own
+            // bottom margin adjoins the NEXT in-flow sibling's top margin, so the chain runs on
+            // through every consecutive self-collapsing sibling (margin-collapse-min-height-
+            // 001.xht: the 5em chain reaches the parent's top margin through two empty divs and
+            // the float-only last child, and — that parent having a non-zero 'min-height' — is
+            // spent above the parent instead of below it).
+            return SelfCollapses(sibling, cbWidth)
+                ? joined + SelfCollapserBottomJoin(sibling, cbWidth)
+                : joined;
         }
         return bottom;
     }
@@ -689,7 +718,11 @@ internal static partial class BoxEngine
                 if (!string.IsNullOrWhiteSpace(child.DisplayText)) return false;
                 continue;
             }
-            if (child.GetFloat() != FloatType.None) return false;
+            // §8.3.1 asks for "no in-flow children": a float is out of flow (§9.3.1), so a box
+            // holding only floats still self-collapses — its margins adjoin through it, and the
+            // chain it closes flows on into its own bottom margin
+            // (margin-collapse-min-height-001.xht's float-only last child).
+            if (child.GetFloat() != FloatType.None) continue;
             return false; // any in-flow element child is content
         }
         return true;

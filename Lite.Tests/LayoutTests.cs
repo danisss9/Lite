@@ -378,6 +378,84 @@ public static class LayoutTests
             $"expected the BFC's height to cover the self-collapsed chain (100), got {h}");
     }
 
+    [Test]
+    public static void Adjoining_ChainsThroughFloatOnlySelfCollapser()
+    {
+        // WPT margin-collapse-min-height-001.xht (§8.3.1, CSS 2.2 change s.8.3.1c): the
+        // float-only last child has no in-flow children (a float is out of flow, §9.3.1), so
+        // its top and bottom margins adjoin and the chain through the two empty siblings
+        // reaches its 50px bottom margin. 'min-height' separates that chain from the parent's
+        // bottom margin, so it is spent in full with the parent's top margin (50 > 10): the
+        // parent sits 50px down, is min-height tall, and its own bottom margin stays below it.
+        var floatBox = Block(new() { ["width"] = "100px", ["height"] = "20px" });
+        floatBox.StyleOverrides["float"] = "left";
+        var last = Block(new() { ["margin-bottom"] = "50px" }, floatBox);
+        var parent = Block(new() { ["width"] = "100px", ["min-height"] = "40px",
+                                   ["margin-top"] = "10px", ["margin-bottom"] = "10px" },
+            Block(new()), Block(new()), last);
+        var follower = Block(new() { ["width"] = "100px", ["height"] = "10px" });
+        var container = Block(new() { ["width"] = "100px" }, parent, follower);
+        LayoutTree(container);
+        True(Math.Abs(parent.Box.ContentBox.Top - 50f) < 1f,
+            $"the 50px chain should collapse with the parent's 10px top margin (parent at 50), got {parent.Box.ContentBox.Top}");
+        True(Math.Abs(parent.Box.ContentBox.Height - 40f) < 1f,
+            $"min-height raises the box and traps the 50px margin (height 40), got {parent.Box.ContentBox.Height}");
+        True(Math.Abs(follower.Box.ContentBox.Top - 100f) < 1f,
+            $"the follower sits below the parent's own 10px bottom margin (50+40+10=100), got {follower.Box.ContentBox.Top}");
+        True(Math.Abs(floatBox.Box.ContentBox.Top - 50f) < 1f,
+            $"the float sits at the parent's content top (50), got {floatBox.Box.ContentBox.Top}");
+    }
+
+    [Test]
+    public static void AutoMargins_BothAuto_OverflowDropsOnEndSide()
+    {
+        // WPT margin-auto-on-block-box (§10.3.3): 'margin: auto' on a 200px block in a 100px
+        // container is over-constrained — under 'ltr' the start side resolves to 0 and the
+        // end side takes the negative slack (-100), so the box anchors at the container's
+        // left edge and overflows right (a clamp to 0/0 would anchor it there too but the
+        // used right margin is wrong for the box's reported geometry).
+        var inner = Block(new() { ["width"] = "200px", ["height"] = "5px", ["margin"] = "auto" });
+        var wrapper = Block(new() { ["width"] = "100px" }, inner);
+        LayoutTree(wrapper);
+        var m = inner.Box.Margin;
+        True(Math.Abs(m.Left - 0f) < 0.5f, $"expected margin-left 0 (start side clamps), got {m.Left}");
+        True(Math.Abs(m.Right - -100f) < 0.5f, $"expected margin-right -100 (end side absorbs the overflow), got {m.Right}");
+    }
+
+    [Test]
+    public static void AutoMargins_OneAutoSide_SubtractsSpecifiedOpposite()
+    {
+        // WPT margin-auto-on-block-box (§10.3.3): 'margin-left: auto' beside a specified
+        // 'margin-right: -125px' in a 100px container with a 50px box: the leftover after the
+        // specified right margin is 175, and the start side takes it unclamped-positive.
+        var inner = Block(new() { ["width"] = "50px", ["height"] = "5px",
+                                  ["margin-left"] = "auto", ["margin-right"] = "-125px" });
+        var wrapper = Block(new() { ["width"] = "100px" }, inner);
+        LayoutTree(wrapper);
+        var m = inner.Box.Margin;
+        True(Math.Abs(m.Left - 175f) < 0.5f,
+            $"expected margin-left 175 (100 - 50 - (-125)), got {m.Left}");
+    }
+
+    [Test]
+    public static void AutoMargins_RootElement_ResolvesAgainstViewport()
+    {
+        // WPT auto-margins-root-element (§10.3.3): 'html { width: 100px; margin-left: auto }'
+        // pushes the root box to the right edge of the 800px viewport: margin-left 700.
+        var html = new LayoutNode(null, "HTML", "", _styleCache.Style);
+        html.StyleOverrides["display"] = "block";
+        html.StyleOverrides["width"] = "100px";
+        html.StyleOverrides["margin-left"] = "auto";
+        var body = new LayoutNode(null, "BODY", "", _styleCache.Style);
+        body.StyleOverrides["display"] = "block";
+        var p = Block(new() { ["height"] = "20px" });
+        html.AddChild(body);
+        body.AddChild(p);
+        BoxEngine.Layout(html, 800, 600);
+        True(Math.Abs(html.Box.MarginBox.Left - 700f) < 1f,
+            $"expected the root box at 700 (800 - 100), got {html.Box.MarginBox.Left}");
+    }
+
     private static LayoutNode TableCell(string text)
     {
         var node = new LayoutNode(null, "TD", text, _styleCache.Style);
