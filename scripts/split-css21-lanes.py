@@ -8,6 +8,7 @@ baseline CSV and writes, under Lite.Conformance/artifacts/lanes/:
                   per line -- directly usable as `--filter @<file>` for `--suite css21-full`
   <lane>.tsv      the same cases with suite, cluster, outcome and the runner's detail
   judges.txt/.tsv the unsupported and manual-pending cases (lane 6.M's route queue)
+  <lane>-pass.txt the lane's own passing cases, its pre-merge regression list
   canary.txt      a fixed, stratified sample of passing cases every lane re-runs for 0 losses
   summary.md      counts per lane and outcome
 
@@ -148,7 +149,7 @@ def main() -> int:
     parser.add_argument("sources", nargs="*",
                         help="shard JSON reports or a baseline CSV (default: the newest complete shard set)")
     parser.add_argument("--out", default=str(ARTIFACTS / "lanes"))
-    parser.add_argument("--canary-per-lane", type=int, default=25)
+    parser.add_argument("--canary-per-lane", type=int, default=80)
     args = parser.parse_args()
 
     sources = args.sources or sorted(glob.glob(str(ARTIFACTS / "css21-full-screen-*-of-*.json")))
@@ -184,6 +185,10 @@ def main() -> int:
 
     for lane in LANES:
         write(lane, engine.get(lane, []))
+        # The lane's own passing cases: the pre-merge regression check a change must hold
+        # (the canary alone is a sample and missed whole families in batch 1).
+        (out / f"{lane}-pass.txt").write_text(
+            "".join(p + "\n" for p in sorted(passing.get(lane, []))), encoding="utf-8")
     write("judges", routes)
 
     # Canary: a deterministic stratified sample of passing cases (hash order, so the sample is
