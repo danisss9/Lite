@@ -183,4 +183,17 @@ public static class CssErrorRecoveryTests
         Equal("\"A\"", Declared(pseudoSheet, "div:before", "content"));
         Equal("\"B\"", Declared(pseudoSheet, "div:after", "content"));
     }
+
+    [Test]
+    public static void ColorSyntax_RejectsFourDigitHexAndMixedRgbUnits()
+    {
+        // Patch 011, CSS 2.1 §4.3.6: 4-digit hex (#1000) and mixed integer/percentage rgb() are invalid
+        // (color-030, outline-color-030, colors-004).
+        Equal((string?)null, Declared(Parse("div { color: #1000; }"), "div", "color"));
+        Equal((string?)null, Declared(Parse("div { color: #11223344; }"), "div", "color"));
+        Equal((string?)null, Declared(Parse("div { color: rgb(100%, 0, 0); }"), "div", "color"));
+        Equal("rgba(0, 128, 0, 1)", Declared(Parse("div { color: #008000; }"), "div", "color"));
+        Equal("rgba(0, 128, 0, 1)", Declared(Parse("div { color: rgb(0, 128, 0); }"), "div", "color"));
+        Equal("rgba(255, 0, 0, 1)", Declared(Parse("div { color: rgb(100%, 0%, 0%); }"), "div", "color"));
+    }
 }

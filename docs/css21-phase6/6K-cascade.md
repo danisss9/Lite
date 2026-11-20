@@ -29,6 +29,19 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Progress
 
+### 5. CSS 2.1 color syntax: reject 4/8-digit hex and mixed `rgb()` units (AngleSharp.Css patch 011)
+- **Spec:** CSS 2.1 §4.3.6 (`#rgb` and `#rrggbb` only — rejects 4-digit `#1000` and 8-digit hex; comma-separated `rgb()` must use all integers or all percentages, never mixed).
+- **Moved (3 cases in K: +2 official, +1 WPT; also unblocks `outline-color-030` in 6.I):**
+  - `css21-official/html4/color-030.htm` (parked finding)
+  - `css21-official/html4/colors-004.htm`, `css/CSS2/syntax/colors-004.xht`
+- **Still failing (related):** `colors-006`, `color-000`, `colors-007` (JS `style.color` canonical serialization).
+- **Handed to other lanes:** None yet.
+- **Checks:**
+  - Units: `CssErrorRecoveryTests` 11/11 passed (including new `ColorSyntax_RejectsFourDigitHexAndMixedRgbUnits`).
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 21/62 official, 22/89 WPT (from 19/62, 21/89; +3 cases).
+  - Canary: 300/300 (154/154 official, 146/146 WPT).
+
 ### 4. CSS 2.1 selector validation & ASCII case-insensitive pseudo names (AngleSharp.Css patch 010)
 - **Spec:** CSS 2.1 §4.1.3 (identifiers cannot start with a digit or `-`+digit; pseudo-class/pseudo-element names are ASCII case-insensitive), §4.1.7 / §5.2.1 (empty comma-separated selector items invalidate the selector group), §5.10 / §5.12 (pseudo-elements must appear at the end of a selector).
 - **Moved (8 cases: +4 official, +4 WPT):**
