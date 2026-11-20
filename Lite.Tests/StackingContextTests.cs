@@ -73,6 +73,31 @@ public static class StackingContextTests
         }
     }
 
+    [Test]
+    public static void FixedAncestor_IsTheContextRootForItsPositionedDescendants()
+    {
+        // containing-block-010: an abs-pos square inside a static div inside a fixed div is
+        // laid out against the fixed div (§10.1 nearest positioned ancestor) and must be
+        // painted: the context walk stops at fixed boxes (they never join an ancestor's z
+        // lists — PaintFixedNodes owns them), so the fixed box is the only root that can
+        // collect its own positioned descendants, at its step 8.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            "#div1{border:solid black;margin:50px;position:fixed;top:0}" +
+            "div div{height:96px;width:96px}" +
+            "#div2{margin:50px}" +
+            "#div3{background:blue;right:0;position:absolute;top:0}</style>" +
+            "<div id=\"div1\"><div id=\"div2\"><div id=\"div3\"></div></div></div>");
+        var bitmap = Drawer.DrawToBitmap(800, 600, root, new Viewport { ViewportHeight = 600 });
+        using (bitmap)
+        {
+            // div1's padding box starts at 53,53 and is 196 wide; div3 sits at its top-right.
+            True(bitmap.GetPixel(200, 80) == SKColors.Blue,
+                $"the abspos square must paint inside the fixed box, got {bitmap.GetPixel(200, 80)}");
+            True(bitmap.GetPixel(700, 60) == SKColors.White.WithAlpha((byte)255),
+                $"nothing may paint at the page's top-right corner, got {bitmap.GetPixel(700, 60)}");
+        }
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);

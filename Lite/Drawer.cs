@@ -1057,8 +1057,15 @@ internal static partial class Drawer
         var isFlex = node.GetDisplay() is DisplayType.Flex or DisplayType.InlineFlex;
         IEnumerable<LayoutNode> ordered = isFlex ? node.Children.OrderBy(c => c.GetOrder()) : node.Children;
 
-        // The root element (no parent) and any stacking-context-establishing box are roots.
-        bool isScRoot = node.Parent is null || EstablishesStackingContext(node);
+        // The root element (no parent), any stacking-context-establishing box, and any
+        // position:fixed box are roots: PaintFixedNodes is the only thing that paints a fixed
+        // box's subtree, so its positioned descendants have no enclosing context to be
+        // collected by — the context walk stops at fixed boxes (EstablishesStackingContext
+        // excludes them so they never join an ancestor's z lists) and PaintNodeInner's child
+        // pass skips stacking items (containing-block-010's abspos square under a fixed div
+        // was laid out but orphaned, painted by nobody).
+        bool isScRoot = node.Parent is null || EstablishesStackingContext(node)
+                        || OwnPosition(node) == PositionType.Fixed;
 
         void SplitInFlowNode(LayoutNode child)
         {
