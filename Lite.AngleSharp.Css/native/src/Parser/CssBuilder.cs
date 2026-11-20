@@ -607,12 +607,28 @@ namespace AngleSharp.Css.Parser
                     while (i < len)
                     {
                         var sc = selectorText[i++];
-                        sb.Append(sc);
                         if (sc == '\\' && i < len)
                         {
+                            // Lite patch 012: CSS 2.1 §4.3.7 — a backslash-escaped newline in a
+                            // selector string is removed (strings-000).
+                            var next = selectorText[i];
+                            if (next == '\r')
+                            {
+                                i++;
+                                if (i < len && selectorText[i] == '\n') i++;
+                                continue;
+                            }
+                            if (next == '\n' || next == '\f')
+                            {
+                                i++;
+                                continue;
+                            }
+                            sb.Append(sc);
                             sb.Append(selectorText[i++]);
+                            continue;
                         }
-                        else if (sc == quote)
+                        sb.Append(sc);
+                        if (sc == quote)
                         {
                             break;
                         }
@@ -955,7 +971,10 @@ namespace AngleSharp.Css.Parser
             CollectTrivia(owner, ref token);
             var start = token.Position;
 
-            if (!_options.IsExcludingNesting && token.IsPotentiallyNested() && properties is ICssStyleDeclaration decl && decl.Parent is CssStyleRule style)
+            // Lite patch 012: CSS 2.1 §4.2 — a bare ':' inside a declaration block starts a
+            // malformed declaration (':red; color:green;', malformed-decl-008), not a nested rule.
+            if (!_options.IsExcludingNesting && token.Type != CssTokenType.Colon &&
+                token.IsPotentiallyNested() && properties is ICssStyleDeclaration decl && decl.Parent is CssStyleRule style)
             {
                 var factory = _context.GetService<DefaultAttributeSelectorFactory>();
                 var rule = new CssStyleRule(style.Owner);
@@ -981,24 +1000,11 @@ namespace AngleSharp.Css.Parser
                 }
             }
 
-            if (token.IsNot(CssTokenType.EndOfFile, CssTokenType.CurlyBracketClose, CssTokenType.Colon) &&
-                token.IsNot(CssTokenType.Semicolon, CssTokenType.CurlyBracketOpen))
+            // Lite patch 012: CSS 2.1 §4.1.1 — a declaration property name must be an IDENT token,
+            // never a STRING ("'color': red;", quoted-keywords-001) or NUMBER/ATKEYWORD.
+            if (token.Type == CssTokenType.Ident)
             {
                 var name = token.Data;
-
-                if (token.Type == CssTokenType.Delim)
-                {
-                    var sb = StringBuilderPool.Obtain();
-                    sb.Append(name);
-
-                    while (token.Type == CssTokenType.Delim)
-                    {
-                        token = NextToken();
-                        sb.Append(token.Data);
-                    }
-
-                    name = sb.ToPool();
-                }
 
                 token = NextToken();
                 CollectTrivia(owner, ref token);

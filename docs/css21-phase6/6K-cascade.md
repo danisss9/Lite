@@ -29,6 +29,32 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Progress
 
+### 6. Declaration property-name validation & recovery + escaped newlines in selector strings (AngleSharp.Css patch 012)
+- **Spec:** CSS 2.1 §4.1.1 (declaration property name must be an `IDENT`, not a `STRING` or `NUMBER`), §4.2 (malformed declaration starting with `:` skips to `;` rather than entering CSS nesting), §4.3.7 (backslash-escaped newline in a selector string is removed).
+- **Moved (6 cases: +3 official, +3 WPT):**
+  - `css21-official/html4/malformed-decl-008.htm`, `css/CSS2/syntax/malformed-decl-008.xht`
+  - `css21-official/html4/quoted-keywords-001.htm`, `css/CSS2/syntax/quoted-keywords-001.xht`
+  - `css21-official/html4/strings-000.htm`, `css/CSS2/syntax/strings-000.xht`
+- **Still failing (remaining K clusters for next wave):**
+  - `lang-pseudoclass-*` / `lang-selector-*` (8 cases: `:lang()` matching & HTTP `Content-Language`)
+  - `html-attribute-021/022/023/027` (8 cases: HTML presentational attribute mapping)
+  - `cascade-001/004/006/010/011/012`, `c32-cascading-000`, `html-precedence-003/004/005`, `selectors-002` (cascade / `! important` / user-style precedence)
+  - `matching-brackets-001/003`, `at-rule-013`, `malformed-decl-block-001`, `c71-fwd-parsing-001`, `escapes-001`, `escaped-newline-001`, `ident-020`, `numbers-units-018`
+  - `c21-pseud-link-002/003`, `c25-pseudo-elmnt-000`, `pseudo-007/008`, `first-child-selector-003`, `specificity-011`
+  - `at-charset-001/034`, `character-encoding-017/018/028/041`, `character-representation-001`
+  - `cascade-import-001/002`, `cascade-import-dynamic-control`, `dom-hover-001`, `dynamic-sibling-combinator-001`, `c64-uri-000`, `colors-006/007`, `color-000`
+  - `default-attribute-selector-007/008` (parked: styled `<input>` keeps UA chrome)
+  - `inherit-computed-001/002`, `inherit-static-offset-003`, `floats/inheritance.html`, `child-bottom-margin-in-unresolvable-percentage-height.html`
+- **Handed to other lanes (for integrator routing):**
+  - **6.E / 6.I (8 cases):** `css/CSS2/css21-errata/s-11-1-1b-001..006, 008, 009.html` — `overflow: hidden` on `<table>` with `<caption>` (CSS 2.1 §11.1.1b erratum, table/overflow layout, not cascade/syntax).
+  - **6.X (8 cases):** `css/CSS2/cascade-import/cascade-import-005..012.xht` — fetch external host `http://software.hixie.ch/utilities/cgi/test-tools/delayed-file` and require interactive alternate-stylesheet selection.
+  - **6.C (1 case):** `css/CSS2/normal-flow/child-bottom-margin-in-unresolvable-percentage-height.html` — block flow / percentage height, not cascade/syntax.
+- **Checks:**
+  - Units: `CssErrorRecoveryTests` 12/12 passed (including new `DeclarationPropertyValidationAndSelectorEscapedNewline`).
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 24/62 official, 25/89 WPT (from 0/62, 0/89 at batch start; **49 cases moved**).
+  - Canary: 300/300 (154/154 official, 146/146 WPT).
+
 ### 5. CSS 2.1 color syntax: reject 4/8-digit hex and mixed `rgb()` units (AngleSharp.Css patch 011)
 - **Spec:** CSS 2.1 §4.3.6 (`#rgb` and `#rrggbb` only — rejects 4-digit `#1000` and 8-digit hex; comma-separated `rgb()` must use all integers or all percentages, never mixed).
 - **Moved (3 cases in K: +2 official, +1 WPT; also unblocks `outline-color-030` in 6.I):**

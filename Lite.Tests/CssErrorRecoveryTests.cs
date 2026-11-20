@@ -196,4 +196,17 @@ public static class CssErrorRecoveryTests
         Equal("rgba(0, 128, 0, 1)", Declared(Parse("div { color: rgb(0, 128, 0); }"), "div", "color"));
         Equal("rgba(255, 0, 0, 1)", Declared(Parse("div { color: rgb(100%, 0%, 0%); }"), "div", "color"));
     }
+
+    [Test]
+    public static void DeclarationPropertyValidationAndSelectorEscapedNewline()
+    {
+        // Patch 012, CSS 2.1 §4.1.1: property names must be IDENT tokens, not STRING (quoted-keywords-001).
+        Equal((string?)null, Declared(Parse("div { 'color': red; }"), "div", "color"));
+        // CSS 2.1 §4.2: missing property name ':red;' skips to ';' and preserves 'color: green' (malformed-decl-008).
+        Equal("rgba(0, 128, 0, 1)", Declared(Parse("div { :red; color: green; }"), "div", "color"));
+        // CSS 2.1 §4.3.7: escaped newline in a selector string is removed (strings-000).
+        var sheet = Parse("p[title=\"this is\\\n a test\"] { color: green; }");
+        Equal(1, sheet.Rules.Length);
+        Equal("p[title=\"this is a test\"]", ((ICssStyleRule)sheet.Rules[0]).SelectorText);
+    }
 }
