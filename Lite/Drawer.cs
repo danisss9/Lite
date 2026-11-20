@@ -715,23 +715,31 @@ internal static partial class Drawer
             {
                 foreach (var (rect, text) in fragments)
                 {
+                    var fragmentBox = BoxEngine.InlineContentArea(node, rect);
                     if (bgColor != SKColors.Transparent)
                     {
                         using var fragBg = new SKPaint { Color = bgColor };
-                        canvas.DrawRect(BoxEngine.InlineContentArea(node, rect), fragBg);
+                        canvas.DrawRect(fragmentBox, fragBg);
                     }
+                    // §14.2: a background image paints and repeats over the inline box's
+                    // content area, one area per line fragment.
+                    DrawBackgroundImageIn(canvas, node, fragmentBox);
                     DrawWrappedText(canvas, node, text, rect.Left, rect.Top, SliceWidth(node, text, font, rect.Width), font, paint, lineAligned: true);
                 }
                 return;
             }
 
+            var inlineBox = BoxEngine.InlineContentArea(node, node.Box);
             if (bgColor != SKColors.Transparent)
             {
                 // §14.2: a background paints over the PADDING box. For an inline box that is the
                 // text plus whatever horizontal padding the line reserved for it (§8.4).
                 using var bgPaint = new SKPaint { Color = bgColor };
-                canvas.DrawRect(BoxEngine.InlineContentArea(node, node.Box).PaddingBox, bgPaint);
+                canvas.DrawRect(inlineBox.PaddingBox, bgPaint);
             }
+            // §14.2: the background image is positioned against the same padding box and tiles
+            // over it; the inline box has no block decoration pass, so it paints here.
+            DrawBackgroundImageIn(canvas, node, inlineBox.PaddingBox);
             // NOTE: an inline box's BORDERS are still not drawn. Reserving room for them in the
             // line and stroking them here was measured against the CSS 2.1 suite and came out
             // flat: it fixes the tests that expect a visible inline border, and breaks the same
@@ -1387,7 +1395,10 @@ internal static partial class Drawer
         {
             using var wrapperBg = new SKPaint { Color = bgColor };
             foreach (var wrapperBox in node.InlineFragmentBoxes!)
+            {
                 canvas.DrawRect(wrapperBox.PaddingBox, wrapperBg);
+                DrawBackgroundImageIn(canvas, node, wrapperBox.PaddingBox);
+            }
         }
         // §8.4/§8.6: a boxless inline wrapper's borders paint per line from the fragments line
         // layout assembled (side masks included) — this is the only border geometry a wrapper
@@ -1443,6 +1454,9 @@ internal static partial class Drawer
                     using var fragBg = new SKPaint { Color = bgColor };
                     canvas.DrawRect(box.PaddingBox, fragBg);
                 }
+                // §14.2: the background image positions and repeats against each fragment's
+                // padding box, like the colour (the inline box has no block decoration pass).
+                if (paintsOwnBorders) DrawBackgroundImageIn(canvas, node, box.PaddingBox);
                 DrawBorders(canvas, box, node);
                 DrawWrappedText(canvas, node, text, rect.Left, rect.Top, SliceWidth(node, text, font, rect.Width), font, paint, lineAligned: true);
             }
@@ -1459,6 +1473,10 @@ internal static partial class Drawer
             using var bgPaint = new SKPaint { Color = bgColor };
             canvas.DrawRect(decorated.PaddingBox, bgPaint);
         }
+        // §14.2: an inline element's background image covers the padding box it was laid out
+        // over; anonymous #text boxes resolve their host's style but paint no background of
+        // their own (as with borders).
+        if (paintsOwnBorders && !wrapperBackground) DrawBackgroundImageIn(canvas, node, decorated.PaddingBox);
         if (hitTarget && !node.Box.BorderBox.IsEmpty)
             _hitRegions.Add(CursorRegion(node.Box.BorderBox, node, nodeKey: node.NodeKey));
         // §8.4: the borders of an unsplit inline box paint around its border box — the box the

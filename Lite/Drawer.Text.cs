@@ -91,6 +91,12 @@ internal static partial class Drawer
             else canvas.DrawRect(box.PaddingBox, bgPaint);
         }
 
+        // Background image and gradient — the list item is a block box whose decorations this
+        // painter draws itself, so §14.2's image layer must be painted here too.
+        var listGradient = node.GetLinearGradient();
+        if (listGradient != null) DrawLinearGradient(canvas, box, node, listGradient);
+        DrawBackgroundImage(canvas, node, box);
+
         DrawBorders(canvas, box, node);
 
         // §18.1: a list item's box shows its own cursor like any block (cursor-applies-to-010:

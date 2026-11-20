@@ -181,6 +181,10 @@ internal static class StyleResolver
         foreach (var prop in previouslyApplied)
         {
             if (winners.ContainsKey(prop) || node.StyleOverrides.ContainsKey(prop)) continue;
+            // A winning SHORTHAND covers its longhands ('background: green' declares
+            // background-color): stamping their initial value here would defeat the fresh
+            // declaration the longhand now falls through to (background-root-101/-102).
+            if (winners.Keys.Any(w => prop.StartsWith(w + "-", StringComparison.OrdinalIgnoreCase))) continue;
             var fallback = PropertyTable.IsInherited(prop)
                 ? (InheritedOrNull(node, prop) ?? PropertyTable.InitialValue(prop))
                 : PropertyTable.InitialValue(prop);

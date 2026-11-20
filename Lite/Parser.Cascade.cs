@@ -1267,6 +1267,19 @@ internal static partial class Parser
 
     private static void StoreProp(LayoutNode node, string prop, string val)
     {
+        // Everything this cascade pass writes must be retractable when the element is
+        // re-resolved after a class/attribute change. A shorthand is stored as its LONGHANDS
+        // ('background: green' → background-color), so marking only the shorthand left the
+        // longhands behind and a restyled body kept its parse-time background
+        // (background-root-101 through -103). Inline styles set later (JsStyle) remove their
+        // key from CascadeAppliedProps, so they are never retracted by this marking.
+        StorePropCore(node, prop, val);
+        node.CascadeAppliedProps.Add(prop);
+        foreach (var key in node.StyleOverrides.Keys) node.CascadeAppliedProps.Add(key);
+    }
+
+    private static void StorePropCore(LayoutNode node, string prop, string val)
+    {
         if (prop == "background")
         {
             ExpandBackgroundShorthand(node, val);

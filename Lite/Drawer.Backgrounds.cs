@@ -109,7 +109,15 @@ internal static partial class Drawer
     /// <summary><paramref name="paintArea"/> overrides where the image paints (and repeats):
     /// the canvas background (§14.2) is positioned against the root box but "covers the entire
     /// canvas", so it paints over the whole page, not just the root's padding box.</summary>
-    private static void DrawBackgroundImage(SKCanvas canvas, LayoutNode node, BoxDimensions box, SKRect? paintArea)
+    private static void DrawBackgroundImage(SKCanvas canvas, LayoutNode node, BoxDimensions box, SKRect? paintArea) =>
+        DrawBackgroundImageIn(canvas, node, box.PaddingBox, paintArea);
+
+    /// <summary>Paints an element's background image against an explicit positioning area —
+    /// the padding box of a box, or the content area of one inline fragment (§14.2: an inline
+    /// box's background covers the content area the line assembled, not its line-height
+    /// fragment box).</summary>
+    internal static void DrawBackgroundImageIn(SKCanvas canvas, LayoutNode node, SKRect paddingBox,
+        SKRect? paintArea = null)
     {
         var imageUrl = node.GetBackgroundImage();
         if (imageUrl == null) return;
@@ -128,11 +136,11 @@ internal static partial class Drawer
         // clipped to the element's padding box, but its placement is independent of where the
         // element scrolled to.
         bool fixedBg = node.IsBackgroundFixed();
-        var clipArea = paintArea ?? box.PaddingBox;
+        var clipArea = paintArea ?? paddingBox;
         var area = fixedBg
             ? new SKRect(_bgFixedScrollX, _viewportScrollY + _bgFixedScrollY,
                          _bgFixedScrollX + _viewportWidth, _viewportScrollY + _bgFixedScrollY + _viewportHeight)
-            : box.PaddingBox;
+            : paddingBox;
 
         // Resolve image draw size
         float fontSize = node.GetFontSize();
