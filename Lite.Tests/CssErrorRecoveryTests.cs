@@ -83,4 +83,29 @@ public static class CssErrorRecoveryTests
         True(!CssComponentScan.IsWellFormedValue("\"broken\nred"), "a newline ends a BAD_STRING");
         True(!CssComponentScan.IsWellFormedValue("red; color: blue"), "a top-level ';' ends the value");
     }
+
+    [Test]
+    public static void EscapedNewlineInString_IsRemoved()
+    {
+        // Patch 008, CSS 2.1 4.3.7: "the newline itself has to be escaped with a backslash. The
+        // newline is subsequently removed from the string" (escapes-000, escaped-newline-001).
+        // Upstream appended Environment.NewLine, which put a CR LF into the generated text.
+        var sheet = Parse("p { content: \"Th\\\nis \" } q { content: 'a\\\nb' }");
+        Equal("\"This \"", Declared(sheet, "p", "content"));
+        Equal("\"ab\"", Declared(sheet, "q", "content"));
+    }
+
+    [Test]
+    public static void EndOfSheet_ClosesOpenConstructs()
+    {
+        // Patch 009, CSS 2.1 4.2: "User agents must close all open constructs (for example:
+        // blocks, parentheses, brackets, rules, strings, and functions) at the end of the style
+        // sheet." eof-002 ends inside rgb(, uri-017 inside url(" and url(.
+        Equal("rgba(0, 128, 0, 1)", Declared(Parse("div { color: rgb(0, 128, 0"), "div", "color"));
+        Equal("url(\"green.png\")", Declared(Parse("p { background-image: url(\"green.png"), "p", "background-image"));
+        Equal("url(\"green.png\")", Declared(Parse("p { background-image: url(green.png"), "p", "background-image"));
+        // Only the end of the sheet closes them: the scan of a value cut short by Lite's raw
+        // rescue still reports the unclosed url( as malformed.
+        True(!CssComponentScan.IsWellFormedValue("url(\"a.png\""), "an unclosed url( in a standalone value");
+    }
 }
