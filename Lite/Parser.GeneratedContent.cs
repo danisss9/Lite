@@ -224,6 +224,102 @@ internal static partial class Parser
     }
 
     /// <summary>
+    /// CSS 2.1 §12.5.1: the list-item marker is an inline box — "the first inline box in the
+    /// principal block box" for 'list-style-position: inside', and a box outside the principal
+    /// block box for 'outside'. Generating it as a real child (rather than painting it over the
+    /// content box at a reserved indent) is what gives an empty item the marker's line box, puts
+    /// an inside marker on a line of its own above a block child (list-style-position-005/023),
+    /// and lets the item's text wrap after it so continuation lines start at the content edge —
+    /// the hanging indent of list-style-position-020/022.
+    /// <para>An 'outside' marker is painted by the list-item painter, so its box is zero-width
+    /// and only added when the item has no other in-flow content: the item still gets the marker's
+    /// line (an empty <c>&lt;li&gt;</c> is one line tall), which places the marker of an empty item
+    /// where the reference puts it (list-style-applies-to-009/012).</para>
+    /// </summary>
+    private static void CreateListMarkerChild(LayoutNode node, IElement element)
+    {
+        if (node.GetDisplay() != DisplayType.ListItem) return;
+
+        // Idempotent across re-projections: replace any marker from an earlier pass.
+        node.Children.RemoveAll(c => c.TagName == "#pseudo-marker");
+
+        var position = node.GetListStylePosition();
+        var type = node.GetListStyleType();
+        var imageUrl = node.GetListStyleImage();
+        var image = imageUrl is null or "none" ? null
+            : ResourceLoader.FetchImage(imageUrl, _documentBaseUrl ?? _baseUrl, Session);
+        // A loadable 'list-style-image' replaces the type's marker; 'none' without an image has
+        // no marker box at all (§12.6.2).
+        if (image is null && type == Lite.Extensions.ListStyleType.None) return;
+
+        var marker = new LayoutNode(null, "#pseudo-marker", "", node.Style);
+        marker.ResetNonInheritedStyles();
+        marker.StyleOverrides["display"] = "inline";
+        // §10.8.1: the generated box is its own inline box and 'vertical-align' does not inherit.
+        marker.StyleOverrides["vertical-align"] = "baseline";
+
+        if (position == ListStylePosition.Inside)
+        {
+            if (image is not null)
+            {
+                marker.Image = image;
+                marker.StyleOverrides["margin-right"] = "4px";
+            }
+            else
+            {
+                var index = 1;
+                for (var sibling = element.PreviousElementSibling; sibling is not null;
+                     sibling = sibling.PreviousElementSibling)
+                    if (TagOf(sibling) == "LI") index++;
+                var keyword = CssCounterStyles.Keyword(type);
+                if (CssCounterStyles.InsideMarkerText(index, keyword) is not { } text) return;
+                marker.TextOverride = text;
+                // The bullet styles are drawn as shapes by the list-item painter (§12.6.2's
+                // disc/circle/square are figures, not glyphs). Its shape is larger and rounder
+                // than the font's bullet character, so the glyph keeps the line's width while
+                // staying invisible under the drawn figure.
+                if (!CssCounterStyles.HasTextMarker(keyword))
+                    marker.StyleOverrides["color"] = "transparent";
+            }
+
+            // The item's own (folded) text becomes a #text child after the marker — the same
+            // representation ::before uses — so the marker and content share the first line.
+            if (!string.IsNullOrEmpty(node.DisplayText))
+            {
+                var textChild = new LayoutNode(null, "#text", node.DisplayText, node.Style);
+                textChild.ResetNonInheritedStyles();
+                textChild.StyleOverrides["display"] = "inline";
+                textChild.Parent = node;
+                node.Children.Add(textChild);
+                node.TextOverride = "";
+            }
+        }
+        else
+        {
+            if (HasInFlowContent(node)) return;
+            // The marker paints outside the box, so its line slot is zero-width; a zero-width
+            // space is content that creates the line (§9.4.2: a line exists only if something
+            // on it renders) without advancing the pen or painting ink.
+            marker.TextOverride = "\uFEFF";
+        }
+
+        marker.Parent = node;
+        node.Children.Insert(0, marker);
+    }
+
+    /// <summary>True when the node or a descendant contributes an in-flow box (text, a normal
+    /// element, ::before/::after content). Floats, absolutely positioned boxes and display:none
+    /// subtrees do not: an item holding only those is still "empty" for its marker line.</summary>
+    private static bool HasInFlowContent(LayoutNode node)
+    {
+        if (node.GetDisplay() == DisplayType.None) return false;
+        if (node.GetFloat() != FloatType.None) return false;
+        if (node.GetPosition() is PositionType.Absolute or PositionType.Fixed) return false;
+        if (!string.IsNullOrEmpty(node.DisplayText)) return true;
+        return node.Children.Any(HasInFlowContent);
+    }
+
+    /// <summary>
     /// CSS 2.1 §5.12.1: splits off the first letter of a block's first line into a real inline
     /// box carrying the <c>::first-letter</c> declarations, so it takes part in layout — it
     /// contributes its own font metrics and 'line-height' to the line box, its width to line
@@ -280,6 +376,9 @@ internal static partial class Parser
         if (!string.IsNullOrEmpty(node.DisplayText)) return node;
         foreach (var child in node.Children)
         {
+            // The list marker is not part of the item's first letter (§12.5.1 places it before
+            // the content): `li::first-letter` styles the content, not the bullet.
+            if (child.TagName == "#pseudo-marker") continue;
             // Floats and absolutely positioned boxes are not on the first line; an atomic inline
             // (inline-block/-table) or a block ends the search — ::first-letter never reaches into
             // them (§5.12.2; first-letter-selector-017's red inline-block p).
@@ -687,3 +786,4 @@ internal static partial class Parser
         return sb.ToString();
     }
 }
+

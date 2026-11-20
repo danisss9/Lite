@@ -1605,6 +1605,8 @@ internal static partial class Parser
 
         // Create ::before and ::after pseudo-element children, each reading its own snapshot.
         CreatePseudoElementChildren(node, directTextRaw, beforeCounters, afterCounters, beforeQuoteDepth, afterQuoteDepth);
+        // The list marker precedes ::before and the element's content (§12.5.1).
+        CreateListMarkerChild(node, element);
         // ::first-letter runs after them: the spec includes ::before content in the first letter,
         // and the split needs the final child list.
         CreateFirstLetterChild(node);

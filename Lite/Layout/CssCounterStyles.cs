@@ -33,6 +33,41 @@ internal static class CssCounterStyles
         _ => Format(value, style) ?? value.ToString(),
     };
 
+    /// <summary>The 'list-style-type' keyword (§12.6.2) for the engine's enum, so the marker
+    /// generator and the painter's table share one spelling.</summary>
+    internal static string Keyword(Lite.Extensions.ListStyleType type) => type switch
+    {
+        Lite.Extensions.ListStyleType.Disc => "disc",
+        Lite.Extensions.ListStyleType.Circle => "circle",
+        Lite.Extensions.ListStyleType.Square => "square",
+        Lite.Extensions.ListStyleType.Decimal => "decimal",
+        Lite.Extensions.ListStyleType.DecimalLeadingZero => "decimal-leading-zero",
+        Lite.Extensions.ListStyleType.LowerAlpha => "lower-alpha",
+        Lite.Extensions.ListStyleType.UpperAlpha => "upper-alpha",
+        Lite.Extensions.ListStyleType.LowerRoman => "lower-roman",
+        Lite.Extensions.ListStyleType.UpperRoman => "upper-roman",
+        Lite.Extensions.ListStyleType.LowerGreek => "lower-greek",
+        Lite.Extensions.ListStyleType.Armenian => "armenian",
+        Lite.Extensions.ListStyleType.Georgian => "georgian",
+        Lite.Extensions.ListStyleType.Hebrew => "hebrew",
+        Lite.Extensions.ListStyleType.Hiragana => "hiragana",
+        Lite.Extensions.ListStyleType.HiraganaIroha => "hiragana-iroha",
+        Lite.Extensions.ListStyleType.Katakana => "katakana",
+        Lite.Extensions.ListStyleType.KatakanaIroha => "katakana-iroha",
+        Lite.Extensions.ListStyleType.CjkIdeographic => "cjk-ideographic",
+        _ => "none",
+    };
+
+    /// <summary>The text of an 'inside' marker box (§12.5.1): the bullet character itself or the
+    /// formatted ordinal with its "." suffix, followed by the space that separates the marker
+    /// from the item's content. Null for 'none'.</summary>
+    internal static string? InsideMarkerText(int index, string style) => style switch
+    {
+        "none" or "" => null,
+        "disc" or "circle" or "square" => Content(index, style) + " ",
+        _ => (Format(index, style) ?? index.ToString()) + ". ",
+    };
+
     /// <summary>The counter's text in the given style, without any marker suffix. Returns
     /// null for the bullet styles (the caller draws the glyph) and for 'none'.</summary>
     internal static string? Format(int value, string style) => style switch

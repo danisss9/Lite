@@ -993,6 +993,9 @@ public static class StyleExtensions
     public static float InsideMarkerIndent(this LayoutNode node)
     {
         if (node.GetListStylePosition() != ListStylePosition.Inside) return 0f;
+        // A generated marker is now a real inline child (§12.5.1), and it advances the first line
+        // by its own width. Reserving the marker's indent as well would indent the item twice.
+        if (node.Children.Any(c => c.TagName == "#pseudo-marker")) return 0f;
         if (node.GetListStyleImage() is { } listImage && listImage != "none")
         {
             // Same fetch the painter makes; the shared cache makes it once. An image that

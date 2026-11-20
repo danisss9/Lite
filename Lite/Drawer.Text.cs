@@ -126,7 +126,11 @@ internal static partial class Drawer
             var markerText = GetMarkerText(listStyleType, node);
             var ascent = -markerFont.Metrics.Ascent;
 
-            if (listStylePos == ListStylePosition.Inside)
+            // §12.5.1: a generated '#pseudo-marker' is a real inline child of the item now, so
+            // it lays out and paints through the ordinary inline path. Painting it here as well
+            // would draw it twice and indent the text a second time.
+            if (listStylePos == ListStylePosition.Inside &&
+                !node.Children.Any(c => c.TagName == "#pseudo-marker"))
             {
                 // Inside: marker is part of content flow — draw it and offset content
                 if (!string.IsNullOrEmpty(markerText))
@@ -141,6 +145,18 @@ internal static partial class Drawer
                 {
                     var bulletSize = markerFont.Size * 0.2f;
                     insideMarkerWidth = bulletSize * 2 + markerFont.Size * 0.3f + 4f;
+                    DrawBulletMarker(canvas, listStyleType, box.ContentBox.Left + markerFont.Size * 0.3f,
+                                     box.ContentBox.Top + markerFont.Size * 0.55f, markerFont.Size, markerPaint);
+                }
+            }
+            else if (listStylePos == ListStylePosition.Inside)
+            {
+                // An inside marker that is a generated child lays out (and supplies the line and
+                // hanging indent), but §12.6.2's disc/circle/square are drawn as figures, not
+                // text: paint the figure over the child's transparent glyph slot.
+                if (node.Children.Any(c => c.TagName == "#pseudo-marker") &&
+                    !CssCounterStyles.HasTextMarker(CssCounterStyles.Keyword(listStyleType)))
+                {
                     DrawBulletMarker(canvas, listStyleType, box.ContentBox.Left + markerFont.Size * 0.3f,
                                      box.ContentBox.Top + markerFont.Size * 0.55f, markerFont.Size, markerPaint);
                 }
@@ -207,7 +223,11 @@ internal static partial class Drawer
 
     private static void DrawBulletMarker(SKCanvas canvas, ListStyleType type, float cx, float cy, float fontSize, SKPaint paint)
     {
-        var radius = fontSize * 0.2f;
+        // CSS 2.1 §12.6.2 defines the bullet styles as a filled circle, a hollow circle and a
+        // filled square; it does not fix their size. 0.2em is the disc's visible diameter in the
+        // common UI fonts, and the cap keeps a marker next to 85px text a bullet rather than a
+        // banner (the 'inside' marker of list-style-position-003/008/009).
+        var radius = Math.Min(fontSize * 0.2f, 11f);
         switch (type)
         {
             case ListStyleType.Disc:

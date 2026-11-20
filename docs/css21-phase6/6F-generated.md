@@ -23,7 +23,11 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Edits outside owned files
 
-_(None yet.)_
+- `Lite/Parser.cs` (2 lines): calls `CreateListMarkerChild` after the pseudo children and before
+  `::first-letter`, with the originating `IElement` (needed for the LI ordinal). No other change.
+- `Lite/Extensions/DrawCommandExtensions.cs` (`InsideMarkerIndent`): returns 0 when the item has
+  a `#pseudo-marker` child, because the real marker box now advances the first line itself.
+- `Lite.Tests/GeneratedContentTests.cs` is new (my lane's tests).
 
 ## Progress
 
@@ -39,6 +43,34 @@ _(None yet.)_
   `content: url()`).
 - **Checks:** units 649 passed; css21 gate 51 passed / 1 expected-fail; wpt gate 86 / 2
   expected-fail; lane list official 0→10, WPT 0 (0 losses); canary 300/300.
+
+### List markers are generated inline boxes (§12.5.1)
+
+- **Moved (44 of the 200 lane cases now pass, from 10):** `list-style-position-003/005/008/009`,
+  `list-style-position-020`-family still open, `list-style-position-applies-to-001/002/003/004/007/013`,
+  `list-style-applies-to-012/014`, `list-style-type-applies-to-012/014`,
+  `list-style-image-applies-to-012/014`, `list-style-position-023/024`, `list-style-position-003`
+  also fixed the parked "outside markers above bars" case. A marker is now a real
+  `#pseudo-marker` child: an 'inside' marker is the first inline box (so it gets its own line
+  above a block child and the item's text wraps after it — the hanging indent), and an empty
+  item gets one zero-width marker line so an outside marker lands where the reference puts it.
+  The painted disc is capped so an 85px item keeps a bullet at the marker's size.
+- **Still fails:** `list-style-position-020/022` (hanging indent: the item's text is a direct
+  child, not a #text child, in the span form), `list-style-applies-to-009/017` and the
+  `-image/-type/-position-009/017` family (the A tag's painter path and the float-sibling line
+  band), the round-dot family below, `list-style-type-017`, `list-style-020`, `c566`.
+- **Checks:** units 652 passed; css21 51/1; wpt 86/2; lane list official 10→27, WPT 0→17 (44
+  total, 0 losses); canary 300/300.
+
+### Round-dot pass conditions (handed to 6.M)
+
+`list-style-type-001`, `list-style-applies-to-005/006`, `list-style-type-applies-to-005/006` (and
+their official twins) fail the `round-dot` machine check because a 16px disc paints a 5x5 ink
+blob whose bbox edges are all inked, so the check's rectangle heuristic calls it square. The
+render is a filled circle 7-8px across including antialiasing (browsers draw ~4-5px here). A larger
+disc would fix the check but then `list-style-position-003/008/009` (85px) fail the `<=24px`
+bullet threshold — the two checks have no common marker size. 6.M should relax `round-dot` to
+test the shape's corner emptiness rather than every bbox edge.
 
 ### Editor's note
 
