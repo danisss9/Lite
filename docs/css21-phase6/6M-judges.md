@@ -25,6 +25,11 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
 ## Handed in
 
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- table-height-algorithm-031/032 (from 6.E): the engine now renders the assert correctly (the two
+  visible "Filler Text" bottoms share the row baseline; the caption is intentionally invisible
+  via `color: white`), but the selftest judge still reports "a filler text painted no ink" — it
+  appears to count the intentionally-white caption as a missing text. Needs a verdict route that
+  accepts an explicitly-white filler text.
 
 ## Edits outside owned files
 
