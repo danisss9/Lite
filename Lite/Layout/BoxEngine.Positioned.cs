@@ -375,8 +375,11 @@ internal static partial class BoxEngine
         return overflow;
     }
 
-    /// <summary>A 'position: relative' box's paint-time shift (§9.4.3): 'left' wins over
-    /// 'right' and 'top' over 'bottom'; percentages resolve against the containing block.</summary>
+    /// <summary>A 'position: relative' box's paint-time shift (§9.4.3): 'top' wins over
+    /// 'bottom'; percentages resolve against the containing block. When neither 'left' nor
+    /// 'right' is 'auto' the position is over-constrained: "If the 'direction' property of the
+    /// containing block is 'ltr', the value of 'left' wins … If the 'direction' property of the
+    /// containing block is 'rtl', 'right' wins and 'left' is ignored."</summary>
     internal static (float Dx, float Dy) RelativeOffset(LayoutNode node)
     {
         var fontSize = node.GetFontSize();
@@ -387,9 +390,27 @@ internal static partial class BoxEngine
         var l = node.GetOffsetLeft(containingWidth, fontSize);
         var r = node.GetOffsetRight(containingWidth, fontSize);
         var b = node.GetOffsetBottom(containingHeight, fontSize);
-        var dx = !float.IsNaN(l) ? l : !float.IsNaN(r) ? -r : 0f;
+        float dx;
+        if (!float.IsNaN(l) && !float.IsNaN(r))
+            dx = RelativeContainingBlockDirection(node) == "rtl" ? -r : l;
+        else
+            dx = !float.IsNaN(l) ? l : !float.IsNaN(r) ? -r : 0f;
         var dy = !float.IsNaN(t) ? t : !float.IsNaN(b) ? -b : 0f;
         return (dx, dy);
+    }
+
+    /// <summary>The 'direction' of a relatively positioned box's containing block (§10.1 item
+    /// 2): the nearest block container ancestor — an inline ancestor's own 'direction' (under
+    /// 'unicode-bidi') does not count.</summary>
+    private static string RelativeContainingBlockDirection(LayoutNode node)
+    {
+        for (var a = node.Parent; a is not null; a = a.Parent)
+        {
+            if (a.TagName.Length > 0 && a.TagName[0] == '#') continue;
+            if (a.GetDisplay() is DisplayType.Inline) continue;
+            return a.GetDirection();
+        }
+        return node.GetDirection();
     }
 
     /// <summary>The far edges of a scroll container's in-flow content (§11.1.1): every

@@ -1643,12 +1643,40 @@ public static class StyleExtensions
         {
             ov = ov.Trim();
             if (ov == "auto") return float.NaN;
+            if (ov == "inherit") return InheritedOffset(node, prop, total, size);
             if (TryEvalCalc(ov, total, size, total, out var calcPx)) return calcPx;
             if (CssUnits.TryParse(ov, size, total, total, total, out var lp)) return lp;
         }
+        // 'inherit' takes the parent's computed value (CSS 2.1 §6.2 Inheritance); the cascade
+        // keeps the keyword as the raw value, which read as 'auto' below — a relative box
+        // inherited no shift and an abs-pos box fell back to its static position
+        // (dynamic-top-change-001..005b's inherited 'top' chain).
+        if (node.Style.GetPropertyValueSafe(prop)?.Trim() == "inherit")
+            return InheritedOffset(node, prop, total, size);
         if (node.Style.GetProperty(prop)?.RawValue is CssConstantValue<CssLengthValue>) return float.NaN; // auto
         if (node.Style.GetProperty(prop)?.RawValue is CssLengthValue l)
             return CssUnits.ToPx(l, size, total, total, total);
+        return float.NaN;
+    }
+
+    /// <summary>Walks the ancestors for the value 'inherit' stands for: each ancestor's own
+    /// 'inherit' keeps walking (CSS 2.1 §6.2), and the first concrete value is parsed HERE —
+    /// against the inheritor's own percentage basis (a computed percentage stays a percentage
+    /// through inheritance) and the inheritor's own font for em units.</summary>
+    private static float InheritedOffset(LayoutNode node, string prop, float total, float size)
+    {
+        for (var p = node.Parent; p is not null; p = p.Parent)
+        {
+            var raw = p.TryResolveStyle(prop, out var pov)
+                ? pov.Trim()
+                : p.Style.GetPropertyValueSafe(prop)?.Trim();
+            if (string.IsNullOrEmpty(raw)) continue;
+            if (raw == "inherit") continue;
+            if (raw == "auto") return float.NaN;
+            if (TryEvalCalc(raw, total, size, total, out var calcPx)) return calcPx;
+            if (CssUnits.TryParse(raw, size, total, total, total, out var lp)) return lp;
+            return float.NaN;
+        }
         return float.NaN;
     }
 

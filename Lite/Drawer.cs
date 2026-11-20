@@ -974,36 +974,72 @@ internal static partial class Drawer
 
     /// <summary>
     /// An element establishes a stacking context (painted atomically, ordered by z-index within
-    /// its parent context) when it is positioned (relative/absolute/sticky), has opacity &lt; 1,
-    /// or has a transform. position:fixed is excluded — those are painted by PaintFixedNodes.
-    ///
-    /// Pragmatic model of CSS 2.1 Appendix E: ALL positioned elements are treated as stacking
-    /// contexts. This correctly flattens and z-orders positioned descendants across nesting
-    /// levels (the main gap of the old per-parent sort). The one unmodeled subtlety is the
-    /// z-index:auto case where a positioned-auto element's own positioned descendants are meant
-    /// to join the PARENT context rather than be isolated within it.
+    /// its parent context) when it is a relatively or absolutely positioned box with an integer
+    /// 'z-index' (CSS 2.1 §9.9.1: "'auto' … The box does not establish a new local stacking
+    /// context"), a sticky box, or has opacity &lt; 1 or a transform. position:fixed is excluded —
+    /// those are painted by PaintFixedNodes.
+    /// <para>A positioned box with 'z-index: auto' is a stacking ITEM without being a context
+    /// (<see cref="IsStackingItem"/>): Appendix E step 8 paints it "as if it generated a new
+    /// stacking context, but any positioned descendants and descendants which actually create a
+    /// new stacking context should be considered part of the parent stacking context, not this
+    /// new one". Treating it as a context sealed its z-index:-1 children above its own
+    /// background (z-index-abspos-001's red square over the green one).</para>
     /// </summary>
     private static bool EstablishesStackingContext(LayoutNode n)
     {
-        var pos = n.GetPosition();
-        if (pos is PositionType.Absolute or PositionType.Relative or PositionType.Sticky) return true;
-        if (n.GetOpacity() < 1f) return true;
-        if (n.GetTransform() != null) return true;
+        var pos = OwnPosition(n);
+        if (pos is PositionType.Absolute or PositionType.Relative && !IsAutoZIndex(n)) return true;
+        if (pos is PositionType.Sticky) return true;
+        if (!IsSynthesized(n) || n.TryResolveStyle("opacity", out _))
+            if (n.GetOpacity() < 1f) return true;
+        if (!IsSynthesized(n) || n.TryResolveStyle("transform", out _))
+            if (n.GetTransform() != null) return true;
         return false;
     }
 
-    /// <summary>Collects stacking-context descendants of <paramref name="node"/> in document
-    /// order, descending through non-stacking, non-fixed boxes but stopping at (and including)
-    /// each stacking context — so deep positioned elements flatten into their nearest ancestor
-    /// stacking context. position:fixed is skipped (PaintFixedNodes owns it).</summary>
+    /// <summary>A box the stacking-context walk paints in its own layer (Appendix E steps 2, 8
+    /// and 9): every stacking context plus every relatively/absolutely positioned box, whatever
+    /// its 'z-index'. The in-flow phases skip these.</summary>
+    private static bool IsStackingItem(LayoutNode n) =>
+        OwnPosition(n) is PositionType.Absolute or PositionType.Relative or PositionType.Sticky
+        || EstablishesStackingContext(n);
+
+    /// <summary>Synthesized nodes (<c>#text</c>, <c>#pseudo-*</c>, anonymous boxes) share their
+    /// host element's <see cref="LayoutNode.Style"/> object, so the host's non-inherited
+    /// 'position', 'opacity' and 'transform' read back as their own unless they carry their own
+    /// override (a generated box's declared 'position').</summary>
+    private static bool IsSynthesized(LayoutNode n) => n.TagName.Length > 0 && n.TagName[0] == '#';
+
+    private static PositionType OwnPosition(LayoutNode n) =>
+        IsSynthesized(n) && !n.TryResolveStyle("position", out _)
+            ? PositionType.Static
+            : n.GetPosition();
+
+    /// <summary>§9.9.1: 'z-index' is 'auto' unless it is an integer.</summary>
+    private static bool IsAutoZIndex(LayoutNode n)
+    {
+        var raw = n.TryResolveStyle("z-index", out var ov)
+            ? ov : n.Style.GetPropertyValueSafe("z-index");
+        return !int.TryParse(raw?.Trim(), out _);
+    }
+
+    /// <summary>Collects the stacking items of <paramref name="node"/>'s stacking context in
+    /// document order (Appendix E). The walk descends through in-flow boxes and through
+    /// positioned 'z-index: auto' boxes — whose positioned descendants belong to this context,
+    /// not to theirs — but stops at (and includes) each real stacking context. position:fixed is
+    /// skipped (PaintFixedNodes owns it).</summary>
     private static void CollectStackingItems(LayoutNode node, List<LayoutNode> items)
     {
         foreach (var child in node.Children)
         {
             if (child.GetDisplay() == DisplayType.None) continue;
-            if (child.GetPosition() == PositionType.Fixed) continue;
+            if (OwnPosition(child) == PositionType.Fixed) continue;
             if (EstablishesStackingContext(child)) items.Add(child); // atomic — don't descend
-            else CollectStackingItems(child, items);
+            else
+            {
+                if (IsStackingItem(child)) items.Add(child);         // z-index:auto, step 8
+                CollectStackingItems(child, items);
+            }
         }
     }
 
@@ -1029,13 +1065,20 @@ internal static partial class Drawer
         var isFlex = node.GetDisplay() is DisplayType.Flex or DisplayType.InlineFlex;
         IEnumerable<LayoutNode> ordered = isFlex ? node.Children.OrderBy(c => c.GetOrder()) : node.Children;
 
-        // The root element (no parent) and any stacking-context-establishing box are roots.
-        bool isScRoot = node.Parent is null || EstablishesStackingContext(node);
+        // The root element (no parent), any stacking-context-establishing box, and any
+        // position:fixed box are roots: PaintFixedNodes is the only thing that paints a fixed
+        // box's subtree, so its positioned descendants have no enclosing context to be
+        // collected by — the context walk stops at fixed boxes (EstablishesStackingContext
+        // excludes them so they never join an ancestor's z lists) and PaintNodeInner's child
+        // pass skips stacking items (containing-block-010's abspos square under a fixed div
+        // was laid out but orphaned, painted by nobody).
+        bool isScRoot = node.Parent is null || EstablishesStackingContext(node)
+                        || OwnPosition(node) == PositionType.Fixed;
 
         void SplitInFlowNode(LayoutNode child)
         {
-            if (child.GetPosition() == PositionType.Fixed) return;             // PaintFixedNodes
-            if (EstablishesStackingContext(child)) return;                     // handled by SC root
+            if (OwnPosition(child) == PositionType.Fixed) return;              // PaintFixedNodes
+            if (IsStackingItem(child)) return;                                 // handled by SC root
             if (_stepFloats == null)
             {
                 // No step-3 descent active (a full-paint context: float subtree, z pass,
@@ -1065,8 +1108,8 @@ internal static partial class Drawer
 
         void DescendForBlocks(LayoutNode child)
         {
-            if (child.GetPosition() == PositionType.Fixed) return;             // PaintFixedNodes
-            if (EstablishesStackingContext(child)) return;                     // handled by SC root
+            if (OwnPosition(child) == PositionType.Fixed) return;              // PaintFixedNodes
+            if (IsStackingItem(child)) return;                                 // handled by SC root
             if (child.TagName != "#text" && child.GetFloat() != FloatType.None)
             {
                 Defer(_stepFloats!, canvas, child);                            // step 4
@@ -1088,14 +1131,18 @@ internal static partial class Drawer
                 SplitInFlowNode(child);
         }
 
-        if (!isScRoot)
+        // Appendix E step 8: a positioned 'z-index: auto' box paints "as if it generated a new
+        // stacking context" — its own in-flow content in the step 3/4/5 order — while its
+        // positioned descendants were collected by the enclosing context, so it has no z lists.
+        bool isAutoZRoot = !isScRoot && IsStackingItem(node);
+        if (!isScRoot && !isAutoZRoot)
         {
             SplitInFlow();
             return;
         }
 
         var items = new List<LayoutNode>();
-        CollectStackingItems(node, items);
+        if (isScRoot) CollectStackingItems(node, items);
         // OrderBy is stable, so equal z-indices keep document order.
         var negativeZ = items.Where(c => c.GetZIndex() < 0).OrderBy(c => c.GetZIndex()).ToList();
         var nonNegativeZ = items.Where(c => c.GetZIndex() >= 0).OrderBy(c => c.GetZIndex()).ToList();
@@ -1128,36 +1175,69 @@ internal static partial class Drawer
     /// skip (overflow-003: an abspos square inside a scrolled 'overflow: scroll' box painted
     /// outside it, unclipped and unscrolled). §11.1.1: the clip covers descendants "except
     /// those whose containing block is the viewport or an ancestor of the element", so an
-    /// absolutely positioned item passes only through boxes that contain its containing block.</summary>
+    /// absolutely positioned item passes only through boxes that contain its containing block.
+    /// <para>A 'z-index: auto' positioned ancestor between the root and the item (whose
+    /// positioned descendants join the root's context, Appendix E) still moves its subtree:
+    /// its relative offset (§9.4.3) is replayed here as well, outermost first, interleaved with
+    /// the clips in tree order. So is an absolutely positioned ancestor's 'clip: rect()'
+    /// (§11.1.2), which clips the box's descendants too; a 'z-index: auto' box with a clip no
+    /// longer paints those positioned descendants itself (clipping-009's red abspos child
+    /// painted outside its clipped parent).</para></summary>
     private static void PaintThroughClippers(SKCanvas canvas, LayoutNode root, LayoutNode item, int viewportWidth)
     {
-        List<LayoutNode>? clippers = null;
-        var absolute = item.GetPosition() == PositionType.Absolute;
+        List<(LayoutNode Box, bool Clip, SKRect? CssClip, float Dx, float Dy)>? chain = null;
+        var absolute = OwnPosition(item) == PositionType.Absolute;
         LayoutNode? containingBlock = null;
         if (absolute)
             for (var a = item.Parent; a is not null && !ReferenceEquals(a, root); a = a.Parent)
-                if (a.GetPosition() != PositionType.Static) { containingBlock = a; break; }
+                if (OwnPosition(a) != PositionType.Static) { containingBlock = a; break; }
+        float shiftX = 0f, shiftY = 0f;
         for (var a = item.Parent; a is not null && !ReferenceEquals(a, root); a = a.Parent)
         {
-            if (a.GetOverflow() == OverflowType.Visible) continue;
-            if (absolute && !IsSelfOrDescendant(containingBlock, a)) continue;
-            (clippers ??= []).Add(a);
+            var clips = a.GetOverflow() != OverflowType.Visible
+                        && (!absolute || IsSelfOrDescendant(containingBlock, a));
+            var aPos = OwnPosition(a);
+            var (dx, dy) = aPos == PositionType.Relative ? BoxEngine.RelativeOffset(a) : (0f, 0f);
+            // §11.1.2: 'clip' applies only to absolutely positioned elements (fixed included).
+            var cssClip = aPos is PositionType.Absolute or PositionType.Fixed ? a.GetClipRect() : null;
+            if (!clips && cssClip is null && dx == 0f && dy == 0f) continue;
+            (chain ??= []).Add((a, clips, cssClip, dx, dy));
+            shiftX += dx;
+            shiftY += dy;
         }
-        if (clippers is null)
+        if (chain is null)
         {
             PaintNode(canvas, item, viewportWidth);
             return;
         }
+        var hitStart = _hitRegions.Count;
         canvas.Save();
-        for (var i = clippers.Count - 1; i >= 0; i--)  // outermost first
+        for (var i = chain.Count - 1; i >= 0; i--)  // outermost first
         {
-            var a = clippers[i];
+            var (a, clips, cssClip, dx, dy) = chain[i];
+            if (dx != 0f || dy != 0f) canvas.Translate(dx, dy);
+            // The 'clip' rectangle is relative to the border box, so it applies before (outside)
+            // the box's own overflow clip, as PaintNode orders them.
+            if (cssClip is { } cr) canvas.ClipRect(cr);
+            if (!clips) continue;
             canvas.ClipRect(BoxEngine.ScrollportRect(a));
             if (a.ScrollState is { } ss && (ss.NeedsScrollbar || ss.NeedsHorizontalScrollbar))
                 canvas.Translate(-ss.ScrollX, -ss.ScrollY);
         }
         PaintNode(canvas, item, viewportWidth);
         canvas.Restore();
+        // Hit regions are recorded in layout coordinates; move the ones this subtree made by
+        // the relative offsets replayed above (PaintNode does the same for the item's own).
+        if (shiftX != 0f || shiftY != 0f)
+            for (var i = hitStart; i < _hitRegions.Count; i++)
+            {
+                var region = _hitRegions[i];
+                var box = region.Bounds;
+                _hitRegions[i] = region with
+                {
+                    Bounds = new SKRect(box.Left + shiftX, box.Top + shiftY, box.Right + shiftX, box.Bottom + shiftY)
+                };
+            }
     }
 
     private static bool IsSelfOrDescendant(LayoutNode? node, LayoutNode ancestor)
@@ -1240,7 +1320,7 @@ internal static partial class Drawer
         {
             if (child.GetDisplay() == DisplayType.None) continue;
             if (child.GetPosition() == PositionType.Fixed) continue;
-            if (EstablishesStackingContext(child)) continue;   // z passes own it
+            if (IsStackingItem(child)) continue;               // z passes own it
             if (child.TagName != "#text" && child.GetFloat() != FloatType.None) continue; // step 4
             if (!IsInlineLevelContent(child)) continue;        // step 3 painted it
             PaintInlineContent(canvas, child, viewportWidth);

@@ -120,4 +120,29 @@ public static class ScrollGutterTests
         True(ss is not null && ss.NeedsScrollbar, "the box must scroll vertically");
         True(!ss!.NeedsHorizontalScrollbar, $"no horizontal overflow, got content {ss.ContentWidth} in {ss.ContainerWidth}");
     }
+
+    [Test]
+    public static void ScrollExtent_IgnoresAbsposChildWithAnOutsideContainingBlock()
+    {
+        // abspos-overflow-001..009: the abs-pos child of an overflow box whose containing block
+        // is the viewport escapes the box's clip (§11.1.1) and must not widen its scrollable
+        // area — 11.1.1 paints it unclipped, so there is nothing to scroll into view. The box's
+        // only child being out-of-flow used to fall into the raw widest-child fallback, which
+        // read the child's margin box and — on every re-layout (DrawToBitmap runs one) — made
+        // the 200px box's content 300px wide and the thumb proportionally short.
+        var html = "<!DOCTYPE html><style>body{margin:0}" +
+            "#s{width:200px;height:200px;overflow:scroll}" +
+            "#a{position:absolute;top:0;left:0;width:300px;height:20px}</style>" +
+            "<div id=\"s\"><div id=\"a\">PASS</div></div>";
+        var page = Parser.ParseChildPage(html, isSrcdoc: true, "http://test/", 800, 600);
+        var s = FindId(page.Root, "s")!;
+        for (var pass = 0; pass < 2; pass++)
+        {
+            BoxEngine.Layout(page.Root, 800, 600);
+            var ss = s.ScrollState;
+            True(ss is not null, $"pass {pass}: the scroll box must track its state");
+            True(ss!.ContentWidth == 200f,
+                $"pass {pass}: the escaped abspos child must not widen the content past the box (the 200px full-width thumb the references render), got {ss.ContentWidth}");
+        }
+    }
 }
