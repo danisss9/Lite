@@ -157,4 +157,30 @@ public static class CssErrorRecoveryTests
         Equal(1, fetched.Count);
         Equal("data:text/css,@import%20url(data:text/css,p%7Bcolor:red%7D);", fetched[0]);
     }
+
+    [Test]
+    public static void SelectorValidation_EnforcesCss21GrammarAndCaseInsensitivePseudos()
+    {
+        // Patch 010, CSS 2.1 §4.1.7 / §5.2.1: empty selector items drop the rule (bad-selector-001).
+        Equal(0, Parse("body,,div { color: red; }").Rules.Length);
+        Equal(0, Parse(",div { color: red; }").Rules.Length);
+        Equal(0, Parse("div, { color: red; }").Rules.Length);
+
+        // CSS 2.1 §5.10 / §5.12: nothing may follow a pseudo-element (pseudo-014/016, c25-pseudo-elmnt-000).
+        Equal(0, Parse("p:first-line[id=\"p1\"], #p1 { color: red; }").Rules.Length);
+        Equal(0, Parse("p:first-line+p, #p1 { color: red; }").Rules.Length);
+        Equal(0, Parse("p:first-line.two { color: red; }").Rules.Length);
+
+        // CSS 2.1 §4.1.3: class/ID identifiers cannot start with digit or '-' + digit (ident-003).
+        Equal(0, Parse(".-1ident, .three { color: red; }").Rules.Length);
+        Equal(0, Parse("#-1ident, .four { color: red; }").Rules.Length);
+        Equal(1, Parse(".-ident, .one { color: green; }").Rules.Length);
+
+        // CSS 2.1 §4.1.3: pseudo-class and pseudo-element names are ASCII case-insensitive (pseudo-007/008).
+        var pseudoSheet = Parse("div:fiRsT-cHiLd { color: green; } div:bEfOre { content: 'A'; } div:aFtEr { content: 'B'; }");
+        Equal(3, pseudoSheet.Rules.Length);
+        Equal("rgba(0, 128, 0, 1)", Declared(pseudoSheet, "div:first-child", "color"));
+        Equal("\"A\"", Declared(pseudoSheet, "div:before", "content"));
+        Equal("\"B\"", Declared(pseudoSheet, "div:after", "content"));
+    }
 }

@@ -29,6 +29,21 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Progress
 
+### 4. CSS 2.1 selector validation & ASCII case-insensitive pseudo names (AngleSharp.Css patch 010)
+- **Spec:** CSS 2.1 §4.1.3 (identifiers cannot start with a digit or `-`+digit; pseudo-class/pseudo-element names are ASCII case-insensitive), §4.1.7 / §5.2.1 (empty comma-separated selector items invalidate the selector group), §5.10 / §5.12 (pseudo-elements must appear at the end of a selector).
+- **Moved (8 cases: +4 official, +4 WPT):**
+  - `css21-official/html4/bad-selector-001.htm`, `css/CSS2/syntax/bad-selector-001.xht`
+  - `css21-official/html4/ident-003.htm`, `css/CSS2/syntax/ident-003.xht`
+  - `css21-official/html4/pseudo-014.htm`, `css/CSS2/selectors/pseudo-014.xht`
+  - `css21-official/html4/pseudo-016.htm`, `css/CSS2/selectors/pseudo-016.xht`
+- **Still failing (related):** `pseudo-007` (`div:fiRsT-cHiLd`), `pseudo-008` (`div:bEfOre`/`div:aFtEr`), `c25-pseudo-elmnt-000` (needs investigation — likely reference/line-box rendering rather than selector parsing, since the unit test confirms `div:first-child`, `div:before`, `div:after` all parse and `p:first-line.two` is dropped).
+- **Handed to other lanes:** None yet.
+- **Checks:**
+  - Units: `CssErrorRecoveryTests` 10/10 passed (including new `SelectorValidation_EnforcesCss21GrammarAndCaseInsensitivePseudos`).
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 19/62 official, 21/89 WPT (from 15/62, 17/89; +8 cases).
+  - Canary: 300/300 (154/154 official, 146/146 WPT).
+
 ### 3. Pseudo-element cascade specificity and descendant universal base selector (`Parser.Cascade.cs`)
 - **Spec:** CSS 2.1 §6.4.1 / §6.4.3 (pseudo-element rules cascade by origin, `!important`, specificity, and source order; single-colon `:before`/`:after`/`:first-letter`/`:first-line` count in `c`, not `b`), §5.10 / §5.12 (combinator or descendant space before a pseudo-element implies `*`, e.g. `div :after` → `div *`).
 - **Moved (8 cases: +3 official, +5 WPT):**
