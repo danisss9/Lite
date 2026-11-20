@@ -1,4 +1,6 @@
+using Lite;
 using Lite.Extensions;
+using Lite.Layout;
 using Lite.Models;
 using static Lite.Tests.TestRunner;
 
@@ -92,6 +94,27 @@ public static class GeneratedContentTests
         True(letter is not null && tail is not null, "first-letter split missing");
         True(tail!.GetVerticalAlign() == VerticalAlignType.Baseline,
             $"tail aligns {tail.GetVerticalAlign()}");
+    }
+
+    [Test]
+    public static void ContentUrl_PaintsTheGeneratedImage()
+    {
+        // §12.2: 'content: url(...)' makes the pseudo box a REPLACED element, so its bitmap must
+        // paint through the image path (content-004's green square). The parser fetch is covered
+        // by the conformance case; this pins the paint path by handing the box a bitmap.
+        var root = Parse("<div></div>", "div:before { content: ''; }");
+        var pseudo = Find(root, "#pseudo-before");
+        True(pseudo is not null, "the pseudo box is missing");
+        using var image = new SkiaSharp.SKBitmap(4, 4);
+        image.Erase(new SkiaSharp.SKColor(0, 128, 0));
+        pseudo!.Image = image;
+        Lite.Layout.BoxEngine.Layout(root, 40, 40);
+        using var bitmap = Drawer.DrawToBitmap(40, 40, root, new Viewport { ViewportHeight = 40 });
+        var painted = false;
+        for (var y = 0; y < 40 && !painted; y++)
+        for (var x = 0; x < 40 && !painted; x++)
+            if (bitmap.GetPixel(x, y) != SkiaSharp.SKColors.White) painted = true;
+        True(painted, "the content image painted nothing");
     }
 
     private static LayoutNode Parse(string body, string css)

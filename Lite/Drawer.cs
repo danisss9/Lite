@@ -1202,7 +1202,9 @@ internal static partial class Drawer
     private static void PaintInlineContent(SKCanvas canvas, LayoutNode node, int viewportWidth)
     {
         if (node.GetDisplay() == DisplayType.None) return;
-        if (IsAtomicInlineBox(node) || node.TagName is "IMG" or "BR"
+        // A generated 'content: url(...)' box is a replaced element too (§12.2): its bitmap
+        // paints through PaintNode's replaced-image path, not the text path (content-004).
+        if (IsAtomicInlineBox(node) || Layout.BoxEngine.IsReplacedImage(node) || node.TagName is "IMG" or "BR"
             || node.GetPosition() is PositionType.Absolute or PositionType.Fixed
             || node.TagName is "A" or "LABEL" or "BUTTON" or "INPUT" or "SELECT" or "TEXTAREA"
                 or "OBJECT" or "IFRAME" or "VIDEO" or "AUDIO" or "SVG" or "CANVAS" or "PROGRESS" or "METER")

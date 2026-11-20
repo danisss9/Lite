@@ -30,6 +30,8 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - `Lite/Extensions/DrawCommandExtensions.cs` (`GetVerticalAlign`): a synthesized `#text` child of
   a table cell without its own value returns baseline (§17.5.4; the cell's `middle` is a
   row-alignment, not an inline value). Fixes the reference half of `first-letter-selector-007`.
+- `Lite/Drawer.cs` (`PaintInlineContent`, 1 line): a replaced `content: url(...)` pseudo box is
+  forwarded to `PaintNode` like an IMG, instead of the empty-text inline path.
 - `Lite.Tests/GeneratedContentTests.cs` is new (my lane's tests).
 
 ## Progress
@@ -64,6 +66,17 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   band), the round-dot family below, `list-style-type-017`, `list-style-020`, `c566`.
 - **Checks:** units 652 passed; css21 51/1; wpt 86/2; lane list official 10→27, WPT 0→17 (44
   total, 0 losses); canary 300/300.
+
+### `content: url(...)` is a replaced inline box (§12.2)
+
+- **Moved:** `content-004` (official + WPT). The pseudo box got the fetched bitmap and laid out
+  correctly, but the inline paint path only forwarded IMG and the atomic inline-boxes to
+  `PaintNode`, so a `#pseudo-before` with an image painted its (empty) text and dropped the
+  bitmap.
+- **Still fails:** the `before-after-*` family that combines `content: url(...)` with display
+  types, floats, positioning or table parts — separate causes below.
+- **Checks:** units 659; css21 51/1; wpt 86/2; lane list 47→49 (official 29, WPT 20), 0 losses;
+  canary 300/300.
 
 ### Cell text and the ::first-letter tail keep the baseline (§17.5.4)
 
