@@ -23,6 +23,11 @@ Branch `css21/p6-e`, worktree `C:\Repos\Lite-p6-e`. Case list `Lite.Conformance/
 
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
 
+- `top/left/right/bottom/position-applies-to-005/006/015` (both corpora, 30 cases in 6.D's
+  list): the table-display variants — 'table-column-group', 'table-column', 'table-caption' —
+  offset/position questions land in the table box geometry, not the positioning walk. From 6.D,
+  20 November 2026.
+
 ## Edits outside owned files
 
 _(None yet.)_
