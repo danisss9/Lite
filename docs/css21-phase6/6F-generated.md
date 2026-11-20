@@ -27,4 +27,20 @@ _(None yet.)_
 
 ## Progress
 
-_(None yet.)_
+### Generated pseudo boxes: `vertical-align` no longer leaks from the host (§10.8.1)
+
+- **Moved (10):** `content-037`, `content-046`, `content-052`, `content-053`, `content-065`,
+  `content-081`, `content-103`, `content-132`, `content-149` (official; their twins are the WPT
+  `generated-content` references) and `first-letter-selector-007`. A `td:before` was middle-aligned
+  because the pseudo borrowed the cell's style object, so the UA `vertical-align: middle` read back
+  as the pseudo's own and the line box grew by 1.4px against the reference cell.
+- **Still fails:** the same files' WPT entries (except `content-037`) were never in this lane's
+  list; the remaining `content-*` cases have other causes (`attr()` case folding, counters,
+  `content: url()`).
+- **Checks:** units 649 passed; css21 gate 51 passed / 1 expected-fail; wpt gate 86 / 2
+  expected-fail; lane list official 0→10, WPT 0 (0 losses); canary 300/300.
+
+### Editor's note
+
+The lane list read before this batch was 0/97 official and 0/103 WPT by definition (every entry is
+a failure), so "moved" means "passes now".

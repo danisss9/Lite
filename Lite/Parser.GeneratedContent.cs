@@ -190,6 +190,12 @@ internal static partial class Parser
                 // copying the raw value here would overwrite that with e.g. the literal "inherit".
                 if (p != "content" && p != "display") pseudoNode.StyleOverrides[p] = v;
             }
+            // CSS 2.1 §10.8.1: 'vertical-align' does not inherit and its initial value is
+            // 'baseline'. The generated box borrows the originating element's style object, so an
+            // element whose own value is 'middle' — every table cell through the UA sheet — leaked
+            // it into its ::before and the first line grew by the disagreement with the strut
+            // (content-037's green "PASS PASS" sat 2px below the same text in the reference cell).
+            pseudoNode.StyleOverrides.TryAdd("vertical-align", "baseline");
             NormalizeGeneratedWhitespace(pseudoNode);
             pseudoNode.Parent = node;
             node.Children.Insert(0, pseudoNode);
@@ -208,6 +214,9 @@ internal static partial class Parser
                 // copying the raw value here would overwrite that with e.g. the literal "inherit".
                 if (p != "content" && p != "display") pseudoNode.StyleOverrides[p] = v;
             }
+            // §10.8.1: 'vertical-align' does not inherit; the generated box starts at 'baseline',
+            // not at the originating element's value (see the ::before case above).
+            pseudoNode.StyleOverrides.TryAdd("vertical-align", "baseline");
             NormalizeGeneratedWhitespace(pseudoNode);
             pseudoNode.Parent = node;
             node.Children.Add(pseudoNode);
@@ -245,6 +254,9 @@ internal static partial class Parser
         letter.StyleOverrides["display"] = "inline";
         foreach (var (p, v) in styles)
             if (p != "content" && p != "display") letter.StyleOverrides[p] = v;
+        // §10.8.1: the ::first-letter box is its own inline box, so its undeclared
+        // 'vertical-align' is the initial 'baseline', not the host element's value.
+        letter.StyleOverrides.TryAdd("vertical-align", "baseline");
 
         var rest = new LayoutNode(null, "#text", text[len..], host.Style);
         rest.ResetNonInheritedStyles();
