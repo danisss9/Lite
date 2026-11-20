@@ -11,7 +11,8 @@ Branch `css21/p6-f`, worktree `C:\Repos\Lite-p6-f`. Case list `Lite.Conformance/
 ## Opens with (parked findings)
 
 - Dynamic pseudo-element rules: `content-178`, `first-letter-selector-029` and `first-line-selector-017`. Rules that match only after a state change must still generate `::before`/`::after`/`::first-letter` (coordinate with 6.K, which owns the dynamic-rule cascade).
-- Outside markers above bars do not paint (`list-style-position-003`).
+- ~~Outside markers above bars do not paint (`list-style-position-003`).~~ Fixed in batch 1 by
+  the generated marker line (§12.5.1); the case passes (official + WPT).
 
 ## Coordination
 
@@ -35,6 +36,10 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - `Lite.Tests/GeneratedContentTests.cs` is new (my lane's tests).
 
 ## Progress
+
+**Batch 1 reading:** lane list 0/97 + 0/103 → **36/97 + 27/103 = 63 of 200**, 0 losses; units 663;
+css21 51/1; wpt 86/2; canary 300/300. Eight commits. The remaining 137 are grouped at the end of
+this section.
 
 ### Generated pseudo boxes: `vertical-align` no longer leaks from the host (§10.8.1)
 
@@ -145,6 +150,30 @@ render is a filled circle 7-8px across including antialiasing (browsers draw ~4-
 disc would fix the check but then `list-style-position-003/008/009` (85px) fail the `<=24px`
 bullet threshold — the two checks have no common marker size. 6.M should relax `round-dot` to
 test the shape's corner emptiness rather than every bbox edge.
+
+### What is left, and where it goes
+
+- **6.K (dynamic):** `first-letter-nested-003/004/005`, `first-letter-dynamic-002/003a/003b`,
+  `before-after-dynamic-attr-001`, `before-after-dynamic-restyle-001`, the `content-178` parked
+  case, and the counter-after-mutation family (`counter-increment-000/001/002`,
+  `counter-reset-000/001/002`, `counter-increment-display-004`, `counters-root-000`). Rules and
+  text that appear after load must regenerate pseudo boxes and re-run the counter pass.
+- **6.K (cascade):** `first-letter-selector-011/012/013/014`, `before-after-001`,
+  `before-first-letter-selector-001` — a selector list mixing a pseudo-element and a normal part.
+- **6.E:** `content-172` (table max-content of a pseudo child).
+- **6.B:** the float-sibling `-017` list tests.
+- **6.X:** `content-159` (XHTML `<style>` quotes), `first-letter-selector-000` (CDATA).
+- **6.M:** the machine checks above (`round-dot`, `painted-only`, `content-008`'s needle,
+  `hanging-indent`, `list-style-type-017`'s band count, `content-counters-003`).
+- **Not diagnosed this batch:** `before-after-display-types-001`, `before-after-floated-001`,
+  `before-after-positioned-001/002/003`, `before-after-table-parts-001`,
+  `before-inheritable-002`/`after-inheritable-002`, `before-after-011`,
+  `content-inherit-002`, `content-173/174/175/177`, `content-white-space-002`,
+  `content-counter-004/009`, `content-counters-009/017/018`, `counter-increment-054`,
+  `list-style-020`, `c566-list-stl`, `content-type-000/001`, `content-height-005`,
+  `c541-word-sp`, `c542-letter-sp`.
+  Most need the generated pseudo's display type (block/table-cell/float/position) or a font
+  question; I left them rather than guess.
 
 ### Editor's note
 

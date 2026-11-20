@@ -40,6 +40,11 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
   counters) but `look-same` finds 0 ink bands below the instructions.
 - `list-style-type-017` (official only, from 6.F): the twin reftest passes but the self-describing
   check reports "8 ink bands below the instructions".
+- `list-style-position-020/022` (official + WPT, from 6.F): `hanging-indent` finds one text band
+  instead of two because the blue border of the box encloses both text lines and its component
+  spans them; the render itself has the second line shifted left under the bullet (the intended
+  result). Suggest ignoring a band whose component is the box border, or grouping text
+  components only.
 
 ## Edits outside owned files
 
