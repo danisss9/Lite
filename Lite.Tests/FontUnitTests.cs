@@ -228,6 +228,28 @@ public static class FontUnitTests
             $"second run must sit on its own line below the first, got tops {a.Box.ContentBox.Top} and {b.Box.ContentBox.Top}");
     }
 
+    [Test]
+    public static void LineHeightZero_LinesShareOneBaseline()
+    {
+        // CSS 2.1 §10.8.1: leading = line-height − (ascent + descent), split half above and half
+        // below the font box; with 'line-height: 0' every inline box's line-height box collapses
+        // to one point above the baseline, consecutive line boxes are 0 tall and their baselines
+        // coincide (font-family-015's two lines must paint on top of each other). A 0 floor on
+        // the below-baseline reach made each line half an ascent tall instead.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head></head><body style=\"margin:0\">" +
+            "<p id=\"p\" style=\"font-size:40px;line-height:0\">" +
+            "<span id=\"a\">X</span><br/><span id=\"b\">X</span></p>" +
+            "</body></html>", isSrcdoc: true, "http://test/", 800, 600).Root;
+        BoxEngine.Layout(page, 800, 600);
+        var a = Find(page, "a")!;
+        var b = Find(page, "b")!;
+        True(MathF.Abs(a.Box.ContentBox.Top - b.Box.ContentBox.Top) < 0.5f,
+            $"zero-height lines share one baseline, got tops {a.Box.ContentBox.Top} and {b.Box.ContentBox.Top}");
+        var p = Find(page, "p")!;
+        True(p.Box.ContentBox.Height < 0.5f, $"the paragraph collapses to 0 height, got {p.Box.ContentBox.Height}");
+    }
+
     private static LayoutNode Parse(string body) => Parser.ParseChildPage(
         $"<!DOCTYPE html><html><head></head><body>{body}</body></html>", isSrcdoc: true, "http://test/", 800, 600).Root;
 

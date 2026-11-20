@@ -230,6 +230,12 @@ internal static partial class BoxEngine
         // aligned items, which anchor to the line box's own edges instead of the baseline.
         var maxAbove = 0f;
         var maxBelow = 0f;
+        // The below-baseline reach of a baseline-aligned box is SIGNED — its line-height box's
+        // bottom edge, which sits ABOVE the baseline when the box's line-height is smaller than
+        // the font's ascent (line-height: 0's reach is ascent − (ascent+descent)/2). maxBelow
+        // keeps a 0 floor for the float-band heuristics; the committed line height takes the
+        // signed max, so a line whose every box ends above the baseline is that short.
+        var maxBelowSigned = float.NegativeInfinity;
         var maxTopH = 0f;
         var maxBottomH = 0f;
         // Whether anything on the current line aligns against the shared baseline. Only then does
@@ -344,7 +350,13 @@ internal static partial class BoxEngine
                 // than the font's ascent+descent gives negative half-leading), so it only counts
                 // when nothing else has claimed room down there — clamping it to 0 would stretch a
                 // `line-height: 10px` line back out to the full baseline.
-                below = hasBaselineItem ? Math.Max(below, strutBelow) : strutBelow;
+                // §10.8.1: the line box's bottom edge is the LOWEST box bottom, signed — with
+                // 'line-height: 0' every box (strut and text alike) ends ascent−(asc+desc)/2 above
+                // the baseline, and the line box is 0 tall, not the half-ascent a 0 floor produces
+                // (font-family-015's second line must share the first line's baseline). The signed
+                // accumulator equals maxBelow whenever any box reaches below the baseline, so this
+                // only bites on all-negative lines.
+                below = hasBaselineItem ? Math.Max(maxBelowSigned, strutBelow) : strutBelow;
             }
             if (maxTopH > above + below) below = maxTopH - above;
             if (maxBottomH > above + below) above = maxBottomH - below;
@@ -403,6 +415,7 @@ internal static partial class BoxEngine
             lineY += thisLineHeight;
             hasCommittedLine = true;
             maxAbove = maxBelow = maxTopH = maxBottomH = 0f;
+            maxBelowSigned = float.NegativeInfinity;
             hasBaselineItem = false;
             lineEndsWithBreak = false;
             currentLine++;
@@ -430,6 +443,7 @@ internal static partial class BoxEngine
                 {
                     maxAbove = item.Ascent;
                     maxBelow = item.Height - item.Ascent;
+                    maxBelowSigned = item.Height - item.Ascent;
                     hasBaselineItem = true;
                 }
                 // HTML <br> with 'clear' (§9.5.2's forced-break form — the WPT floats-clear corpus
@@ -701,7 +715,7 @@ internal static partial class BoxEngine
                     placed.RemoveRange(last + 1, placed.Count - last - 1);
                     placedSource.RemoveRange(last + 1, placedSource.Count - last - 1);
                     if (placedLine.Count > last + 1) placedLine.RemoveRange(last + 1, placedLine.Count - last - 1);
-                    (maxAbove, maxBelow, maxTopH, maxBottomH, hasBaselineItem) = LineMetrics(placed, lineStart);
+                    (maxAbove, maxBelow, maxBelowSigned, maxTopH, maxBottomH, hasBaselineItem) = LineMetrics(placed, lineStart);
                     CommitLine();
                     itemIndex = src;
                     continue;
@@ -716,7 +730,7 @@ internal static partial class BoxEngine
                     // placedLine runs parallel to placed: the re-placed items must not inherit
                     // the removed entries' line numbers (their wrapper fragments fold per line).
                     if (placedLine.Count > cut) placedLine.RemoveRange(cut, placedLine.Count - cut);
-                    (maxAbove, maxBelow, maxTopH, maxBottomH, hasBaselineItem) = LineMetrics(placed, lineStart);
+                    (maxAbove, maxBelow, maxBelowSigned, maxTopH, maxBottomH, hasBaselineItem) = LineMetrics(placed, lineStart);
                     CommitLine();
                     itemIndex = resume - 1;
                     continue;
@@ -900,6 +914,7 @@ internal static partial class BoxEngine
                 default:
                     maxAbove = Math.Max(maxAbove, AboveBaselineComponent(effectiveItem, va));
                     maxBelow = Math.Max(maxBelow, effectiveItem.Height - AboveBaselineComponent(effectiveItem, va));
+                    maxBelowSigned = Math.Max(maxBelowSigned, effectiveItem.Height - AboveBaselineComponent(effectiveItem, va));
                     hasBaselineItem = true;
                     break;
             }
@@ -1462,11 +1477,14 @@ internal static partial class BoxEngine
     }
 
     /// <summary>Recomputes the line's baseline accumulators from what is placed on it — needed
-    /// after the line is cut back to an earlier break opportunity.</summary>
-    private static (float Above, float Below, float TopH, float BottomH, bool HasBaseline) LineMetrics(
+    /// after the line is cut back to an earlier break opportunity. Below is the 0-floored reach
+    /// the float-band heuristics read; BelowSigned is the §10.8.1 signed bottom edge the
+    /// committed line height takes (negative when every box ends above the baseline).</summary>
+    private static (float Above, float Below, float BelowSigned, float TopH, float BottomH, bool HasBaseline) LineMetrics(
         List<(InlineItem item, float relX, float relY)> placed, int lineStart)
     {
         float above = 0f, below = 0f, topH = 0f, bottomH = 0f;
+        var belowSigned = float.NegativeInfinity;
         var hasBaseline = false;
         for (var k = lineStart; k < placed.Count; k++)
         {
@@ -1484,11 +1502,12 @@ internal static partial class BoxEngine
                 default:
                     above = Math.Max(above, AboveBaselineComponent(it, va));
                     below = Math.Max(below, it.Height - AboveBaselineComponent(it, va));
+                    belowSigned = Math.Max(belowSigned, it.Height - AboveBaselineComponent(it, va));
                     hasBaseline = true;
                     break;
             }
         }
-        return (above, below, topH, bottomH, hasBaseline);
+        return (above, below, belowSigned, topH, bottomH, hasBaseline);
     }
 
     /// <summary>A child that puts nothing on the line: collapsible whitespace, a comment or a
