@@ -354,9 +354,8 @@ public static class StyleExtensions
 
     public static bool GetFontBold(this LayoutNode node)
     {
-        var weight = node.TryResolveStyle(PropertyNames.FontWeight, out var ov)
-            ? ov : node.Style.GetPropertyValueSafe(PropertyNames.FontWeight);
-        return weight is "bold" or "bolder" or "700" or "800" or "900";
+        // §15.6: the computed weight, so 600 and a resolved 'bolder' count as bold.
+        return Lite.Layout.TextMeasure.ComputedFontWeight(node) >= 600;
     }
 
     public static bool GetFontItalic(this LayoutNode node)

@@ -368,6 +368,11 @@ public class LayoutNode
     /// </summary>
     public float? ComputedFontSize { get; set; }
 
+    /// <summary>CSS 2.1 §15.6 computed 'font-weight' (a number 1-1000), resolved by the Parser:
+    /// 'bolder'/'lighter' are relative to the PARENT's computed weight and descendants inherit
+    /// the number. Null on nodes the Parser did not build.</summary>
+    public int? ComputedFontWeight { get; set; }
+
     /// <summary>
     /// CSS 2.1 §10.3.7 / §10.6.4 static position: the left/top MARGIN edge of the hypothetical
     /// box this element would have generated if its 'position' were 'static', in absolute layout

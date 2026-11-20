@@ -1110,6 +1110,9 @@ internal static partial class Parser
         float fontPx;
         using (CssUnits.ForFont(parentNode)) fontPx = ResolveOwnFontSize(element, parentFontPx);
         node.ComputedFontSize = fontPx;
+        // §15.6: font-weight computes to a number; 'bolder'/'lighter' resolve against the parent.
+        node.ComputedFontWeight = TextMeasure.ResolveFontWeight(OwnFontWeightDeclaration(element),
+            parentNode is null ? TextMeasure.NormalWeight : TextMeasure.ComputedFontWeight(parentNode));
 
         // §15.8: the 'font' shorthand's optional /<line-height> component. Nothing expands the
         // shorthand, so the component used to vanish and the element laid out at 'normal'.

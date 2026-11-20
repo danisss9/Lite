@@ -23,8 +23,24 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Edits outside owned files
 
-_(None yet.)_
+- `Lite/Parser.cs`: 3 lines wiring `ComputedFontWeight` on parsed elements (CSS 2.1 §15.6).
+- `Lite/Parser.Fonts.cs`: new partial file for 6.J font longhand cascade (`OwnFontWeightDeclaration`, `FontWeightOf`).
+- `Lite/Models/LayoutNode.cs`: `ComputedFontWeight` property.
+- `Lite/Extensions/DrawCommandExtensions.cs`: `GetFontBold` reads `TextMeasure.ComputedFontWeight(node) >= 600`.
 
 ## Progress
 
-_(None yet.)_
+### 1. Computed `font-weight`, CSS Fonts weight matching, and synthetic bold
+
+- **Spec:** CSS 2.1 §15.5, §15.6, §15.8; CSS Fonts 3 §5.2; CSS Fonts 4 §2.2.
+- **Moved (+11 pass, +1 manualpending, 0 losses):**
+  - `css21-official/html4/font-weight-002.htm`, `css/CSS2/fonts/font-weight-002.xht`
+  - `css21-official/html4/font-weight-003.htm`, `css/CSS2/fonts/font-weight-003.xht`
+  - `css21-official/html4/font-weight-012.htm`, `css/CSS2/fonts/font-weight-012.xht`
+  - `css21-official/html4/font-weight-013.htm`, `css/CSS2/fonts/font-weight-013.xht`
+  - `css21-official/html4/font-weight-bolder-001.htm`
+  - `css21-official/html4/font-weight-lighter-001.htm`
+  - `css21-official/html4/font-weight-normal-001.htm`
+  - `css/CSS2/fonts/font-weight-015.xht` (fail → manualpending; no failure red)
+- **Still failing (67):** `font-family-rule-*` (16), `font-family-002..006` (10), `font-style-002..004` + `font-matching-rule-001/006` (10), `font-weight-010/011/014` (6), `font-family-invalid-characters-002..004` (6), `font-size-003/014` (4), `fonts-011..013` (3), `font-045` (2), `font-matching-rule-009` (2), `font-size-rule-002` (2), `font-146`, `font-147`, `font-family-013`, `font-family-015`, `font-size-116`, `font-size-121`.
+- **Checks:** units 650/0; curated css21 51/1, wpt 86/2; J.txt 11 pass / 1 manualpending / 67 fail; canary 300/300.

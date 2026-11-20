@@ -1,6 +1,7 @@
 using Lite.Extensions;
 using Lite.Layout;
 using Lite.Models;
+using SkiaSharp;
 using static Lite.Tests.TestRunner;
 
 namespace Lite.Tests;
@@ -33,6 +34,65 @@ public static class FontUnitTests
         var node = Find(page, "z")!;
         using var font = TextMeasure.CreateFont(node);
         True(font.MeasureText("Filler Text") == 0f, $"width {font.MeasureText("Filler Text")}");
+    }
+
+    [Test]
+    public static void FontWeight_BolderAndLighterStepFromTheParentsComputedWeight()
+    {
+        // §15.6 / CSS Fonts table (font-weight-bolder-001, -lighter-001).
+        Equal(400, TextMeasure.ResolveFontWeight("bolder", 100));
+        Equal(700, TextMeasure.ResolveFontWeight("bolder", 400));
+        Equal(900, TextMeasure.ResolveFontWeight("bolder", 600));
+        Equal(100, TextMeasure.ResolveFontWeight("lighter", 500));
+        Equal(400, TextMeasure.ResolveFontWeight("lighter", 700));
+        Equal(700, TextMeasure.ResolveFontWeight("lighter", 900));
+        Equal(300, TextMeasure.ResolveFontWeight(null, 300));
+        Equal(300, TextMeasure.ResolveFontWeight("inherit", 300));
+        True(!TextMeasure.IsValidFontWeight("9000"), "9000 is out of range (font-matching-rule-009)");
+    }
+
+    [Test]
+    public static void FontWeight_ComputesOnceAndDescendantsInheritTheNumber()
+    {
+        // AngleSharp hands descendants the specified 'bolder'; re-reading it stepped again at
+        // every level. The Parser's computed weight resolves it once, against the parent.
+        var page = Parse("<div style=\"font-weight: 100\"><span id=\"s\" style=\"font-weight: bolder\"><em id=\"e\">x</em></span></div>" +
+                         "<table><tr><th id=\"th\">a</th><th id=\"thn\" style=\"font-weight: normal\">b</th></tr></table>" +
+                         "<div style=\"font-weight: bold\"><div id=\"f\" style=\"font: 20px serif\">c</div><p id=\"p6\" style=\"font-weight: 600\">d</p></div>");
+        Equal(400, TextMeasure.ComputedFontWeight(Find(page, "s")!));
+        Equal(400, TextMeasure.ComputedFontWeight(Find(page, "e")!));
+        Equal(700, TextMeasure.ComputedFontWeight(Find(page, "th")!));
+        Equal(400, TextMeasure.ComputedFontWeight(Find(page, "thn")!));
+        // §15.8: the 'font' shorthand resets the weight it omits to 'normal'.
+        Equal(400, TextMeasure.ComputedFontWeight(Find(page, "f")!));
+        True(Find(page, "p6")!.GetFontBold(), "600 renders bold (font-weight-010)");
+    }
+
+    [Test]
+    public static void FontRegistry_MatchesWeightsByTheCssFontsOrderAndSynthesizesBold()
+    {
+        // CSS Fonts 3 §5.2: 400 tries 500 before lighter weights; 700 takes the heavier faces
+        // first, then the lighter ones descending. A face lighter than 600 asked for bold is
+        // emboldened (font-weight-002's bold Ahem box, the "b" cells of font-weight-bolder-001).
+        using var stream = SKTypeface.Default.OpenStream();
+        var bytes = new byte[stream.Length];
+        stream.Read(bytes, bytes.Length);
+        const string family = "Lite Unit Weights";
+        FontRegistry.Register(family, 100, false, bytes);
+        FontRegistry.Register(family, 500, false, bytes);
+        FontRegistry.Register(family, 800, false, bytes);
+        var w100 = FontRegistry.Resolve(family, 100, false)!;
+        var w500 = FontRegistry.Resolve(family, 500, false)!;
+        var w800 = FontRegistry.Resolve(family, 800, false)!;
+        True(ReferenceEquals(FontRegistry.Resolve(family, 400, false), w500), "400 → 500");
+        True(ReferenceEquals(FontRegistry.Resolve(family, 300, false), w100), "300 → 100");
+        True(ReferenceEquals(FontRegistry.Resolve(family, 600, false), w800), "600 → 800");
+        True(ReferenceEquals(FontRegistry.Resolve(family, 900, false), w800), "900 → 800");
+        True(ReferenceEquals(FontRegistry.Resolve(family, 700, true), w800), "no italic face: the upright one");
+        True(TextMeasure.NeedsSyntheticBold(700, w500), "a 400-class face asked for 700 is emboldened");
+        True(!TextMeasure.NeedsSyntheticBold(500, w500), "500 is not bold");
+        FontRegistry.Clear();
+        True(FontRegistry.Resolve(family, 400, false) is null, "@font-face faces do not survive Clear()");
     }
 
     private static LayoutNode Parse(string body) => Parser.ParseChildPage(
