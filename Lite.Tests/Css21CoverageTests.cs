@@ -302,6 +302,34 @@ public static class Css21CoverageTests
     }
 
     [Test]
+    public static void OfficialVariants_VendoredClaimsRequireTheBuildDirectory()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "lite-css21-variants-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "html4"));
+        Directory.CreateDirectory(Path.Combine(root, "other"));
+        var availability = new JsonObject
+        {
+            ["html4-screen"] = "vendored",
+            ["xhtml1-screen"] = "vendored",
+            ["other-formats-screen"] = "vendored",
+        };
+        try
+        {
+            Equal("xhtml1-screen", string.Join(",", OfficialCatalog.MissingVendoredVariants(root, availability)));
+            Directory.CreateDirectory(Path.Combine(root, "xhtml1"));
+            True(!OfficialCatalog.MissingVendoredVariants(root, availability).Any());
+            availability["xhtml1-screen"] = "unavailable";
+            Directory.Delete(Path.Combine(root, "xhtml1"));
+            True(!OfficialCatalog.MissingVendoredVariants(root, availability).Any());
+            True(!OfficialCatalog.MissingVendoredVariants(root, null).Any());
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [Test]
     public static void FuzzyLimits_ComeOnlyFromManifestMetadata()
     {
         var current = RefCase("css/CSS2/a.htm", FuzzyEntry(null, 1, 15));

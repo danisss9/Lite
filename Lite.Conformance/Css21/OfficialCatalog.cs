@@ -34,12 +34,25 @@ internal static class OfficialCatalog
     // catalogs produced by an older builder even when the vendored tree and lock are stable.
     private const int BuilderVersion = 2;
     internal const string ScreenHtml4Variant = "html4-screen";
+    internal const string Xhtml1Variant = "xhtml1-screen";
     internal const string OtherFormatsVariant = "other-formats-screen";
     internal static string Root => Path.Combine(ConformancePaths.Vendor, "css21-official-20110323");
     internal static string CatalogPath => Path.Combine(ConformancePaths.EnsureArtifacts(), "css21-official-catalog.json");
 
-    // The canonical host is offline; only these variants are recoverable from archives today.
-    private static readonly string[] ArchivableVariants = [ScreenHtml4Variant, OtherFormatsVariant];
+    // The variant names the lock publishes, with the directory each one builds into. A
+    // variant the lock reports as vendored must have that directory: the readiness gate
+    // reads the lock, so the lock's claim has to be checkable against the tree.
+    private static readonly (string Variant, string Directory)[] VariantDirectories =
+    [
+        (ScreenHtml4Variant, "html4"),
+        (Xhtml1Variant, "xhtml1"),
+        (OtherFormatsVariant, "other"),
+    ];
+
+    // The variants recoverable from the pinned sources; xhtml1 is rebuilt from the same
+    // pre-snapshot commit (see scripts/restore-css21-xhtml1.py).
+    private static readonly string[] ArchivableVariants =
+        [ScreenHtml4Variant, Xhtml1Variant, OtherFormatsVariant];
 
     private static readonly Regex LinkTag = new(@"<link\b[^>]*>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex MetaTag = new(@"<meta\b[^>]*>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -116,8 +129,22 @@ internal static class OfficialCatalog
         }
         foreach (var variant in counts.UnavailableVariants)
             blockers.Add($"css21-official-variant-unavailable:{variant}");
+        foreach (var variant in MissingVendoredVariants(Root, LockEntry()?["variantAvailability"] as JsonObject))
+            blockers.Add($"css21-official-variant-missing:{variant}");
         if (!CountsReconcile(counts))
             blockers.Add("css21-official-count-mismatch");
+    }
+
+    /// <summary>Variants the lock reports as vendored whose build directory is absent. The
+    /// lock is the gate's only statement of variant availability, so a "vendored" claim is
+    /// only honest when the directory the variant builds into is present.</summary>
+    internal static IEnumerable<string> MissingVendoredVariants(string root, JsonObject? availability)
+    {
+        if (availability is null) yield break;
+        foreach (var (variant, directory) in VariantDirectories)
+            if (availability[variant]?.GetValue<string>() == "vendored" &&
+                !Directory.Exists(Path.Combine(root, directory)))
+                yield return variant;
     }
 
     /// <summary>Vendored counts must fit the published suite totals exactly: vendored plus
