@@ -23,6 +23,12 @@ Branch `css21/p6-g`, worktree `C:\Repos\Lite-p6-g`. Case list `Lite.Conformance/
 
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
 
+- `css/CSS2/text/text-align-bidi-008.xht`, `text-align-bidi-009.xht`, `text-align-bidi-010.xht` — the justified RTL
+  paragraph's lines do not end on one edge: the inked band ends alternate 641..787 / 631..785 (a 10px spread) though
+  the box content box is 628..790. §16.2 requires justified lines to line up on both edges, so this is the known
+  10px RTL start-edge asymmetry, now visible because the judge reads inside the content box and mirrors the last
+  line's start edge. From 6.M.
+
 ## Edits outside owned files
 
 _(None yet.)_

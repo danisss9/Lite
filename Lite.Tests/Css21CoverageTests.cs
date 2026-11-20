@@ -1463,6 +1463,66 @@ public static class Css21CoverageTests
     }
 
     [Test]
+    public static void VisualChecks_FirstLineMarkerReadsThePlainAndFlowBelowVariants()
+    {
+        // list-style-001/016: "the text below has a square bullet" is satisfied by a single
+        // line whose bullet starts it; the longer "second line flows below that bullet"
+        // sentence still needs the second line.
+        const string sentence = "Test passes if the text below has a square bullet.";
+        using var oneLine = Render(c =>
+        {
+            c.DrawRect(new SkiaSharp.SKRect(20, 30, 28, 38), Fill(SkiaSharp.SKColors.Black));
+            c.DrawRect(new SkiaSharp.SKRect(36, 30, 120, 40), Fill(SkiaSharp.SKColors.Black));
+        });
+        var root = Node("html", "block");
+        var instructions = Node("p", "block");
+        instructions.TextOverride = sentence;
+        instructions.Box = new Lite.Layout.BoxDimensions { ContentBox = new SkiaSharp.SKRect(0, 0, 400, 20) };
+        root.AddChild(instructions);
+        var plain = VisualChecks.Evaluate(new VisualCheck("first-line-marker"),
+            new RenderSet(oneLine, null, null), root, sentence, "x");
+        True(plain.Passed);
+        var flowBelow = VisualChecks.Evaluate(new VisualCheck("first-line-marker", Mode: "flow-below"),
+            new RenderSet(oneLine, null, null), root, sentence, "x");
+        True(flowBelow.Cat == WptRunner.Cat.Unsupported);
+    }
+
+    [Test]
+    public static void VisualChecks_PaintedFontReadsTheInstructionParagraphAndFailsClosed()
+    {
+        // c527: the instruction paragraph IS the tested face, so with nothing painted below
+        // the instructions the judge reads the runs inside the instruction node. A run set
+        // that honours size, pitch and family passes; a later baseline fails; the two
+        // unreadable families (small-caps, an unconstrained sentence) stay unsupported.
+        const string sentence = "This text should be 18px serif.";
+        var root = Node("html", "block");
+        var paragraph = Node("p", "block");
+        paragraph.TextOverride = sentence;
+        paragraph.Box = new Lite.Layout.BoxDimensions
+        {
+            ContentBox = new SkiaSharp.SKRect(0, 0, 400, 60),
+        };
+        root.AddChild(paragraph);
+        using var bitmap = Render(_ => { });
+        var paint = new List<Lite.Rendering.PaintLog.Entry>
+        {
+            new(sentence, 0, 18, "Liberation Serif", 18, "left", false, false),
+            new("second line", 0, 45, "Liberation Serif", 18, "left", false, false),
+        };
+        var faithful = new VisualCheck("painted-font", Count: 18, Edge: "27", Shape: "serif");
+        True(VisualChecks.Evaluate(faithful, new RenderSet(bitmap, null, null, paint), root, sentence, "x").Passed);
+        var strained = new List<Lite.Rendering.PaintLog.Entry> { paint[0], paint[1] with { BaselineY = 60 } };
+        True(!VisualChecks.Evaluate(faithful, new RenderSet(bitmap, null, null, strained), root, sentence, "x").Passed);
+        var smallCaps = new VisualCheck("painted-font", Count: 18, Mode: "small-caps");
+        True(VisualChecks.Evaluate(smallCaps, new RenderSet(bitmap, null, null, paint), root, sentence, "x").Cat == WptRunner.Cat.Unsupported);
+        var empty = new VisualCheck("painted-font");
+        True(VisualChecks.Evaluate(empty, new RenderSet(bitmap, null, null, paint), root, sentence, "x").Cat == WptRunner.Cat.Unsupported);
+        // The strict decoration templates keep their stated polarity and subject route.
+        True(SelfTestOracle.Condition("css21-official/html4/text-decoration-propagation-003.htm").Check is { Under: true });
+        True(SelfTestOracle.Condition("css21-official/html4/text-decoration-071.htm").Check is { Through: false, Anchor: "next" });
+    }
+
+    [Test]
     public static void SelfTestOracle_ManualPendingIsASupportedVerdictRoute()
     {
         const string path = "css21-official/html4/example.htm";

@@ -21,6 +21,8 @@ Branch `css21/p6-j`, worktree `C:\Repos\Lite-p6-j`. Case list `Lite.Conformance/
 
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
 
+- `css/CSS2/css1/c527-font-008.xht` (and the official `c527-font-008.htm`) — `.nine { font: oblique normal 700 18px/200% sans-serif; }` paints every run at 12px: the `font` shorthand's size (and the 200% line-height) is not applied. The judge now reads the instruction paragraph's own runs and reports "every painted run is 12px, the sentence states 18px". From 6.M.
+
 ## Edits outside owned files
 
 _(None yet.)_

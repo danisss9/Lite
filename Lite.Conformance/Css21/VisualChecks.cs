@@ -177,7 +177,7 @@ internal static class VisualChecks
         {
             "painted-text" => PaintedText(check, renders.Paint, top),
             "painted-order" => PaintedOrder(check, renders.Paint, top),
-            "painted-font" => PaintedFont(check, renders.Paint, top),
+            "painted-font" => PaintedFont(check, renders.Paint, top, sentence, root),
             "painted-only" => PaintedOnly(check, renders.Paint, top),
             "painted-sequence" => PaintedSequence(check, renders.Paint, top),
             "first-line-wider" => FirstLineWider(check, bitmap, top),
@@ -235,7 +235,7 @@ internal static class VisualChecks
             "three-bars" => ThreeBars(check, bitmap, top, path),
             "first-letter-color" => FirstLetterColor(check, bitmap, root, top, sentence, path),
             "first-line-color" => FirstLineColor(check, bitmap, top, path),
-            "justify" => Justify(bitmap, top, path),
+            "justify" => Justify(bitmap, root, top, path),
             "text-band" => TextBand(check, bitmap, root, top, sentence, path),
             "edge-letter" => EdgeLetter(check, bitmap, root, top, path),
             "stack-order" => StackOrder(check, bitmap, top, path),
@@ -1013,9 +1013,31 @@ internal static class VisualChecks
     /// <c>Count</c> size, <c>Mode</c> bold/italic/smallcaps, <c>Edge</c> baseline pitch,
     /// <c>Shape</c> a concrete family name (generic families stay unjudged — the resolved
     /// concrete name is a UA choice).</summary>
-    private static WptRunner.RunResult PaintedFont(VisualCheck check, IReadOnlyList<Lite.Rendering.PaintLog.Entry>? paint, int top)
+    private static WptRunner.RunResult PaintedFont(VisualCheck check, IReadOnlyList<Lite.Rendering.PaintLog.Entry>? paint,
+        int top, string sentence, LayoutNode root)
     {
+        // Every field the template reads must be a field a person would read. An empty check
+        // (c527-font-003's "small and cursive, with double line spacing") or one whose only
+        // stated face is small-caps (the painter draws small-caps without a paint-log entry,
+        // so no judge can read the transform) proves nothing and stays unsupported, never a
+        // pass.
+        if (check is { Count: null, Mode: null, Edge: null, Shape: null })
+            return new(WptRunner.Cat.Unsupported,
+                "Visual check: the sentence states no font property the paint log records", 0, 0);
+        if (check.Mode == "small-caps")
+            return new(WptRunner.Cat.Unsupported,
+                "Visual check: the paint log does not record the small-caps transform", 0, 0);
         var below = paint?.Where(e => e.BaselineY > top).ToList() ?? new List<Lite.Rendering.PaintLog.Entry>();
+        // The c527 family tests the instruction paragraph itself ("This text should be 13px
+        // Helvetica …" — the sentence and the dummy runs are printed in the face under test),
+        // so the tested runs are above the instruction node's bottom, not below it. Read the
+        // runs inside the instruction node only when nothing at all was painted below it: no
+        // other content can be the subject then.
+        if (below.Count == 0 && paint is { Count: > 0 } && InstructionNode(root, sentence) is { } node)
+        {
+            var box = node.Box.BorderBox;
+            below = paint.Where(e => e.BaselineY >= box.Top && e.BaselineY <= box.Bottom).ToList();
+        }
         if (below.Count == 0)
             return new(WptRunner.Cat.Unsupported, "Visual check: the paint log is empty below the instructions", 0, 0);
         var assertion = Describe(check);
@@ -2365,7 +2387,7 @@ internal static class VisualChecks
                 "three-bars" => FromResult(bitmap is null ? null : ThreeBars(check, bitmap, top, "")),
                 "lines-same" => FromResult(bitmap is null ? null : LinesSame(check, bitmap, top, "")),
                 "first-line-color" => FromResult(bitmap is null ? null : FirstLineColor(check, bitmap, top, "")),
-                "justify" => FromResult(bitmap is null ? null : Justify(bitmap, top, "")),
+                "justify" => FromResult(bitmap is null ? null : Justify(bitmap, null, top, "")),
                 "stack-order" => FromResult(bitmap is null ? null : StackOrder(check, bitmap, top, "")),
                 "border-sides" => FromResult(bitmap is null ? null : BorderSides(check, bitmap, top, "")),
                 "lines-spaced" => FromResult(bitmap is null ? null : LinesSpaced(check, bitmap, top, "")),
@@ -3698,6 +3720,27 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
     /// filler text; its ink is what the text checks read.</summary>
     private static LayoutNode? FindFiller(LayoutNode root, int top) => FindNodeByText(root, top, "filler text");
 
+    /// <summary>The deepest element below <paramref name="top"/> whose text mentions the
+    /// filler text. The decoration checks use it because the filler may sit in a float or an
+    /// inline-block inside a wrapper: the wrapper's text aggregates the child's, but a block
+    /// with only floated children has zero height, so an ink crop taken at the wrapper's
+    /// border box is empty (text-decoration-propagation-004/005) and a line drawn only under
+    /// the child is not detected (propagation-003). Other text checks keep the first-element
+    /// subject: their comparison boxes are the wrapper's (text-align-applies-to-008–011).</summary>
+    private static LayoutNode? FindFillerDeep(LayoutNode root, int top)
+    {
+        LayoutNode? best = null;
+        void Walk(LayoutNode node)
+        {
+            if (!node.TagName.StartsWith('#') && node.Box.BorderBox.Top >= top &&
+                Normalize(Text(node)).Contains("filler text", StringComparison.Ordinal))
+                best = node;
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        return best;
+    }
+
     /// <summary>The first element below <paramref name="top"/> whose text contains (or,
     /// with <paramref name="exact"/>, equals) <paramref name="needle"/>.</summary>
     private static LayoutNode? FindNodeByText(LayoutNode root, int top, string needle, bool exact = false)
@@ -4002,7 +4045,12 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
     /// mid-height row of the text inked nearly solid (glyph gaps filled by the line).</summary>
     private static WptRunner.RunResult TextDecoration(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
     {
-        var filler = FindFiller(root, top);
+        // "the text below" names the first text element after the instructions; its own text
+        // (not a wrapper's aggregate) locates the ink, because the family's subject may be a
+        // float or an inline-block whose wrapper has zero height.
+        var filler = check.Anchor == "next"
+            ? TextElementsBelow(root, top).FirstOrDefault(n => Normalize(n.DisplayText).Length > 0)
+            : FindFillerDeep(root, top);
         if (filler is null)
             return new(WptRunner.Cat.Unsupported, "Visual check: no filler-text element below the instructions", 0, 0);
         var ink = ElementInk(bitmap, filler, 6, out var box);
@@ -4622,7 +4670,10 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         var bands = InkBands(bitmap, top, out var clipped);
         if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
         var textBands = bands.Where(b => b.Members.Max(m => m.Height) > 5).ToList();
-        if (textBands.Count < 2)
+        // "…and the second line of text flows below that bullet" needs the second line; the
+        // plain "the text below has a square bullet" does not.
+        var flowBelow = check.Mode == "flow-below";
+        if (textBands.Count < (flowBelow ? 2 : 1))
             return new(WptRunner.Cat.Unsupported, $"Visual check: only {textBands.Count} text bands below the instructions", 0, 0);
         var first = textBands[0];
         var marker = first.Members.FirstOrDefault(m => Math.Max(m.Width, m.Height) is > 4 and <= 26 &&
@@ -4634,31 +4685,34 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         if (marker.Left > first.Members.Min(m => m.Left) + 2 * EdgeTolerance)
             return new(WptRunner.Cat.Fail, $"{assertion}: the bullet is not at the line's start", 1, 1,
                 [new(assertion, 1, $"bullet at x {marker.Left}")], 0);
-        // The second line's left edge: the leftmost ink in the rows between the first band's
-        // bottom and the second band's bottom. Band members alone misread here — line 2's
-        // first glyph can antialias up into the first band and merge with it, which would
-        // report the line's second glyph instead of its start.
-        var second = textBands[1];
-        var secondLeft = second.Members.Max(m => m.Right);
-        var pixels = bitmap.Pixels;
-        var width = bitmap.Width;
-        var white = CropBackground(bitmap, new SKRectI(0, first.Bottom, width, Math.Min(second.Bottom + 1, bitmap.Height)));
-        for (var y = first.Bottom; y < second.Bottom && y < bitmap.Height; y++)
-        for (var x = 0; x < second.Members.Max(m => m.Right) && x < width; x++)
+        if (flowBelow)
         {
-            if (Distance(pixels[y * width + x], white) <= InkThreshold) continue;
-            secondLeft = Math.Min(secondLeft, x);
-            break;
-        }
-        // Inside markers: line 2 realigns with the marker's own left edge (the content edge).
-        // Outside markers hang left of the text, and line 2 realigns with the text start —
-        // either way line 2 may not start past the first line's own content.
-        var firstTextLeft = first.Members.Where(m => !ReferenceEquals(m, marker)).Min(m => m.Left);
-        var line2Edge = Math.Max(marker.Right, firstTextLeft);
-        if (secondLeft > line2Edge + 6)
-        {
+            // The second line's left edge: the leftmost ink in the rows between the first
+            // band's bottom and the second band's bottom. Band members alone misread here —
+            // line 2's first glyph can antialias up into the first band and merge with it,
+            // which would report the line's second glyph instead of its start.
+            var second = textBands[1];
+            var secondLeft = second.Members.Max(m => m.Right);
+            var pixels = bitmap.Pixels;
+            var width = bitmap.Width;
+            var white = CropBackground(bitmap, new SKRectI(0, first.Bottom, width, Math.Min(second.Bottom + 1, bitmap.Height)));
+            for (var y = first.Bottom; y < second.Bottom && y < bitmap.Height; y++)
+            for (var x = 0; x < second.Members.Max(m => m.Right) && x < width; x++)
+            {
+                if (Distance(pixels[y * width + x], white) <= InkThreshold) continue;
+                secondLeft = Math.Min(secondLeft, x);
+                break;
+            }
+            // Inside markers: line 2 realigns with the marker's own left edge (the content
+            // edge). Outside markers hang left of the text, and line 2 realigns with the text
+            // start — either way line 2 may not start past the first line's own content.
+            var firstTextLeft = first.Members.Where(m => !ReferenceEquals(m, marker)).Min(m => m.Left);
+            var line2Edge = Math.Max(marker.Right, firstTextLeft);
+            if (secondLeft > line2Edge + 6)
+            {
                 return new(WptRunner.Cat.Fail, $"{assertion}: the second line does not flow below the bullet (starts at {secondLeft})", 1, 1,
-                [new(assertion, 1, $"second line starts {secondLeft - line2Edge}px right of the first line's content")], 0);
+                    [new(assertion, 1, $"second line starts {secondLeft - line2Edge}px right of the first line's content")], 0);
+            }
         }
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
     }
@@ -5513,12 +5567,26 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         return members.MaxBy(c => (long)c.Width * c.Height) is { } biggest ? biggest.Color : SKColors.White;
     }
 
-    /// <summary>All but the last text band share both edges, and the last shares the left —
-    /// text-align: justify.</summary>
-    private static WptRunner.RunResult Justify(SKBitmap bitmap, int top, string path)
+    /// <summary>All but the last text band share both edges, and the last aligns with the
+    /// block's start edge — text-align: justify. The bands are read inside the justified
+    /// block's content box: a 1px border joins every line into one connected component, so a
+    /// whole-page read sees a single band (text-align-bidi-008/009/010). The last line's edge
+    /// is the start edge of the block's direction (§16.2, §8.6): left in ltr, right in rtl.</summary>
+    private static WptRunner.RunResult Justify(SKBitmap bitmap, LayoutNode? root, int top, string path)
     {
         var assertion = Describe(new VisualCheck("justify"));
-        var bands = InkBands(bitmap, top, out var clipped);
+        // The box below the instructions holding its own text — the justified block.
+        var subject = root is null ? null : TextElementsBelow(root, top).FirstOrDefault(n =>
+            n.GetDisplay() is DisplayType.Block or DisplayType.ListItem or DisplayType.TableCell &&
+            Normalize(n.DisplayText).Length > 0);
+        List<(int Top, int Bottom, List<Component> Members)> bands;
+        bool clipped;
+        if (subject is not null)
+        {
+            var region = SKRectI.Round(subject.Box.ContentBox);
+            bands = InkBandsOf(Components(bitmap, region, out clipped));
+        }
+        else bands = InkBands(bitmap, top, out clipped);
         if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
         if (bands.Count < 2)
             return new(WptRunner.Cat.Unsupported, $"Visual check: only {bands.Count} text bands below the instructions", 0, 0);
@@ -5527,13 +5595,17 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         for (var k = 0; k < bands.Count - 1; k++)
         {
             if (Math.Abs(lefts[k] - lefts[0]) > 2 || Math.Abs(rights[k] - rights[0]) > 2)
-                return new(WptRunner.Cat.Fail, $"{assertion}: line {k} does not line up on both edges (left {lefts[k]}, right {rights[k]})", 1, 1,
+                return new(WptRunner.Cat.Fail, $"{assertion}: line {k} does not line up on both edges (bands {string.Join("; ", lefts.Zip(rights, (l, r) => $"{l}..{r}"))})", 1, 1,
                     [new(assertion, 1, "line not justified")], 0);
         }
-        // The last line of a justified paragraph never extends past the justified lines' edge.
-        if (Math.Abs(lefts[^1] - lefts[0]) > 2 || rights[^1] > rights[0] + 2)
+        // The last line of a justified paragraph never extends past the justified lines'
+        // edges; it sits on the block's start edge.
+        var rtl = subject?.GetDirection() == "rtl";
+        var startMismatch = rtl ? Math.Abs(rights[^1] - rights[0]) > 2 : Math.Abs(lefts[^1] - lefts[0]) > 2;
+        var overshoot = rtl ? lefts[^1] < lefts[0] - 2 : rights[^1] > rights[0] + 2;
+        if (startMismatch || overshoot)
             return new(WptRunner.Cat.Fail, $"{assertion}: the last line does not sit inside the justified edges (left {lefts[^1]}, right {rights[^1]})", 1, 1,
-                [new(assertion, 1, "last line not left-aligned inside the block")], 0);
+                [new(assertion, 1, $"last line not { (rtl ? "right" : "left") }-aligned inside the block")], 0);
         return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
     }
 
