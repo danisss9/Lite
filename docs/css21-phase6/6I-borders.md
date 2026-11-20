@@ -28,6 +28,35 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Progress
 
+### 2026-11-20 — An undeclared border colour is the element's own colour (CSS 2.1 §8.5.2)
+- **Moved (+18, handed in from 6.C):** `c5511-brdr-tw-001/-003`, `c5512-brdr-rw-001/-003`,
+  `c5513-brdr-bw-001/-003`, `c5514-brdr-lw-001/-003`, `c5515-brdr-w-001` — official + WPT twins.
+- **Change:** `DrawCommandExtensions.cs` `GetBorder{Top,Right,Bottom,Left}Color` fell back to
+  black for an undeclared border colour; §8.5.2 says the initial `border-color` value is the
+  value of `color`. The `GetColor` default parameter now takes `null` to mean "initial value is
+  the element's own computed colour" (resolved through the existing currentColor path). Fixed
+  both the `-001` no-red swatch cases (green borders) and the `-003` open-ended cases (navy
+  borders inherited from `.zero`). Added
+  `BorderStyleTests.UndeclaredBorderColor_IsTheElementsOwnColor`.
+- **Still failing (4), verdict reached:** `c5518-brdr-t-001`, `c5520-brdr-b-001` (official + WPT)
+  — render verified: all 7 stated blue lines paint (`td`, `span`, `li.three`). The failure is
+  the `text-band` needle judge collecting ancestor nodes (`FindAllNodesByText` matches through
+  recursive `Text`), so `td.skip` — `border: none` by design — becomes a target via its nested
+  table's text and can never pass; handed to **6.M**. `c5520` additionally shows a cell
+  child-order bug (nested table paints above the cell's leading anonymous block "dummy text";
+  twin c5518 lays out the same DOM correctly), handed to **6.E** (`TableEngine`).
+
+### 2026-11-20 — batch-2 queue audit
+- All 99 cases on the regenerated `I.txt` are batch-1 handoffs parked with other lanes:
+  6.M (ring/shape judges — style-003..008, style-rendering-001/002, width-014/092/047,
+  applies-to-010 family, outline-style-applies-to-008, clipping-017, dashed 016/017/018), 6.E
+  (applies-to-004 collapsed winners, outline-applies-to-016/017), 6.K (border-width-010/011/012,
+  outline-width-096), 6.D (clipping-006, outline-layout-002), 6.A (border-001/003 reference
+  wrapping). Batch 2's own work was the c55xx family above.
+- **Checks:** units 736/0; curated `css21` 51/1, `wpt` 86/2; lane `I` 0/56 official, 0/43 WPT
+  (the moved cases sit on C's list); `I-pass` 1592/1592 + 883/883; canary 492/492 + 468/468
+  (960/960); `C-pass` 1401/1401 + 1573/1573 — 0 losses.
+
 ### 2026-11-20 — 3D border bevel shading on near-black colors (CSS 2.1 §8.5.3)
 - **Moved (+2 WPT):** `css/CSS2/borders/groove-default.html`, `css/CSS2/borders/ridge-default.html`.
 - **Change:** `Drawer.Borders.cs` (`LightenColor`) lifts near-black colors (`R+G+B < 96`) toward white so `groove`/`ridge` with the default black `border-color` paint visibly distinct light/dark halves instead of collapsing into solid black, while keeping pure-channel multiplicative scaling on hues. Added `BorderStyleTests.GrooveAndRidge_WithDefaultBlackColor_DifferFromSolid`.

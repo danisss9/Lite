@@ -134,3 +134,12 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   (`text-*`, `painted-*`, `first-line-*`, `justify`, `align-*`) shows no new-looking failures beyond the handed-in
   ones.
 
+- `c5518-brdr-t-001`, `c5520-brdr-b-001` (official + WPT, from 6.I): `text-band` with
+  `needle: "here ⇧"` targets every node whose *recursive* text contains the needle
+  (`FindAllNodesByText` walks with `Text(node)`, which concatenates descendants), so `td.skip`
+  — which the test deliberately sets `border-top`/`border-bottom: none` on — becomes a target
+  through its nested table's "HERE ⇧" text and fails "no blue line above/below the text" even
+  though all 7 stated lines paint (verified render; the nested td's border sits ~20px below
+  td.skip's own text, outside the judge's 10px window). A correct render cannot pass this
+  check. Suggest restricting needle targets to nodes whose own inline content renders the
+  needle, or anchoring the band to the occurrence's line box rather than each ancestor's box.
