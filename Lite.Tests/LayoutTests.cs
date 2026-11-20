@@ -321,6 +321,63 @@ public static class LayoutTests
         True(Math.Abs(h - 80f) < 1f, $"expected parent content height 80 (margin contained by bottom padding), got {h}");
     }
 
+    [Test]
+    public static void MinHeight_SeparatesLastChildBottomMargin()
+    {
+        // WPT min-height-separates-margin (§8.3.1, CSS 2.2 change s.8.3.1c): 'min-height' raises
+        // the auto height (0) to 50, so the box's bottom margin no longer adjoins the last
+        // child's — the child's 10px bottom margin is separated: it neither collapses through
+        // the parent's bottom edge nor grows the box past the clamped height. The footer lands
+        // directly at 50 (no 10px gap) and the two greens form one 100px square.
+        var child = Block(new() { ["height"] = "49px", ["margin-bottom"] = "10px" });
+        var parent = Block(new() { ["width"] = "100px", ["min-height"] = "50px" }, child);
+        var footer = Block(new() { ["width"] = "100px", ["height"] = "50px" });
+        var container = Block(new() { ["width"] = "100px" }, parent, footer);
+        LayoutTree(container);
+        var h = parent.Box.ContentBox.Height;
+        True(Math.Abs(h - 50f) < 1f, $"expected parent content height 50 (min-height, margin separated), got {h}");
+        True(Math.Abs(footer.Box.ContentBox.Top - 50f) < 1f,
+            $"expected the footer directly below the parent (50), got {footer.Box.ContentBox.Top}");
+    }
+
+    [Test]
+    public static void MaxHeight_SeparatesLastChildBottomMargin()
+    {
+        // WPT max-height-separates-margin: 'max-height' cuts the auto height (61) to 50, which
+        // equally separates the box's bottom margin from the last child's 10px one — the footer
+        // sits directly at 50, not 10px lower (§8.3.1: adjoining needs the content-given height).
+        var child = Block(new() { ["height"] = "51px", ["margin-bottom"] = "10px" });
+        var parent = Block(new() { ["width"] = "100px", ["max-height"] = "50px" }, child);
+        var footer = Block(new() { ["width"] = "100px", ["height"] = "50px" });
+        var container = Block(new() { ["width"] = "100px" }, parent, footer);
+        LayoutTree(container);
+        var h = parent.Box.ContentBox.Height;
+        True(Math.Abs(h - 50f) < 1f, $"expected parent content height 50 (max-height cap), got {h}");
+        True(Math.Abs(footer.Box.ContentBox.Top - 50f) < 1f,
+            $"expected the footer directly below the parent (50), got {footer.Box.ContentBox.Top}");
+    }
+
+    [Test]
+    public static void SelfCollapsedChain_BehindTopBoundary_CountsInHeight()
+    {
+        // WPT margin-collapse-through-percentage-height-block: an 'overflow: hidden' box (a BFC)
+        // holds only self-collapsing children — the single chain their margins form is spent
+        // through the box's TOP edge (the children's margins adjoin the box's own top margin),
+        // so it must not open a second gap inside; but §10.6.3 keeps the (possibly collapsed)
+        // bottom margin of the last in-flow child part of the auto height: the box is 100px
+        // tall. (The 30%-height middle child computes to 'auto' — its containing block's height
+        // is auto, §10.5 — so all three children are empty.)
+        var inner = Block(new() { ["width"] = "100px", ["overflow"] = "hidden" },
+            Block(new() { ["margin-bottom"] = "100px" }),
+            Block(new() { ["height"] = "30%" }),
+            Block(new() { ["margin-top"] = "100px" }));
+        var outer = Block(new() { ["width"] = "100px", ["height"] = "200px" }, inner);
+        LayoutTree(outer);
+        var h = inner.Box.ContentBox.Height;
+        True(Math.Abs(h - 100f) < 1f,
+            $"expected the BFC's height to cover the self-collapsed chain (100), got {h}");
+    }
+
     private static LayoutNode TableCell(string text)
     {
         var node = new LayoutNode(null, "TD", text, _styleCache.Style);

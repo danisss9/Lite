@@ -243,16 +243,23 @@ internal static partial class BoxEngine
         // bottom border/padding, an auto height, and is not a block formatting context, the last
         // in-flow child's bottom margin collapses with this block's own bottom margin (propagating
         // out) rather than adding to the content height. Otherwise it stays inside the content.
-        var effectiveBottomChain = MarginChain.Of(margin.Bottom);
-        if (trailingMargin != 0f && padding.Bottom == 0f && border.Bottom == 0f
-            && node.IsAutoHeight() && !establishesBfc)
-            effectiveBottomChain += trailingChain;
-        else if (chainHasCommittedContent)
+        // The decision is final only once min/max-height have run (below): a candidate whose
+        // height they change keeps the margin inside.
+        var collapseThroughCandidate = trailingMargin != 0f && padding.Bottom == 0f && border.Bottom == 0f
+            && node.IsAutoHeight() && !establishesBfc;
+        // When the whole content self-collapsed into one chain (§8.3.1) and that chain escaped
+        // through this box's TOP (no top border/padding, not a BFC: the first child's margins
+        // adjoin this box's top margin), it is already spent above the box and must not open a
+        // second gap inside it. Behind a top boundary the chain stays inside and is part of
+        // the content height (§10.6.3/§10.6.7: "the bottom edge of the bottom (possibly
+        // collapsed) margin of its last in-flow child"): an 'overflow: hidden' box holding only
+        // empty blocks with 100px margins is 100px tall (margin-collapse-through-percentage-
+        // height-block). A bordered box whose empty children's margins collapse to 1em + -1em
+        // still renders its borders alone (margin-collapse-128).
+        var chainStayedInside = chainHasCommittedContent || border.Top + padding.Top != 0f ||
+                                establishesBfc || node.TagName == "HTML";
+        if (!collapseThroughCandidate && chainStayedInside)
             contentH += trailingMargin;
-        var effectiveBottomMargin = effectiveBottomChain.Value;
-        // else: the whole content self-collapsed into one chain (§8.3.1) — with a bottom
-        // border/padding the chain can neither escape nor extend the height: a bordered box
-        // with only empty children renders its borders alone (margin-collapse-128).
 
         // Explicit height overrides — respect box-sizing: border-box.
         // NOT for a CSS table box: §17.5.3 makes the specified height a MINIMUM the row stretch
@@ -358,6 +365,7 @@ internal static partial class BoxEngine
         // CSS 2.1 §10.7: clamp the resolved height to min-height/max-height. Percentages resolve
         // against the containing block height; when that is auto (parentContentHeight == 0) an
         // unresolvable percentage max-height computes to 'none' and min-height to 0.
+        var unclampedH = contentH;
         var maxH = node.GetMaxHeight(parentContentHeight, fontSize);
         if (maxH < float.PositiveInfinity && !(IsPercentValue(node, "max-height") && parentContentHeight <= 0f))
         {
@@ -372,6 +380,19 @@ internal static partial class BoxEngine
                 ? Math.Max(0f, minH - border.Top - border.Bottom - padding.Top - padding.Bottom) : minH;
             if (contentH < minContent) contentH = minContent;
         }
+
+        // §8.3.1 (CSS 2.2 "Collapsing margins"): the last in-flow child's bottom margin adjoins
+        // this box's bottom margin only while the box's height is the auto height its content
+        // gives it. When 'min-height' or 'max-height' changes that height, the bottom border
+        // edge is no longer at the content's end, so the margins are separated: the child's
+        // margin stays inside — neither escaping below the box nor growing it past the clamped
+        // height (min-height-separates-margin, max-height-separates-margin,
+        // margin-collapse-min-height-001: a 550px margin under 'min-height: 100px' leaves the
+        // box 100px tall and the following box directly below it).
+        var effectiveBottomChain = MarginChain.Of(margin.Bottom);
+        if (collapseThroughCandidate && MathF.Abs(contentH - unclampedH) < 0.01f)
+            effectiveBottomChain += trailingChain;
+        var effectiveBottomMargin = effectiveBottomChain.Value;
 
         margin.Bottom = effectiveBottomMargin;
         node.CollapseShiftApplied = 0; // a fresh Box invalidates any prior self-collapse anchoring
@@ -650,7 +671,13 @@ internal static partial class BoxEngine
         var border = node.GetBorderWidth();
         if (padding.Top != 0f || padding.Bottom != 0f || border.Top != 0f || border.Bottom != 0f) return false;
         // A specified height (or min-height) that resolves positive keeps the box's sides apart.
-        if (!node.IsAutoHeight() && node.GetHeight(cbWidth, 0, fontSize) > 0f) return false;
+        // A percentage height resolves against the containing block's HEIGHT, and computes to
+        // 'auto' when that height is not specified (§10.5) — not against the width passed here.
+        var heightBasis = node.Parent is { } heightParent && !heightParent.IsAutoHeight()
+            ? heightParent.GetHeight(0, 0) : 0f;
+        if (!node.IsAutoHeight() && node.GetHeight(heightBasis, 0, fontSize) > 0f) return false;
+        // §8.3.1 requires a "zero computed 'min-height'" for the top and bottom margins to adjoin.
+        if (node.GetMinHeight(heightBasis, fontSize) > 0f) return false;
         // An element holding its OWN text contains line boxes — the chain stops inside it.
         if (!string.IsNullOrEmpty(node.DisplayText)) return false;
         foreach (var child in node.Children)
