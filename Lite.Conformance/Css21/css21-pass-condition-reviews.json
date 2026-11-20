@@ -2276,7 +2276,8 @@
    "path": "css/CSS2/selectors/dom-hover-001.xht",
    "condition": "manual",
    "manualPending": true,
-   "note": "the stated condition (\"none\") names a visual property with no strict machine reading in the current judge set — the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence"
+   "redScan": false,
+   "note": "the stated condition (\"none\") names a visual property with no strict machine reading in the current judge set - the suite authored it for a person to read the rendered page against that sentence; awaiting recorded manual evidence. The at-rest page paints its subject red BY DESIGN (#green { color: red }) and the stated condition is the hover-then-removal state (\"at that point there should be no red\"), so the at-rest failure-red scan is not a verdict and is off; the case stays manual-pending."
   },
   {
    "path": "css/CSS2/selectors/dom-hover-002.xht",

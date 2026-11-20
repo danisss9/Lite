@@ -23,6 +23,10 @@ Branch `css21/p6-d`, worktree `C:\Repos\Lite-p6-d`. Case list `Lite.Conformance/
 
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
 
+- `css/CSS2/box-display/containing-block-017.xht`, `containing-block-018.xht` — the WPT manual copy now runs the
+  fail-closed selftest route and fails on a large visible red box (the page's stated condition is "no red visible");
+  the abspos containing-block placement is wrong. Render evidence: `artifacts/cb17.png` in the 6.M worktree. From 6.M.
+
 ## Edits outside owned files
 
 _(None yet.)_

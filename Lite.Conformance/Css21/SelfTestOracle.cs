@@ -16,7 +16,8 @@ internal static class SelfTestOracle
 {
     internal const string ConditionsFile = "Css21/css21-pass-conditions.json";
 
-    internal sealed record Stated(string Condition, string? Sentence, VisualCheck? Check, bool ManualPending = false);
+    internal sealed record Stated(string Condition, string? Sentence, VisualCheck? Check, bool ManualPending = false,
+        bool RedScan = true);
 
     private static Dictionary<string, Stated>? _conditions;
 
@@ -33,7 +34,7 @@ internal static class SelfTestOracle
         if (check is null && twin is null && ApprovedRenders.Find(test.Path) is { } approval)
             check = (renders, _) => ApprovedRenders.Judge(approval, renders.Final);
         var result = WptVisualPage.RunSelfTest(test, embeddedRequired: stated.Condition == "same-color",
-            statedCondition: check, statedCheck: stated.Check, sentence: stated.Sentence);
+            statedCondition: check, statedCheck: stated.Check, sentence: stated.Sentence, redScan: stated.RedScan);
         return Decide(test.Path, stated.Condition, result, twin, lookup, checkedCondition: check is not null,
             manualPending: stated.ManualPending);
     }
@@ -54,6 +55,13 @@ internal static class SelfTestOracle
             0, 0, Artifacts: selfTest.Artifacts);
     }
 
+    /// <summary>A reviewed manual-pending entry with no machine check: the stated condition
+    /// needs a person (or recorded native evidence), so the oracle can only fail the page on
+    /// failure red or leave it manual-pending — never pass it. A WPT manual-kind copy of an
+    /// official case with such an entry runs this route like its official copy instead of
+    /// having none.</summary>
+    internal static bool AwaitsManualEvidence(string path) => Condition(path) is { ManualPending: true, Check: null };
+
     /// <summary>The case's classified pass condition; an unlisted case is "unstated",
     /// which no red-scan pass can satisfy on its own.</summary>
     internal static Stated Condition(string path)
@@ -69,7 +77,7 @@ internal static class SelfTestOracle
         return JsonNode.Parse(File.ReadAllText(file))!["cases"]!.AsArray().OfType<JsonObject>()
             .ToDictionary(c => c["path"]!.GetValue<string>(), c => new Stated(
                 c["condition"]!.GetValue<string>(), c["sentence"]?.GetValue<string>(), ReadCheck(c["check"] as JsonObject),
-                c["manualPending"]?.GetValue<bool>() ?? false),
+                c["manualPending"]?.GetValue<bool>() ?? false, c["redScan"]?.GetValue<bool>() ?? true),
                 StringComparer.Ordinal);
     }
 

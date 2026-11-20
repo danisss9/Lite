@@ -53,8 +53,9 @@ public static class Css21CoverageTests
     [Test]
     public static void Evidence_KindNamesTheRouteThatRan()
     {
-        // A css/CSS2 "visual" page is decided by the selftest oracle; a manual case runs only
-        // when its stated condition has a machine check, and otherwise has no route at all.
+        // A css/CSS2 "visual" page is decided by the selftest oracle; a manual case runs when
+        // its stated condition has a machine check, or — reviewed manual-pending — through the
+        // fail-closed self-test oracle, and otherwise has no route at all.
         Equal("selftest", WptRunner.EvidenceKind(new WptCase("css/CSS2/a.xht", "css/CSS2/a.xht", "visual", "window", false, false, []), "css/CSS2/a.xht"));
         Equal("reftest", WptRunner.EvidenceKind(RefCase("css/CSS2/b.xht", null), "css/CSS2/b.xht"));
         const string checkedManual = "css/CSS2/backgrounds/background-012.xht";
@@ -1430,6 +1431,35 @@ public static class Css21CoverageTests
         ss.ScrollXTo(-5);
         True(ss.ScrollX == 0);
         True(ss.NeedsHorizontalScrollbar && !new ElementScrollState().NeedsHorizontalScrollbar);
+    }
+
+    [Test]
+    public static void WptRunner_ManualPendingRouteRunsTheOracleButCannotPass()
+    {
+        // A reviewed manual-pending entry with no machine check (outline-019 awaits native
+        // observation) runs its WPT manual-kind copy through the fail-closed oracle: failure
+        // red fails it, a clean render stays manual-pending. It is never "unexecuted".
+        const string pending = "css/CSS2/ui/outline-019.xht";
+        var manual = new WptCase(pending, pending, "manual", "window", false, false, []);
+        True(SelfTestOracle.Condition(pending) is { ManualPending: true, Check: null });
+        True(WptRunner.IsManualPendingRoute(manual, pending));
+        Equal("selftest", WptRunner.EvidenceKind(manual, pending));
+        // A machine-checked manual copy already has the stronger route; a visual copy is the
+        // selftest route; an unreviewed manual case still has none.
+        const string checkedManual = "css/CSS2/backgrounds/background-012.xht";
+        True(!WptRunner.IsManualPendingRoute(new WptCase(checkedManual, checkedManual, "manual", "window", false, false, []), checkedManual));
+        True(!WptRunner.IsManualPendingRoute(new WptCase(pending, pending, "visual", "window", false, false, []), pending));
+        const string noCheck = "css/CSS2/ui/no-such-manual-case.xht";
+        True(!WptRunner.IsManualPendingRoute(new WptCase(noCheck, noCheck, "manual", "window", false, false, []), noCheck));
+        // The oracle can only leave it pending, never a pass.
+        var clean = new WptRunner.RunResult(WptRunner.Cat.Pass, "no failure red", 1, 0,
+            [new("no failure red", 0, null)], 0);
+        var decided = SelfTestOracle.Decide(pending, "manual", clean, null, _ => null, manualPending: true);
+        True(decided.Cat == WptRunner.Cat.ManualPending && !decided.Passed);
+        // A reviewed state-dependent entry turns the at-rest red scan off (its subject is red
+        // BY DESIGN until the stated hover/removal state); an ordinary entry scans.
+        True(!SelfTestOracle.Condition("css/CSS2/selectors/dom-hover-001.xht").RedScan);
+        True(SelfTestOracle.Condition(pending).RedScan);
     }
 
     [Test]

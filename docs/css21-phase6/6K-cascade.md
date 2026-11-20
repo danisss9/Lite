@@ -23,6 +23,11 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
 
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
 
+- `css/CSS2/cascade/html-precedence-003.xht` — the WPT manual copy now runs the fail-closed selftest route and fails:
+  `<font color="green">` inside a red `div` paints red. The file's assert says the presentational `color` attribute
+  trumps the author `div` rule and the user sheet's universal selector (§6.4.4 cascade order); the attribute seems
+  ignored. Render evidence: `artifacts/hp3.png` in the 6.M worktree. From 6.M.
+
 ## Edits outside owned files
 
 _(None yet.)_

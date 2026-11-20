@@ -19,6 +19,11 @@ Branch `css21/p6-h`, worktree `C:\Repos\Lite-p6-h`. Case list `Lite.Conformance/
 
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
 
+- `css/CSS2/backgrounds/background-attachment-006.xht`, `background-attachment-007.xht` — the WPT manual copy now
+  runs the fail-closed selftest route and fails on visible red: 006's `.outer` red top border should be covered by
+  the `-10px`-margin inner box, and 007's red background should be covered by the tiled image. Both are layout/paint
+  coverage of the background layer, not the judge. Render evidence: `artifacts/ba6.png` in the 6.M worktree. From 6.M.
+
 ## Edits outside owned files
 
 _(None yet.)_

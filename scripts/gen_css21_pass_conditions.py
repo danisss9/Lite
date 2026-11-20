@@ -1294,7 +1294,8 @@ def main() -> None:
             entry = dict(existing.get(path) or {
                 'path': path, 'suite': suite, 'condition': 'unstated', 'sentence': None, 'twin': None,
             })
-            entry.update({k: v for k, v in review.items() if k in ('condition', 'sentence', 'check', 'twin', 'note', 'manualPending')})
+            entry.update({k: v for k, v in review.items() if k in ('condition', 'sentence', 'check', 'twin', 'note',
+                                                                   'manualPending', 'redScan')})
             entry['reviewed'] = True
             entries.append(entry)
             return

@@ -386,6 +386,13 @@ internal static class WptRunner
     internal static bool IsMachineCheckedManual(WptCase? test, string path) =>
         test is { Kind: "manual" } && (SelfTestOracle.Condition(path).Check is not null || Css21.ApprovedRenders.Find(path) is not null);
 
+    /// <summary>A css/CSS2 manual-kind case whose reviewed entry awaits manual evidence runs
+    /// the selftest oracle like its official copy: failure red fails it, otherwise it is
+    /// manual-pending. It can never pass (<see cref="SelfTestOracle.AwaitsManualEvidence"/>).</summary>
+    internal static bool IsManualPendingRoute(WptCase? test, string path) =>
+        test is { Kind: "manual" } && test.Path.Replace('\\', '/').StartsWith("css/CSS2/", StringComparison.Ordinal) &&
+        !IsMachineCheckedManual(test, path) && SelfTestOracle.AwaitsManualEvidence(path);
+
     /// <summary>The kind of route that actually decides a case, for evidence: the catalog
     /// kind names what the suite promised, this names what ran. Self-describing visual
     /// pages and machine-checked manual cases are decided by the selftest oracle, never by
@@ -398,7 +405,7 @@ internal static class WptRunner
             Css21.ApprovedRenders.Find(path) is not null &&
             (test.Kind == "selftest" || IsSelfDescribingVisual(test) || IsMachineCheckedManual(test, path)) => "approved-render",
         "testharness" or "reftest" or "crashtest" or "selftest" => test.Kind,
-        _ when IsSelfDescribingVisual(test) || IsMachineCheckedManual(test, path) => "selftest",
+        _ when IsSelfDescribingVisual(test) || IsMachineCheckedManual(test, path) || IsManualPendingRoute(test, path) => "selftest",
         _ => "unexecuted",
     };
 
@@ -410,7 +417,7 @@ internal static class WptRunner
         // kinds stay refused inside their own runners until those routes gain the capability.
         if (WptCatalog.Context(testPath) != "window" ||
             test is { Kind: not ("testharness" or "reftest" or "crashtest" or "selftest") } && !IsSelfDescribingVisual(test) &&
-            !IsMachineCheckedManual(test, testPath))
+            !IsMachineCheckedManual(test, testPath) && !IsManualPendingRoute(test, testPath))
             return new(Cat.Unsupported, $"Execution support required: {test?.Kind ?? "testharness"}/{WptCatalog.Context(testPath)}", 0, 0);
         // The kill budget must exceed the worker's own report pump (TestTimeoutMs * 6 = 60s),
         // and must fit the heaviest legitimate page: named-character-references carries
@@ -643,7 +650,7 @@ internal static class WptRunner
             // A manual-kind case whose stated pass condition is machine-checked (the scroll
             // protocol performs the stated interaction mechanically) runs through the
             // self-describing oracle; the rest stay unsupported below.
-            _ when IsMachineCheckedManual(test, path) => SelfTestOracle.Run(test!, Catalog(), CatalogCase),
+            _ when IsMachineCheckedManual(test, path) || IsManualPendingRoute(test, path) => SelfTestOracle.Run(test!, Catalog(), CatalogCase),
             _ when IsSelfDescribingVisual(test) => SelfTestOracle.Run(test!, Catalog(), CatalogCase),
             _ when NeedsInputBridge(test, path) => RunInProcess(url, testDriver: true),
             _ => RunInProcess(url),
