@@ -33,6 +33,9 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   row-alignment, not an inline value). Fixes the reference half of `first-letter-selector-007`.
 - `Lite/Drawer.cs` (`PaintInlineContent`, 1 line): a replaced `content: url(...)` pseudo box is
   forwarded to `PaintNode` like an IMG, instead of the empty-text inline path.
+- `Lite/Drawer.cs` (`PaintNodeContentBody`, `case "A"`): an anchor with `display: list-item`
+  takes the list-item paint path (the tag dispatch otherwise bypassed the marker).
+- `Lite/Scripting/Dom/JsElement.cs` was **not** changed (dynamic re-projection handed to 6.K).
 - `Lite.Tests/GeneratedContentTests.cs` is new (my lane's tests).
 
 ## Progress
