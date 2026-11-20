@@ -153,5 +153,17 @@ needs a look at the test's positioned layer before I can say the cause is one th
 - **Checks:** units 654/0; gates css21 51/1, wpt 86/2; lane list 222 → 213 total, 0 losses;
   canary 300/300.
 
+### Commit c80a206f — css-wide keyword inheritance passes computed values (§6.2.1)
+
+- **Moved (0):** hardening only — lane list stays 213, no losses.
+- **What changed:** `EffectiveValue` converts em/ex to px at the declaring element's font-size
+  and passes percentages through verbatim; `ResolvePendingCssWideKeywords` stamps declared-
+  channel margin-*/padding-* keywords into the override channel.
+- **Still fails, honestly:** the served `margin-em-inherit-001` / `padding-em-inherit-001` —
+  AngleSharp copies the parent's SPECIFIED value for `inherit`, so the keyword never reaches
+  layout (probe: the child's used margin is 2em at its own 40px font = 80px, not 56px). Root
+  cause and the parse-time fix direction are in "Opens with (parked findings)"; handed to 6.K.
+- **Checks:** units 655/0 (1 new test); gates css21 51/1, wpt 86/2; canary 300/300.
+
 
 
