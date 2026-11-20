@@ -472,10 +472,13 @@ internal static partial class BoxEngine
         // (floats-placement-vertical-001a, floats-006, c414-flt-wrap-001). A dropped float is
         // below the line and displaces nothing on it; a float joined to the run's just-committed
         // line cannot move that closed line's content, and the join's fit test already excludes
-        // the overlap.
+        // the overlap. The same holds for a line that holds no content yet: a left float at the
+        // line's start edge moves that edge, so whatever the line goes on to hold starts right
+        // of the float's margin box (floats-040's inline-block and floats-122's "X" beside the
+        // leading float, not under it).
         var reflow = RunFloatPlacement.None;
-        if (!dropped && !joinedLine && side == FloatType.Left && outerLeft < contentRightAbs &&
-            contentRightAbs > contentLeftAbs)
+        if (!dropped && !joinedLine && side == FloatType.Left && outerRight > contentLeftAbs &&
+            (outerLeft < contentRightAbs || outerLeft <= contentLeftAbs + 0.5f))
             reflow = new RunFloatPlacement(outerRight - contentLeftAbs);
 
         floats.Add(LayoutFloatBox(node, side, m, outerLeft, outerTop, viewportWidth, viewportHeight,

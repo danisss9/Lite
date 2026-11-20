@@ -115,4 +115,21 @@ public static class FloatSizingTests
         True(cell.Box.ContentBox.Width > 29.5f && cell.Box.ContentBox.Right > 199.5f - 0.5f,
             $"the floated table's cell must be laid out at the right edge, got {cell.Box.ContentBox}");
     }
+
+    [Test]
+    public static void LeadingInRunFloat_MovesTheEmptyLinesStartEdge()
+    {
+        // floats-040's shape: whitespace, a left float, then an inline-block — one inline run.
+        // §9.5: the line box beside the float is shortened by its margin box, so the inline-block
+        // starts right of the float even though the line held no content when it was placed.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div style='width:200px'>\n  <div style='float:left;width:50px;height:50px'></div>\n" +
+            "  <div id='ib' style='display:inline-block;width:40px;height:40px'></div>\n</div></body></html>");
+        var ib = FindNode(root, n => n.Id == "ib")!;
+        True(ib is not null, "inline-block not found");
+        True(Math.Abs(ib.Box.ContentBox.Left - 50f) < 0.5f,
+            $"the inline-block must start at the float's right edge, got {ib.Box.ContentBox.Left}");
+        True(ib.Box.ContentBox.Top < 0.5f, $"it stays on the float's line, got top {ib.Box.ContentBox.Top}");
+    }
 }
