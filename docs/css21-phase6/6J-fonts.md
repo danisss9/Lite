@@ -23,10 +23,10 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Edits outside owned files
 
-- `Lite/Parser.cs`: 3 lines wiring `ComputedFontWeight` on parsed elements (CSS 2.1 §15.6); `ResolveFontSizeValue` steps `larger`/`smaller` through the §15.7 absolute-size table.
-- `Lite/Parser.Fonts.cs`: new partial file for 6.J font longhand cascade (`OwnFontWeightDeclaration`, `FontWeightOf`).
+- `Lite/Parser.cs`: 3 lines wiring `ComputedFontWeight` on parsed elements (CSS 2.1 §15.6); `ResolveFontSizeValue` steps `larger`/`smaller` through the §15.7 absolute-size table; reject invalid `font` shorthands in `FontSizeOf`/`OwnFontLineHeightDeclaration` and reset leaked `font-family`/`line-height` (§15.8 / §10.8.1 / §6.2.1).
+- `Lite/Parser.Fonts.cs`: new partial file for 6.J font longhand cascade (`OwnFontWeightDeclaration`, `FontWeightOf`, `IsValidFontShorthand`, `HasOnlyInvalidFontShorthand`).
 - `Lite/Models/LayoutNode.cs`: `ComputedFontWeight` property.
-- `Lite/Extensions/DrawCommandExtensions.cs`: `GetFontBold` reads `TextMeasure.ComputedFontWeight(node) >= 600`; `GetFontFamilies` returns the full ordered list of available font families for missing-glyph fallback (CSS 2.1 §15.2 / §15.3).
+- `Lite/Extensions/DrawCommandExtensions.cs`: `GetFontBold` reads `TextMeasure.ComputedFontWeight(node) >= 600`; `GetFontFamilies` returns the full ordered list of available font families for missing-glyph fallback (CSS 2.1 §15.2 / §15.3); `GetLineHeight` honours `inherit` override and rejects negative `CssLengthValue` (§10.8.1).
 
 ## Progress
 
@@ -63,3 +63,29 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   - `css/CSS2/fonts/font-size-121.xht`
 - **Still failing (62):** `font-family-rule-*` (16), `font-family-002..006` (10), `font-style-002..004` + `font-matching-rule-001/006` (10), `font-weight-010/011/014` (6), `font-family-invalid-characters-002..004` (6), `font-size-003/014` (4), `font-045` (2), `font-matching-rule-009` (2), `fonts-011`, `fonts-012`, `font-146`, `font-147`, `font-family-015`, `font-size-116`.
 - **Checks:** units 652/0; curated css21 51/1, wpt 86/2; J.txt 16 pass / 1 manualpending / 62 fail; canary 300/300.
+
+### 4. `font` shorthand validation (mixed `inherit` and negative `/<line-height>`)
+
+- **Spec:** CSS 2.1 §15.8, §10.8.1, §6.2.1, §4.2.
+- **Moved (+1 pass, +2 manualpending with 0 red pixels, 0 losses):**
+  - `css/CSS2/fonts/font-146.xht` (fail → pass)
+  - `css21-official/html4/font-045.htm` (fail 61440 red px → manualpending, 0 red px)
+  - `css/CSS2/fonts/font-045.xht` (fail 96000 red px → manualpending, 0 red px)
+- **Still failing (59) — breakdown & hand-offs:**
+  - **6.M (judges — 46 cases already rendering correctly, judge heuristics rejecting valid output):**
+    - `font-family-rule-004/007/011..016` (16 cases): renders a 16x16 Ahem box above `"X"` (verified on `font-family-rule-004.xht`), judge reports `0 boxes sit above the letter x`.
+    - `font-family-002..006` (10 cases): renders `"PASS PASS"` with a 16x16 Ahem box below (verified on `font-family-002.htm`), judge reports `no black box below the words`.
+    - `font-style-002..004`, `font-matching-rule-001/006` (10 cases): slanted 1em Ahem box rejected by minimum-size threshold (`the shape is only 20x16` / `36x16`).
+    - `font-weight-010/011/014` (6 cases): green bold/normal `"Filler Text"` clearly visible under black overlay (verified on `font-weight-010.htm` and `font-weight-014.htm`), judge checks dominant ink (`#ff000000`) or reports no ink.
+    - `font-size-003/014` (4 cases): 1px Ahem box below judge's minimum shape size (`0 top-level shapes below the instructions`).
+  - **6.K (selectors/cascade/syntax — 7 cases):**
+    - `font-family-invalid-characters-002..004` (6 cases): CSS syntax error recovery for unbalanced `(`/`)`/`{`/`[` pairs in stylesheet parsing.
+    - `font-147.xht` (1 case): unquoted `font-family` syntax validation in `font` shorthand.
+  - **6.A / 6.G (inline/text painting & bidi — 2 cases):**
+    - `fonts-011.xht` (1 case): bidi control chars `U+202E`/`U+202C` need zero-width/stripping in bidi/text painting (6.G).
+    - `fonts-012.xht` (1 case): mixed-font per-run fallback (`XXXX İ FAIL`) in `Drawer.Text.cs` (6.A).
+  - **Remaining 6.J / design decisions (4 cases):**
+    - `font-matching-rule-009` (2 cases): test declares `font-family: serif` while `font-weight-normal-ref.html` declares no `font-family`, assuming the UA default font is `serif` (Lite defaults to `"Arial"`; changing the global default font affects the whole suite and needs a separate decision).
+    - `font-family-015.xht` (1 case): 36 red pixels from baseline/metric difference on `&#x05e2;` between fallback fonts under `line-height: 0`.
+    - `font-size-116.xht` (1 case): 2358 red pixels at `font: 1000px/1 Ahem`.
+- **Checks:** units 653/0; curated css21 51/1, wpt 86/2; J.txt 17 pass / 3 manualpending / 59 fail; canary 300/300.

@@ -1120,6 +1120,16 @@ internal static partial class Parser
             !node.StyleOverrides.ContainsKey(PropertyNames.LineHeight))
             node.StyleOverrides[PropertyNames.LineHeight] = fontLh;
 
+        // §15.8 / §4.2: when an invalid 'font' shorthand was rejected (e.g. negative line-height
+        // in font-146), prevent AngleSharp's leaked 'font-family'/'line-height' longhands from applying.
+        if (HasOnlyInvalidFontShorthand(element))
+        {
+            if (!node.StyleOverrides.ContainsKey(PropertyNames.FontFamily))
+                node.StyleOverrides[PropertyNames.FontFamily] = "inherit";
+            if (!node.StyleOverrides.ContainsKey(PropertyNames.LineHeight))
+                node.StyleOverrides[PropertyNames.LineHeight] = "inherit";
+        }
+
         // Extract flex-related CSS properties that AngleSharp doesn't cascade
         ExtractMatchedCssProperties(element, node);
 
@@ -1899,7 +1909,7 @@ internal static partial class Parser
             // content area stopped covering the inline-block's red box. The shorthand's
             // line-height value is its /<line-height> component, or 'normal' when unstated.
             var isFont = rule.Properties.TryGetValue("font", out var font) &&
-                         !string.IsNullOrWhiteSpace(font);
+                         !string.IsNullOrWhiteSpace(font) && IsValidFontShorthand(font);
             var direct = rule.Properties.TryGetValue("line-height", out var lh) &&
                          !string.IsNullOrWhiteSpace(lh);
             if (!isFont && !direct) continue;
@@ -1920,7 +1930,8 @@ internal static partial class Parser
             var (props, _) = ParseDeclarations(inline);
             if (props.TryGetValue("line-height", out var direct) && !string.IsNullOrWhiteSpace(direct))
                 return direct;
-            if (props.TryGetValue("font", out var font) && !string.IsNullOrWhiteSpace(font))
+            if (props.TryGetValue("font", out var font) && !string.IsNullOrWhiteSpace(font) &&
+                IsValidFontShorthand(font))
                 return LineHeightComponentOf(font) ?? "normal";
         }
         return best;
@@ -2031,7 +2042,8 @@ internal static partial class Parser
     {
         if (props.TryGetValue("font-size", out var direct) && !string.IsNullOrWhiteSpace(direct))
             return direct;
-        if (!props.TryGetValue("font", out var shorthand) || string.IsNullOrWhiteSpace(shorthand))
+        if (!props.TryGetValue("font", out var shorthand) || string.IsNullOrWhiteSpace(shorthand) ||
+            !IsValidFontShorthand(shorthand))
             return null;
         // <style> <variant> <weight> <size>[/<line-height>] <family>: the size is the last token
         // before the family list, so scan for the first token that parses as a length/percentage.

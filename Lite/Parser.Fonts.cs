@@ -41,6 +41,93 @@ internal static partial class Parser
         return best;
     }
 
+    /// <summary>Whether a 'font' shorthand declaration is syntactically valid for the parts
+    /// Lite extracts (§15.8 / §6.2.1 / §10.8.1 / §4.2): rejects 'inherit' mixed with other
+    /// subproperty values (<c>font: 40px inherit</c>, font-045) and negative <c>/&lt;line-height&gt;</c>
+    /// components (<c>font: 4em/-2em serif</c>, font-146), so the whole shorthand is ignored.</summary>
+    private static bool IsValidFontShorthand(string shorthand)
+    {
+        var trimmed = shorthand.Trim();
+        if (trimmed.Length == 0) return false;
+        if (trimmed.Equals("inherit", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("initial", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("unset", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // Scan unquoted tokens (preserving quoted family names like "inherit" or "a/b").
+        var tokens = new List<(string Text, bool Quoted)>();
+        var i = 0;
+        while (i < trimmed.Length)
+        {
+            while (i < trimmed.Length && char.IsWhiteSpace(trimmed[i])) i++;
+            if (i >= trimmed.Length) break;
+            if (trimmed[i] is '"' or '\'')
+            {
+                var q = trimmed[i++];
+                var start = i;
+                while (i < trimmed.Length && trimmed[i] != q)
+                {
+                    if (trimmed[i] == '\\' && i + 1 < trimmed.Length) i++;
+                    i++;
+                }
+                tokens.Add((trimmed[start..i], true));
+                if (i < trimmed.Length) i++;
+            }
+            else
+            {
+                var start = i;
+                while (i < trimmed.Length && !char.IsWhiteSpace(trimmed[i])) i++;
+                tokens.Add((trimmed[start..i], false));
+            }
+        }
+
+        for (var t = 0; t < tokens.Count; t++)
+        {
+            var (tok, quoted) = tokens[t];
+            if (quoted) continue;
+            // §6.2.1 / §15.8: 'inherit' cannot mix with other values in the shorthand.
+            var bare = tok.TrimEnd(',');
+            if (tokens.Count > 1 && bare.Equals("inherit", StringComparison.OrdinalIgnoreCase))
+                return false;
+            // §10.8.1: negative line-height after '/' is invalid and voids the entire shorthand.
+            var slash = tok.IndexOf('/');
+            if (slash >= 0)
+            {
+                var lh = slash + 1 < tok.Length ? tok[(slash + 1)..] : (t + 1 < tokens.Count ? tokens[t + 1].Text : "");
+                if (lh.StartsWith('-')) return false;
+            }
+        }
+        return true;
+    }
+
+    /// <summary>True when the element matched an invalid 'font' shorthand (e.g. negative
+    /// line-height in <c>font: 4em/-2em serif</c>, font-146) that AngleSharp expanded into
+    /// 'font-family' anyway, and no valid 'font'/'font-family' declaration applies on the
+    /// element itself. The caller then resets 'font-family' to 'inherit' so the bogus
+    /// longhand from the rejected shorthand does not leak.</summary>
+    private static bool HasOnlyInvalidFontShorthand(IElement element)
+    {
+        var sawInvalid = false;
+        foreach (var rule in CssRules)
+        {
+            var hasFamily = rule.Properties.TryGetValue("font-family", out var ff) && !string.IsNullOrWhiteSpace(ff);
+            var hasFont = rule.Properties.TryGetValue("font", out var f) && !string.IsNullOrWhiteSpace(f);
+            if (!hasFamily && !hasFont) continue;
+            try { if (!element.Matches(rule.Selector)) continue; }
+            catch { continue; }
+            if (hasFamily || (hasFont && IsValidFontShorthand(f!))) return false;
+            sawInvalid = true;
+        }
+        if (element.GetAttribute("style") is { Length: > 0 } inline)
+        {
+            var (props, _) = ParseDeclarations(inline);
+            if (props.TryGetValue("font-family", out var ff) && !string.IsNullOrWhiteSpace(ff)) return false;
+            if (props.TryGetValue("font", out var f) && !string.IsNullOrWhiteSpace(f))
+                return !IsValidFontShorthand(f);
+        }
+        return sawInvalid;
+    }
+
     /// <summary>The font-weight a declaration block sets, directly or through the 'font'
     /// shorthand (§15.8: the shorthand resets every font longhand it omits to its initial
     /// value, so <c>font: 1in Ahem</c> sets the weight back to 'normal').</summary>
@@ -48,7 +135,8 @@ internal static partial class Parser
     {
         if (props.TryGetValue("font-weight", out var direct) && !string.IsNullOrWhiteSpace(direct))
             return TextMeasure.IsValidFontWeight(direct) ? direct.Trim() : null;
-        if (!props.TryGetValue("font", out var shorthand) || string.IsNullOrWhiteSpace(shorthand))
+        if (!props.TryGetValue("font", out var shorthand) || string.IsNullOrWhiteSpace(shorthand) ||
+            !IsValidFontShorthand(shorthand))
             return null;
         var trimmed = shorthand.Trim();
         if (trimmed.Equals("inherit", StringComparison.OrdinalIgnoreCase)) return "inherit";

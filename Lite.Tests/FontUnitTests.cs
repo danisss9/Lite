@@ -143,6 +143,20 @@ public static class FontUnitTests
         True(MathF.Abs(Find(page, "bot")!.GetFontSize() - 9f) < 0.01f, $"bot={Find(page, "bot")!.GetFontSize()}");
     }
 
+    [Test]
+    public static void FontShorthand_IgnoresMixedInheritAndNegativeLineHeight()
+    {
+        // CSS 2.1 §15.8 / §6.2.1 / §10.8.1: 'inherit' mixed with other values (font-045) and
+        // negative '/<line-height>' (font-146) invalidate the entire 'font' shorthand.
+        var page = Parse(
+            "<div style=\"font: 160px/1 Ahem\"><span id=\"inh\" style=\"font: 40px inherit\">XXXX</span></div>" +
+            "<div id=\"neg\" style=\"font: 4em/-2em serif\">text</div>");
+        True(MathF.Abs(Find(page, "inh")!.GetFontSize() - 160f) < 0.01f, $"expected inherited 160px, got {Find(page, "inh")!.GetFontSize()}");
+        True(MathF.Abs(Find(page, "neg")!.GetFontSize() - 16f) < 0.01f, $"expected default 16px, got {Find(page, "neg")!.GetFontSize()}");
+        True(!Find(page, "neg")!.GetFontFamily().Equals("Times New Roman", StringComparison.OrdinalIgnoreCase),
+            $"invalid font shorthand must not leak font-family, got {Find(page, "neg")!.GetFontFamily()}");
+    }
+
     private static LayoutNode Parse(string body) => Parser.ParseChildPage(
         $"<!DOCTYPE html><html><head></head><body>{body}</body></html>", isSrcdoc: true, "http://test/", 800, 600).Root;
 

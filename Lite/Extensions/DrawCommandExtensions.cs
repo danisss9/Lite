@@ -517,6 +517,14 @@ public static class StyleExtensions
                     System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var mult))
                     return mult * fontSize;
+                if (ov.Equals("inherit", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (n.Parent is { } p) return p.GetLineHeight(fontSize);
+                    using var nf = TextMeasure.CreateFont(node);
+                    var nm = nf.Metrics;
+                    var nat = -nm.Ascent + nm.Descent;
+                    return nat > 0f ? nat : fontSize * 1.4f;
+                }
                 // 'normal' (or an unparseable value) is this element's own cascaded value and
                 // terminates inheritance only when declared HERE; keep walking past it on an
                 // ancestor is wrong, so stop either way — 'normal' means no multiplier applies.
@@ -535,7 +543,7 @@ public static class StyleExtensions
             return num * fontSize;
 
         var raw = node.Style.GetProperty(PropertyNames.LineHeight)?.RawValue;
-        if (raw is CssLengthValue lh2)
+        if (raw is CssLengthValue lh2 && lh2.Value >= 0)
             return CssUnits.ToPx(lh2, fontSize, fontSize, fontSize, fontSize);
 
         // 'normal' is the FONT's natural line box (ascent+descent), per §10.8.1 and browser
