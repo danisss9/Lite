@@ -2020,11 +2020,20 @@ internal static partial class Parser
             var t = token.Split('/')[0].Trim();
             if (t.Length == 0 || t.EndsWith(",", StringComparison.Ordinal)) continue;
             if (t.EndsWith("%", StringComparison.Ordinal)) return t;
+            // §15.8: a bare number before the size is the <font-weight> (100..900), never the
+            // size — a font-size length needs a unit unless it is 0 (§4.3.2). Taking it as the
+            // size left 'font: 900 5em/0 serif' (font-family-015) and 'font: oblique normal 700
+            // 18px/200% sans-serif' (c527-font-008) at the inherited size.
+            if (token.IndexOf('/') < 0 && IsUnitlessNonZeroNumber(t)) continue;
             if (char.IsAsciiDigit(t[0]) || t[0] == '.') return t;
             if (t.ToLowerInvariant() is "xx-small" or "x-small" or "small" or "medium" or "large"
                 or "x-large" or "xx-large" or "larger" or "smaller") return t;
         }
         return null;
+
+        static bool IsUnitlessNonZeroNumber(string s) =>
+            float.TryParse(s, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var n) && n != 0f;
     }
 
     // CSS 2.1 §15.7 absolute-size table (xx-small .. xx-large). 'larger' and 'smaller' step

@@ -189,6 +189,23 @@ public static class FontUnitTests
             $"invalid font shorthand must not leak font-family, got {Find(page, "neg")!.GetFontFamily()}");
     }
 
+    [Test]
+    public static void FontShorthand_NumericWeightIsNotTheSize()
+    {
+        // CSS 2.1 §15.8: in 'font: 900 5em/0 serif' the bare number is the <font-weight>; the
+        // size is the 5em (a non-zero font-size length needs a unit, §4.3.2). Reading '900' as
+        // the size left the text at the inherited size (font-family-015, c527-font-008).
+        var page = Parse(
+            "<div style=\"font-size: 12px\">" +
+            "<p id=\"a\" style=\"font: 900 5em/0 serif\">X</p>" +
+            "<p id=\"b\" style=\"font: oblique normal 700 18px/200% sans-serif\">X</p>" +
+            "<p id=\"c\" style=\"font: 0/0 serif\">X</p></div>");
+        True(MathF.Abs(Find(page, "a")!.GetFontSize() - 60f) < 0.01f, $"expected 5em = 60px, got {Find(page, "a")!.GetFontSize()}");
+        True(MathF.Abs(Find(page, "b")!.GetFontSize() - 18f) < 0.01f, $"expected 18px, got {Find(page, "b")!.GetFontSize()}");
+        True(Find(page, "c")!.GetFontSize() < 0.01f, $"expected 0, got {Find(page, "c")!.GetFontSize()}");
+        True(TextMeasure.ComputedFontWeight(Find(page, "a")!) == 900, $"weight {TextMeasure.ComputedFontWeight(Find(page, "a")!)}");
+    }
+
     private static LayoutNode Parse(string body) => Parser.ParseChildPage(
         $"<!DOCTYPE html><html><head></head><body>{body}</body></html>", isSrcdoc: true, "http://test/", 800, 600).Root;
 
