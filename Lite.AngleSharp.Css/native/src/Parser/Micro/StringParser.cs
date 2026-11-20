@@ -50,7 +50,7 @@ namespace AngleSharp.Css.Parser
 
                         if (current.IsLineBreak())
                         {
-                            buffer.AppendLine();
+                            // Lite patch 008: CSS 2.1 4.3.7 - an escaped newline is removed from the string.
                         }
                         else if (current != Symbols.EndOfFile)
                         {
@@ -96,7 +96,7 @@ namespace AngleSharp.Css.Parser
 
                         if (current.IsLineBreak())
                         {
-                            buffer.AppendLine();
+                            // Lite patch 008: CSS 2.1 4.3.7 - an escaped newline is removed from the string.
                         }
                         else if (current != Symbols.EndOfFile)
                         {

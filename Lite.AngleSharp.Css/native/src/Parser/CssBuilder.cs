@@ -517,7 +517,7 @@ namespace AngleSharp.Css.Parser
             // holding a BAD_STRING or BAD_URI drops the whole rule, block included.
             var selectorText = GetArgument(ref current, CssContentMode.RulePrelude, out var badPrelude);
 
-            if (badPrelude)
+            if (badPrelude || !TryNormalizeAndValidateSelector(selectorText, out selectorText))
             {
                 RaiseErrorOccurred(CssParseError.InvalidSelector, current.Position);
                 JumpToRuleEnd(ref current, semicolonEnds: false);
@@ -539,6 +539,249 @@ namespace AngleSharp.Css.Parser
 
             FillDeclarations(rule.Owner, rule.Style, NextToken());
             return rule;
+        }
+
+        // Lite patch 010: CSS 2.1 §4.1.3 / §4.1.7 / §5.2.1 / §5.10 / §5.12 selector validation and
+        // ASCII case-insensitive pseudo-class/pseudo-element normalization:
+        //  - reject empty items in comma-separated selector groups (body,,div; bad-selector-001);
+        //  - reject any tokens following a pseudo-element (p:first-line[id="p1"], p:first-line+p,
+        //    p:first-line.two; pseudo-014, pseudo-016, c25-pseudo-elmnt-000);
+        //  - reject class/ID identifiers starting with an unescaped digit or '-' + digit
+        //    (.-1ident, #-1ident; ident-003);
+        //  - ASCII-lowercase pseudo-class and pseudo-element names so AngleSharp's case-sensitive
+        //    selector table matches :fiRsT-cHiLd, :bEfOre, :aFtEr (pseudo-007, pseudo-008).
+        private static Boolean TryNormalizeAndValidateSelector(String selectorText, out String normalized)
+        {
+            normalized = selectorText;
+            if (String.IsNullOrEmpty(selectorText))
+            {
+                return false;
+            }
+
+            var sb = new System.Text.StringBuilder(selectorText.Length);
+            var len = selectorText.Length;
+            var parenDepth = 0;
+            var bracketDepth = 0;
+            var hasToken = false;
+            var seenPseudoElement = false;
+            var i = 0;
+
+            while (i < len)
+            {
+                var c = selectorText[i];
+
+                if (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\f')
+                {
+                    sb.Append(c);
+                    i++;
+                    continue;
+                }
+
+                if (c == '/' && i + 1 < len && selectorText[i + 1] == '*')
+                {
+                    sb.Append("/*");
+                    i += 2;
+                    while (i < len)
+                    {
+                        if (selectorText[i] == '*' && i + 1 < len && selectorText[i + 1] == '/')
+                        {
+                            sb.Append("*/");
+                            i += 2;
+                            break;
+                        }
+                        sb.Append(selectorText[i++]);
+                    }
+                    continue;
+                }
+
+                if (c == '"' || c == '\'')
+                {
+                    if (seenPseudoElement && parenDepth == 0 && bracketDepth == 0)
+                    {
+                        return false;
+                    }
+                    hasToken = true;
+                    var quote = c;
+                    sb.Append(c);
+                    i++;
+                    while (i < len)
+                    {
+                        var sc = selectorText[i++];
+                        if (sc == '\\' && i < len)
+                        {
+                            // Lite patch 012: CSS 2.1 §4.3.7 — a backslash-escaped newline in a
+                            // selector string is removed (strings-000).
+                            var next = selectorText[i];
+                            if (next == '\r')
+                            {
+                                i++;
+                                if (i < len && selectorText[i] == '\n') i++;
+                                continue;
+                            }
+                            if (next == '\n' || next == '\f')
+                            {
+                                i++;
+                                continue;
+                            }
+                            sb.Append(sc);
+                            sb.Append(selectorText[i++]);
+                            continue;
+                        }
+                        sb.Append(sc);
+                        if (sc == quote)
+                        {
+                            break;
+                        }
+                    }
+                    continue;
+                }
+
+                if (bracketDepth > 0)
+                {
+                    if (c == '[') bracketDepth++;
+                    else if (c == ']') bracketDepth--;
+                    else if (c == '\\' && i + 1 < len)
+                    {
+                        sb.Append(c);
+                        sb.Append(selectorText[++i]);
+                        i++;
+                        continue;
+                    }
+                    sb.Append(c);
+                    i++;
+                    continue;
+                }
+
+                if (parenDepth > 0)
+                {
+                    if (c == '(') parenDepth++;
+                    else if (c == ')') parenDepth--;
+                    else if (c == '\\' && i + 1 < len)
+                    {
+                        sb.Append(c);
+                        sb.Append(selectorText[++i]);
+                        i++;
+                        continue;
+                    }
+                    sb.Append(c);
+                    i++;
+                    continue;
+                }
+
+                if (c == ',')
+                {
+                    if (!hasToken)
+                    {
+                        return false;
+                    }
+                    hasToken = false;
+                    seenPseudoElement = false;
+                    sb.Append(c);
+                    i++;
+                    continue;
+                }
+
+                if (seenPseudoElement)
+                {
+                    return false;
+                }
+
+                hasToken = true;
+
+                if (c == '[')
+                {
+                    bracketDepth++;
+                    sb.Append(c);
+                    i++;
+                    continue;
+                }
+
+                if (c == '(')
+                {
+                    parenDepth++;
+                    sb.Append(c);
+                    i++;
+                    continue;
+                }
+
+                if (c == '.' || c == '#')
+                {
+                    sb.Append(c);
+                    i++;
+                    if (i < len && selectorText[i] >= '0' && selectorText[i] <= '9')
+                    {
+                        return false;
+                    }
+                    if (i + 1 < len && selectorText[i] == '-' && selectorText[i + 1] >= '0' && selectorText[i + 1] <= '9')
+                    {
+                        return false;
+                    }
+                    continue;
+                }
+
+                if (c == ':')
+                {
+                    var isDouble = i + 1 < len && selectorText[i + 1] == ':';
+                    sb.Append(':');
+                    i++;
+                    if (isDouble)
+                    {
+                        sb.Append(':');
+                        i++;
+                    }
+                    var nameStart = i;
+                    while (i < len)
+                    {
+                        var ic = selectorText[i];
+                        if ((ic >= 'a' && ic <= 'z') || (ic >= 'A' && ic <= 'Z') ||
+                            (ic >= '0' && ic <= '9') || ic == '-' || ic == '_')
+                        {
+                            sb.Append(ic >= 'A' && ic <= 'Z' ? (Char)(ic + 32) : ic);
+                            i++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    var nameLen = i - nameStart;
+                    if (isDouble)
+                    {
+                        seenPseudoElement = true;
+                    }
+                    else if (nameLen > 0)
+                    {
+                        var name = selectorText.Substring(nameStart, nameLen);
+                        if (name.Equals("before", StringComparison.OrdinalIgnoreCase) ||
+                            name.Equals("after", StringComparison.OrdinalIgnoreCase) ||
+                            name.Equals("first-letter", StringComparison.OrdinalIgnoreCase) ||
+                            name.Equals("first-line", StringComparison.OrdinalIgnoreCase))
+                        {
+                            seenPseudoElement = true;
+                        }
+                    }
+                    continue;
+                }
+
+                if (c == '\\' && i + 1 < len)
+                {
+                    sb.Append(c);
+                    sb.Append(selectorText[++i]);
+                    i++;
+                    continue;
+                }
+
+                sb.Append(c);
+                i++;
+            }
+
+            if (!hasToken)
+            {
+                return false;
+            }
+
+            normalized = sb.ToString();
+            return true;
         }
 
         public CssKeyframeRule CreateKeyframeRule(CssKeyframeRule rule, CssToken current)
@@ -728,7 +971,10 @@ namespace AngleSharp.Css.Parser
             CollectTrivia(owner, ref token);
             var start = token.Position;
 
-            if (!_options.IsExcludingNesting && token.IsPotentiallyNested() && properties is ICssStyleDeclaration decl && decl.Parent is CssStyleRule style)
+            // Lite patch 012: CSS 2.1 §4.2 — a bare ':' inside a declaration block starts a
+            // malformed declaration (':red; color:green;', malformed-decl-008), not a nested rule.
+            if (!_options.IsExcludingNesting && token.Type != CssTokenType.Colon &&
+                token.IsPotentiallyNested() && properties is ICssStyleDeclaration decl && decl.Parent is CssStyleRule style)
             {
                 var factory = _context.GetService<DefaultAttributeSelectorFactory>();
                 var rule = new CssStyleRule(style.Owner);
@@ -754,24 +1000,11 @@ namespace AngleSharp.Css.Parser
                 }
             }
 
-            if (token.IsNot(CssTokenType.EndOfFile, CssTokenType.CurlyBracketClose, CssTokenType.Colon) &&
-                token.IsNot(CssTokenType.Semicolon, CssTokenType.CurlyBracketOpen))
+            // Lite patch 012: CSS 2.1 §4.1.1 — a declaration property name must be an IDENT token,
+            // never a STRING ("'color': red;", quoted-keywords-001) or NUMBER/ATKEYWORD.
+            if (token.Type == CssTokenType.Ident)
             {
                 var name = token.Data;
-
-                if (token.Type == CssTokenType.Delim)
-                {
-                    var sb = StringBuilderPool.Obtain();
-                    sb.Append(name);
-
-                    while (token.Type == CssTokenType.Delim)
-                    {
-                        token = NextToken();
-                        sb.Append(token.Data);
-                    }
-
-                    name = sb.ToPool();
-                }
 
                 token = NextToken();
                 CollectTrivia(owner, ref token);

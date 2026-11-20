@@ -265,11 +265,399 @@ internal static partial class Parser
     private static string FetchCssText(string url, string? linkCharset, string? referrerCharset,
         out string usedCharset)
     {
+        // RFC 2397 data: URIs (e.g. @import url(data:text/css,...)) are decoded locally.
+        if (DataUri.IsDataUri(url))
+        {
+            if (DataUri.TryDecodeBytes(url, out var dataBytes, out _))
+                return DecodeCss(dataBytes, null, linkCharset, referrerCharset, out usedCharset);
+            usedCharset = "utf-8";
+            return string.Empty;
+        }
         using var response = Session.Client.GetAsync(url).Result;
         response.EnsureSuccessStatusCode();
         var bytes = response.Content.ReadAsByteArrayAsync().Result;
         return DecodeCss(bytes, response.Content.Headers.ContentType?.CharSet,
                          linkCharset, referrerCharset, out usedCharset);
+    }
+
+    /// <summary>
+    /// Recursively inlines leading <c>@import</c> rules per CSS 2.1 §6.3 ("CSS 2.1 user agents
+    /// must ignore any @import rule that occurs inside a block or after any non-ignored statement
+    /// other than an @charset or an @import rule") and §4.2 (open strings, <c>url(</c> tokens and
+    /// statements are closed at EOF). Non-leading <c>@import</c> rules are left untouched so the
+    /// CSS parser ignores or absorbs them as part of surrounding malformed syntax (at-import-001,
+    /// at-import-011, at-rule-006/007, c11-import-000, import-000, eof-005/006, uri-018,
+    /// cascade-import-001).
+    /// </summary>
+    private static string InlineImports(string css, string baseUrl, string? referrerCharset = null, int depth = 0) =>
+        InlineImportsCore(css, baseUrl, (resolved, refCharset) =>
+        {
+            var imported = FetchCssText(resolved, null, refCharset, out var importedCharset);
+            return (imported, importedCharset);
+        }, referrerCharset, depth);
+
+    /// <summary>Testable core of <see cref="InlineImports"/> with an injectable sheet fetcher.</summary>
+    internal static string InlineImportsCore(
+        string css,
+        string baseUrl,
+        Func<string, string?, (string Css, string Charset)?> fetcher,
+        string? referrerCharset = null,
+        int depth = 0)
+    {
+        if (depth > 8 || string.IsNullOrEmpty(css) ||
+            !css.Contains("@import", StringComparison.OrdinalIgnoreCase))
+            return css;
+
+        var sb = new StringBuilder(css.Length);
+        var i = 0;
+        var expandedAny = false;
+
+        while (i < css.Length)
+        {
+            SkipImportTrivial(css, ref i);
+            var stmtStart = i;
+            if (i >= css.Length) break;
+
+            if (css[i] != '@')
+            {
+                // A rule set: its prelude runs through any ';' up to the '{' of its block (§4.2,
+                // at-import-011's '# :unknownpseudo @import ...; .import {...}' is one statement).
+                // CSS 2.1 §6.3 ends the @import prologue only at a NON-IGNORED statement, so a
+                // rule set the CSS parser drops (invalid selector: at-import-010, at-rule-009)
+                // is kept verbatim and the scan goes on.
+                SkipStatementTail(css, ref i, semicolonEndsStatement: false);
+                if (!IsIgnoredStatement(css, stmtStart, i))
+                {
+                    sb.Append(css, stmtStart, css.Length - stmtStart);
+                    return expandedAny ? sb.ToString() : css;
+                }
+                sb.Append(css, stmtStart, i - stmtStart);
+                sb.Append('\n');
+                continue;
+            }
+
+            var kwStart = i + 1;
+            var kwEnd = kwStart;
+            while (kwEnd < css.Length && (char.IsAsciiLetterOrDigit(css[kwEnd]) || css[kwEnd] == '-'))
+                kwEnd++;
+            var kw = css.AsSpan(kwStart, kwEnd - kwStart);
+
+            if (kw.Equals("charset", StringComparison.OrdinalIgnoreCase))
+            {
+                // Skip leading @charset ...; and keep scanning for @import rules.
+                i = kwEnd;
+                SkipStatementTail(css, ref i);
+                continue;
+            }
+
+            if (!kw.Equals("import", StringComparison.OrdinalIgnoreCase))
+            {
+                // Any other VALID at-rule (@media {...}, @page {...}, @font-face, …) ends the
+                // @import prologue. An unknown at-rule or a known one that is invalid ('@media;',
+                // '@page;') is ignored per §4.2, so it does not (at-import-009, at-rule-008).
+                i = kwEnd;
+                SkipStatementTail(css, ref i);
+                if (!IsIgnoredStatement(css, stmtStart, i))
+                {
+                    sb.Append(css, stmtStart, css.Length - stmtStart);
+                    return expandedAny ? sb.ToString() : css;
+                }
+                sb.Append(css, stmtStart, i - stmtStart);
+                sb.Append('\n');
+                continue;
+            }
+
+            i = kwEnd;
+            SkipImportWhitespaceAndComments(css, ref i);
+            if (!TryReadImportTarget(css, ref i, out var importUrl))
+            {
+                // Malformed @import target — skip to end of statement/block per §4.2.
+                SkipStatementTail(css, ref i);
+                expandedAny = true;
+                continue;
+            }
+
+            // Read optional media query list up to top-level ';', '{' or EOF (§4.2).
+            var mediaStart = i;
+            var hitBlock = false;
+            var depthParen = 0;
+            var depthBracket = 0;
+            while (i < css.Length)
+            {
+                var c = css[i];
+                if (c == '/' && i + 1 < css.Length && css[i + 1] == '*')
+                {
+                    SkipCssComment(css, ref i);
+                    continue;
+                }
+                if (c == '"' || c == '\'')
+                {
+                    TryReadCssString(css, ref i, out _);
+                    continue;
+                }
+                if (c == '(') { depthParen++; i++; continue; }
+                if (c == ')' && depthParen > 0) { depthParen--; i++; continue; }
+                if (c == '[') { depthBracket++; i++; continue; }
+                if (c == ']' && depthBracket > 0) { depthBracket--; i++; continue; }
+                if (depthParen == 0 && depthBracket == 0)
+                {
+                    if (c == ';') break;
+                    if (c == '{') { hitBlock = true; break; }
+                }
+                i++;
+            }
+
+            var media = css[mediaStart..i].Trim();
+            if (hitBlock)
+            {
+                // @import with a { ... } block is invalid (§4.2); skip through matching '}'.
+                SkipBalancedBlock(css, ref i);
+                expandedAny = true;
+                continue;
+            }
+            if (i < css.Length && css[i] == ';') i++;
+
+            expandedAny = true;
+            var resolved = Lite.Network.UrlUtils.Resolve(importUrl, baseUrl);
+            if (resolved is null) continue;
+            try
+            {
+                var fetched = fetcher(resolved, referrerCharset);
+                if (fetched is null) continue;
+                var (imported, importedCharset) = fetched.Value;
+                imported = InlineImportsCore(imported, resolved, fetcher, importedCharset, depth + 1);
+                if (string.IsNullOrEmpty(media))
+                {
+                    sb.Append(imported);
+                    sb.Append('\n');
+                }
+                else
+                {
+                    sb.Append("@media ");
+                    sb.Append(media);
+                    sb.Append(" {\n");
+                    sb.Append(imported);
+                    sb.Append("\n}\n");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[@import load error] {resolved}: {ex.Message}");
+            }
+        }
+
+        return expandedAny ? sb.ToString() : css;
+    }
+
+    private static void SkipImportTrivial(string css, ref int i)
+    {
+        while (i < css.Length)
+        {
+            var c = css[i];
+            if (c is ' ' or '\t' or '\r' or '\n' or '\f') { i++; continue; }
+            if (c == '/' && i + 1 < css.Length && css[i + 1] == '*') { SkipCssComment(css, ref i); continue; }
+            if (c == '<' && i + 3 < css.Length && css[i + 1] == '!' && css[i + 2] == '-' && css[i + 3] == '-') { i += 4; continue; }
+            if (c == '-' && i + 2 < css.Length && css[i + 1] == '-' && css[i + 2] == '>') { i += 3; continue; }
+            break;
+        }
+    }
+
+    private static void SkipImportWhitespaceAndComments(string css, ref int i)
+    {
+        while (i < css.Length)
+        {
+            var c = css[i];
+            if (c is ' ' or '\t' or '\r' or '\n' or '\f') { i++; continue; }
+            if (c == '/' && i + 1 < css.Length && css[i + 1] == '*') { SkipCssComment(css, ref i); continue; }
+            break;
+        }
+    }
+
+    private static void SkipCssComment(string css, ref int i)
+    {
+        i += 2;
+        while (i < css.Length)
+        {
+            if (css[i] == '*' && i + 1 < css.Length && css[i + 1] == '/') { i += 2; return; }
+            i++;
+        }
+    }
+
+    /// <summary>
+    /// True when the CSS parser drops the statement <c>css[start..end]</c> entirely: an unknown
+    /// or malformed at-rule, or a rule set whose selector is invalid. Such a statement is
+    /// "ignored" in the sense of CSS 2.1 §6.3 and does not end the @import prologue. The
+    /// decision is the parser's own (the same AngleSharp.Css fork that later reads the sheet),
+    /// so the prologue and the cascade agree on what was ignored.
+    /// </summary>
+    private static bool IsIgnoredStatement(string css, int start, int end)
+    {
+        var statement = css[start..end];
+        try
+        {
+            // A rule set with an invalid selector survives in the sheet with a null Selector
+            // (the builder keeps it, the cascade never matches it), so it counts as ignored.
+            foreach (var rule in new AngleSharp.Css.Parser.CssParser().ParseStyleSheet(statement).Rules)
+                if (rule is not ICssStyleRule { Selector: null })
+                    return false;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void SkipStatementTail(string css, ref int i, bool semicolonEndsStatement = true)
+    {
+        var depthParen = 0;
+        var depthBracket = 0;
+        while (i < css.Length)
+        {
+            var c = css[i];
+            if (c == '/' && i + 1 < css.Length && css[i + 1] == '*') { SkipCssComment(css, ref i); continue; }
+            if (c == '"' || c == '\'') { TryReadCssString(css, ref i, out _); continue; }
+            if (c == '(') { depthParen++; i++; continue; }
+            if (c == ')' && depthParen > 0) { depthParen--; i++; continue; }
+            if (c == '[') { depthBracket++; i++; continue; }
+            if (c == ']' && depthBracket > 0) { depthBracket--; i++; continue; }
+            if (depthParen == 0 && depthBracket == 0)
+            {
+                if (c == ';' && semicolonEndsStatement) { i++; return; }
+                if (c == '{') { SkipBalancedBlock(css, ref i); return; }
+            }
+            i++;
+        }
+    }
+
+    private static void SkipBalancedBlock(string css, ref int i)
+    {
+        if (i >= css.Length || css[i] != '{') return;
+        var depth = 0;
+        while (i < css.Length)
+        {
+            var c = css[i];
+            if (c == '/' && i + 1 < css.Length && css[i + 1] == '*') { SkipCssComment(css, ref i); continue; }
+            if (c == '"' || c == '\'') { TryReadCssString(css, ref i, out _); continue; }
+            if (c == '{') { depth++; i++; continue; }
+            if (c == '}') { depth--; i++; if (depth == 0) return; continue; }
+            i++;
+        }
+    }
+
+    private static bool TryReadImportTarget(string css, ref int i, out string url)
+    {
+        url = string.Empty;
+        if (i >= css.Length) return false;
+        if (css[i] == '"' || css[i] == '\'')
+            return TryReadCssString(css, ref i, out url);
+
+        if (css.Length - i >= 4 && css.AsSpan(i, 4).Equals("url(", StringComparison.OrdinalIgnoreCase))
+        {
+            i += 4;
+            SkipImportWhitespaceAndComments(css, ref i);
+            if (i >= css.Length) return true; // empty url( closed at EOF
+            if (css[i] == '"' || css[i] == '\'')
+            {
+                if (!TryReadCssString(css, ref i, out url)) return false;
+                SkipImportWhitespaceAndComments(css, ref i);
+                if (i >= css.Length) return true; // closed at EOF per §4.2
+                if (css[i] == ')') { i++; return true; }
+                return false;
+            }
+
+            // Unquoted CSS URI token (§4.3.4), with backslash escapes (e.g. \( \) in data: URLs).
+            var sb = new StringBuilder();
+            while (i < css.Length)
+            {
+                var c = css[i];
+                if (c == ')') { i++; url = sb.ToString(); return true; }
+                if (c is ' ' or '\t' or '\r' or '\n' or '\f') break;
+                if (c == '"' || c == '\'' || c == '(' || c <= 0x1F || c == 0x7F) return false;
+                if (c == '\\')
+                {
+                    if (!TryAppendCssEscape(css, ref i, sb, allowEscapedNewline: false)) return false;
+                    continue;
+                }
+                sb.Append(c);
+                i++;
+            }
+            SkipImportWhitespaceAndComments(css, ref i);
+            if (i >= css.Length) { url = sb.ToString(); return true; } // closed at EOF per §4.2
+            if (css[i] == ')') { i++; url = sb.ToString(); return true; }
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool TryReadCssString(string css, ref int i, out string value)
+    {
+        value = string.Empty;
+        if (i >= css.Length) return false;
+        var quote = css[i++];
+        var sb = new StringBuilder();
+        while (i < css.Length)
+        {
+            var c = css[i];
+            if (c == quote) { i++; value = sb.ToString(); return true; }
+            if (c is '\n' or '\r' or '\f') return false; // BAD_STRING (§4.2)
+            if (c == '\\')
+            {
+                if (!TryAppendCssEscape(css, ref i, sb, allowEscapedNewline: true)) return false;
+                continue;
+            }
+            sb.Append(c);
+            i++;
+        }
+        // Unclosed string at EOF is closed per CSS 2.1 §4.2.
+        value = sb.ToString();
+        return true;
+    }
+
+    private static bool TryAppendCssEscape(string css, ref int i, StringBuilder sb, bool allowEscapedNewline)
+    {
+        i++; // skip '\'
+        if (i >= css.Length) return true; // trailing backslash at EOF drops backslash
+        var c = css[i];
+        if (c == '\r')
+        {
+            if (!allowEscapedNewline) return false;
+            i++;
+            if (i < css.Length && css[i] == '\n') i++;
+            return true;
+        }
+        if (c is '\n' or '\f')
+        {
+            if (!allowEscapedNewline) return false;
+            i++;
+            return true;
+        }
+        if (Uri.IsHexDigit(c))
+        {
+            var codePoint = 0;
+            var digits = 0;
+            while (i < css.Length && digits < 6 && Uri.IsHexDigit(css[i]))
+            {
+                codePoint = (codePoint << 4) | Uri.FromHex(css[i]);
+                i++;
+                digits++;
+            }
+            // CSS 2.1 §4.1.3: a single whitespace character (or CRLF) after a hex escape is consumed.
+            if (i < css.Length)
+            {
+                if (css[i] == '\r') { i++; if (i < css.Length && css[i] == '\n') i++; }
+                else if (css[i] is ' ' or '\t' or '\n' or '\f') i++;
+            }
+            if (codePoint == 0 || codePoint > 0x10FFFF || (codePoint >= 0xD800 && codePoint <= 0xDFFF))
+                sb.Append('\uFFFD');
+            else
+                sb.Append(char.ConvertFromUtf32(codePoint));
+            return true;
+        }
+        sb.Append(c);
+        i++;
+        return true;
     }
 
     /// <summary>Decodes stylesheet bytes; see <see cref="FetchCssText"/> for the priority order.
@@ -578,9 +966,9 @@ internal static partial class Parser
         ApplyCascadeToExtractedRules(element, node);
 
         // Pseudo-element rules were lifted out of the sheets before the cascade ran (see
-        // NeutralizePseudoElementRules), so they are applied here from the recorded originals.
-        foreach (var (selector, style) in _pseudoElementRules)
-            TryExtractPseudoElementRule(element, node, selector, style);
+        // NeutralizePseudoElementRules), so they are applied here in CSS 2.1 §6.4.1/§6.4.3
+        // cascade order (origin, !important, specificity, source order).
+        ApplyPseudoElementRules(element, node);
 
     }
 
@@ -1105,6 +1493,135 @@ internal static partial class Parser
     }
 
     /// <summary>
+    /// Extracts the element-matching base selector from a single pseudo-element selector part
+    /// (CSS 2.1 §5.10 / §5.12). Preserves the implicit universal selector when a combinator or
+    /// descendant whitespace precedes the pseudo-element (<c>div :after</c> → <c>div *</c>, not
+    /// <c>div</c>; specificity-011).
+    /// </summary>
+    internal static string ExtractPseudoElementBaseSelector(string part)
+    {
+        var m = PseudoElementRegex.Match(part);
+        if (!m.Success) return part.Trim();
+        var before = part[..m.Index];
+        var trimmedBefore = before.TrimEnd();
+        if (trimmedBefore.Length == 0) return string.Empty;
+        if (before.Length > trimmedBefore.Length || trimmedBefore[^1] is '>' or '+' or '~')
+            return trimmedBefore + " *";
+        return trimmedBefore;
+    }
+
+    private readonly record struct PseudoWinner(int Rank, int Specificity, int Order)
+    {
+        public bool OutranksOrTies(PseudoWinner other) =>
+            Rank != other.Rank ? Rank > other.Rank :
+            Specificity != other.Specificity ? Specificity > other.Specificity :
+            Order >= other.Order;
+    }
+
+    /// <summary>
+    /// Applies all neutralized pseudo-element rules to <paramref name="node"/> in CSS 2.1 §6.4.1 /
+    /// §6.4.3 cascade order: origin &amp; !important rank, then selector specificity, then source
+    /// order (specificity-005, specificity-008, specificity-009, specificity-011).
+    /// </summary>
+    private static void ApplyPseudoElementRules(IElement element, LayoutNode node)
+    {
+        if (_pseudoElementRules.Count == 0) return;
+
+        Dictionary<string, PseudoWinner>? beforeWinners = null;
+        Dictionary<string, PseudoWinner>? afterWinners = null;
+        Dictionary<string, PseudoWinner>? firstLetterWinners = null;
+        Dictionary<string, PseudoWinner>? firstLineWinners = null;
+
+        for (var order = 0; order < _pseudoElementRules.Count; order++)
+        {
+            var (selector, ruleStyle) = _pseudoElementRules[order];
+            if (string.IsNullOrEmpty(selector)) continue;
+            var origin = AngleSharp.Css.Dom.CascadeOrigin.Of(ruleStyle.Parent as ICssRule);
+
+            foreach (var rawPart in SplitSelectorList(selector))
+            {
+                var part = rawPart.Trim();
+                if (part.Length == 0) continue;
+                var lower = part.ToLowerInvariant();
+                bool isBefore = lower.Contains("::before") || lower.Contains(":before");
+                bool isAfter = lower.Contains("::after") || lower.Contains(":after");
+                bool isFirstLetter = lower.Contains("::first-letter") || lower.Contains(":first-letter");
+                bool isFirstLine = lower.Contains("::first-line") || lower.Contains(":first-line");
+                if (!isBefore && !isAfter && !isFirstLetter && !isFirstLine) continue;
+
+                var baseSelector = ExtractPseudoElementBaseSelector(part);
+                if (baseSelector.Length > 0)
+                {
+                    try { if (!element.Matches(baseSelector)) continue; }
+                    catch { continue; }
+                }
+
+                var cssText = ruleStyle.CssText;
+                if (string.IsNullOrEmpty(cssText)) continue;
+
+                var (props, important) = ParseDeclarations(cssText);
+                foreach (var longhand in ruleStyle)
+                {
+                    if (string.IsNullOrEmpty(longhand.Value)) continue;
+                    if (!props.ContainsKey(longhand.Name))
+                    {
+                        props[longhand.Name] = longhand.Value;
+                        if (IsImportant(ruleStyle, longhand.Name))
+                            important.Add(longhand.Name);
+                    }
+                }
+
+                var specificity = ComputeSpecificity(part);
+
+                if (isBefore)
+                {
+                    node.BeforeStyles ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    beforeWinners ??= new Dictionary<string, PseudoWinner>(StringComparer.OrdinalIgnoreCase);
+                    MergePseudoProps(node.BeforeStyles, beforeWinners, props, important, origin, specificity, order);
+                }
+                if (isAfter)
+                {
+                    node.AfterStyles ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    afterWinners ??= new Dictionary<string, PseudoWinner>(StringComparer.OrdinalIgnoreCase);
+                    MergePseudoProps(node.AfterStyles, afterWinners, props, important, origin, specificity, order);
+                }
+                if (isFirstLetter)
+                {
+                    node.FirstLetterStyles ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    firstLetterWinners ??= new Dictionary<string, PseudoWinner>(StringComparer.OrdinalIgnoreCase);
+                    MergePseudoProps(node.FirstLetterStyles, firstLetterWinners, props, important, origin, specificity, order);
+                }
+                if (isFirstLine)
+                {
+                    node.FirstLineStyles ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    firstLineWinners ??= new Dictionary<string, PseudoWinner>(StringComparer.OrdinalIgnoreCase);
+                    MergePseudoProps(node.FirstLineStyles, firstLineWinners, props, important, origin, specificity, order);
+                }
+            }
+        }
+    }
+
+    private static void MergePseudoProps(
+        Dictionary<string, string> target,
+        Dictionary<string, PseudoWinner> winners,
+        Dictionary<string, string> props,
+        HashSet<string> important,
+        int origin,
+        int specificity,
+        int order)
+    {
+        foreach (var (p, v) in props)
+        {
+            var candidate = new PseudoWinner(CascadeRank(origin, important.Contains(p)), specificity, order);
+            if (!winners.TryGetValue(p, out var existing) || candidate.OutranksOrTies(existing))
+            {
+                winners[p] = candidate;
+                target[p] = v;
+            }
+        }
+    }
+
+    /// <summary>
     /// Detects ::before / ::after pseudo-element selectors, strips them,
     /// matches the base selector, and stores all properties for later synthetic child creation.
     /// </summary>
@@ -1121,7 +1638,7 @@ internal static partial class Parser
         // puts content on ::before of .bef and ::after of .af — handling the list whole gave
         // every matching element BOTH pseudos and doubled the sentences).
         var handled = false;
-        foreach (var rawPart in selector.Split(','))
+        foreach (var rawPart in SplitSelectorList(selector))
         {
             var part = rawPart.Trim();
             var lower = part.ToLowerInvariant();
@@ -1132,7 +1649,7 @@ internal static partial class Parser
             if (!isBefore && !isAfter && !isFirstLetter && !isFirstLine) continue;
 
             // Strip the pseudo-element to get the part's base selector.
-            var baseSelector = PseudoElementRegex.Replace(part, "").Trim();
+            var baseSelector = ExtractPseudoElementBaseSelector(part);
             if (baseSelector.Length > 0)
             {
                 try { if (!element.Matches(baseSelector)) { handled = true; continue; } }
@@ -1977,7 +2494,11 @@ internal static partial class Parser
     private static bool IsIllegalPropertyValue(string prop, string value) =>
         NonNegativeProperties.Contains(prop) && ContainsNegativeNumber(value);
 
-    /// <summary>Computes a CSS specificity score (a*100 + b*10 + c) for a compound/complex selector.</summary>
+    /// <summary>
+    /// Computes a CSS 2.1 §6.4.3 specificity score ((a &lt;&lt; 16) | (b &lt;&lt; 8) | c) for a
+    /// compound/complex selector. Single-colon CSS 2.1 pseudo-elements (:before, :after,
+    /// :first-letter, :first-line) count in c (element/pseudo-element), not b (pseudo-class).
+    /// </summary>
     internal static int ComputeSpecificity(string selector)
     {
         int a = 0, b = 0, c = 0;
@@ -1990,13 +2511,35 @@ internal static partial class Parser
             else if (ch == ':')
             {
                 i++;
-                if (i < selector.Length && selector[i] == ':') { c++; i++; SkipIdent(selector, ref i); } // ::pseudo-element
-                else { b++; SkipIdent(selector, ref i); if (i < selector.Length && selector[i] == '(') SkipTo(selector, ref i, ')'); }
+                if (i < selector.Length && selector[i] == ':')
+                {
+                    c++;
+                    i++;
+                    SkipIdent(selector, ref i);
+                }
+                else
+                {
+                    var nameStart = i;
+                    SkipIdent(selector, ref i);
+                    var name = selector.AsSpan(nameStart, i - nameStart);
+                    if (name.Equals("before", StringComparison.OrdinalIgnoreCase) ||
+                        name.Equals("after", StringComparison.OrdinalIgnoreCase) ||
+                        name.Equals("first-letter", StringComparison.OrdinalIgnoreCase) ||
+                        name.Equals("first-line", StringComparison.OrdinalIgnoreCase))
+                    {
+                        c++;
+                    }
+                    else
+                    {
+                        b++;
+                        if (i < selector.Length && selector[i] == '(') SkipTo(selector, ref i, ')');
+                    }
+                }
             }
             else if (char.IsLetter(ch)) { c++; SkipIdent(selector, ref i); } // type selector
             else i++; // combinators, '*', whitespace
         }
-        return a * 100 + b * 10 + c;
+        return (Math.Min(a, 255) << 16) | (Math.Min(b, 255) << 8) | Math.Min(c, 255);
     }
 
     private static void SkipIdent(string s, ref int i)

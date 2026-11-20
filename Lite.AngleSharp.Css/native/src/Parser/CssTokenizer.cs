@@ -166,6 +166,18 @@ namespace AngleSharp.Css.Parser
                 sb.Remove(sb.Length - trailingWhitespace, trailingWhitespace);
             }
 
+            // Lite patch 009: CSS 2.1 4.2 "User agents must close all open constructs (for
+            // example: blocks, parentheses, brackets, rules, strings, and functions) at the end
+            // of the style sheet" - 'color: rgb(0, 128, 0' at the end of a sheet is
+            // 'rgb(0, 128, 0)' (eof-002), not a malformed value.
+            if (current == Symbols.EndOfFile)
+            {
+                while (closers.Count > 0)
+                {
+                    sb.Append(closers.Pop());
+                }
+            }
+
             Back();
             return sb.ToPool();
         }
@@ -208,6 +220,9 @@ namespace AngleSharp.Css.Parser
 
                     if (current == Symbols.EndOfFile)
                     {
+                        // An escaped end of file contributes nothing (the backslash is dropped
+                        // so the closing quote below is not read as escaped).
+                        sb.Length--;
                         break;
                     }
 
@@ -217,6 +232,9 @@ namespace AngleSharp.Css.Parser
                 current = GetNext();
             }
 
+            // Lite patch 009: CSS 2.1 4.2 - a string still open at the end of the style sheet is
+            // closed there (uri-017's 'url("swatch-green.png' ends the sheet).
+            sb.Append(quote);
             return true;
         }
 
@@ -292,6 +310,14 @@ namespace AngleSharp.Css.Parser
             {
                 sb.Append(current);
                 current = GetNext();
+                return true;
+            }
+
+            // Lite patch 009: CSS 2.1 4.2 - a url( still open at the end of the style sheet is
+            // closed there, which makes it a complete URI token (uri-017, uri-018).
+            if (current == Symbols.EndOfFile)
+            {
+                sb.Append(Symbols.RoundBracketClose);
                 return true;
             }
 
@@ -645,7 +671,8 @@ namespace AngleSharp.Css.Parser
 
                         if (current.IsLineBreak())
                         {
-                            StringBuffer.AppendLine();
+                            // Lite patch 008: CSS 2.1 4.3.7 / 4.1.3 - an escaped newline is removed from the
+                            // string; upstream appended Environment.NewLine (CR LF on Windows) in its place.
                         }
                         else if (current != Symbols.EndOfFile)
                         {
@@ -695,7 +722,8 @@ namespace AngleSharp.Css.Parser
 
                         if (current.IsLineBreak())
                         {
-                            StringBuffer.AppendLine();
+                            // Lite patch 008: CSS 2.1 4.3.7 / 4.1.3 - an escaped newline is removed from the
+                            // string; upstream appended Environment.NewLine (CR LF on Windows) in its place.
                         }
                         else if (current != Symbols.EndOfFile)
                         {
@@ -1238,7 +1266,8 @@ namespace AngleSharp.Css.Parser
                     }
                     else if (current.IsLineBreak())
                     {
-                        StringBuffer.AppendLine();
+                        // Lite patch 008: CSS 2.1 4.3.7 / 4.1.3 - an escaped newline is removed from the
+                        // string; upstream appended Environment.NewLine (CR LF on Windows) in its place.
                     }
                     else
                     {
@@ -1286,7 +1315,8 @@ namespace AngleSharp.Css.Parser
                     }
                     else if (current.IsLineBreak())
                     {
-                        StringBuffer.AppendLine();
+                        // Lite patch 008: CSS 2.1 4.3.7 / 4.1.3 - an escaped newline is removed from the
+                        // string; upstream appended Environment.NewLine (CR LF on Windows) in its place.
                     }
                     else
                     {

@@ -227,4 +227,38 @@ public static class CascadeTests
                 $"#{id} should keep its green background — the red one is malformed, got {bg}");
         }
     }
+
+    [Test]
+    public static void PseudoElementCascade_RespectsSpecificityAndDescendantUniversal()
+    {
+        // CSS 2.1 §6.4.3: single-colon pseudo-elements count in c (not b), and pseudo-element
+        // rules cascade by specificity rather than last-rule-wins (specificity-005/008/009/011).
+        True(Parser.ComputeSpecificity("div:first-line") > Parser.ComputeSpecificity(":first-line"),
+            "0,0,2 > 0,0,1");
+        True(Parser.ComputeSpecificity("div:first-child:first-line") > Parser.ComputeSpecificity("div:first-line"),
+            "0,1,2 > 0,0,2");
+        True(Parser.ComputeSpecificity("html > body > *:first-line") > Parser.ComputeSpecificity("div:first-line"),
+            "0,0,3 > 0,0,2");
+        Equal(Parser.ComputeSpecificity("p:after"), Parser.ComputeSpecificity("div :after"));
+        Equal("div *", Parser.ExtractPseudoElementBaseSelector("div :after"));
+        Equal("body div *", Parser.ExtractPseudoElementBaseSelector("body div :after"));
+
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "div:first-line { color: green; }" +
+            ":first-line { color: red; }" +
+            "p:after { content: 'FAILED'; }" +
+            "div :after { content: 'PASSED'; }" +
+            "</style></head><body><div><p id='p'>Hi</p></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+
+        LayoutNode? F(LayoutNode n, string tag, string? id = null) =>
+            n.TagName == tag && (id is null || n.Id == id) ? n : n.Children.Select(c => F(c, tag, id)).FirstOrDefault(r => r != null);
+
+        var div = F(page.Root, "DIV")!;
+        var p = F(page.Root, "P", "p")!;
+        Equal("rgba(0, 128, 0, 1)", div.FirstLineStyles!["color"]);
+        True(div.AfterStyles is null, "div :after must not match div itself");
+        Equal("\"PASSED\"", p.AfterStyles!["content"]);
+    }
 }

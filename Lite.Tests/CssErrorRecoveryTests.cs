@@ -1,4 +1,4 @@
-using AngleSharp.Css.Dom;
+﻿using AngleSharp.Css.Dom;
 using AngleSharp.Css.Parser;
 using static Lite.Tests.TestRunner;
 
@@ -82,5 +82,181 @@ public static class CssErrorRecoveryTests
         True(!CssComponentScan.IsWellFormedValue("url(a b.png)"), "whitespace inside an unquoted url is a BAD_URI");
         True(!CssComponentScan.IsWellFormedValue("\"broken\nred"), "a newline ends a BAD_STRING");
         True(!CssComponentScan.IsWellFormedValue("red; color: blue"), "a top-level ';' ends the value");
+    }
+
+    [Test]
+    public static void EscapedNewlineInString_IsRemoved()
+    {
+        // Patch 008, CSS 2.1 4.3.7: "the newline itself has to be escaped with a backslash. The
+        // newline is subsequently removed from the string" (escapes-000, escaped-newline-001).
+        // Upstream appended Environment.NewLine, which put a CR LF into the generated text.
+        var sheet = Parse("p { content: \"Th\\\nis \" } q { content: 'a\\\nb' }");
+        Equal("\"This \"", Declared(sheet, "p", "content"));
+        Equal("\"ab\"", Declared(sheet, "q", "content"));
+    }
+
+    [Test]
+    public static void EndOfSheet_ClosesOpenConstructs()
+    {
+        // Patch 009, CSS 2.1 4.2: "User agents must close all open constructs (for example:
+        // blocks, parentheses, brackets, rules, strings, and functions) at the end of the style
+        // sheet." eof-002 ends inside rgb(, uri-017 inside url(" and url(.
+        Equal("rgba(0, 128, 0, 1)", Declared(Parse("div { color: rgb(0, 128, 0"), "div", "color"));
+        Equal("url(\"green.png\")", Declared(Parse("p { background-image: url(\"green.png"), "p", "background-image"));
+        Equal("url(\"green.png\")", Declared(Parse("p { background-image: url(green.png"), "p", "background-image"));
+        // Only the end of the sheet closes them: the scan of a value cut short by Lite's raw
+        // rescue still reports the unclosed url( as malformed.
+        True(!CssComponentScan.IsWellFormedValue("url(\"a.png\""), "an unclosed url( in a standalone value");
+    }
+
+    [Test]
+    public static void AtImport_HonorsLeadingPositionEofClosureAndEscapedUrls()
+    {
+        // CSS 2.1 §6.3: @import is ignored after any non-ignored statement other than @charset/@import.
+        var fetched = new List<string>();
+        (string Css, string Charset)? Fetch(string url, string? _)
+        {
+            fetched.Add(url);
+            return ("p { color: green; }", "utf-8");
+        }
+
+        var afterRule = Lite.Parser.InlineImportsCore(
+            "body { color: green; }\n@import url(\"red.css\");",
+            "http://example.test/page.html",
+            Fetch);
+        Equal(0, fetched.Count);
+        True(afterRule.Contains("@import"), "non-leading @import stays untouched for the CSS parser");
+
+        // CSS 2.1 §6.3 + §4.2: garbage before @import also terminates the @import prologue (at-import-011).
+        var afterGarbage = Lite.Parser.InlineImportsCore(
+            "# :unknownpseudo\n@import \"red.css\";\np { color: green; }",
+            "http://example.test/page.html",
+            Fetch);
+        Equal(0, fetched.Count);
+        True(afterGarbage.Contains("# :unknownpseudo"), "garbage before @import is preserved");
+
+        // CSS 2.1 §4.2: open string, open url(, and missing semicolon at EOF all close cleanly (eof-005/006, uri-018).
+        var eofString = Lite.Parser.InlineImportsCore("@import \"green.css", "http://example.test/page.html", Fetch);
+        True(eofString.Contains("color: green"), "unclosed string @import at EOF expands");
+        Equal("http://example.test/green.css", fetched[^1]);
+
+        var eofNoSemi = Lite.Parser.InlineImportsCore("@import \"green2.css\"", "http://example.test/page.html", Fetch);
+        True(eofNoSemi.Contains("color: green"), "@import without trailing semicolon at EOF expands");
+        Equal("http://example.test/green2.css", fetched[^1]);
+
+        var eofUrl = Lite.Parser.InlineImportsCore("@import url(green3.css", "http://example.test/page.html", Fetch);
+        True(eofUrl.Contains("color: green"), "unclosed url( @import at EOF expands");
+        Equal("http://example.test/green3.css", fetched[^1]);
+
+        // CSS 2.1 §4.3.4: escaped parens inside unquoted url(...) unescape before resolution (cascade-import-001).
+        fetched.Clear();
+        Lite.Parser.InlineImportsCore(
+            "@import url(data:text/css,@import%20url\\(data:text/css,p%7Bcolor:red%7D\\););",
+            "http://example.test/page.html",
+            Fetch);
+        Equal(1, fetched.Count);
+        Equal("data:text/css,@import%20url(data:text/css,p%7Bcolor:red%7D);", fetched[0]);
+    }
+
+    [Test]
+    public static void AtImport_IgnoredStatementsDoNotEndTheImportPrologue()
+    {
+        // CSS 2.1 §6.3: only a NON-IGNORED statement other than @charset/@import makes a later
+        // @import ignored; §4.2 ignores unknown at-rules, malformed known at-rules and rule sets
+        // with an invalid selector, so an @import after them still applies.
+        const string Base = "http://example.test/page.html";
+        var fetched = new List<string>();
+        (string Css, string Charset)? Fetch(string url, string? _)
+        {
+            fetched.Add(url);
+            return (".import { color: green; }", "utf-8");
+        }
+
+        string Inline(string css)
+        {
+            fetched.Clear();
+            return Lite.Parser.InlineImportsCore(css, Base, Fetch);
+        }
+
+        // at-import-009: known but invalid at-rules.
+        var known = Inline("@media;\n@page;\n@charset;\n@import \"green.css\";");
+        Equal(1, fetched.Count);
+        True(known.Contains(".import { color: green; }"), "@import after '@media;' and '@page;' expands");
+        // at-rule-008: an unknown at-rule, with or without a block.
+        Inline("@badat-rule foo;\n@import \"green.css\";");
+        Equal(1, fetched.Count);
+        Inline("@unknown-block x { a: b; }\n@import \"green.css\";");
+        Equal(1, fetched.Count);
+        // at-import-010 / at-rule-009: rule sets with an invalid selector, block included.
+        Inline("# { background: red; }\n:unknownpseudo { background: red; }\n@import \"green.css\";");
+        Equal(1, fetched.Count);
+        Inline("1badselector\n{\n someprop:someval;\n}\n@import \"green.css\";");
+        Equal(1, fetched.Count);
+
+        // Valid statements still end the prologue: an empty rule set (at-rule-007), a valid
+        // @media block (at-rule-004) and @font-face.
+        Inline("foo{}\n@import \"red.css\";");
+        Equal(0, fetched.Count);
+        Inline("@media print { p { color: red; } }\n@import \"red.css\";");
+        Equal(0, fetched.Count);
+        Inline("@font-face { font-family: x; }\n@import \"red.css\";");
+        Equal(0, fetched.Count);
+        // at-import-011: an ignored rule set's prelude runs through ';' to its '{', so the
+        // @import inside it belongs to the ignored statement, and 'p {...}' ends the prologue.
+        var garbage = Inline("# :unknownpseudo\n@import \"red.css\";\n.import { color: red; }\np { color: green; }\n@import \"red.css\";");
+        Equal(0, fetched.Count);
+        True(garbage.Contains("# :unknownpseudo"), "the ignored statement is kept for the CSS parser");
+    }
+
+    [Test]
+    public static void SelectorValidation_EnforcesCss21GrammarAndCaseInsensitivePseudos()
+    {
+        // Patch 010, CSS 2.1 §4.1.7 / §5.2.1: empty selector items drop the rule (bad-selector-001).
+        Equal(0, Parse("body,,div { color: red; }").Rules.Length);
+        Equal(0, Parse(",div { color: red; }").Rules.Length);
+        Equal(0, Parse("div, { color: red; }").Rules.Length);
+
+        // CSS 2.1 §5.10 / §5.12: nothing may follow a pseudo-element (pseudo-014/016, c25-pseudo-elmnt-000).
+        Equal(0, Parse("p:first-line[id=\"p1\"], #p1 { color: red; }").Rules.Length);
+        Equal(0, Parse("p:first-line+p, #p1 { color: red; }").Rules.Length);
+        Equal(0, Parse("p:first-line.two { color: red; }").Rules.Length);
+
+        // CSS 2.1 §4.1.3: class/ID identifiers cannot start with digit or '-' + digit (ident-003).
+        Equal(0, Parse(".-1ident, .three { color: red; }").Rules.Length);
+        Equal(0, Parse("#-1ident, .four { color: red; }").Rules.Length);
+        Equal(1, Parse(".-ident, .one { color: green; }").Rules.Length);
+
+        // CSS 2.1 §4.1.3: pseudo-class and pseudo-element names are ASCII case-insensitive (pseudo-007/008).
+        var pseudoSheet = Parse("div:fiRsT-cHiLd { color: green; } div:bEfOre { content: 'A'; } div:aFtEr { content: 'B'; }");
+        Equal(3, pseudoSheet.Rules.Length);
+        Equal("rgba(0, 128, 0, 1)", Declared(pseudoSheet, "div:first-child", "color"));
+        Equal("\"A\"", Declared(pseudoSheet, "div:before", "content"));
+        Equal("\"B\"", Declared(pseudoSheet, "div:after", "content"));
+    }
+
+    [Test]
+    public static void ColorSyntax_RejectsFourDigitHexAndMixedRgbUnits()
+    {
+        // Patch 011, CSS 2.1 §4.3.6: 4-digit hex (#1000) and mixed integer/percentage rgb() are invalid
+        // (color-030, outline-color-030, colors-004).
+        Equal((string?)null, Declared(Parse("div { color: #1000; }"), "div", "color"));
+        Equal((string?)null, Declared(Parse("div { color: #11223344; }"), "div", "color"));
+        Equal((string?)null, Declared(Parse("div { color: rgb(100%, 0, 0); }"), "div", "color"));
+        Equal("rgba(0, 128, 0, 1)", Declared(Parse("div { color: #008000; }"), "div", "color"));
+        Equal("rgba(0, 128, 0, 1)", Declared(Parse("div { color: rgb(0, 128, 0); }"), "div", "color"));
+        Equal("rgba(255, 0, 0, 1)", Declared(Parse("div { color: rgb(100%, 0%, 0%); }"), "div", "color"));
+    }
+
+    [Test]
+    public static void DeclarationPropertyValidationAndSelectorEscapedNewline()
+    {
+        // Patch 012, CSS 2.1 §4.1.1: property names must be IDENT tokens, not STRING (quoted-keywords-001).
+        Equal((string?)null, Declared(Parse("div { 'color': red; }"), "div", "color"));
+        // CSS 2.1 §4.2: missing property name ':red;' skips to ';' and preserves 'color: green' (malformed-decl-008).
+        Equal("rgba(0, 128, 0, 1)", Declared(Parse("div { :red; color: green; }"), "div", "color"));
+        // CSS 2.1 §4.3.7: escaped newline in a selector string is removed (strings-000).
+        var sheet = Parse("p[title=\"this is\\\n a test\"] { color: green; }");
+        Equal(1, sheet.Rules.Length);
+        Equal("p[title=\"this is a test\"]", ((ICssStyleRule)sheet.Rules[0]).SelectorText);
     }
 }

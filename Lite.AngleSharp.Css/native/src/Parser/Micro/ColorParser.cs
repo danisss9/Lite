@@ -88,7 +88,12 @@ namespace AngleSharp.Css.Parser
                 current = source.Next();
             }
 
-            if (CssColorValue.TryFromHex(buffer.ToPool(), out var result))
+            var hex = buffer.ToPool();
+
+            // Lite patch 011: CSS 2.1 §4.3.6 — only 3-digit (#rgb) and 6-digit (#rrggbb) hex
+            // colors are valid in CSS 2.1; 4-digit (#1000) and 8-digit hex must be rejected
+            // (color-030, outline-color-030).
+            if ((hex.Length == 3 || hex.Length == 6) && CssColorValue.TryFromHex(hex, out var result))
             {
                 return result;
             }
@@ -144,14 +149,16 @@ namespace AngleSharp.Css.Parser
 
         private static CssColorValue? ParseRgbaLegacy(StringSource source)
         {
-            var r = ParseRgbComponent(source);
+            var r = ParseRgbComponent(source, out var rPercent);
             var c1 = source.SkipGetSkip();
-            var g = ParseRgbComponent(source);
+            var g = ParseRgbComponent(source, out var gPercent);
             var c2 = source.SkipGetSkip();
-            var b = ParseRgbComponent(source);
+            var b = ParseRgbComponent(source, out var bPercent);
             var c3 = source.SkipGetSkip();
 
-            if (r != null && g != null && b != null)
+            // Lite patch 011: CSS 2.1 §4.3.6 — comma-separated rgb()/rgba() must use either all
+            // integers or all percentages, never a mix (colors-004).
+            if (r != null && g != null && b != null && rPercent == gPercent && gPercent == bPercent)
             {
                 if (Check(c3, c1, c2))
                 {
@@ -430,8 +437,12 @@ namespace AngleSharp.Css.Parser
             return null;
         }
 
-        private static Byte? ParseRgbComponent(StringSource source)
+        private static Byte? ParseRgbComponent(StringSource source) =>
+            ParseRgbComponent(source, out _);
+
+        private static Byte? ParseRgbComponent(StringSource source, out Boolean isPercent)
         {
+            isPercent = false;
             var unit = source.ParseUnit();
 
             if (unit == null)
@@ -446,6 +457,7 @@ namespace AngleSharp.Css.Parser
 
             if (unit.Dimension == "%" && Double.TryParse(unit.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var val))
             {
+                isPercent = true;
                 // Lite patch 002: clamp to the gamut before the byte cast (CSS 2.1 §4.3.6 — the
                 // unclamped cast wrapped 101% to 2).
                 return (Byte)Math.Round(Math.Clamp(255.0 * val / 100.0, 0.0, 255.0));
