@@ -1095,38 +1095,17 @@ internal static partial class BoxEngine
                 }
 
                 // §9.5: a plain in-flow block's border box OVERLAPS the floats beside it — only
-                // its inline (line box) content narrows, and a block that establishes a BFC may
-                // not overlap at all. Placing every block in the float's wake painted block
-                // backgrounds beside the float instead of under it (floats-008/135: the red
-                // block must slide UNDER the green/blue float, not out of its way).
-                var (effX, effW) = EstablishesBlockFormattingContext(child)
-                    ? AvailableBand(floats, borderTop, 1, contentX, contentW)
-                    : (contentX, contentW);
-                if (effW != contentW || effX != contentX)
-                {
-                    // §9.5 rule 6: "implementations should clear the said element by placing it
-                    // below any preceding floats" when it cannot fit beside them — the border box
-                    // must not overlap, and a BFC's specified width is not narrowed by the band
-                    // (floats-bfc-001's 200px BFC drops below the 150px float and grows its
-                    // auto-height parent to full coverage).
-                    var wantedW = child.IsAutoWidth()
-                        ? effW
-                        : Math.Max(0f, child.GetWidth(contentW)
-                                       + child.GetBorderWidth().Left + child.GetBorderWidth().Right
-                                       + (child.GetPadding(contentW, viewportHeight, childFontSize).Left
-                                          + child.GetPadding(contentW, viewportHeight, childFontSize).Right));
-                    if (wantedW > effW + 0.5f)
-                    {
-                        var floatBottom = borderTop;
-                        foreach (var f in floats) floatBottom = Math.Max(floatBottom, f.Bottom);
-                        if (floatBottom > borderTop + 0.5f)
-                        {
-                            borderTop = floatBottom;
-                            (effX, effW) = AvailableBand(floats, borderTop, 1, contentX, contentW);
-                            RetireFloats(floats, borderTop);
-                        }
-                    }
-                }
+                // its inline (line box) content narrows, while a table, a block-level replaced
+                // element, or a block that establishes a BFC may not overlap at all. Placing every
+                // block in the float's wake painted block backgrounds beside the float instead of
+                // under it (floats-008/135: the red block must slide UNDER the green/blue float,
+                // not out of its way).
+                var (effX, effW) = (contentX, contentW);
+                var avoidsFloats = floats.Count > 0 && AvoidsFloatsInBfc(child);
+                var (bfcWantedW, bfcProbeH) = (0f, 1f);
+                if (avoidsFloats)
+                    (borderTop, effX, effW, bfcWantedW, bfcProbeH) = FitBfcBesideFloats(
+                        child, floats, borderTop, contentX, contentW, parentContentHeight, viewportHeight, childFontSize);
                 // The pre-layout state of the spent-chain flag: the ride gate below must know
                 // whether the CURRENT chain was opened by a re-anchored self-collapser (the box
                 // about to fold would set the flag itself before the ride runs).
@@ -1134,6 +1113,25 @@ internal static partial class BoxEngine
                 var (h, childBottomMargin) = LayoutBlock(child, effX, borderTop - childMarginTop, effW,
                                                          viewportWidth, viewportHeight, parentContentHeight, floats);
                 var borderBoxH = h - childMarginTop - childBottomMargin.Value;
+                // §9.5: when an auto-height BFC grows taller than its initial top-edge probe and
+                // now overlaps a wider float starting partway down its laid-out height
+                // (floats-bfc-003), re-fit over the full border-box height and re-layout.
+                for (var reAttempt = 0; reAttempt < 8 && avoidsFloats && borderBoxH > bfcProbeH + 0.5f; reAttempt++)
+                {
+                    bfcProbeH = borderBoxH;
+                    var (reFitY, reFitX, reFitW) = FitBandBelow(floats, borderTop, bfcProbeH, bfcWantedW, contentX, contentW);
+                    if (reFitY <= borderTop + 0.5f && MathF.Abs(reFitX - effX) <= 0.5f && MathF.Abs(reFitW - effW) <= 0.5f)
+                        break;
+                    if (reFitY > borderTop + 0.5f)
+                    {
+                        borderTop = reFitY;
+                        RetireFloats(floats, borderTop);
+                    }
+                    (effX, effW) = (reFitX, reFitW);
+                    (h, childBottomMargin) = LayoutBlock(child, effX, borderTop - childMarginTop, effW,
+                                                         viewportWidth, viewportHeight, parentContentHeight, floats);
+                    borderBoxH = h - childMarginTop - childBottomMargin.Value;
+                }
 
                 // Self-collapsing block (§8.3.1): no in-flow content / border / padding / height (a
                 // zero border-box height already implies height is auto-or-0 with no min-height), and

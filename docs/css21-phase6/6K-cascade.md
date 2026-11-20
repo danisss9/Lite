@@ -45,6 +45,12 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
   `<font color="green">` inside a red `div` paints red. The file's assert says the presentational `color` attribute
   trumps the author `div` rule and the user sheet's universal selector (§6.4.4 cascade order); the attribute seems
   ignored. Render evidence: `artifacts/hp3.png` in the 6.M worktree. From 6.M.
+- `css/CSS2/floats/floats-placement-005.html`: float and inline-block layout on the test page
+  matches the reference geometry (`wpt-reference-floats-placement-005-*-actual.png`), but in
+  `floats-placement-005-ref.html` `<div class="float-left" style="width: 100px; height: 40px;
+  background: cyan;">` renders green instead of cyan (`*-expected.png`) because the class rule
+  `.float-left { background: green; }` beats the inline `style="... background: cyan;"` shorthand.
+  From 6.B.
 
 ## Edits outside owned files
 

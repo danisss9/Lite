@@ -150,6 +150,50 @@ public static class FloatSizingTests
         True(ib.Box.ContentBox.Top >= 9.5f, $"the line moves below the float, got top {ib.Box.ContentBox.Top}");
     }
     [Test]
+    public static void BfcBesideFloats_AvoidsFloatStartingInsideItsHeight()
+    {
+        // floats-wrap-top-below-bfc-002l's shape: a 150px left float (75px tall) and a 300px
+        // right float that drops below it (y=75..150). §9.5: a BFC's border box must not overlap
+        // a float's margin box over its whole height, so the second 200x50 BFC at y=50 — whose
+        // top band is 250px wide but whose lower half meets the right float — moves below the
+        // floats instead of overlapping the right one.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'><div style='width:400px'>" +
+            "<div style='float:left;width:150px;height:75px'></div>" +
+            "<div style='float:right;width:300px;height:75px'></div>" +
+            "<div id='a' style='overflow:hidden;width:200px;height:50px'></div>" +
+            "<div id='b' style='overflow:hidden;width:200px;height:50px'></div>" +
+            "</div></body></html>");
+        var a = FindNode(root, n => n.Id == "a")!;
+        var b = FindNode(root, n => n.Id == "b")!;
+        True(a is not null && b is not null, "BFC nodes not found");
+        True(a.Box.ContentBox.Top < 0.5f && Math.Abs(a.Box.ContentBox.Left - 150f) < 0.5f,
+            $"the first BFC sits beside the left float, got {a.Box.ContentBox}");
+        True(Math.Abs(b.Box.ContentBox.Top - 150f) < 0.5f && b.Box.ContentBox.Left < 0.5f,
+            $"the second BFC must move below the lower float, got {b.Box.ContentBox}");
+    }
+
+    [Test]
+    public static void BfcBesideFloats_StepsDownOneFloatBottomAtATime()
+    {
+        // floats-wrap-top-below-bfc-003l's shape: 250px floats on both sides, the right one
+        // dropped to y=75. The second 100x50 BFC fits nowhere at y=50, but beside the lower
+        // right float at y=75 (band 0..150) it does — rule 6 moves it past the NEXT float
+        // bottom, not below every float.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'><div style='width:400px'>" +
+            "<div style='float:left;width:250px;height:75px'></div>" +
+            "<div style='float:right;width:250px;height:75px'></div>" +
+            "<div id='a' style='overflow:hidden;width:100px;height:50px'></div>" +
+            "<div id='b' style='overflow:hidden;width:100px;height:50px'></div>" +
+            "</div></body></html>");
+        var b = FindNode(root, n => n.Id == "b")!;
+        True(b is not null, "BFC node not found");
+        True(Math.Abs(b.Box.ContentBox.Top - 75f) < 0.5f && b.Box.ContentBox.Left < 0.5f,
+            $"the second BFC must sit at (0,75) beside the lower float, got {b.Box.ContentBox}");
+    }
+
+    [Test]
     public static void EmptyLine_AvoidsFloatStartingInsideItsHeight()
     {
         // floats-wrap-top-below-inline-002l's shape: the second 200x50 inline-block starts a
@@ -215,5 +259,28 @@ public static class FloatSizingTests
             $"first line starts at y=0 beside the 10px float, got {s1.Box.ContentBox}");
         True(Math.Abs(s2.Box.ContentBox.Top - 20f) < 0.5f && Math.Abs(s2.Box.ContentBox.Left - 100f) < 0.5f,
             $"second line (y=20..40) wraps past the y=30 zero-height float to x=100, got {s2.Box.ContentBox}");
+    }
+
+    [Test]
+    public static void AutoHeightBfc_RefitsWhenGrownHeightMeetsWiderFloat()
+    {
+        // floats-bfc-003's shape: #float1 is 100x25 at y=0..25, #float2 is 200x25 at y=25..50.
+        // An auto-height BFC containing two 100x50 floats initially sees a 200px band at y=0 and
+        // lays out 50px tall, which overlaps #float2 at y=25..50; re-fitting over its 50px height
+        // narrows its band to 100px (x=200..300), stacking its inner floats to 100px tall.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'><div style='width:300px'>" +
+            "<div style='float:left;clear:left;width:100px;height:25px'></div>" +
+            "<div style='float:left;clear:left;width:200px;height:25px'></div>" +
+            "<div id='bfc' style='overflow:hidden'>" +
+            "<div style='float:left;width:100px;height:50px'></div>" +
+            "<div style='float:left;width:100px;height:50px'></div>" +
+            "</div></div></body></html>");
+        var bfc = FindNode(root, n => n.Id == "bfc")!;
+        True(bfc is not null, "bfc not found");
+        True(Math.Abs(bfc.Box.ContentBox.Left - 200f) < 0.5f &&
+             Math.Abs(bfc.Box.ContentBox.Width - 100f) < 0.5f &&
+             Math.Abs(bfc.Box.ContentBox.Height - 100f) < 0.5f,
+            $"#bfc must narrow to 100x100 at x=200 to avoid #float2, got {bfc.Box.ContentBox}");
     }
 }

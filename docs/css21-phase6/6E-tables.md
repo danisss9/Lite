@@ -39,6 +39,16 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - To 6.G (unchanged, parked): border-conflict-element-029 waits on RTL column order.
 - `border-applies-to-004`, `border-color-applies-to-004`, `border-{left,right}-applies-to-004`, `border-{left,right}-color-applies-to-004`, `border-{left,right}-width-applies-to-004` (official+WPT, 16): in `border-collapse: collapse`, a `table-row`'s left/right border is resolved onto the interior boundary between adjacent cells in `TableEngine` instead of only the row's outer left/right edges (from 6.I).
 - `outline-applies-to-016`, `outline-applies-to-017` (WPT, 2): replaced `<img>` with `display: table-column-group` / `table-column` produces no laid-out box, so nothing paints (from 6.I).
+- `floats-wrap-bfc-006` (official + WPT, 2): a `<table>` with a top `<caption>` (`width: 100px`)
+  and a wider `<tbody>` (`width: 230px`) beside a staircase of 30 1px-tall left floats wraps the
+  table and caption together at the 230px width (`y = 30`), whereas the reference places the 100px
+  caption at `y = 17` (where the float staircase narrows to 70px) and the 230px table grid below
+  the floats (`y = 30`). Per §17.4 the caption and table box are separate block-level boxes inside
+  the table wrapper box. From 6.B.
+- `clear-applies-to-015`, `float-applies-to-005/006/015` (official + WPT, 8): `display:
+  table-column-group`, `table-column`, and `table-caption` boxes with `float`/`clear` fail because
+  anonymous table wrapper / caption geometry in `TableEngine` / `BoxEngine.Normalize` does not
+  match the reference table sizing. From 6.B.
 
 ## Edits outside owned files
 
