@@ -67,6 +67,19 @@ applicability change and keep `applicable` with the animated-image judge as its 
 wants the exclusion instead, the permitting text would have to come from outside the pinned target, and
 the plan's 19 November decision would be reversed.
 
+### Rulings, 20 November
+
+- **`c5504-mrgn-l-002` → optional.** Applied to both rows (`css/CSS2/css1/c5504-mrgn-l-002.xht`,
+  `css21-official/html4/c5504-mrgn-l-002.htm`) with `permits` quoting §11.1.1; `media` and
+  `requirementIds` are cleared (the case leaves the screen matrix), and the dated rationale records
+  the scroll-mechanism reading and the sibling cases that carry the margin computation.
+- **inline-svg → keep applicable, hand to the Phase 6 engine queue.** No applicability change. The
+  four cases stay in `L.txt` (0/4) until the integrator's next lane split; the engine items are
+  inline SVG intrinsic sizing, viewBox scaling and box properties (§10.3.2/§10.6.2 on a replaced
+  element; SVG 1.1 §IntrinsicSizing supplies the sizing rules).
+- **`background-animated-001` → keep applicable/implemented.** No change; the 19 November
+  animated-image decision and the `image-animates` judge stand.
+
 ## Progress
 
 - **20 November — the xhtml1 variant (one commit, no engine changes).**
@@ -112,3 +125,9 @@ the plan's 19 November decision would be reversed.
     merged identity, and must not refetch the official tree (the fetch would drop xhtml1;
     the restore script is the documented post-fetch step).
   - **Open decisions:** see the section above; nothing was recorded.
+- **20 November — the rulings (one commit, evidence only).**
+  - `c5504-mrgn-l-002` (both suites) reclassified **optional** with the §11.1.1 permitting sentence;
+    two cases leave the screen matrix (screen blockers 18,088 → 18,086; missing-case 17,887 →
+    17,885). inline-svg and `background-animated-001` recorded as ruled with no applicability change.
+  - **Checks:** units 648/648; curated gates css21 51 pass / 1 expected-fail, wpt 86 pass / 2;
+    inventory 18,086 screen / 577 print; lane L 0/4 unchanged; canary 300/300.
