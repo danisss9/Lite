@@ -67,4 +67,27 @@ public static class FloatSizingTests
         True(Math.Abs((195f - f.Box.ContentBox.Right)) < 0.5f,
             $"right float must sit flush with the content right edge, got right {f.Box.ContentBox.Right}");
     }
+
+    [Test]
+    public static void FloatNotHigherThanEarlierFloat_Top()
+    {
+        // floats-146's shape: A (12em left), B (14em left — does not fit beside A, drops), then
+        // C (4em right). §9.5.1 rule 5: C's top may not be higher than B's (an earlier float),
+        // so C lands beside B on the second row instead of beside A on the first.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div style='width:20em;font-size:16px'>" +
+            "<div style='padding:0.2em;margin:0.2em;border:1px solid;width:12em;float:left'>A</div>" +
+            "<div style='padding:0.2em;margin:0.2em;border:1px solid;width:14em;float:left'>B</div>" +
+            "<div style='padding:0.2em;margin:0.2em;border:1px solid;width:4em;float:right'>C</div>" +
+            "</div></body></html>");
+        var a = FindNode(root, n => n.GetFloat() == FloatType.Left && n.DisplayText == "A")!;
+        var b = FindNode(root, n => n.GetFloat() == FloatType.Left && n.DisplayText == "B")!;
+        var c = FindNode(root, n => n.GetFloat() == FloatType.Right && n.DisplayText == "C")!;
+        True(a is not null && b is not null && c is not null, "float nodes not found");
+        True(b.Box.ContentBox.Top > a.Box.ContentBox.Top + 0.5f,
+            "B must drop below A (it does not fit beside it)");
+        True(c.Box.ContentBox.Top >= b.Box.ContentBox.Top - 0.5f,
+            $"C's top must not be above B's (§9.5.1 rule 5), got C {c.Box.ContentBox.Top} vs B {b.Box.ContentBox.Top}");
+    }
 }
