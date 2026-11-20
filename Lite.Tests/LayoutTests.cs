@@ -414,7 +414,8 @@ public static class LayoutTests
         // end side takes the negative slack (-100), so the box anchors at the container's
         // left edge and overflows right (a clamp to 0/0 would anchor it there too but the
         // used right margin is wrong for the box's reported geometry).
-        var inner = Block(new() { ["width"] = "200px", ["height"] = "5px", ["margin"] = "auto" });
+        var inner = Block(new() { ["width"] = "200px", ["height"] = "5px",
+                                  ["margin-left"] = "auto", ["margin-right"] = "auto" });
         var wrapper = Block(new() { ["width"] = "100px" }, inner);
         LayoutTree(wrapper);
         var m = inner.Box.Margin;
@@ -441,7 +442,8 @@ public static class LayoutTests
     public static void AutoMargins_RootElement_ResolvesAgainstViewport()
     {
         // WPT auto-margins-root-element (§10.3.3): 'html { width: 100px; margin-left: auto }'
-        // pushes the root box to the right edge of the 800px viewport: margin-left 700.
+        // pushes the root box to the right edge of the 800px viewport: margin-left 700, so the
+        // border box — the edge offsetLeft reports — sits at 700.
         var html = new LayoutNode(null, "HTML", "", _styleCache.Style);
         html.StyleOverrides["display"] = "block";
         html.StyleOverrides["width"] = "100px";
@@ -452,8 +454,10 @@ public static class LayoutTests
         html.AddChild(body);
         body.AddChild(p);
         BoxEngine.Layout(html, 800, 600);
-        True(Math.Abs(html.Box.MarginBox.Left - 700f) < 1f,
-            $"expected the root box at 700 (800 - 100), got {html.Box.MarginBox.Left}");
+        True(Math.Abs(html.Box.Margin.Left - 700f) < 1f,
+            $"expected the root's resolved margin-left 700, got {html.Box.Margin.Left}");
+        True(Math.Abs(html.Box.BorderBox.Left - 700f) < 1f,
+            $"expected the root's border box at 700 (800 - 100), got {html.Box.BorderBox.Left}");
     }
 
     private static LayoutNode TableCell(string text)
