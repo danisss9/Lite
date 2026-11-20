@@ -108,7 +108,10 @@ internal static class TableEngine
             var cellW = CellSpanWidth(colWidths, p.Col, p.ColSpan, spacing);
             var cellPad = cell.GetPadding(cellW, viewportH, cellFontSize);
             var cellBord = cell.GetBorderWidth();
-            var cellMarg = cell.GetMargin(cellW, viewportH, cellFontSize);
+            // §17.5: "Internal table elements do not have margins." A cell's declared margin
+            // (a UA 8px on BODY, or a test's negative margin) must not inset or shift it:
+            // s-11-1-1b-005's body cell was 4px wide (8px margins inside a 20px cell).
+            var cellMarg = default(EdgeSizes);
 
             var cx = CellX(contentX, colWidths, p.Col, spacing) + cellMarg.Left + cellBord.Left + cellPad.Left;
             var cw = Math.Max(0f, cellW
@@ -289,7 +292,8 @@ internal static class TableEngine
             var rowFontSize = rowNode.GetFontSize();
             var rowPad = rowNode.GetPadding(contentW, viewportH, rowFontSize);
             var rowBord = rowNode.GetBorderWidth();
-            var rowMarg = rowNode.GetMargin(contentW, viewportH, rowFontSize);
+            // §17.5: internal table elements (rows, row groups, columns, cells) have no margins.
+            var rowMarg = default(EdgeSizes);
 
             var rowCX = contentX + rowMarg.Left + rowBord.Left + rowPad.Left;
             var rowCY = rowYs[r] + rowMarg.Top + rowBord.Top + rowPad.Top;

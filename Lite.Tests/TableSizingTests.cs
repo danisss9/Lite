@@ -214,6 +214,31 @@ public static class TableSizingTests
         }
     }
 
+    [Test]
+    public static void TableCellAndRow_IgnoreMargins()
+    {
+        // §17.5: "Internal table elements do not have margins." A cell's declared margins must
+        // not inset or shift it — s-11-1-1b-005's BODY cell was 4px wide (8px UA margins in a
+        // 20px cell) and s-11-1-1b-006's -15px cell margin lifted the black square.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0} #t{display:table;border-spacing:0}" +
+            " #r{display:table-row;margin-top:11px}" +
+            " #c{display:table-cell;width:20px;height:20px;margin:7px 9px -15px 3px}</style>" +
+            "<div id=\"t\"><div id=\"r\"><div id=\"c\"></div></div></div>");
+        var table = Find(root, "DIV", "t")!;
+        var row = Find(root, "DIV", "r")!;
+        var cell = Find(root, "DIV", "c")!;
+        True(Math.Abs(cell.Box.BorderBox.Left - table.Box.ContentBox.Left) < 0.01f,
+            $"a cell's left margin must be ignored, cell {cell.Box.BorderBox.Left} vs table {table.Box.ContentBox.Left}");
+        True(Math.Abs(cell.Box.BorderBox.Top - row.Box.BorderBox.Top) < 0.01f,
+            $"a cell's top margin must be ignored, cell {cell.Box.BorderBox.Top} vs row {row.Box.BorderBox.Top}");
+        True(Math.Abs(cell.Box.BorderBox.Width - 20f) < 0.01f,
+            $"horizontal margins must not shrink the cell, got {cell.Box.BorderBox.Width}");
+        True(Math.Abs(table.Box.BorderBox.Height - 20f) < 0.01f,
+            $"vertical margins must not move the rows, table height {table.Box.BorderBox.Height}");
+        True(Math.Abs(row.Box.BorderBox.Top - table.Box.ContentBox.Top) < 0.01f,
+            $"a row's top margin must be ignored, row {row.Box.BorderBox.Top} vs table {table.Box.ContentBox.Top}");
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);
