@@ -24,6 +24,13 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
 
 ## Handed in
 
+- `text-align-bidi-002/003/004` (official + WPT, from 6.G, handoff): the engine centers the line on
+  its advance width and the P's content box (8..792); the judge's `AlignCenter` walks
+  `container = container.Parent` one level per iteration (it assigns `parent.Parent`), so from the P
+  it lands on the document box (0..800) instead of the body/P content box, and its ink-edge gaps pick
+  up the 8px body margin plus glyph side bearings (reported 223/213 on a 784px content box). The
+  rendered advance box is symmetric around 400. Suggest using the nearest block whose content box is
+  at least the subject's width, and a bearing-tolerant ink read.
 - `direction-unicode-bidi-026/027/028` (official + WPT, 6 cases, from 6.G): the reviewed needle has
   **two lines** (`line1\nline2`, the inner block's paragraph and the outer override's paragraph), but
   `PaintedOrder` normalizes the whole needle to one string and compares it against the first single

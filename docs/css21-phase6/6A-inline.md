@@ -27,6 +27,12 @@ Branch `css21/p6-a`, worktree `C:\Repos\Lite-p6-a`. Case list `Lite.Conformance/
     per-line wrapper accumulator (`AccumulateWrapperFragment`/`FlushWrapperFragments`) still unions a split
     box's fragments into one rect; the 005a/006a family needs it to emit one fragment box per contiguous run
     — parked for 6.A (6.G notes it as the remaining §8.6 multi-fragment work).
+  - **Per-line visual order (6.G's other parked item) also lands in this file:** block own text is wrapped
+    before it is reordered, so `text-align-bidi-008/009/010` (Hebrew RTL justified) and `-011` (a leading
+    RLO) paint in logical order. The shape is: break the paragraph on the logical order, then run
+    `Bidi.Reorder` on each line's string and paint that line's visual string. That needs
+    `DrawWrappedText`/the block own-text wrap to carry per-line bidi information, so 6.A and 6.G should
+    agree the seam before either side changes it. 6.G did not touch `Drawer.Text.cs` in batch 2.
 - 6.F owns the marker painting inside `Drawer.Text.cs`.
 
 ## Handed in

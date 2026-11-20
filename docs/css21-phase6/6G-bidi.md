@@ -104,3 +104,25 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   `GeneratedContentTests.EmptyOutsideListItem_HasItsMarkerLineBox`). Curated css21 51/1, wpt 86/2. G list
   10/56 + 10/65. `G-pass.txt` 223/223, `A-pass.txt` 1405/1405, `canary.txt` 960/960.
 
+### 2026-11-20 — Batch 2 close: residues and handoffs (no engine change)
+- **`text-align-bidi-002/003/004` are judge-side, handed to 6.M.** The P's line is advance-centred on
+  its 784px content box (8..792; `WrapText` gives 375.352px for the 53-char line, draw x 212.3). The
+  judge's `AlignCenter` climbs `container = parent.Parent` each iteration and ends on the document's
+  0..800 box, so its ink-edge gaps differ by the 8px body margin plus side bearings (reported 223/213).
+  No engine change made; details in `6M-judges.md`.
+- **`text-align-bidi-008/009/010` and `-011` are the queued per-line visual order.** Their block own
+  text wraps before reordering: Hebrew RTL lines (008/009/010) and the whole-paragraph RLO of 011 paint
+  in logical order because `BidiVisualBlockText` stands down when the paragraph is wider than the band
+  and returns the X9-stripped logical text. The fix belongs with the line-breaking restructure: break
+  on the logical order, then run `Bidi.Reorder` per line box (and paint the line's visual string). This
+  needs `Drawer.Text.DrawWrappedText`/the line assembler (6.A's file), so it is left parked and agreed
+  in `6A-inline.md` rather than half-done here.
+- **`bidi-001..004`/`005a..010a`** order correctly but need multiple §8.6 wrapper fragments per line
+  (6.A, parked above). **`bidi-breaking-001/002`** need the bidi-break paragraph rules (RLM/block
+  boundary); **`bidi-glyph-mirroring-001/002`** need bracket mirroring; **`bidi-alt-001`** is alt-text
+  fallback. **`bidi-override-003/004`** remain with 6.F, **`bidi-border-collapse-001..004`** with 6.E.
+- **Checks (unchanged engine identity):** units 739/740 (pre-existing `EmptyOutsideListItem` failure);
+  curated css21 51/1, wpt 86/2; G list 10/56 + 10/65; `G-pass` 223/223, `A-pass` 1405/1405, canary
+  960/960.
+
+
