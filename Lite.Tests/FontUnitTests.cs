@@ -127,6 +127,22 @@ public static class FontUnitTests
         }
     }
 
+    [Test]
+    public static void FontSize_LargerAndSmallerStepThroughAbsoluteSizeTable()
+    {
+        // CSS 2.1 §15.7: 'larger' from 'medium' equals 'large' (font-size-rule-002), and six
+        // steps from xx-small reach xx-large symmetrically with six 'smaller' steps (font-size-121).
+        var page = Parse(
+            "<div style=\"font-size: medium\"><span id=\"l1\" style=\"font-size: large\">X</span><span id=\"l2\" style=\"font-size: larger\">X</span></div>" +
+            "<div style=\"font-size: xx-small\"><span style=\"font-size: larger\"><span style=\"font-size: larger\"><span style=\"font-size: larger\"><span style=\"font-size: larger\"><span style=\"font-size: larger\"><span id=\"top\" style=\"font-size: larger\">X</span></span></span></span></span></span></div>" +
+            "<div style=\"font-size: xx-large\"><span style=\"font-size: smaller\"><span style=\"font-size: smaller\"><span style=\"font-size: smaller\"><span style=\"font-size: smaller\"><span style=\"font-size: smaller\"><span id=\"bot\" style=\"font-size: smaller\">X</span></span></span></span></span></span></div>");
+        var l1 = Find(page, "l1")!.GetFontSize();
+        var l2 = Find(page, "l2")!.GetFontSize();
+        True(MathF.Abs(l1 - l2) < 0.01f, $"large={l1}, larger={l2}");
+        True(MathF.Abs(Find(page, "top")!.GetFontSize() - 32f) < 0.01f, $"top={Find(page, "top")!.GetFontSize()}");
+        True(MathF.Abs(Find(page, "bot")!.GetFontSize() - 9f) < 0.01f, $"bot={Find(page, "bot")!.GetFontSize()}");
+    }
+
     private static LayoutNode Parse(string body) => Parser.ParseChildPage(
         $"<!DOCTYPE html><html><head></head><body>{body}</body></html>", isSrcdoc: true, "http://test/", 800, 600).Root;
 

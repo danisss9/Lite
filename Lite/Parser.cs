@@ -2047,6 +2047,11 @@ internal static partial class Parser
         return null;
     }
 
+    // CSS 2.1 §15.7 absolute-size table (xx-small .. xx-large). 'larger' and 'smaller' step
+    // through these entries when the parent's computed size sits within the table, and fall back
+    // to the 1.2 ratio outside it (font-size-rule-002, font-size-121).
+    private static readonly float[] AbsoluteFontSizes = [9f, 10f, 13f, 16f, 18f, 24f, 32f];
+
     /// <summary>Resolves one 'font-size' value against the parent's computed size, including the
     /// absolute/relative keywords (§15.7).</summary>
     private static float ResolveFontSizeValue(string value, float parentPx)
@@ -2054,15 +2059,21 @@ internal static partial class Parser
         value = value.Trim();
         switch (value.ToLowerInvariant())
         {
-            case "xx-small": return 9f;
-            case "x-small": return 10f;
-            case "small": return 13f;
-            case "medium": return 16f;
-            case "large": return 18f;
-            case "x-large": return 24f;
-            case "xx-large": return 32f;
-            case "larger": return parentPx * 1.2f;
-            case "smaller": return parentPx / 1.2f;
+            case "xx-small": return AbsoluteFontSizes[0];
+            case "x-small": return AbsoluteFontSizes[1];
+            case "small": return AbsoluteFontSizes[2];
+            case "medium": return AbsoluteFontSizes[3];
+            case "large": return AbsoluteFontSizes[4];
+            case "x-large": return AbsoluteFontSizes[5];
+            case "xx-large": return AbsoluteFontSizes[6];
+            case "larger":
+                for (var i = 0; i < AbsoluteFontSizes.Length; i++)
+                    if (AbsoluteFontSizes[i] > parentPx + 0.01f) return AbsoluteFontSizes[i];
+                return parentPx * 1.2f;
+            case "smaller":
+                for (var i = AbsoluteFontSizes.Length - 1; i >= 0; i--)
+                    if (AbsoluteFontSizes[i] < parentPx - 0.01f) return AbsoluteFontSizes[i];
+                return parentPx / 1.2f;
             case "inherit": case "unset": return parentPx;
             case "initial": return DefaultFontSizePx;
         }
