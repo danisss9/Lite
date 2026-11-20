@@ -110,6 +110,94 @@ div { direction: rtl; font-size: 28px; }
         True(div.RenderedText().Contains('\u0646'), "RenderedText stays logical for layout");
     }
 
+    [Test]
+    public static void Reorder_ExplicitRloPdfIsAnEmbeddingAndRendersNothing()
+    {
+        // §16.2/UAX #9 X2-X5/X7/X9: an explicit RLO opens an RTL override level, PDF closes
+        // it, and both are removed from the rendering (zero width, no glyph).
+        var (levels, visual) = Bidi.Reorder("ab\u202Ecd\u202Cef", baseLtr: true, []);
+        True(visual == "abdcef",
+            $"expected abdcef, got {string.Join(",", visual.Select(c => ((int)c).ToString("X")))} / levels " +
+            $"{string.Join(",", levels)}");
+        Equal(0, levels[0]);
+        Equal(1, levels[3]);
+        Equal(1, levels[4]);
+        Equal(0, levels[6]);
+        True(!visual.Contains('\u202E') && !visual.Contains('\u202C'),
+            "the explicit controls must not paint: " + string.Join(",", visual.Select(c => ((int)c).ToString("X"))));
+        Equal("ab cdef", Bidi.WithoutExplicitFormatting("ab c\u202Ede\u202Cf"));
+    }
+
+    [Test]
+    public static void InlineRun_ExplicitRloSpansItemsAndOmitsControlWidth()
+    {
+        // bidi-005..011's shape: RLO/PDF inside one inline scope reorder characters across the
+        // item boundaries, and the controls reserve no advance width (Ahem would charge 20px
+        // each, the red gaps line-breaking-bidi-001 exposed).
+        Lite.Layout.FontRegistry.RegisterFile(
+            Path.Combine(FindRepoRoot(), "Lite.Conformance", "vendor", "wpt", "fonts", "Ahem.ttf"));
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div id='d' style='font:20px/1 Ahem;width:400px'>AA<span id='s'>\u202ECD</span>\u202CEF</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var span = Find(page.Root, "SPAN")!;
+        var div = Find(page.Root, "DIV")!;
+        True(span.InlineFragments is { Count: > 0 } && span.InlineFragments[^1].Text == "DC",
+            $"the RLO must reverse the span's 'CD' to 'DC', got '{span.InlineFragments?.LastOrDefault().Text}'");
+        True(Math.Abs(span.Box.ContentBox.Left - 40f) < 0.5f,
+            $"the span starts after 'AA' (40px); the removed controls take no width, got {span.Box.ContentBox.Left}");
+        // 'EF' follows with no control advance: its fragment ends at 6 glyphs = 120px.
+        LayoutNode? ef = null;
+        void Walk(LayoutNode n)
+        {
+            if (n.DisplayText.EndsWith("EF", StringComparison.Ordinal)) ef = n;
+            foreach (var c in n.Children) Walk(c);
+        }
+        Walk(page.Root);
+        True(ef?.InlineFragments is { Count: > 0 } frags && Math.Abs(frags[^1].Rect.Right - 120f) < 0.5f,
+            $"six rendered glyphs end at 120px at 20px Ahem (the two controls add nothing), got {ef?.InlineFragments?.LastOrDefault().Rect.Right}");
+    }
+
+    [Test]
+    public static void InlineRun_EmptyInlineBoxDoesNotSplitTheL2Run()
+    {
+        // CSS2 text/bidi-span-001: "Inline boxes should not affect bidi reordering" — the empty
+        // span between two Hebrew letters is a zero-width marker, so the two letters stay one
+        // level-1 run and reverse together.
+        Lite.Layout.FontRegistry.RegisterFile(
+            Path.Combine(FindRepoRoot(), "Lite.Conformance", "vendor", "wpt", "fonts", "Ahem.ttf"));
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div style='font:20px/1 Ahem'>\u05D0<span></span>\u05D1</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        float LeftOf(string text)
+        {
+            float left = -1f;
+            void Walk(LayoutNode n)
+            {
+                foreach (var (rect, fragText) in n.InlineFragments ?? [])
+                    if (fragText.Contains(text)) left = rect.Left;
+                foreach (var c in n.Children) Walk(c);
+            }
+            Walk(page.Root);
+            return left;
+        }
+        var alef = LeftOf("\u05D0");
+        var bet = LeftOf("\u05D1");
+        True(alef >= 0 && bet >= 0 && bet < alef,
+            $"the empty span must not split the run: bet should paint left of alef, got bet={bet}, alef={alef}");
+    }
+
+    private static string FindRepoRoot()
+    {
+        var dir = Directory.GetCurrentDirectory();
+        while (dir is not null && !File.Exists(Path.Combine(dir, "Lite.sln")))
+            dir = Path.GetDirectoryName(dir);
+        return dir ?? throw new InvalidOperationException("repo root not found");
+    }
+
     private sealed class ScratchServer : IDisposable
     {
         private readonly WebApplication _app;

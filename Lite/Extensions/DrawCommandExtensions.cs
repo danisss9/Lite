@@ -837,7 +837,11 @@ public static class StyleExtensions
             var (_, overrideVisual) = Lite.Layout.Bidi.Reorder(text, node.GetDirection() != "rtl", spans);
             return overrideVisual;
         }
-        if (Lite.Layout.TextMeasure.MeasureSingleLine(text, font).Width > availableWidth + 0.5f) return text;
+        if (Lite.Layout.TextMeasure.MeasureSingleLine(text, font).Width > availableWidth + 0.5f)
+            // A wrapped paragraph reorders line by line (queued), but X9's explicit formatting
+            // characters never render: strip them even when the whole-paragraph pass stands
+            // down, or Ahem charges a glyph slot for RLO/PDF (fonts-011's red gaps).
+            return Lite.Layout.Bidi.WithoutExplicitFormatting(text);
         var (_, visual) = Lite.Layout.Bidi.Reorder(text, node.GetDirection() != "rtl", System.Array.Empty<Lite.Layout.Bidi.Span>());
         return visual;
     }

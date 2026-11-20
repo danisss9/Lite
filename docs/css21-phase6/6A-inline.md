@@ -18,6 +18,15 @@ Branch `css21/p6-a`, worktree `C:\Repos\Lite-p6-a`. Case list `Lite.Conformance/
 ## Coordination
 
 - 6.G (bidi) starts after this lane's first merge and reshapes the line assembly for the visual order. Keep `ReorderForBidi` working and tell 6.G what changed in the line assembly.
+  - **6.G, batch 2 (2026-11-20), changes inside `BoxEngine.Inline.cs` that 6.A should expect at merge:** only
+    `ReorderForBidi` and its private helpers changed (`StripExplicitFormatting`, `TrimRunEndSpace`); the line
+    loop, `CollectInlineItems` and the wrapper assembly are untouched. `ReorderForBidi` can now return a
+    non-null list even when it does not reorder (X9 control stripping), and its fragment model no longer
+    appends non-text items at the end — images/struts keep their logical slot, and inline EDGE items are
+    removed from the stream and re-inserted around their box's first/last visual fragment (§8.6). The
+    per-line wrapper accumulator (`AccumulateWrapperFragment`/`FlushWrapperFragments`) still unions a split
+    box's fragments into one rect; the 005a/006a family needs it to emit one fragment box per contiguous run
+    — parked for 6.A (6.G notes it as the remaining §8.6 multi-fragment work).
 - 6.F owns the marker painting inside `Drawer.Text.cs`.
 
 ## Handed in

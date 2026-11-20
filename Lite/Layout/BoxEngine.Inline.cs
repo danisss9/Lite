@@ -1612,7 +1612,7 @@ internal static partial class BoxEngine
         // in the twin-walk shapes (the unicode-bidi-applies-to families measure the legacy's
         // line geometry).
         foreach (var it in items)
-            if (it.Node?.BidiReversesContent() == true) return null;
+            if (it.Node?.BidiReversesContent() == true) return StripExplicitFormatting(items);
 
         // The cheap gate: strong RTL / Arabic content anywhere in the run, or an embedding
         // scope (an override reverses pure-Latin content too — bidi-box-model-003's
@@ -1635,13 +1635,30 @@ internal static partial class BoxEngine
             // the box-model families pin).
             hasBidi = container.GetUnicodeBidi() == "bidi-override";
         }
-        if (!hasBidi) return null;
+        if (!hasBidi) return StripExplicitFormatting(items);
+
+        // §16.6.1: a collapsible space at the end of the line is removed. The run reorders as
+        // one line, so its logical end IS the line end — trim it before the L2 passes, or an
+        // override scope after the space relocates it to the middle of the visual line
+        // (bidi-011's source '...ST ' painted the space between 'TEST' and the span).
+        items = TrimRunEndSpace(items);
 
         // Single-line gate: line breaking must stay on the logical order, so a run that wraps
         // keeps it (a wrapped RTL line re-evaluates the algorithm per line box — queued).
+        // Explicit formatting characters are measured as the zero-width characters they are
+        // (X9), so a run that only overflows because of them still reorders.
         var totalWidth = 0f;
-        foreach (var it in items) totalWidth += it.Width;
-        if (totalWidth > firstW + 0.5f) return null;
+        foreach (var it in items)
+        {
+            if (it.Kind == InlineItemKind.Text && it.Text is { Length: > 0 } t &&
+                Bidi.HasExplicitFormatting(t))
+            {
+                var clean = Bidi.WithoutExplicitFormatting(t);
+                totalWidth += clean.Length == 0 ? 0f : MeasureSlice(it, clean);
+            }
+            else totalWidth += it.Width;
+        }
+        if (totalWidth > firstW + 0.5f) return StripExplicitFormatting(items);
 
         var baseLtr = container.GetDirection() != "rtl";
 
@@ -1742,27 +1759,64 @@ internal static partial class BoxEngine
         var (levels, _) = Bidi.Reorder(stream.ToString(), baseLtr, spans);
 
         // Split every text item at its level-run boundaries, then run the L2 passes at fragment
-        // granularity (order only) and reverse each odd-level fragment's own chars.
+        // granularity (order only) and reverse each odd-level fragment's own chars. The item
+        // sequence is preserved: a non-text item takes its fragment slot at its own position
+        // in the stream (an image between two text runs keeps that place under the reversal).
+        // Inline EDGES are not part of the character stream at all — §8.6 attaches them to the
+        // box's first/last VISUAL fragment, which is re-established below.
         var fragments = new List<BidiFragment>();
-        foreach (var (itemIndex, start, length) in ranges)
-        {
-            var source = items[itemIndex];
-            var logical = source.Text!;
-            var runStart = 0;
-            for (var k = 1; k <= length; k++)
-            {
-                if (k < length && levels[start + k] == levels[start + runStart]) continue;
-                var slice = logical[runStart..k];
-                var level = levels[start + runStart];
-                fragments.Add(new BidiFragment(source, slice, level, MeasureSlice(source, slice)));
-                runStart = k;
-            }
-        }
-        // Non-text items ride at their innermost scope's level (base level when none).
+        var edges = new List<(InlineItem Item, int Logical)>();
+        var rangeIndex = 0;
         for (var i = 0; i < items.Count; i++)
         {
-            if (items[i].Kind == InlineItemKind.Text) continue;
-            fragments.Add(new BidiFragment(items[i], null, ChainLevel(ScopeChain(items[i].Node), baseLtr), items[i].Width));
+            var item = items[i];
+            if (item.Kind == InlineItemKind.InlineEdge)
+            {
+                edges.Add((item, fragments.Count));
+                continue;
+            }
+            if (item.Kind == InlineItemKind.Text)
+            {
+                while (rangeIndex < ranges.Count && ranges[rangeIndex].ItemIndex < i) rangeIndex++;
+                if (rangeIndex >= ranges.Count || ranges[rangeIndex].ItemIndex != i) continue;
+                var (_, start, length) = ranges[rangeIndex];
+                rangeIndex++;
+                var logical = item.Text!;
+                var runStart = 0;
+                for (var k = 1; k <= length; k++)
+                {
+                    if (k < length && levels[start + k] == levels[start + runStart]) continue;
+                    // X9: the explicit formatting characters inside the run do not render, so a
+                    // slice that is only controls yields no fragment.
+                    var slice = Bidi.WithoutExplicitFormatting(logical[runStart..k]);
+                    var level = levels[start + runStart];
+                    if (slice.Length > 0)
+                        fragments.Add(new BidiFragment(item, slice, level, MeasureSlice(item, slice)));
+                    runStart = k;
+                }
+                continue;
+            }
+            // A zero-width marker (break, out-of-flow record, strut) or an atomic inline rides
+            // at its innermost scope's level (base level when none).
+            fragments.Add(new BidiFragment(item, null, ChainLevel(ScopeChain(item.Node), baseLtr), item.Width));
+        }
+
+        // A zero-width inline box between two characters does not break the L2 run they belong
+        // to (bidi-span-001's empty <span> between Hebrew letters). Such markers take the level
+        // of the text beside them rather than their scope chain's base level; the previous
+        // character wins so a marker stays with the run it follows.
+        int? next = null;
+        for (var fi = fragments.Count - 1; fi >= 0; fi--)
+        {
+            if (fragments[fi].Text is not null) { next = fragments[fi].Level; continue; }
+            if (next is { } nv) fragments[fi] = fragments[fi] with { Level = nv };
+        }
+        int? previous = null;
+        for (var fi = 0; fi < fragments.Count; fi++)
+        {
+            if (fragments[fi].Text is not null) { previous = fragments[fi].Level; continue; }
+            if (previous is { } pv)
+                fragments[fi] = fragments[fi] with { Level = pv };
         }
 
         // Fragment-granularity L2: reverse maximal runs at each level, highest first. Only the
@@ -1787,22 +1841,59 @@ internal static partial class BoxEngine
             }
         }
 
-        var result = new List<InlineItem>(items.Count);
-        foreach (var index in order)
+        // §8.6: "render the margins, borders and padding in visual order (not logical order)".
+        // Each edge lands on the box's left-most/right-most generated fragment. For a box split
+        // by the reordering that is the first/last content fragment in VISUAL order, so the
+        // leading edge precedes the box's first visual fragment and the trailing edge follows
+        // the last. An unsplit box keeps both edges around its one fragment.
+        var position = new int[fragments.Count];
+        for (var p = 0; p < order.Count; p++) position[order[p]] = p;
+        var insertBefore = new List<(int Logical, InlineItem Item)>?[fragments.Count + 1];
+        foreach (var (edge, logical) in edges)
         {
-            var f = fragments[index];
+            var first = int.MaxValue;
+            var last = -1;
+            if (edge.Node is { } box)
+                for (var fi = 0; fi < fragments.Count; fi++)
+                    if (IsAncestorOrSelf(box, fragments[fi].Source.Node))
+                    {
+                        first = Math.Min(first, position[fi]);
+                        last = Math.Max(last, position[fi]);
+                    }
+            int anchor;
+            if (first == int.MaxValue)
+            {
+                // A box with no content of its own (an empty inline): keep its edges where the
+                // logical sequence put them, next to the neighbouring fragment.
+                anchor = logical < order.Count ? position[logical] : order.Count;
+                if (edge.TrailingEdge && anchor > 0) anchor--;
+                else if (edge.TrailingEdge) anchor = 0;
+            }
+            else anchor = edge.TrailingEdge ? last + 1 : first;
+            (insertBefore[anchor] ??= []).Add((logical, edge));
+        }
+
+        var result = new List<InlineItem>(items.Count);
+        void EmitEdges(int at)
+        {
+            if (insertBefore[at] is not { } list) return;
+            list.Sort((a, b) => a.Logical.CompareTo(b.Logical));
+            foreach (var (_, edge) in list) result.Add(edge);
+        }
+        for (var p = 0; p < order.Count; p++)
+        {
+            EmitEdges(p);
+            var f = fragments[order[p]];
             if (f.Text is null || f.Source.Kind != InlineItemKind.Text)
             {
                 result.Add(f.Source);
                 continue;
             }
             var visual = f.Level % 2 == 1 ? StyleExtensions.ReverseText(f.Text) : f.Text;
-            result.Add(f.Source with
-            {
-                Text = visual,
-                Width = f.Level % 2 == 1 ? MeasureSlice(f.Source, visual) : f.Width,
-            });
+            var width = f.Level % 2 == 1 ? MeasureSlice(f.Source, visual) : f.Width;
+            result.Add(f.Source with { Text = visual, Width = width, ContentW = width });
         }
+        EmitEdges(order.Count);
         return result;
     }
 
@@ -1810,12 +1901,65 @@ internal static partial class BoxEngine
     /// paragraph-level bidi reordering: <see cref="Level"/> is the slice's embedding level.</summary>
     private sealed record BidiFragment(InlineItem Source, string? Text, int Level, float Width);
 
+    /// <summary>X9's zero-width rendering applied to the collected items when the paragraph
+    /// pass does not reorder them: an explicit formatting control (RLE/LRE/RLO/LRO/PDF) must
+    /// occupy no space and paint nothing, so each text item's rendered string loses them and
+    /// is re-measured. Returns null when nothing changed, letting the caller keep its list.</summary>
+    private static List<InlineItem>? StripExplicitFormatting(List<InlineItem> items)
+    {
+        List<InlineItem>? result = null;
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            if (item.Kind != InlineItemKind.Text || item.Text is not { Length: > 0 } text ||
+                !Bidi.HasExplicitFormatting(text))
+            {
+                result?.Add(item);
+                continue;
+            }
+            result ??= items.Take(i).ToList();
+            var clean = Bidi.WithoutExplicitFormatting(text);
+            if (clean.Length == 0) continue;
+            var width = MeasureSlice(item, clean);
+            result.Add(item with { Text = clean, Width = width, ContentW = width });
+        }
+        return result;
+    }
+
     private static float MeasureSlice(InlineItem source, string slice)
     {
         if (source.Node is not { } node) return 0f;
         using var font = TextMeasure.CreateFont(node);
         var (ls, wsp) = TextMeasure.SpacingOf(node);
         return TextMeasure.MeasureSingleLine(slice, font, -1f, ls, wsp).Width;
+    }
+
+    /// <summary>§16.6.1: the collapsible whitespace ending the run is removed at the line's
+    /// end. The paragraph-level reorder treats the composed run as one line, so trimming it
+    /// before the L2 passes keeps a space that a bidi override scope would otherwise carry
+    /// into the middle of the visual line. Returns the input list when nothing is trimmed.</summary>
+    private static List<InlineItem> TrimRunEndSpace(List<InlineItem> items)
+    {
+        for (var i = items.Count - 1; i >= 0; i--)
+        {
+            var item = items[i];
+            if (item.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow or InlineItemKind.Float)
+                continue;
+            if (item.Kind != InlineItemKind.Text || item.Text is not { Length: > 0 } text) break;
+            if (item.Node.GetWhiteSpace() is WhiteSpace.Pre or WhiteSpace.PreWrap) break;
+            var trimmed = text.TrimEndCss();
+            if (trimmed.Length == text.Length) break;
+            var copy = items.ToList();
+            if (trimmed.Length == 0)
+            {
+                copy.RemoveAt(i);
+                return copy;
+            }
+            var width = MeasureSlice(item, trimmed);
+            copy[i] = item with { Text = trimmed, Width = width, ContentW = width };
+            return copy;
+        }
+        return items;
     }
 
     /// <summary>
