@@ -117,6 +117,27 @@ public static class CascadeTests
     }
 
     [Test]
+    public static void Inherit_ExTakesDeclaringElementXHeight()
+    {
+        // word-spacing-101 (§6.2.1, §4.3.2): an inherited 'ex' length computes at the
+        // DECLARING element's x-height — Ahem's is 0.8em, so 12ex at 16px is 153.6px. The
+        // conversion ran unscoped and fell back to 0.5em (96px); the child must read exactly
+        // what the parent resolves its own 12ex to.
+        var dir = Directory.GetCurrentDirectory();
+        while (dir is not null && !File.Exists(Path.Combine(dir, "Lite.sln"))) dir = Path.GetDirectoryName(dir);
+        FontRegistry.RegisterFile(Path.Combine(dir!, "Lite.Conformance", "vendor", "wpt", "fonts", "Ahem.ttf"));
+        var child = Block(new() { ["width"] = "100px", ["height"] = "5px", ["font-family"] = "Ahem",
+                                  ["font-size"] = "16px", ["margin-top"] = "inherit" });
+        var parent = Block(new() { ["width"] = "200px", ["height"] = "10px", ["font-family"] = "Ahem",
+                                   ["font-size"] = "16px", ["margin-top"] = "12ex" }, child);
+        LayoutTree(Block(new(), parent));
+        True(Math.Abs(parent.Box.Margin.Top - 153.6f) < 0.5f,
+            $"the parent's 12ex in Ahem resolves to 153.6px, got {parent.Box.Margin.Top}");
+        True(Math.Abs(child.Box.Margin.Top - parent.Box.Margin.Top) < 0.5f,
+            $"the inherited 12ex takes the parent's computed {parent.Box.Margin.Top}px, got {child.Box.Margin.Top}");
+    }
+
+    [Test]
     public static void Inherit_MarginTakesParentComputedLengthNotRawEm()
     {
         // margin-em-inherit-001 (§6.2.1 + §8.3): what 'margin: inherit' passes on is the

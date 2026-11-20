@@ -292,7 +292,12 @@ internal static class StyleResolver
         // #child { margin: inherit } takes the parent's 56px, not 2em at the child's 40px).
         // Percentages stay relative: §8.3 keeps them in the computed value and the child's
         // containing block governs them.
+        // The 'ex' unit reads the DECLARING element's own first available font (§4.3.2: the
+        // x-height of the font) — unscoped, the conversion fell back to 0.5em and an inherited
+        // 'word-spacing: 12ex' in Ahem (x-height 0.8em) shrank from 153.6px to 96px
+        // (word-spacing-101).
         var trimmed = raw.Trim();
+        using var fontScope = CssUnits.ForFont(node);
         if ((trimmed.EndsWith("em", StringComparison.Ordinal) ||
              trimmed.EndsWith("ex", StringComparison.Ordinal)) &&
             CssUnits.TryParse(trimmed, node.GetFontSize(), 0f, 0f, 0f, out var px))
