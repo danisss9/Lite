@@ -57,6 +57,47 @@ public static class BorderStyleTests
     }
 
     [Test]
+    public static void DoubleBorder_PaintsTwoCrispSubLinesWithAGap()
+    {
+        // CSS 2.1 §8.5.3: a 'double' border is two solid lines with a gap; the two lines and
+        // the gap fill the declared width. The sub-lines must be crisp (each one row here),
+        // not antialiased strokes whose fringes join the two halves into one grey band
+        // (border-style-003/004/007/008 read the merged band as 'solid').
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><style>body{margin:0} div{width:40px;height:40px;margin-top:10px;border:9px double black}</style><div></div>",
+            isSrcdoc: true, "http://test/", 100, 100);
+        BoxEngine.Layout(page.Root, 100, 100);
+        using var bitmap = Drawer.DrawToBitmap(100, 100, page.Root, new Viewport { ViewportHeight = 100 });
+        // 9px top border over y=[10..19): 3px line, 3px gap, 3px line (integer thirds).
+        if (bitmap.GetPixel(20, 10) != SkiaSharp.SKColors.Black || bitmap.GetPixel(20, 12) != SkiaSharp.SKColors.Black)
+            throw new Exception("the outer sub-line of a 9px double border must be a 3px solid band");
+        if (bitmap.GetPixel(20, 14) != SkiaSharp.SKColors.White)
+            throw new Exception("the gap between the sub-lines must stay unpainted");
+        if (bitmap.GetPixel(20, 16) != SkiaSharp.SKColors.Black || bitmap.GetPixel(20, 18) != SkiaSharp.SKColors.Black)
+            throw new Exception("the inner sub-line of a 9px double border must be a 3px solid band");
+    }
+
+    [Test]
+    public static void DottedBorder_UsesEqualDotAndGapLengths()
+    {
+        // CSS 2.1 §8.5.3: 'dotted' is a series of evenly spaced dots, the border width giving
+        // their size. Browsers space them with a gap of the same length; a sparser cycle inks
+        // only a third of the band and the side reads as no border at all (border-style-002/006).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><style>body{margin:0} div{width:60px;height:20px;border-top:4px dotted black}</style><div></div>",
+            isSrcdoc: true, "http://test/", 100, 100);
+        BoxEngine.Layout(page.Root, 100, 100);
+        using var bitmap = Drawer.DrawToBitmap(100, 100, page.Root, new Viewport { ViewportHeight = 100 });
+        // A 4px dot then a 4px gap: x=[0..3] inked, x=[4..7] clear, x=[8..11] inked.
+        if (bitmap.GetPixel(0, 1) != SkiaSharp.SKColors.Black || bitmap.GetPixel(3, 1) != SkiaSharp.SKColors.Black)
+            throw new Exception("a 4px dot must ink its four columns");
+        if (bitmap.GetPixel(4, 1) != SkiaSharp.SKColors.White || bitmap.GetPixel(7, 1) != SkiaSharp.SKColors.White)
+            throw new Exception("a 4px gap must follow each 4px dot");
+        if (bitmap.GetPixel(8, 1) != SkiaSharp.SKColors.Black)
+            throw new Exception("the next dot must start after one gap length");
+    }
+
+    [Test]
     public static void ClipRect_AppliesOnlyToAbsolutelyPositionedElements()
     {
         // CSS 2.1 §11.1.2: 'clip' applies only to absolutely positioned elements

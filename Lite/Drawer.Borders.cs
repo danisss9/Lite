@@ -140,20 +140,34 @@ internal static partial class Drawer
 
         if (style == BorderStyle.Double && width >= 3f)
         {
-            // Draw two lines with a gap in between
-            var lineW = Math.Max(1f, width / 3f);
-            var offset = width / 2f - lineW / 2f;
-            var isHorizontal = Math.Abs(y1 - y2) < 0.01f;
-            using var p = new SKPaint { Color = color, StrokeWidth = lineW, IsAntialias = true };
-            if (isHorizontal)
+            // CSS 2.1 §8.5.3: 'double' is two solid sub-lines separated by a gap; the two
+            // lines and the gap together fill the border width. Paint each sub-line as a
+            // crisp filled band on whole device rows (as a solid side is), not as two centred
+            // antialiased strokes: a one-pixel stroke at a fractional position spreads over
+            // two rows at about half coverage each, the rows then join across the gap and the
+            // pair reads as a single grey 'solid' band (border-style-003/004/007/008's
+            // "bottom reads solid, not double"). Integer thirds keep the two lines and the
+            // gap equal, and a width too small for three rows stays a single solid band.
+            var horizontal = Math.Abs(y1 - y2) < 0.01f;
+            var centre = horizontal ? y1 : x1;
+            var start = (int)MathF.Round(centre - width / 2f);
+            var end = (int)MathF.Round(centre + width / 2f);
+            if (end - start < 3) end = start + Math.Max(3, (int)MathF.Round(width));
+            var line = Math.Max(1, (end - start) / 3);
+            using var fill = new SKPaint { Color = color, IsAntialias = false };
+            if (horizontal)
             {
-                canvas.DrawLine(x1, y1 - offset, x2, y2 - offset, p);
-                canvas.DrawLine(x1, y1 + offset, x2, y2 + offset, p);
+                var left = Math.Min(x1, x2);
+                var right = Math.Max(x1, x2);
+                canvas.DrawRect(new SKRect(left, start, right, start + line), fill);
+                canvas.DrawRect(new SKRect(left, end - line, right, end), fill);
             }
             else
             {
-                canvas.DrawLine(x1 - offset, y1, x2 - offset, y2, p);
-                canvas.DrawLine(x1 + offset, y1, x2 + offset, y2, p);
+                var top = Math.Min(y1, y2);
+                var bottom = Math.Max(y1, y2);
+                canvas.DrawRect(new SKRect(start, top, start + line, bottom), fill);
+                canvas.DrawRect(new SKRect(end - line, top, end, bottom), fill);
             }
             return;
         }
@@ -221,7 +235,13 @@ internal static partial class Drawer
         switch (style)
         {
             case BorderStyle.Dotted:
-                paint.PathEffect = SKPathEffect.CreateDash([paint.StrokeWidth, paint.StrokeWidth * 2], 0);
+                // CSS 2.1 §8.5.3: 'dotted' paints a series of evenly spaced dots, the border
+                // width setting the dot size. The gap is UA-defined, but browsers use a dot
+                // and a gap of the same length; a [w, 2w] cycle inks only a third of the band
+                // and reads as no border at all when a reading samples the middle of a side
+                // (border-style-002/006, border-style-shorthand-001..004, the outline ring of
+                // outline-style-applies-to-008). A [w, w] cycle keeps the dots square.
+                paint.PathEffect = SKPathEffect.CreateDash([paint.StrokeWidth, paint.StrokeWidth], 0);
                 break;
             case BorderStyle.Dashed:
                 paint.PathEffect = SKPathEffect.CreateDash([paint.StrokeWidth * 3, paint.StrokeWidth * 2], 0);
