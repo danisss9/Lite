@@ -55,4 +55,26 @@ public static class BorderStyleTests
         if (gOuter == rOuter && gInner == rInner)
             throw new Exception("groove and ridge must invert their light/dark bevel halves");
     }
+
+    [Test]
+    public static void ClipRect_AppliesOnlyToAbsolutelyPositionedElements()
+    {
+        // CSS 2.1 §11.1.2: 'clip' applies only to absolutely positioned elements
+        // (position: absolute or fixed). Non-positioned and relatively positioned boxes
+        // must ignore clip: rect(...) (clip-non-absolute-001).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><style>" +
+            "#s{clip:rect(10px,25px,50px,10px)}" +
+            "#r{position:relative;clip:rect(10px,25px,50px,10px)}" +
+            "#a{position:absolute;clip:rect(10px,25px,50px,10px)}" +
+            "#f{position:fixed;clip:rect(10px,25px,50px,10px)}" +
+            "</style><div id=\"s\">x</div><div id=\"r\">x</div><div id=\"a\">x</div><div id=\"f\">x</div>",
+            isSrcdoc: true, "http://test/", 400, 300);
+        BoxEngine.Layout(page.Root, 400, 300);
+        LayoutNode? Find(LayoutNode n, string id) => n.Id == id ? n : n.Children.Select(c => Find(c, id)).FirstOrDefault(f => f is not null);
+        if (Find(page.Root, "s")!.GetClipRect() is not null) throw new Exception("static element must not clip");
+        if (Find(page.Root, "r")!.GetClipRect() is not null) throw new Exception("relative element must not clip");
+        if (Find(page.Root, "a")!.GetClipRect() is null) throw new Exception("absolute element must clip");
+        if (Find(page.Root, "f")!.GetClipRect() is null) throw new Exception("fixed element must clip");
+    }
 }

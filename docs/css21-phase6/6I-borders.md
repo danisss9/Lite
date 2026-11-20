@@ -29,3 +29,8 @@ _(None yet.)_
 - **Moved (+2 WPT):** `css/CSS2/borders/groove-default.html`, `css/CSS2/borders/ridge-default.html`.
 - **Change:** `Drawer.Borders.cs` (`LightenColor`) lifts near-black colors (`R+G+B < 96`) toward white so `groove`/`ridge` with the default black `border-color` paint visibly distinct light/dark halves instead of collapsing into solid black, while keeping pure-channel multiplicative scaling on hues. Added `BorderStyleTests.GrooveAndRidge_WithDefaultBlackColor_DifferFromSolid`.
 - **Checks:** units 648/0; curated `css21` 51/1, `wpt` 86/2; lane `I` 0/72 official, 2/54 WPT; canary 300/300 (154/154 official, 146/146 WPT).
+
+### 2026-11-20 — `clip` applies only to absolutely positioned elements (CSS 2.1 §11.1.2)
+- **Moved (+1 official, +1 WPT):** `css21-official/html4/clip-non-absolute-001.htm`, `css/CSS2/visufx/clip-non-absolute-001.xht`.
+- **Change:** `Lite/Extensions/DrawCommandExtensions.cs` (`GetClipRect`) returns `null` unless `node.GetPosition()` is `PositionType.Absolute` or `PositionType.Fixed` (§9.3.1 / §11.1.2). Added `BorderStyleTests.ClipRect_AppliesOnlyToAbsolutelyPositionedElements`.
+- **Checks:** units 649/0; curated `css21` 51/1, `wpt` 86/2; lane `I` 1/72 official, 3/54 WPT; canary 300/300 (154/154 official, 146/146 WPT).
