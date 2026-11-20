@@ -4,35 +4,47 @@ namespace Lite.Layout;
 
 /// <summary>
 /// Registry of custom typefaces: @font-face registrations loaded from URLs, plus persistent
-/// test-font provisioning. Maps (family, bold, italic) to an SKTypeface.
+/// test-font provisioning. Maps a family to its faces, matched by weight and style.
 /// </summary>
 internal static class FontRegistry
 {
-    private static readonly Dictionary<string, SKTypeface> _typefaces = new(StringComparer.OrdinalIgnoreCase);
-    // Provisioned test fonts survive the per-document Clear() (FontRegistry is wiped during
-    // every page load because @font-face rules must be re-collected); the official CSS 2.1
-    // suite references its test fonts by family name without @font-face, so they must persist.
-    private static readonly HashSet<string> _persistent = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>One face of a family: its typeface, OS/2 weight class and slant.</summary>
+    private sealed record Face(SKTypeface Typeface, int Weight, bool Italic, bool Persistent);
+
+    // Family name → its faces. Matching picks among them by style, then weight (CSS 2.1 §15.5,
+    // refined by CSS Fonts 3 §5.2): one family can carry nine weights (the CSSTest Weights Full
+    // fonts), which a (bold, italic) key could only hold two of.
+    private static readonly Dictionary<string, List<Face>> _families = new(StringComparer.OrdinalIgnoreCase);
 
     internal static void Clear()
     {
-        foreach (var (key, tf) in _typefaces)
-            if (!_persistent.Contains(key)) tf.Dispose();
-        var kept = _typefaces.Where(kv => _persistent.Contains(kv.Key)).ToList();
-        _typefaces.Clear();
-        foreach (var (key, tf) in kept) _typefaces[key] = tf;
+        // Provisioned test fonts survive the per-document Clear() (FontRegistry is wiped during
+        // every page load because @font-face rules must be re-collected); the official CSS 2.1
+        // suite references its test fonts by family name without @font-face, so they must persist.
+        foreach (var faces in _families.Values)
+        {
+            foreach (var face in faces)
+                if (!face.Persistent) face.Typeface.Dispose();
+            faces.RemoveAll(f => !f.Persistent);
+        }
+        foreach (var empty in _families.Where(kv => kv.Value.Count == 0).Select(kv => kv.Key).ToList())
+            _families.Remove(empty);
     }
 
-    internal static void Register(string family, bool bold, bool italic, byte[] fontData)
+    internal static void Register(string family, bool bold, bool italic, byte[] fontData) =>
+        Register(family, bold ? TextMeasure.BoldWeight : TextMeasure.NormalWeight, italic, fontData);
+
+    /// <summary>Registers an @font-face source under its descriptor weight and style.</summary>
+    internal static void Register(string family, int weight, bool italic, byte[] fontData)
     {
-        var key = MakeKey(family, bold, italic);
-        if (_typefaces.ContainsKey(key)) return;
+        var faces = FacesOf(family);
+        if (faces.Any(f => f.Weight == weight && f.Italic == italic)) return;
         var data = SKData.Create(new MemoryStream(fontData));
         var tf = SKTypeface.FromData(data);
         if (tf != null)
         {
-            _typefaces[key] = tf;
-            Console.WriteLine($"[FontRegistry] Registered '{family}' bold={bold} italic={italic}");
+            faces.Add(new Face(tf, weight, italic, Persistent: false));
+            Console.WriteLine($"[FontRegistry] Registered '{family}' weight={weight} italic={italic}");
         }
     }
 
@@ -45,28 +57,38 @@ internal static class FontRegistry
             var tf = SKTypeface.FromFile(path);
             if (tf is null) return;
             var family = tf.FamilyName;
-            var bold = tf.FontWeight >= 600;
+            var weight = tf.FontWeight;
             var italic = tf.FontStyle.Slant != SKFontStyleSlant.Upright;
-            var key = MakeKey(family, bold, italic);
-            if (_typefaces.ContainsKey(key)) { tf.Dispose(); return; }
-            _typefaces[key] = tf;
-            _persistent.Add(key);
-            // The name table's LOCALIZED family names (nameID 1/16 on every platform record)
-            // alias to the same face: the official suite's localized-name tests address the
-            // CSSTest fonts by their Japanese fullwidth names, which Skia's primary
-            // FamilyName never exposes (font-family-name-010).
+            if (!TryAdd(family, tf, weight, italic)) { tf.Dispose(); return; }
+            // The name table's LOCALIZED and typographic family names (nameID 1/16 on every
+            // platform record) alias to the same face: the official suite's localized-name tests
+            // address the CSSTest fonts by their Japanese fullwidth names, which Skia's primary
+            // FamilyName never exposes (font-family-name-010), and the CSSTest Weights fonts
+            // share one typographic family ("CSSTest Weights Full") across nine weight faces.
             foreach (var alias in LocalizedFamilyNames(path))
-            {
-                if (alias.Equals(family, StringComparison.OrdinalIgnoreCase)) continue;
-                var aliasKey = MakeKey(alias, bold, italic);
-                if (_typefaces.TryAdd(aliasKey, tf)) _persistent.Add(aliasKey);
-            }
-            Console.WriteLine($"[FontRegistry] Provisioned '{family}' bold={bold} italic={italic}");
+                if (!alias.Equals(family, StringComparison.OrdinalIgnoreCase))
+                    TryAdd(alias, tf, weight, italic);
+            Console.WriteLine($"[FontRegistry] Provisioned '{family}' weight={weight} italic={italic}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[FontRegistry] Failed to provision {Path.GetFileName(path)}: {ex.Message}");
         }
+
+        static bool TryAdd(string family, SKTypeface tf, int weight, bool italic)
+        {
+            var faces = FacesOf(family);
+            if (faces.Any(f => f.Weight == weight && f.Italic == italic)) return false;
+            faces.Add(new Face(tf, weight, italic, Persistent: true));
+            return true;
+        }
+    }
+
+    private static List<Face> FacesOf(string family)
+    {
+        var key = Normalize(family);
+        if (!_families.TryGetValue(key, out var faces)) _families[key] = faces = [];
+        return faces;
     }
 
     /// <summary>Every family name (nameID 1 and 16) the font's 'name' table declares — all
@@ -134,27 +156,44 @@ internal static class FontRegistry
         return names;
     }
 
-    internal static SKTypeface? Resolve(string family, bool bold, bool italic)
+    /// <summary>The registered face of <paramref name="family"/> that best matches the desired
+    /// weight and style, or null when the family is not registered. CSS 2.1 §15.5 step 3 matches
+    /// 'font-style' first (an italic request takes an italic face, else the upright one, which
+    /// the painter then slants), then 'font-weight' (§15.6) by the CSS Fonts 3 §5.2 order:
+    /// <list type="bullet">
+    /// <item>a desired weight from 400 to 500 tries the weights up to 500 ascending, then the
+    /// lighter ones descending, then the heavier ones ascending (400 picks 500 before 300);</item>
+    /// <item>below 400, the lighter weights descending, then the heavier ascending;</item>
+    /// <item>above 500, the heavier weights ascending, then the lighter descending.</item>
+    /// </list></summary>
+    internal static SKTypeface? Resolve(string family, int weight, bool italic)
     {
-        // Try exact match first
-        if (_typefaces.TryGetValue(MakeKey(family, bold, italic), out var tf))
-            return tf;
-        // Fallback: try normal weight/style for this family
-        if (_typefaces.TryGetValue(MakeKey(family, false, false), out tf))
-            return tf;
-        return null;
+        if (!_families.TryGetValue(Normalize(family), out var faces) || faces.Count == 0) return null;
+        var styled = faces.Where(f => f.Italic == italic).ToList();
+        if (styled.Count == 0) styled = faces;
+        return MatchWeight(styled, weight)?.Typeface;
+    }
+
+    private static Face? MatchWeight(IReadOnlyList<Face> faces, int desired)
+    {
+        if (faces.FirstOrDefault(f => f.Weight == desired) is { } exact) return exact;
+        Face? Lightest(Func<Face, bool> range) => faces.Where(range).OrderBy(f => f.Weight).FirstOrDefault();
+        Face? Heaviest(Func<Face, bool> range) => faces.Where(range).OrderByDescending(f => f.Weight).FirstOrDefault();
+        if (desired is >= 400 and <= 500)
+            return Lightest(f => f.Weight > desired && f.Weight <= 500)
+                   ?? Heaviest(f => f.Weight < desired)
+                   ?? Lightest(f => f.Weight > 500);
+        if (desired < 400)
+            return Heaviest(f => f.Weight < desired) ?? Lightest(f => f.Weight > desired);
+        return Lightest(f => f.Weight > desired) ?? Heaviest(f => f.Weight < desired);
     }
 
     /// <summary>Whether a provisioned family exists under this exact name (case-insensitive).
     /// Used by font-family list resolution: a provisioned name wins over Skia's fuzzy
     /// FromFamilyName matching, which would e.g. let "CSSTest   FamilyName" (three spaces)
     /// wrongly resolve to "CSSTest FamilyName".</summary>
-    internal static bool HasFamily(string family)
-    {
-        var prefix = family.Trim().Trim('"', '\'') + "|";
-        return _typefaces.Keys.Any(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
-    }
+    internal static bool HasFamily(string family) =>
+        _families.TryGetValue(Normalize(family), out var faces) && faces.Count > 0;
 
-    private static string MakeKey(string family, bool bold, bool italic) =>
-        $"{family.Trim().Trim('\"', '\'')}|{(bold ? "b" : "n")}|{(italic ? "i" : "n")}";
+    private static string Normalize(string family) => family.Trim().Trim('"', '\'');
 }

@@ -13,35 +13,48 @@ internal static class TextMeasure
         // A zero font size is legal (§15.7) and must render and measure nothing (font-size-002's
         // "font-size: 0px" text painted, and took space, at the old 1px floor).
         var size = Math.Max(0f, node.GetFontSize());
-        var family = node.GetFontFamily();
-        var bold = node.GetFontBold();
+        var weight = ComputedFontWeight(node);
         var italic = node.GetFontItalic();
-        var slant = italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
-        var weight = bold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
+        var families = node.GetFontFamilies();
+        var typeface = ResolveTypeface(families[0], weight, italic);
 
-        // Check @font-face registry before falling back to system fonts
-        var customTypeface = FontRegistry.Resolve(family, bold, italic);
-        var typeface = customTypeface
-                       ?? SystemTypeface(family, weight, slant)
-                       ?? SKTypeface.Default;
-
-        // If the node has short text (pseudo-element content), check for missing glyphs
-        // and fall back to a typeface with broader Unicode coverage.
+        // CSS 2.1 §15.2 / §15.3: when the primary family lacks glyphs for the text, try the
+        // remaining families in the node's 'font-family' list in order (font-family-013,
+        // fonts-013, font-family-015) before falling back to system symbol fonts.
         var text = node.DisplayText;
-        if (!string.IsNullOrEmpty(text) && text.Length <= 20 && !ContainsAllGlyphs(typeface, text))
+        if (!string.IsNullOrEmpty(text) && (families.Length > 1 || text.Length <= 20) && !ContainsAllGlyphs(typeface, text))
         {
-            foreach (var fallback in PlatformFonts.SymbolFallbacks)
+            var matched = false;
+            for (var i = 1; i < families.Length; i++)
             {
-                var fb = SystemTypeface(fallback, weight, slant);
-                if (fb != null && ContainsAllGlyphs(fb, text))
+                var fb = ResolveTypeface(families[i], weight, italic);
+                if (ContainsAllGlyphs(fb, text))
                 {
                     typeface = fb;
+                    matched = true;
                     break;
+                }
+            }
+            if (!matched && text.Length <= 20)
+            {
+                foreach (var fallback in PlatformFonts.SymbolFallbacks)
+                {
+                    var fb = SystemTypeface(fallback, (SKFontStyleWeight)weight, Slant(italic));
+                    if (fb != null && ContainsAllGlyphs(fb, text))
+                    {
+                        typeface = fb;
+                        break;
+                    }
                 }
             }
         }
 
         var font = new SKFont(typeface, size);
+        // §15.6 synthesis: a bold weight (600 and up) asked of a family whose best face is
+        // lighter than 600 (Ahem and most CSSTest Weights families carry one or two weights)
+        // is drawn emboldened, as every browser does. Without it the bold and normal Ahem boxes
+        // of font-weight-002 painted identically.
+        if (NeedsSyntheticBold(weight, typeface)) font.Embolden = true;
         // Ahem is the CSS test font: every glyph is a box on the em square, and browsers
         // grid-fit those edges to whole pixels. It carries no hinting instructions and the
         // platform rasterizer does not autohint it, so at most sizes its 0.8em ascent lands on
@@ -53,6 +66,73 @@ internal static class TextMeasure
         return font;
     }
 
+    /// <summary>CSS 2.1 §15.6 'normal' and 'bold'.</summary>
+    internal const int NormalWeight = 400, BoldWeight = 700;
+
+    /// <summary>Whether a face needs emboldening to render the desired weight: the request is
+    /// bold (600 and up) and the matched face is not.</summary>
+    internal static bool NeedsSyntheticBold(int desiredWeight, SKTypeface typeface) =>
+        desiredWeight >= 600 && typeface.FontWeight < 600;
+
+    /// <summary>Whether a 'font-weight' value is valid: the §15.6 keywords, or a number from 1 to
+    /// 1000 (CSS 2.1 lists the hundreds; CSS Fonts 4 admits every number in that range).</summary>
+    internal static bool IsValidFontWeight(string? value)
+    {
+        var v = value?.Trim().ToLowerInvariant();
+        if (v is "normal" or "bold" or "bolder" or "lighter" or "inherit" or "initial" or "unset") return true;
+        return int.TryParse(v, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n)
+               && n is >= 1 and <= 1000;
+    }
+
+    /// <summary>The computed 'font-weight' (§15.6) of a declared value against the parent's
+    /// computed weight. Null (nothing declared) and 'inherit' take the parent's. 'bolder' and
+    /// 'lighter' step relative to it by the CSS Fonts 4 table (CSS 2.1 leaves the step to the
+    /// family's faces; the suite's font-weight-bolder/lighter references follow the table):
+    /// <list type="bullet">
+    /// <item>bolder: below 350 → 400, below 550 → 700, otherwise 900;</item>
+    /// <item>lighter: below 550 → 100, below 750 → 400, otherwise 700.</item>
+    /// </list></summary>
+    internal static int ResolveFontWeight(string? declared, int parentWeight)
+    {
+        var v = declared?.Trim().ToLowerInvariant();
+        switch (v)
+        {
+            case null or "" or "inherit" or "unset": return parentWeight;
+            case "normal" or "initial": return NormalWeight;
+            case "bold": return BoldWeight;
+            case "bolder": return parentWeight < 350 ? 400 : parentWeight < 550 ? 700 : Math.Max(900, parentWeight);
+            case "lighter": return parentWeight < 100 ? parentWeight : parentWeight < 550 ? 100 : parentWeight < 750 ? 400 : 700;
+        }
+        return int.TryParse(v, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n)
+               && n is >= 1 and <= 1000 ? n : parentWeight;
+    }
+
+    /// <summary>A node's computed 'font-weight'. The Parser resolves it for the elements it
+    /// builds; a value set on the node itself (a pseudo-element's or script's declaration)
+    /// resolves here against the parent. Boxes that share their element's style (#text,
+    /// anonymous boxes) inherit: re-reading a shared specified 'bolder' would step twice.</summary>
+    internal static int ComputedFontWeight(LayoutNode node)
+    {
+        var parent = node.Parent;
+        if (node.TryResolveStyle("font-weight", out var own) && IsValidFontWeight(own))
+            return ResolveFontWeight(own, parent is null ? NormalWeight : ComputedFontWeight(parent));
+        if (node.ComputedFontWeight is { } computed) return computed;
+        var raw = node.Style.GetPropertyValueSafe("font-weight")?.Trim().ToLowerInvariant();
+        if (parent is null) return ResolveFontWeight(IsValidFontWeight(raw) ? raw : null, NormalWeight);
+        if (node.TagName.StartsWith('#') || raw is "bolder" or "lighter" || !IsValidFontWeight(raw))
+            return ComputedFontWeight(parent);
+        return ResolveFontWeight(raw, ComputedFontWeight(parent));
+    }
+
+    /// <summary>The face a family, weight and style resolve to: a registered (@font-face or
+    /// provisioned) family first, then the installed family, then Skia's default.</summary>
+    internal static SKTypeface ResolveTypeface(string family, int weight, bool italic) =>
+        FontRegistry.Resolve(family, weight, italic)
+        ?? SystemTypeface(family, (SKFontStyleWeight)weight, Slant(italic))
+        ?? SKTypeface.Default;
+
+    private static SKFontStyleSlant Slant(bool italic) => italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
+
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<SKTypeface, float> s_xHeightRatios = new();
 
     /// <summary>The x-height of the node's first available font as a fraction of the em —
@@ -61,13 +141,7 @@ internal static class TextMeasure
     /// (font-size-083: '6ex' at 20px is 96px, not 60). 0.5 when the font reports none.</summary>
     internal static float XHeightRatio(LayoutNode node)
     {
-        var bold = node.GetFontBold();
-        var italic = node.GetFontItalic();
-        var family = node.GetFontFamily();
-        var typeface = FontRegistry.Resolve(family, bold, italic)
-                       ?? SystemTypeface(family, bold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
-                           italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright)
-                       ?? SKTypeface.Default;
+        var typeface = ResolveTypeface(node.GetFontFamily(), ComputedFontWeight(node), node.GetFontItalic());
         return s_xHeightRatios.GetOrAdd(typeface, static t =>
         {
             using var font = new SKFont(t, 100f);
@@ -88,11 +162,19 @@ internal static class TextMeasure
         s_systemTypefaces.GetOrAdd((family, weight, slant),
             static key => SKTypeface.FromFamilyName(key.Family, key.Weight, SKFontStyleWidth.Normal, key.Slant));
 
+    /// <summary>Unicode Default_Ignorable / bidi format characters carry no visible glyph and
+    /// must not trigger font fallback (CSS Fonts 3 §5.2; fonts-011).</summary>
+    private static bool IsDefaultIgnorable(char c) =>
+        c is '\u00AD' or '\u034F' or '\u061C' or '\uFEFF'
+          or (>= '\u200B' and <= '\u200F')
+          or (>= '\u202A' and <= '\u202E')
+          or (>= '\u2060' and <= '\u206F');
+
     private static bool ContainsAllGlyphs(SKTypeface typeface, string text)
     {
         foreach (var c in text)
         {
-            if (c == ' ') continue;
+            if (c == ' ' || IsDefaultIgnorable(c)) continue;
             if (typeface.GetGlyphs(c.ToString()) is ushort[] glyphs
                 && glyphs.Length > 0 && glyphs[0] == 0)
                 return false;
