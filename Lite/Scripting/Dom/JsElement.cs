@@ -2984,8 +2984,12 @@ public class JsElement
 
     public double offsetWidth { get { EnsureLayout(); return Node.Box.BorderBox.Width; } }
     public double offsetHeight { get { EnsureLayout(); return Node.Box.BorderBox.Height; } }
-    public double offsetLeft { get { EnsureLayout(); return Node.Box.MarginBox.Left; } }
-    public double offsetTop { get { EnsureLayout(); return Node.Box.MarginBox.Top; } }
+    // offsetLeft/offsetTop report the BORDER edge of the box (the CSSOM View convention — the
+    // same edge offsetWidth/offsetHeight span), not the margin edge: an element whose margins
+    // push it right reads at its border-box left, so 'html { width: 100px; margin-left: auto }'
+    // reports innerWidth - 100, not 0 (auto-margins-root-element).
+    public double offsetLeft { get { EnsureLayout(); return Node.Box.BorderBox.Left; } }
+    public double offsetTop { get { EnsureLayout(); return Node.Box.BorderBox.Top; } }
     public double clientWidth { get { EnsureLayout(); return Node.Box.ContentBox.Width; } }
     public double clientHeight { get { EnsureLayout(); return Node.Box.ContentBox.Height; } }
     // Element scroll offsets (§11.1.1): reads/writes go through the layout's scroll state so
