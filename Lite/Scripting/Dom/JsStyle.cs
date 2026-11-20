@@ -20,6 +20,9 @@ public class JsStyle
     public string display { get => Get("display"); set => Set("display", value); }
     public string visibility { get => Get("visibility"); set => Set("visibility", value); }
     public string overflow { get => Get("overflow"); set => Set("overflow", value); }
+    // CSS 2.1 §11.1.2: expose 'clip' on CSSStyleDeclaration so el.style.clip = "auto"
+    // overrides a stylesheet clip: rect(...) (clip-001).
+    public string clip { get => Get("clip"); set => Set("clip", value); }
     public string position { get => Get("position"); set => Set("position", value); }
     public string zIndex { get => Get("z-index"); set => Set("z-index", value); }
     public string cssFloat { get => Get("float"); set => Set("float", value); }

@@ -21,7 +21,7 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Edits outside owned files
 
-_(None yet.)_
+- `Lite/Scripting/Dom/JsStyle.cs` (minimal 1-property addition `clip`, in its own commit): exposes `element.style.clip` on `CSSStyleDeclaration` so `el.style.clip = "auto"` overrides stylesheet `clip: rect(...)` (CSS 2.1 §11.1.2, `clip-001`). Not owned by any lane.
 
 ## Progress
 
@@ -34,3 +34,8 @@ _(None yet.)_
 - **Moved (+1 official, +1 WPT):** `css21-official/html4/clip-non-absolute-001.htm`, `css/CSS2/visufx/clip-non-absolute-001.xht`.
 - **Change:** `Lite/Extensions/DrawCommandExtensions.cs` (`GetClipRect`) returns `null` unless `node.GetPosition()` is `PositionType.Absolute` or `PositionType.Fixed` (§9.3.1 / §11.1.2). Added `BorderStyleTests.ClipRect_AppliesOnlyToAbsolutelyPositionedElements`.
 - **Checks:** units 649/0; curated `css21` 51/1, `wpt` 86/2; lane `I` 1/72 official, 3/54 WPT; canary 300/300 (154/154 official, 146/146 WPT).
+
+### 2026-11-20 — Expose `element.style.clip` on `JsStyle` (CSS 2.1 §11.1.2 / CSSOM)
+- **Moved (+1 official, +1 WPT):** `css21-official/html4/clip-001.htm`, `css/CSS2/visufx/clip-001.xht`.
+- **Change:** `Lite/Scripting/Dom/JsStyle.cs` adds `public string clip { get => Get("clip"); set => Set("clip", value); }` so dynamic `el.style.clip = "auto"` writes to `StyleOverrides["clip"]` and clears a stylesheet `clip: rect(...)`. Added `BorderStyleTests.StyleClipProperty_OverridesStylesheetClipToAuto`.
+- **Checks:** units 650/0; curated `css21` 51/1, `wpt` 86/2; lane `I` 2/72 official, 4/54 WPT; canary 300/300 (154/154 official, 146/146 WPT).

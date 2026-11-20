@@ -77,4 +77,21 @@ public static class BorderStyleTests
         if (Find(page.Root, "a")!.GetClipRect() is null) throw new Exception("absolute element must clip");
         if (Find(page.Root, "f")!.GetClipRect() is null) throw new Exception("fixed element must clip");
     }
+
+    [Test]
+    public static void StyleClipProperty_OverridesStylesheetClipToAuto()
+    {
+        // CSS 2.1 §11.1.2: assigning element.style.clip = "auto" must override a stylesheet
+        // clip: rect(...) so the element is no longer clipped (clip-001).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><style>#p{position:absolute;width:2px;height:2px;clip:rect(0,1px,1px,0)}</style>" +
+            "<div id=\"p\"></div>",
+            isSrcdoc: true, "http://test/", 200, 200);
+        BoxEngine.Layout(page.Root, 200, 200);
+        LayoutNode? Find(LayoutNode n, string id) => n.Id == id ? n : n.Children.Select(c => Find(c, id)).FirstOrDefault(f => f is not null);
+        var p = Find(page.Root, "p")!;
+        if (p.GetClipRect() is null) throw new Exception("stylesheet clip: rect(...) must apply initially");
+        new Lite.Scripting.Dom.JsStyle(p).clip = "auto";
+        if (p.GetClipRect() is not null) throw new Exception("style.clip = 'auto' must clear the clip rect");
+    }
 }
