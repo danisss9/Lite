@@ -7,23 +7,92 @@ namespace Lite.Layout;
 internal static partial class BoxEngine
 {
     /// <summary>The ::first-line styles that govern <paramref name="node"/>'s first line
-    /// (§5.12.1): its own, or its parent block's. An inline-level node (a text run) shares the
-    /// parent's first formatted line; a block-level child opens it only when it is the parent's
-    /// first in-flow child (`ul:first-line` styles the first list item's first line, not every
-    /// item's).</summary>
-    internal static Dictionary<string, string>? FirstLineStylesOf(LayoutNode node)
+    /// (§5.12.1): its own, or an ancestor block's when <paramref name="node"/> sits on that
+    /// ancestor's first formatted line. A preceding block child, &lt;br&gt;, or preserved newline
+    /// already consumed/ended the parent's first line (first-line-pseudo-002/005,
+    /// first-line-selector-010). When <paramref name="node"/> is inside an inline-block on an
+    /// ancestor's first line, <paramref name="appliesToAllLines"/> is true because the entire
+    /// atomic inline sits inside the ancestor's ::first-line and inherits from it
+    /// (first-line-selector-011).</summary>
+    internal static Dictionary<string, string>? FirstLineStylesOf(LayoutNode node) =>
+        FirstLineStylesOf(node, out _);
+
+    internal static Dictionary<string, string>? FirstLineStylesOf(LayoutNode node, out bool appliesToAllLines)
     {
+        appliesToAllLines = false;
         if (node.FirstLineStyles is { } own) return own;
-        if (node.Parent?.FirstLineStyles is not { } inherited) return null;
-        if (node.TagName.StartsWith('#') || node.GetDisplay() is DisplayType.Inline) return inherited;
-        foreach (var c in node.Parent.Children)
+
+        var cur = node;
+        var insideAtomicInline = false;
+        while (cur.Parent is { } parent)
         {
-            if (c.GetDisplay() == DisplayType.None || c.GetPosition() is PositionType.Absolute or PositionType.Fixed ||
-                c.GetFloat() != FloatType.None) continue;
-            if (c.TagName.StartsWith('#') && string.IsNullOrWhiteSpace(c.DisplayText)) continue;
-            return ReferenceEquals(c, node) ? inherited : null;
+            var parentDisp = parent.GetDisplay();
+            var parentIsAtomic = !parent.TagName.StartsWith('#') &&
+                parentDisp is DisplayType.InlineBlock or DisplayType.InlineTable or DisplayType.InlineFlex;
+
+            // Inside an atomic inline (e.g. inline-block), every line of the atomic box inherits
+            // from an ancestor's ::first-line if the atomic box itself sits on that ancestor's
+            // first formatted line (§5.12.1).
+            if (parentIsAtomic)
+            {
+                insideAtomicInline = true;
+                cur = parent;
+                continue;
+            }
+
+            if (!IsOnParentsFirstLine(cur, parent)) return null;
+
+            if (parent.FirstLineStyles is { } inherited)
+            {
+                appliesToAllLines = insideAtomicInline ||
+                    (!cur.TagName.StartsWith('#') &&
+                     cur.GetDisplay() is DisplayType.InlineBlock or DisplayType.InlineTable or DisplayType.InlineFlex);
+                return inherited;
+            }
+
+            // Continue climbing only through inline wrappers or first-child blocks.
+            if (parentDisp is not (DisplayType.Inline or DisplayType.Block or DisplayType.ListItem))
+                return null;
+            cur = parent;
         }
         return null;
+    }
+
+    private static bool IsOnParentsFirstLine(LayoutNode node, LayoutNode parent)
+    {
+        var nodeIsBlock = !node.TagName.StartsWith('#') &&
+            node.GetDisplay() is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex
+                or DisplayType.Table or DisplayType.TableRowGroup or DisplayType.TableRow or DisplayType.TableCell;
+
+        foreach (var c in parent.Children)
+        {
+            if (ReferenceEquals(c, node)) return true;
+            if (c.TagName is "#comment" or "#pi") continue;
+            if (c.GetDisplay() == DisplayType.None || c.GetPosition() is PositionType.Absolute or PositionType.Fixed ||
+                c.GetFloat() != FloatType.None) continue;
+
+            if (c.TagName == "BR") return false;
+
+            if (c.TagName.StartsWith('#'))
+            {
+                var ws = c.GetWhiteSpace();
+                if (ws is WhiteSpace.Pre or WhiteSpace.PreWrap or WhiteSpace.PreLine && c.DisplayText.Contains('\n'))
+                    return false;
+                if (c.DisplayText.IsCssWhiteSpaceOnly() && ws is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+                    continue;
+                // Non-empty inline text precedes a block-level node → anonymous block consumed line 1.
+                if (nodeIsBlock) return false;
+                continue;
+            }
+
+            var d = c.GetDisplay();
+            if (d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex
+                or DisplayType.Table or DisplayType.TableRowGroup or DisplayType.TableRow or DisplayType.TableCell)
+                return false;
+
+            if (nodeIsBlock) return false;
+        }
+        return false;
     }
 
     /// <summary>The ::first-line 'text-transform' of <paramref name="node"/>'s first line.</summary>

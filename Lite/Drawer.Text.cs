@@ -285,7 +285,7 @@ internal static partial class Drawer
         // ::first-line styles are resolved from the node or its parent block. CSS 2.1 §5.12.1:
         // they do not apply inside descendant floats — a float's content is not part of the
         // block's first formatted line, so `div:first-line` must not style a floated span's text.
-        var firstLineStyles = BoxEngine.FirstLineStylesOf(node);
+        var firstLineStyles = BoxEngine.FirstLineStylesOf(node, out var firstLineAllLines);
         if (firstLineStyles is not null && DescendsFromFloat(node)) firstLineStyles = null;
         var firstLineTransform = firstLineStyles is null ? TextTransform.None : BoxEngine.FirstLineTransform(node);
 
@@ -387,7 +387,7 @@ internal static partial class Drawer
             SKPaint? tempPaint = null;
             SKFont? tempFont = null;
 
-            if (isFirstLine && firstLineStyles != null)
+            if ((isFirstLine || firstLineAllLines) && firstLineStyles != null)
             {
                 tempPaint = new SKPaint { Color = paint.Color, IsAntialias = true };
                 if (firstLineStyles.TryGetValue("color", out var flColor))

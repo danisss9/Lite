@@ -30,6 +30,19 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 ## Progress
 
+### 2026-11-20 — Commit 4: §5.12.1 ::first-line scoping across preceding blocks, `<br>`, and inline-blocks
+- **Moved (+4 pass, +4 fail→manualpending, 0 losses; cumulative +22 pass, +4 fail→manualpending):**
+  - `first-line-selector-010` (official + WPT): fail → pass
+  - `first-line-selector-011` (official + WPT): fail → pass
+  - `first-line-pseudo-002` (official + WPT): fail (711 red px) → manualpending (0 red px)
+  - `first-line-pseudo-005` (official + WPT): fail (711 red px) → manualpending (0 red px)
+- **What changed:**
+  - `Lite/Layout/BoxEngine.Inline.cs`: updated `FirstLineStylesOf` to verify via `IsOnParentsFirstLine` that no preceding block sibling, `<br>`, or preserved newline already consumed/ended the ancestor's first formatted line, and to propagate `appliesToAllLines = true` when descending through an atomic inline (`inline-block`/`inline-table`/`inline-flex`) sitting on the ancestor's first formatted line.
+  - `Lite/Drawer.Text.cs`: applied ancestor `::first-line` inherited styles across all lines of an atomic inline when `appliesToAllLines` is true.
+- **Still failing (`::first-line`):** `first-line-selector-016` (dropped from 89 to 40 red px; remaining 40 red px are `<span>FAIL</span>` because `Parser.Cascade.cs` neutralizes the comma-separated `span, div:first-line` rule — handing to 6.K); `first-line-selector-007/008` (`font` shorthand / `px` `font-size` / `letter-spacing` / `text-decoration` in `::first-line`); `first-line-selector-001` (antialiased green color check `#ff219021`); `first-line-000`, `first-line-floats-002`, `first-line-pseudo-012/013`.
+- **Handed to other lanes:** `first-line-selector-016` to 6.K (`span, div:first-line` selector-list neutralization in `Parser.Cascade.cs`).
+- **Checks:** Units 651/651; `css21` 51/1; `wpt` 86/2; Lane A 10/74 official (+2 pass, +2 manualpending), 12/90 WPT (+2 pass, +2 manualpending), 0 losses; Canary 300/300 (154/154 official, 146/146 WPT).
+
 ### 2026-11-20 — Commit 3: §16.1 + §10.3.5 intrinsic sizing for negative text-indent, preserved newlines, U+200B, and leaf inline edges
 - **Moved (+8: 3 official, 5 WPT, 0 losses; cumulative +18: 8 official, 10 WPT):**
   - `text-indent-intrinsic-001` (official + WPT)

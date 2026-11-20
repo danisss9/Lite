@@ -92,4 +92,34 @@ public static class InlineFormattingTests
         True(m1.Box.ContentBox.Width > 36f,
             $"m1 includes leaf span's 3em margin-left (>36px), got {m1.Box.ContentBox.Width}");
     }
+
+    [Test]
+    public static void FirstLineStyles_ScopingAcrossBlockBrAndInlineBlock()
+    {
+        // CSS 2.1 §5.12.1: ::first-line does not apply after a preceding block child or <br>,
+        // while an inline-block on the parent's first line inherits ::first-line for all of its lines.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<style>.fl:first-line { color: green; } .ib { display: inline-block; }</style>" +
+            "<div id='afterBlock' class='fl'><div>&nbsp;</div>After block</div>" +
+            "<div id='afterBr' class='fl'><br/>After br</div>" +
+            "<div id='withIb' class='fl'><span class='ib'>Line1<br/>Line2</span></div>" +
+            "</body></html>");
+        var afterBlock = FindNode(root, n => n.Id == "afterBlock")!;
+        var afterBlockText = afterBlock.Children.Last(c => c.TagName == "#text");
+        True(BoxEngine.FirstLineStylesOf(afterBlockText, out _) is null,
+            "text after a block sibling is not on parent's first formatted line");
+
+        var afterBr = FindNode(root, n => n.Id == "afterBr")!;
+        var afterBrText = afterBr.Children.Last(c => c.TagName == "#text");
+        True(BoxEngine.FirstLineStylesOf(afterBrText, out _) is null,
+            "text after <br> is on line 2 and must not receive parent's ::first-line");
+
+        var withIb = FindNode(root, n => n.Id == "withIb")!;
+        var ibSpan = withIb.Children.First(c => c.TagName == "SPAN");
+        var ibLine2 = ibSpan.Children.Last(c => c.TagName == "#text");
+        var fl = BoxEngine.FirstLineStylesOf(ibLine2, out var allLines);
+        True(fl is not null && allLines,
+            "text inside an inline-block on parent's first line inherits ::first-line for all lines");
+    }
 }
