@@ -471,6 +471,34 @@ public static class LayoutTests
             $"the collapsed table must ignore its 20px of padding (collapsed {col.Box.BorderBox.Width} vs separated {sep.Box.BorderBox.Width})");
     }
 
+    [Test]
+    public static void CellTextLineBoxes_IgnoreTheCellRowAlignment()
+    {
+        // §17.5.3's 'vertical-align' on a table cell aligns the CELL in its ROW (the HTML UA
+        // default is 'middle'); it is not a line-box alignment — 'vertical-align' does not
+        // inherit (§5.5), so a #text run aligns 'baseline'. Reading the cell's value shifted
+        // the whole cell's text and grew every line to the shifted reach
+        // (table-height-algorithm-004: ten 20px/1em Ahem lines measured 22px each, 220
+        // against the 200px reference).
+        Lite.Layout.FontRegistry.RegisterFile(
+            Path.Combine(FindRepoRoot(), "Lite.Conformance", "vendor", "wpt", "fonts", "Ahem.ttf"));
+        var root = LayoutPage("<!DOCTYPE html><style>body{margin:0} td{padding:0}" +
+            " #ref{font:20px/1em Ahem} table{border-spacing:0}</style>" +
+            "<div id=\"ref\"><table><tr><td>X<br>X<br></td></tr></table></div>");
+        var td = FindNode(root, "TD");
+        True(td is not null, "cell missing");
+        True(Math.Abs(td!.Box.BorderBox.Height - 40f) < 1f,
+            $"two 20px/1em lines must make a 40px cell (got {td.Box.BorderBox.Height})");
+    }
+
+    private static string FindRepoRoot()
+    {
+        var dir = Directory.GetCurrentDirectory();
+        while (dir is not null && !File.Exists(Path.Combine(dir, "Lite.sln")))
+            dir = Path.GetDirectoryName(dir);
+        return dir ?? throw new InvalidOperationException("repo root not found");
+    }
+
     // -- §8.3.1/§9.5.2 clearance (the margin-collapse-clear-* reftest family) --
 
     // A style object carrying a real 1px black top border (GetBorderWidth reads node.Style,
