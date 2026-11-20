@@ -84,9 +84,9 @@
    "variantAvailability": {
     "html4-screen": "vendored",
     "other-formats-screen": "vendored",
-    "xhtml1-screen": "unavailable"
+    "xhtml1-screen": "vendored"
    },
-   "treeSha256": "e231e67f2225a519b3d31534143147578b43ea21436a5e96a3de4c8ab555abf9",
+   "treeSha256": "f4d0ff8e44fcd4c366f652cff7407c168f57f172b0c0addf1d46edbf2a0ea466",
    "vendored": true
   }
  ]

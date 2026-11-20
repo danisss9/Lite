@@ -21763,14 +21763,11 @@
     },
     {
       "path": "css/CSS2/css1/c5504-mrgn-l-002.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.8.3. flags: image scroll should.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.8.3"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.8.3. flags: image scroll should. Reviewed 2026-11-20: reclassified optional - it asks the reader to scroll to the left (negative x) to see the green box. CSS 2.1 leaves that to the UA: overflow content may be clipped to the document window, and viewport 'auto' scrolling is user-agent-dependent; nothing requires negative-x content to be reachable. The margin computation itself is covered by the passing c5504-mrgn-l-000/001/003 and c5504-imrgn-l-* cases.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 11.1.1: \"Even if 'overflow' is set to 'visible', content may be clipped to a UA's document window by the native operating environment.\" and \"The behavior of the 'auto' value is user agent-dependent, but should cause a scrolling mechanism to be provided for overflowing boxes.\""
     },
     {
       "path": "css/CSS2/css1/c5504-mrgn-l-003.xht",
@@ -139333,14 +139330,11 @@
     },
     {
       "path": "css21-official/html4/c5504-mrgn-l-002.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.8.3. flags: image scroll should. cites outside the pinned target: http://www.w3.org/TR/REC-CSS1#margin-left.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.8.3"
-      ]
+      "classification": "optional",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.8.3. flags: image scroll should. cites outside the pinned target: http://www.w3.org/TR/REC-CSS1#margin-left. Reviewed 2026-11-20: reclassified optional - it asks the reader to scroll to the left (negative x) to see the green box. CSS 2.1 leaves that to the UA: overflow content may be clipped to the document window, and viewport 'auto' scrolling is user-agent-dependent; nothing requires negative-x content to be reachable. The margin computation itself is covered by the passing c5504-mrgn-l-000/001/003 and c5504-imrgn-l-* cases.",
+      "media": [],
+      "requirementIds": [],
+      "permits": "CSS 2.1 11.1.1: \"Even if 'overflow' is set to 'visible', content may be clipped to a UA's document window by the native operating environment.\" and \"The behavior of the 'auto' value is user agent-dependent, but should cause a scrolling mechanism to be provided for overflowing boxes.\""
     },
     {
       "path": "css21-official/html4/c5504-mrgn-l-003.htm",
