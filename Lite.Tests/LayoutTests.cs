@@ -321,6 +321,214 @@ public static class LayoutTests
         True(Math.Abs(h - 80f) < 1f, $"expected parent content height 80 (margin contained by bottom padding), got {h}");
     }
 
+    [Test]
+    public static void MinHeight_SeparatesLastChildBottomMargin()
+    {
+        // WPT min-height-separates-margin (§8.3.1, CSS 2.2 change s.8.3.1c): 'min-height' raises
+        // the auto height (0) to 50, so the box's bottom margin no longer adjoins the last
+        // child's — the child's 10px bottom margin is separated: it neither collapses through
+        // the parent's bottom edge nor grows the box past the clamped height. The footer lands
+        // directly at 50 (no 10px gap) and the two greens form one 100px square.
+        var child = Block(new() { ["height"] = "49px", ["margin-bottom"] = "10px" });
+        var parent = Block(new() { ["width"] = "100px", ["min-height"] = "50px" }, child);
+        var footer = Block(new() { ["width"] = "100px", ["height"] = "50px" });
+        var container = Block(new() { ["width"] = "100px" }, parent, footer);
+        LayoutTree(container);
+        var h = parent.Box.ContentBox.Height;
+        True(Math.Abs(h - 50f) < 1f, $"expected parent content height 50 (min-height, margin separated), got {h}");
+        True(Math.Abs(footer.Box.ContentBox.Top - 50f) < 1f,
+            $"expected the footer directly below the parent (50), got {footer.Box.ContentBox.Top}");
+    }
+
+    [Test]
+    public static void MaxHeight_KeepsLastChildBottomMarginCollapsing()
+    {
+        // margin-collapse-038 (§8.3.1: the last child's bottom margin adjoins its parent's when
+        // the parent has an 'auto' COMPUTED height — a max-height cut leaves it auto): the 300px
+        // child's 100px bottom margin collapses through the 99px-capped parent and lands inside
+        // the grandparent (bounded below by padding), which is 99 + 100 = 199px tall. (Chrome and Firefox
+        // separate here, per WPT max-height-separates-margin; the two tests are mutually
+        // exclusive and the CSS 2.1 text sides with -038.)
+        var child = Block(new() { ["height"] = "300px", ["margin-bottom"] = "100px" });
+        var parent = Block(new() { ["max-height"] = "99px" }, child);
+        var grand = Block(new() { ["width"] = "100px", ["padding-bottom"] = "1px" }, parent);
+        LayoutTree(grand);
+        True(Math.Abs(parent.Box.ContentBox.Height - 99f) < 1f,
+            $"expected the parent capped at 99, got {parent.Box.ContentBox.Height}");
+        True(Math.Abs(parent.Box.Margin.Bottom - 100f) < 0.5f,
+            $"expected the child's 100px margin collapsed into the parent's bottom margin, got {parent.Box.Margin.Bottom}");
+        True(Math.Abs(grand.Box.ContentBox.Height - 199f) < 1f,
+            $"expected the grandparent to hold 99 + 100 = 199, got {grand.Box.ContentBox.Height}");
+    }
+
+    [Test]
+    public static void SelfCollapsedChain_CancellingMembers_KeepsBorderedBoxEmpty()
+    {
+        // margin-collapse-128/129 (§8.3.1: the collapsed margin is max(positives) +
+        // min(negatives) over ALL adjoining margins): a box bounded by padding (the tests use
+        // borders — the same §8.3.1 boundary) whose content is only
+        // empty blocks forms one chain; with a 1em and a -1em member it collapses to 0, so the
+        // box's content height is 0 — even when a nested chain's members cancel to 0 on their
+        // own (128: d's 1em with e's -1em) or a first child's own -1em is cancelled by its
+        // children's 1em (129). Dropping the zero-valued nested chain lost its -1em.
+        LayoutNode Empty(string top, string bottom, params LayoutNode[] kids) =>
+            Block(new() { ["margin-top"] = top, ["margin-bottom"] = bottom }, kids);
+        var c128 = Block(new() { ["width"] = "100px", ["padding-top"] = "16px", ["padding-bottom"] = "16px" },
+            Empty("16px", "16px", Empty("16px", "16px"), Empty("16px", "16px")),
+            Empty("16px", "16px", Empty("16px", "-16px"), Empty("16px", "16px")));
+        var c129 = Block(new() { ["width"] = "100px", ["padding-top"] = "16px", ["padding-bottom"] = "16px" },
+            Empty("-16px", "16px", Empty("16px", "16px"), Empty("16px", "16px")),
+            Empty("16px", "16px", Empty("16px", "16px"), Empty("16px", "16px")));
+        LayoutTree(Block(new(), c128, c129));
+        True(Math.Abs(c128.Box.ContentBox.Height) < 0.5f,
+            $"expected the 1em/-1em chain to collapse to 0 (128), got {c128.Box.ContentBox.Height}");
+        True(Math.Abs(c129.Box.ContentBox.Height) < 0.5f,
+            $"expected the -1em/1em chain to collapse to 0 (129), got {c129.Box.ContentBox.Height}");
+    }
+
+    [Test]
+    public static void SelfCollapsedChain_NetNegative_ClampsHeightToZero()
+    {
+        // height-114 (§10.6.3): a box with top and bottom padding (the test's borders — the same
+        // boundary) holding one empty child with 'margin-bottom: -10em' — the chain stays
+        // inside, and the
+        // bottom edge of that collapsed margin lies above the content top. A height is never
+        // negative, so the content height is 0 and the two padding bands touch.
+        var test = Block(new() { ["width"] = "100px", ["padding-top"] = "16px", ["padding-bottom"] = "16px" },
+            Block(new() { ["margin-bottom"] = "-160px" }));
+        LayoutTree(test);
+        True(Math.Abs(test.Box.ContentBox.Height) < 0.5f,
+            $"expected a zero content height, got {test.Box.ContentBox.Height}");
+        True(Math.Abs(test.Box.BorderBox.Height - 32f) < 0.5f,
+            $"expected the border box to be the two 16px padding bands (32), got {test.Box.BorderBox.Height}");
+    }
+
+    [Test]
+    public static void NewFormattingContext_ThatCannotFitBesideChainFloat_SeparatesItsMargin()
+    {
+        // WPT new-fc-separates-from-float (§9.5, §9.5.2): the float-only first child chains
+        // through (its float is out of flow), but a following 200px 'overflow: hidden' box
+        // cannot fit beside the 200px float in a 200px container, so — as with clearance — its
+        // 200px top margin is separated from the chain: the float stays at the top, and the
+        // new formatting context sits below it at 200.
+        var floatBox = Block(new() { ["width"] = "200px", ["height"] = "200px" });
+        floatBox.StyleOverrides["float"] = "left";
+        var holder = Block(new(), floatBox);
+        var fc = Block(new() { ["width"] = "200px", ["height"] = "1px", ["margin-top"] = "200px",
+                               ["overflow"] = "hidden" });
+        var middle = Block(new(), holder, fc);
+        var outer = Block(new() { ["width"] = "200px", ["overflow"] = "hidden" }, middle);
+        LayoutTree(outer);
+        var top = outer.Box.ContentBox.Top;
+        True(Math.Abs(floatBox.Box.ContentBox.Top - top) < 0.5f,
+            $"expected the float at the container's top ({top}), got {floatBox.Box.ContentBox.Top}");
+        True(Math.Abs(fc.Box.BorderBox.Top - (top + 200f)) < 0.5f,
+            $"expected the new formatting context below the float ({top + 200}), got {fc.Box.BorderBox.Top}");
+    }
+
+    [Test]
+    public static void SelfCollapsedChain_BehindTopBoundary_CountsInHeight()
+    {
+        // WPT margin-collapse-through-percentage-height-block: an 'overflow: hidden' box (a BFC)
+        // holds only self-collapsing children — the single chain their margins form is spent
+        // through the box's TOP edge (the children's margins adjoin the box's own top margin),
+        // so it must not open a second gap inside; but §10.6.3 keeps the (possibly collapsed)
+        // bottom margin of the last in-flow child part of the auto height: the box is 100px
+        // tall. (The 30%-height middle child computes to 'auto' — its containing block's height
+        // is auto, §10.5 — so all three children are empty.)
+        var inner = Block(new() { ["width"] = "100px", ["overflow"] = "hidden" },
+            Block(new() { ["margin-bottom"] = "100px" }),
+            Block(new() { ["height"] = "30%" }),
+            Block(new() { ["margin-top"] = "100px" }));
+        var outer = Block(new() { ["width"] = "100px", ["height"] = "200px" }, inner);
+        LayoutTree(outer);
+        var h = inner.Box.ContentBox.Height;
+        True(Math.Abs(h - 100f) < 1f,
+            $"expected the BFC's height to cover the self-collapsed chain (100), got {h}");
+    }
+
+    [Test]
+    public static void Adjoining_ChainsThroughFloatOnlySelfCollapser()
+    {
+        // WPT margin-collapse-min-height-001.xht (§8.3.1, CSS 2.2 change s.8.3.1c): the
+        // float-only last child has no in-flow children (a float is out of flow, §9.3.1), so
+        // its top and bottom margins adjoin and the chain through the two empty siblings
+        // reaches its 50px bottom margin. 'min-height' separates that chain from the parent's
+        // bottom margin, so it is spent in full with the parent's top margin (50 > 10): the
+        // parent sits 50px down, is min-height tall, and its own bottom margin stays below it.
+        var floatBox = Block(new() { ["width"] = "100px", ["height"] = "20px" });
+        floatBox.StyleOverrides["float"] = "left";
+        var last = Block(new() { ["margin-bottom"] = "50px" }, floatBox);
+        var parent = Block(new() { ["width"] = "100px", ["min-height"] = "40px",
+                                   ["margin-top"] = "10px", ["margin-bottom"] = "10px" },
+            Block(new()), Block(new()), last);
+        var follower = Block(new() { ["width"] = "100px", ["height"] = "10px" });
+        var container = Block(new() { ["width"] = "100px" }, parent, follower);
+        LayoutTree(container);
+        True(Math.Abs(parent.Box.ContentBox.Top - 50f) < 1f,
+            $"the 50px chain should collapse with the parent's 10px top margin (parent at 50), got {parent.Box.ContentBox.Top}");
+        True(Math.Abs(parent.Box.ContentBox.Height - 40f) < 1f,
+            $"min-height raises the box and traps the 50px margin (height 40), got {parent.Box.ContentBox.Height}");
+        True(Math.Abs(follower.Box.ContentBox.Top - 100f) < 1f,
+            $"the follower sits below the parent's own 10px bottom margin (50+40+10=100), got {follower.Box.ContentBox.Top}");
+        True(Math.Abs(floatBox.Box.ContentBox.Top - 50f) < 1f,
+            $"the float sits at the parent's content top (50), got {floatBox.Box.ContentBox.Top}");
+    }
+
+    [Test]
+    public static void AutoMargins_BothAuto_OverflowDropsOnEndSide()
+    {
+        // WPT margin-auto-on-block-box (§10.3.3): 'margin: auto' on a 200px block in a 100px
+        // container is over-constrained — under 'ltr' the start side resolves to 0 and the
+        // end side takes the negative slack (-100), so the box anchors at the container's
+        // left edge and overflows right (a clamp to 0/0 would anchor it there too but the
+        // used right margin is wrong for the box's reported geometry).
+        var inner = Block(new() { ["width"] = "200px", ["height"] = "5px",
+                                  ["margin-left"] = "auto", ["margin-right"] = "auto" });
+        var wrapper = Block(new() { ["width"] = "100px" }, inner);
+        LayoutTree(wrapper);
+        var m = inner.Box.Margin;
+        True(Math.Abs(m.Left - 0f) < 0.5f, $"expected margin-left 0 (start side clamps), got {m.Left}");
+        True(Math.Abs(m.Right - -100f) < 0.5f, $"expected margin-right -100 (end side absorbs the overflow), got {m.Right}");
+    }
+
+    [Test]
+    public static void AutoMargins_OneAutoSide_SubtractsSpecifiedOpposite()
+    {
+        // WPT margin-auto-on-block-box (§10.3.3): 'margin-left: auto' beside a specified
+        // 'margin-right: -125px' in a 100px container with a 50px box: the leftover after the
+        // specified right margin is 175, and the start side takes it unclamped-positive.
+        var inner = Block(new() { ["width"] = "50px", ["height"] = "5px",
+                                  ["margin-left"] = "auto", ["margin-right"] = "-125px" });
+        var wrapper = Block(new() { ["width"] = "100px" }, inner);
+        LayoutTree(wrapper);
+        var m = inner.Box.Margin;
+        True(Math.Abs(m.Left - 175f) < 0.5f,
+            $"expected margin-left 175 (100 - 50 - (-125)), got {m.Left}");
+    }
+
+    [Test]
+    public static void AutoMargins_RootElement_ResolvesAgainstViewport()
+    {
+        // WPT auto-margins-root-element (§10.3.3): 'html { width: 100px; margin-left: auto }'
+        // pushes the root box to the right edge of the 800px viewport: margin-left 700, so the
+        // border box — the edge offsetLeft reports — sits at 700.
+        var html = new LayoutNode(null, "HTML", "", _styleCache.Style);
+        html.StyleOverrides["display"] = "block";
+        html.StyleOverrides["width"] = "100px";
+        html.StyleOverrides["margin-left"] = "auto";
+        var body = new LayoutNode(null, "BODY", "", _styleCache.Style);
+        body.StyleOverrides["display"] = "block";
+        var p = Block(new() { ["height"] = "20px" });
+        html.AddChild(body);
+        body.AddChild(p);
+        BoxEngine.Layout(html, 800, 600);
+        True(Math.Abs(html.Box.Margin.Left - 700f) < 1f,
+            $"expected the root's resolved margin-left 700, got {html.Box.Margin.Left}");
+        True(Math.Abs(html.Box.BorderBox.Left - 700f) < 1f,
+            $"expected the root's border box at 700 (800 - 100), got {html.Box.BorderBox.Left}");
+    }
+
     private static LayoutNode TableCell(string text)
     {
         var node = new LayoutNode(null, "TD", text, _styleCache.Style);

@@ -117,6 +117,88 @@ public static class CascadeTests
     }
 
     [Test]
+    public static void Inherit_ExTakesDeclaringElementXHeight()
+    {
+        // word-spacing-101 (§6.2.1, §4.3.2): an inherited 'ex' length computes at the
+        // DECLARING element's x-height — Ahem's is 0.8em, so 12ex at 16px is 153.6px. The
+        // conversion ran unscoped and fell back to 0.5em (96px); the child must read exactly
+        // what the parent resolves its own 12ex to.
+        var dir = Directory.GetCurrentDirectory();
+        while (dir is not null && !File.Exists(Path.Combine(dir, "Lite.sln"))) dir = Path.GetDirectoryName(dir);
+        FontRegistry.RegisterFile(Path.Combine(dir!, "Lite.Conformance", "vendor", "wpt", "fonts", "Ahem.ttf"));
+        var child = Block(new() { ["width"] = "100px", ["height"] = "5px", ["font-family"] = "Ahem",
+                                  ["font-size"] = "16px", ["margin-top"] = "inherit" });
+        var parent = Block(new() { ["width"] = "200px", ["height"] = "10px", ["font-family"] = "Ahem",
+                                   ["font-size"] = "16px", ["margin-top"] = "12ex" }, child);
+        LayoutTree(Block(new(), parent));
+        True(Math.Abs(parent.Box.Margin.Top - 153.6f) < 0.5f,
+            $"the parent's 12ex in Ahem resolves to 153.6px, got {parent.Box.Margin.Top}");
+        True(Math.Abs(child.Box.Margin.Top - parent.Box.Margin.Top) < 0.5f,
+            $"the inherited 12ex takes the parent's computed {parent.Box.Margin.Top}px, got {child.Box.Margin.Top}");
+    }
+
+    [Test]
+    public static void Inherit_MarginTakesParentComputedLengthNotRawEm()
+    {
+        // margin-em-inherit-001 (§6.2.1 + §8.3): what 'margin: inherit' passes on is the
+        // parent's COMPUTED value — '2em' at the parent's 28px font is 56px — not the raw
+        // '2em' re-resolved at the child's own 40px font (which would be 80px). A percentage
+        // stays in the computed value verbatim: the child re-resolves it against its own
+        // containing block (15% of the parent's 200px content width is 30, not the parent's
+        // 15% of 800 = 120, and not 15% of the child's font size).
+        var emChild = Block(new() { ["width"] = "100px", ["height"] = "5px",
+                                    ["font-size"] = "40px", ["margin-top"] = "inherit" });
+        var emParent = Block(new() { ["width"] = "200px", ["height"] = "10px",
+                                     ["font-size"] = "28px", ["margin-top"] = "2em" }, emChild);
+        var pctChild = Block(new() { ["width"] = "100px", ["height"] = "5px",
+                                     ["margin-top"] = "inherit" });
+        var pctParent = Block(new() { ["width"] = "200px", ["height"] = "10px",
+                                      ["margin-top"] = "15%" }, pctChild);
+        LayoutTree(Block(new(), emParent, pctParent));
+        True(Math.Abs(emParent.Box.Margin.Top - 56f) < 0.5f,
+            $"the parent's 2em computes to 56px at its 28px font, got {emParent.Box.Margin.Top}");
+        True(Math.Abs(emChild.Box.Margin.Top - 56f) < 0.5f,
+            $"the child's 'margin-top: inherit' takes the parent's computed 56px, got {emChild.Box.Margin.Top}");
+        True(Math.Abs(pctParent.Box.Margin.Top - 120f) < 0.5f,
+            $"the parent's 15% resolves against the 800px containing block (120), got {pctParent.Box.Margin.Top}");
+        True(Math.Abs(pctChild.Box.Margin.Top - 30f) < 0.5f,
+            $"the inherited percentage re-resolves at the child's containing block (15% of 200 = 30), got {pctChild.Box.Margin.Top}");
+    }
+
+    // Mirror of LayoutTests.Block: CascadeTests has no block helper of its own.
+    private static readonly ICssStyleDeclarationCache _styleCache = new();
+    private sealed class ICssStyleDeclarationCache
+    {
+        public AngleSharp.Css.Dom.ICssStyleDeclaration Style { get; } =
+            Parser.ParseFragment("<div></div>")[0].Style;
+    }
+    private static LayoutNode Block(Dictionary<string, string> styles, params LayoutNode[] children)
+    {
+        var node = new LayoutNode(null, "DIV", "", _styleCache.Style);
+        node.StyleOverrides["display"] = "block";
+        foreach (var side in new[] { "top", "right", "bottom", "left" })
+        {
+            node.StyleOverrides[$"margin-{side}"] = "0";
+            node.StyleOverrides[$"padding-{side}"] = "0";
+            node.StyleOverrides[$"border-{side}-width"] = "0";
+        }
+        foreach (var (k, v) in styles) node.StyleOverrides[k] = v;
+        foreach (var c in children) node.AddChild(c);
+        return node;
+    }
+    private static LayoutNode LayoutTree(LayoutNode content, int vw = 800, int vh = 600)
+    {
+        var root = new LayoutNode(null, "HTML", "", _styleCache.Style);
+        var body = new LayoutNode(null, "BODY", "", _styleCache.Style);
+        root.StyleOverrides["display"] = "block";
+        body.StyleOverrides["display"] = "block";
+        root.AddChild(body);
+        body.AddChild(content);
+        BoxEngine.Layout(root, vw, vh);
+        return root;
+    }
+
+    [Test]
     public static void LinkPseudoClass_MatchesAnchorWithHref()
     {
         var a = Parser.ParseFragment("<a href=\"/x\">link</a>")[0];
