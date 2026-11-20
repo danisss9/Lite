@@ -21,6 +21,15 @@ Branch `css21/p6-c`, worktree `C:\Repos\Lite-p6-c`. Case list `Lite.Conformance/
 
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
 
+- `css21-official/html4/margin-collapse-clear-000.htm`, `-001`, `-004`, `-006`, `-007`, `-010` and
+  the WPT twins under `css/CSS2/margin-padding-clear/`: these contain no `float` and no `clear` at
+  all — the failing bar is the collapsed-through parent's background ("each coloured bar matches a
+  same-coloured box", the #c0c0c0 bar at 19,151). Pure §8.3.1 margin collapsing, BoxEngine.Block.cs.
+  From 6.B (they landed on B by test-name stem).
+- `floats-wrap-bfc-with-margin-001..010` (WPT): shared — the §10.3.3 negative-margin "prop-up" of an
+  auto-width BFC beside a float is the Block-side width resolution in the
+  `EstablishesBlockFormattingContext` branch; 6.B owns the float side of the same cases. From 6.B.
+
 ## Edits outside owned files
 
 _(None yet.)_

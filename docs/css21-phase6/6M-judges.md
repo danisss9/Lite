@@ -26,6 +26,13 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
 
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
 
+- `css/CSS2/floats/hit-test-floats-003.html`, `-005`: the checks call `elementFromPoint` over
+  floats and get "error" instead of a target — hit-testing protocol/implementation, not float
+  layout (no layout-side fix moves them). From 6.B.
+- `css/CSS2/floats/computed-float-position-absolute.html`: the check reads
+  `getComputedStyle(...).float` and gets `undefined` — the computed style does not expose `float`,
+  a CSSOM/protocol gap, not float layout. From 6.B.
+
 ## Edits outside owned files
 
 _(None yet.)_
