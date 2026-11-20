@@ -833,42 +833,6 @@ internal static partial class Parser
     private static string? ResolveUrl(string src) =>
         Lite.Network.UrlUtils.Resolve(src, _documentBaseUrl ?? _baseUrl);
 
-    /// <summary>
-    /// Recursively inlines <c>@import</c> rules (CSS 2.1 §6.3): fetches each imported sheet
-    /// (resolved against <paramref name="baseUrl"/>), inlines ITS imports, and substitutes the
-    /// text. A media-qualified import (<c>@import url(x) print;</c>) is wrapped in an @media block.
-    /// </summary>
-    private static string InlineImports(string css, string baseUrl, string? referrerCharset = null, int depth = 0)
-    {
-        if (depth > 8 || string.IsNullOrEmpty(css) ||
-            !css.Contains("@import", StringComparison.OrdinalIgnoreCase))
-            return css;
-
-        // @import url("x") media;  |  @import "x" media;  |  @import 'x';
-        var rx = new System.Text.RegularExpressions.Regex(
-            @"@import\s+(?:url\(\s*)?['""]?([^'""\)\s]+)['""]?\s*\)?\s*([^;]*);",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-        return rx.Replace(css, m =>
-        {
-            var importUrl = m.Groups[1].Value.Trim();
-            var media = m.Groups[2].Value.Trim();
-            var resolved = Lite.Network.UrlUtils.Resolve(importUrl, baseUrl);
-            if (resolved is null) return "";
-            try
-            {
-                var imported = FetchCssText(resolved, null, referrerCharset, out var importedCharset);
-                imported = InlineImports(imported, resolved, importedCharset, depth + 1);
-                return string.IsNullOrEmpty(media) ? imported : $"@media {media} {{\n{imported}\n}}";
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[@import load error] {resolved}: {ex.Message}");
-                return "";
-            }
-        });
-    }
-
     /// <summary>Walks all stylesheets and loads @font-face rules into <see cref="FontRegistry"/>.</summary>
     private static void CollectFontFaces(AngleSharp.Dom.IDocument document)
     {

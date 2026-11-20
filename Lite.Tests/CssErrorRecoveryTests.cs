@@ -108,4 +108,53 @@ public static class CssErrorRecoveryTests
         // rescue still reports the unclosed url( as malformed.
         True(!CssComponentScan.IsWellFormedValue("url(\"a.png\""), "an unclosed url( in a standalone value");
     }
+
+    [Test]
+    public static void AtImport_HonorsLeadingPositionEofClosureAndEscapedUrls()
+    {
+        // CSS 2.1 §6.3: @import is ignored after any non-ignored statement other than @charset/@import.
+        var fetched = new List<string>();
+        (string Css, string Charset)? Fetch(string url, string? _)
+        {
+            fetched.Add(url);
+            return ("p { color: green; }", "utf-8");
+        }
+
+        var afterRule = Lite.Parser.InlineImportsCore(
+            "body { color: green; }\n@import url(\"red.css\");",
+            "http://example.test/page.html",
+            Fetch);
+        Equal(0, fetched.Count);
+        True(afterRule.Contains("@import"), "non-leading @import stays untouched for the CSS parser");
+
+        // CSS 2.1 §6.3 + §4.2: garbage before @import also terminates the @import prologue (at-import-011).
+        var afterGarbage = Lite.Parser.InlineImportsCore(
+            "# :unknownpseudo\n@import \"red.css\";\np { color: green; }",
+            "http://example.test/page.html",
+            Fetch);
+        Equal(0, fetched.Count);
+        True(afterGarbage.Contains("# :unknownpseudo"), "garbage before @import is preserved");
+
+        // CSS 2.1 §4.2: open string, open url(, and missing semicolon at EOF all close cleanly (eof-005/006, uri-018).
+        var eofString = Lite.Parser.InlineImportsCore("@import \"green.css", "http://example.test/page.html", Fetch);
+        True(eofString.Contains("color: green"), "unclosed string @import at EOF expands");
+        Equal("http://example.test/green.css", fetched[^1]);
+
+        var eofNoSemi = Lite.Parser.InlineImportsCore("@import \"green2.css\"", "http://example.test/page.html", Fetch);
+        True(eofNoSemi.Contains("color: green"), "@import without trailing semicolon at EOF expands");
+        Equal("http://example.test/green2.css", fetched[^1]);
+
+        var eofUrl = Lite.Parser.InlineImportsCore("@import url(green3.css", "http://example.test/page.html", Fetch);
+        True(eofUrl.Contains("color: green"), "unclosed url( @import at EOF expands");
+        Equal("http://example.test/green3.css", fetched[^1]);
+
+        // CSS 2.1 §4.3.4: escaped parens inside unquoted url(...) unescape before resolution (cascade-import-001).
+        fetched.Clear();
+        Lite.Parser.InlineImportsCore(
+            "@import url(data:text/css,@import%20url\\(data:text/css,p%7Bcolor:red%7D\\););",
+            "http://example.test/page.html",
+            Fetch);
+        Equal(1, fetched.Count);
+        Equal("data:text/css,@import%20url(data:text/css,p%7Bcolor:red%7D);", fetched[0]);
+    }
 }

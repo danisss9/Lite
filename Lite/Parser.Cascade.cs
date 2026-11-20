@@ -265,11 +265,354 @@ internal static partial class Parser
     private static string FetchCssText(string url, string? linkCharset, string? referrerCharset,
         out string usedCharset)
     {
+        // RFC 2397 data: URIs (e.g. @import url(data:text/css,...)) are decoded locally.
+        if (DataUri.IsDataUri(url))
+        {
+            if (DataUri.TryDecodeBytes(url, out var dataBytes, out _))
+                return DecodeCss(dataBytes, null, linkCharset, referrerCharset, out usedCharset);
+            usedCharset = "utf-8";
+            return string.Empty;
+        }
         using var response = Session.Client.GetAsync(url).Result;
         response.EnsureSuccessStatusCode();
         var bytes = response.Content.ReadAsByteArrayAsync().Result;
         return DecodeCss(bytes, response.Content.Headers.ContentType?.CharSet,
                          linkCharset, referrerCharset, out usedCharset);
+    }
+
+    /// <summary>
+    /// Recursively inlines leading <c>@import</c> rules per CSS 2.1 §6.3 ("CSS 2.1 user agents
+    /// must ignore any @import rule that occurs inside a block or after any non-ignored statement
+    /// other than an @charset or an @import rule") and §4.2 (open strings, <c>url(</c> tokens and
+    /// statements are closed at EOF). Non-leading <c>@import</c> rules are left untouched so the
+    /// CSS parser ignores or absorbs them as part of surrounding malformed syntax (at-import-001,
+    /// at-import-011, at-rule-006/007, c11-import-000, import-000, eof-005/006, uri-018,
+    /// cascade-import-001).
+    /// </summary>
+    private static string InlineImports(string css, string baseUrl, string? referrerCharset = null, int depth = 0) =>
+        InlineImportsCore(css, baseUrl, (resolved, refCharset) =>
+        {
+            var imported = FetchCssText(resolved, null, refCharset, out var importedCharset);
+            return (imported, importedCharset);
+        }, referrerCharset, depth);
+
+    /// <summary>Testable core of <see cref="InlineImports"/> with an injectable sheet fetcher.</summary>
+    internal static string InlineImportsCore(
+        string css,
+        string baseUrl,
+        Func<string, string?, (string Css, string Charset)?> fetcher,
+        string? referrerCharset = null,
+        int depth = 0)
+    {
+        if (depth > 8 || string.IsNullOrEmpty(css) ||
+            !css.Contains("@import", StringComparison.OrdinalIgnoreCase))
+            return css;
+
+        var sb = new StringBuilder(css.Length);
+        var i = 0;
+        var expandedAny = false;
+
+        while (i < css.Length)
+        {
+            SkipImportTrivial(css, ref i);
+            var stmtStart = i;
+            if (i >= css.Length) break;
+
+            if (css[i] != '@')
+            {
+                // First non-ignored statement (or malformed prelude such as '# :unknownpseudo'):
+                // per CSS 2.1 §6.3 no further @import may take effect; keep the remainder verbatim.
+                sb.Append(css, stmtStart, css.Length - stmtStart);
+                return expandedAny ? sb.ToString() : css;
+            }
+
+            var kwStart = i + 1;
+            var kwEnd = kwStart;
+            while (kwEnd < css.Length && (char.IsAsciiLetterOrDigit(css[kwEnd]) || css[kwEnd] == '-'))
+                kwEnd++;
+            var kw = css.AsSpan(kwStart, kwEnd - kwStart);
+
+            if (kw.Equals("charset", StringComparison.OrdinalIgnoreCase))
+            {
+                // Skip leading @charset ...; and keep scanning for @import rules.
+                i = kwEnd;
+                SkipStatementTail(css, ref i);
+                continue;
+            }
+
+            if (!kw.Equals("import", StringComparison.OrdinalIgnoreCase))
+            {
+                // Any other at-rule (@media, @page, @font-face, …) ends the @import prologue.
+                sb.Append(css, stmtStart, css.Length - stmtStart);
+                return expandedAny ? sb.ToString() : css;
+            }
+
+            i = kwEnd;
+            SkipImportWhitespaceAndComments(css, ref i);
+            if (!TryReadImportTarget(css, ref i, out var importUrl))
+            {
+                // Malformed @import target — skip to end of statement/block per §4.2.
+                SkipStatementTail(css, ref i);
+                expandedAny = true;
+                continue;
+            }
+
+            // Read optional media query list up to top-level ';', '{' or EOF (§4.2).
+            var mediaStart = i;
+            var hitBlock = false;
+            var depthParen = 0;
+            var depthBracket = 0;
+            while (i < css.Length)
+            {
+                var c = css[i];
+                if (c == '/' && i + 1 < css.Length && css[i + 1] == '*')
+                {
+                    SkipCssComment(css, ref i);
+                    continue;
+                }
+                if (c == '"' || c == '\'')
+                {
+                    TryReadCssString(css, ref i, out _);
+                    continue;
+                }
+                if (c == '(') { depthParen++; i++; continue; }
+                if (c == ')' && depthParen > 0) { depthParen--; i++; continue; }
+                if (c == '[') { depthBracket++; i++; continue; }
+                if (c == ']' && depthBracket > 0) { depthBracket--; i++; continue; }
+                if (depthParen == 0 && depthBracket == 0)
+                {
+                    if (c == ';') break;
+                    if (c == '{') { hitBlock = true; break; }
+                }
+                i++;
+            }
+
+            var media = css[mediaStart..i].Trim();
+            if (hitBlock)
+            {
+                // @import with a { ... } block is invalid (§4.2); skip through matching '}'.
+                SkipBalancedBlock(css, ref i);
+                expandedAny = true;
+                continue;
+            }
+            if (i < css.Length && css[i] == ';') i++;
+
+            expandedAny = true;
+            var resolved = Lite.Network.UrlUtils.Resolve(importUrl, baseUrl);
+            if (resolved is null) continue;
+            try
+            {
+                var fetched = fetcher(resolved, referrerCharset);
+                if (fetched is null) continue;
+                var (imported, importedCharset) = fetched.Value;
+                imported = InlineImportsCore(imported, resolved, fetcher, importedCharset, depth + 1);
+                if (string.IsNullOrEmpty(media))
+                {
+                    sb.Append(imported);
+                    sb.Append('\n');
+                }
+                else
+                {
+                    sb.Append("@media ");
+                    sb.Append(media);
+                    sb.Append(" {\n");
+                    sb.Append(imported);
+                    sb.Append("\n}\n");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[@import load error] {resolved}: {ex.Message}");
+            }
+        }
+
+        return expandedAny ? sb.ToString() : css;
+    }
+
+    private static void SkipImportTrivial(string css, ref int i)
+    {
+        while (i < css.Length)
+        {
+            var c = css[i];
+            if (c is ' ' or '\t' or '\r' or '\n' or '\f') { i++; continue; }
+            if (c == '/' && i + 1 < css.Length && css[i + 1] == '*') { SkipCssComment(css, ref i); continue; }
+            if (c == '<' && i + 3 < css.Length && css[i + 1] == '!' && css[i + 2] == '-' && css[i + 3] == '-') { i += 4; continue; }
+            if (c == '-' && i + 2 < css.Length && css[i + 1] == '-' && css[i + 2] == '>') { i += 3; continue; }
+            break;
+        }
+    }
+
+    private static void SkipImportWhitespaceAndComments(string css, ref int i)
+    {
+        while (i < css.Length)
+        {
+            var c = css[i];
+            if (c is ' ' or '\t' or '\r' or '\n' or '\f') { i++; continue; }
+            if (c == '/' && i + 1 < css.Length && css[i + 1] == '*') { SkipCssComment(css, ref i); continue; }
+            break;
+        }
+    }
+
+    private static void SkipCssComment(string css, ref int i)
+    {
+        i += 2;
+        while (i < css.Length)
+        {
+            if (css[i] == '*' && i + 1 < css.Length && css[i + 1] == '/') { i += 2; return; }
+            i++;
+        }
+    }
+
+    private static void SkipStatementTail(string css, ref int i)
+    {
+        var depthParen = 0;
+        var depthBracket = 0;
+        while (i < css.Length)
+        {
+            var c = css[i];
+            if (c == '/' && i + 1 < css.Length && css[i + 1] == '*') { SkipCssComment(css, ref i); continue; }
+            if (c == '"' || c == '\'') { TryReadCssString(css, ref i, out _); continue; }
+            if (c == '(') { depthParen++; i++; continue; }
+            if (c == ')' && depthParen > 0) { depthParen--; i++; continue; }
+            if (c == '[') { depthBracket++; i++; continue; }
+            if (c == ']' && depthBracket > 0) { depthBracket--; i++; continue; }
+            if (depthParen == 0 && depthBracket == 0)
+            {
+                if (c == ';') { i++; return; }
+                if (c == '{') { SkipBalancedBlock(css, ref i); return; }
+            }
+            i++;
+        }
+    }
+
+    private static void SkipBalancedBlock(string css, ref int i)
+    {
+        if (i >= css.Length || css[i] != '{') return;
+        var depth = 0;
+        while (i < css.Length)
+        {
+            var c = css[i];
+            if (c == '/' && i + 1 < css.Length && css[i + 1] == '*') { SkipCssComment(css, ref i); continue; }
+            if (c == '"' || c == '\'') { TryReadCssString(css, ref i, out _); continue; }
+            if (c == '{') { depth++; i++; continue; }
+            if (c == '}') { depth--; i++; if (depth == 0) return; continue; }
+            i++;
+        }
+    }
+
+    private static bool TryReadImportTarget(string css, ref int i, out string url)
+    {
+        url = string.Empty;
+        if (i >= css.Length) return false;
+        if (css[i] == '"' || css[i] == '\'')
+            return TryReadCssString(css, ref i, out url);
+
+        if (css.Length - i >= 4 && css.AsSpan(i, 4).Equals("url(", StringComparison.OrdinalIgnoreCase))
+        {
+            i += 4;
+            SkipImportWhitespaceAndComments(css, ref i);
+            if (i >= css.Length) return true; // empty url( closed at EOF
+            if (css[i] == '"' || css[i] == '\'')
+            {
+                if (!TryReadCssString(css, ref i, out url)) return false;
+                SkipImportWhitespaceAndComments(css, ref i);
+                if (i >= css.Length) return true; // closed at EOF per §4.2
+                if (css[i] == ')') { i++; return true; }
+                return false;
+            }
+
+            // Unquoted CSS URI token (§4.3.4), with backslash escapes (e.g. \( \) in data: URLs).
+            var sb = new StringBuilder();
+            while (i < css.Length)
+            {
+                var c = css[i];
+                if (c == ')') { i++; url = sb.ToString(); return true; }
+                if (c is ' ' or '\t' or '\r' or '\n' or '\f') break;
+                if (c == '"' || c == '\'' || c == '(' || c <= 0x1F || c == 0x7F) return false;
+                if (c == '\\')
+                {
+                    if (!TryAppendCssEscape(css, ref i, sb, allowEscapedNewline: false)) return false;
+                    continue;
+                }
+                sb.Append(c);
+                i++;
+            }
+            SkipImportWhitespaceAndComments(css, ref i);
+            if (i >= css.Length) { url = sb.ToString(); return true; } // closed at EOF per §4.2
+            if (css[i] == ')') { i++; url = sb.ToString(); return true; }
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool TryReadCssString(string css, ref int i, out string value)
+    {
+        value = string.Empty;
+        if (i >= css.Length) return false;
+        var quote = css[i++];
+        var sb = new StringBuilder();
+        while (i < css.Length)
+        {
+            var c = css[i];
+            if (c == quote) { i++; value = sb.ToString(); return true; }
+            if (c is '\n' or '\r' or '\f') return false; // BAD_STRING (§4.2)
+            if (c == '\\')
+            {
+                if (!TryAppendCssEscape(css, ref i, sb, allowEscapedNewline: true)) return false;
+                continue;
+            }
+            sb.Append(c);
+            i++;
+        }
+        // Unclosed string at EOF is closed per CSS 2.1 §4.2.
+        value = sb.ToString();
+        return true;
+    }
+
+    private static bool TryAppendCssEscape(string css, ref int i, StringBuilder sb, bool allowEscapedNewline)
+    {
+        i++; // skip '\'
+        if (i >= css.Length) return true; // trailing backslash at EOF drops backslash
+        var c = css[i];
+        if (c == '\r')
+        {
+            if (!allowEscapedNewline) return false;
+            i++;
+            if (i < css.Length && css[i] == '\n') i++;
+            return true;
+        }
+        if (c is '\n' or '\f')
+        {
+            if (!allowEscapedNewline) return false;
+            i++;
+            return true;
+        }
+        if (Uri.IsHexDigit(c))
+        {
+            var codePoint = 0;
+            var digits = 0;
+            while (i < css.Length && digits < 6 && Uri.IsHexDigit(css[i]))
+            {
+                codePoint = (codePoint << 4) | Uri.FromHex(css[i]);
+                i++;
+                digits++;
+            }
+            // CSS 2.1 §4.1.3: a single whitespace character (or CRLF) after a hex escape is consumed.
+            if (i < css.Length)
+            {
+                if (css[i] == '\r') { i++; if (i < css.Length && css[i] == '\n') i++; }
+                else if (css[i] is ' ' or '\t' or '\n' or '\f') i++;
+            }
+            if (codePoint == 0 || codePoint > 0x10FFFF || (codePoint >= 0xD800 && codePoint <= 0xDFFF))
+                sb.Append('\uFFFD');
+            else
+                sb.Append(char.ConvertFromUtf32(codePoint));
+            return true;
+        }
+        sb.Append(c);
+        i++;
+        return true;
     }
 
     /// <summary>Decodes stylesheet bytes; see <see cref="FetchCssText"/> for the priority order.
