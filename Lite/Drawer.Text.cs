@@ -95,8 +95,10 @@ internal static partial class Drawer
 
         // §18.1: a list item's box shows its own cursor like any block (cursor-applies-to-010:
         // 'cursor: pointer' on a display:list-item box showed the default arrow).
+        // Keep an anchor's link target on its hit region when a list item is also a link
+        // (`a { display: list-item }`, list-style-applies-to-009).
         if (!node.GetPointerEventsNone())
-            _hitRegions.Add(CursorRegion(box.BorderBox, node, nodeKey: node.NodeKey));
+            _hitRegions.Add(CursorRegion(box.BorderBox, node, node.Href, node.NodeKey));
 
         var listStyleType = node.GetListStyleType();
         var listStylePos = node.GetListStylePosition();

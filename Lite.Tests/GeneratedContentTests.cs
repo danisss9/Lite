@@ -118,6 +118,20 @@ public static class GeneratedContentTests
     }
 
     [Test]
+    public static void AnchorAsAListItem_PaintsItsMarker()
+    {
+        // list-style-applies-to-009: the A tag has a dedicated paint path, which had no marker;
+        // `a { display: list-item }` must paint its bullet like any list item box.
+        var root = Parse("<a style=\"display: list-item\"></a>", "body { margin: 0 0 0 20px }");
+        using var bitmap = Drawer.DrawToBitmap(40, 40, root, new Viewport { ViewportHeight = 40 });
+        var ink = false;
+        for (var y = 0; y < 40 && !ink; y++)
+        for (var x = 0; x < 40 && !ink; x++)
+            if (bitmap.GetPixel(x, y) != SkiaSharp.SKColors.White) ink = true;
+        True(ink, "the anchor's list marker painted nothing");
+    }
+
+    [Test]
     public static void GeneratedBox_InheritsAPresentationalHint()
     {
         // content-145: the body's HTML text="green" hint is an inherited colour; the ::before

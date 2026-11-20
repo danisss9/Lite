@@ -21,7 +21,11 @@ Branch `css21/p6-e`, worktree `C:\Repos\Lite-p6-e`. Case list `Lite.Conformance/
 
 ## Handed in
 
-_(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- `content-172` (official + WPT, from 6.F): the `.normal` row's cell shrink-to-fits to its longest
+  forced line ("XXX XXX") instead of the full collapsed pseudo content, so "XXX" wraps while the
+  control cell stays on one line. The pre row is now correct. The max-content measure of a cell
+  holding a pseudo child with newlines is the remaining cause (6.F did not change IntrinsicSizer
+  or TableEngine).
 
 ## Edits outside owned files
 

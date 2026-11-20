@@ -24,7 +24,22 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
 
 ## Handed in
 
-_(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- `list-style-type-001`, `list-style-applies-to-005/006`, `list-style-type-applies-to-005/006`
+  (official + WPT, from 6.F): `round-dot` rejects a 16px disc. The render is a filled circle 7-8px
+  across including antialiasing, but `Components`' 5x5 ink bbox has every bbox edge inked, so
+  `Rectangular` is true. A larger disc would pass here but break the `<=24px` bullet limit of
+  `list-style-position-003/008/009` at 85px, so the two checks have no common marker size.
+  Suggest testing corner emptiness (a circle's top row is narrower than its bbox) instead.
+- `content-008` (from 6.F): the pass-condition needle is `"1."` but the sentence and test ask for
+  the square bullet (`counter(test, square)`); the generated check does not match the sentence.
+- `content-142` (from 6.F): `painted-only` compares the painted "PASS PASS" case-sensitively
+  against the lowercase needles `["pass","pass"]` and reports the correct text as non-allowed.
+- `quotes-applies-to-005/006` (from 6.F): `painted-only` with no needles reports the rendered
+  quote glyphs as non-allowed tokens although the sentence only asks for quotes.
+- `content-counters-003` (from 6.F): the two lines are pixel-identical (small hollow-circle
+  counters) but `look-same` finds 0 ink bands below the instructions.
+- `list-style-type-017` (official only, from 6.F): the twin reftest passes but the self-describing
+  check reports "8 ink bands below the instructions".
 
 ## Edits outside owned files
 

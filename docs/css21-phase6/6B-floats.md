@@ -18,7 +18,12 @@ Branch `css21/p6-b`, worktree `C:\Repos\Lite-p6-b`. Case list `Lite.Conformance/
 
 ## Handed in
 
-_(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- `list-style-applies-to-017`, `list-style-type-applies-to-017`,
+  `list-style-image-applies-to-017`, `list-style-position-applies-to-017` (all WPT, from 6.F):
+  an empty `display: list-item` block that is a sibling of a block-level float keeps its
+  full-width content box instead of taking the float's shifted line band; its outside marker
+  therefore paints off the left edge (expected: beside the float, where the reference puts it).
+  The pseudo/position work in 6.F is done; only the float band is missing.
 
 ## Edits outside owned files
 

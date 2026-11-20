@@ -21,7 +21,13 @@ Branch `css21/p6-x`, worktree `C:\Repos\Lite-p6-x`. Case list `Lite.Conformance/
 
 ## Handed in
 
-_(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
+- `content-159` (official + WPT, from 6.F): served as XHTML, the `div:lang(en) { quotes: '"' '"'
+  "'" "'" }` declaration is lost, so the pseudo content renders the default curly quotes instead
+  of the straight ones the reference uses. `--render` (which serves .xht as HTML) matches the
+  reference, so this is the XML stylesheet path, not 6.F's quote-depth logic.
+- `first-letter-selector-000` (official + WPT, from 6.F): the test builds "TESTING" from seven
+  floated `:first-letter` divs, one of which holds `<![CDATA[E]]>`; the CDATA box renders empty,
+  so the actual is "TSTING". The HTML twin passes.
 
 ## Edits outside owned files
 

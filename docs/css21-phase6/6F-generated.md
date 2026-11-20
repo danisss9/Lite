@@ -67,6 +67,18 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - **Checks:** units 652 passed; css21 51/1; wpt 86/2; lane list official 10→27, WPT 0→17 (44
   total, 0 losses); canary 300/300.
 
+### An anchor with `display: list-item` is a list item box
+
+- **Moved (8):** `list-style-applies-to-009`, `list-style-image-applies-to-009`,
+  `list-style-type-applies-to-009`, `list-style-position-applies-to-009` (official + WPT). The
+  `A` tag's dedicated paint path has no marker, so these empty `a { display: list-item }` items
+  rendered nothing. The list-item branch now owns the tag; its hit region keeps the link target.
+- **Still fails:** `list-style-applies-to-017` and `list-style-image/type/position-…-017`: the
+  list item beside a block-level float keeps its full-width content box (no line band shift), so
+  the marker paints off the left edge — a float/block-flow issue (handed to 6.B).
+- **Checks:** units 663; css21 51/1; wpt 86/2; lane list 55→63 (official 36, WPT 27), 0 losses;
+  canary 300/300.
+
 ### attr() case folding and inherited presentational hints (§12.2, §6.2.1)
 
 - **Moved:** `content-attr-case-001` (official + WPT; `attr(Title)` now finds HTML's `title`) and

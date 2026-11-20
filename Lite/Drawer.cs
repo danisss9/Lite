@@ -594,6 +594,14 @@ internal static partial class Drawer
                 PaintChildrenSorted(canvas, node, viewportWidth);
                 return;
 
+            // An anchor with 'display: list-item' is a list item box first (§12.5.1): the marker
+            // painter owns its background, borders, text and children. PaintAnchor has no marker
+            // path, so `a { display: list-item }` lost the bullet entirely
+            // (list-style-applies-to-009).
+            case "A" when node.GetDisplay() == DisplayType.ListItem:
+                PaintListItem(canvas, node, viewportWidth);
+                return;
+
             case "A":
                 PaintAnchor(canvas, node, viewportWidth);
                 return;
