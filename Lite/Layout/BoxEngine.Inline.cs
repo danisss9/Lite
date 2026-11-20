@@ -418,7 +418,7 @@ internal static partial class BoxEngine
             // shrink-to-fit box.
             var fitWidth = item.Width;
             if (item.Kind == InlineItemKind.Text && item.Text is { } fitText && fitText.Length > 0 &&
-                char.IsWhiteSpace(fitText[^1]) &&
+                IsCssSpace(fitText[^1]) &&
                 item.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
             {
                 using var fitFont = TextMeasure.CreateFont(item.Node);
@@ -542,7 +542,7 @@ internal static partial class BoxEngine
             // in browsers — keeping it opened ' OneTwoThree' one space past the border
             // (block-in-inline-insert-001-nosplit-ref).
             var atLineStart = lineX <= bandLeft ||
-                placed.FindIndex(lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow)) < 0;
+                placed.FindIndex(lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow or InlineItemKind.Float or InlineItemKind.Strut)) < 0;
 
             // Skip whitespace-only text at the start of a line — a COLLAPSING one (§16.6.1):
             // under white-space:pre/pre-wrap a preserved space at a line's start renders, and
@@ -560,7 +560,7 @@ internal static partial class BoxEngine
             // a line boundary painted one space too far right (white-space-12 reftests).
             // Preserved spaces (pre/pre-wrap) are content and stay.
             if (atLineStart && item.Kind == InlineItemKind.Text && item.Text is { } leading &&
-                leading.Length > 0 && char.IsWhiteSpace(leading[0]))
+                leading.Length > 0 && IsCssSpace(leading[0]))
             {
                 var wsMode = item.Node?.GetWhiteSpace() ?? WhiteSpace.Normal;
                 if (wsMode is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
@@ -578,26 +578,35 @@ internal static partial class BoxEngine
             // §16.6.1: consecutive collapsible spaces across an inline boundary collapse to
             // one — the previous item's trailing space has already advanced the line, so this
             // item's leading space must not render a second one (float-nowrap-3's 'my parent.'
-            // sat one ch right of the reference's). Preserved spaces (pre/pre-wrap) stay.
+            // sat one ch right of the reference's). When stripping leaves an empty run, drop
+            // the item from the line entirely so its wrapper does not paint a background over
+            // collapsed whitespace (white-space-normal-007/008, white-space-collapsing-004/005).
+            // Preserved spaces (pre/pre-wrap) and non-CSS spaces (&nbsp;) stay.
             if (lineX > bandLeft && item.Kind == InlineItemKind.Text && item.Text is { Length: > 0 } lt &&
-                char.IsWhiteSpace(lt[0]) &&
+                IsCssSpace(lt[0]) &&
                 item.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
             {
+                var collapsedAway = false;
                 for (var k = placed.Count - 1; k >= lineStart; k--)
                 {
                     var pit = placed[k].item;
-                    if (pit.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow or InlineItemKind.Float) continue;
+                    if (pit.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow or InlineItemKind.Float or InlineItemKind.Strut) continue;
                     if (pit.Kind == InlineItemKind.Text && pit.Text is { Length: > 0 } pt &&
-                        char.IsWhiteSpace(pt[^1]) &&
+                        IsCssSpace(pt[^1]) &&
                         pit.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
                     {
                         var stripped = lt.TrimStartCss();
-                        if (stripped.Length == 0) continue;
+                        if (stripped.Length == 0)
+                        {
+                            collapsedAway = true;
+                            break;
+                        }
                         var stripW = StrippedWidth(item.Node, stripped);
                         item = item with { Text = stripped, Width = stripW, ContentW = stripW };
                     }
                     break;
                 }
+                if (collapsedAway) continue;
             }
 
             // For text items wider than the available space, re-measure with wrapping
@@ -729,10 +738,11 @@ internal static partial class BoxEngine
                 item.Node.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap) &&
                 (pi + 1 >= placed.Count || placedLine[pi + 1] != placedLine[pi]))
             {
+                var trimmedText = t.TrimEndCss();
                 using var trimFont = TextMeasure.CreateFont(item.Node);
                 var (trimLs, trimWsp) = TextMeasure.SpacingOf(item.Node);
-                var trimmed = TextMeasure.MeasureSingleLine(t.TrimEndCss(), trimFont, -1f, trimLs, trimWsp).Width;
-                folded = item with { Width = trimmed, ContentW = trimmed };
+                var trimmed = TextMeasure.MeasureSingleLine(trimmedText, trimFont, -1f, trimLs, trimWsp).Width;
+                folded = item with { Text = trimmedText, Width = trimmed, ContentW = trimmed };
             }
             ApplyInlineItem(folded, originX + relX, originY + relY, viewportWidth, viewportHeight);
             AccumulateWrapperFragment(wrapperFragments, folded, originX + relX, originY + relY, placedLine[pi]);
@@ -755,10 +765,10 @@ internal static partial class BoxEngine
         InlineItem item, float absX, float absY, int lineIndex)
     {
         if (item.Kind is InlineItemKind.OutOfFlow or InlineItemKind.LineBreak) return;
-        // A whitespace-only text item paints no ink and (§16.6.1) holds no line slot — folding
-        // its rect gave the wrapper a border fragment around collapsed space (the XML-served
-        // border-color-012 markup's inter-span whitespace grew an inner border box).
-        if (item.Kind == InlineItemKind.Text && (item.Text ?? "").IsCssWhiteSpaceOnly()) return;
+        // §16.6.1: a collapsed (zero-width) whitespace item holds no line slot and must not grow
+        // a wrapper's fragment; a surviving rendered space (e.g. '<span> </span>' between two
+        // words) DOES occupy advance width and its wrapper's background covers it.
+        if (item.Kind == InlineItemKind.Text && (item.Text ?? "").IsCssWhiteSpaceOnly() && item.Width <= 0f) return;
         if (item.Kind == InlineItemKind.InlineEdge)
         {
             var span = new SKRect(absX, absY, absX + item.Width, absY);
@@ -1271,6 +1281,10 @@ internal static partial class BoxEngine
     private static bool RendersNothingInline(LayoutNode node) =>
         IsCollapsibleWhitespaceText(node) || node.TagName is "#comment" or "#pi" ||
         node.GetDisplay() == DisplayType.None;
+
+    /// <summary>CSS 2.1 §16.6.1 collapsible white-space characters (excludes U+00A0 NBSP and
+    /// Unicode spaces such as U+2000 en quad).</summary>
+    private static bool IsCssSpace(char c) => c is ' ' or '\t' or '\n' or '\r' or '\f';
 
     /// <summary>A text node holding only collapsible whitespace (no rendered glyph; a no-break
     /// space is content).</summary>
@@ -1929,6 +1943,19 @@ internal static partial class BoxEngine
                 // §16.2/UAX #9 subset reversal), so measuring it keeps width and fragments
                 // in agreement with what painting draws.
                 var rendered = node.RenderedText();
+                // §16.6.1: collapsible spaces are removed only at line start/end or after another
+                // collapsible space — not at inline element boundaries. The parser trims leaf
+                // text as if it stood alone; restore those boundary spaces for inline elements so
+                // the first space stays in its own inline box (keeping its background) and the
+                // line loop collapses consecutive or line-edge spaces across siblings.
+                if (display == DisplayType.Inline && !node.TagName.StartsWith('#') &&
+                    ws is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+                {
+                    if (node.TrimmedLeadingSpace && (rendered.Length == 0 || !IsCssSpace(rendered[0])))
+                        rendered = " " + rendered;
+                    if (node.TrimmedTrailingSpace && (rendered.Length == 0 || !IsCssSpace(rendered[^1])))
+                        rendered += " ";
+                }
                 var segments = ws is WhiteSpace.Pre or WhiteSpace.PreWrap or WhiteSpace.PreLine
                                && rendered.Contains('\n')
                     ? rendered.Split('\n')
