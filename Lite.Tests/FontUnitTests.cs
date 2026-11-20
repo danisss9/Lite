@@ -95,6 +95,38 @@ public static class FontUnitTests
         True(FontRegistry.Resolve(family, 400, false) is null, "@font-face faces do not survive Clear()");
     }
 
+    [Test]
+    public static void FontFamilyList_FallsBackToLaterFamilyForMissingGlyphsAndIgnoresBidiControls()
+    {
+        // CSS 2.1 §15.2 / §15.3: missing glyphs fall back through the element's font-family list
+        // before trying system symbol fallbacks (font-family-013, fonts-013); default-ignorable
+        // bidi control characters must not trigger fallback (fonts-011).
+        var ahemPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Lite.Conformance", "vendor", "wpt", "fonts", "Ahem.ttf");
+        if (File.Exists(ahemPath)) FontRegistry.RegisterFile(ahemPath);
+
+        var page = Parse(
+            "<span id=\"fb\" style=\"font-family: Ahem, 'Times New Roman'\">&#x0162;&#x0119;&#x015F;&#x0163;</span>" +
+            "<span id=\"bidi\" style=\"font-family: Ahem\">X&#x202E;X&#x202C;</span>");
+        var fbEl = Find(page, "fb")!;
+        var fbNode = fbEl.Children.Count > 0 ? fbEl.Children[0] : fbEl;
+        var families = fbNode.GetFontFamilies();
+        True(families.Length >= 2, $"expected fallback chain, got [{string.Join(", ", families)}]");
+        if (FontRegistry.HasFamily("Ahem"))
+        {
+            using var fbFont = TextMeasure.CreateFont(fbNode);
+            True(!fbFont.Typeface.FamilyName.Equals("Ahem", StringComparison.OrdinalIgnoreCase),
+                $"Ahem lacks U+0162; expected fallback to Times New Roman, got {fbFont.Typeface.FamilyName}");
+            True(fbFont.Typeface.FamilyName.Equals("Times New Roman", StringComparison.OrdinalIgnoreCase),
+                $"expected Times New Roman from font-family list, got {fbFont.Typeface.FamilyName}");
+
+            var bidiEl = Find(page, "bidi")!;
+            var bidiNode = bidiEl.Children.Count > 0 ? bidiEl.Children[0] : bidiEl;
+            using var bidiFont = TextMeasure.CreateFont(bidiNode);
+            True(bidiFont.Typeface.FamilyName.Equals("Ahem", StringComparison.OrdinalIgnoreCase),
+                $"bidi control chars must not trigger fallback from Ahem, got {bidiFont.Typeface.FamilyName}");
+        }
+    }
+
     private static LayoutNode Parse(string body) => Parser.ParseChildPage(
         $"<!DOCTYPE html><html><head></head><body>{body}</body></html>", isSrcdoc: true, "http://test/", 800, 600).Root;
 

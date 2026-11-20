@@ -26,7 +26,7 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - `Lite/Parser.cs`: 3 lines wiring `ComputedFontWeight` on parsed elements (CSS 2.1 §15.6).
 - `Lite/Parser.Fonts.cs`: new partial file for 6.J font longhand cascade (`OwnFontWeightDeclaration`, `FontWeightOf`).
 - `Lite/Models/LayoutNode.cs`: `ComputedFontWeight` property.
-- `Lite/Extensions/DrawCommandExtensions.cs`: `GetFontBold` reads `TextMeasure.ComputedFontWeight(node) >= 600`.
+- `Lite/Extensions/DrawCommandExtensions.cs`: `GetFontBold` reads `TextMeasure.ComputedFontWeight(node) >= 600`; `GetFontFamilies` returns the full ordered list of available font families for missing-glyph fallback (CSS 2.1 §15.2 / §15.3).
 
 ## Progress
 
@@ -44,3 +44,12 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   - `css/CSS2/fonts/font-weight-015.xht` (fail → manualpending; no failure red)
 - **Still failing (67):** `font-family-rule-*` (16), `font-family-002..006` (10), `font-style-002..004` + `font-matching-rule-001/006` (10), `font-weight-010/011/014` (6), `font-family-invalid-characters-002..004` (6), `font-size-003/014` (4), `fonts-011..013` (3), `font-045` (2), `font-matching-rule-009` (2), `font-size-rule-002` (2), `font-146`, `font-147`, `font-family-013`, `font-family-015`, `font-size-116`, `font-size-121`.
 - **Checks:** units 650/0; curated css21 51/1, wpt 86/2; J.txt 11 pass / 1 manualpending / 67 fail; canary 300/300.
+
+### 2. Per-family missing-glyph fallback and default-ignorable bidi characters
+
+- **Spec:** CSS 2.1 §15.2, §15.3; CSS Fonts 3 §5.2.
+- **Moved (+2 pass, 0 losses):**
+  - `css/CSS2/fonts/font-family-013.xht`
+  - `css/CSS2/fonts/fonts-013.xht`
+- **Still failing (65):** `fonts-011` still needs bidi control-character stripping/zero-width handling (6.G), `fonts-012` needs per-run mixed-font fallback in `Drawer.Text.cs` (6.A), `font-family-015` still shows 36 red pixels (baseline/metric difference between fallback fonts); remaining clusters as above.
+- **Checks:** units 651/0; curated css21 51/1, wpt 86/2; J.txt 13 pass / 1 manualpending / 65 fail; canary 300/300.

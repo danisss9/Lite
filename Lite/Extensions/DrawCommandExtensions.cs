@@ -2007,9 +2007,15 @@ public static class StyleExtensions
 
     // Resolved font-family lists: the first part that names an AVAILABLE font (a provisioned
     // test font or an installed family, matched exactly apart from case) and its resolved name.
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> s_fontFamilyCache = new();
+    private static readonly string[] s_defaultFontFamilies = ["Arial"];
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string[]> s_fontFamilyCache = new();
 
-    public static string GetFontFamily(this LayoutNode node)
+    public static string GetFontFamily(this LayoutNode node) => GetFontFamilies(node)[0];
+
+    /// <summary>The ordered list of available font families from the node's computed 'font-family'
+    /// list (CSS 2.1 §15.3). The first entry is the primary family; subsequent entries are tried
+    /// when a character's glyph is missing from an earlier family (§15.2 / §15.3).</summary>
+    public static string[] GetFontFamilies(this LayoutNode node)
     {
         var value = node.TryResolveStyle(PropertyNames.FontFamily, out var ov)
             ? ov
@@ -2021,19 +2027,19 @@ public static class StyleExtensions
         // the suite's provisioned font literally named 'inherit').
         var trimmedValue = value.Trim();
         if (trimmedValue.Equals("inherit", StringComparison.OrdinalIgnoreCase))
-            return node.Parent is { } parent ? parent.GetFontFamily() : "Arial";
-        if (string.IsNullOrEmpty(value) || trimmedValue is "initial" or "unset" or "none") return "Arial";
+            return node.Parent is { } parent ? parent.GetFontFamilies() : s_defaultFontFamilies;
+        if (string.IsNullOrEmpty(value) || trimmedValue is "initial" or "unset" or "none") return s_defaultFontFamilies;
         return s_fontFamilyCache.GetOrAdd(value, ResolveFontFamilyList);
     }
 
-    private static string ResolveFontFamilyList(string value)
+    private static string[] ResolveFontFamilyList(string value)
     {
-        // §15.2? family-list matching: each name is tried in order; a QUOTED name's internal
+        // §15.3 family-list matching: each name is tried in order; a QUOTED name's internal
         // whitespace is significant ("CSSTest   FamilyName" with three spaces must NOT match
         // the provisioned "CSSTest FamilyName" — Skia's FromFamilyName would fuzzy-match it),
-        // and matching is case-insensitive. The first part that names an available font wins;
-        // generic keywords map to their system implementations.
-        string? firstPart = null;
+        // and matching is case-insensitive. Every available family is kept in order so missing
+        // glyphs can fall back through the list (§15.2); generic keywords terminate the list.
+        var resolved = new List<string>();
         foreach (var rawPart in value.Split(','))
         {
             var part = rawPart.Trim();
@@ -2044,26 +2050,40 @@ public static class StyleExtensions
             // implementation; it is never an ordinary family. A quoted "sans-serif" is just a
             // family name — the test suites provision fonts under exactly those names to prove
             // the difference, so the keyword must not reach the registry or it renders in them.
-            if (!quoted && GenericFamily(name) is { } generic) return generic;
-            firstPart ??= name;
+            if (!quoted && GenericFamily(name) is { } generic)
+            {
+                if (!resolved.Contains(generic, StringComparer.OrdinalIgnoreCase)) resolved.Add(generic);
+                break;
+            }
+            if (quoted && Lite.Layout.FontRegistry.HasFamily(name))
+            {
+                if (!resolved.Contains(name, StringComparer.OrdinalIgnoreCase)) resolved.Add(name);
+                continue;
+            }
             var mapped = name switch
             {
                 "system-ui" or "ui-sans-serif" or "-apple-system" or "BlinkMacSystemFont" => Lite.Layout.PlatformFonts.SystemUi,
                 "monospace" or "ui-monospace" or "Courier" or "Courier New" => Lite.Layout.PlatformFonts.Monospace,
                 _ => name,
             };
-            if (Lite.Layout.FontRegistry.HasFamily(mapped)) return mapped;
+            if (Lite.Layout.FontRegistry.HasFamily(mapped))
+            {
+                if (!resolved.Contains(mapped, StringComparer.OrdinalIgnoreCase)) resolved.Add(mapped);
+                continue;
+            }
             using var probe = SKTypeface.FromFamilyName(mapped, SKFontStyleWeight.Normal,
                 SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
             if (probe is not null && string.Equals(probe.FamilyName, mapped, StringComparison.OrdinalIgnoreCase))
-                return mapped;
+            {
+                if (!resolved.Contains(mapped, StringComparer.OrdinalIgnoreCase)) resolved.Add(mapped);
+            }
             // Not available: keep trying the remaining parts.
         }
         // Nothing in the list resolved: the fallback is the UA DEFAULT font — the same face an
         // element without any font-family renders in — NOT Skia's fuzzy match of the unknown
         // name (a closest-face pick like Segoe UI differs from the reference's default and
         // fails the whole unknown-family family: font-family-name-017..024).
-        return "Arial";
+        return resolved.Count > 0 ? [.. resolved] : s_defaultFontFamilies;
     }
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> s_genericFamilies =

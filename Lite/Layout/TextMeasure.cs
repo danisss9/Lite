@@ -15,20 +15,36 @@ internal static class TextMeasure
         var size = Math.Max(0f, node.GetFontSize());
         var weight = ComputedFontWeight(node);
         var italic = node.GetFontItalic();
-        var typeface = ResolveTypeface(node.GetFontFamily(), weight, italic);
+        var families = node.GetFontFamilies();
+        var typeface = ResolveTypeface(families[0], weight, italic);
 
-        // If the node has short text (pseudo-element content), check for missing glyphs
-        // and fall back to a typeface with broader Unicode coverage.
+        // CSS 2.1 §15.2 / §15.3: when the primary family lacks glyphs for the text, try the
+        // remaining families in the node's 'font-family' list in order (font-family-013,
+        // fonts-013, font-family-015) before falling back to system symbol fonts.
         var text = node.DisplayText;
-        if (!string.IsNullOrEmpty(text) && text.Length <= 20 && !ContainsAllGlyphs(typeface, text))
+        if (!string.IsNullOrEmpty(text) && (families.Length > 1 || text.Length <= 20) && !ContainsAllGlyphs(typeface, text))
         {
-            foreach (var fallback in PlatformFonts.SymbolFallbacks)
+            var matched = false;
+            for (var i = 1; i < families.Length; i++)
             {
-                var fb = SystemTypeface(fallback, (SKFontStyleWeight)weight, Slant(italic));
-                if (fb != null && ContainsAllGlyphs(fb, text))
+                var fb = ResolveTypeface(families[i], weight, italic);
+                if (ContainsAllGlyphs(fb, text))
                 {
                     typeface = fb;
+                    matched = true;
                     break;
+                }
+            }
+            if (!matched && text.Length <= 20)
+            {
+                foreach (var fallback in PlatformFonts.SymbolFallbacks)
+                {
+                    var fb = SystemTypeface(fallback, (SKFontStyleWeight)weight, Slant(italic));
+                    if (fb != null && ContainsAllGlyphs(fb, text))
+                    {
+                        typeface = fb;
+                        break;
+                    }
                 }
             }
         }
@@ -146,11 +162,19 @@ internal static class TextMeasure
         s_systemTypefaces.GetOrAdd((family, weight, slant),
             static key => SKTypeface.FromFamilyName(key.Family, key.Weight, SKFontStyleWidth.Normal, key.Slant));
 
+    /// <summary>Unicode Default_Ignorable / bidi format characters carry no visible glyph and
+    /// must not trigger font fallback (CSS Fonts 3 §5.2; fonts-011).</summary>
+    private static bool IsDefaultIgnorable(char c) =>
+        c is '\u00AD' or '\u034F' or '\u061C' or '\uFEFF'
+          or (>= '\u200B' and <= '\u200F')
+          or (>= '\u202A' and <= '\u202E')
+          or (>= '\u2060' and <= '\u206F');
+
     private static bool ContainsAllGlyphs(SKTypeface typeface, string text)
     {
         foreach (var c in text)
         {
-            if (c == ' ') continue;
+            if (c == ' ' || IsDefaultIgnorable(c)) continue;
             if (typeface.GetGlyphs(c.ToString()) is ushort[] glyphs
                 && glyphs.Length > 0 && glyphs[0] == 0)
                 return false;
