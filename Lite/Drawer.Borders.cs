@@ -238,8 +238,22 @@ internal static partial class Drawer
             c.Alpha);
     }
 
+    // CSS 2.1 §8.5.3: 3D border styles ('groove', 'ridge', 'inset', 'outset') derive
+    // light and dark bevel shades from the border color. Multiplicative scaling alone leaves
+    // black (#000000) unchanged, making default-color groove/ridge borders indistinguishable
+    // from solid (groove-default, ridge-default). Lift near-black colors toward white so the
+    // two bevel halves stay visually distinct while preserving pure-channel scaling on hues.
     private static SKColor LightenColor(SKColor c, float factor)
     {
+        if (c.Red + c.Green + c.Blue < 96)
+        {
+            const float lift = 0.4f;
+            return new SKColor(
+                (byte)Math.Clamp(c.Red + (255 - c.Red) * lift, 0, 255),
+                (byte)Math.Clamp(c.Green + (255 - c.Green) * lift, 0, 255),
+                (byte)Math.Clamp(c.Blue + (255 - c.Blue) * lift, 0, 255),
+                c.Alpha);
+        }
         return new SKColor(
             (byte)Math.Clamp(c.Red * factor, 0, 255),
             (byte)Math.Clamp(c.Green * factor, 0, 255),
