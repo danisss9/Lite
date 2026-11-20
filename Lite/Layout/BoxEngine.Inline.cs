@@ -332,12 +332,32 @@ internal static partial class BoxEngine
         void CommitLine()
         {
             TrimSpaceBeforeClosingEdges();
+            // §16.6.1: a space at the end of a line is removed — the box it would have made is
+            // gone from the line box, so its font's line-height box must not size the line
+            // either. The removed runs still sit in `placed` (they paint nothing) but the line's
+            // metrics come from the content range only: a trailing run in the block's own font
+            // used to raise the line's above-reach and drop the baseline a pixel against every
+            // other line (font-family-015's two zero-height lines must share one baseline).
+            var lineEnd = placed.Count;
+            while (lineEnd > lineStart)
+            {
+                var it = placed[lineEnd - 1].item;
+                if (it.Kind == InlineItemKind.Text && (it.Text ?? "").IsCssWhiteSpaceOnly() &&
+                    it.Node.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap))
+                { lineEnd--; continue; }
+                if (it.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow or
+                    InlineItemKind.Float)
+                { lineEnd--; continue; }
+                break;
+            }
             // Resolve the final line-box height: start from the baseline-aligned items' reach,
             // then grow outward (below for 'top', above for 'bottom') if those need more room.
-            var above = maxAbove;
-            var below = maxBelow;
+            var (cAbove, cBelow, cBelowSigned, cTopH, cBottomH, cHasBaseline) =
+                LineMetrics(placed, lineStart, lineEnd);
+            var above = cAbove;
+            var below = cBelow;
             // §9.4.2: a line with no content (only empty edgeless inline boxes) is zero-height.
-            if (!LineHasContent()) { above = 0f; below = 0f; maxTopH = 0f; maxBottomH = 0f; }
+            if (!LineHasContent()) { above = 0f; below = 0f; cTopH = 0f; cBottomH = 0f; }
 
             // The strut only counts on a line that actually has content. §9.4.2: a line box with
             // no text, no in-flow content and no inline box with non-zero edges is a ZERO-height
@@ -356,11 +376,11 @@ internal static partial class BoxEngine
                 // (font-family-015's second line must share the first line's baseline). The signed
                 // accumulator equals maxBelow whenever any box reaches below the baseline, so this
                 // only bites on all-negative lines.
-                below = hasBaselineItem ? Math.Max(maxBelowSigned, strutBelow) : strutBelow;
+                below = cHasBaseline ? Math.Max(cBelowSigned, strutBelow) : strutBelow;
             }
-            if (maxTopH > above + below) below = maxTopH - above;
-            if (maxBottomH > above + below) above = maxBottomH - below;
-            var thisLineHeight = above + below > 0f ? above + below : Math.Max(maxTopH, maxBottomH);
+            if (cTopH > above + below) below = cTopH - above;
+            if (cBottomH > above + below) above = cBottomH - below;
+            var thisLineHeight = above + below > 0f ? above + below : Math.Max(cTopH, cBottomH);
 
             // The line's used width, ignoring trailing collapsible whitespace — it is removed at
             // the end of a line (§16.6.1), so counting it would land a right-aligned line a space
@@ -715,7 +735,7 @@ internal static partial class BoxEngine
                     placed.RemoveRange(last + 1, placed.Count - last - 1);
                     placedSource.RemoveRange(last + 1, placedSource.Count - last - 1);
                     if (placedLine.Count > last + 1) placedLine.RemoveRange(last + 1, placedLine.Count - last - 1);
-                    (maxAbove, maxBelow, maxBelowSigned, maxTopH, maxBottomH, hasBaselineItem) = LineMetrics(placed, lineStart);
+                    (maxAbove, maxBelow, maxBelowSigned, maxTopH, maxBottomH, hasBaselineItem) = LineMetrics(placed, lineStart, placed.Count);
                     CommitLine();
                     itemIndex = src;
                     continue;
@@ -730,7 +750,7 @@ internal static partial class BoxEngine
                     // placedLine runs parallel to placed: the re-placed items must not inherit
                     // the removed entries' line numbers (their wrapper fragments fold per line).
                     if (placedLine.Count > cut) placedLine.RemoveRange(cut, placedLine.Count - cut);
-                    (maxAbove, maxBelow, maxBelowSigned, maxTopH, maxBottomH, hasBaselineItem) = LineMetrics(placed, lineStart);
+                    (maxAbove, maxBelow, maxBelowSigned, maxTopH, maxBottomH, hasBaselineItem) = LineMetrics(placed, lineStart, placed.Count);
                     CommitLine();
                     itemIndex = resume - 1;
                     continue;
@@ -1477,16 +1497,17 @@ internal static partial class BoxEngine
     }
 
     /// <summary>Recomputes the line's baseline accumulators from what is placed on it — needed
-    /// after the line is cut back to an earlier break opportunity. Below is the 0-floored reach
-    /// the float-band heuristics read; BelowSigned is the §10.8.1 signed bottom edge the
-    /// committed line height takes (negative when every box ends above the baseline).</summary>
+    /// after the line is cut back to an earlier break opportunity, and by CommitLine over the
+    /// line's content range. Below is the 0-floored reach the float-band heuristics read;
+    /// BelowSigned is the §10.8.1 signed bottom edge the committed line height takes (negative
+    /// when every box ends above the baseline).</summary>
     private static (float Above, float Below, float BelowSigned, float TopH, float BottomH, bool HasBaseline) LineMetrics(
-        List<(InlineItem item, float relX, float relY)> placed, int lineStart)
+        List<(InlineItem item, float relX, float relY)> placed, int lineStart, int lineEnd)
     {
         float above = 0f, below = 0f, topH = 0f, bottomH = 0f;
         var belowSigned = float.NegativeInfinity;
         var hasBaseline = false;
-        for (var k = lineStart; k < placed.Count; k++)
+        for (var k = lineStart; k < lineEnd; k++)
         {
             var it = placed[k].item;
             if (it.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow) continue;

@@ -250,6 +250,28 @@ public static class FontUnitTests
         True(p.Box.ContentBox.Height < 0.5f, $"the paragraph collapses to 0 height, got {p.Box.ContentBox.Height}");
     }
 
+    [Test]
+    public static void TrailingWhitespaceRun_DoesNotSizeTheLineBox()
+    {
+        // CSS 2.1 16.6.1: a space at the end of a line is removed - the box it would have made
+        // is gone from the line box, so its font's line-height box must not size the line either.
+        // A trailing run in the block's own font raised the line's above-reach and dropped that
+        // line's baseline a pixel against the others (font-family-015's two zero-height lines
+        // must share one baseline).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head></head><body style=\"margin:0\">" +
+            "<p style=\"font-size:40px;line-height:0\">" +
+            "<span id=\"a\" style=\"font-size:40px\">X</span>" +
+            "<span style=\"font: 80px serif\"> </span><br/>" +
+            "<span id=\"b\" style=\"font-size:40px\">X</span></p>" +
+            "</body></html>", isSrcdoc: true, "http://test/", 800, 600).Root;
+        BoxEngine.Layout(page, 800, 600);
+        var a = Find(page, "a")!;
+        var b = Find(page, "b")!;
+        True(MathF.Abs(a.Box.ContentBox.Top - b.Box.ContentBox.Top) < 0.5f,
+            $"both lines' baselines coincide (the 80px trailing space is removed), got tops {a.Box.ContentBox.Top} and {b.Box.ContentBox.Top}");
+    }
+
     private static LayoutNode Parse(string body) => Parser.ParseChildPage(
         $"<!DOCTYPE html><html><head></head><body>{body}</body></html>", isSrcdoc: true, "http://test/", 800, 600).Root;
 
