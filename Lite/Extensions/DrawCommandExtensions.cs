@@ -1041,8 +1041,18 @@ public static class StyleExtensions
 
     public static VerticalAlignType GetVerticalAlign(this LayoutNode node)
     {
-        var raw = node.TryResolveStyle("vertical-align", out var ov)
-            ? ov : node.Style.GetPropertyValueSafe("vertical-align");
+        var hasOwnValue = node.TryResolveStyle("vertical-align", out var ov);
+        // CSS 2.1 §17.5.4: 'vertical-align' on a table cell aligns the cell's content in its
+        // row; it is not an inline alignment for the cell's anonymous text. A synthesized #text
+        // box borrows the cell's style object, so it read the cell's 'middle' as its own and
+        // pushed the cell's text below an adjacent span's (first-letter-selector-007's
+        // reference vs test). An own value (a pseudo rule's, or the baseline ResetNonInherited
+        // boxes carry) still wins; an inline element inside the cell has its own style and its
+        // #text child's parent is that element, not the cell.
+        if (!hasOwnValue && node.TagName.StartsWith('#') &&
+            node.Parent?.GetDisplay() == DisplayType.TableCell)
+            return VerticalAlignType.Baseline;
+        var raw = hasOwnValue ? ov : node.Style.GetPropertyValueSafe("vertical-align");
         return raw?.Trim() switch
         {
             "top" => VerticalAlignType.Top,

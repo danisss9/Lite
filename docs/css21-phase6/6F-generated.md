@@ -27,6 +27,9 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   `::first-letter`, with the originating `IElement` (needed for the LI ordinal). No other change.
 - `Lite/Extensions/DrawCommandExtensions.cs` (`InsideMarkerIndent`): returns 0 when the item has
   a `#pseudo-marker` child, because the real marker box now advances the first line itself.
+- `Lite/Extensions/DrawCommandExtensions.cs` (`GetVerticalAlign`): a synthesized `#text` child of
+  a table cell without its own value returns baseline (§17.5.4; the cell's `middle` is a
+  row-alignment, not an inline value). Fixes the reference half of `first-letter-selector-007`.
 - `Lite.Tests/GeneratedContentTests.cs` is new (my lane's tests).
 
 ## Progress
@@ -61,6 +64,18 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   band), the round-dot family below, `list-style-type-017`, `list-style-020`, `c566`.
 - **Checks:** units 652 passed; css21 51/1; wpt 86/2; lane list official 10→27, WPT 0→17 (44
   total, 0 losses); canary 300/300.
+
+### Cell text and the ::first-letter tail keep the baseline (§17.5.4)
+
+- **Moved:** `first-letter-selector-007` (WPT; the official twin already passed after the first
+  commit). A table cell's anonymous `#text` borrowed the cell's `vertical-align: middle` as an
+  inline value, so mixed cell content (`<span>F</span>iller Text`) put the tail 2px below the
+  span; that is the reference page of this test, while the test's split `::first-letter` tail had
+  been given the initial baseline, so the two no longer matched. Synthesized `#text` children of
+  a table cell now start from baseline unless they carry an own value; the first-letter tail is
+  also explicitly baseline.
+- **Checks:** units 658; css21 51/1; wpt 86/2; lane list 46→47 (official 28, WPT 19), 0 losses;
+  canary 300/300.
 
 ### The implicit 'list-item' counter (§12.4)
 

@@ -67,6 +67,33 @@ public static class GeneratedContentTests
         Equal("a", letter!.DisplayText);
     }
 
+    [Test]
+    public static void CellText_IsBaselineAlignedNextToASpan()
+    {
+        // §17.5.4: the cell's 'middle' aligns its content in the row, it is not an inline value
+        // for the cell's anonymous text. The reference of first-letter-selector-007 puts a span
+        // beside the cell's text; both must share the baseline.
+        var cell = Find(Parse("<table><tr><td><span>F</span>iller Text</td></tr></table>",
+            "td { vertical-align: middle; }"), "TD")!;
+        var text = Find(cell, "#text")!;
+        True(text.GetVerticalAlign() == VerticalAlignType.Baseline,
+            $"cell text aligns {text.GetVerticalAlign()}");
+    }
+
+    [Test]
+    public static void FirstLetterTail_IsBaselineAlignedInATableCell()
+    {
+        // The split-off tail is an inline box of its own, so the cell's 'middle' must not reach
+        // it either (first-letter-selector-007).
+        var cell = Find(Parse("<table><tr><td>Filler Text</td></tr></table>",
+            "td { vertical-align: middle; } td:first-letter { color: green; }"), "TD")!;
+        var letter = Find(cell, "#pseudo-first-letter");
+        var tail = Find(cell, "#text");
+        True(letter is not null && tail is not null, "first-letter split missing");
+        True(tail!.GetVerticalAlign() == VerticalAlignType.Baseline,
+            $"tail aligns {tail.GetVerticalAlign()}");
+    }
+
     private static LayoutNode Parse(string body, string css)
     {
         var page = Parser.ParseChildPage(

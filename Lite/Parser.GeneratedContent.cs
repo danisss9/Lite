@@ -381,6 +381,11 @@ internal static partial class Parser
         var rest = new LayoutNode(null, "#text", text[len..], host.Style);
         rest.ResetNonInheritedStyles();
         rest.StyleOverrides["display"] = "inline";
+        // The tail is an inline child once the letter is split off, so it starts from the
+        // initial baseline rather than reading the host's non-inherited 'vertical-align'
+        // (a table cell's UA 'middle' pushed the rest of the text 2px down:
+        // first-letter-selector-007).
+        rest.StyleOverrides["vertical-align"] = "baseline";
 
         // The host keeps its box (and its own styles) but hands its text to the two new children,
         // which flow inside it as ordinary inline content.
