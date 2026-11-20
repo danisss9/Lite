@@ -135,4 +135,28 @@ public static class BorderStyleTests
         new Lite.Scripting.Dom.JsStyle(p).clip = "auto";
         if (p.GetClipRect() is not null) throw new Exception("style.clip = 'auto' must clear the clip rect");
     }
+
+    [Test]
+    public static void UndeclaredBorderColor_IsTheElementsOwnColor()
+    {
+        // CSS 2.1 §8.5.2: the initial 'border-color' is the value of 'color'. c5511-brdr-tw-001:
+        // 'border-style: solid; color: green' with no border-color paints a green border, and an
+        // inherited 'color' counts too; a declared border-color still wins.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><style>#a{border-style:solid;color:green}" +
+            " #w{color:blue} #b{border-style:solid} #c{border-style:solid;color:green;border-left-color:red}</style>" +
+            "<div id=\"a\">x</div><div id=\"w\"><div id=\"b\">y</div></div><div id=\"c\">z</div>",
+            isSrcdoc: true, "http://test/", 200, 200);
+        BoxEngine.Layout(page.Root, 200, 200);
+        LayoutNode? Find(LayoutNode n, string id) => n.Id == id ? n : n.Children.Select(c => Find(c, id)).FirstOrDefault(f => f is not null);
+        var a = Find(page.Root, "a")!;
+        foreach (var (side, c) in new[] { ("top", a.GetBorderTopColor()), ("right", a.GetBorderRightColor()),
+                     ("bottom", a.GetBorderBottomColor()), ("left", a.GetBorderLeftColor()) })
+            if (c != new SkiaSharp.SKColor(0, 128, 0)) throw new Exception($"#a {side} border must be green, got {c}");
+        var b = Find(page.Root, "b")!.GetBorderTopColor();
+        if (b != new SkiaSharp.SKColor(0, 0, 255)) throw new Exception($"#b border must take the inherited blue color, got {b}");
+        var cNode = Find(page.Root, "c")!;
+        if (cNode.GetBorderLeftColor() != new SkiaSharp.SKColor(255, 0, 0)) throw new Exception("a declared border-left-color must win");
+        if (cNode.GetBorderTopColor() != new SkiaSharp.SKColor(0, 128, 0)) throw new Exception("#c undeclared top border must be green");
+    }
 }

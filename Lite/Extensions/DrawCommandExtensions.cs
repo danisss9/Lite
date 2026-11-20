@@ -1810,10 +1810,13 @@ public static class StyleExtensions
         };
     }
 
-    public static SKColor GetBorderTopColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderTopColor, SKColors.Black);
-    public static SKColor GetBorderRightColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderRightColor, SKColors.Black);
-    public static SKColor GetBorderBottomColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderBottomColor, SKColors.Black);
-    public static SKColor GetBorderLeftColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderLeftColor, SKColors.Black);
+    // CSS 2.1 §8.5.2: the initial value of 'border-*-color' is "the value of the 'color'
+    // property" — an undeclared border colour is the element's own computed colour, not
+    // black (c5511-brdr-tw-001: 'border-style: solid; color: green' paints a green border).
+    public static SKColor GetBorderTopColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderTopColor, null);
+    public static SKColor GetBorderRightColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderRightColor, null);
+    public static SKColor GetBorderBottomColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderBottomColor, null);
+    public static SKColor GetBorderLeftColor(this LayoutNode node) => GetColor(node, PropertyNames.BorderLeftColor, null);
 
     public static bool IsUnderline(this LayoutNode node) => HasDecoration(node, "underline");
 
@@ -2163,7 +2166,9 @@ public static class StyleExtensions
         });
     }
 
-    private static SKColor GetColor(LayoutNode node, string propertyName, SKColor defaultColor)
+    /// <param name="defaultColor">The colour for an undeclared value; <c>null</c> means the
+    /// property's initial value is the element's own 'color' (the border colours, §8.5.2).</param>
+    private static SKColor GetColor(LayoutNode node, string propertyName, SKColor? defaultColor)
     {
         // `currentColor` resolves to the element's computed `color` (CSS Color §4.4). Check the
         // serialized value FIRST — AngleSharp exposes currentColor as a black Color sentinel,
@@ -2213,7 +2218,7 @@ public static class StyleExtensions
             }
         }
 
-        return defaultColor;
+        return defaultColor ?? node.GetColor();
     }
 
     internal static SKColor? ParseCssColor(string value)
