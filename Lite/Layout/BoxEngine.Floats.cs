@@ -139,6 +139,12 @@ internal static partial class BoxEngine
     {
         var fontSize = child.GetFontSize();
         var margin = child.GetMargin(contentW, viewportHeight, fontSize);
+        // §10.3.5 (non-replaced) / §10.3.2 (replaced): a floated box's computed 'auto' left/right
+        // margins are USED as 0 — the generic resolver's (total-size)/2 split is the in-flow
+        // block's §10.3.3 centering rule, which does not apply here (float-non-replaced-width-
+        // 001/003/005, float-replaced-width-001/003/005/006/011).
+        if (child.IsAutoMarginLeft()) margin.Left = 0f;
+        if (child.IsAutoMarginRight()) margin.Right = 0f;
         var padding = child.GetPadding(contentW, viewportHeight, fontSize);
         var border = child.GetBorderWidth();
 
@@ -301,6 +307,10 @@ internal static partial class BoxEngine
         var side = node.GetFloat();
         var fontSize = node.GetFontSize();
         var margin = node.GetMargin(maxWidth, viewportHeight, fontSize);
+        // §10.3.5 / §10.3.2: a float's 'auto' left/right margins are used as 0 — the generic
+        // resolver's centering split is the in-flow §10.3.3 rule.
+        if (node.IsAutoMarginLeft()) margin.Left = 0f;
+        if (node.IsAutoMarginRight()) margin.Right = 0f;
         var padding = node.GetPadding(maxWidth, viewportHeight, fontSize);
         var border = node.GetBorderWidth();
 
