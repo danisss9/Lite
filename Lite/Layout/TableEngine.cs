@@ -53,6 +53,8 @@ internal static class TableEngine
         float contentW,
         float viewportW, float viewportH)
     {
+        // §10.3.7 / §10.6.4: an abs-pos child of the table needs a static position (6.D).
+        BoxEngine.RecordTableStaticPositions(table, contentX, contentY, contentW);
         var rows = CollectRows(table);
         if (rows.Count == 0) return LayoutCaptionsOnly(table, contentX, contentY, contentW, viewportW, viewportH);
 
@@ -405,12 +407,25 @@ internal static class TableEngine
     private static string? RawDisplay(LayoutNode node) =>
         (node.TryResolveStyle("display", out var d) ? d : node.Style.GetPropertyValueSafe("display"))?.Trim();
 
+    /// <summary>§9.7 (dis-pos-flo): an absolutely or fixed positioned box — or a floated one —
+    /// computes its 'display' to 'block', so a table-internal box whose specified display is a
+    /// column/caption keyword has LEFT the table's structure (§17.2.1: internal boxes only
+    /// participate within table parents; the blockified box takes no part in columns, rows or
+    /// caption bands). It is an ordinary block: it neither spans columns nor paints the §17.5.1
+    /// cell-area band (top-applies-to-005: the abs 'table-column-group' child painted only the
+    /// cells' slice of background instead of its own border box).</summary>
+    private static bool BlockifiedOutOfTableStructure(LayoutNode node) =>
+        node.GetFloat() != FloatType.None
+        || node.GetPosition() is PositionType.Absolute or PositionType.Fixed;
+
     /// <summary>A column: the COL element or any 'display: table-column' box (GetDisplay maps
     /// both column keywords to None since they generate no box of their own).</summary>
-    internal static bool IsColumn(LayoutNode node) => node.TagName == "COL" || RawDisplay(node) == "table-column";
+    internal static bool IsColumn(LayoutNode node) => !BlockifiedOutOfTableStructure(node) &&
+        (node.TagName == "COL" || RawDisplay(node) == "table-column");
 
     /// <summary>A column group: the COLGROUP element or any 'display: table-column-group' box.</summary>
-    internal static bool IsColumnGroup(LayoutNode node) => node.TagName == "COLGROUP" || RawDisplay(node) == "table-column-group";
+    internal static bool IsColumnGroup(LayoutNode node) => !BlockifiedOutOfTableStructure(node) &&
+        (node.TagName == "COLGROUP" || RawDisplay(node) == "table-column-group");
 
     /// <summary>The indices of columns removed from the rendering by 'visibility: collapse'
     /// (§17.5.1). visibility is inherited, so a collapsed group's own col children read
@@ -464,8 +479,11 @@ internal static class TableEngine
         return caption is null ? 0f : LayoutCaptionBlock(caption, contentX, contentY, contentW, viewportW, viewportH);
     }
 
-    /// <summary>The table's caption: the HTML CAPTION element or any 'display: table-caption' box.</summary>
-    internal static bool IsCaption(LayoutNode node) => node.TagName == "CAPTION" || RawDisplay(node) == "table-caption";
+    /// <summary>The table's caption: the HTML CAPTION element or any 'display: table-caption' box
+    /// that is still part of the table's structure (§9.7 blockifies an abs/fixed/floated
+    /// table-caption box to 'block' — it is ordinary out-of-flow content, not a caption band).</summary>
+    internal static bool IsCaption(LayoutNode node) => !BlockifiedOutOfTableStructure(node) &&
+        (node.TagName == "CAPTION" || RawDisplay(node) == "table-caption");
 
     private static float LayoutCaptionBlock(LayoutNode caption, float x, float y, float width,
         float viewportW, float viewportH)

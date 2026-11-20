@@ -92,6 +92,45 @@ public static class AbsPosContainingBlockTests
             $"abs box must end at #c's inner right edge (205), got {a.Box.ContentBox.Right}");
     }
 
+    [Test]
+    public static void AbsPosTableChild_TakesTheTableStartAsItsStaticPosition()
+    {
+        // top-applies-to-005 / left-applies-to-005: §9.7 blockifies an abs-pos
+        // 'table-column-group' child of a table; with one offset 'auto' on each axis its static
+        // position (§10.3.7 / §10.6.4) is the start of the table's content area (40,30), not
+        // the initial containing block's corner.
+        var root = Layout("<!DOCTYPE html><style>body{margin:30px 40px}" +
+            "#t{display:table}#r{display:table-row}#c{display:table-cell}" +
+            "#a,#b{position:absolute;width:20px;height:20px}" +
+            "#a{display:table-column-group;top:0}#b{display:table-caption;left:0}</style>" +
+            "<div id=\"t\"><div id=\"a\"></div><div id=\"b\"></div><div id=\"r\"><div id=\"c\">x</div></div></div>");
+        var a = Find(root, "DIV", "a");
+        var b = Find(root, "DIV", "b");
+        True(a is not null && b is not null, "nodes missing");
+        True(Math.Abs(a!.Box.ContentBox.Left - 40f) < 0.5f && a.Box.ContentBox.Top == 0f,
+            $"#a (top:0, left:auto) must sit at 40,0, got {a.Box.ContentBox.Location}");
+        True(b!.Box.ContentBox.Left == 0f && Math.Abs(b.Box.ContentBox.Top - 30f) < 0.5f,
+            $"#b (left:0, top:auto) must sit at 0,30, got {b.Box.ContentBox.Location}");
+    }
+
+    [Test]
+    public static void AbsPosTableColumnGroupChild_PaintsItsOwnBorderBox()
+    {
+        // top-applies-to-005 / -006: §9.7 blockifies the abs-pos child's 'table-column-group'
+        // (and 'table-column') display to 'block', so it is NOT a column of the table — its
+        // background paints its own border box (§14.2), not the §17.5.1 cell-area band, which
+        // clipped the green square to the table's own (18px-tall) box.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            "#t{display:table}#a{display:table-column-group;position:absolute;top:0;left:auto;width:96px;height:96px;background:green}" +
+            "</style><div id=\"t\"><div id=\"a\"></div><div id=\"r\"><div id=\"c\">x</div></div></div>");
+        var bitmap = Drawer.DrawToBitmap(400, 200, root, new Viewport { ViewportHeight = 200 });
+        using (bitmap)
+        {
+            True(bitmap.GetPixel(50, 10) == SKColors.Green && bitmap.GetPixel(50, 90) == SKColors.Green,
+                $"the whole 96px green square must paint, got (50,10)={bitmap.GetPixel(50, 10)} (50,90)={bitmap.GetPixel(50, 90)}");
+        }
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);
