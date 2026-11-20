@@ -36,6 +36,20 @@ public static class XhtmlTests
     }
 
     [Test]
+    public static void XhtmlAttrFunction_MatchesAttributeNamesCaseSensitively()
+    {
+        // CSS 2.1 12.2 attr(X) takes the attribute's name as the document language defines it:
+        // XML names are case-sensitive, so in XHTML 'attr(Title)' does not find 'title'
+        // (content-attr-case-002), while HTML's case-insensitive names do (content-attr-case-001).
+        using var server = new XmlTestServer();
+        using var session = new BrowserSession();
+        var page = Parser.TraversePage(new NavigationRequest(server.BaseUrl + "/attr-case.xht"), 800, 600, session);
+        True(Parser.IsXmlDocument, "the document mode must be XML");
+        var before = Find(page.Root, "#pseudo-before");
+        True(before is null || before.DisplayText == "", $"attr(Title) leaked '{before?.DisplayText}'");
+    }
+
+    [Test]
     public static void XhtmlInlineStyleAttribute_Cascades()
     {
         // XML parsing builds generic elements, but an element in the XHTML namespace is an HTML
@@ -129,6 +143,14 @@ public static class XhtmlTests
                     await ctx.Response.WriteAsync(
                         "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>x</title></head>" +
                         "<body><p style=\"color: green; position: relative; left: 100px\">x</p></body></html>");
+                    return;
+                }
+                if (ctx.Request.Path == "/attr-case.xht")
+                {
+                    await ctx.Response.WriteAsync(
+                        "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>x</title>" +
+                        "<style>#t:before { content: attr(Title); }</style></head>" +
+                        "<body><div id=\"t\" title=\"FAIL\"></div></body></html>");
                     return;
                 }
                 if (ctx.Request.Path == "/malformed.xht")

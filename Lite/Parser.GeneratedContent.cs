@@ -508,11 +508,13 @@ internal static partial class Parser
 
     /// <summary>CSS 2.1 §12.2 attr(X): the named attribute's value. An exact match is preferred;
     /// HTML's attribute names are ASCII case-insensitive, so `attr(Title)` finds `title`
-    /// (content-attr-case-001). XML keeps an exact match first, which is all an XML document
-    /// can distinguish anyway.</summary>
+    /// (content-attr-case-001). XML attribute names are case-sensitive, so an XML document
+    /// (XHTML served as XML) matches exactly only: `attr(Title)` does not find `title`
+    /// (content-attr-case-002).</summary>
     private static string AttributeValue(LayoutNode node, string name)
     {
         if (node.Attributes.TryGetValue(name, out var exact)) return exact;
+        if (IsXmlDocument) return "";
         foreach (var (key, value) in node.Attributes)
             if (string.Equals(key, name, StringComparison.OrdinalIgnoreCase)) return value;
         return "";
