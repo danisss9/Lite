@@ -997,20 +997,12 @@ internal static partial class BoxEngine
             // 'clear' applies only to block-level boxes and floats (CSS 2.1 §9.5.2); inline-level
             // boxes ignore it. (Text nodes can carry a non-inherited 'clear' from the parent's
             // computed style — honoring it on an inline run would also stall the run collector.)
+            // On a float, 'clear' is §9.5.2 constraint #10 on the float's own top outer edge
+            // (applied inside LayoutFloat / PlaceInRunFloat) — the float is out of flow and never
+            // advances the normal-flow cursor or retires earlier floats for subsequent in-flow content.
             var clear = child.GetClear();
             var isBlockLevel = display == DisplayType.Block || display == DisplayType.ListItem
                             || display == DisplayType.Flex || display == DisplayType.Table;
-            // FLOATS with clear keep the cursor-adjust form (the float's margin box starts at the
-            // cleared position). Block-level boxes are handled inside their branch below, where
-            // the §9.5.2 clearance computation needs the hypothetical border edge.
-            if (clear != ClearType.None && floatSide != FloatType.None)
-            {
-                var clearedForFloat = ApplyClear(clear, floats, runY + pending.Value);
-                RetireFloats(floats, clearedForFloat);
-                // Keep runY + pendingMargin == cleared so the running margin still collapses with the
-                // next box exactly as before (clearance behaviour unchanged).
-                runY = clearedForFloat - pending.Value;
-            }
 
             // Handle floated elements — taken out of normal flow but affect available width
             if (floatSide != FloatType.None)
@@ -1268,8 +1260,7 @@ internal static partial class BoxEngine
                         // 'clear' keeps the block-level branch above, which owns ApplyClear and
                         // the margin-chain interaction.
                         var joinsRunAsFloat = children[i].TagName != "#text" &&
-                            children[i].GetFloat() != FloatType.None &&
-                            children[i].GetClear() == ClearType.None;
+                            children[i].GetFloat() != FloatType.None;
                         if (!joinsRunAsFloat &&
                             (d == DisplayType.Block || d == DisplayType.ListItem || d == DisplayType.Flex || d == DisplayType.Table)) break;
                     }

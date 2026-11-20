@@ -149,4 +149,71 @@ public static class FloatSizingTests
             $"the shifted first line keeps its 40px indent, got left {ib.Box.ContentBox.Left}");
         True(ib.Box.ContentBox.Top >= 9.5f, $"the line moves below the float, got top {ib.Box.ContentBox.Top}");
     }
+    [Test]
+    public static void EmptyLine_AvoidsFloatStartingInsideItsHeight()
+    {
+        // floats-wrap-top-below-inline-002l's shape: the second 200x50 inline-block starts a
+        // line at y=50 whose top band (150..400) holds it, but the right float from y=75
+        // narrows the band over the line's height to nothing. §9.5 rule 7: the empty line
+        // shifts down until the content fits — below the right float, at y=150.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'><div style='width:400px'>" +
+            "<div style='float:left;width:150px;height:75px'></div>" +
+            "<div style='float:right;width:300px;height:75px'></div>" +
+            "<span id='a' style='display:inline-block;vertical-align:top;width:200px;height:50px'></span>\n" +
+            "<span id='b' style='display:inline-block;vertical-align:top;width:200px;height:50px'></span>" +
+            "</div></body></html>");
+        var a = FindNode(root, n => n.Id == "a")!;
+        var b = FindNode(root, n => n.Id == "b")!;
+        True(a is not null && b is not null, "span nodes not found");
+        True(a.Box.ContentBox.Top < 0.5f && Math.Abs(a.Box.ContentBox.Left - 150f) < 0.5f,
+            $"the first span sits beside the left float, got {a.Box.ContentBox}");
+        True(Math.Abs(b.Box.ContentBox.Top - 150f) < 0.5f && b.Box.ContentBox.Left < 0.5f,
+            $"the second span's line must move below the lower float, got {b.Box.ContentBox}");
+    }
+
+    [Test]
+    public static void FloatRule3_AllowsExtendingPastContainingBlockWhenNoOppositeFloatOverlap()
+    {
+        // floats-rule3-outside-left-001's shape: a 50px right float in a 500px BFC (x=450..500),
+        // and inside a 'margin-right: 100px' child block (x=0..400) a 425px left float. §9.5.1
+        // rule 7 only forbids extending past the containing block's right edge when another left
+        // float sits to its left; rule 3 only forbids extending past the right float's left edge
+        // (450). Since 425 <= 450 and no left float precedes it, the float stays at y=0.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div style='float:left;width:500px;height:500px'>" +
+            "<div style='float:right;width:50px;height:300px'></div>" +
+            "<div style='margin-right:100px'>" +
+            "<div id='f' style='float:left;width:425px;height:10px'></div>" +
+            "</div></div></body></html>");
+        var f = FindNode(root, n => n.Id == "f")!;
+        True(f is not null, "float not found");
+        True(f.Box.ContentBox.Top < 0.5f && f.Box.ContentBox.Left < 0.5f,
+            $"the 425px left float fits at (0,0) beside the 450..500 right float, got {f.Box.ContentBox}");
+    }
+
+    [Test]
+    public static void ClearedFloat_DoesNotAdvanceNormalFlowCursor()
+    {
+        // floats-zero-height-wrap-001/002 & floats-placement-001: 'clear' on a float is §9.5.2
+        // constraint #10 on the float's own outer top; the float is out of flow and must not push
+        // subsequent normal-flow inline content down to the cleared float's Y.
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'><div style='width:500px'>" +
+            "<div style='float:left;width:10px;height:30px'></div>" +
+            "<div id='f2' style='float:left;clear:left;width:100px;height:0'></div>" +
+            "<span id='s1' style='display:inline-block;vertical-align:bottom;width:300px;height:20px'></span>" +
+            "<span id='s2' style='display:inline-block;vertical-align:bottom;width:300px;height:20px'></span>" +
+            "</div></body></html>");
+        var f2 = FindNode(root, n => n.Id == "f2")!;
+        var s1 = FindNode(root, n => n.Id == "s1")!;
+        var s2 = FindNode(root, n => n.Id == "s2")!;
+        True(f2 is not null && s1 is not null && s2 is not null, "nodes not found");
+        True(Math.Abs(f2.Box.ContentBox.Top - 30f) < 0.5f, $"cleared float sits at y=30, got {f2.Box.ContentBox.Top}");
+        True(s1.Box.ContentBox.Top < 0.5f && Math.Abs(s1.Box.ContentBox.Left - 10f) < 0.5f,
+            $"first line starts at y=0 beside the 10px float, got {s1.Box.ContentBox}");
+        True(Math.Abs(s2.Box.ContentBox.Top - 20f) < 0.5f && Math.Abs(s2.Box.ContentBox.Left - 100f) < 0.5f,
+            $"second line (y=20..40) wraps past the y=30 zero-height float to x=100, got {s2.Box.ContentBox}");
+    }
 }

@@ -71,17 +71,52 @@ internal static partial class BoxEngine
         return best;
     }
 
+    /// <summary>
+    /// The highest position at or below <paramref name="y"/> where a box of the given border-box
+    /// <paramref name="width"/> and <paramref name="height"/> fits beside the floats, with the band
+    /// (absolute left edge and width) it gets there. CSS 2.1 §9.5: a line box or the border box of
+    /// a box that establishes a block formatting context must not overlap the margin box of any
+    /// float in the same BFC — so the band is measured over the box's WHOLE height, not a 1px
+    /// probe at its top: a float whose top starts partway down the box still narrows it
+    /// (floats-wrap-top-below-bfc-002l: a 50px BFC at y=50 must not overlap a float starting at
+    /// y=75). When the band is too narrow the box moves down to the next float bottom, one float
+    /// at a time (the band can only widen there), until it fits or no float reaches lower —
+    /// floats-wrap-top-below-003l's box fits beside the lower float at y=75 rather than going
+    /// below every float.
+    /// </summary>
+    private static (float Y, float X, float W) FitBandBelow(
+        List<ActiveFloat> floats, float y, float height, float width,
+        float contentX, float contentW)
+    {
+        var h = Math.Max(height, 1f);
+        var (bx, bw) = AvailableBand(floats, y, h, contentX, contentW);
+        for (var attempt = 0; attempt < 512 && width > bw + 0.5f; attempt++)
+        {
+            // No float beside the box: it is wider than the containing block on its own and
+            // overflows it where it stands — moving down cannot make it fit.
+            if (bx <= contentX + 0.5f && bw >= contentW - 0.5f) break;
+            if (NextFloatBottom(floats, y) is not { } next) break;
+            y = next;
+            (bx, bw) = AvailableBand(floats, y, h, contentX, contentW);
+        }
+        return (y, bx, bw);
+    }
+
     /// <summary>Width of the narrowest thing that must fit on the first line before it may be
     /// shortened any further: the first atomic inline box, or the first word of the first text
-    /// item. Whitespace-only items are skipped — they are dropped at the start of a line.</summary>
+    /// item. Whitespace-only items are skipped — they are dropped at the start of a line. A
+    /// forced break (&lt;br&gt;) ends the first line before any following content, and a float is
+    /// out of flow (float-no-content-beside-001).</summary>
     private static float FirstUnbreakableWidth(List<InlineItem> items)
     {
         foreach (var item in items)
         {
             switch (item.Kind)
             {
-                case InlineItemKind.OutOfFlow or InlineItemKind.LineBreak or InlineItemKind.InlineEdge:
+                case InlineItemKind.OutOfFlow or InlineItemKind.InlineEdge:
                     continue;
+                case InlineItemKind.LineBreak or InlineItemKind.Float:
+                    return 0f;
                 case InlineItemKind.Text when item.Text is { } t:
                     var trimmed = t.TrimStartCss();
                     if (trimmed.Length == 0) continue;
@@ -147,6 +182,64 @@ internal static partial class BoxEngine
         floats.RemoveAll(f => f.Bottom <= y);
     }
 
+    /// <summary>
+    /// CSS 2.1 §9.5.1 rules 1, 2, 3, 7, 9: tries to place a float of outer width
+    /// <paramref name="outerW"/> on <paramref name="side"/> at vertical position <paramref name="y"/>
+    /// within the containing block [<paramref name="contentX"/>, <paramref name="contentX"/> + <paramref name="contentW"/>].
+    /// Unlike line boxes (which are clamped to the containing block's horizontal edges), a float
+    /// with no same-side float to its outer side may extend past the opposite edge of its
+    /// containing block (rule 7), provided it does not overlap an opposite-side float in the same
+    /// BFC even when that float lies outside the containing block (rule 3,
+    /// floats-rule3-outside-left-001 / floats-rule3-outside-right-001).
+    /// </summary>
+    private static bool TryPlaceFloatAt(
+        List<ActiveFloat> floats, FloatType side, float y, float outerW,
+        float contentX, float contentW, out float outerLeft)
+    {
+        var cbLeft = contentX;
+        var cbRight = contentX + contentW;
+        var leftEdge = cbLeft;
+        var rightEdge = cbRight;
+        var minRightFloatLeft = float.PositiveInfinity;
+        var maxLeftFloatRight = float.NegativeInfinity;
+        var hasLeftFloat = false;
+        var hasRightFloat = false;
+
+        foreach (var f in floats)
+        {
+            if (f.Bottom <= y || f.Top >= y + 1f) continue;
+            if (f.Side == FloatType.Left)
+            {
+                hasLeftFloat = true;
+                leftEdge = Math.Max(leftEdge, f.Right);
+                maxLeftFloatRight = Math.Max(maxLeftFloatRight, f.Right);
+            }
+            else
+            {
+                hasRightFloat = true;
+                rightEdge = Math.Min(rightEdge, f.Left);
+                minRightFloatLeft = Math.Min(minRightFloatLeft, f.Left);
+            }
+        }
+
+        if (side == FloatType.Left)
+        {
+            outerLeft = leftEdge;
+            var outerRight = outerLeft + outerW;
+            if (outerRight > minRightFloatLeft + 0.5f) return false;
+            if (hasLeftFloat && outerRight > cbRight + 0.5f) return false;
+            return true;
+        }
+        else
+        {
+            var outerRight = rightEdge;
+            outerLeft = outerRight - outerW;
+            if (outerLeft < maxLeftFloatRight - 0.5f) return false;
+            if (hasRightFloat && outerLeft < cbLeft - 0.5f) return false;
+            return true;
+        }
+    }
+
     private static ActiveFloat LayoutFloat(
         LayoutNode child, FloatType side,
         List<ActiveFloat> floats,
@@ -166,8 +259,11 @@ internal static partial class BoxEngine
         // style="float:right">` pushed the image onto its own line under the text.
         if (!float.IsNaN(openLineY) && openLineY < placeY)
         {
-            var (lbx, lbw) = AvailableBand(floats, openLineY, 1, contentX, contentW);
-            if (outerW <= lbw - openLineUsedW + 0.5f) placeY = openLineY;
+            var (_, lbw) = AvailableBand(floats, openLineY, 1, contentX, contentW);
+            if (openLineUsedW > 0f
+                ? outerW <= lbw - openLineUsedW + 0.5f
+                : TryPlaceFloatAt(floats, side, openLineY, outerW, contentX, contentW, out _))
+                placeY = openLineY;
         }
         // §9.5.1 rule 5: the outer top of a floating box may not be higher than the outer top of
         // any block or floated box generated by an element earlier in the source document. The
@@ -176,17 +272,16 @@ internal static partial class BoxEngine
         // above them (floats-146: the right float C may not rise beside A, above the dropped
         // float B).
         foreach (var f in floats) placeY = Math.Max(placeY, f.Top);
-        // Determine X based on side, respecting existing floats
+        // §9.5.2: 'clear' on a float requires its top outer edge to be below the bottom outer edge
+        // of any earlier left-/right-floating boxes (constraint #10, applied to the float's own
+        // placement without advancing the normal-flow cursor or retiring earlier floats).
+        placeY = ApplyClear(child.GetClear(), floats, placeY);
+        // Determine X based on side, respecting existing floats (§9.5.1 rules 1, 2, 3, 7, 9).
         float outerLeft;
-        // Try to place; if it doesn't fit, slide down
         for (int attempt = 0; attempt < 50; attempt++)
         {
-            var (bx, bw) = AvailableBand(floats, placeY, 1, contentX, contentW);
-            if (outerW <= bw + 0.5f)
-            {
-                outerLeft = side == FloatType.Left ? bx : bx + bw - outerW;
+            if (TryPlaceFloatAt(floats, side, placeY, outerW, contentX, contentW, out outerLeft))
                 goto placed;
-            }
             // Slide down past the nearest float bottom
             var nearest = float.MaxValue;
             foreach (var f in floats)
@@ -229,10 +324,34 @@ internal static partial class BoxEngine
         if (child.IsAutoMarginRight()) margin.Right = 0f;
         var padding = child.GetPadding(contentW, viewportHeight, fontSize);
         var border = child.GetBorderWidth();
+        // Generated ::before/::after boxes share their originating element's Style object, so
+        // non-inherited box edges (margin, padding, border) and width/height must only apply when
+        // declared on the pseudo-element itself (floats-114's floated ::before/::after inside a
+        // bordered, padded <p>).
+        var isPseudo = child.TagName.StartsWith("#pseudo", StringComparison.Ordinal);
+        if (isPseudo)
+        {
+            var ov = child.StyleOverrides;
+            bool HasOv(string prop, string shorthand) => ov.ContainsKey(prop) || ov.ContainsKey(shorthand);
+            if (!HasOv("margin-top", "margin")) margin.Top = 0f;
+            if (!HasOv("margin-right", "margin")) margin.Right = 0f;
+            if (!HasOv("margin-bottom", "margin")) margin.Bottom = 0f;
+            if (!HasOv("margin-left", "margin")) margin.Left = 0f;
+            if (!HasOv("padding-top", "padding")) padding.Top = 0f;
+            if (!HasOv("padding-right", "padding")) padding.Right = 0f;
+            if (!HasOv("padding-bottom", "padding")) padding.Bottom = 0f;
+            if (!HasOv("padding-left", "padding")) padding.Left = 0f;
+            bool HasBorderOv(string s) => ov.ContainsKey($"border-{s}-width") || ov.ContainsKey($"border-{s}")
+                || ov.ContainsKey("border-width") || ov.ContainsKey("border");
+            if (!HasBorderOv("top")) border.Top = 0f;
+            if (!HasBorderOv("right")) border.Right = 0f;
+            if (!HasBorderOv("bottom")) border.Bottom = 0f;
+            if (!HasBorderOv("left")) border.Left = 0f;
+        }
 
         // 'width: 0' is a used width of zero — only an AUTO width shrink-to-fits (floats-153's
         // zero-width float with a negative margin must not grow to its text).
-        var hasExplicitW = !child.IsAutoWidth();
+        var hasExplicitW = !child.IsAutoWidth() && (!isPseudo || child.StyleOverrides.ContainsKey("width"));
         var explicitW = hasExplicitW ? child.GetWidth(contentW) : 0f;
         // A floated replaced box (§9.7 makes it block-level) is sized from the image, not
         // shrink-to-fit over children it does not have.
@@ -259,19 +378,29 @@ internal static partial class BoxEngine
         // didn't, so a float's max-width-constrained width never reached its parent's
         // shrink-to-fit (absolute-non-replaced-width-019..024) nor its own box.
         var isBorderBoxW = child.Style.GetPropertyValueSafe("box-sizing") == "border-box";
-        var maxW = child.GetMaxWidth(contentW, fontSize);
+        var maxW = (!isPseudo || child.StyleOverrides.ContainsKey("max-width"))
+            ? child.GetMaxWidth(contentW, fontSize) : float.PositiveInfinity;
         if (maxW < float.PositiveInfinity && !(IsPercentValue(child, "max-width") && contentW <= 0f))
         {
             var maxContent = isBorderBoxW
                 ? Math.Max(0f, maxW - border.Left - border.Right - padding.Left - padding.Right) : maxW;
             childContentW = Math.Min(childContentW, maxContent);
         }
-        var minW = child.GetMinWidth(contentW, fontSize);
+        var minW = (!isPseudo || child.StyleOverrides.ContainsKey("min-width"))
+            ? child.GetMinWidth(contentW, fontSize) : 0f;
         if (minW > 0f && !(IsPercentValue(child, "min-width") && contentW <= 0f))
         {
             var minContent = isBorderBoxW
                 ? Math.Max(0f, minW - border.Left - border.Right - padding.Left - padding.Right) : minW;
             childContentW = Math.Max(childContentW, minContent);
+        }
+        // §17.5.2.2: a table's width cannot be smaller than the minimum width required by its
+        // columns/cells, even when a smaller explicit 'width' is specified on the floated table
+        // (floated-table-wider-than-specified).
+        if (child.GetDisplay() == DisplayType.Table)
+        {
+            var tableMinW = TableEngine.MeasureTableContentWidths(child, Math.Max(0f, maxAvail), viewportHeight).SumMin;
+            childContentW = Math.Max(childContentW, tableMinW);
         }
 
         var outerW = margin.Left + border.Left + padding.Left + childContentW + padding.Right + border.Right + margin.Right;
@@ -295,8 +424,10 @@ internal static partial class BoxEngine
         var placeContentY = outerTop + margin.Top + border.Top + padding.Top;
 
         // Lay out children inside the float
+        var isPseudo = child.TagName.StartsWith("#pseudo", StringComparison.Ordinal);
         var isBorderBox = child.Style.GetPropertyValueSafe("box-sizing") == "border-box";
-        var explicitH = child.GetHeight(parentContentHeight, 0, viewportHeight);
+        var explicitH = (!isPseudo || child.StyleOverrides.ContainsKey("height"))
+            ? child.GetHeight(parentContentHeight, 0, viewportHeight) : 0f;
         var knownH = explicitH > 0
             ? (isBorderBox ? Math.Max(0, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitH)
             : 0f;
@@ -387,8 +518,10 @@ internal static partial class BoxEngine
         var joinedLine = false;
         if (!float.IsNaN(openLineY) && originY + openLineY < lineTopAbs - 0.5f)
         {
-            var (jx, jw) = AvailableBand(floats, originY + openLineY, lineH, originX, maxWidth);
-            if (outerW <= jw - openLineUsedW + 0.5f)
+            var (_, jw) = AvailableBand(floats, originY + openLineY, lineH, originX, maxWidth);
+            if (openLineUsedW > 0f
+                ? outerW <= jw - openLineUsedW + 0.5f
+                : TryPlaceFloatAt(floats, side, originY + openLineY, outerW, originX, maxWidth, out _))
             {
                 lineTopAbs = originY + openLineY;
                 joinedLine = true;
@@ -396,93 +529,178 @@ internal static partial class BoxEngine
         }
         var outerTop = lineTopAbs;
         foreach (var f in floats) outerTop = Math.Max(outerTop, f.Top);
+        // §9.5.2 constraint #10: 'clear' on an in-run float places its top outer edge below
+        // earlier matching floats without advancing the inline flow cursor.
+        outerTop = ApplyClear(node.GetClear(), floats, outerTop);
         var dropped = outerTop > lineTopAbs + 0.5f;
         var (bx, bw) = AvailableBand(floats, dropped ? outerTop : lineTopAbs, lineH, originX, maxWidth);
         var contentLeftAbs = originX + bandLeft;
         var contentRightAbs = originX + lineX;
-        if (!dropped && outerW > bw + 0.5f)
+        var lineHasContent = contentRightAbs > contentLeftAbs + 0.5f;
+        float provLeft = 0f;
+        if (!dropped && !TryPlaceFloatAt(floats, side, lineTopAbs, outerW, originX, maxWidth, out provLeft))
         {
-            // Rule 7: not enough horizontal room beside the line — it moves below the line box.
+            // Rule 7: not enough horizontal room beside existing floats at the line top.
+            // When the line holds content, the float drops below the line box; when the line is
+            // still empty (c414-flt-wrap-001's right float after a 1x1 left float), it slides
+            // down past the blocking float's bottom without skipping an empty strut height.
             dropped = true;
-            outerTop = lineTopAbs + lineH;
-            (bx, bw) = AvailableBand(floats, outerTop, lineH, originX, maxWidth);
+            if (lineHasContent) outerTop = lineTopAbs + lineH;
         }
-        if (!dropped && side == FloatType.Right)
+        if (!dropped && side == FloatType.Right && lineHasContent)
         {
             // A right float cannot move the line's content leftward: overlapping the line's
             // already-laid-out content (the overflowing nowrap line) drops it below the line.
-            var provRight = bx + bw;
-            var provLeft = provRight - outerW;
-            if (provLeft < contentRightAbs && provRight > contentLeftAbs && contentRightAbs > contentLeftAbs)
+            var provRight = provLeft + outerW;
+            if (provLeft < contentRightAbs && provRight > contentLeftAbs)
             {
                 dropped = true;
                 outerTop = lineTopAbs + lineH;
-                (bx, bw) = AvailableBand(floats, outerTop, lineH, originX, maxWidth);
             }
         }
-        if (!dropped && side == FloatType.Left && !joinedLine)
+        if (!dropped && side == FloatType.Left && !joinedLine && lineHasContent)
         {
             // Rule 7 on the left side too: re-flowing the line's content beside the float is
             // only possible while the content still fits the remaining band. When it does not
             // — floats-placement-vertical-003's 100px float beside a 5px "H" in a 100px body —
             // the float drops below the line box instead of pushing the content out.
             var contentWOnLine = Math.Max(0f, contentRightAbs - contentLeftAbs);
-            if (bx < contentRightAbs && contentRightAbs > contentLeftAbs &&
-                contentWOnLine + outerW > bw + 0.5f)
+            if (bx < contentRightAbs && contentWOnLine + outerW > bw + 0.5f)
             {
                 dropped = true;
                 outerTop = lineTopAbs + lineH;
-                (bx, bw) = AvailableBand(floats, outerTop, lineH, originX, maxWidth);
             }
         }
+        float outerLeft = provLeft;
         if (dropped)
         {
             // Rule 7 continued: slide downward until either it fits or there are no more floats
             // present (LayoutFloat's loop).
             for (var attempt = 0; attempt < 50; attempt++)
             {
-                (bx, bw) = AvailableBand(floats, outerTop, lineH, originX, maxWidth);
-                if (outerW <= bw + 0.5f) break;
+                if (TryPlaceFloatAt(floats, side, outerTop, outerW, originX, maxWidth, out outerLeft))
+                    goto placedInRun;
                 var nearest = float.MaxValue;
                 foreach (var f in floats)
                     if (f.Bottom > outerTop) nearest = Math.Min(nearest, f.Bottom);
                 if (nearest == float.MaxValue) break;
                 outerTop = nearest;
             }
+            outerLeft = side == FloatType.Left ? originX : originX + maxWidth - outerW;
         }
-        // Rule 9: as far to its side as the band permits (the band at the final outerTop).
-        if (!dropped)
-        {
-            (bx, bw) = AvailableBand(floats, outerTop, lineH, originX, maxWidth);
-        }
-        float outerLeft;
-        float outerRight;
-        if (side == FloatType.Right)
-        {
-            outerRight = bx + bw;
-            outerLeft = outerRight - outerW;
-        }
-        else
-        {
-            outerLeft = bx;
-            outerRight = outerLeft + outerW;
-        }
+    placedInRun:
+        var outerRight = outerLeft + outerW;
+        var af = LayoutFloatBox(node, side, m, outerLeft, outerTop, viewportWidth, viewportHeight,
+                                containingBlockHeight, 0f);
+        floats.Add(af);
         // §9.5: the current line box — created next to the float — is shortened by the float's
         // margin box, and content that was already on the line re-flows into the remaining band
-        // (floats-placement-vertical-001a, floats-006, c414-flt-wrap-001). A dropped float is
-        // below the line and displaces nothing on it; a float joined to the run's just-committed
-        // line cannot move that closed line's content, and the join's fit test already excludes
-        // the overlap. The same holds for a line that holds no content yet: a left float at the
-        // line's start edge moves that edge, so whatever the line goes on to hold starts right
-        // of the float's margin box (floats-040's inline-block and floats-122's "X" beside the
-        // leading float, not under it).
+        // (floats-placement-vertical-001a, floats-006, c414-flt-wrap-001). A zero-height float at
+        // the line top (af.Bottom <= lineTopAbs, floats-placement-001) does not narrow the line's
+        // band and therefore does not shift lineX.
         var reflow = RunFloatPlacement.None;
-        if (!dropped && !joinedLine && side == FloatType.Left && outerRight > contentLeftAbs &&
+        if (!dropped && !joinedLine && side == FloatType.Left && af.Bottom > lineTopAbs &&
+            outerRight > contentLeftAbs &&
             (outerLeft < contentRightAbs || outerLeft <= contentLeftAbs + 0.5f))
             reflow = new RunFloatPlacement(outerRight - contentLeftAbs);
 
-        floats.Add(LayoutFloatBox(node, side, m, outerLeft, outerTop, viewportWidth, viewportHeight,
-                                  containingBlockHeight, 0f));
         return reflow;
+    }
+
+    /// <summary>True when an inline box is broken around an IN-FLOW block-level child (§9.2.1.1).
+    /// Floated and absolutely/fixed-positioned children are blockified by §9.7 for their own
+    /// layout, but they are out of flow and do not split their enclosing inline box
+    /// (floats-149's inline wrapper around two floated spans keeps its margin-left).</summary>
+    private static bool IsBrokenAroundInFlowBlock(LayoutNode node)
+    {
+        if (node.GetDisplay() is not (DisplayType.Inline or DisplayType.None)) return false;
+        foreach (var child in node.Children)
+        {
+            if (child.GetFloat() != FloatType.None) continue;
+            if (child.GetPosition() is PositionType.Absolute or PositionType.Fixed) continue;
+            if (child.GetDisplay() is DisplayType.Block or DisplayType.Flex or DisplayType.Table
+                                    or DisplayType.ListItem)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>CSS 2.1 §9.5: "The border box of a table, a block-level replaced element, or an
+    /// element in the normal flow that establishes a new block formatting context (such as an
+    /// element with 'overflow' other than 'visible') must not overlap the margin box of any
+    /// floats in the same block formatting context as the element itself."</summary>
+    private static bool AvoidsFloatsInBfc(LayoutNode child) =>
+        EstablishesBlockFormattingContext(child) || IsReplacedImage(child);
+
+    private static (float BorderTop, float EffX, float EffW, float WantedW, float ProbeH) FitBfcBesideFloats(
+        LayoutNode child, List<ActiveFloat> floats, float borderTop,
+        float contentX, float contentW, float parentContentHeight, float viewportHeight, float childFontSize)
+    {
+        var childPad = child.GetPadding(contentW, viewportHeight, childFontSize);
+        if (child.GetDisplay() is DisplayType.Table or DisplayType.InlineTable && TableEngine.IsBorderCollapse(child))
+            childPad = default;
+        var childBorder = child.GetBorderWidth();
+        var horizBp = childBorder.Left + childBorder.Right + childPad.Left + childPad.Right;
+        var vertBp = childBorder.Top + childBorder.Bottom + childPad.Top + childPad.Bottom;
+        var isHtmlTable = child.TagName == "TABLE";
+        var isBB = child.Style.GetPropertyValueSafe("box-sizing") == "border-box" || isHtmlTable;
+        var replaced = TryResolveReplacedSize(child, contentW, parentContentHeight, viewportHeight);
+        float wantedW;
+        if (replaced.HasValue)
+        {
+            wantedW = (isBB ? Math.Max(0f, replaced.Value.Width - horizBp) : replaced.Value.Width) + horizBp;
+        }
+        else if (!child.IsAutoWidth())
+        {
+            var specW = child.GetWidth(contentW);
+            wantedW = (isBB ? Math.Max(0f, specW - horizBp) : specW) + horizBp;
+        }
+        else
+        {
+            wantedW = 0f;
+        }
+        var maxW = child.GetMaxWidth(contentW, childFontSize);
+        if (maxW < float.PositiveInfinity && !(IsPercentValue(child, "max-width") && contentW <= 0f))
+        {
+            var maxBorderBox = isBB ? Math.Max(0f, maxW) : maxW + horizBp;
+            if (wantedW > maxBorderBox) wantedW = maxBorderBox;
+        }
+        var minW = child.GetMinWidth(contentW, childFontSize);
+        if (minW > 0f && !(IsPercentValue(child, "min-width") && contentW <= 0f))
+        {
+            var minBorderBox = isBB ? Math.Max(0f, minW) : minW + horizBp;
+            if (wantedW < minBorderBox) wantedW = minBorderBox;
+        }
+        // §17.5.2.2: a table's border box cannot shrink narrower than its minimum content width
+        // plus its horizontal border/padding (floats-wrap-bfc-003-left-table / 003-right-table /
+        // floats-wrap-bfc-004).
+        if (child.GetDisplay() == DisplayType.Table)
+        {
+            var tableMinBorderBox = TableEngine.MeasureTableContentWidths(child, contentW, viewportHeight).SumMin + horizBp;
+            wantedW = Math.Max(wantedW, tableMinBorderBox);
+        }
+
+        var probeH = 1f;
+        if (replaced.HasValue)
+        {
+            var repContentH = isBB ? Math.Max(0f, replaced.Value.Height - vertBp) : replaced.Value.Height;
+            repContentH = ClampContentHeight(child, repContentH, parentContentHeight, childBorder, childPad, childFontSize);
+            probeH = repContentH + vertBp;
+        }
+        else if (!child.IsAutoHeight() && !IsPercentValue(child, "height"))
+        {
+            var specH = child.GetHeight(parentContentHeight, childFontSize, viewportHeight);
+            var specContentH = isBB ? Math.Max(0f, specH - vertBp) : specH;
+            specContentH = ClampContentHeight(child, specContentH, parentContentHeight,
+                                              childBorder, childPad, childFontSize);
+            probeH = specContentH + vertBp;
+        }
+        var (fitY, fitX, fitW) = FitBandBelow(floats, borderTop, probeH, wantedW, contentX, contentW);
+        if (fitY > borderTop + 0.5f)
+        {
+            borderTop = fitY;
+            RetireFloats(floats, borderTop);
+        }
+        return (borderTop, fitX, fitW, wantedW, probeH);
     }
 }
