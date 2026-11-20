@@ -176,14 +176,13 @@ internal static partial class BoxEngine
         // Items are measured against the first line's band; a line that turns out wider re-measures
         // its text below.
         var (firstX, firstW) = AvailableBand(floats, originY, 1, originX, maxWidth);
-        // CSS 2.1 §16.2 / UAX #9 subset: a block carrying an active RTL override renders its
-        // inline content in reverse visual order — the top-level child sequence reverses here
-        // (keyed on the container only: an inline override further down reverses its OWN
-        // content, not its siblings), and each text leaf reverses through RenderedText. The
-        // legacy reversal owns every override scope: the paragraph pass reproduces the
-        // character reversal but the twin-walk shapes assert the legacy's line geometry
-        // (bidi-box-model, the unicode-bidi-applies-to families), so the routing stays.
-        if (nodes.Count > 0 && nodes[0].Parent is { } runBlock && runBlock.BidiIsRtlOverride())
+        // CSS 2.1 §16.2 / UAX #9: a block carrying an active RTL override with edge-bearing
+        // inline boxes renders its inline content in reverse visual order — the top-level child
+        // sequence reverses here (keyed on the container only: an inline override further down
+        // reverses its OWN content, not its siblings), and each text leaf reverses through
+        // RenderedText. The legacy reversal owns the scopes whose §8.6 physical-side edges it
+        // models; an edge-less scope routes to the paragraph-level pass below.
+        if (nodes.Count > 0 && nodes[0].Parent is { } runBlock && runBlock.BidiReversesContentForLayout())
             nodes = nodes.AsEnumerable().Reverse().ToList();
         CollectInlineItems(nodes, items, firstW, viewportWidth, viewportHeight, containingBlockHeight);
 
@@ -1606,13 +1605,13 @@ internal static partial class BoxEngine
     {
         if (items.Count == 0 || container is null) return null;
 
-        // Paragraphs under an active bidi-override scope keep the legacy whole-stream
-        // reversal: the §8.6 physical-side edge reservation and the mirrored join sides of
-        // split boxes key on that mechanism, and the pass's forced-R output diverges from it
-        // in the twin-walk shapes (the unicode-bidi-applies-to families measure the legacy's
-        // line geometry).
+        // Paragraphs under an active bidi-override scope WITH edge boxes keep the legacy
+        // whole-stream reversal: the §8.6 physical-side edge reservation and the mirrored join
+        // sides of split boxes key on that mechanism, and the pass's forced-R output diverges
+        // from it in the twin-walk shapes (the unicode-bidi-applies-to families measure the
+        // legacy's line geometry). An edge-less scope routes here instead.
         foreach (var it in items)
-            if (it.Node?.BidiReversesContent() == true) return StripExplicitFormatting(items);
+            if (it.Node?.BidiReversesContentForLayout() == true) return StripExplicitFormatting(items);
 
         // The cheap gate: strong RTL / Arabic content anywhere in the run, or an embedding
         // scope (an override reverses pure-Latin content too — bidi-box-model-003's
@@ -1624,6 +1623,10 @@ internal static partial class BoxEngine
             if (it.Kind != InlineItemKind.Text || it.Text is not { Length: > 0 } gate) continue;
             streamLength += gate.Length;
             if (!hasBidi && Bidi.HasBidiContent(gate)) hasBidi = true;
+            // A declared embed/override on an inline element above the item opens a scope even
+            // for pure-Latin content: an rtl override reverses 'dnoceS' with no RTL-class char
+            // present (bidi-box-model-006).
+            if (!hasBidi && ScopeChain(it.Node).Count > 0) hasBidi = true;
         }
         if (!hasBidi)
         {
@@ -2376,10 +2379,13 @@ internal static partial class BoxEngine
                 var isRtlBox = node.GetDirection() == "rtl";
                 if (!isRtlBox && leading != 0f) items.Add(EdgeItem(node, leading, trailing: false));
                 var subtreeStart = items.Count;
-                // §16.2/UAX #9 subset: inside a reversed scope every level's child sequence
-                // reverses (the scope's character stream reverses as a whole), while the box's
-                // own edge items stay at its physical boundaries.
-                var children = node.BidiReversesContent() ? node.Children.AsEnumerable().Reverse() : node.Children;
+                // §16.2/UAX #9: inside a reversed scope every level's child sequence reverses (the
+                // scope's character stream reverses as a whole), while the box's own edge items
+                // stay at its physical boundaries. Only an EDGE-BEARING scope keeps this legacy
+                // whole-stream reversal: §8.6's physical-side reservation keys on it. An
+                // edge-less scope routes to the paragraph-level pass, which reproduces the same
+                // reversal from the UBA levels.
+                var children = node.BidiReversesContentForLayout() ? node.Children.AsEnumerable().Reverse() : node.Children;
                 CollectInlineItems(children, items, maxWidth, viewportWidth, viewportHeight, containingBlockHeight);
                 if (!isRtlBox && trailing != 0f) items.Add(EdgeItem(node, trailing, trailing: true));
                 if (isRtlBox && (leading != 0f || trailing != 0f))

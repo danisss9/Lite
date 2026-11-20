@@ -24,6 +24,12 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
 
 ## Handed in
 
+- `direction-unicode-bidi-026/027/028` (official + WPT, 6 cases, from 6.G): the reviewed needle has
+  **two lines** (`line1\nline2`, the inner block's paragraph and the outer override's paragraph), but
+  `PaintedOrder` normalizes the whole needle to one string and compares it against the first single
+  painted line carrying non-ASCII — no single line can equal the joined two-line expectation. The engine
+  now paints both lines in the reviewed order (019/021/023 pass through the same path). Suggest matching
+  the expected line whose non-ASCII content is on that band, or comparing the painted line sequence.
 - `list-style-type-001`, `list-style-applies-to-005/006`, `list-style-type-applies-to-005/006`
   (official + WPT, from 6.F): `round-dot` rejects a 16px disc. The render is a filled circle 7-8px
   across including antialiasing, but `Components`' 5x5 ink bbox has every bbox edge inked, so

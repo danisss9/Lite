@@ -12,7 +12,9 @@ Branch `css21/p6-g`, worktree `C:\Repos\Lite-p6-g`. Case list `Lite.Conformance/
 
 - Line breaking on the visual order: the reorder engages only when the composed run fits one line band.
 - The line's start edge is not mirrored (text-align under rtl): `text-align-bidi-002/003/004` share one 10px centering asymmetry.
-- Merge the legacy `BidiReversesContent` override path into `Bidi.cs`.
+- §8.6 multi-fragment wrapper geometry for boxes split by the reordering: `bidi-001..004`, `bidi-005a..010a`
+  order correctly now, but the painter unions a split box's fragments into one rect (borders across the gaps).
+  Needs the per-line wrapper accumulator to emit one fragment box per contiguous run — 6.A's line-assembly area.
 - `bidi-override-003/004` (list-marker placement under override, with 6.F) and `bidi-border-collapse-001..004` (RTL collapsed tables, with 6.E).
 
 ## Coordination
@@ -38,7 +40,14 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - `Lite/Extensions/DrawCommandExtensions.cs` — one line in `BidiVisualBlockText`: when the block's own text is
   wider than the band (the queued per-line reorder stands down), return `Bidi.WithoutExplicitFormatting(text)`
   instead of the raw string, so X9's controls never paint/reserve width in wrapped block text
-  (`fonts-011`, `line-breaking-bidi-001..003`).
+  (`fonts-011`, `line-breaking-bidi-001..003`). Commit 2 also widened its content gate to admit a declared
+  override on pure-Latin text, and routes `RenderedText` through `BidiReversesContentForLayout`.
+- `Lite/Drawer.cs` — one line in `PaintBlock`'s own-text branch: draw
+  `node.BidiVisualBlockText(textMaxW, font)` instead of `node.RenderedText()`, so an inline-block's own text
+  honours a declared override (`unicode-bidi-applies-to-012`); the other block text sites already did.
+- `Lite/Layout/BoxEngine.Inline.cs` outside `ReorderForBidi`/helpers: the collection-time child-sequence
+  reversal and the run's top-level sequence reversal now gate on `BidiReversesContentForLayout()` (legacy
+  only for edge-bearing scopes).
 
 ## Progress
 
@@ -72,3 +81,26 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   one failure `GeneratedContentTests.EmptyOutsideListItem_HasItsMarkerLineBox` also fails with this batch
   stashed at the base commit — pre-existing, not this change). Curated css21 51/1, wpt 86/2. G list 6/56 +
   6/65. `G-pass.txt` 223/223, `A-pass.txt` 1405/1405, `canary.txt` 960/960.
+
+### 2026-11-20 — Commit 2: §16.2 override scopes merge into the paragraph pass
+- **Moved (G list, +8: 4 official, 4 WPT; official 6/56 → 10/56, WPT 6/65 → 10/65):**
+  - `direction-unicode-bidi-019`, `-021`, `-023` (official + WPT)
+  - `bidi-inline-002` (official + WPT)
+- **What changed:** the legacy whole-stream reversal (`BidiReversesContent`) now fires only for scopes that
+  carry §8.6 edge boxes (`BidiReversesContentForLayout`). Edge-less override scopes route to the
+  paragraph-level pass, which models them as UBA override spans and handles mixed Latin/Arabic content —
+  the legacy subset only covered strong-LTR content. Gated consistently at all four reversal sites:
+  `RenderedText`, the collection-time child sequence, the run's top-level child sequence, and
+  `ReorderForBidi`'s bail. `ReorderForBidi`'s gate also engages on a declared inline embed/override scope
+  (no RTL-class char needed, e.g. `dnoceS`). `BidiVisualBlockText` now admits a declared override on
+  pure-Latin block text, and `PaintBlock`'s own-text branch uses it (inline-block `SSAP SSAP` → `PASS PASS`).
+- **Still failing and why:** `direction-unicode-bidi-026/027/028` are judge-side (two-line needle vs
+  single-line candidate) — handed to 6.M. `bidi-001..004`/`005a..010a` need the §8.6 multi-fragment wrapper
+  (6.A). `bidi-breaking-001/002`, `bidi-glyph-mirroring`, `bidi-alt-001` remain (paragraph/base-direction and
+  glyph-mirroring work); `bidi-override-003/004` with 6.F, border-collapse with 6.E.
+- **Restored while widening the gate:** `unicode-bidi-applies-to-007/009/012` (official + WPT) had regressed
+  when `RenderedText` stopped reversing edge-less scopes; they pass again through the paragraph pass.
+- **Checks:** units 739/740 (new `InlineRun_EdgeLessRtlOverrideSpanOwnsMixedContent`; same pre-existing
+  `GeneratedContentTests.EmptyOutsideListItem_HasItsMarkerLineBox`). Curated css21 51/1, wpt 86/2. G list
+  10/56 + 10/65. `G-pass.txt` 223/223, `A-pass.txt` 1405/1405, `canary.txt` 960/960.
+

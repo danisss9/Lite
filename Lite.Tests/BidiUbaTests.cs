@@ -190,6 +190,33 @@ div { direction: rtl; font-size: 28px; }
             $"the empty span must not split the run: bet should paint left of alef, got bet={bet}, alef={alef}");
     }
 
+    [Test]
+    public static void InlineRun_EdgeLessRtlOverrideSpanOwnsMixedContent()
+    {
+        // direction-unicode-bidi-019's shape: a bidi-override span inside an RTL paragraph whose
+        // content mixes Latin and Arabic. The paragraph-level pass owns the edge-less scope, so
+        // the span's whole stream renders in reverse order and the surrounding RTL text reorders
+        // around it (the legacy whole-stream reversal could only handle strong-LTR content).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div id='d' style='direction:rtl;font-size:20px'>" +
+            "\u0646\u0634\u0627\u0637 \u0627\u0644\u062a\u062f\u0648\u064a\u0644 \"<span id='s' style='unicode-bidi:bidi-override'>" +
+            "i18n activity, \u0627\u062e\u062a\u0628\u0627\u0631</span>\"!</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        LayoutNode? span = null;
+        void Walk(LayoutNode n)
+        {
+            if (n.Id == "s") span = n;
+            foreach (var c in n.Children) Walk(c);
+        }
+        Walk(page.Root);
+        True(span?.InlineFragments is { Count: > 0 } fragments,
+            "the override span must paint a fragment");
+        var text = string.Concat(span!.InlineFragments!.Select(f => f.Text));
+        Equal("\u0631\u0627\u0628\u062a\u062e\u0627 ,ytivitca n81i", text);
+    }
+
     private static string FindRepoRoot()
     {
         var dir = Directory.GetCurrentDirectory();
