@@ -734,6 +734,19 @@ The phases, in order:
   | margin collapse | 33/28 |
 
   Each package opens with its already-diagnosed parked findings.
+  - **Parallel lanes (20 November).** From the 20 November committed head, Phase 6 runs as parallel
+    lanes, one agent session per lane, each in its own worktree and branch with its own files.
+    - **Setup.** `BoxEngine`, `Drawer` and `Parser` were split mechanically into per-area
+      partial files, so each lane owns whole files.
+    - **Lanes.** 6.A inline, 6.B floats, 6.C block flow, 6.D positioning, 6.E tables, 6.F
+      generated content, 6.G bidi (wave 2), 6.H backgrounds, 6.I borders, 6.J fonts, 6.K
+      cascade, 6.M judges and 6.X evidence.
+    - **Case lists.** `scripts/split-css21-lanes.py` writes each lane's case list from the
+      baseline shards.
+    - **Integration.** The integrator merges lanes in batches, with the full upstream baseline
+      and the 0-loss rule after each batch.
+    - **Docs.** The rules, file ownership and per-lane notes are in
+      [css21-phase6/](css21-phase6/README.md). Batch results are folded in here.
 - **Phase 7, the flip.**
   1. Freeze inventory edits and run the upstream-mode baseline on the committed tree.
   2. Commit the generator's flips, then run a second baseline (any edit changes the identity).
