@@ -1335,22 +1335,26 @@ internal static class TableEngine
         var widths = new float[colCount];
 
         // Gather explicit widths from cells with colspan=1 (these columns are fixed).
+        // §17.5.2.2 step 1: the column's minimum is the LARGEST minimum cell width among its
+        // single-column cells, "or the column 'width', whichever is larger" — a 0.5in cell
+        // under a 1in column element sits in a 1in column (column-width-001/002), and a
+        // second, wider fixed cell further down the column widens it too.
         foreach (var p in placements)
         {
             if (p.ColSpan != 1) continue;
-            if (widths[p.Col] == 0f)
+            // A cell's 'width' is its content width: the column also holds the cell's
+            // padding and borders (§17.5.2.2) — a td { width: 200px; border: 3px } is 206px.
+            var w = p.Cell.GetWidth(availableW);
+            if (w > 0f)
             {
-                // A cell's 'width' is its content width: the column also holds the cell's
-                // padding and borders (§17.5.2.2) — a td { width: 200px; border: 3px } is 206px.
-                var w = p.Cell.GetWidth(availableW);
-                if (w > 0f)
-                {
-                    var pad = p.Cell.GetPadding(availableW, viewportH, p.Cell.GetFontSize());
-                    var bord = p.Cell.GetBorderWidth();
-                    widths[p.Col] = w + pad.Left + pad.Right + bord.Left + bord.Right;
-                }
+                var pad = p.Cell.GetPadding(availableW, viewportH, p.Cell.GetFontSize());
+                var bord = p.Cell.GetBorderWidth();
+                widths[p.Col] = Math.Max(widths[p.Col], w + pad.Left + pad.Right + bord.Left + bord.Right);
             }
         }
+        var columnElementWidths = ColumnElementWidths(table, colCount, availableW);
+        for (var c = 0; c < colCount; c++)
+            if (widths[c] > 0f) widths[c] = Math.Max(widths[c], columnElementWidths[c]);
 
         var autoCols = Enumerable.Range(0, colCount).Where(c => widths[c] == 0f).ToList();
         if (autoCols.Count == 0) return widths;
@@ -1377,7 +1381,7 @@ internal static class TableEngine
             }
         }
         // A column (group) 'width' is a minimum for its column in automatic layout.
-        var elementWidths = ColumnElementWidths(table, colCount, availableW);
+        var elementWidths = columnElementWidths;
         foreach (var c in autoCols)
             if (elementWidths[c] > 0f)
             {

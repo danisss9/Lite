@@ -359,6 +359,43 @@ public static class LayoutTests
         True(Math.Abs((w1 + w2) - 300f) < 1.5f, $"columns should fill the 300px table (got {w1 + w2})");
     }
 
+    [Test]
+    public static void AutoTable_ColumnElementWidthFloorsNarrowerCells()
+    {
+        // CSS 2.1 §17.5.2.2 step 1: with automatic layout a column's width is the LARGEST minimum
+        // cell width among its single-column cells "or the column 'width', whichever is larger" —
+        // a 48px cell under a 96px column element sits in a 96px column (column-width-001/002),
+        // and a second, wider cell further down the column widens it (previously only the first
+        // fixed cell sized the column).
+        var col = new LayoutNode(null, "COL", "", _styleCache.Style);
+        col.StyleOverrides["width"] = "96px";
+        var group = new LayoutNode(null, "COLGROUP", "", _styleCache.Style);
+        group.StyleOverrides["display"] = "table-column-group";
+        group.AddChild(col);
+        var c1 = TableCell("first");
+        c1.StyleOverrides["width"] = "48px";
+        var c2 = TableCell("second");
+        c2.StyleOverrides["width"] = "72px";
+        var table = new LayoutNode(null, "TABLE", "", _styleCache.Style);
+        table.StyleOverrides["display"] = "table";
+        table.StyleOverrides["width"] = "300px";
+        table.StyleOverrides["border-spacing"] = "0";
+        table.AddChild(group);
+        foreach (var row in new[] { c1, c2 })
+        {
+            var r = new LayoutNode(null, "TR", "", _styleCache.Style);
+            r.StyleOverrides["display"] = "table-row";
+            r.AddChild(row);
+            table.AddChild(r);
+        }
+        LayoutTree(table);
+
+        var w1 = c1.Box.ContentBox.Width;
+        var w2 = c2.Box.ContentBox.Width;
+        True(Math.Abs(w1 - 96f) < 1f, $"the 96px column element should floor its 48px cell (got {w1})");
+        True(Math.Abs(w2 - 96f) < 1f, $"the wider cell below must not shrink the column below 96px (got {w2})");
+    }
+
     // -- §8.3.1/§9.5.2 clearance (the margin-collapse-clear-* reftest family) --
 
     // A style object carrying a real 1px black top border (GetBorderWidth reads node.Style,
