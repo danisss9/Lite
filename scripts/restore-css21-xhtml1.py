@@ -444,6 +444,15 @@ def main():
         for reference in test_refs:
             documents.setdefault(reference, "reference")
 
+    # Twins that scripts/restore-css21-html4-gzip.py already decompressed keep their capture
+    # provenance across a re-run, as long as the twin still has the recorded bytes.
+    previous_captures = {}
+    if os.path.exists(MANIFEST_OUT):
+        with open(MANIFEST_OUT, encoding="utf-8") as handle:
+            for old in json.load(handle).get("files", []):
+                if isinstance(old.get("twinCapture"), dict):
+                    previous_captures[old["twin"]] = old["twinCapture"]
+
     records, skipped, unresolved = [], [], []
     byte_exact = no_twin = 0
     for path in sorted(documents):
@@ -502,6 +511,8 @@ def main():
             record["twin"] = "html4/%s.htm" % stem
             if gzipped:
                 record["twinCapture"] = "gzip (Wayback stored the body compressed)"
+            elif record["twin"] in previous_captures and                     previous_captures[record["twin"]]["sha256"] == hashlib.sha256(twin).hexdigest():
+                record["twinCapture"] = previous_captures[record["twin"]]
         if hrefs:
             record["references"] = hrefs
         if "nonHTML" in flags:

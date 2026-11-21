@@ -142,3 +142,33 @@ the plan's 19 November decision would be reversed.
     17,885). inline-svg and `background-animated-001` recorded as ruled with no applicability change.
   - **Checks:** units 648/648; curated gates css21 51 pass / 1 expected-fail, wpt 86 pass / 2;
     inventory 18,086 screen / 577 print; lane L 0/4 unchanged; canary 300/300.
+- **21 November — decompress the 25 vendored `html4` gzip bodies (one commit, no engine changes).**
+  - **Decompression & provenance.** `scripts/restore-css21-html4-gzip.py` decompressed all 25
+    vendored `html4/*.htm` files (22 tests + 3 `-ref.htm` references) whose Wayback captures were
+    gzip-compressed response bodies. Every file was proven byte-exact against the recovered
+    `xhtml1 -> html4` build transform (`scripts/restore-css21-xhtml1.py`) applied to the pinned
+    `csswg-test@fa448700877` source blob (matching `sourceSha256`), with zero unresolved and zero
+    drift on idempotent re-run. Provenance (`capturedSha256`, `capturedBytes`, `sha256`, `bytes`,
+    `verifiedBy`) is recorded in `Lite.Conformance/Css21/css21-xhtml1-restore.json`, and
+    `scripts/restore-css21-xhtml1.py` preserves that provenance across re-runs.
+  - **Lock & catalog re-pin.** Re-pinned `test-suites.lock.json` `treeSha256` with the documented
+    OrdinalIgnoreCase canonical rule (`f4d0ff8e…` → `7c2c44de…`), regenerated WPT manifest
+    provenance (`suiteLockSha256`), and rebuilt `css21-official-catalog.json` locally (9,364 cases).
+    **Integrator:** the official tree hash re-pinned (`f4d0ff8e…` → `7c2c44de…`); let
+    `OfficialCatalog.Ensure()` rebuild the catalog on the merged identity and run
+    `scripts/restore-css21-html4-gzip.py` after any future refetch + xhtml1 restore.
+  - **Before vs after (`gz-cases.txt`, 22 test cases): 7/22 → 11/22 passing.**
+    - **4 moved `fail -> pass`:** `inline-table-002a`, `inline-table-002b`, `inline-table-003`,
+      `inline-table-valign-001` (all four tests and their 3 `-ref.htm` files now render real HTML).
+    - **1 moved `manualpending -> fail`:** `border-conflict-element-038` (now renders real HTML and
+      reports 935 red pixels; honest failure exposed).
+    - **1 stayed `fail` with real-HTML diagnostic:** `root-box-002` (twin reftest mismatch → 2,990
+      red pixels).
+    - **16 unchanged:** 7 `pass` (`block-in-inline-001`, `c541-word-sp-000`, `c547-indent-000`,
+      `counter-increment-053`, `eof-005`, `table-visual-layout-018`, `word-spacing-characters-002`),
+      8 `manualpending` (`border-bottom-color-057`, `border-conflict-element-002`,
+      `border-conflict-element-037`, `c26-psudo-nest-000`, `c543-txt-decor-000`, `outline-color-001`,
+      `outline-color-002`, `text-decoration-087`), 1 `fail` (`text-indent-011`).
+  - **Checks:** build Release 0 warnings/errors; units 735/735; curated gates `css21` 51/0/1 xfail,
+    `wpt` 86/0/2 xfail; `--suite css21-inventory` 9,290 WPT / 9,364 official / 18,086 screen
+    blockers / 570 print blockers.
