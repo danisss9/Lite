@@ -118,6 +118,55 @@ public static class StackingContextTests
         }
     }
 
+    [Test]
+    public static void FixedDescendantOfFixedOverflowBox_PaintsAtItsViewportAnchor()
+    {
+        // clipping-006: §10.1 — a fixed box is not the containing block of its own position:fixed
+        // descendant (only a transform/filter would be), so the green child anchors to the
+        // VIEWPORT at left:100/top:70 and is NOT clipped by the parent's overflow:hidden; the
+        // red in-flow child IS clipped (its containing block is the parent). The green child of
+        // a fixed parent was laid out and then painted by nobody.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            "#p{position:fixed; overflow:hidden; width:100px; height:100px}" +
+            "#red{width:100px; height:100px; margin:100px 0 0 100px; background:red}" +
+            "#g{position:fixed; left:100px; top:70px; width:100px; height:100px; background:green}</style>" +
+            "<div id=\"p\"><div id=\"red\"></div><div id=\"g\"></div></div>");
+        var bitmap = Drawer.DrawToBitmap(400, 300, root, new Viewport { ViewportHeight = 300 });
+        using (bitmap)
+        {
+            True(bitmap.GetPixel(150, 120) == SKColors.Green,
+                $"the fixed child must paint at its viewport anchor (150,120), got {bitmap.GetPixel(150, 120)}");
+            for (var y = 0; y < 300; y += 7)
+                for (var x = 0; x < 400; x += 7)
+                    True(bitmap.GetPixel(x, y) != SKColors.Red,
+                        $"no red may be visible anywhere (the parent's overflow clips its own child), found red at {x},{y}");
+        }
+    }
+
+    [Test]
+    public static void FixedDescendantOfClippedFixedParent_StaysInsideTheClip()
+    {
+        // clipping-010: §11.1.2 — the 'clip: rect()' of a fixed box applies to its descendants
+        // too, so the red fixed child of the clipped green fixed parent must be clipped (like
+        // the parent's own in-flow child is), even though PaintFixedNodes paints it as a
+        // separate viewport-anchored box.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            "#p{position:fixed; width:100px; height:100px; background:green; clip:rect(0px 100px 100px 0px)}" +
+            "#inflow{width:100px; height:100px; margin:100px 0 0 100px; background:red}" +
+            "#fx{position:fixed; width:100px; height:100px; margin:100px 0 0 100px; background:red}</style>" +
+            "<div id=\"p\"><div id=\"inflow\"></div><div id=\"fx\"></div></div>");
+        var bitmap = Drawer.DrawToBitmap(400, 300, root, new Viewport { ViewportHeight = 300 });
+        using (bitmap)
+        {
+            True(bitmap.GetPixel(50, 50) == SKColors.Green,
+                $"the clipped parent paints green at 50,50, got {bitmap.GetPixel(50, 50)}");
+            for (var y = 0; y < 300; y += 7)
+                for (var x = 0; x < 400; x += 7)
+                    True(bitmap.GetPixel(x, y) != SKColors.Red,
+                        $"both red children are outside the parent's clip, found red at {x},{y}");
+        }
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);

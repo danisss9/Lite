@@ -1501,7 +1501,35 @@ internal class JsEngine : IDisposable
                 stack.Push(node.Children[i]);
         }
 
-        if (firstMatch is null) return null;
+        if (firstMatch is null)
+        {
+            // The rendering tree can DROP an element a script still resolves by name: the
+            // block-in-inline hoist (§9.2.1.1) removes an inline whose only child was a block,
+            // yet the element keeps its DOM identity and its styles — adjacent-to-relpos-
+            // inline-* sets `posMe.style.position` on such a span, and the getter ran but
+            // returned null (the walk above only reaches rendering nodes). HTML5 §7.3.3 named
+            // access resolves against the DOCUMENT, so fall back to the DOM tree and the
+            // first-bound layout node; the wrapper's mutations re-project as usual.
+            var state = JsEngine.For(_engine)?.DocumentState;
+            if (state?.Document is { } doc)
+            {
+                LayoutNode? bound = null;
+                var pending = new Stack<AngleSharp.Dom.INode>();
+                pending.Push(doc);
+                var seen = new HashSet<AngleSharp.Dom.INode>();
+                while (pending.Count > 0 && bound is null)
+                {
+                    var node = pending.Pop();
+                    if (!seen.Add(node)) continue;
+                    if (node is AngleSharp.Dom.IElement { Id: { Length: > 0 } id }
+                        && id.Equals(name, StringComparison.Ordinal))
+                        bound = state.FindBound(node);
+                    foreach (var child in node.ChildNodes) pending.Push(child);
+                }
+                if (bound is not null) return JsElement.For(_engine, bound);
+            }
+            return null;
+        }
         if (!multiple) return JsElement.For(_engine, firstMatch);
         return new JsHtmlCollection(() => CollectNamedWindowElements(name));
     }

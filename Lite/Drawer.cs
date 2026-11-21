@@ -77,8 +77,28 @@ internal static partial class Drawer
         // Dynamic pseudo-class rules re-match once per frame: the DOM may have changed under
         // a cached match (a class toggled by script) even when the interaction state did not.
         Interaction.PseudoClassState.Invalidate();
-        // Layout pass — compute node.Box for every node
-        BoxEngine.Layout(root, width, height);
+        // Layout pass — compute node.Box for every node. A page that scrolls shows its bar in
+        // a gutter the CONTENT does not occupy: the bar's width (height for the horizontal
+        // bar) is taken out of the initial containing block (§10.1 — the ICB is the viewport
+        // minus the classic bars, the same reservation an 'overflow: scroll' box's Scrollport
+        // already makes for its own content). Whether the page scrolls is only known after a
+        // layout, and reflowing narrower can change the page extent, so the decision settles
+        // on the second pass: a page that still extends past the fold keeps the gutter; one
+        // that now fits re-lays at the full window, which is the first pass's answer and
+        // cannot oscillate.
+        var layoutWidth = (float)width;
+        var layoutHeight = (float)height;
+        BoxEngine.Layout(root, layoutWidth, layoutHeight);
+        if (BoxEngine.ViewportOverflow(root) != OverflowType.Hidden)
+        {
+            var (pageRight0, pageBottom0) = BoxEngine.PageExtent(root);
+            if (pageBottom0 > height || pageRight0 > width)
+            {
+                layoutWidth -= pageBottom0 > height ? BoxEngine.ScrollGutter : 0f;
+                layoutHeight -= pageRight0 > width ? BoxEngine.ScrollGutter : 0f;
+                BoxEngine.Layout(root, layoutWidth, layoutHeight);
+            }
+        }
         // Nested iframes inherit the device scale (read by PaintIframe during PaintNode);
         // every DrawToBitmap entry rewrites it, so no restore is needed on the way out.
         _renderScale = scale;
@@ -118,8 +138,11 @@ internal static partial class Drawer
         SelectOptionMap.Clear();
         _pendingDropdown = null;
         _viewportScrollY = viewport.ScrollY;
-        _viewportHeight = height;
-        _viewportWidth = width;
+        // The fixed-background positioning area is the LAYOUT viewport — the window less the
+        // page bars' gutters (§14.2.1: the image sits at the viewport's bottom right, clear of
+        // the bars — background-bg-pos-207's purple square painted 6px under the vertical bar).
+        _viewportHeight = layoutHeight;
+        _viewportWidth = layoutWidth;
         // A paint that throws mid-node (or any future early return) must not leak the previous
         // render's scrollable-box offsets into this one: the fixed-background placement would
         // land in mid-air (background-027-class cases render per test in a shared worker).
@@ -306,13 +329,40 @@ internal static partial class Drawer
             var node = stack.Pop();
             if (!visited.Add(node)) continue;
             if (node.GetPosition() == PositionType.Fixed)
+            {
                 // PaintNodeInner, not PaintNode: PaintNode skips every fixed box so the normal
                 // tree pass leaves them for this one. Routing back through it made this pass a
                 // no-op, so a position:fixed box was laid out correctly and then never painted.
-                PaintNodeInner(canvas, node, viewportWidth);
-            else
-                for (int i = node.Children.Count - 1; i >= 0; i--)
-                    stack.Push(node.Children[i]);
+                // §11.1.2: the 'clip: rect()' of an absolutely or fixed positioned ancestor
+                // applies to the box's descendants too, so this separate paint replays the clip
+                // of every such ancestor between the root and the box — the same replay
+                // PaintThroughClippers makes for stacking items (clipping-010: a fixed child of
+                // a clipped fixed parent painted outside the clip once it was painted at all).
+                // An ancestor's overflow clip does NOT come along (§11.1.1: the clip covers no
+                // descendant whose containing block is the viewport — clipping-007).
+                List<SKRect>? clips = null;
+                for (var a = node.Parent; a is not null; a = a.Parent)
+                    if (a.GetPosition() is PositionType.Absolute or PositionType.Fixed
+                        && a.GetClipRect() is { } cr)
+                        (clips ??= []).Add(cr);
+                if (clips is null)
+                    PaintNodeInner(canvas, node, viewportWidth);
+                else
+                {
+                    canvas.Save();
+                    foreach (var cr in clips) canvas.ClipRect(cr);
+                    PaintNodeInner(canvas, node, viewportWidth);
+                    canvas.Restore();
+                }
+            }
+            // §10.1: a fixed box is NOT the containing block of its own position:fixed
+            // descendants (only a transform/filter/perspective would be) — they anchor to the
+            // viewport like this one, so the walk must keep descending through the subtree for
+            // them (clipping-006: a fixed child of a fixed overflow box was laid out and then
+            // painted by nobody). PaintChildrenSorted's stacking walk skips fixed children
+            // (CollectStackingItems), so the subtree paint above did not already draw them.
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
         }
     }
 

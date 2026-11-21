@@ -43,6 +43,28 @@ internal static partial class BoxEngine
         }
     }
 
+    /// <summary>Records the static position (§10.3.7 / §10.6.4) of a table's absolutely or fixed
+    /// positioned children. §9.7 blockifies such a child ('table-column-group', 'table-caption',
+    /// … compute to 'block'), so it takes no part in the table's structure (§17.2.1 anonymous
+    /// boxes, column widths, rows); the hypothetical static box sits at the start of the table
+    /// box's content area — its top, and its left edge (its right edge under 'direction: rtl',
+    /// the edge <see cref="ResolveAbsoluteBox"/> anchors an rtl static position at). Without it
+    /// the box fell to its containing block's corner whenever an offset was left 'auto'
+    /// (top-applies-to-005: 'top: 0' with 'left: auto' landed at x 0 instead of the table's 8).
+    /// Block, inline and flex containers record their own children's static positions.</summary>
+    internal static void RecordTableStaticPositions(LayoutNode table, float contentX, float contentY, float contentW)
+    {
+        var rtl = table.GetDirection() == "rtl";
+        foreach (var c in table.Children)
+        {
+            if (c.TagName.Length > 0 && c.TagName[0] == '#') continue;
+            var pos = c.GetPosition();
+            if (pos is not (PositionType.Absolute or PositionType.Fixed)) continue;
+            c.StaticX = rtl ? contentX + contentW : contentX;
+            c.StaticY = contentY;
+        }
+    }
+
     /// <summary>The containing block a positioned descendant sees through this box (§10.1). A
     /// block-level positioned box is its own Box; an inline positioned box contributes the
     /// bounding box of its padding boxes across every line it fragments over — collected from the

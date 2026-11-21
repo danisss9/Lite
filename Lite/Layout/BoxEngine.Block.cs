@@ -431,6 +431,24 @@ internal static partial class BoxEngine
             if (contentH < minContent) contentH = minContent;
         }
 
+        // A max-height cut on an auto-height scroll container leaves the natural content
+        // taller than the clamped box — vertical overflow the auto-height branch above could
+        // not know about (its height grew to fit, so it tracks only the width axis). The clamp
+        // runs after that branch, so the vertical scroll state is computed here against the
+        // clamped height (§11.1.1): the box scrolls to its natural content extent, with the
+        // same Scrollport the explicit-height branch uses. The width tracking (or the null the
+        // non-sideways branch set) stays as the auto-height branch left it.
+        var clampedOverflow = node.GetOverflow();
+        if (clampedOverflow is OverflowType.Scroll or OverflowType.Auto or OverflowType.Hidden
+            && scrollContentH > contentH)
+        {
+            var (_, portH2) = Scrollport(clampedOverflow, alwaysScrollbars, contentW, contentH, naturalW, scrollContentH, flowW);
+            var ss = node.ScrollState ?? new ElementScrollState();
+            ss.ContentHeight = scrollContentH;
+            ss.ContainerHeight = portH2;
+            node.ScrollState = ss;
+        }
+
         // §8.3.1 (CSS 2.2 "Collapsing margins", change s.8.3.1c): a non-zero computed
         // 'min-height' that RAISES the auto height separates the last in-flow child's bottom
         // margin from this box's: the bottom border edge is no longer at the content's end, so

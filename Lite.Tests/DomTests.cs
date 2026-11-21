@@ -10,6 +10,29 @@ namespace Lite.Tests;
 public static class DomTests
 {
     [Test]
+    public static void OffsetLeft_MeasuresAgainstTheOffsetParentPaddingEdge()
+    {
+        // inline-static-position-001 / adjacent-to-relpos-inline-*: offsetParent is the nearest
+        // non-static ancestor (CSSOM View §10) — a relative-positioned inline included — and
+        // offsetLeft/offsetTop measure the border edge against that parent's PADDING edge, the
+        // browsers' interoperable reading. The absolute span after 5×10px glyphs in a div at
+        // body margin 8 with a 1px border reads offsetLeft 50 (not the page-absolute 59) and
+        // offsetParent is the relpos div, whose style the check-layout scripts inspect.
+        const string html = """
+            <!doctype html><style>body{margin:8px}</style>
+            <div id="d" style="position:relative; border:1px solid blue; font:10px Ahem, monospace">
+              12345<span id="a" style="position:absolute">span</span>
+            </div>
+            <script>
+            var a = document.getElementById('a');
+            window.out = [a.offsetLeft, a.offsetTop, a.offsetParent.id];
+            </script>
+            """;
+        var engine = Parser.ParseChildPage(html, true, "http://offset.test/", 800, 600).Engine!;
+        Equal("50,0,d", engine.RawEngine.Evaluate("out.join(',')").ToString());
+    }
+
+    [Test]
     public static void Details_ParsedDocumentsKeepSeparateNotificationQueues()
     {
         const string html = """
