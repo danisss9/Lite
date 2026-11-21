@@ -970,6 +970,73 @@ internal static partial class Parser
         // cascade order (origin, !important, specificity, source order).
         ApplyPseudoElementRules(element, node);
 
+        StampOwnInheritOverRelativeLengths(element, node);
+    }
+
+    private static readonly Regex s_fontRelativeLength =
+        new(@"^[+-]?(\d+(\.\d*)?|\.\d+)(em|ex)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    /// <summary>The element's own cascade - origin, !important, specificity, source order and
+    /// the style attribute - WITHOUT inheritance (§6.2.1 distinguishes the specified/inherited
+    /// value from the computed one). Used where the layout node's raw value could hide an
+    /// 'inherit' keyword that AngleSharp already substituted.</summary>
+    internal static ICssStyleDeclaration? ComputeExplicitStyleFor(IElement element)
+    {
+        try
+        {
+            var window = element.Owner?.DefaultView;
+            if (window is null) return null;
+            var device = element.Owner!.Context.GetService<IRenderDevice>() ?? new DefaultRenderDevice();
+            return window.GetStyleCollection(device).ComputeExplicitStyle(element);
+        }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// CSS 2.1 §6.2.1: 'inherit' takes the parent's COMPUTED value, and an 'em'/'ex' length
+    /// computes against the font of the element that declares it (§4.3.2). AngleSharp resolves
+    /// the keyword by copying the parent's SPECIFIED declaration into the element's own cascade,
+    /// so <c>#child { margin: inherit }</c> under <c>#parent { font-size: 28px; margin: 2em }</c>
+    /// reached layout as a bare "2em" that the child's own 40px font then scaled to 80px instead
+    /// of 56px (margin-em-inherit-001, padding-em-inherit-001). Once the keyword is replaced it
+    /// is indistinguishable from an authored "2em", so the element's own winning declaration is
+    /// read here: where it is 'inherit' and the cascade substituted a font-relative length, the
+    /// keyword goes to the override channel, which <see cref="StyleResolver"/> resolves against
+    /// the parent's computed value (parents first).
+    /// </summary>
+    private static void StampOwnInheritOverRelativeLengths(IElement element, LayoutNode node)
+    {
+        List<string>? candidates = null;
+        try
+        {
+            foreach (var property in node.Style)
+            {
+                if (property.Name is not { Length: > 0 } name || node.StyleOverrides.ContainsKey(name)) continue;
+                if (s_fontRelativeLength.IsMatch(property.Value?.Trim() ?? "")) (candidates ??= []).Add(name);
+            }
+        }
+        catch { return; }
+        if (candidates is null) return;
+
+        // Cheap gate before a second cascade pass: some matching rule or the style attribute
+        // must spell 'inherit' for one of the candidates.
+        ICssStyleDeclaration? inline = null;
+        try { if (element.HasAttribute("style")) inline = element.GetStyle(); }
+        catch { inline = null; }
+        bool SaysInherit(ICssStyleDeclaration? style, string prop) =>
+            style is not null && string.Equals(style.GetPropertyValueSafe(prop)?.Trim(), "inherit",
+                StringComparison.OrdinalIgnoreCase);
+        if (!candidates.Any(prop => SaysInherit(inline, prop) || _staticMatches.Any(m => SaysInherit(m.Style, prop))))
+            return;
+
+        // The element's own cascade (origin, !important, specificity, order and the style
+        // attribute), without inheritance: does 'inherit' win there?
+        ICssStyleDeclaration? own = ComputeExplicitStyleFor(element);
+        if (own is null) return;
+
+        foreach (var prop in candidates)
+            if (SaysInherit(own, prop))
+                node.StyleOverrides[prop] = "inherit";
     }
 
     /// <summary>A rule's place in the §6.4.1 cascade: its declarations, the specificity of
@@ -1922,10 +1989,12 @@ internal static partial class Parser
         return false;
     }
 
-    /// <summary>Whether <paramref name="element"/>'s inherited document language matches a
-    /// ':lang(...)' selector fragment (§5.11.4): the nearest lang/xml:lang attribute on the
-    /// element or an ancestor, compared case-insensitively with hyphen-prefix semantics
-    /// (':lang(en)' matches lang="en-US"). The argument may be a quoted string or a wildcard.</summary>
+    /// <summary>Whether <paramref name="element"/>'s language matches a ':lang(...)' selector
+    /// fragment (§5.11.4): the nearest lang/xml:lang attribute on the element or an ancestor,
+    /// or - when none is in scope - the document's own language. The argument is a language
+    /// RANGE: it matches the language itself or a more specific tag that extends it with a
+    /// hyphen (':lang(en)' matches en-US; ':lang(en-GB)' does not match 'en'), compared ASCII
+    /// case-insensitively. The argument may be a quoted string or a wildcard.</summary>
     private static bool ElementMatchesLang(IElement element, string langFragment)
     {
         var open = langFragment.IndexOf('(');
@@ -1952,9 +2021,34 @@ internal static partial class Parser
             }
             if (!string.IsNullOrEmpty(lang)) { inherited = lang.Trim(); break; }
         }
+        inherited ??= DocumentLanguage(element);
         if (inherited is null) return false;
-        return inherited.Split(['-', '_'], 2)[0].Equals(wanted.Split(['-', '_'], 2)[0],
-            StringComparison.OrdinalIgnoreCase);
+        // A language range matches when the tags are equal, or when the element's tag is the
+        // range plus a hyphen and further subtags: 'en' never matches ':lang(en-GB)'.
+        return inherited.Equals(wanted, StringComparison.OrdinalIgnoreCase) ||
+            inherited.Length > wanted.Length &&
+            inherited.StartsWith(wanted, StringComparison.OrdinalIgnoreCase) &&
+            inherited[wanted.Length] == '-';
+    }
+
+    /// <summary>The document language for ':lang()' when no lang attribute is in scope
+    /// (§5.11.4): the response's Content-Language header, else an HTML
+    /// <c>meta http-equiv="content-language"</c>.</summary>
+    private static string? DocumentLanguage(IElement element)
+    {
+        if (Current.ContentLanguage is { Length: > 0 } header) return header;
+        if (element.Owner is not { } document) return null;
+        // An HTML document, or an XHTML document (the XML parser): 'meta http-equiv' is
+        // meaningful in both. A plain XML document has no such element semantics.
+        var xhtml = document is AngleSharp.Html.Dom.IHtmlDocument ||
+            document.DocumentElement?.NamespaceUri == "http://www.w3.org/1999/xhtml";
+        if (!xhtml) return null;
+        foreach (var meta in document.QuerySelectorAll("meta[http-equiv]"))
+            if (string.Equals(meta.GetAttribute("http-equiv"), "content-language",
+                    StringComparison.OrdinalIgnoreCase) &&
+                meta.GetAttribute("content")?.Trim() is { Length: > 0 } content)
+                return content;
+        return null;
     }
 
     // ---- CSS rule storage for the LayoutNode-based cascade (StyleResolver) ----

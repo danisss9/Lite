@@ -1198,12 +1198,20 @@ namespace AngleSharp.Css.Parser
 
         private String CreateValue(ref CssToken token, out Boolean important, out Boolean bad)
         {
-            var keyword = CssKeywords.BangImportant;
+            // CSS 2.1 §4.1.9: the priority is '<!>' followed by optional whitespace and the
+            // keyword 'important'. Upstream required the exact string "!important", so the
+            // official suite's equally valid '! important' (cascade-012's imported sheet) lost
+            // its priority and the declaration cascaded as normal.
+            var keyword = CssKeywords.Important;
             var value = _tokenizer.ContentFrom(token.Position.Position, CssContentMode.Value, out bad);
-            var keywordStart = value.Length - keyword.Length;
+            var end = value.Length;
+            while (end > 0 && value[end - 1].IsSpaceCharacter()) end--;
+            var keywordStart = end - keyword.Length;
             important = keywordStart >= 0 &&
-                value[keywordStart] == Symbols.ExclamationMark &&
                 String.Compare(value, keywordStart, keyword, 0, keyword.Length, StringComparison.OrdinalIgnoreCase) == 0;
+            var bang = keywordStart;
+            while (important && bang > 0 && value[bang - 1].IsSpaceCharacter()) bang--;
+            important = important && bang > 0 && value[bang - 1] == Symbols.ExclamationMark;
             token = NextToken();
 
             if (!important)
@@ -1211,14 +1219,14 @@ namespace AngleSharp.Css.Parser
                 return value;
             }
 
-            var end = keywordStart;
+            var valueEnd = bang - 1;
 
-            while (end > 0 && value[end - 1].IsSpaceCharacter())
+            while (valueEnd > 0 && value[valueEnd - 1].IsSpaceCharacter())
             {
-                end--;
+                valueEnd--;
             }
 
-            return value.Substring(0, end);
+            return value.Substring(0, valueEnd);
         }
 
         private String GetArgument(ref CssToken token) => GetArgument(ref token, CssContentMode.AtRulePrelude, out _);

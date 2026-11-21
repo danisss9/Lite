@@ -1,3 +1,5 @@
+using AngleSharp.Css.Dom;
+using AngleSharp.Dom;
 using Lite.Extensions;
 using Lite.Models;
 using Lite.Scripting.Dom;
@@ -70,6 +72,53 @@ internal static class StyleResolver
             if (ReferenceEquals(child.Style, old)) child.Style = fresh;
     }
 
+    /// <summary>A parsed #text node shares its element's computed style object, but the
+    /// override channel lives on the LayoutNode: a rule that reached the element only through
+    /// that channel (a :lang/:link/dynamic rule, a presentational hint, the em/ex inherit
+    /// stamp) was invisible to its text — an XML-served `:lang(fr) { color: green }` colored
+    /// the element green and painted its text black (lang-selector-004). Text inherits the
+    /// element's COMPUTED value (§6.2.1), so copy the inherited properties of the override
+    /// channel onto the text node.</summary>
+    internal static void InheritOverrideChannel(LayoutNode element, LayoutNode text)
+    {
+        foreach (var prop in InheritedProperties)
+            if (element.StyleOverrides.TryGetValue(prop, out var value))
+                text.StyleOverrides[prop] = value;
+    }
+
+    /// <summary>§6.2.1 for a child ELEMENT: its computed style is built by AngleSharp from the
+    /// parent's computed style, so a value the parent carries only in the override channel
+    /// (:lang/:link/dynamic rules, hints) never reaches it — lang-pseudoclass-002's `em` inside
+    /// a `p:lang(es) { color: white }` stayed black. Carry the parent's effective value across
+    /// unless the child's own cascade declares the property (§6.4.1). Runs after the parent's
+    /// presentational hints, so a `&lt;font color&gt;` under a `:lang` rule keeps its attribute.</summary>
+    internal static void InheritOverrideChannelIntoSubtree(LayoutNode node)
+    {
+        var inherited = InheritedProperties.Where(prop => node.StyleOverrides.ContainsKey(prop)).ToArray();
+        if (inherited.Length == 0) return;
+        foreach (var child in node.Children)
+        {
+            var stamped = false;
+            ICssStyleDeclaration? own = null;
+            var computed = false;
+            foreach (var prop in inherited)
+            {
+                if (child.StyleOverrides.ContainsKey(prop)) continue;
+                if (!node.StyleOverrides.TryGetValue(prop, out var effective)) continue;
+                if (!computed)
+                {
+                    computed = true;
+                    if (child.DomNode is IElement element) own = Parser.ComputeExplicitStyleFor(element);
+                }
+                if (own is not null && !string.IsNullOrEmpty(own.GetPropertyValueSafe(prop)?.Trim()))
+                    continue;
+                child.StyleOverrides[prop] = effective;
+                stamped = true;
+            }
+            if (stamped) InheritOverrideChannelIntoSubtree(child);
+        }
+    }
+
     /// <summary>A parsed #text node shares its element's style object; a script-created one
     /// (createTextNode) carries the render root's, so it painted in the root's color — the
     /// inserted "bc" of table-anonymous-objects-009 came out black inside a red cell. Stamp
@@ -77,7 +126,9 @@ internal static class StyleResolver
     /// text run must never pick up its parent's float/clear/display.</summary>
     private static void InheritIntoText(LayoutNode text)
     {
-        if (text.Parent is not { } parent || ReferenceEquals(text.Style, parent.Style)) return;
+        if (text.Parent is not { } parent) return;
+        InheritOverrideChannel(parent, text);
+        if (ReferenceEquals(text.Style, parent.Style)) return;
         foreach (var prop in InheritedProperties)
             if (EffectiveValue(parent, prop) is { } inherited) text.StyleOverrides[prop] = inherited;
     }

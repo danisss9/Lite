@@ -45,12 +45,218 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
   `<font color="green">` inside a red `div` paints red. The file's assert says the presentational `color` attribute
   trumps the author `div` rule and the user sheet's universal selector (§6.4.4 cascade order); the attribute seems
   ignored. Render evidence: `artifacts/hp3.png` in the 6.M worktree. From 6.M.
+- **`margin-em-inherit-001` / `padding-em-inherit-001` (WPT twins), from 6.C** — the `inherit`
+  computed-value bug is fixed (commit 1 of this batch); what remains is one 2-pixel row at the bottom
+  of the green box. The reference fixes `height: 194px` for a 100px inline image in a 40px font,
+  i.e. a 110px line box; our `line-height: normal` strut measures 108.48px (font descent 8.48px,
+  ascent 36.21px at 40px). This is the font metric and the §10.8.1 strut, not the cascade.
+  **From 6.K (this batch) to 6.J + 6.A.**
+
+- **`default-attribute-selector-007/008` (official + WPT, 4 cases), from 6.K to 6.I (Drawer
+  painter):** the selectors are correct — the test's `input`/`button` green background never
+  paints because `Drawer.PaintInput` (Lite/Drawer.cs:1771) fills text-like inputs with
+  `SKColors.White` and a hardcoded grey border, and `PaintButton` (line 2204) paints native
+  chrome; the author `background-color`/border is not consulted. The painted dominant colour is
+  the chrome grey (`#cacaca` / `#a0a0a0`). A fix is: when the element carries an author
+  background or border, `DrawBorders` + `GetBackgroundColor` instead of the native chrome.
+
+- **`cascade-001/004/006/010/011` and `html-precedence-003` (official), from 6.K to 6.X
+  (evidence/vendor):** the official `html4/support/cascade.css` and
+  `html4/support/html-precedence-003.css` are missing from the vendored official tree, so
+  `WptVisualPage.UserStyleSession` finds no user sheet and the prerequisite user styles never
+  apply. The maintained WPT copies (`css/CSS2/cascade/support/cascade.css`,
+  `support/html-precedence-003.css`) exist and are identical. `cascade-012`'s imported sheet was
+  a real engine bug and is fixed in commit 3.
+
+- **`html-precedence-004/005` (WPT), from 6.K to 6.M:** the user stylesheet is quoted inside the
+  test text, not linked; a harness cannot know it. Manual-pending, like the existing
+  user-stylesheet judges.
+- **`pseudo-007` (official + WPT), from 6.K to 6.X:** the maintained WPT twin's `rel=match` is
+  `universal-selector-002-ref.xht` (blue borders around viewport and div) while the test only
+  sets `div:fiRsT-cHiLd { color: green }` and carries no border rule. No engine can match that
+  reference; the official copy's own diagnostic passes. The reference (or the match) needs fixing
+  upstream.
+- **`pseudo-008` (official + WPT), from 6.K to 6.A/6.F:** `<div> </div>` between `::before`
+  ("Filler") and `::after` ("Text") carries a single space that must collapse to one space
+  (reference: "Filler Text"). Our generated line comes out without the space (a collapsible
+  whitespace-only text run between the two boxes is dropped).
+- **`c64-uri-000`, from 6.K to 6.X:** the test's own support sheets (`css1test64a.css`,
+  `css1test64b.css`) set `background: red url(support/swatch-red.png)` for `.one`/`.two`, and
+  `swatch-red.png` is solid red, while the page and the WPT reference demand three GREEN
+  backgrounds. The test contradicts its own stylesheets as vendored.
+- **`numbers-units-018`, from 6.K to 6.C:** §4.3.2 on the root element — `20em`/`20ex` in
+  `html { margin-left: 20em; margin-top: 20ex }` must use the INITIAL font size (16px), not the
+  root's own `font: 20px`. The em/ex conversion lives in `Lite/Layout/CssUnits.cs` (6.C).
+- **`html-attribute-021/022` (iframe `marginheight`/`marginwidth`), from 6.K to 6.H:** the nested
+  document's `* { background-color: green }` on `html`/`body` must propagate to the frame's
+  canvas; our iframe paints white (no canvas-background propagation for child documents), so the
+  frame shows no green box at all. The margin attributes themselves are low-precedence hints and
+  not the blocker.
+- **`specificity-011` (WPT), from 6.K: parked for 6.F/6.I.** `div :after { content: "PASSED";
+  border-top: solid teal }` matches (the base selector resolves to `div *`), but the reference's
+  teal top / blue bottom borders on the generated inline do not match ours; needs a render diff
+  of the ::after border painting, not the cascade.
+- **`first-child-selector-003` (WPT), from 6.K: needs a selector-engine look.** `:root:first-child
+  { color: green }` must beat `html { color: red }`; AngleSharp's match of `:root:first-child`
+  on the document element is the suspect.
+
+- **`escapes-001` (official + WPT), from 6.K to 6.J (font fallback):** the render is correct
+  (green background, white text) and the only pixel difference is the glyph face: the test's
+  `font-family: "\"", '\'', serif` should fall through the two unavailable quoted families to
+  `serif`, but our font selection lands on the default sans. The declaration parses (background
+  applies); the family-list fallback does not.
+
+- **`escaped-newline-001` (official + WPT), from 6.K: parsing parked.** The paint trace shows no
+  generated text at all on the test page (the reference page paints `Filler Text Filler Text`
+  correctly), so the `div:before` rule is being lost, not mis-measured. The value is
+  `"Filler\<escaped newline> Text\00000a<newline> Filler Text"`; patch 008 handles the escaped
+  newline and `ConsumeEscape` consumes the whitespace after the hex escape, so the remaining
+  suspect is the CSSOM serialization/host `ParseCssTextToDict` round trip of a string containing
+  a line feed. Needs a focused parser probe next batch.
+
+- **Remaining syntax/matching cases not investigated this batch** (`matching-brackets-001/003`,
+  `at-rule-013`, `malformed-decl-block-001`, `c71-fwd-parsing-001`, `ident-020`,
+  `numbers-units-018`, `c64-uri-000`): `numbers-units-018` is root-em/ex (6.C), `c64-uri-000`
+  looks like a broken test (above); the rest need per-case parser probes with the fork before
+  any fix.
 
 ## Edits outside owned files
 
 - `Lite/Parser.cs`: removed the old regex-based `InlineImports` method body (36 lines) so the spec-compliant `InlineImports` lives in owned `Lite/Parser.Cascade.cs`. The HTML5 gate was not rerun (per lane rules).
+- Batch 2, `Lite/Parser.cs` (shared with the HTML5 track; the HTML5 gate was not rerun):
+  - `ParseState.ContentLanguage` plus its two fetch-path assignments (`TraversePage` and
+    `ParseChildPage`) for `:lang()`'s HTTP document language (commit 2);
+  - `StyleResolver.InheritOverrideChannelIntoSubtree(node)` after `ApplyPresentationalHints`
+    (commit 2), so a child element/text run inherits an override-channel value;
+  - the linked-sheet `<style>` insertion at the link's position instead of `head.AppendChild`
+    (commit 4).
 
 ## Progress
+
+### Batch 2, commit 4 - a fetched `<link>` sheet keeps its source-order position (§6.4.1)
+
+- **Spec:** CSS 2.1 §6.4.1: declarations of one origin with equal specificity are ordered by
+  source order; §14.3 defines `<link rel=stylesheet>` as an author sheet at its document position.
+- **Root cause:** `Parser.cs` eagerly fetches every linked sheet and appends the generated
+  `<style>` element to the END of `<head>`. A `<link>` placed BEFORE an inline `<style>` therefore
+  cascaded AFTER it: `c32-cascading-000`'s linked `.c { color: red }` beat the later inline
+  `.c { color: green }`, reddening the last paragraph.
+- **Fix:** the generated `<style>` is inserted at the link's own position
+  (`link.Parent.InsertBefore(styleEl, link.NextSibling)`); the head-append remains as the
+  detached-link fallback.
+- **Moved (2):** `css21-official/html4/c32-cascading-000.htm`,
+  `css/CSS2/css1/c32-cascading-000.xht`.
+- **Edits outside owned files:** `Lite/Parser.cs` (shared with the HTML5 track). **The HTML5 gate
+  was not rerun** (lane rules).
+- **Checks:**
+  - Build: succeeded.
+  - Units: 739 passed, 0 failed, including the new
+    `CascadeTests.LinkedSheetKeepsItsSourceOrderBeforeALaterStyleElement` (a data: `<link>`
+    before an inline `<style>`).
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 4/37 official, 8/65 WPT (from 0/37 + 1/65 at batch start; **11 cases moved** —
+    12 now pass, of which `inherit-static-offset-003` already passed).
+  - `K-pass.txt`: 1,166/1,166; Canary: 960/960.
+  - `C-pass.txt` (source-order change reaches every page): 2,974/2,974.
+
+### Batch 2, commit 3 - `! important` (whitespace) keeps its priority (AngleSharp.Css patch 013)
+
+- **Spec:** CSS 2.1 §4.1.9: a declaration's priority is `!` followed by optional whitespace and
+  the keyword `important`.
+- **Root cause:** `CssBuilder.CreateValue` required the exact string `!important` at the end of
+  the value, so `cascade-012`'s imported `support/cascade-012.css` (`.test { color: green !
+  important }`) lost its priority and the later author `color: red` won. The host's
+  `NormalizeImportantBangs` only rewrites `<style>` blocks in the HTML source, never `@import`ed
+  text — the fork patch covers every sheet.
+- **Moved (1 case):** `css/CSS2/cascade/cascade-012.xht`.
+- **Still failing (related):** none of the other `! important` cases; K-pass held.
+- **Checks:**
+  - Build: succeeded.
+  - Units: 738 passed, 0 failed, including the new
+    `CssErrorRecoveryTests.BangImportant_AllowsWhitespaceBeforeTheKeyword` (fails on pristine).
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 3/37 official, 7/65 WPT (from 0/37 + 1/65 at batch start: **9 cases moved** in the
+    batch).
+  - `K-pass.txt`: 1,166/1,166; Canary: 960/960.
+  - `A-pass.txt` (parser change reaches every stylesheet): 1,405/1,405.
+  - Fork patch: next number is now 014 in `Lite.AngleSharp.Css/README.md`. The HTML5 gate was
+    not rerun (lane rules); the fork is shared with the HTML5 track.
+
+### Batch 2, commit 2 - `:lang()` language ranges, document language and override-channel inheritance (§5.11.4 / §6.2.1)
+
+- **Moved (8 cases: +3 official, +5 WPT):**
+  - `css21-official/html4/lang-pseudoclass-001.htm`, `css/CSS2/selectors/lang-pseudoclass-001.html`
+  - `css21-official/html4/lang-selector-005.htm`, `css/CSS2/selectors/lang-selector-005.xht`
+    (HTTP `Content-Language: fr`)
+  - `css21-official/html4/lang-selector-006.htm`, `css/CSS2/selectors/lang-selector-006.xht`
+    (`meta http-equiv="content-language" content="fr"`)
+  - `css/CSS2/selectors/lang-selector-004.xht` (inherited `lang="fr"`)
+  - `css/CSS2/selectors/lang-pseudoclass-002.xht` (XHTML `xml:lang`, range semantics, `<em>`)
+- **Root causes, three of them:**
+  1. **Range semantics were wrong** (`Parser.Cascade.cs`, `ElementMatchesLang`): the old code
+     compared the PRIMARY subtags only, so `:lang(en-GB)` wrongly matched `lang="en"`, `lang="en-US"`
+     and `lang="en-GB"` all. §5.11.4's argument is a language range: it matches the language
+     itself or the range followed by a hyphen and more subtags.
+  2. **No document language** when no `lang`/`xml:lang` is in scope: now the HTTP
+     `Content-Language` header (two lines in `Parser.cs`'s `ParseState`/fetch paths) and an HTML
+     or XHTML `meta http-equiv="content-language"` are consulted, in that order.
+  3. **The override channel did not inherit** (`StyleResolver.cs`): a `:lang`/`:link`/dynamic
+     rule reaches only the element's override channel, which AngleSharp's cascade never sees. Text
+     runs and child elements therefore kept the stale computed value: the XML-served
+     `lang-selector-004` painted its text black, and `lang-pseudoclass-002`'s `<em>` inside
+     `p:lang(es) { color: white }` stayed black. New
+     `StyleResolver.InheritOverrideChannelIntoSubtree` copies the element's inherited
+     override values onto its text runs and child elements whose OWN cascade does not declare the
+     property (checked with `ComputeExplicitStyleFor`), after presentational hints so a child
+     `<font color>` attribute still wins.
+- **Edits outside owned files:** `Lite/Parser.cs` (shared with the HTML5 track): the
+  `ParseState.ContentLanguage` field, its two fetch-path assignments, and the
+  `InheritOverrideChannelIntoSubtree` call after `ApplyPresentationalHints`. **The HTML5 gate was
+  not rerun** (lane rules).
+- **Checks:**
+  - Build: `dotnet build Lite.sln -c Release` succeeded.
+  - Units: full suite 737 passed, 0 failed, including the new
+    `CascadeTests.Lang_MatchesRangesDocumentLanguageAndReachesText`.
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 3/37 official, 6/65 WPT (from 0/37, 1/65; **8 cases moved**, the list above).
+  - `K-pass.txt`: 1,166/1,166 (611/611 official, 555/555 WPT).
+  - Canary: 960/960 (492/492 official, 468/468 WPT).
+  - `C-pass.txt` (inheritance/cascade change): 2,974/2,974.
+
+### Batch 2, commit 1 - `inherit` passes the parent's COMPUTED font-relative length (§6.2.1)
+
+- **Handed in from 6.C:** `margin-em-inherit-001` / `padding-em-inherit-001` (official and WPT
+  twins, 4 served paths). AngleSharp replaces the `inherit` keyword with the parent's SPECIFIED
+  value, so `#child { margin: inherit }` under `#parent { margin: 2em; font-size: 28px }` reached
+  layout as the string `2em`, which the child's own 40px font scaled to 80px instead of the
+  parent's computed 56px.
+- **Fix (`Parser.Cascade.cs`):** after the cascade, a declaration whose computed value is a bare
+  `em`/`ex` length is checked against the element's own explicit cascade
+  (`ComputeExplicitStyle`, which still holds the `inherit` keyword). When the own winner is
+  `inherit`, the keyword is stamped into the override channel, which 6.C's
+  `ResolvePendingCssWideKeywords` resolves from the parent's computed value. A cheap gate keeps
+  the second cascade pass to elements whose matching rules or style attribute actually spell
+  `inherit`. No fork patch changed.
+- **Moved in K: none** (these cases belong to 6.C, not to this lane).
+- **Still fails, honestly:** all four served paths now put `#child` at the exact geometry the
+  test states (`offsetLeft=238`, `offsetTop=174`, margin `56/84/28/112`) and the *official*
+  renders are fully green with no red. The maintained WPT twins (`margin-em-inherit-001.xht`,
+  `padding-em-inherit-001.xht`) still diff by **one 2-pixel row** (784 and 800 px): their
+  reference fixes the green box at `height: 194px`, which needs a 110px line box for the inline
+  100px image, i.e. a 10px font descent at 40px. Our serif metric gives a 108.48px line box
+  (descent 8.48px), so the box is 1.5px short. Probe: a 40px text line measures 44.69px
+  (ascent 36.21, descent 8.48). That is `line-height: normal` strut/font metrics, not cascade:
+  **handed to 6.J/6.A** (see Handed in).
+- **Checks:**
+  - Build: `dotnet build Lite.sln -c Release` succeeded.
+  - Units: full suite 736 passed, 0 failed, including the new
+    `CascadeTests.Inherit_StylesheetMarginAndPaddingTakeParentComputedEm`.
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 0/37 official, 1/65 WPT (unchanged).
+  - `K-pass.txt`: 1,166/1,166 (611/611 official, 555/555 WPT).
+  - Canary: 960/960 (492/492 official, 468/468 WPT).
+  - `C-pass.txt` (cascade change reaches every lane): 2,974/2,974 (1,401/1,401 official,
+    1,573/1,573 WPT).
 
 ### Fix round (batch 1 losses): ignored statements no longer end the `@import` prologue (`Parser.Cascade.cs`)
 - **Losses found by the integrator** (`fix-losses.txt`, each passing at base `05228a26`): `at-import-009`, `at-import-010`, `at-rule-008`, `at-rule-009`, official and WPT (8 cases).

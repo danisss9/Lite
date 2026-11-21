@@ -259,4 +259,25 @@ public static class CssErrorRecoveryTests
         Equal(1, sheet.Rules.Length);
         Equal("p[title=\"this is a test\"]", ((ICssStyleRule)sheet.Rules[0]).SelectorText);
     }
+
+    [Test]
+    public static void BangImportant_AllowsWhitespaceBeforeTheKeyword()
+    {
+        // Patch 013, CSS 2.1 §4.1.9: the priority is '!' followed by optional whitespace and
+        // 'important' - the official suite spells it '! important' (cascade-012's imported
+        // sheet). Upstream required the exact string "!important", so the declaration lost its
+        // priority and a later normal rule won.
+        var sheet = Parse("a { color: green ! important } b { color: red !important } " +
+                          "c { color: blue !  IMPORTANT } d { color: black important }");
+        foreach (var selector in new[] { "a", "b", "c" })
+        {
+            var rule = sheet.Rules.OfType<ICssStyleRule>().First(r => r.SelectorText == selector);
+            Equal("important", rule.Style.GetPropertyPriority("color"));
+            True(rule.Style.GetPropertyValue("color") is { Length: > 0 } value && !value.Contains('!'),
+                $"{selector}: the priority is not part of the value, got {rule.Style.GetPropertyValue("color")}");
+        }
+        // Without the bang it is not a priority; the value itself stays.
+        var d = sheet.Rules.OfType<ICssStyleRule>().First(r => r.SelectorText == "d");
+        Equal("", d.Style.GetPropertyPriority("color"));
+    }
 }

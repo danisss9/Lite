@@ -41,6 +41,60 @@ public static class CascadeTests
     }
 
     [Test]
+    public static void LinkedSheetKeepsItsSourceOrderBeforeALaterStyleElement()
+    {
+        // §6.4.1 orders declarations of one origin by source order. The eagerly fetched
+        // <link rel=stylesheet> must stay at the link's position: appended to the end of <head>
+        // its `.c { color: red }` beat the LATER inline `.c { color: green }` (c32-cascading-000).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head>" +
+            "<link rel='stylesheet' href='data:text/css,.c%7Bcolor%3Ared%7D'>" +
+            "<style>.c { color: green }</style>" +
+            "</head><body><p class='c' id='c'>x</p></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        LayoutNode? F(LayoutNode n, string id) =>
+            n.Id == id ? n : n.Children.Select(c => F(c, id)).FirstOrDefault(r => r != null);
+        True(F(page.Root, "c")!.GetColor() == new SkiaSharp.SKColor(0, 128, 0),
+            $"the later inline sheet wins at equal specificity, got {F(page.Root, "c")!.GetColor()}");
+    }
+
+    [Test]
+    public static void Lang_MatchesRangesDocumentLanguageAndReachesText()
+    {
+        // §5.11.4: ':lang(C)' takes the nearest lang/xml:lang; with none in scope the document
+        // language (meta http-equiv="content-language" here) applies. The argument is a language
+        // RANGE: ':lang(en)' matches en-US but ':lang(en-GB)' does not match a plain 'en'.
+        // §6.2.1: the rule reaches the element through Lite's override channel, so its text and
+        // its child elements must still see the computed color (the XML-served
+        // lang-selector-004/lang-pseudoclass-002 twins painted the text and the <em> black).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><meta http-equiv='content-language' content='fr'>" +
+            "<style>div:lang(fr) { color: green } p:lang(en) { color: green } " +
+            "span:lang(en-GB) { color: lime } p:lang(es) { color: white; background-color: green }" +
+            "</style></head><body>" +
+            "<div id='doc'>Document language<span id='docspan'>x</span></div>" +
+            "<p id='widen' lang='en-US'>English range</p>" +
+            "<p><span id='narrow' lang='en'>not en-GB</span></p>" +
+            "<p id='es' lang='es'>Spanish <em id='em'>emphasis</em></p>" +
+            "</body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        LayoutNode? F(LayoutNode n, string id) =>
+            n.Id == id ? n : n.Children.Select(c => F(c, id)).FirstOrDefault(r => r != null);
+        var green = new SkiaSharp.SKColor(0, 128, 0);
+        var doc = F(page.Root, "doc")!;
+        var docText = doc.Children.FirstOrDefault(c => c.TagName == "#text");
+        True(doc.GetColor() == green, $"meta content-language 'fr' makes div:lang(fr) green, got {doc.GetColor()}");
+        True(docText is not null && docText.GetColor() == green,
+            $"the div's own text inherits the green override, got {docText?.GetColor()}");
+        True(F(page.Root, "widen")!.GetColor() == green, $":lang(en) matches lang=en-US, got {F(page.Root, "widen")!.GetColor()}");
+        True(F(page.Root, "narrow")!.GetColor() == SkiaSharp.SKColors.Black,
+            $":lang(en-GB) must not match lang=en, got {F(page.Root, "narrow")!.GetColor()}");
+        var es = F(page.Root, "es")!;
+        True(es.GetColor() == SkiaSharp.SKColors.White, $"p:lang(es) sets white, got {es.GetColor()}");
+        True(F(page.Root, "em")!.GetColor() == SkiaSharp.SKColors.White,
+            $"a child element inherits the override-channel white, got {F(page.Root, "em")!.GetColor()}");
+    }
+
+    [Test]
     public static void Specificity_IdBeatsClass()
     {
         Equal(true, Parser.ComputeSpecificity("#x") > Parser.ComputeSpecificity(".x"));
@@ -163,6 +217,33 @@ public static class CascadeTests
             $"the parent's 15% resolves against the 800px containing block (120), got {pctParent.Box.Margin.Top}");
         True(Math.Abs(pctChild.Box.Margin.Top - 30f) < 0.5f,
             $"the inherited percentage re-resolves at the child's containing block (15% of 200 = 30), got {pctChild.Box.Margin.Top}");
+    }
+
+    [Test]
+    public static void Inherit_StylesheetMarginAndPaddingTakeParentComputedEm()
+    {
+        // §6.2.1 through the real cascade (margin-em-inherit-001 / padding-em-inherit-001):
+        // AngleSharp replaces the child's 'inherit' with the parent's specified "2em", which the
+        // child's own 40px font then scaled to 80px. The computed value is the parent's 56px.
+        // A child that authors its own em margin keeps resolving it at its own font.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>" +
+            "body { margin: 0 } #parent { font-size: 28px; margin: 2em 3em 1em 4em; padding: 1em }" +
+            "#child { font-size: 40px; margin: inherit; padding: inherit; height: 10px }" +
+            "#own { font-size: 40px; margin: 1em 0 0 0; height: 10px }" +
+            "</style></head><body><div id='parent'><div id='child'></div><div id='own'></div></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        Drawer.Draw(800, 600, page.Root, new Viewport { ViewportHeight = 600 });
+
+        LayoutNode? F(LayoutNode n, string id) =>
+            n.Id == id ? n : n.Children.Select(c => F(c, id)).FirstOrDefault(r => r != null);
+        var child = F(page.Root, "child")!;
+        var own = F(page.Root, "own")!;
+        True(Math.Abs(child.Box.Margin.Top - 56f) < 0.5f, $"margin-top inherits 2em at 28px = 56, got {child.Box.Margin.Top}");
+        True(Math.Abs(child.Box.Margin.Right - 84f) < 0.5f, $"margin-right inherits 3em at 28px = 84, got {child.Box.Margin.Right}");
+        True(Math.Abs(child.Box.Margin.Left - 112f) < 0.5f, $"margin-left inherits 4em at 28px = 112, got {child.Box.Margin.Left}");
+        True(Math.Abs(child.Box.Padding.Top - 28f) < 0.5f, $"padding-top inherits 1em at 28px = 28, got {child.Box.Padding.Top}");
+        True(Math.Abs(own.Box.Margin.Top - 40f) < 0.5f, $"an authored 1em resolves at the element's own 40px, got {own.Box.Margin.Top}");
     }
 
     // Mirror of LayoutTests.Block: CascadeTests has no block helper of its own.
