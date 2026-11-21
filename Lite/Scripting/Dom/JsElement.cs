@@ -1,4 +1,5 @@
 using Lite.Scripting.Runtime;
+using Lite.Extensions;
 using Lite.Interaction;
 using Lite.Layout;
 using Lite.Models;
@@ -2984,12 +2985,56 @@ public class JsElement
 
     public double offsetWidth { get { EnsureLayout(); return Node.Box.BorderBox.Width; } }
     public double offsetHeight { get { EnsureLayout(); return Node.Box.BorderBox.Height; } }
+
+    /// <summary>The offsetParent (CSSOM View §10, offsetParent attributes): null for the root
+    /// element, the body element itself and a fixed-positioned box (its containing block is the
+    /// viewport, so nothing owns its position); otherwise the nearest ancestor whose computed
+    /// 'position' is not 'static' — a positioned INLINE ancestor included
+    /// (adjacent-to-relpos-inline-*: the check-layout script reads offsetParent.style) —
+    /// falling back to the body element, which browsers return for an unpositioned chain.</summary>
+    public JsElement? offsetParent
+    {
+        get
+        {
+            EnsureLayout();
+            if (Node.TagName is "HTML" or "BODY" || Node.GetPosition() == PositionType.Fixed)
+                return null;
+            for (var a = Node.Parent; a is not null; a = a.Parent)
+            {
+                if (a.TagName is "BODY" or "HTML") return For(_engine, a);
+                if (a.GetPosition() != PositionType.Static) return For(_engine, a);
+            }
+            return null;
+        }
+    }
+
     // offsetLeft/offsetTop report the BORDER edge of the box (the CSSOM View convention — the
     // same edge offsetWidth/offsetHeight span), not the margin edge: an element whose margins
     // push it right reads at its border-box left, so 'html { width: 100px; margin-left: auto }'
-    // reports innerWidth - 100, not 0 (auto-margins-root-element).
-    public double offsetLeft { get { EnsureLayout(); return Node.Box.BorderBox.Left; } }
-    public double offsetTop { get { EnsureLayout(); return Node.Box.BorderBox.Top; } }
+    // reports innerWidth - 100, not 0 (auto-margins-root-element). The origin is the
+    // offsetParent's PADDING edge — the browsers' interoperable reading (inline-static-position-
+    // 001's check-layout expects the relative div's inner border: 12345's 50px span reads 50,
+    // not the page-absolute 59). A fixed box has no offset parent: its origin is the viewport.
+    public double offsetLeft
+    {
+        get
+        {
+            EnsureLayout();
+            var parent = offsetParent;
+            return parent is null ? Node.Box.BorderBox.Left
+                : Node.Box.BorderBox.Left - parent.Node.Box.PaddingBox.Left;
+        }
+    }
+    public double offsetTop
+    {
+        get
+        {
+            EnsureLayout();
+            var parent = offsetParent;
+            return parent is null ? Node.Box.BorderBox.Top
+                : Node.Box.BorderBox.Top - parent.Node.Box.PaddingBox.Top;
+        }
+    }
     public double clientWidth { get { EnsureLayout(); return Node.Box.ContentBox.Width; } }
     public double clientHeight { get { EnsureLayout(); return Node.Box.ContentBox.Height; } }
     // Element scroll offsets (§11.1.1): reads/writes go through the layout's scroll state so
