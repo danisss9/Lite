@@ -994,7 +994,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/c26-psudo-nest-000.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "4ca269b093bdb5bbf81b5056ca7c6f9c3fd5baa98bb10687a88bd942368ce82d",
+    "capturedBytes": 974,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "4b23ae42eb99fda2eb7b55a6d22200277fc2e41ddee46c1894351819e02b9334",
+    "bytes": 2712,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/c31-important-000.xht",
@@ -1776,7 +1784,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/c541-word-sp-000.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "4e37207b9335f8f8469f910bf2b734dce4e061414323d66e9f789be8d1f0c36b",
+    "capturedBytes": 666,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "fb4bfaaf9af59b80ecc23f06e9b6ad8ce073f7039f2dc8bf24f418000c314fc9",
+    "bytes": 1693,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/c541-word-sp-001.xht",
@@ -1821,7 +1837,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/c543-txt-decor-000.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "28d2651ce30932ccb1d9ddc6da782d3dbc02de97c6cd09b8813182593199ab55",
+    "capturedBytes": 928,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "2ac567d82d55515da71fd298b3e9f75a43248b82f2de32c45e418a9d5a0a4b54",
+    "bytes": 2550,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/c544-valgn-000.xht",
@@ -1910,7 +1934,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/c547-indent-000.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "3b319f3d46ba63bd6489fbef53ceffa73d65e02af292991acffd8e3a46b7d2a2",
+    "capturedBytes": 629,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "f780b1e657661e5c0634ed9b23a95caf8d78770cf0045338deb6521df699ca41",
+    "bytes": 1431,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/c547-indent-001.xht",
@@ -10668,7 +10700,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/word-spacing-characters-002.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "3d1c4c56566031e2558522ead20903682289078004643f980c8782b47d7bd8ab",
+    "capturedBytes": 974,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "2ad85d3652c52a83e219897c40923bc94613315cba59c9f87246e7a0f4012f21",
+    "bytes": 6461,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/word-spacing-characters-003.xht",
@@ -14979,7 +15019,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/text-decoration-087.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "ec467a5c1e850d11edf5b225f3b8385d437b28f3f29c835fcdfdb85e01c4b744",
+    "capturedBytes": 554,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "20d46f62fd592ff69125e99de00dfcb2954ea07394b25dba548d52ee52bb60bf",
+    "bytes": 1047,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/text-decoration-088.xht",
@@ -15024,7 +15072,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/text-indent-011.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "20880394415a0cb89993854513dfbf09cfd5b8659ccbb972a2fcd2e8920e84ea",
+    "capturedBytes": 469,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "b24f98c36ab604ad45855cdd7a35a221db75c16d4d703155e877103d2fb26a30",
+    "bytes": 768,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/text-indent-012.xht",
@@ -16631,7 +16687,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/block-in-inline-001.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "53da70f2dc6b73ad1e914ac43a3ddc6988a66895652a3801031edab907448901",
+    "capturedBytes": 629,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "d47304866dc04097dd25d6901a59c9e8ab1756fc7b357748092975c12fa27816",
+    "bytes": 1243,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/block-in-inline-002.xht",
@@ -18172,7 +18236,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/root-box-002.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "db9704d9c337695cd3b549138b51ac74ccbbb3b54e403b76be3885669db43040",
+    "capturedBytes": 789,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "ae9424fb520c043c8cffd7a4079081c21845d664780b51b898627ebcbd76eb75",
+    "bytes": 1707,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/root-box-003.xht",
@@ -33341,7 +33413,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/counter-increment-053.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "ddd43177757a6e9e96f0274de5ce48ee5d6b13e39e6e27465c1544322a365a0d",
+    "capturedBytes": 488,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "2af9774cdf1031d1893aa972e39bfd6e08ba31a60039db0f106833d45bef0622",
+    "bytes": 1130,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/counter-increment-054.xht",
@@ -53538,7 +53618,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/border-conflict-element-002.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "29aa605bb6cd8172fab40275c273f813e2e92dc8c96c7328e3f47727aa352658",
+    "capturedBytes": 625,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "b7de7d648a9fa11bd38b195cd3485632c98b6ccaeca78f9b4eaf8819a0f3ff60",
+    "bytes": 1714,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/border-conflict-element-003.xht",
@@ -53924,7 +54012,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/border-conflict-element-037.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "58e9cbbb172ecb4e1208ccc128433317fecade722af76d5bca6f6b3d7c1ac1f1",
+    "capturedBytes": 641,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "e9d77d774c9bcc3cc382936e31ff1e8840aa21a2e05171b91002e71a40349a93",
+    "bytes": 1826,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/border-conflict-element-038.xht",
@@ -53936,7 +54032,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/border-conflict-element-038.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "ba8ed3dfbdcba8f6056c8ae37e14b32ee1a636cd8a4468f3fb6e7e07563675a2",
+    "capturedBytes": 670,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "6c996066628d2616bacf4439a14ad155689b8851707d51ea9769897e8561591b",
+    "bytes": 1954,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/border-conflict-element-039.xht",
@@ -59921,7 +60025,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/table-visual-layout-018.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "0875603c9b01452121906b964df6945a779cb8173450db42e5ba2441e74417d3",
+    "capturedBytes": 492,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "e50fd6e72a627fbfc1fc340d52cddd0061f2ca413e4f597d40f0b6b13f205885",
+    "bytes": 1433,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/table-visual-layout-019.xht",
@@ -60725,7 +60837,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/outline-color-001.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "c65e8d3c76fab5cc8e7b71f296768e9a1e46b4b9166388607ae660fd0dcd3d7a",
+    "capturedBytes": 519,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "4155ce8867f5cb2a8dde86747508b7aa363ce2cf55a8dc8a8b464fd665e51758",
+    "bytes": 1219,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/outline-color-002.xht",
@@ -60737,7 +60857,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/outline-color-002.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "b0a0b1089f1632e2b5d35402c44036e9ad885f700e5a72d01d051fe0f5cb9171",
+    "capturedBytes": 509,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "5fa329e6d5cc8b6151c9039fb9f662b586f768163482243433fc6c0201402302",
+    "bytes": 1226,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/outline-color-003.xht",
@@ -64951,7 +65079,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/eof-005.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "1da7826658005d9f529dc21a6ad5ee8639a292220ff441ae30c1b1bc9145b7b7",
+    "capturedBytes": 406,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "bf52ea5f19a75d3b232ecd1ca0bcc4c2e0cfd9e76fc6bb8b474ec08fe105db7c",
+    "bytes": 712,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/eof-006.xht",
@@ -73994,7 +74130,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/border-bottom-color-057.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "cf2fa46da43ba05511b47770a16a6399bf46f14a38084f6556d18c0dc5399639",
+    "capturedBytes": 591,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "9f0ef30cab1a1824d4eba55953eb5cf8d83281eca44ca807254aa70bc20cd529",
+    "bytes": 1525,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/border-bottom-color-058.xht",
@@ -103797,7 +103941,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/inline-table-002-ref.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "6e546c78af5cf147dac98b0239d4b75325e451315e913d66c943eb7828699aa3",
+    "capturedBytes": 253,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "2247fb4544e4b9504ea2d2ec5f804fb1fe5643997e9d1f4ef8178b6bbddc4edd",
+    "bytes": 349,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/inline-table-002a.xht",
@@ -103809,7 +103961,15 @@
    "transform": "reference-link injection (1 link)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/inline-table-002a.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)",
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "59822f74bf4d7c474e3ceae334a0b9005135e1b1b7f468d1d95bb21648490935",
+    "capturedBytes": 490,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "de5586f8294b6ef315b710944278ad4f95d13509a39b9ef3b6ad977fe8e6f959",
+    "bytes": 941,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   },
    "references": [
     "inline-table-002-ref.xht"
    ]
@@ -103824,7 +103984,15 @@
    "transform": "reference-link injection (1 link)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/inline-table-002b.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)",
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "10e722197a00aa20a87a614651d6fc8d6df9a511fda530ebc641fa78a80de893",
+    "capturedBytes": 496,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "93535c6a996d47cdbec3fb5d6a508a32173e93977900aa8036cf31f04e09d449",
+    "bytes": 966,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   },
    "references": [
     "inline-table-002-ref.xht"
    ]
@@ -103839,7 +104007,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/inline-table-003-ref.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "f7d87a9bda023efc1e85a3c7c05b03f06d19c006e17bc5bec6567b00d8fe587a",
+    "capturedBytes": 252,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "45a65cf1d02a7b4f646a3e8a1e1addcbd79380fa561f81ecaf7d92e8b998dd56",
+    "bytes": 347,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/inline-table-003.xht",
@@ -103851,7 +104027,15 @@
    "transform": "reference-link injection (1 link)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/inline-table-003.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)",
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "920660665d81f17a25540aba210768a1e307e64dfb157c9a998efc7bba805e5b",
+    "capturedBytes": 464,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "39a9ba6b2128726639653afa2d92c0d801f9aba383e8393cc4db32ea3447fc4b",
+    "bytes": 873,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   },
    "references": [
     "inline-table-003-ref.xht"
    ]
@@ -103916,7 +104100,15 @@
    "transform": "identity (XHTMLSource.write copies a clean source)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/inline-table-valign-001-ref.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)"
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "6cd81b0121e150ba3c2cafecbe1956f0606034be032c1b221b1b3660b0b6bdc1",
+    "capturedBytes": 480,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "7087e0aea58f6b7908dae1a3a073fbf04cff1f7cbe725243567b160b7fb26003",
+    "bytes": 925,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   }
   },
   {
    "target": "xhtml1/inline-table-valign-001.xht",
@@ -103928,7 +104120,15 @@
    "transform": "reference-link injection (1 link)",
    "verifiedBy": "xhtml1->html4 build transform equals the vendored .htm twin byte for byte",
    "twin": "html4/inline-table-valign-001.htm",
-   "twinCapture": "gzip (Wayback stored the body compressed)",
+   "twinCapture": {
+    "capture": "gzip (Wayback stored the body compressed)",
+    "capturedSha256": "6c06354cf4600fe2ce22f0eb6fbb42270e8f97f18874498302f7041d19e5ecf8",
+    "capturedBytes": 657,
+    "decompressedBy": "scripts/restore-css21-html4-gzip.py",
+    "sha256": "b562a43d3d432be203ec33a97885fc650b36eb3a36501b7a3b31d07de896d0b2",
+    "bytes": 1402,
+    "verifiedBy": "gunzip(captured body) equals the xhtml1->html4 build transform of the pinned source blob byte for byte"
+   },
    "references": [
     "inline-table-valign-001-ref.xht"
    ]

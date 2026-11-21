@@ -97,6 +97,17 @@ the plan's 19 November decision would be reversed.
 - **`background-animated-001` → keep applicable/implemented.** No change; the 19 November
   animated-image decision and the `image-animates` judge stand.
 
+### Rulings, 21 November
+
+- **`vertical-align-sub-001` & `vertical-align-super-001` (official + WPT, 4 cases) → keep applicable.**
+  Do not exclude CSS 2.1 tests for AA overdraw; leave AA fringe handling to 6.M / harness.
+- **`css/CSS2/cascade-import/cascade-import-005..012.xht` (8 WPT cases) → `defective` (`missing-input`).**
+  All 8 fetch stylesheets from the unvendored external CGI host
+  `http://software.hixie.ch/utilities/cgi/test-tools/delayed-file` and require interactive
+  alternate-stylesheet selection (HTML 4.01 §14.3.1, not CSS 2.1 §6.4.1). Paired with the
+  self-contained passing §6.4.1 reftest `css/CSS2/cascade/sort-by-order-001.xht` (`authored-equivalent`,
+  which carries `css21.6.4.1` on `screen`).
+
 ## Progress
 
 - **20 November — the xhtml1 variant (one commit, no engine changes).**
@@ -148,3 +159,69 @@ the plan's 19 November decision would be reversed.
     17,885). inline-svg and `background-animated-001` recorded as ruled with no applicability change.
   - **Checks:** units 648/648; curated gates css21 51 pass / 1 expected-fail, wpt 86 pass / 2;
     inventory 18,086 screen / 577 print; lane L 0/4 unchanged; canary 300/300.
+- **21 November — decompress the 25 vendored `html4` gzip bodies (one commit, no engine changes).**
+  - **Decompression & provenance.** `scripts/restore-css21-html4-gzip.py` decompressed all 25
+    vendored `html4/*.htm` files (22 tests + 3 `-ref.htm` references) whose Wayback captures were
+    gzip-compressed response bodies. Every file was proven byte-exact against the recovered
+    `xhtml1 -> html4` build transform (`scripts/restore-css21-xhtml1.py`) applied to the pinned
+    `csswg-test@fa448700877` source blob (matching `sourceSha256`), with zero unresolved and zero
+    drift on idempotent re-run. Provenance (`capturedSha256`, `capturedBytes`, `sha256`, `bytes`,
+    `verifiedBy`) is recorded in `Lite.Conformance/Css21/css21-xhtml1-restore.json`, and
+    `scripts/restore-css21-xhtml1.py` preserves that provenance across re-runs.
+  - **Lock & catalog re-pin.** Re-pinned `test-suites.lock.json` `treeSha256` with the documented
+    OrdinalIgnoreCase canonical rule (`f4d0ff8e…` → `7c2c44de…`), regenerated WPT manifest
+    provenance (`suiteLockSha256`), and rebuilt `css21-official-catalog.json` locally (9,364 cases).
+    **Integrator:** the official tree hash re-pinned (`f4d0ff8e…` → `7c2c44de…`); let
+    `OfficialCatalog.Ensure()` rebuild the catalog on the merged identity and run
+    `scripts/restore-css21-html4-gzip.py` after any future refetch + xhtml1 restore.
+  - **Before vs after (`gz-cases.txt`, 22 test cases): 7/22 → 11/22 passing.**
+    - **4 moved `fail -> pass`:** `inline-table-002a`, `inline-table-002b`, `inline-table-003`,
+      `inline-table-valign-001` (all four tests and their 3 `-ref.htm` files now render real HTML).
+    - **1 moved `manualpending -> fail`:** `border-conflict-element-038` (now renders real HTML and
+      reports 935 red pixels; honest failure exposed).
+    - **1 stayed `fail` with real-HTML diagnostic:** `root-box-002` (twin reftest mismatch → 2,990
+      red pixels).
+    - **16 unchanged:** 7 `pass` (`block-in-inline-001`, `c541-word-sp-000`, `c547-indent-000`,
+      `counter-increment-053`, `eof-005`, `table-visual-layout-018`, `word-spacing-characters-002`),
+      8 `manualpending` (`border-bottom-color-057`, `border-conflict-element-002`,
+      `border-conflict-element-037`, `c26-psudo-nest-000`, `c543-txt-decor-000`, `outline-color-001`,
+      `outline-color-002`, `text-decoration-087`), 1 `fail` (`text-indent-011`).
+  - **Checks:** build Release 0 warnings/errors; units 735/735; curated gates `css21` 51/0/1 xfail,
+    `wpt` 86/0/2 xfail; `--suite css21-inventory` 9,290 WPT / 9,364 official / 18,086 screen
+    blockers / 570 print blockers.
+- **21 November — clear-cut CSS 2.2 `later-feature` and defective official reference reclassifications (one commit, evidence only).**
+  - **6 WPT cases → `later-feature`** (all assert post-2011 CSS 2.2 changes contradicting the
+    pinned 2011-06-07 Recommendation; `media` and `requirementIds` cleared, contradicting 2.1
+    sentences quoted in `rationale`):
+    - `css/CSS2/normal-flow/max-height-separates-margin.html` (CSS 2.2 `s.8.3.1c` vs CSS 2.1
+      §8.3.1 `'auto'` computed height; mutually exclusive with passing `margin-collapse-038`).
+    - `css/CSS2/cascade/inherit-computed-001.html` (CSS 2.2 `s.6.2.1` vs CSS 2.1 §8.5.2
+      `border-*-color` initial `"the value of the 'color' property"` and Computed value `"the
+      computed value is the same as the specified value"`).
+    - `css/CSS2/visudet/inline-block-baseline-003.xht`..`006.xht` (CSS 2.2 `s.10.8.1` vs CSS 2.1
+      §10.8.1 `"The baseline of an 'inline-block' is the baseline of its last line box in the
+      normal flow, unless it has either no in-flow line boxes or if its 'overflow' property has a
+      computed value other than 'visible', in which case the baseline is the bottom margin edge."`).
+  - **2 official cases → `defective` (`contradicts-target`) with passing WPT `maintained-twin` replacements:**
+    - `css21-official/html4/text-indent-intrinsic-003.htm` → `css/CSS2/text/text-indent-intrinsic-003.xht`
+    - `css21-official/html4/text-indent-intrinsic-004.htm` → `css/CSS2/text/text-indent-intrinsic-004.xht`
+    - Both 2011-03-23 `-ref.htm` files gave `width: 0` / `width: 1em` for the `&#x200B;` wrapped
+      lines contradicting §16.1 (`"This property specifies the indentation of the first line of text
+      in a block container."`); WPT fixed both references to `1em` / `3em` and both WPT twins pass.
+  - **Deferred to user judgment (not recorded yet):** `vertical-align-sub-001` / `vertical-align-super-001`
+    (official + WPT, 4 cases) and `css/CSS2/cascade-import/cascade-import-005..012.xht` (8 cases).
+  - **Checks:** build Release succeeded; units 735/735; curated gates `css21` 51/0/1 xfail, `wpt`
+    86/0/2 xfail; `--suite css21-inventory` 9,290 WPT / 9,364 official / 18,080 screen blockers
+    (15 `defective-without-passing-replacement`, 28 `implemented-without-evidence`, 17,877
+    `missing-case`, 10 `missing-evidence`, 150 `unimplemented`) / 570 print blockers.
+- **21 November — user rulings on `cascade-import-005..012` and `vertical-align-sub/super-001` (one commit, evidence only).**
+  - `css/CSS2/cascade-import/cascade-import-005..012.xht` (8 WPT cases) reclassified **`defective`
+    (`missing-input`)** with §6.4.1 and HTML 4.01 §14.3.1 cited, paired with self-contained passing
+    replacement `css/CSS2/cascade/sort-by-order-001.xht` (`authored-equivalent`, `css21.6.4.1` on
+    `screen`).
+  - `vertical-align-sub-001` and `vertical-align-super-001` (official + WPT, 4 cases) recorded as
+    ruled **keep applicable** (no applicability change; AA fringe handling stays with 6.M / harness).
+  - **Checks:** build Release succeeded; units 735/735; curated gates `css21` 51/0/1 xfail, `wpt`
+    86/0/2 xfail; `--suite css21-inventory` 9,290 WPT / 9,364 official / **18,080 screen blockers**
+    (23 `defective-without-passing-replacement`, 28 `implemented-without-evidence`, 17,869
+    `missing-case`, 10 `missing-evidence`, 150 `unimplemented`) / 570 print blockers.
