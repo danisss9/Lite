@@ -122,7 +122,12 @@ internal static partial class Drawer
         var imageUrl = node.GetBackgroundImage();
         if (imageUrl == null) return;
         var bitmap = ResourceLoader.FetchImage(imageUrl, node.DocumentState?.BaseUrl, node.DocumentState?.Session);
-        if (bitmap == null) return;
+        // An SVG image has no raster size of its own: it is sized against the positioning area
+        // below and rasterized at that size.
+        var vector = bitmap is null
+            ? ResourceLoader.FetchSvgImage(imageUrl, node.DocumentState?.BaseUrl, node.DocumentState?.Session)
+            : null;
+        if (bitmap == null && vector == null) return;
 
         var repeat = node.GetBackgroundRepeat();
         var (posX, posY) = node.GetBackgroundPosition();
@@ -144,10 +149,16 @@ internal static partial class Drawer
 
         // Resolve image draw size
         float fontSize = node.GetFontSize();
-        float drawW = bitmap.Width, drawH = bitmap.Height;
-        if (sizeW == "cover" || sizeW == "contain")
+        float drawW, drawH;
+        if (vector is not null)
         {
-            var scaleX = area.Width / bitmap.Width;
+            (drawW, drawH) = VectorDrawSize(vector, sizeW, sizeH, area, fontSize);
+            if (drawW <= 0 || drawH <= 0) return;
+            bitmap = vector.Rasterize(drawW, drawH);
+        }
+        else if (sizeW == "cover" || sizeW == "contain")
+        {
+            var scaleX = area.Width / bitmap!.Width;
             var scaleY = area.Height / bitmap.Height;
             var scale = sizeW == "cover" ? Math.Max(scaleX, scaleY) : Math.Min(scaleX, scaleY);
             drawW = bitmap.Width * scale;
@@ -155,9 +166,10 @@ internal static partial class Drawer
         }
         else
         {
-            if (sizeW != "auto") drawW = ResolveBgDimension(sizeW, area.Width, fontSize);
-            if (sizeH != "auto") drawH = ResolveBgDimension(sizeH, area.Height, fontSize);
+            drawW = sizeW != "auto" ? ResolveBgDimension(sizeW, area.Width, fontSize) : bitmap!.Width;
+            drawH = sizeH != "auto" ? ResolveBgDimension(sizeH, area.Height, fontSize) : bitmap!.Height;
         }
+        if (bitmap is null) return;
 
         // Resolve position
         float offX = ResolveBgPosition(posX, area.Width, drawW, fontSize);
@@ -193,6 +205,28 @@ internal static partial class Drawer
         }
 
         canvas.Restore();
+    }
+
+    /// <summary>The size an SVG background image paints at. CSS 2.1 §14.2.1 places the image
+    /// in the background positioning area; an image without intrinsic dimensions takes its
+    /// size from that area, by CSS Images 3 §5.3's default sizing algorithm (the default object
+    /// size is the positioning area), and <c>cover</c>/<c>contain</c> scale its intrinsic
+    /// ratio to the area (css3-background §3.9).</summary>
+    private static (float Width, float Height) VectorDrawSize(Lite.Media.SvgImage image, string sizeW, string sizeH,
+        SKRect area, float fontSize)
+    {
+        if (sizeW is "cover" or "contain")
+        {
+            if (image.Ratio is not { } ratio) return (area.Width, area.Height);
+            var wide = area.Width / area.Height > ratio;
+            // contain fits the ratio inside the area; cover fills it, overflowing one axis.
+            return wide == (sizeW == "contain")
+                ? (area.Height * ratio, area.Height)
+                : (area.Width, area.Width / ratio);
+        }
+        float? w = sizeW != "auto" ? ResolveBgDimension(sizeW, area.Width, fontSize) : null;
+        float? h = sizeH != "auto" ? ResolveBgDimension(sizeH, area.Height, fontSize) : null;
+        return image.ConcreteSize(w, h, area.Width, area.Height);
     }
 
     private static float ResolveBgDimension(string val, float total, float fontSize)

@@ -82,4 +82,31 @@ public static class BackgroundPaintTests
         True(green > 0, "the list item's background image should paint over its padding box");
         Equal(0, red);
     }
+
+    [Test]
+    public static void SvgBackgroundImage_SizesAgainstPositioningAreaAndRasterizes()
+    {
+        var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'>" +
+                  "<rect width='2' height='1' fill='green'/></svg>";
+        var uri = "url(data:image/svg+xml;base64," +
+                  Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(svg)) + ")";
+
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}" +
+            "#t{width:100px;height:100px;background-color:red}</style></head>" +
+            "<body><div id=t></div></body></html>",
+            isSrcdoc: true, "http://test/", 200, 200);
+        var node = FindById(page.Root, "t")!;
+        node.StyleOverrides["background-image"] = uri;
+        node.StyleOverrides["background-repeat"] = "no-repeat";
+
+        // Ratio 2:1 with no intrinsic width/height: concrete size in 100×100 is 100×50 (CSS Images 3 §5.3).
+        using var bitmap = Drawer.DrawToBitmap(200, 200, page.Root, new Viewport { ViewportHeight = 200 });
+        var (topGreen, topRed) = Count(bitmap, new SKRect(0, 0, 100, 50));
+        var (botGreen, botRed) = Count(bitmap, new SKRect(0, 50, 100, 100));
+        True(topGreen > 0, "the SVG background should fill the top 100×50 band");
+        Equal(0, topRed);
+        Equal(0, botGreen);
+        True(botRed > 0, "no-repeat 2:1 SVG should leave the bottom 100×50 band showing the red background");
+    }
 }
