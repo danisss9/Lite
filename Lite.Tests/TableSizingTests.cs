@@ -291,6 +291,33 @@ public static class TableSizingTests
             "the viewport must still apply BODY's 'scroll'");
     }
 
+    [Test]
+    public static void CaptionSide_IsInheritedFromTheTable()
+    {
+        // §17.4: 'caption-side' is inherited, so the caption takes the table's value
+        // (caption-side-applies-to-006/007: 'caption-side: bottom' on display:table /
+        // inline-table left our caption on top because only its own style was read).
+        string CaptionTop(string tableRule, string captionRule)
+        {
+            var root = Layout("<!DOCTYPE html><style>body{margin:0} #t{" + tableRule + "}" +
+                " #c{display:table-caption" + captionRule + "} #r{display:table-row}" +
+                " #x{display:table-cell;width:20px;height:20px}</style>" +
+                "<div id=\"t\"><div id=\"c\">cap</div><div id=\"r\"><div id=\"x\"></div></div></div>");
+            return Find(root, "DIV", "c")!.Box.BorderBox.Top.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+        float Top(string rule, string cap) => float.Parse(CaptionTop(rule, cap), System.Globalization.CultureInfo.InvariantCulture);
+        var bottom = Top("display:table;caption-side:bottom", "");
+        var bottomInline = Top("display:inline-table;caption-side:bottom", "");
+        var top = Top("display:table", "");
+        var ownTop = Top("display:table;caption-side:bottom", ";caption-side:top");
+        True(bottom > 0f && Math.Abs(bottom - bottomInline) < 0.01f,
+            $"table and inline-table must both put the inherited 'bottom' caption below, got {bottom} and {bottomInline}");
+        // Both captions sit below their 20px cell: the position includes the caption's height.
+        True(Math.Abs(bottom - 20f) < 0.01f, $"the inherited 'bottom' caption must start below the 20px cell, top {bottom}");
+        True(Math.Abs(bottom - top - 20f) < 0.01f, $"the caption's side must change its position by the cell height, {top} -> {bottom}");
+        True(Math.Abs(ownTop - top) < 0.01f, $"the caption's own 'top' must win over the table's 'bottom', got {ownTop} vs {top}");
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);

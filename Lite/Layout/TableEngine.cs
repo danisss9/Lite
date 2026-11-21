@@ -90,9 +90,7 @@ internal static class TableEngine
         float captionBottomH = 0f;
         if (caption is not null)
         {
-            var side = caption.TryResolveStyle("caption-side", out var cs)
-                ? cs : caption.Style.GetPropertyValueSafe("caption-side");
-            captionBottom = side?.Trim() == "bottom";
+            captionBottom = CaptionSide(caption) == "bottom";
             if (!captionBottom)
                 captionTopH = LayoutCaptionBlock(caption, contentX, contentY, contentW, viewportW, viewportH);
         }
@@ -402,6 +400,23 @@ internal static class TableEngine
             new CaptionInsets(captionTopH, captionBottomH, BoxEngine.Generation));
 
         return ry - contentY;
+    }
+
+    /// <summary>§17.4: 'caption-side' is an inherited property, so a caption inherits it from
+    /// the table (and the table from its own ancestors). The cascade keeps the table's value in
+    /// its StyleOverrides channel, which the caption's style object does not see, so walk up;
+    /// reading only the caption's own style left caption-side-applies-to-006/007's caption on
+    /// top despite the table's 'bottom'. The initial value is 'top'.</summary>
+    private static string CaptionSide(LayoutNode caption)
+    {
+        for (var n = caption; n is not null; n = n.Parent)
+        {
+            var raw = n.TryResolveStyle("caption-side", out var ov)
+                ? ov : n.Style.GetPropertyValueSafe("caption-side");
+            var value = raw?.Trim();
+            if (!string.IsNullOrEmpty(value) && value != "inherit") return value;
+        }
+        return "top";
     }
 
     /// <summary>Lays out a table CAPTION as a block spanning the table width and returns its
