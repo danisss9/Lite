@@ -41,6 +41,10 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   the box content box is 628..790. §16.2 requires justified lines to line up on both edges, so this is the known
   10px RTL start-edge asymmetry, now visible because the judge reads inside the content box and mirrors the last
   line's start edge. From 6.M.
+- Line assembly note from 6.A (batch 2, no case): `CommitLine` now places baseline-aligned items inside a
+  `top`/`bottom` inline ancestor from that ancestor's baseline (`BaselineAnchorHost`, §10.8.1 aligned subtrees), and a
+  bare `#text` no longer takes its element's `vertical-align`. This changes only the vertical offsets. The x positions
+  and the `placed` order that `ReorderForBidi` works on are unchanged, and G-pass is 223/223.
 
 ## Edits outside owned files
 

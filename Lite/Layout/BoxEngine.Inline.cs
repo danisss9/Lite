@@ -377,6 +377,42 @@ internal static partial class BoxEngine
                 // only bites on all-negative lines.
                 below = cHasBaseline ? Math.Max(cBelowSigned, strutBelow) : strutBelow;
             }
+            // §10.8.1: items hanging on a 'top'/'bottom' inline ancestor's baseline resolve their
+            // reach from the whole line: the host's baseline sits its own reach (the tallest of
+            // its hanging items, at least its strut) below the line-box edge it aligns to, and
+            // every hanging item places from there. The host's reach also has to fit the line.
+            var hostAbove = new Dictionary<LayoutNode, float>();
+            var hostBelow = new Dictionary<LayoutNode, float>();
+            if (LineHasContent())
+                foreach (var (it, _, _) in placed.GetRange(lineStart, lineEnd - lineStart))
+                {
+                    if (it.Kind is InlineItemKind.OutOfFlow or InlineItemKind.InlineEdge) continue;
+                    if (LineItemVerticalAlign(it.Node) is VerticalAlignType.Top or VerticalAlignType.Bottom) continue;
+                    if (BaselineAnchorHost(it.Node, out var hVa) is not { } host) continue;
+                    var abc = AboveBaselineComponent(it, LineItemVerticalAlign(it.Node));
+                    if (hVa == VerticalAlignType.Top)
+                    {
+                        var (hAbove, _) = hostAbove.TryGetValue(host, out var a) ? (a, 0f) : InlineStrut(host);
+                        hostAbove[host] = Math.Max(hAbove, abc);
+                    }
+                    else
+                    {
+                        var (_, hBelow) = hostBelow.TryGetValue(host, out var b) ? (0f, b) : InlineStrut(host);
+                        hostBelow[host] = Math.Max(hBelow, it.Height - abc);
+                    }
+                }
+            if (LineHasContent())
+                foreach (var (it, _, _) in placed.GetRange(lineStart, lineEnd - lineStart))
+                {
+                    if (it.Kind is InlineItemKind.OutOfFlow or InlineItemKind.InlineEdge) continue;
+                    if (LineItemVerticalAlign(it.Node) is VerticalAlignType.Top or VerticalAlignType.Bottom) continue;
+                    if (BaselineAnchorHost(it.Node, out var hVa) is not { } host) continue;
+                    var abc = AboveBaselineComponent(it, LineItemVerticalAlign(it.Node));
+                    if (hVa == VerticalAlignType.Top)
+                        cTopH = Math.Max(cTopH, hostAbove[host] - abc + it.Height);
+                    else
+                        cBottomH = Math.Max(cBottomH, hostBelow[host] + abc);
+                }
             if (cTopH > above + below) below = cTopH - above;
             if (cBottomH > above + below) above = cBottomH - below;
             var thisLineHeight = above + below > 0f ? above + below : Math.Max(cTopH, cBottomH);
@@ -423,7 +459,18 @@ internal static partial class BoxEngine
             {
                 var (it, rx, _) = placed[k];
                 var vAlign = LineItemVerticalAlign(it.Node);
-                float yOffset = it.Kind == InlineItemKind.OutOfFlow ? 0f : vAlign switch
+                float yOffset;
+                if (it.Kind != InlineItemKind.OutOfFlow && vAlign is not (VerticalAlignType.Top or VerticalAlignType.Bottom) &&
+                    BaselineAnchorHost(it.Node, out var hVa) is { } host &&
+                    (hVa == VerticalAlignType.Top ? hostAbove : hostBelow).TryGetValue(host, out var hReach))
+                {
+                    // §10.8.1: the item's baseline hangs on the host's baseline, which sits the
+                    // host's own reach below the line-box edge the host aligns to.
+                    yOffset = hVa == VerticalAlignType.Top
+                        ? hReach - AboveBaselineComponent(it, vAlign)
+                        : thisLineHeight - hReach - AboveBaselineComponent(it, vAlign);
+                }
+                else yOffset = it.Kind == InlineItemKind.OutOfFlow ? 0f : vAlign switch
                 {
                     VerticalAlignType.Top => 0f,
                     VerticalAlignType.Bottom => thisLineHeight - it.Height,
@@ -931,21 +978,29 @@ internal static partial class BoxEngine
             }
 
             var va = LineItemVerticalAlign(effectiveItem.Node);
-            switch (va)
-            {
-                case VerticalAlignType.Top:
-                    maxTopH = Math.Max(maxTopH, effectiveItem.Height);
-                    break;
-                case VerticalAlignType.Bottom:
-                    maxBottomH = Math.Max(maxBottomH, effectiveItem.Height);
-                    break;
-                default:
-                    maxAbove = Math.Max(maxAbove, AboveBaselineComponent(effectiveItem, va));
-                    maxBelow = Math.Max(maxBelow, effectiveItem.Height - AboveBaselineComponent(effectiveItem, va));
-                    maxBelowSigned = Math.Max(maxBelowSigned, effectiveItem.Height - AboveBaselineComponent(effectiveItem, va));
-                    hasBaselineItem = true;
-                    break;
-            }
+            // §10.8.1: a baseline-aligned item inside a 'top'/'bottom' inline ancestor hangs on
+            // THAT ancestor's baseline, not on the line's. Its reach resolves at CommitLine from
+            // the whole line (the host's own reach is the tallest of its hanging items), so
+            // nothing is accumulated here. An item with its own 'top'/'bottom' still anchors to
+            // the line-box edge itself.
+            var anchoredToHost = va is not (VerticalAlignType.Top or VerticalAlignType.Bottom) &&
+                                 BaselineAnchorHost(effectiveItem.Node, out _) is not null;
+            if (!anchoredToHost)
+                switch (va)
+                {
+                    case VerticalAlignType.Top:
+                        maxTopH = Math.Max(maxTopH, effectiveItem.Height);
+                        break;
+                    case VerticalAlignType.Bottom:
+                        maxBottomH = Math.Max(maxBottomH, effectiveItem.Height);
+                        break;
+                    default:
+                        maxAbove = Math.Max(maxAbove, AboveBaselineComponent(effectiveItem, va));
+                        maxBelow = Math.Max(maxBelow, effectiveItem.Height - AboveBaselineComponent(effectiveItem, va));
+                        maxBelowSigned = Math.Max(maxBelowSigned, effectiveItem.Height - AboveBaselineComponent(effectiveItem, va));
+                        hasBaselineItem = true;
+                        break;
+                }
 
             placed.Add((effectiveItem, lineX, lineY));
             placedLine.Add(currentLine);
@@ -1183,19 +1238,51 @@ internal static partial class BoxEngine
     /// </summary>
     /// <summary>The §10.8.1 line-box alignment of a placed item. 'vertical-align' does not
     /// inherit (§5.5): a bare text run carries none of its own, so its alignment is the
-    /// initial 'baseline'. A synthesized #text resolves property values through the shared
-    /// style of its ELEMENT — for cell text that element is the table cell, whose UA default
-    /// 'vertical-align: middle' is the §17.5.3 CELL-in-row alignment, not a line-box one —
-    /// so reading it here shifted the whole cell's text and grew every line to the shifted
-    /// reach (table-height-algorithm-004's ten 20px Ahem lines measured 22px, 220 against
-    /// the 200px reference). That holds only for text directly in a block container's root
-    /// inline box: a #text inside an INLINE element is that inline box's content and is placed
-    /// with it, so it keeps the element's alignment (vertical-align-nested-top-001's first 'X'
-    /// inside a 'vertical-align: top' span dropped to the baseline).</summary>
-    private static VerticalAlignType LineItemVerticalAlign(LayoutNode node) =>
-        node.TagName == "#text" && node.Parent is { } host && host.GetDisplay() != DisplayType.Inline
-            ? VerticalAlignType.Baseline
-            : node.GetVerticalAlign();
+    /// initial 'baseline' (§9.2.1.1: an anonymous inline box takes the initial value for every
+    /// non-inherited property). A synthesized #text resolves property values through the shared
+    /// style of its ELEMENT — reading that element's 'vertical-align' here aligned the text
+    /// with the ELEMENT instead of with the element's baseline: for cell text that element is
+    /// the table cell, whose UA default 'vertical-align: middle' is the §17.5.3 CELL-in-row
+    /// alignment, not a line-box one (table-height-algorithm-004), and for the text of a
+    /// 'vertical-align: top' span it top-aligned the text instead of hanging it on the span's
+    /// baseline (anonymous-inline-inherit-001). Only a 'vertical-align' DECLARED on the text
+    /// itself (a JS/pseudo projection) is the text's own.</summary>
+    private static VerticalAlignType LineItemVerticalAlign(LayoutNode node)
+    {
+        if (node.TagName != "#text") return node.GetVerticalAlign();
+        return node.TryResolveStyle("vertical-align", out _) ? node.GetVerticalAlign() : VerticalAlignType.Baseline;
+    }
+
+    /// <summary>The inline ancestor a baseline-aligned item hangs its baseline ON (§10.8.1:
+    /// "baseline: align the box's baseline with the baseline of the parent box"). Walking up
+    /// from the item, 'vertical-align: baseline' ancestors pass the baseline through; the first
+    /// 'top'/'bottom' one anchors its whole baseline-hanging subtree to the line-box edge it
+    /// aligns to. Other non-baseline ancestor values (middle, sub, …) return null — those keep
+    /// the legacy item-level alignment.</summary>
+    private static LayoutNode? BaselineAnchorHost(LayoutNode node, out VerticalAlignType hostVa)
+    {
+        hostVa = VerticalAlignType.Baseline;
+        for (var p = node.Parent; p is not null && p.GetDisplay() == DisplayType.Inline; p = p.Parent)
+        {
+            var v = p.GetVerticalAlign();
+            if (v is VerticalAlignType.Top or VerticalAlignType.Bottom) { hostVa = v; return p; }
+            if (v != VerticalAlignType.Baseline) return null;
+        }
+        return null;
+    }
+
+    /// <summary>The strut reach (ascent above / descent below the baseline, both positive) of
+    /// an inline box with its own font and line-height — the baseline an empty 'top'-aligned
+    /// span offers its content (§10.8.1).</summary>
+    private static (float Above, float Below) InlineStrut(LayoutNode node)
+    {
+        using var font = TextMeasure.CreateFont(node);
+        var lh = node.GetLineHeight(node.GetFontSize());
+        if (node.IsNormalLineHeight())
+            lh = -font.Metrics.Ascent + font.Metrics.Descent;
+        var above = TextMeasure.ComputeAscent(font, lh);
+        return (above, lh - above);
+    }
 
     private static float AboveBaselineComponent(InlineItem item, VerticalAlignType vAlign)
     {
@@ -1520,6 +1607,10 @@ internal static partial class BoxEngine
             var it = placed[k].item;
             if (it.Kind is InlineItemKind.InlineEdge or InlineItemKind.OutOfFlow) continue;
             var va = LineItemVerticalAlign(it.Node);
+            // §10.8.1: an item hanging on a 'top'/'bottom' inline ancestor's baseline resolves
+            // its reach from that host at CommitLine, not from the line's baseline.
+            if (va is not (VerticalAlignType.Top or VerticalAlignType.Bottom) &&
+                BaselineAnchorHost(it.Node, out _) is not null) continue;
             switch (va)
             {
                 case VerticalAlignType.Top:

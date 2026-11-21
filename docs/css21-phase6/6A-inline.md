@@ -53,9 +53,32 @@ Branch `css21/p6-a`, worktree `C:\Repos\Lite-p6-a`. Case list `Lite.Conformance/
 
 ## Edits outside owned files
 
+- `Lite/Extensions/DrawCommandExtensions.cs` (6.I's file; batch 2, `e4b06e76`): `GetLineHeight` resolves an ANCESTOR's em/ex/%/calc `line-height` against that ancestor's own font-size, so the computed absolute length is what descendants inherit (§10.8.1, §6.1.2). I-pass 2475/2475, J-pass 519/519.
+- `Lite/Drawer.cs` (inline fragment painting, no named owner; nearest is 6.H; batch 2, `7de89196`): anonymous `#text` boxes no longer paint their host element's `background-color` over their line fragments (§9.2.1.1, §6.2.1); block-in-inline pieces keep the old paint. H-pass checked.
 - `Lite/Parser.cs` (1-line fix in `Traverse` mixed-children loop: call `NormalizeTextWhitespace(textNode.Data, ws)` instead of `CollapseWhitespace(textNode.Data)`, matching the leaf-text path at line 1078, so `white-space: pre`/`pre-wrap`/`pre-line` preserves newlines and spaces in mixed-children elements).
 
 ## Progress
+
+### 2026-11-21 — Batch 2: line-height inheritance, anonymous-box backgrounds, aligned subtrees
+Three commits (`e4b06e76`, `7de89196`, and the aligned-subtree commit after them).
+- **`e4b06e76` §10.8.1/§6.1.2, relative `line-height` inherits as the computed length** (`DrawCommandExtensions.cs`, outside owned files): an ancestor's `1em`/`200%` resolved against the descendant's font. c548-ln-ht-003/004 drop from 4400 to 1600 red px, and nothing flips on this commit alone. Unit `LineHeight_RelativeLengthInheritsAsComputedPixels`.
+- **`7de89196` §9.2.1.1/§6.2.1, anonymous inline boxes paint no background** (`Drawer.cs`, outside owned files): the text child repainted the host's red `background-color` over the block's background image. **Moved:** `c548-ln-ht-003`, `c548-ln-ht-004` (official + WPT), fail → pass. Unit `AnonymousText_DoesNotPaintHostBackground`.
+- **Aligned subtrees, §10.8.1** (`BoxEngine.Inline.cs`): a bare `#text` takes the initial `vertical-align: baseline` (§9.2.1.1) unless a value is declared on the text itself. A baseline-aligned item inside a `top`/`bottom` inline ancestor hangs on that ancestor's baseline. The host's reach is the tallest of its hanging items, at least its own strut, and it is placed from the line-box edge the host aligns to (`BaselineAnchorHost`, `InlineStrut`). Other non-baseline ancestors (middle, sub, length) keep the item-level alignment. **Moved:** `css/CSS2/linebox/anonymous-inline-inherit-001.html` fail → pass (won back). Unit `VerticalAlignTop_TextHangsOnHostBaseline`.
+- **A.txt:** 5 pass / 120 fail (was 0/125). Official 2/59, WPT 3/66. 0 losses.
+- **Still failing, and why:**
+  - css1 "HI" cases `c5502-imrgn-r-003`, `c5504-imrgn-l-003`, `c5507-ipadn-r-003`, `c5509-ipadn-l-003` (official + WPT): the shared reference places the I bar 25px plus one default-font space after the H. Our default serif's space is 4px, and the Ahem test needs 5px (I bar at 142 vs 143). This is font-dependent, so it is left parked.
+  - css1 image-row 1px shifts: `c5502-imrgn-r-005/006`, `c5504-imrgn-l-005/006`, `c5507-ipadn-r-004`, `c5509-ipadn-l-004`, `c5510-ipadn-000`, `c5508-ipadn-b-003`. The reference's image line sits 1px higher, because its strut descent below a 15px image is 3px where Blink's is 4px. Blink rounds ascent and descent to whole pixels and gives the floored half-leading to the ascent and the rest to the descent. Lite centres unrounded metrics (`TextMeasure.ComputeAscent`, `GetLineHeight` 'normal' = ascent+descent without line gap). Changing this touches 6.J's metrics API and every line, so it needs a coordinated change with 6.J. It was not done here.
+  - `line-height-125`: the inheritance is now right (10px), but the case still fails. Not yet diagnosed.
+  - `vertical-align-negative-leading-001`: `top`/`bottom` boxes with negative leading (line-height 10px, 30px font) place the glyphs off.
+  - `vertical-align-baseline-003`: an inline-block's baseline must be its LAST line box (§10.8.1); we align on the first.
+  - `line-height-oof-descendants-001`: an empty abs/float/fixed span gives a `line-height: 0` line real height. The reference also renders wrong (0-height paragraphs collapse through).
+  - `line-height-bleed-002`: the `::first-letter` box under `line-height: 0` is placed above the rest.
+  - `vertical-align-applies-to-007`: a `vertical-align: bottom` table cell keeps its text at the top (§17.5.3; 6.E's area).
+  - `line-height-203/206`: web-font (Revalia/AD woff) ascent/descent (6.J's area).
+  - `fonts-012` (per-run mixed-font fallback, handed in from 6.J): not started in this batch.
+  - The rest are unchanged from batch 1: `::first-line`, `text-align-white-space`, `text-indent`, `text-transform`, `white-space-mixed/normal/processing-054`, `letter-spacing-080/102`, `word-spacing-justify-001`, and the 6.X/6.M candidates listed above.
+- **Handed to other lanes:** a line-assembly note to 6.G (`6G-bidi.md`). No cases moved.
+- **Checks (on the final tree):** build 0 errors. Units 738/738. css21 51/1. wpt 86/2. `A-pass.txt` 1405/1405. `canary.txt` 960/960. `G-pass.txt` 223/223. `I-pass.txt` 2475/2475. `H-pass.txt` 1274/1274. `J-pass.txt` 519/519 (on `e4b06e76`).
 
 ### 2026-11-20 — Fix round: §16.6.1 line-end space before closing inline edges
 - **Losses from the batch-1 baseline, both caused by commit 1 (`5e148b2c`):** `css21-official/html4/block-in-inline-append-002.htm` and `css/CSS2/borders/border-color-012.xht`. Commit 1 restores the parser-trimmed boundary spaces on leaf inline boxes, so `...text </span></span>` now ends its line with a real space. The line-end trim only fired when that text was the line's LAST placed item, and here closing inline edges follow it, so the space stayed and the wrapper borders reached one space past the glyphs. (In `block-in-inline-append-002` it was the static reference that grew the space; the DOM-built test has none.)
