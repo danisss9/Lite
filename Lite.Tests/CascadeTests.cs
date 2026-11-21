@@ -41,6 +41,42 @@ public static class CascadeTests
     }
 
     [Test]
+    public static void Lang_MatchesRangesDocumentLanguageAndReachesText()
+    {
+        // §5.11.4: ':lang(C)' takes the nearest lang/xml:lang; with none in scope the document
+        // language (meta http-equiv="content-language" here) applies. The argument is a language
+        // RANGE: ':lang(en)' matches en-US but ':lang(en-GB)' does not match a plain 'en'.
+        // §6.2.1: the rule reaches the element through Lite's override channel, so its text and
+        // its child elements must still see the computed color (the XML-served
+        // lang-selector-004/lang-pseudoclass-002 twins painted the text and the <em> black).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><meta http-equiv='content-language' content='fr'>" +
+            "<style>div:lang(fr) { color: green } p:lang(en) { color: green } " +
+            "span:lang(en-GB) { color: lime } p:lang(es) { color: white; background-color: green }" +
+            "</style></head><body>" +
+            "<div id='doc'>Document language<span id='docspan'>x</span></div>" +
+            "<p id='widen' lang='en-US'>English range</p>" +
+            "<p><span id='narrow' lang='en'>not en-GB</span></p>" +
+            "<p id='es' lang='es'>Spanish <em id='em'>emphasis</em></p>" +
+            "</body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        LayoutNode? F(LayoutNode n, string id) =>
+            n.Id == id ? n : n.Children.Select(c => F(c, id)).FirstOrDefault(r => r != null);
+        var green = new SkiaSharp.SKColor(0, 128, 0);
+        var doc = F(page.Root, "doc")!;
+        var docText = doc.Children.FirstOrDefault(c => c.TagName == "#text");
+        True(doc.GetColor() == green, $"meta content-language 'fr' makes div:lang(fr) green, got {doc.GetColor()}");
+        True(docText is not null && docText.GetColor() == green,
+            $"the div's own text inherits the green override, got {docText?.GetColor()}");
+        True(F(page.Root, "widen")!.GetColor() == green, $":lang(en) matches lang=en-US, got {F(page.Root, "widen")!.GetColor()}");
+        True(F(page.Root, "narrow")!.GetColor() == SkiaSharp.SKColors.Black,
+            $":lang(en-GB) must not match lang=en, got {F(page.Root, "narrow")!.GetColor()}");
+        var es = F(page.Root, "es")!;
+        True(es.GetColor() == SkiaSharp.SKColors.White, $"p:lang(es) sets white, got {es.GetColor()}");
+        True(F(page.Root, "em")!.GetColor() == SkiaSharp.SKColors.White,
+            $"a child element inherits the override-channel white, got {F(page.Root, "em")!.GetColor()}");
+    }
+
+    [Test]
     public static void Specificity_IdBeatsClass()
     {
         Equal(true, Parser.ComputeSpecificity("#x") > Parser.ComputeSpecificity(".x"));

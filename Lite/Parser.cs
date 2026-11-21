@@ -163,6 +163,9 @@ internal static partial class Parser
         internal string Charset = EncodingNames.Utf8;
         /// <summary>The response MIME type (see DocumentState.MediaType).</summary>
         internal string? MediaType;
+        /// <summary>The response's Content-Language header: the document language used by
+        /// ':lang()' when no lang attribute is in scope (CSS 2.1 §5.11.4).</summary>
+        internal string? ContentLanguage;
         /// <summary>Cursor into <see cref="Source"/>: scripts are collected in document order,
         /// so each one consumes the next source span (its start tag through its end tag).</summary>
         internal int SourceCursor;
@@ -269,6 +272,9 @@ internal static partial class Parser
         }
         using var response = Session.Client.Send(message);
         var address = response.RequestMessage?.RequestUri?.AbsoluteUri ?? request.Url;
+        // CSS 2.1 §5.11.4: the document language may come from the HTTP headers; it is the
+        // fallback for ':lang()' on elements with no lang attribute in scope.
+        Current.ContentLanguage = response.Content.Headers.ContentLanguage.FirstOrDefault();
         // REC §8.2.2.1: the document bytes are decoded by the encoding-sniffing algorithm
         // (BOM, then the transport charset, then the 1024-byte meta prescan, then Lite's
         // implementation-defined UTF-8 default, with the late-declaration restart).
@@ -737,6 +743,7 @@ internal static partial class Parser
                 Current.Charset = charset;
                 mediaType = response.Content.Headers.ContentType?.MediaType;
                 Current.MediaType = mediaType;
+                Current.ContentLanguage = response.Content.Headers.ContentLanguage.FirstOrDefault();
             }
             // The child document dispatches on its MIME type exactly like the top-level load:
             // an XML media type (application/xml, text/xml, image/svg+xml, an XHTML document)
@@ -1565,6 +1572,11 @@ internal static partial class Parser
         if (tag == "TABLE")
             ApplyTableSpacingAttributes(element, node);
         ApplyPresentationalHints(element, node, tag);
+        // §6.2.1: the override channel can hold inherited values AngleSharp's cascade never saw
+        // (:lang/:link/dynamic rules, presentational hints). The children's computed styles were
+        // built from the parent's stale value, so carry the parent's effective values down. Runs
+        // after the hints so the element's own attribute mapping is part of what it hands on.
+        StyleResolver.InheritOverrideChannelIntoSubtree(node);
 
         // <picture>: now that the <img> and <source> children exist, pick the source the <img>
         // should display (media/type-based selection; falls back to the <img>'s own src).

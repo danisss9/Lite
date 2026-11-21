@@ -58,6 +58,47 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
 
 ## Progress
 
+### Batch 2, commit 2 - `:lang()` language ranges, document language and override-channel inheritance (§5.11.4 / §6.2.1)
+
+- **Moved (8 cases: +3 official, +5 WPT):**
+  - `css21-official/html4/lang-pseudoclass-001.htm`, `css/CSS2/selectors/lang-pseudoclass-001.html`
+  - `css21-official/html4/lang-selector-005.htm`, `css/CSS2/selectors/lang-selector-005.xht`
+    (HTTP `Content-Language: fr`)
+  - `css21-official/html4/lang-selector-006.htm`, `css/CSS2/selectors/lang-selector-006.xht`
+    (`meta http-equiv="content-language" content="fr"`)
+  - `css/CSS2/selectors/lang-selector-004.xht` (inherited `lang="fr"`)
+  - `css/CSS2/selectors/lang-pseudoclass-002.xht` (XHTML `xml:lang`, range semantics, `<em>`)
+- **Root causes, three of them:**
+  1. **Range semantics were wrong** (`Parser.Cascade.cs`, `ElementMatchesLang`): the old code
+     compared the PRIMARY subtags only, so `:lang(en-GB)` wrongly matched `lang="en"`, `lang="en-US"`
+     and `lang="en-GB"` all. §5.11.4's argument is a language range: it matches the language
+     itself or the range followed by a hyphen and more subtags.
+  2. **No document language** when no `lang`/`xml:lang` is in scope: now the HTTP
+     `Content-Language` header (two lines in `Parser.cs`'s `ParseState`/fetch paths) and an HTML
+     or XHTML `meta http-equiv="content-language"` are consulted, in that order.
+  3. **The override channel did not inherit** (`StyleResolver.cs`): a `:lang`/`:link`/dynamic
+     rule reaches only the element's override channel, which AngleSharp's cascade never sees. Text
+     runs and child elements therefore kept the stale computed value: the XML-served
+     `lang-selector-004` painted its text black, and `lang-pseudoclass-002`'s `<em>` inside
+     `p:lang(es) { color: white }` stayed black. New
+     `StyleResolver.InheritOverrideChannelIntoSubtree` copies the element's inherited
+     override values onto its text runs and child elements whose OWN cascade does not declare the
+     property (checked with `ComputeExplicitStyleFor`), after presentational hints so a child
+     `<font color>` attribute still wins.
+- **Edits outside owned files:** `Lite/Parser.cs` (shared with the HTML5 track): the
+  `ParseState.ContentLanguage` field, its two fetch-path assignments, and the
+  `InheritOverrideChannelIntoSubtree` call after `ApplyPresentationalHints`. **The HTML5 gate was
+  not rerun** (lane rules).
+- **Checks:**
+  - Build: `dotnet build Lite.sln -c Release` succeeded.
+  - Units: full suite 737 passed, 0 failed, including the new
+    `CascadeTests.Lang_MatchesRangesDocumentLanguageAndReachesText`.
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 3/37 official, 6/65 WPT (from 0/37, 1/65; **8 cases moved**, the list above).
+  - `K-pass.txt`: 1,166/1,166 (611/611 official, 555/555 WPT).
+  - Canary: 960/960 (492/492 official, 468/468 WPT).
+  - `C-pass.txt` (inheritance/cascade change): 2,974/2,974.
+
 ### Batch 2, commit 1 - `inherit` passes the parent's COMPUTED font-relative length (§6.2.1)
 
 - **Handed in from 6.C:** `margin-em-inherit-001` / `padding-em-inherit-001` (official and WPT

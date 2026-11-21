@@ -976,6 +976,22 @@ internal static partial class Parser
     private static readonly Regex s_fontRelativeLength =
         new(@"^[+-]?(\d+(\.\d*)?|\.\d+)(em|ex)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+    /// <summary>The element's own cascade - origin, !important, specificity, source order and
+    /// the style attribute - WITHOUT inheritance (§6.2.1 distinguishes the specified/inherited
+    /// value from the computed one). Used where the layout node's raw value could hide an
+    /// 'inherit' keyword that AngleSharp already substituted.</summary>
+    internal static ICssStyleDeclaration? ComputeExplicitStyleFor(IElement element)
+    {
+        try
+        {
+            var window = element.Owner?.DefaultView;
+            if (window is null) return null;
+            var device = element.Owner!.Context.GetService<IRenderDevice>() ?? new DefaultRenderDevice();
+            return window.GetStyleCollection(device).ComputeExplicitStyle(element);
+        }
+        catch { return null; }
+    }
+
     /// <summary>
     /// CSS 2.1 §6.2.1: 'inherit' takes the parent's COMPUTED value, and an 'em'/'ex' length
     /// computes against the font of the element that declares it (§4.3.2). AngleSharp resolves
@@ -1015,15 +1031,8 @@ internal static partial class Parser
 
         // The element's own cascade (origin, !important, specificity, order and the style
         // attribute), without inheritance: does 'inherit' win there?
-        ICssStyleDeclaration own;
-        try
-        {
-            var window = element.Owner?.DefaultView;
-            if (window is null) return;
-            var device = element.Owner!.Context.GetService<IRenderDevice>() ?? new DefaultRenderDevice();
-            own = window.GetStyleCollection(device).ComputeExplicitStyle(element);
-        }
-        catch { return; }
+        ICssStyleDeclaration? own = ComputeExplicitStyleFor(element);
+        if (own is null) return;
 
         foreach (var prop in candidates)
             if (SaysInherit(own, prop))
@@ -1980,10 +1989,12 @@ internal static partial class Parser
         return false;
     }
 
-    /// <summary>Whether <paramref name="element"/>'s inherited document language matches a
-    /// ':lang(...)' selector fragment (§5.11.4): the nearest lang/xml:lang attribute on the
-    /// element or an ancestor, compared case-insensitively with hyphen-prefix semantics
-    /// (':lang(en)' matches lang="en-US"). The argument may be a quoted string or a wildcard.</summary>
+    /// <summary>Whether <paramref name="element"/>'s language matches a ':lang(...)' selector
+    /// fragment (§5.11.4): the nearest lang/xml:lang attribute on the element or an ancestor,
+    /// or - when none is in scope - the document's own language. The argument is a language
+    /// RANGE: it matches the language itself or a more specific tag that extends it with a
+    /// hyphen (':lang(en)' matches en-US; ':lang(en-GB)' does not match 'en'), compared ASCII
+    /// case-insensitively. The argument may be a quoted string or a wildcard.</summary>
     private static bool ElementMatchesLang(IElement element, string langFragment)
     {
         var open = langFragment.IndexOf('(');
@@ -2010,9 +2021,34 @@ internal static partial class Parser
             }
             if (!string.IsNullOrEmpty(lang)) { inherited = lang.Trim(); break; }
         }
+        inherited ??= DocumentLanguage(element);
         if (inherited is null) return false;
-        return inherited.Split(['-', '_'], 2)[0].Equals(wanted.Split(['-', '_'], 2)[0],
-            StringComparison.OrdinalIgnoreCase);
+        // A language range matches when the tags are equal, or when the element's tag is the
+        // range plus a hyphen and further subtags: 'en' never matches ':lang(en-GB)'.
+        return inherited.Equals(wanted, StringComparison.OrdinalIgnoreCase) ||
+            inherited.Length > wanted.Length &&
+            inherited.StartsWith(wanted, StringComparison.OrdinalIgnoreCase) &&
+            inherited[wanted.Length] == '-';
+    }
+
+    /// <summary>The document language for ':lang()' when no lang attribute is in scope
+    /// (§5.11.4): the response's Content-Language header, else an HTML
+    /// <c>meta http-equiv="content-language"</c>.</summary>
+    private static string? DocumentLanguage(IElement element)
+    {
+        if (Current.ContentLanguage is { Length: > 0 } header) return header;
+        if (element.Owner is not { } document) return null;
+        // An HTML document, or an XHTML document (the XML parser): 'meta http-equiv' is
+        // meaningful in both. A plain XML document has no such element semantics.
+        var xhtml = document is AngleSharp.Html.Dom.IHtmlDocument ||
+            document.DocumentElement?.NamespaceUri == "http://www.w3.org/1999/xhtml";
+        if (!xhtml) return null;
+        foreach (var meta in document.QuerySelectorAll("meta[http-equiv]"))
+            if (string.Equals(meta.GetAttribute("http-equiv"), "content-language",
+                    StringComparison.OrdinalIgnoreCase) &&
+                meta.GetAttribute("content")?.Trim() is { Length: > 0 } content)
+                return content;
+        return null;
     }
 
     // ---- CSS rule storage for the LayoutNode-based cascade (StyleResolver) ----
