@@ -264,13 +264,17 @@ public static class DuckDuckGoLiteTests
     public static void Homepage_UsesDesktopControlWidthAndRelativeHitRegions()
     {
         using var server = new SearchServer();
-        foreach (var (width, height, expectedWidth) in new[] { (800, 600, 470.4f), (1280, 800, 600f) })
+        // The 800x600 window's homepage is taller than the fold, so its classic page scrollbar
+        // reserves a gutter from the initial containing block (Drawer's layout viewport) and
+        // the desktop search input lays out at 465.6px; at 1280x800 the page fits and the
+        // full-width 600px expectation stands.
+        foreach (var (width, height, expectedWidth) in new[] { (800, 600, 465.6f), (1280, 800, 600f) })
         {
             var page = Parser.TraversePage(new NavigationRequest(server.BaseUrl + "/lite/"), width, height);
             var viewport = new Viewport { ViewportHeight = height };
             var (_, hits) = Drawer.Draw(width, height, page.Root, viewport);
             var query = FindControl(Find(page.Root, "search"), "q");
-            True(Math.Abs(query.Box.ContentBox.Width - expectedWidth) < 2f,
+                True(Math.Abs(query.Box.ContentBox.Width - expectedWidth) < 2f,
                 $"query width was {query.Box.ContentBox.Width}, expected {expectedWidth}");
             var hit = hits.Single(h => h.NodeKey == query.NodeKey && h.InputAction == InputAction.TextInput);
             True(hit.Bounds.Top >= height * 0.25f,
