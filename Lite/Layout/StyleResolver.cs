@@ -83,7 +83,30 @@ internal static class StyleResolver
     {
         foreach (var prop in InheritedProperties)
             if (element.StyleOverrides.TryGetValue(prop, out var value))
-                text.StyleOverrides[prop] = value;
+                text.StyleOverrides[prop] = ComputedForInheritance(element, prop, value);
+    }
+
+    /// <summary>§6.2.1: a child inherits the parent's COMPUTED value. For the inherited
+    /// properties whose computed value is an absolute length, a relative length or percentage
+    /// computes on the DECLARING element ('line-height: 1em' at 10px is 10px for every
+    /// descendant, whatever their own font size, line-height-125). Copying the raw '1em' down
+    /// the override channel re-resolved it against each descendant's font: a 50px child got
+    /// 50px lines. Unitless numbers and keywords inherit as they are.</summary>
+    private static string ComputedForInheritance(LayoutNode node, string prop, string value)
+    {
+        var v = value.Trim();
+        if (v.Length == 0 || !(v.EndsWith("em", StringComparison.OrdinalIgnoreCase) ||
+                               v.EndsWith("ex", StringComparison.OrdinalIgnoreCase) || v.EndsWith('%')))
+            return value;
+        float? px = prop switch
+        {
+            "line-height" => node.GetLineHeight(node.GetFontSize()),
+            "font-size" => node.GetFontSize(),
+            "letter-spacing" or "word-spacing" =>
+                CssUnits.TryParse(v, node.GetFontSize(), node.GetFontSize(), 0f, 0f, out var len) ? len : null,
+            _ => null,
+        };
+        return px is { } p ? p.ToString(System.Globalization.CultureInfo.InvariantCulture) + "px" : value;
     }
 
     /// <summary>§6.2.1 for a child ELEMENT: its computed style is built by AngleSharp from the
@@ -112,7 +135,7 @@ internal static class StyleResolver
                 }
                 if (own is not null && !string.IsNullOrEmpty(own.GetPropertyValueSafe(prop)?.Trim()))
                     continue;
-                child.StyleOverrides[prop] = effective;
+                child.StyleOverrides[prop] = ComputedForInheritance(node, prop, effective);
                 stamped = true;
             }
             if (stamped) InheritOverrideChannelIntoSubtree(child);
