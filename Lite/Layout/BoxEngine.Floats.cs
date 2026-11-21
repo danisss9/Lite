@@ -680,6 +680,25 @@ internal static partial class BoxEngine
             wantedW = Math.Max(wantedW, tableMinBorderBox);
         }
 
+        // §10.3.3's width equation is a lower bound for an auto-width BFC: content width =
+        // containing block width − margins − edges, so a NEGATIVE start margin "props up" the
+        // border box to the containing block width − margins. That no longer fits beside any
+        // float, so the box goes below them (floats-wrap-bfc-with-margin-001..010). Only the
+        // START margin does: the end margin is the one §10.3.3 recomputes, so a negative end
+        // margin cannot widen the box. Under 'rtl' that is margin-left, and an auto BFC with
+        // margin-left:-20px stays beside its float (new-fc-beside-float-with-margin-rtl).
+        if (!replaced.HasValue && child.IsAutoWidth())
+        {
+            var marginLeft = child.IsAutoMarginLeft() ? 0f : child.GetMarginLeft(total: contentW, size: childFontSize);
+            var marginRight = child.IsAutoMarginRight() ? 0f : child.GetMarginRight(total: contentW, size: childFontSize);
+            var rtl = child.Parent?.GetDirection() == "rtl";
+            var start = rtl ? marginRight : marginLeft;
+            var end = rtl ? marginLeft : marginRight;
+            var inlineMargins = start + Math.Max(0f, end);
+            if (inlineMargins < 0f)
+                wantedW = Math.Max(wantedW, Math.Max(0f, contentW - inlineMargins));
+        }
+
         var probeH = 1f;
         if (replaced.HasValue)
         {
