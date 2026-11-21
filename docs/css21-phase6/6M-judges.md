@@ -80,6 +80,7 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - `Lite.Conformance/Wpt/WptRunner.cs`: the manual-pending dispatch (`IsManualPendingRoute`, two route checks and `EvidenceKind`). The route cannot be expressed from the owned files (the kind switch lives here); it is 13 lines and one concern.
 - `Lite.Tests/Css21CoverageTests.cs`: the unit tests for every new route/check (the lane rules require them).
 - `docs/css21-phase6/6D-positioning.md`, `6H-backgrounds.md`, `6K-cascade.md`: findings handed in, one section each.
+- `docs/css21-phase6/6A-inline.md`, `6E-tables.md`, `6J-fonts.md`: batch-2 hand-ins under "Handed in" (the align-edge/table-width dependency and the unquoted `default` family).
 
 ## Progress
 
@@ -133,4 +134,48 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   1078 manualpending / 13 fail / 48 unsupported / 20 pass; canary 300/300. A 1,370-case affected-kind run
   (`text-*`, `painted-*`, `first-line-*`, `justify`, `align-*`) shows no new-looking failures beyond the handed-in
   ones.
+ 
+### 3. Judges read the scroll, font-family, tiny-size and weight sentences (commit `batch 2 judges`)
+
+- **Audit of 6.H's `cbe1d649` (48 cases).** I dumped before/mid/after for the 24 WPT and 24
+  official `background-119/121/…/205` renders (`LITE_SURVEY_DUMP=all`) and read each against its
+  sentence: after scrolling down, the box's bottom band is the repeated cat line-art row (20.4% dark
+  ink over 96.9% of the band's columns) and scrolling right moves it (27.5% of the band's pixels
+  change). All 48 are real passes, so the second scroll phase stays. The judge now also requires that
+  dark line-art share and column spread, not the two-tone share that a blank white band satisfied by
+  itself; the 48 keep passing, and no pass was manufactured.
+- **Moved to pass (36 font cases, WPT + official):**
+  - `font-matching-rule-001/006`, `font-style-002/003/004` (10): `slanted-box` accepts the 20x16
+    sheared Ahem glyph when its rows read as a parallelogram (equal-length runs drifting one way).
+  - `font-size-003/014` (4): `one-shape` variant `tiny` reads the 1px/1pt dot geometrically; the
+    component read dropped it.
+  - `font-family-rule-004/007/013/014/015/016` (12): `letter-x` variant `box-above` reads the
+    fallback letter geometrically (the antialiased glyph shatters past the join threshold) and
+    requires one filled Ahem box above its column.
+  - `font-family-002..006` (10): `words-and-box` accepts the 16x16 Ahem box (the old 20px floor).
+  - `font-weight-010/011/014` (6): a new `text-visible` check counts the stated colour's own pixels
+    over the filler elements' union (>=300px and >=5% of the ink), so the obscuring black copy no
+    longer has to be the dominant ink. `font-weight-012/013` keep passing under the same kind.
+- **Moved to fail (2, audited):** `font-family-rule-011` official+WPT: the engine matches the
+  unquoted `default` family, so both elements paint the Ahem box and the page has no letter. Handed
+  to 6.J.
+- **No moves for 6.A's align-edge cases (change reverted).** A judge-only content-edge read does fix
+  `text-align-applies-to-007/012/013/015` (8) — the line sits at the body's 792/8 — but it flips 12
+  currently-passing siblings (`…-006/008/009/010/011/014`, in `A-pass.txt`) to fail: their
+  `width: 100%` tables have `border: solid`, the engine sizes the percentage as a content box, and
+  the line paints at 798. Those 12 pass only through the viewport-edge fallback, so the judge keeps
+  it until 6.E fixes the table width (handed in to 6.A and 6.E).
+- **Check kinds:** `text-visible` is new (judge, `Describe`, `ColorShare` core, unit test,
+  `known` list in `PassConditions_EveryCheckKindHasJudgeAndEveryCaseHasARoute`); the other changes
+  are new variants/reads of existing kinds. New unit tests: `TextVisible_…`, `TinyInk_…`,
+  `Parallelogram_…`, and `ScrollCatsBottomMoved_…` (rewritten to a line-art hatch).
+- **Readings:** units 739/739; css21 gate 51 passed + 1 expected-fail; wpt 86 + 2 expected-fail;
+  affected kinds: fonts/scroll 98 → 96 pass, 2 fail (`font-family-rule-011`), align-right 35 → 31
+  pass, 4 fail (the 6.A cases; the 12 A-pass siblings still pass); canary 960/960 (0 losses); J-pass
+  519/519; A-pass's six align siblings re-checked in the align-right run.
+- **Honest residue:** a broad 1,404-case `affected.txt` sweep hung on `outline-007.htm` (the worker
+  recycled and the run was stopped after 936 cases); nothing new-looking appeared in it
+  (`first-line-selector-001`, `html-attribute-021/022`, `lang-selector-005/006` are pre-existing).
+  The timed renders (`floats-137`, `background-position-201`, `background-bg-pos-205`),
+  `background-root-014/014a` and the long tail of manual-pending sentences are still open.
 

@@ -1579,7 +1579,7 @@ public static class Css21CoverageTests
         }
         var known = new HashSet<string>(StringComparer.Ordinal);
         foreach (var kind in new[] { "one-shape", "same-dimension", "bar-gap", "line-style", "look-same", "solid-line",
-                     "border-ring", "border-sample", "text-color", "text-on-background", "bolder", "line-align", "scrollbars", "text-color-pairs", "text-decoration", "align-right",
+                     "border-ring", "border-sample", "text-color", "text-visible", "text-on-background", "bolder", "line-align", "scrollbars", "text-color-pairs", "text-decoration", "align-right",
                      "scrollbox-same-size", "scrollbar-gap", "twin-squares", "page-scroll-text", "grid-aligned", "tile-centered", "outline-around", "first-line-case", "page-horizontal-bar", "cursor-marker", "word-boxes", "viewport-half-square", "resize-no-red", "image-animates",
                      "shape-relation", "space-between", "stack-three", "two-size", "line-pair", "marker-bullet",
                      "round-dot", "double-line", "slanted-box", "line-marker", "bullet-beside", "bar-stack", "bars-match",
@@ -1615,5 +1615,110 @@ public static class Css21CoverageTests
                          condition is "no-red" or "same-color" || !ScreenRunnable(path);
             True(routed, $"case without a verdict route: {path} ({condition})");
         }
+    }
+    /// <summary>Lane 6.M: "a picture of a cat repeated across the bottom" reads the line art's
+    /// dark ink and its column spread — a blank white band (which the two-tone share counts as
+    /// image) and a single unrepeated tile both fall short; a repeated row passes.</summary>
+    [Test]
+    public static void ScrollCatsBottomMoved_NeedsRepeatedDarkLineArt()
+    {
+        var band = new SkiaSharp.SKRectI(0, 0, 192, 48);
+        SkiaSharp.SKBitmap Paint(params int[] tileLefts)
+        {
+            var bmp = new SkiaSharp.SKBitmap(192, 48);
+            bmp.Erase(SkiaSharp.SKColors.White);
+            foreach (var left in tileLefts)
+                for (var x = Math.Max(0, left); x < Math.Min(192, left + 94); x++)
+                    for (var y = 0; y < 48; y++)
+                        // Line art: a sparse dark hatch that still reaches every column, as
+                        // the cat tile's strokes do.
+                        if ((x + y) % 5 == 0) bmp.SetPixel(x, y, SkiaSharp.SKColors.Black);
+            return bmp;
+        }
+        using var blank = Paint();
+        True(VisualChecks.DarkInkSpread(blank, band).Dark == 0, "a blank white band has no line art");
+        using var single = Paint(40);
+        True(VisualChecks.DarkInkSpread(single, band).Spread < 0.75, "one 94px tile must not read as a repeated row");
+        using var row = Paint(-50, 48, 146);
+        var (dark, spread) = VisualChecks.DarkInkSpread(row, band);
+        True(dark >= 0.05 && spread >= 0.75, $"a repeated row reads dark {dark:F2}, spread {spread:F2}");
+    }
+
+    /// <summary>Lane 6.M: "the green text is visible. It can be partially obscured by the
+    /// black text" (font-weight-010…014) counts the stated colour's own pixels. A run covered
+    /// exactly by the obscuring copy leaves none; a bold/offset copy leaves a visible share.
+    /// </summary>
+    [Test]
+    public static void TextVisible_CountsTheStatedColourNotTheDominantInk()
+    {
+        var box = new SkiaSharp.SKRectI(0, 0, 40, 20);
+        SkiaSharp.SKBitmap Paint(bool offset)
+        {
+            var bmp = new SkiaSharp.SKBitmap(40, 20);
+            bmp.Erase(SkiaSharp.SKColors.White);
+            // Four 4px-wide glyph strokes; the black copy is the same width, at the same
+            // columns (exactly covering the green) or shifted two pixels (a bolder face).
+            foreach (var start in new[] { 4, 12, 20, 28 })
+            for (var y = 0; y < 20; y++)
+            for (var i = 0; i < 4; i++)
+            {
+                bmp.SetPixel(start + i, y, new SkiaSharp.SKColor(0x00, 0x80, 0x00));
+                bmp.SetPixel(start + (offset ? 2 : 0) + i, y, SkiaSharp.SKColors.Black);
+            }
+            return bmp;
+        }
+        using var covered = Paint(offset: false);  // black exactly on the green
+        var hidden = VisualChecks.ColorShare(covered, box, "green");
+        True(hidden.Stated == 0, $"a run covered exactly shows no green (got {hidden.Stated})");
+        using var showing = Paint(offset: true);   // black stroke shifted two pixels
+        var visible = VisualChecks.ColorShare(showing, box, "green");
+        True(visible.Stated > 0 && visible.Stated * 20 >= visible.Ink,
+            $"a partly obscured run keeps green visible ({visible.Stated} of {visible.Ink})");
+    }
+
+    /// <summary>Lane 6.M: "there is a tiny box below" at font-size 1px/1pt — the single
+    /// antialiased dot the component read drops. Ink elsewhere on the page, or no ink, fails.
+    /// </summary>
+    [Test]
+    public static void TinyInk_AcceptsOnlyOneSmallMarkBelowTheInstructions()
+    {
+        using var bmp = new SkiaSharp.SKBitmap(60, 60);
+        bmp.Erase(SkiaSharp.SKColors.White);
+        True(VisualChecks.TinyInk(bmp, 20) == "no ink below the instructions", "a blank page has no tiny box");
+        bmp.SetPixel(30, 30, SkiaSharp.SKColors.Black);
+        True(VisualChecks.TinyInk(bmp, 20) is null, "one 1px Ahem glyph is the tiny box");
+        bmp.SetPixel(50, 50, SkiaSharp.SKColors.Black);
+        True(VisualChecks.TinyInk(bmp, 20) is not null, "a second mark far away is not one tiny box");
+        using var above = new SkiaSharp.SKBitmap(60, 60);
+        above.Erase(SkiaSharp.SKColors.White);
+        above.SetPixel(30, 10, SkiaSharp.SKColors.Black);
+        True(VisualChecks.TinyInk(above, 20) == "no ink below the instructions", "ink above the instructions is not the box");
+    }
+
+    /// <summary>Lane 6.M: the slanted-box judge accepts a sheared Ahem box (one glyph at the
+    /// initial size) but not a slanted letter: the rows must be single runs of equal length
+    /// drifting one way.
+    /// </summary>
+    [Test]
+    public static void Parallelogram_AcceptsAShearedBoxAndRejectsALetter()
+    {
+        using var bmp = new SkiaSharp.SKBitmap(60, 40);
+        bmp.Erase(SkiaSharp.SKColors.White);
+        // A 24x16 parallelogram sheared right by 6px over its height.
+        for (var y = 0; y < 16; y++)
+            for (var x = 0; x < 24; x++)
+                bmp.SetPixel(10 + x + y * 6 / 16, 5 + y, SkiaSharp.SKColors.Black);
+        var shape = new VisualChecks.Component(10, 5, 40, 21, false, SkiaSharp.SKColors.Black);
+        True(VisualChecks.Parallelogram(bmp, shape) is null, $"a sheared box reads as a parallelogram: {VisualChecks.Parallelogram(bmp, shape)}");
+        // A letter x: two crossing strokes, several runs on most rows.
+        using var letter = new SkiaSharp.SKBitmap(60, 40);
+        letter.Erase(SkiaSharp.SKColors.White);
+        for (var i = 0; i < 12; i++)
+        {
+            letter.SetPixel(12 + i, 5 + i, SkiaSharp.SKColors.Black);
+            letter.SetPixel(23 - i, 5 + i, SkiaSharp.SKColors.Black);
+        }
+        var glyph = new VisualChecks.Component(12, 5, 24, 17, false, SkiaSharp.SKColors.Black);
+        True(VisualChecks.Parallelogram(letter, glyph) is not null, "a letter's crossing strokes are not a sheared box");
     }
 }

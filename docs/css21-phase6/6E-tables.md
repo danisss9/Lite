@@ -21,6 +21,14 @@ Branch `css21/p6-e`, worktree `C:\Repos\Lite-p6-e`. Case list `Lite.Conformance/
 
 ## Handed in
 
+- `text-align-applies-to-007/012/013/015` (official + WPT, 8, from 6.A via 6.M): the judge now does
+  read the content edge, but the four cannot move without the table sizing below because their
+  six siblings `…-006/008/009/010/011/014` (12, currently passing) paint their right-aligned line at
+  x=798: `width: 100%` on a `display: table` box with `border: solid` is sized as a content box, so
+  the table overflows the 8px-margined body (content right 792) by its border. The 12 siblings only
+  pass because the align-right judge falls back to the document root's 800px content box. A judge
+  change alone flips all 12; the table's percentage width must become border-box-aware first.
+
 - `content-172` (official + WPT, from 6.F): the `.normal` row's cell shrink-to-fits to its longest
   forced line ("XXX XXX") instead of the full collapsed pseudo content, so "XXX" wraps while the
   control cell stays on one line. The pre row is now correct. The max-content measure of a cell
