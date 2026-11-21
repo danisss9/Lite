@@ -508,7 +508,15 @@ public static class StyleExtensions
             if (n.TryResolveStyle(PropertyNames.LineHeight, out var ov))
             {
                 ov = ov.Trim();
-                if (TryEvalCalc(ov, fontSize, fontSize, fontSize, out var calcPx)) return calcPx;
+                // §10.8.1 / §6.1.2: a length or percentage computes to an ABSOLUTE length on
+                // the DECLARING element (em, ex and % against that element's own font) and
+                // descendants inherit that length. Resolving an ancestor's '1em' or '200%'
+                // against the descendant's font re-scaled it: a 50px child under
+                // 'font-size: 10px; line-height: 1em' got 50px lines (line-height-125), a
+                // 'font-size: 200%' paragraph under 'line-height: 200%' got 80px lines instead
+                // of 40px (c548-ln-ht-003).
+                var basis = ReferenceEquals(n, node) ? fontSize : n.GetFontSize();
+                if (TryEvalCalc(ov, basis, basis, basis, out var calcPx)) return calcPx;
                 if (ov.EndsWith("px") && float.TryParse(ov[..^2],
                     System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var px))
@@ -517,6 +525,12 @@ public static class StyleExtensions
                     System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var mult))
                     return mult * fontSize;
+                if (!ReferenceEquals(n, node))
+                {
+                    using var declScope = CssUnits.ForFont(n);
+                    if (CssUnits.TryParse(ov, basis, basis, 0f, 0f, out var lenPx) && lenPx >= 0f)
+                        return lenPx;
+                }
                 if (ov.Equals("inherit", StringComparison.OrdinalIgnoreCase))
                 {
                     if (n.Parent is { } p) return p.GetLineHeight(fontSize);

@@ -1,5 +1,6 @@
 using Lite.Layout;
 using Lite.Models;
+using Lite.Extensions;
 using static Lite.Tests.TestRunner;
 
 namespace Lite.Tests;
@@ -157,5 +158,34 @@ public static class InlineFormattingTests
             : o.Box.BorderBox.Right;
         True(Math.Abs(outerRight - 50f) < 0.5f,
             $"the wrapper's right border closes on the glyphs (40 + 10 = 50), got {outerRight}");
+    }
+    [Test]
+    public static void LineHeight_RelativeLengthInheritsAsComputedPixels()
+    {
+        // CSS 2.1 §10.8.1: a length or percentage 'line-height' computes to an absolute length on
+        // the declaring element, and that length is inherited. A 50px child under
+        // 'font-size: 10px; line-height: 1em' keeps 10px lines; a 40px child under
+        // 'font-size: 20px; line-height: 200%' keeps 40px lines (line-height-125, c548-ln-ht-003).
+        // The child declares font longhands, NOT the 'font' shorthand — §15.8 resets line-height
+        // to 'normal' on an element whose shorthand omits /<line-height>, which would cut the
+        // inheritance the case exercises (line-height-125's .test uses font-size for the same
+        // reason).
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div style='font-size:10px;line-height:1em'><div id='a' style='font-size:50px;font-family:Ahem'>X</div></div>" +
+            "<div style='font:20px Ahem;line-height:200%'><div id='b' style='font-size:200%'>X</div></div>" +
+            "<div style='font:20px Ahem;line-height:2'><div id='c' style='font-size:200%'>X</div></div>" +
+            "</body></html>");
+        var a = FindNode(root, n => n.Id == "a")!;
+        var b = FindNode(root, n => n.Id == "b")!;
+        var c = FindNode(root, n => n.Id == "c")!;
+        True(Math.Abs(a.GetLineHeight(a.GetFontSize()) - 10f) < 0.5f,
+            $"'1em' on a 10px ancestor inherits as 10px, got {a.GetLineHeight(a.GetFontSize())}");
+        True(Math.Abs(b.GetLineHeight(b.GetFontSize()) - 40f) < 0.5f,
+            $"'200%' on a 20px ancestor inherits as 40px, got {b.GetLineHeight(b.GetFontSize())}");
+        True(Math.Abs(c.GetLineHeight(c.GetFontSize()) - 80f) < 0.5f,
+            $"a number still inherits as the factor (2 x 40px = 80px), got {c.GetLineHeight(c.GetFontSize())}");
+        True(Math.Abs(a.Box.ContentBox.Height - 10f) < 0.5f,
+            $"the 50px child's line box is 10px tall, got {a.Box.ContentBox.Height}");
     }
 }
