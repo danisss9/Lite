@@ -22,6 +22,12 @@ Branch `css21/p6-a`, worktree `C:\Repos\Lite-p6-a`. Case list `Lite.Conformance/
 
 ## Handed in
 
+- `content-174` (WPT, from 6.F): a `span:before` with `white-space: nowrap` and `background: green`
+  is much wider than its 5em/1em red parents; the green background stops at ~5em and the remaining
+  text is not painted, while the reference covers the whole overflowing run. The pseudo box and its
+  text are generated correctly; the inline box's overflow painting is the gap. If this is the
+  background painter rather than the line box, please forward to 6.H.
+
 - `border-001`, `border-003` (official+WPT, 4): the bordered test box renders pixel-perfectly; the WPT reference (`border-001-ref.xht` / `border-003-ref.xht`) uses Ahem text with `word-spacing` which mis-wraps in inline layout (from 6.I).
 
 ## Edits outside owned files

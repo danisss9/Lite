@@ -35,14 +35,74 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   forwarded to `PaintNode` like an IMG, instead of the empty-text inline path.
 - `Lite/Drawer.cs` (`PaintNodeContentBody`, `case "A"`): an anchor with `display: list-item`
   takes the list-item paint path (the tag dispatch otherwise bypassed the marker).
-- `Lite/Scripting/Dom/JsElement.cs` was **not** changed (dynamic re-projection handed to 6.K).
+- `Lite/Scripting/Dom/JsElement.cs`: `OnAttributeChanged` re-evaluates a generated box whose
+  'content' uses `attr()`; `SetCharacterData` re-projects the parent and rebuilds the containing
+  blocks' `::first-letter` split (§12.2, §5.12.2). Both are the narrow generated-content half of
+  the dynamic work parked to 6.K — if 6.K lands a general regeneration, these hooks are redundant
+  but harmless (they are idempotent).
 - `Lite.Tests/GeneratedContentTests.cs` is new (my lane's tests).
 
 ## Progress
 
+**Batch 2 reading:** lane list 0/58 + 0/72 → **9/58 + 10/72 = 19 of 130**, 0 losses; units 741;
+css21 51/1; wpt 86/2; canary 960/960. Three commits.
+
 **Batch 1 reading:** lane list 0/97 + 0/103 → **36/97 + 27/103 = 63 of 200**, 0 losses; units 663;
 css21 51/1; wpt 86/2; canary 300/300. Eight commits. The remaining 137 are grouped at the end of
 this section.
+
+### A hidden element's pseudo counter does not run; a repeated name resets one instance (§12.4)
+
+- **Moved (4):** `counter-increment-display-004` and `counters-root-000` (official + WPT).
+  `PseudoCounters` applied a pseudo's `counter-increment` for every element with a content pseudo
+  rule, including a `display: none` one, so the hidden div skipped a number. `ApplyCounterProperties`
+  treated each repeated name in one declaration as a fresh nested instance, so
+  `html { counter-reset: c 0 c 4 c 0 }` counted 0.4.0 instead of 4 — §12.4 orders repeated names on
+  the one instance the declaration creates.
+- **Still fails:** `counter-increment-000/001/002` and `counter-reset-000/001/002` — these pages run
+  `setTimeout('run()', 0)` and the engine's `setTimeout` accepts only a function
+  (`[JS Error] TypeError: not a function`), so the DOM mutation never happens. Verified with a
+  diagnostic copy using `setTimeout(run, 0)`: the counters then renumber correctly. Handed to 6.K
+  (the inserted element also needs its own ::before, which the dynamic generation covers).
+- **Checks:** build Lite.sln Release; units 737; css21 51/1; wpt 86/2; F.txt official 0→2/58,
+  WPT 0→2/72; F-pass 885 + 904, J-pass 264 + 255, canary 492 + 468, 0 losses.
+
+### attr() text follows an attribute change; whitespace between generated boxes (§12.2, §16.6.1)
+
+- **Moved (4):** `before-after-dynamic-attr-001` and `before-after-selector-001` (official + WPT).
+  attr(X) returns the attribute's value for the subject, so an attribute set after load must
+  re-evaluate the generated box's text instead of leaving the parse-time value. Separately, an
+  element whose own text is whitespace-only between two generated boxes keeps one collapsed space
+  (§16.6.1: only line start/end spaces go), so `<div> </div>` with `:before`+`:after` renders
+  "Filler Text Filler Text", not "Filler TextFiller Text".
+- **Still fails:** `before-after-dynamic-restyle-001` — the class change only then makes `.cl:after`
+  match, so a box must be created; the refresh rewrites existing text only. 6.K's dynamic rule
+  generation.
+- **Checks:** units 738; css21 51/1; wpt 86/2; F.txt official 2→4/58, WPT 2→4/72; F-pass 885 + 904,
+  J-pass 264 + 255, canary 492 + 468, 0 losses.
+
+### The ::first-letter split follows DOM text changes and inherits from its host pseudo (§5.12.2)
+
+- **Moved (11):** `first-letter-nested-002/003/004/005` (official + WPT),
+  `before-first-letter-selector-001` (official + WPT) and WPT `first-letter-quote-004`. The split is
+  a function of the block's first-line text: re-projection kept the block's box, so a parse-time
+  split stayed frozen (nested-002 kept the cleared text's letter) and text set/appended after layout
+  never grew one (nested-003/004/005, quote-004). A stale split is detected by comparing its
+  letter+tail with the host's current document text and is rebuilt. The synthesized letter and tail
+  also now copy the host's inherited declarations, so `::before { color: green }` reaches them
+  (before-first-letter-selector-001 painted them black).
+- **WPT `first-letter-quote-004` passes for the wrong reason:** both it and its reference path
+  (the still-unstyled `first-letter-quote-002` document) render no split because the first text is
+  a lone `"`. It must be re-checked when the punctuation split lands (6.K).
+- **Punctuation split is deferred to 6.K:** `first-letter-quote-002/005` need the first letter to
+  start at punctuation in an earlier box (`span:before`'s open-quote, a `"` text node). The code is
+  written but it makes `first-letter-dynamic-001`'s REFERENCE render green while its subject cannot
+  (the `:first-letter` rule is added to a `<style>` after parse, and pseudo rules are collected only
+  at parse start), which is a pass-list loss. Both halves must land together with 6.K's dynamic
+  rule collection. `first-letter-selector-028` is the same selector-list neutralization 6.K already
+  has for 011–014.
+- **Checks:** units 741; css21 51/1; wpt 86/2; F.txt official 4→9/58, WPT 4→10/72;
+  F-pass 885 + 904, J-pass 264 + 255, canary 492 + 468, 0 losses.
 
 ### Generated pseudo boxes: `vertical-align` no longer leaks from the host (§10.8.1)
 
@@ -177,6 +237,45 @@ test the shape's corner emptiness rather than every bbox edge.
   `c541-word-sp`, `c542-letter-sp`.
   Most need the generated pseudo's display type (block/table-cell/float/position) or a font
   question; I left them rather than guess.
+
+### Batch 2: what is left, and where it goes
+
+Reading: 9/58 official + 10/72 WPT still fail 111 cases. Grouped by cause, from this batch's
+diagnosis:
+
+- **6.K (dynamic rules and CharacterData), 20+:** `before-after-dynamic-restyle-001` (a class
+  change must create `.cl:after`), `first-letter-dynamic-001/002/003a/003b` (a `<style>` added after
+  parse must feed `Current.PseudoElementRules` and re-cascade), `first-letter-quote-002/004/005` +
+  `first-letter-punctuation-184` (the punctuation split — see above), the counter-after-mutation
+  family (`counter-increment-000/001/002`, `counter-reset-000/001/002`, which also need
+  `setTimeout('run()', 0)` string handlers), `content-178`, `first-line-selector-017`,
+  `first-letter-selector-029`, `first-letter-selector-011/012/013/014` and `-028`
+  (selector-list neutralization), `before-after-001`, `before-inheritable-002`/`after-inheritable-002`.
+- **6.D (paint order):** `content-177` — two absolutely positioned spans overlap; the later red
+  `ED` paints over the green control, while the reference paints them in the other order.
+- **6.A/6.H (inline background overflow):** `content-174` — a `white-space: nowrap` `:before` box
+  wider than its 5em parent paints its green background only for the first ~5em; the reference
+  covers the whole overflowing run.
+- **6.E:** `content-172` (table max-content of a pseudo child).
+- **6.B:** the float-sibling `-017` list family (8 WPT + 4 official twins).
+- **6.M (machine checks):** `round-dot` (`list-style-type-001`, `list-style-applies-to-005/006`,
+  `list-style-type-applies-to-005/006`), `painted-only` (`quotes-applies-to-005/006` — the four
+  painted quote glyphs tokenize as one word; `content-142`), `hanging-indent`
+  (`list-style-position-020/022` — the render shows both lines, the check counts one band),
+  `content-008`'s needle, `list-style-type-017`'s band count, `content-counters-003`.
+  `first-letter-punctuation-184`: the suite's Unicode 5.x calls U+166D CANADIAN SYLLABICS CHI SIGN
+  `Po`; .NET 8's `CharUnicodeInfo` calls it `So`, so `FirstLetterLength` cannot include it by
+  category. Needs a reviewed defect or an explicit table.
+- **6.X:** `content-159` (XHTML `<style>` quotes), `first-letter-selector-000` (CDATA).
+- **Still undiagnosed:** `before-after-display-types-001`, `before-after-floated-001`,
+  `before-after-positioned-001/002/003`, `before-after-table-parts-001`, `before-after-011`,
+  `content-inherit-002`, `content-173/175`, `content-white-space-002`, `content-counter-004/009`,
+  `content-counters-009/017/018`, `counter-increment-054`, `list-style-020`, `c566-list-stl`,
+  `content-type-000/001`, `content-height-005`, `c542-letter-sp`, `first-letter-abspos` (the split
+  exists and its color override is green in the parse path, but the render paints it black — likely
+  a paint-path choice for the split letter inside a block whose first child is absolute).
+  `content-173` is a content-string parsing bug (the `\A`-laden multi-line single-quoted strings
+  with `\'` come back truncated; only the tail of the :before cat and none of the :after cat paint).
 
 ### Editor's note
 

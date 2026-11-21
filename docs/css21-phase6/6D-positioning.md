@@ -21,6 +21,12 @@ Branch `css21/p6-d`, worktree `C:\Repos\Lite-p6-d`. Case list `Lite.Conformance/
 
 ## Handed in
 
+- `content-177` (WPT, from 6.F): `<div><span class="test">ED</span><span class="control">…</span></div>`
+  with both spans `position: absolute; top: 0; left: 0` — the later red "ED" of the test span paints
+  over the green control, but the reference paints the control last. The generated text itself is
+  correct (verified by render); this is stacked-abspos paint order (Appendix E), not generated
+  content.
+
 - `clipping-006`, `clipping-007` (official+WPT, 4): `overflow: hidden` on a `position: fixed` ancestor clips a `position: fixed` descendant whose containing block is the viewport (`PaintThroughClippers` / containing-block clipping in `Drawer.cs`) (from 6.I).
 - `outline-layout-002` (official+WPT, 2): `span1`'s 50px solid white outline paints before `span2`'s red text instead of after inline siblings in the stacking context (CSS 2.1 Appendix E §E.2 step 10) (from 6.I).
 
