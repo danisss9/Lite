@@ -55,7 +55,7 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 - `Lite.Conformance/Css21/SelfTestOracle.cs` (6.M) — commit `cbe1d649`: parse `scroll.then` into `ScrollSpec`. One-line route fix; 6.M owns the file.
 - `Lite/Layout/StyleResolver.cs` + `Lite/Parser.Cascade.cs` (6.K) — commit `fd3c10fd`: `StoreProp` now marks every key it writes in `CascadeAppliedProps` (so a shorthand's parse-time longhands are retractable), and a winning shorthand covers its longhands in the initial-value fallback. Both files are 6.K's.
-- `Lite/Drawer.cs` (shared, no lane owner) — commit `6eea0bea`: paint background images on all inline painting paths (`DrawBackgroundImageIn`).
+- `Lite/Drawer.cs` (shared, no lane owner) — commit `6eea0bea`: paint background images on all inline painting paths (`DrawBackgroundImageIn`); batch 2 Commit 4: guard §14.2 `body`-to-canvas background propagation to `root.TagName == "HTML"` only.
 - `Lite/Drawer.Text.cs` (6.A's text painting; the list-marker members belong to 6.F) — commit `6eea0bea`: `PaintListItem` paints the background image and gradient.
 
 ## Progress
@@ -83,3 +83,6 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - **Commit 3 (paint and tile background images into the border box, CSS 2.1 §14.2):** `DrawBackgroundImage` now passes `box.BorderBox` as the clip/tile area while keeping `box.PaddingBox` as the positioning origin, matching `background-color` so background images show behind dotted/transparent borders.
   - **Moved (4 fail → manual-pending):** `background-attachment-005/006` (2 official + 2 WPT; both dropped to 0 red pixels and now await manual scroll observation). `background-attachment-007` (official + WPT) dropped from 9074 to 3274 red pixels (investigating remaining red).
   - **Checks:** units 738 passed / 0 failed; css21 gate 51/1; wpt gate 86/2; `H.txt` 22 pass + 4 manual-pending + 35 fail; `H-pass.txt` 1274/1274 (694/694 official + 580/580 WPT); `canary.txt` 960/960 (492/492 official + 468/468 WPT).
+- **Commit 4 (non-HTML XML root does not propagate `body` background to canvas, CSS 2.1 §14.2):** guarded `FindBody(root)` in `Drawer.cs` (shared, no lane owner) to `root.TagName == "HTML"`.
+  - **Moved (1 fail → manual-pending):** `css/CSS2/other-formats/xml/background-20.xml` (465,888 red pixels → 0 red pixels; route awaits manual observation).
+  - **Checks:** units 739 passed / 0 failed; css21 gate 51/1; wpt gate 86/2; `H.txt` 22 pass + 5 manual-pending + 34 fail; `H-pass.txt` 1274/1274 (694/694 official + 580/580 WPT); `canary.txt` 960/960 (492/492 official + 468/468 WPT).

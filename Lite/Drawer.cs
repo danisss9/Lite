@@ -96,7 +96,9 @@ internal static partial class Drawer
         // When the root is fully transparent, the BODY's background — color AND image — becomes
         // the canvas background, positioned relative to the ROOT's padding box, and the body
         // paints no background of its own (its own box would place the image wrong).
-        var body = FindBody(root) ?? root;
+        // §14.2: body background propagation applies only when the root element is an HTML 'HTML'
+        // or XHTML 'html' element — not a generic XML root (background-20.xml).
+        var body = root.TagName == "HTML" ? FindBody(root) ?? root : root;
         _propagatedBackgroundNode = null;
         var clearColor = root.GetBackgroundColor();
         if (clearColor.Alpha == 0 && root.GetBackgroundImage() == null)

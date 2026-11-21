@@ -152,4 +152,27 @@ public static class BackgroundPaintTests
         True(borderGreen > 0, "the tiled background image should paint across the top border area");
         Equal(0, borderRed);
     }
+
+    [Test]
+    public static void NonHtmlRoot_DoesNotPropagateBodyBackgroundToCanvas()
+    {
+        // CSS 2.1 §14.2: only an HTML/XHTML html root propagates its body child's background
+        // to the canvas; a generic XML root leaves the canvas at its default (white).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}</style></head><body></body></html>",
+            isSrcdoc: true, "http://test/", 200, 120);
+        var genericRoot = new LayoutNode(null, "GENERIC", "", page.Root.Style);
+        var body = new LayoutNode(null, "BODY", "", page.Root.Style);
+        body.StyleOverrides["display"] = "block";
+        body.StyleOverrides["background-color"] = "red";
+        body.StyleOverrides["height"] = "20px";
+        genericRoot.Children.Add(body);
+        body.Parent = genericRoot;
+
+        using var bitmap = Drawer.DrawToBitmap(200, 120, genericRoot, new Viewport { ViewportHeight = 120 });
+        var (_, bodyRed) = Count(bitmap, new SKRect(0, 0, 200, 20));
+        var (_, canvasRed) = Count(bitmap, new SKRect(0, 60, 200, 120));
+        True(bodyRed > 0, "the body element itself should still paint its own red background");
+        Equal(0, canvasRed);
+    }
 }
