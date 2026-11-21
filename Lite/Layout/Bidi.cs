@@ -18,11 +18,19 @@ namespace Lite.Layout;
 /// item's chars share one level range, which the caller guarantees by splitting text items at
 /// level-run boundaries before the item-level pass.
 ///
+/// Explicit formatting characters are part of X: RLE/LRE/RLO/LRO open an embedding scope
+/// (X2-X5), PDF closes the innermost one (X7), and all five — plus BN — are removed from the
+/// rendering (X9): they reserve no width and paint nothing, but the levels they establish
+/// apply to the characters between them, including across inline item boundaries. CSS
+/// 'unicode-bidi: embed'/'bidi-override' scopes enter the same stack as span events, so a
+/// declared scope and an explicit control compose exactly as UAX #9 X1-X7 prescribe.
+///
 /// Out of scope here (honest limitations, queued): line breaking on the visual order — the
 /// reorder engages only when the composed run fits one line band, because a wrapped RTL line
 /// re-evaluates the algorithm per line box; mirroring of the line's start edge (text-align);
-/// and paragraphs carrying an active bidi-override scope, which keep the legacy whole-stream
-/// reversal (BidiReversesContent) until the two mechanisms merge.</summary>
+/// glyph mirroring (paired brackets); isolate controls (LRI/RLI/FSI/PDI); and the §8.6
+/// multi-fragment placement of boxes split by the reordering (the legacy whole-stream
+/// reversal keeps edge-bearing override scopes until that lands).</summary>
 internal static class Bidi
 {
     /// <summary>An embedding/override scope the source CSS opens: <see cref="Rtl"/> is the
@@ -39,7 +47,9 @@ internal static class Bidi
         text.AsSpan().IndexOfAnyInRange('\u2066', '\u2069') >= 0;
 
     /// <summary>The resolved embedding level per char (after X/W/N/I) and the reordered visual
-    /// string. Direct port of the derivation's resolve_levels_and_types + reorder.</summary>
+    /// string. Direct port of the derivation's resolve_levels_and_types + reorder, extended
+    /// with UAX #9's explicit formatting characters (X2-X5/X7/X9) so an RLE/LRE/RLO/LRO scope
+    /// in the text reorders exactly like the declared span the corpus' CSS cases use.</summary>
     public static (int[] Levels, string Visual) Reorder(string text, bool baseLtr, IReadOnlyList<Span> spans)
     {
         var n = text.Length;
@@ -49,23 +59,75 @@ internal static class Bidi
         var baseLevel = baseLtr ? 0 : 1;
         Array.Fill(levels, baseLevel);
 
-        // X2/X3: each span's level is the least (odd|even) level greater than the level at its
-        // start; an override also forces every character inside to the scope's direction.
-        foreach (var span in spans)
+        // X1-X7: walk the paragraph left to right with one embedding stack. CSS span scopes
+        // open/close at their boundaries; an explicit RLE/LRE/RLO/LRO pushes the level X2-X5
+        // prescribes and PDF pops it (X7). X9's removed characters (the five explicit controls
+        // and BN) keep their position in this walk but are dropped from the visual string.
+        var opening = new List<Span>?[n + 1];
+        var closing = new List<Span>?[n + 1];
+        // Outer scopes first at a shared start (length desc), so the stack nests them.
+        foreach (var span in spans.Where(s => s.Length > 0 && s.Start < n)
+                     .OrderBy(s => s.Start).ThenByDescending(s => s.Start + s.Length))
         {
-            if (span.Length <= 0) continue;
-            var cur = levels[Math.Min(span.Start, n - 1)];
-            int newLevel;
-            if (span.Rtl)
-                newLevel = cur % 2 == 0 ? cur + 1 : cur + 2;
-            else
-                newLevel = cur % 2 == 0 ? cur + 2 : cur + 1;
             var end = Math.Min(span.Start + span.Length, n);
-            for (var i = span.Start; i < end; i++)
+            (opening[span.Start] ??= []).Add(span);
+            (closing[end] ??= []).Add(span);
+        }
+
+        var stack = new Stack<Scope>();
+        stack.Push(new Scope(baseLevel, null, null));
+        Scope Current() => stack.Peek();
+
+        // X2/X3: the least odd (rtl) or even (ltr) level greater than the current one.
+        static int NextLevel(int cur, bool rtl) =>
+            rtl ? (cur % 2 == 0 ? cur + 1 : cur + 2) : (cur % 2 == 0 ? cur + 2 : cur + 1);
+
+        for (var i = 0; i < n; i++)
+        {
+            if (closing[i] is { } closes)
+                // Innermost first (start desc): an outer scope's frame only pops once the
+                // scopes opened inside it have closed.
+                foreach (var span in closes.OrderByDescending(s => s.Start))
+                    while (stack.Count > 1 && ReferenceEquals(stack.Peek().Owner, span)) stack.Pop();
+            if (opening[i] is { } opens)
+                foreach (var span in opens)
+                {
+                    // A span sort key of (start asc, length desc) keeps outer scopes beneath
+                    // inner ones at a shared start.
+                    var over = span.Override ? (span.Rtl ? BidiClass.R : BidiClass.L) : (BidiClass?)null;
+                    stack.Push(new Scope(NextLevel(Current().Level, span.Rtl), over, span));
+                }
+
+            var scope = Current();
+            var type = types[i];
+            var level = scope.Level;
+            switch (type)
             {
-                levels[i] = newLevel;
-                if (span.Override && types[i] != BidiClass.BN)
-                    types[i] = span.Rtl ? BidiClass.R : BidiClass.L;
+                case BidiClass.RLE:
+                case BidiClass.RLO:
+                case BidiClass.LRE:
+                case BidiClass.LRO:
+                    types[i] = BidiClass.BN;
+                    levels[i] = level;
+                    var rtl = type is BidiClass.RLE or BidiClass.RLO;
+                    var over = type is BidiClass.RLO or BidiClass.LRO
+                        ? (rtl ? BidiClass.R : BidiClass.L) : (BidiClass?)null;
+                    stack.Push(new Scope(NextLevel(level, rtl), over, null));
+                    break;
+                case BidiClass.PDF:
+                    types[i] = BidiClass.BN;
+                    levels[i] = level;
+                    // PDF closes the innermost EXPLICIT embedding; a declared CSS scope stays
+                    // open until its own element ends (X7 balances X2-X5, not CSS's box).
+                    if (stack.Count > 1 && stack.Peek().Owner is null) stack.Pop();
+                    break;
+                case BidiClass.BN:
+                    levels[i] = level;
+                    break;
+                default:
+                    levels[i] = level;
+                    if (scope.Override is { } forced) types[i] = forced;
+                    break;
             }
         }
 
@@ -142,7 +204,45 @@ internal static class Bidi
                 else k++;
             }
         }
-        return (levels, new string(chars));
+        // X9: the explicit controls and BN reserve no glyph — drop them from the visual
+        // string after the L2 passes. Removing by the character's own class (not by its
+        // logical index) is load-bearing: the L2 passes move a removed control around with
+        // the run it sits in, so an index-based filter can drop a rendered neighbour.
+        var visual = new System.Text.StringBuilder(n);
+        foreach (var c in chars)
+            if (!IsRemovedByX9(c)) visual.Append(c);
+        return (levels, visual.ToString());
+    }
+
+    /// <summary>One frame of the X1-X7 embedding stack: the level it establishes, the
+    /// override type it forces (null for an embed), and the CSS span that owns it (null for
+    /// an explicit control, which PDF closes).</summary>
+    private sealed record Scope(int Level, BidiClass? Override, Span? Owner);
+
+    /// <summary>UAX #9 X9's removed characters: the explicit formatting controls and BN.
+    /// They are ignored by the algorithm and the renderer alike (§16.2).</summary>
+    public static bool IsRemovedByX9(char c) =>
+        BidiClassTable.ClassOf(c) is BidiClass.BN or BidiClass.RLE or BidiClass.LRE
+            or BidiClass.RLO or BidiClass.LRO or BidiClass.PDF;
+
+    /// <summary>Whether a string carries an explicit bidi formatting character that X9
+    /// removes from the rendering.</summary>
+    public static bool HasExplicitFormatting(string text)
+    {
+        foreach (var c in text)
+            if (IsRemovedByX9(c)) return true;
+        return false;
+    }
+
+    /// <summary>The string as it renders under X9: explicit formatting characters and BN
+    /// removed (they occupy no space and paint nothing).</summary>
+    public static string WithoutExplicitFormatting(string text)
+    {
+        if (!HasExplicitFormatting(text)) return text;
+        var builder = new System.Text.StringBuilder(text.Length);
+        foreach (var c in text)
+            if (!IsRemovedByX9(c)) builder.Append(c);
+        return builder.ToString();
     }
 
     public enum BidiClass { L, R, AL, EN, AN, CS, WS, ON, ET, ES, BN, NSM, PDF, RLE, LRE, RLO, LRO, B, S, FSI, LRI, PDI, RLI }

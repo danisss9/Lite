@@ -1067,7 +1067,7 @@ internal static partial class Drawer
                 textMaxW = textW;
             }
 
-            DrawWrappedText(canvas, node, node.RenderedText(),
+            DrawWrappedText(canvas, node, node.BidiVisualBlockText(textMaxW, font),
                             textX, textY, textMaxW, font, paint);
         }
 

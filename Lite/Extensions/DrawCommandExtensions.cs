@@ -801,7 +801,10 @@ public static class StyleExtensions
         }
         else
             text = transform == TextTransform.None ? text : StyleExtensions.ApplyTextTransform(text, transform, node.GetLanguage());
-        return node.BidiReversesContent() ? ReverseText(text) : text;
+        // Only an edge-bearing override scope keeps the legacy character reversal: an edge-less
+        // scope's layout routes to the paragraph-level pass (Bidi.Reorder), which produces the
+        // visual text itself, so reversing here too would double-reverse it.
+        return node.BidiReversesContentForLayout() ? ReverseText(text) : text;
     }
 
     /// <summary>After keeping the continued word's first letter, the rest of that word must not
@@ -851,7 +854,12 @@ public static class StyleExtensions
     public static string BidiVisualBlockText(this LayoutNode node, float availableWidth, SkiaSharp.SKFont font)
     {
         var text = node.RenderedText();
-        if (string.IsNullOrEmpty(text) || !Lite.Layout.Bidi.HasBidiContent(text)) return text;
+        if (string.IsNullOrEmpty(text)) return text;
+        // A bidi-override on the block reverses pure-Latin content too ('SSAP SSAP' →
+        // 'PASS PASS'), so the content gate cannot stand alone: unicode-bidi-applies-to-009's
+        // block carries no RTL-class character at all.
+        var overrideScope = node.BidiReversesContent() || node.GetUnicodeBidi() == "bidi-override";
+        if (!Lite.Layout.Bidi.HasBidiContent(text) && !overrideScope) return text;
         // A block-leaf override scope WITH edge boxes keeps the legacy reversal (RenderedText
         // already returned the reversed text). An edge-less scope routes to the paragraph-level
         // reorder: the block's own content is one override span whose direction is the block's
@@ -859,19 +867,22 @@ public static class StyleExtensions
         // one reverses the whole stream (direction-unicode-bidi-023) — and the reorder
         // reproduces both.
         if (node.BidiReversesContentForLayout()) return text;
-        // The content gate is load-bearing here: a synthesized node's shared style object can
-        // compute a bidi-override noise value, and reordering pure-LTR text would shift it
-        // (LayoutTests.InlineBox_ReservesItsHorizontalMarginAndPadding's span). Real override
-        // content carries RTL or Arabic characters.
-        if ((node.BidiReversesContent() || node.GetUnicodeBidi() == "bidi-override") &&
-            Lite.Layout.Bidi.HasBidiContent(text))
+        // The block's own content is one override span whose direction is the block's OWN —
+        // an LTR override forces everything logical (direction-unicode-bidi-022), an RTL one
+        // reverses the whole stream (direction-unicode-bidi-023). A declared override decides
+        // pure-Latin content too (unicode-bidi-applies-to-009's 'SSAP SSAP').
+        if (overrideScope)
         {
             var spans = new System.Collections.Generic.List<Lite.Layout.Bidi.Span>
                 { new(0, text.Length, Rtl: node.GetDirection() == "rtl", Override: true) };
             var (_, overrideVisual) = Lite.Layout.Bidi.Reorder(text, node.GetDirection() != "rtl", spans);
             return overrideVisual;
         }
-        if (Lite.Layout.TextMeasure.MeasureSingleLine(text, font).Width > availableWidth + 0.5f) return text;
+        if (Lite.Layout.TextMeasure.MeasureSingleLine(text, font).Width > availableWidth + 0.5f)
+            // A wrapped paragraph reorders line by line (queued), but X9's explicit formatting
+            // characters never render: strip them even when the whole-paragraph pass stands
+            // down, or Ahem charges a glyph slot for RLO/PDF (fonts-011's red gaps).
+            return Lite.Layout.Bidi.WithoutExplicitFormatting(text);
         var (_, visual) = Lite.Layout.Bidi.Reorder(text, node.GetDirection() != "rtl", System.Array.Empty<Lite.Layout.Bidi.Span>());
         return visual;
     }

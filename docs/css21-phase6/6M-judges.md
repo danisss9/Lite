@@ -35,6 +35,19 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
   top-level shape instead of 3 and `no-horizontal-gap` counts 0/1 blue shapes. A same-colour,
   touching 1px marker needs the segmentation split by geometry (the bar shares an edge), not by ink.
 
+- `text-align-bidi-002/003/004` (official + WPT, from 6.G, handoff): the engine centers the line on
+  its advance width and the P's content box (8..792); the judge's `AlignCenter` walks
+  `container = container.Parent` one level per iteration (it assigns `parent.Parent`), so from the P
+  it lands on the document box (0..800) instead of the body/P content box, and its ink-edge gaps pick
+  up the 8px body margin plus glyph side bearings (reported 223/213 on a 784px content box). The
+  rendered advance box is symmetric around 400. Suggest using the nearest block whose content box is
+  at least the subject's width, and a bearing-tolerant ink read.
+- `direction-unicode-bidi-026/027/028` (official + WPT, 6 cases, from 6.G): the reviewed needle has
+  **two lines** (`line1\nline2`, the inner block's paragraph and the outer override's paragraph), but
+  `PaintedOrder` normalizes the whole needle to one string and compares it against the first single
+  painted line carrying non-ASCII — no single line can equal the joined two-line expectation. The engine
+  now paints both lines in the reviewed order (019/021/023 pass through the same path). Suggest matching
+  the expected line whose non-ASCII content is on that band, or comparing the painted line sequence.
 - `list-style-type-001`, `list-style-applies-to-005/006`, `list-style-type-applies-to-005/006`
   (official + WPT, from 6.F): `round-dot` rejects a 16px disc. The render is a filled circle 7-8px
   across including antialiasing, but `Components`' 5x5 ink bbox has every bbox edge inked, so
