@@ -56,6 +56,12 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - To 6.G (unchanged, parked): border-conflict-element-029 waits on RTL column order.
 - `border-applies-to-004`, `border-color-applies-to-004`, `border-{left,right}-applies-to-004`, `border-{left,right}-color-applies-to-004`, `border-{left,right}-width-applies-to-004` (official+WPT, 16): in `border-collapse: collapse`, a `table-row`'s left/right border is resolved onto the interior boundary between adjacent cells in `TableEngine` instead of only the row's outer left/right edges (from 6.I).
 - `outline-applies-to-016`, `outline-applies-to-017` (WPT, 2): replaced `<img>` with `display: table-column-group` / `table-column` produces no laid-out box, so nothing paints (from 6.I).
+- `c5520-brdr-b-001` (official + WPT, from 6.I): inside `td.skip` the nested table renders
+  ABOVE the cell's leading anonymous block "dummy text" — source order is text first, then the
+  table. The twin c5518 (same DOM, `border-top` instead of `border-bottom`) lays it out
+  correctly (geom: c5518 child TABLE offsetTop=119.3 after the text; c5520 offsetTop=101.4 at
+  the cell top). Cell child ordering diverges between the two passes; the judge-side needle
+  problem (see 6.M) masks it today.
 
 ## Edits outside owned files
 
