@@ -457,9 +457,18 @@ internal static partial class Parser
         var len = FirstLetterLength(text);
         if (len <= 0) return;
 
+        SplitFirstLetter(node, host, len, styles);
+    }
+
+    /// <summary>Splits the first <paramref name="len"/> characters of <paramref name="host"/>'s
+    /// text into a ::first-letter box followed by the rest of its text.</summary>
+    private static void SplitFirstLetter(LayoutNode node, LayoutNode host, int len, Dictionary<string, string> styles)
+    {
+        var text = host.DisplayText;
         var letter = new LayoutNode(null, "#pseudo-first-letter", text[..len], host.Style);
         letter.ResetNonInheritedStyles();
         letter.StyleOverrides["display"] = "inline";
+        CopyInheritedStyles(host, letter);
         foreach (var (p, v) in styles)
             if (p != "content" && p != "display")
                 letter.StyleOverrides[p] = ResolvePseudoValue(node, p, v);
@@ -471,6 +480,7 @@ internal static partial class Parser
         var rest = new LayoutNode(null, "#text", text[len..], host.Style);
         rest.ResetNonInheritedStyles();
         rest.StyleOverrides["display"] = "inline";
+        CopyInheritedStyles(host, rest);
         // The tail is an inline child once the letter is split off, so it starts from the
         // initial baseline rather than reading the host's non-inherited 'vertical-align'
         // (a table cell's UA 'middle' pushed the rest of the text 2px down:
@@ -484,6 +494,71 @@ internal static partial class Parser
         rest.Parent = host;
         host.Children.Insert(0, rest);
         host.Children.Insert(0, letter);
+    }
+
+    /// <summary>Copies the host's inherited values into a synthesized box. The split boxes are new
+    /// inline boxes between the host and its text, and a #text child only shares its parent's
+    /// Style object, not the parent's override channel — so a ::before's own `color: green` was
+    /// lost by the letter and its tail (before-first-letter-selector-001 painted both black).</summary>
+    private static void CopyInheritedStyles(LayoutNode host, LayoutNode target)
+    {
+        var source = host.TagName == "#text" && host.Parent is { } parent ? parent : host;
+        foreach (var prop in PropertyTable.InheritedProperties)
+            if (source.TryResolveStyle(prop, out var value))
+                target.StyleOverrides.TryAdd(prop, value);
+    }
+
+    /// <summary>CSS 2.1 §5.12.2: the ::first-letter box follows the block's first-line text, which a
+    /// DOM mutation can change; re-projection preserves the block's box, so the split is never
+    /// rebuilt (first-letter-quote-004 appends the text after layout, nested-003/004/005 set it).
+    /// Rebuilds the split only when the stored one no longer matches the document.</summary>
+    internal static void RefreshFirstLetter(LayoutNode block)
+    {
+        if (block.FirstLetterStyles is not { Count: > 0 }) return;
+        if (!HasFirstLetterSplit(block) || UndoStaleFirstLetterSplit(block))
+            CreateFirstLetterChild(block);
+    }
+
+    /// <summary>Re-runs ::first-letter generation for <paramref name="node"/> and the blocks that
+    /// contain it, after its text changed.</summary>
+    internal static void RefreshFirstLetterForAncestors(LayoutNode node)
+    {
+        for (var block = node; block is not null; block = block.Parent)
+            RefreshFirstLetter(block);
+    }
+
+    private static bool HasFirstLetterSplit(LayoutNode node)
+    {
+        foreach (var child in node.Children)
+            if (child.TagName == "#pseudo-first-letter" || HasFirstLetterSplit(child)) return true;
+        return false;
+    }
+
+    /// <summary>True when the split under <paramref name="node"/> was stale and removed. The split
+    /// inserted one #pseudo-first-letter and a synthetic #text tail at its host's child list; its
+    /// text was taken out of the host, so a host whose document text no longer matches that pair
+    /// has been mutated. The host's text is left in the override channel for the re-split, and an
+    /// unchanged split stays (a later sibling's mutation does not disturb it). A generated box's
+    /// own text is not a function of the DOM and is left alone.</summary>
+    private static bool UndoStaleFirstLetterSplit(LayoutNode node)
+    {
+        foreach (var child in node.Children)
+            if (UndoStaleFirstLetterSplit(child)) return true;
+
+        var idx = node.Children.FindIndex(c => c.TagName == "#pseudo-first-letter");
+        if (idx < 0 || node.DomNode is not (IText or IElement)) return false;
+        var letter = node.Children[idx];
+        var tail = idx + 1 < node.Children.Count && node.Children[idx + 1].TagName == "#text" &&
+                   node.Children[idx + 1].DomNode is null
+            ? node.Children[idx + 1] : null;
+        var splitText = letter.DisplayText + (tail?.DisplayText ?? "");
+        var current = CollapseWhitespace(node.DomNode.TextContent ?? "");
+        if (current == splitText) return false;
+
+        node.Children.Remove(letter);
+        if (tail is not null) node.Children.Remove(tail);
+        node.TextOverride = current;
+        return true;
     }
 
     /// <summary>The nearest node in document order whose own text would start

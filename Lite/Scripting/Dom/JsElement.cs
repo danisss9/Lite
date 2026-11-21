@@ -109,6 +109,11 @@ public class JsElement
         var old = DomNode?.TextContent ?? Node.DisplayText;
         if (DomNode is not null) DomNode.TextContent = data;
         Node.TextOverride = data;
+        // CSS 2.1 §5.12.2: the block's ::first-letter split is a function of this text, so the
+        // containing blocks must rebuild it (first-letter-nested-002/003). A folded parent keeps
+        // its own copy of the text, so re-project it first.
+        if (Node.Parent is { DomNode: IElement } parent) ReProjectAfterMutation(parent);
+        else Parser.RefreshFirstLetterForAncestors(Node);
         MutationObserverRegistry.NotifyCharacterData(_engine, Node, old);
     }
 
