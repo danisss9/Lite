@@ -70,6 +70,16 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
   correctly (geom: c5518 child TABLE offsetTop=119.3 after the text; c5520 offsetTop=101.4 at
   the cell top). Cell child ordering diverges between the two passes; the judge-side needle
   problem (see 6.M) masks it today.
+- `floats-wrap-bfc-006` (official + WPT, 2): a `<table>` with a top `<caption>` (`width: 100px`)
+  and a wider `<tbody>` (`width: 230px`) beside a staircase of 30 1px-tall left floats wraps the
+  table and caption together at the 230px width (`y = 30`), whereas the reference places the 100px
+  caption at `y = 17` (where the float staircase narrows to 70px) and the 230px table grid below
+  the floats (`y = 30`). Per §17.4 the caption and table box are separate block-level boxes inside
+  the table wrapper box. From 6.B.
+- `clear-applies-to-015`, `float-applies-to-005/006/015` (official + WPT, 8): `display:
+  table-column-group`, `table-column`, and `table-caption` boxes with `float`/`clear` fail because
+  anonymous table wrapper / caption geometry in `TableEngine` / `BoxEngine.Normalize` does not
+  match the reference table sizing. From 6.B.
 
 ## Edits outside owned files
 

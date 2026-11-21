@@ -45,6 +45,25 @@ Branch `css21/p6-b`, worktree `C:\Repos\Lite-p6-b`. Case list `Lite.Conformance/
   - commit 43909242: the empty-line rule-7 hook no longer requires the pen at the
     band's start edge (it carries the line's start offset, e.g. text-indent), and a collapsible
     space that overflows a line with no content no longer commits that line (§16.6.1).
+- **Batch 2:**
+  - `Lite/Layout/BoxEngine.Inline.cs` (6.A): the empty-line rule-7 hook delegates to
+    `FitBandBelow` over `contentH` and always updates `bandLeft`/`bandRight`/`lineX` from that
+    full-height band (`floats-zero-height-wrap-001/002`); `BreakAllowedBefore` re-enters the item
+    loop (`itemIndex--; continue;`) after `CommitLine()` so wrapped lines run the empty-line
+    rule-7 hook (`floats-wrap-top-below-inline-002l/002r/003l/003r`); `lineContentRight` starts at
+    `bandLeft` so an empty line does not look occupied to `PlaceInRunFloat` (`c414-flt-wrap-001`);
+    and `InlineBoxEdges`/`ApplyInlineItem` call `IsBrokenAroundInFlowBlock` so out-of-flow
+    floated/abspos children do not strip an inline wrapper's horizontal margins (`floats-149`).
+    Verified against `A-pass.txt` (1405/1405).
+  - `Lite/Layout/BoxEngine.Block.cs` (6.C): removed the normal-flow cursor advance and float
+    retirement on cleared floats (`clear` on a float is §9.5.2 constraint #10 on the float's own
+    outer top inside `LayoutFloat`/`PlaceInRunFloat`, never on the in-flow cursor `runY` —
+    `floats-zero-height-wrap-001/002`, `floats-placement-001/002/003`, `zero-width-floats`); and
+    delegated the BFC-beside-floats branch to `AvoidsFloatsInBfc`/`FitBfcBesideFloats` (in
+    `BoxEngine.Floats.cs`) with a post-layout re-fit loop when an auto-height BFC grows into a
+    wider lower float (`floats-wrap-top-below-bfc-002l/002r/003l/003r`,
+    `floats-wrap-bfc-003-left-table/003-right-table/004/008`, `floats-bfc-003`, `floats-039`).
+    Verified against `C-pass.txt` (2974/2974) and `D-pass.txt` (1203/1203).
 
 ## Progress
 
@@ -167,3 +186,99 @@ they ran only `B.txt` and the 300-case canary.
 - **Process note for the next batch:** run `B-pass.txt` (and the neighbouring lanes' pass lists
   when a commit touches their files), not just the canary. Of the 35 losses, 24 sat in
   `B-pass`, 5 in `D-pass`, 2 in `C-pass` and 1 in `J-pass`; the canary held only 3.
+
+### Batch 2 — §9.5 / §9.5.1 / §9.5.2 float placement, full-height line & BFC band fitting, and cleared-float isolation
+
+- **Root causes fixed:**
+  1. **Full-height band fitting (`FitBandBelow`, §9.5):** both line boxes (`BoxEngine.Inline.cs`)
+     and BFCs / tables / block-level replaced elements (`BoxEngine.Block.cs` via
+     `AvoidsFloatsInBfc` and `FitBfcBesideFloats` in `BoxEngine.Floats.cs`) now probe
+     `AvailableBand` over their full height rather than 1px at their top edge, stepping down one
+     `NextFloatBottom` at a time until the box fits. When an item wraps onto a new line via
+     `BreakAllowedBefore`, the loop now re-enters after `CommitLine()` (`itemIndex--; continue;`)
+     so the new empty line runs the rule-7 hook (`floats-wrap-top-below-inline-002l/002r/003l/003r`,
+     `floats-wrap-top-below-bfc-002l/002r/003l/003r`, `floats-wrap-bfc-008`, `floats-039`).
+     Auto-width tables beside floats floor `wantedW` by `TableEngine.MeasureTableContentWidths(...).SumMin`
+     (§17.5.2.2, `floats-wrap-bfc-003-left-table/003-right-table/004`), and auto-height BFCs that
+     grow taller than their initial probe re-fit over their laid-out border-box height
+     (`floats-bfc-003`).
+  2. **Cleared floats do not advance the normal-flow cursor (§9.5.2 constraint #10):**
+     `LayoutChildrenImpl` previously called `ApplyClear`, `RetireFloats`, and advanced `runY`
+     when a float had `clear != none`, pushing subsequent normal-flow content down to the cleared
+     float's Y. `ApplyClear` now applies strictly to the float's own `placeY`/`outerTop` inside
+     `LayoutFloat` and `PlaceInRunFloat`, and `PlaceInRunFloat` guards its `reflow` shift with
+     `af.Bottom > lineTopAbs` so a zero-height float at a line's top edge does not shift `lineX`
+     (`floats-zero-height-wrap-001/002`, `floats-placement-001/002/003`, `zero-width-floats`).
+  3. **§9.5.1 rules 3 & 7 outside the containing block (`TryPlaceFloatAt`):** a float with no
+     same-side float to its outer side may extend past the opposite edge of its containing block
+     (rule 7), provided it does not overlap an opposite-side float in the same BFC even when that
+     float lies outside the containing block (rule 3, `floats-rule3-outside-left/right-001`).
+  4. **Empty-line in-run float drop (`c414-flt-wrap-001`):** when an in-run float cannot fit at
+     `lineTopAbs` on a line that holds no content yet (`lineContentRight == bandLeft`),
+     `PlaceInRunFloat` slides down from `outerTop` past blocking float bottoms without adding the
+     empty line's strut height `lineH`.
+  5. **First-line unbreakable width stops at `<br>` (`float-no-content-beside-001`):**
+     `FirstUnbreakableWidth` returns `0f` on `InlineItemKind.LineBreak` or `Float` so a long word
+     after an initial `<br>` does not push the empty `<br>` line itself below the float.
+  6. **Floated `::before`/`::after` edge isolation (`floats-114`), inline wrapper margins around
+     floats (`floats-149`), and floated table minimum width (`floated-table-wider-than-specified`):**
+     `MeasureFloat` only applies margin/padding/border/width/height on `#pseudo*` nodes when
+     declared in `StyleOverrides`; `IsBrokenAroundInFlowBlock` ignores out-of-flow children when
+     deciding whether an inline wrapper's horizontal margins are suppressed; and `MeasureFloat`
+     floors a floated `display: table` by `SumMin`.
+- **Moved (47 — 19 official + 28 WPT):**
+  - Official (19): `c414-flt-wrap-001`, `floats-039`, `floats-114`, `floats-149`,
+    `floats-rule3-outside-left-001`, `floats-rule3-outside-right-001`,
+    `floats-wrap-bfc-003-left-table`, `floats-wrap-bfc-003-right-table`, `floats-wrap-bfc-004`,
+    `floats-wrap-top-below-bfc-002l`, `floats-wrap-top-below-bfc-002r`,
+    `floats-wrap-top-below-bfc-003l`, `floats-wrap-top-below-bfc-003r`,
+    `floats-wrap-top-below-inline-002l`, `floats-wrap-top-below-inline-002r`,
+    `floats-wrap-top-below-inline-003l`, `floats-wrap-top-below-inline-003r`,
+    `floats-zero-height-wrap-001`, `floats-zero-height-wrap-002`.
+  - WPT (28): the 19 WPT twins of the official cases above, plus `floats-bfc-003`,
+    `float-no-content-beside-001`, `floated-table-wider-than-specified`, `floats-placement-001`,
+    `floats-placement-002`, `floats-placement-003`, `floats-wrap-bfc-008`,
+    `floats-wrap-bfc-with-margin-010`, `zero-width-floats`.
+- **Still failing in `B.txt` (20 official + 57 WPT) and why:**
+  - `c5525-fltinln-000`, `c5525-fltmrgn-000` (2 official + 2 WPT): layout is pixel-exact
+    (`c5525-fltmrgn-000` dropped from 9000 to 3150 red pixels); the remaining red pixels are
+    painted by `Drawer.cs` (`PaintInlineBoxOwnContent` line 1452) where an anonymous `#text` child
+    of a block with `background: red url(...)` paints the parent's `background-color: red` in
+    step 5 over the parent's step-3 background image on space characters. Handed to 6.D.
+  - `c5525-fltmult-000` (1 official): uses a literal `<div class="red"><p>Red</p></div>` as one of
+    4 test color swatches compared against a reference table; fails `redScan`. Handed to 6.M.
+  - `floats-placement-005` (1 WPT): test page layout is exact (`*-actual.png`), but the reference
+    page `floats-placement-005-ref.html` renders `.float-left` with inline `style="background:
+    cyan"` as green. Handed to 6.K.
+  - `floats-wrap-bfc-006` (1 official + 1 WPT), `clear-applies-to-015` (1+1),
+    `float-applies-to-005/006/015` (3+3): table caption vs table grid independent wrapping around
+    floats (§17.4) and anonymous table wrapper sizing. Handed to 6.E.
+  - `float-replaced-height-007` (1 official + 1 WPT): SVG `<object>` intrinsic size (part of the
+    SVG replaced cluster).
+  - `floats-143` (1 official + 1 WPT), `intrinsic-size-float-and-line` (1 WPT): shrink-to-fit
+    `max-content` width in `IntrinsicSizer.cs` (6.A) takes `max(float, inline)` instead of summing
+    consecutive un-cleared floats alongside adjacent inline content.
+  - `margin-collapse-clear-000/001/004/006/007/010` (6 official + 6 WPT, no floats/clear, already
+    handed to 6.C) and `margin-collapse-clear-002/003/008/009` (4 official + 4 WPT),
+    `adjoining-float-*` (4 WPT), `negative-clearance-after-adjoining-float` (1 WPT),
+    `no-clearance-due-to-large-margin*` (2 WPT), `new-fc-beside-adjoining-float` (1 WPT),
+    `new-fc-separates-from-float-2/3` (2 WPT), `clear-on-replaced-element` (1 WPT):
+    margin-collapse chain + adjoining-float clearance interaction in `BoxEngine.Block.cs` (6.C).
+  - `floats-wrap-bfc-with-margin-001..009` (10 WPT) and `zero-width-floats-positioning.tentative`
+    (1 WPT): negative-margin BFC beside floats (mostly tentative CSSWG tests).
+  - `floats-clear-multicol-*` (4 WPT): CSS Multi-column Layout (`column-count`), outside CSS 2.1.
+  - `zero-space-between-floats-001..004` (4 WPT): `JsElement.offsetLeft`/`offsetTop` ignores
+    `offsetParent` (`#container` has `position: relative`, so `offsetLeft` reads `108`/`8` instead
+    of `100`/`0`).
+  - `hit-test-floats-003/005` (2 WPT), `computed-float-position-absolute` (1 WPT): already handed
+    to 6.M.
+  - `float-root` (1 WPT), `floats-line-wrap-shifted-001` (1 WPT),
+    `float-percentage-resolution-quirks-mode` (1 WPT): root-element float margin/containing-block,
+    first-line wrap after narrow float band, and quirks-mode percentage height resolution.
+- **Handed to other lanes:** added entries to `6M-judges.md`, `6E-tables.md`, `6K-cascade.md`, and
+  `6D-positioning.md`.
+- **Checks:** units 741/741; css21 51 + 1 expected-fail; wpt 86 + 2 expected-fail;
+  `B.txt` 19/39 official + 28/85 WPT (47 moved from 0/39 + 0/85); `B-pass.txt` 494/494 (204
+  official + 290 WPT, 0 losses); `canary.txt` 960/960 (492 official + 468 WPT, 0 losses);
+  `C-pass.txt` 2974/2974 (1401 official + 1573 WPT, 0 losses); `A-pass.txt` 1405/1405 (669
+  official + 736 WPT, 0 losses); `D-pass.txt` 1203/1203 (555 official + 648 WPT, 0 losses).

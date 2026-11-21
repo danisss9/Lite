@@ -1049,20 +1049,12 @@ internal static partial class BoxEngine
             // 'clear' applies only to block-level boxes and floats (CSS 2.1 §9.5.2); inline-level
             // boxes ignore it. (Text nodes can carry a non-inherited 'clear' from the parent's
             // computed style — honoring it on an inline run would also stall the run collector.)
+            // On a float, 'clear' is §9.5.2 constraint #10 on the float's own top outer edge
+            // (applied inside LayoutFloat / PlaceInRunFloat) — the float is out of flow and never
+            // advances the normal-flow cursor or retires earlier floats for subsequent in-flow content.
             var clear = child.GetClear();
             var isBlockLevel = display == DisplayType.Block || display == DisplayType.ListItem
                             || display == DisplayType.Flex || display == DisplayType.Table;
-            // FLOATS with clear keep the cursor-adjust form (the float's margin box starts at the
-            // cleared position). Block-level boxes are handled inside their branch below, where
-            // the §9.5.2 clearance computation needs the hypothetical border edge.
-            if (clear != ClearType.None && floatSide != FloatType.None)
-            {
-                var clearedForFloat = ApplyClear(clear, floats, runY + pending.Value);
-                RetireFloats(floats, clearedForFloat);
-                // Keep runY + pendingMargin == cleared so the running margin still collapses with the
-                // next box exactly as before (clearance behaviour unchanged).
-                runY = clearedForFloat - pending.Value;
-            }
 
             // Handle floated elements — taken out of normal flow but affect available width
             if (floatSide != FloatType.None)
@@ -1155,63 +1147,17 @@ internal static partial class BoxEngine
                 }
 
                 // §9.5: a plain in-flow block's border box OVERLAPS the floats beside it — only
-                // its inline (line box) content narrows, and a block that establishes a BFC may
-                // not overlap at all. Placing every block in the float's wake painted block
-                // backgrounds beside the float instead of under it (floats-008/135: the red
-                // block must slide UNDER the green/blue float, not out of its way).
-                var (effX, effW) = EstablishesBlockFormattingContext(child)
-                    ? AvailableBand(floats, borderTop, 1, contentX, contentW)
-                    : (contentX, contentW);
-                if (effW != contentW || effX != contentX)
-                {
-                    // §9.5 rule 6: "implementations should clear the said element by placing it
-                    // below any preceding floats" when it cannot fit beside them — the border box
-                    // must not overlap, and a BFC's specified width is not narrowed by the band
-                    // (floats-bfc-001's 200px BFC drops below the 150px float and grows its
-                    // auto-height parent to full coverage).
-                    // An auto-width BFC fills the band with its BORDER box. Its own margin on the
-                    // float's side lies between the border box and the float and may overlap the
-                    // float's margin box (§9.5 constrains only the border box), so that margin
-                    // neither narrows the box nor moves it; a margin on the far side insets it
-                    // from that edge (floats-wrap-bfc-with-margin's reference leaves the
-                    // same-side positive margins out entirely). §10.3.3's width equation is also
-                    // a lower bound: content width = containing block width − margins − edges,
-                    // so a NEGATIVE total inline-axis margin "props up" the border box to
-                    // containing block width − margins, which no longer fits beside the float —
-                    // it must go below it (floats-wrap-bfc-with-margin-001..010).
-                    var autoBfc = child.IsAutoWidth();
-                    var marginLeft = child.IsAutoMarginLeft() ? 0f : child.GetMarginLeft(total: contentW, size: childFontSize);
-                    var marginRight = child.IsAutoMarginRight() ? 0f : child.GetMarginRight(total: contentW, size: childFontSize);
-                    var floatOnLeft = effX > contentX + 0.5f;
-                    var floatOnRight = effX + effW < contentX + contentW - 0.5f;
-                    var wantedW = autoBfc
-                        ? Math.Max(0f, effW - (floatOnLeft ? 0f : marginLeft) - (floatOnRight ? 0f : marginRight))
-                        : Math.Max(0f, child.GetWidth(contentW)
-                                       + child.GetBorderWidth().Left + child.GetBorderWidth().Right
-                                       + (child.GetPadding(contentW, viewportHeight, childFontSize).Left
-                                          + child.GetPadding(contentW, viewportHeight, childFontSize).Right));
-                    if (autoBfc && marginLeft + marginRight < 0f)
-                        wantedW = Math.Max(wantedW, Math.Max(0f, contentW - marginLeft - marginRight));
-                    if (wantedW > effW + 0.5f)
-                    {
-                        var floatBottom = borderTop;
-                        foreach (var f in floats) floatBottom = Math.Max(floatBottom, f.Bottom);
-                        if (floatBottom > borderTop + 0.5f)
-                        {
-                            borderTop = floatBottom;
-                            (effX, effW) = AvailableBand(floats, borderTop, 1, contentX, contentW);
-                            RetireFloats(floats, borderTop);
-                            floatOnLeft = floatOnRight = false;
-                        }
-                    }
-                    if (autoBfc && (floatOnLeft || floatOnRight))
-                    {
-                        // Give LayoutBlock the margin-box origin and available width that make its
-                        // auto-width border box fill the band with only the far-side margin inside.
-                        effX -= floatOnLeft ? marginLeft : 0f;
-                        effW += (floatOnLeft ? marginLeft : 0f) + (floatOnRight ? marginRight : 0f);
-                    }
-                }
+                // its inline (line box) content narrows, while a table, a block-level replaced
+                // element, or a block that establishes a BFC may not overlap at all. Placing every
+                // block in the float's wake painted block backgrounds beside the float instead of
+                // under it (floats-008/135: the red block must slide UNDER the green/blue float,
+                // not out of its way).
+                var (effX, effW) = (contentX, contentW);
+                var avoidsFloats = floats.Count > 0 && AvoidsFloatsInBfc(child);
+                var (bfcWantedW, bfcProbeH) = (0f, 1f);
+                if (avoidsFloats)
+                    (borderTop, effX, effW, bfcWantedW, bfcProbeH) = FitBfcBesideFloats(
+                        child, floats, borderTop, contentX, contentW, parentContentHeight, viewportHeight, childFontSize);
                 // The pre-layout state of the spent-chain flag: the ride gate below must know
                 // whether the CURRENT chain was opened by a re-anchored self-collapser (the box
                 // about to fold would set the flag itself before the ride runs).
@@ -1219,6 +1165,25 @@ internal static partial class BoxEngine
                 var (h, childBottomMargin) = LayoutBlock(child, effX, borderTop - childMarginTop, effW,
                                                          viewportWidth, viewportHeight, parentContentHeight, floats);
                 var borderBoxH = h - childMarginTop - childBottomMargin.Value;
+                // §9.5: when an auto-height BFC grows taller than its initial top-edge probe and
+                // now overlaps a wider float starting partway down its laid-out height
+                // (floats-bfc-003), re-fit over the full border-box height and re-layout.
+                for (var reAttempt = 0; reAttempt < 8 && avoidsFloats && borderBoxH > bfcProbeH + 0.5f; reAttempt++)
+                {
+                    bfcProbeH = borderBoxH;
+                    var (reFitY, reFitX, reFitW) = FitBandBelow(floats, borderTop, bfcProbeH, bfcWantedW, contentX, contentW);
+                    if (reFitY <= borderTop + 0.5f && MathF.Abs(reFitX - effX) <= 0.5f && MathF.Abs(reFitW - effW) <= 0.5f)
+                        break;
+                    if (reFitY > borderTop + 0.5f)
+                    {
+                        borderTop = reFitY;
+                        RetireFloats(floats, borderTop);
+                    }
+                    (effX, effW) = (reFitX, reFitW);
+                    (h, childBottomMargin) = LayoutBlock(child, effX, borderTop - childMarginTop, effW,
+                                                         viewportWidth, viewportHeight, parentContentHeight, floats);
+                    borderBoxH = h - childMarginTop - childBottomMargin.Value;
+                }
 
                 // Self-collapsing block (§8.3.1): no in-flow content / border / padding / height (a
                 // zero border-box height already implies height is auto-or-0 with no min-height), and
@@ -1345,8 +1310,7 @@ internal static partial class BoxEngine
                         // 'clear' keeps the block-level branch above, which owns ApplyClear and
                         // the margin-chain interaction.
                         var joinsRunAsFloat = children[i].TagName != "#text" &&
-                            children[i].GetFloat() != FloatType.None &&
-                            children[i].GetClear() == ClearType.None;
+                            children[i].GetFloat() != FloatType.None;
                         if (!joinsRunAsFloat &&
                             (d == DisplayType.Block || d == DisplayType.ListItem || d == DisplayType.Flex || d == DisplayType.Table)) break;
                     }

@@ -155,6 +155,12 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
   `numbers-units-018`, `c64-uri-000`): `numbers-units-018` is root-em/ex (6.C), `c64-uri-000`
   looks like a broken test (above); the rest need per-case parser probes with the fork before
   any fix.
+- `css/CSS2/floats/floats-placement-005.html`: float and inline-block layout on the test page
+  matches the reference geometry (`wpt-reference-floats-placement-005-*-actual.png`), but in
+  `floats-placement-005-ref.html` `<div class="float-left" style="width: 100px; height: 40px;
+  background: cyan;">` renders green instead of cyan (`*-expected.png`) because the class rule
+  `.float-left { background: green; }` beats the inline `style="... background: cyan;"` shorthand.
+  From 6.B.
 
 ## Edits outside owned files
 

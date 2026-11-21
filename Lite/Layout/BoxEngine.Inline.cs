@@ -515,7 +515,7 @@ internal static partial class BoxEngine
                 // measure the line's extent without it (floats-006: the space between the span
                 // and the floated divs would otherwise inflate the used width and drop the
                 // second float below the first instead of packing beside it).
-                var lineContentRight = lineX;
+                var lineContentRight = bandLeft;
                 for (var k = placed.Count - 1; k >= lineStart; k--)
                 {
                     var (pit, prx, _) = placed[k];
@@ -562,26 +562,31 @@ internal static partial class BoxEngine
             // leading-float's 40px-indented line beside a leading 60px float in a 100px block
             // moves below the float with its indent, rather than wrapping its inline-block onto
             // an unindented second line.
-            if (floats.Count > 0 &&
+            if (floats.Count > 0 && item.Kind != InlineItemKind.InlineEdge &&
+                !(item.Kind == InlineItemKind.Text && (item.Text ?? "").IsCssWhiteSpaceOnly() &&
+                  item.Node?.GetWhiteSpace() is not (WhiteSpace.Pre or WhiteSpace.PreWrap)) &&
                 placed.FindIndex(lineStart, p => p.item.Kind is not (InlineItemKind.InlineEdge
-                    or InlineItemKind.OutOfFlow or InlineItemKind.Float)) < 0)
+                    or InlineItemKind.OutOfFlow or InlineItemKind.Float or InlineItemKind.Strut)) < 0)
             {
-                var pieceW = FirstPieceWidth(item) + (lineX - bandLeft);
+                var keepIndent = lineX - bandLeft;
+                var pieceW = FirstPieceWidth(item) + keepIndent;
                 var contentH = Math.Max(Math.Max(Math.Max(strutAbove + strutBelow, maxAbove + maxBelow),
                     item.Height), 1f);
-                if (pieceW > bandRight - bandLeft + 0.5f)
-                {
-                    var (dxb, dwb) = AvailableBand(floats, originY + lineY, contentH, originX, maxWidth);
-                    var keepIndent = lineX - bandLeft;
-                    while (pieceW > dwb + 0.5f && NextFloatBottom(floats, originY + lineY) is { } nextY)
-                    {
-                        lineY = nextY - originY;
-                        (dxb, dwb) = AvailableBand(floats, originY + lineY, contentH, originX, maxWidth);
-                    }
-                    bandLeft = dxb - originX;
-                    bandRight = bandLeft + dwb;
-                    lineX = bandLeft + keepIndent;
-                }
+                // The fit test itself uses the band over the line's extent (contentH), not the
+                // line top's 1px probe: a float starting below the line's top but inside its
+                // height is beside the line too (floats-wrap-top-below-inline-002l's 200px span
+                // at y=50 fits the 250px band at the top, not the band down to y=100;
+                // floats-zero-height-wrap's float at y=30 narrows the y=20..40 line).
+                var (fitY, dxb, dwb) = FitBandBelow(floats, originY + lineY, contentH, pieceW, originX, maxWidth);
+                lineY = fitY - originY;
+                var newBandLeft = dxb - originX;
+                var dxBand = newBandLeft - bandLeft;
+                if (MathF.Abs(dxBand) > 0.01f)
+                    for (var k = lineStart; k < placed.Count; k++)
+                        placed[k] = (placed[k].item, placed[k].relX + dxBand, lineY);
+                bandLeft = newBandLeft;
+                bandRight = bandLeft + dwb;
+                lineX = bandLeft + keepIndent;
             }
 
             // A whitespace-only text item that would cross the line's end collapses there
@@ -698,6 +703,8 @@ internal static partial class BoxEngine
                         continue;
                     }
                     CommitLine();
+                    itemIndex--;
+                    continue;
                 }
                 else if (!gluedToLineStart && SplitAtFirstOpportunity(items, itemIndex) )
                 {
@@ -793,6 +800,7 @@ internal static partial class BoxEngine
                     // inline's first letter (text-transform-cap-002).
                     var stripW = StrippedWidth(item.Node, stripped);
                     item = item with { Text = stripped, Width = stripW, ContentW = stripW };
+                    fitWidth = stripW;
                 }
             }
 
@@ -824,6 +832,7 @@ internal static partial class BoxEngine
                         }
                         var stripW = StrippedWidth(item.Node, stripped);
                         item = item with { Text = stripped, Width = stripW, ContentW = stripW };
+                        fitWidth = stripW;
                     }
                     break;
                 }
@@ -1572,7 +1581,7 @@ internal static partial class BoxEngine
         // from, so asking them for a margin would apply the parent's a second time.
         if (node.TagName.StartsWith('#')) return (0f, 0f);
 
-        if (node.IsBrokenAroundBlock()) return (0f, 0f);
+        if (IsBrokenAroundInFlowBlock(node)) return (0f, 0f);
 
         // §8.6 (bidi box model): an inline box that is NOT split by bidi reordering keeps its
         // physical sides — 'margin-left' reserves space on the left of the line whatever the
@@ -2550,7 +2559,7 @@ internal static partial class BoxEngine
                     // of the space the line gave the box. Anonymous boxes (#text) resolve their
                     // styles from the element that produced them, so taking edges there would
                     // apply the parent's a second time.
-                    var noEdges = node.TagName.StartsWith('#') || node.IsBrokenAroundBlock();
+                    var noEdges = node.TagName.StartsWith('#') || IsBrokenAroundInFlowBlock(node);
                     node.Box = new BoxDimensions
                     {
                         ContentBox = rect,

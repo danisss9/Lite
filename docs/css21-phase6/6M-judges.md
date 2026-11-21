@@ -90,6 +90,11 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - `css/CSS2/floats/computed-float-position-absolute.html`: the check reads
   `getComputedStyle(...).float` and gets `undefined` — the computed style does not expose `float`,
   a CSSOM/protocol gap, not float layout. From 6.B.
+- `css21-official/html4/c5525-fltmult-000.htm`: has no WPT reftest twin and uses a literal
+  `<div class="red"><p>Red</p></div>` (`background: red; color: black`) as one of the four test
+  color blocks ("Yellow, Blue, Red, Green") compared against the reference table below; the
+  red-pixel scanner fails with `10638 red pixels (diagnostic)`. Needs `redScan: false` and a
+  two-region comparison check. From 6.B.
 
 ## Edits outside owned files
 

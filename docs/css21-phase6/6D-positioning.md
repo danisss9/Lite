@@ -40,6 +40,17 @@ Branch `css21/p6-d`, worktree `C:\Repos\Lite-p6-d`. Case list `Lite.Conformance/
 **Handed to other lanes:**
 
 - To 6.B (then 6.C/6.J): the `ch` unit measures 0.5em (`CssUnits.cs` line ~87) where CSS Values §6.2 asks for the '0' glyph advance (1em in Ahem, ~0.6em in the suite's monospace). A working measured fix (TextMeasure.ZeroAdvanceRatio + CssUnits wiring, both files' owners see this note) was **reverted here**: it makes `float-nowrap-3/4/8/9` and `table-anonymous-objects-214` fail — the CORRECT width exposes a float-interaction bug (a right-floated box inside nowrap text paints over the line instead of shortening it: the test paints the float mid-line, the reference at the span start). Fix the float behavior first, then land the measurement; my probe harness reports (`probe-ch.json` in this worktree's artifacts) show exactly which cases flip.
+  the abspos containing-block placement is wrong. Render evidence: `artifacts/cb17.png` in the 6.M worktree. From 6.M.
+- `c5525-fltinln-000`, `c5525-fltmrgn-000` (official + WPT, 4): float and text-fragment layout
+  around the floats is pixel-exact (`c5525-fltmrgn-000` dropped from 9000 to 3150 red pixels after
+  the line-wrap rule-7 fix), but in `Drawer.cs` (`PaintInlineBoxOwnContent` line 1452), an
+  anonymous `#text` child of a block container (`div.a`/`div.b` or `p.test2..test6` with
+  `background: red url(...)`) reads the parent block's `background-color: red` from the shared
+  `Style` and paints it over each text fragment in Appendix E step 5, covering the parent block's
+  step-3 background image on the space characters (`900` red pixels = 4 spaces in
+  `c5525-fltinln-000`; `3150` red pixels = 14 spaces in `c5525-fltmrgn-000`). Anonymous `#text`
+  children of non-inline containers should not paint a background color of their own (just as
+  line 1479 already skips `DrawBackgroundImageIn` when `!paintsOwnBorders`). From 6.B.
 
 ## Edits outside owned files
 
