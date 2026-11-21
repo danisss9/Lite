@@ -45,12 +45,53 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
   `<font color="green">` inside a red `div` paints red. The file's assert says the presentational `color` attribute
   trumps the author `div` rule and the user sheet's universal selector (§6.4.4 cascade order); the attribute seems
   ignored. Render evidence: `artifacts/hp3.png` in the 6.M worktree. From 6.M.
+- **`margin-em-inherit-001` / `padding-em-inherit-001` (WPT twins), from 6.C** — the `inherit`
+  computed-value bug is fixed (commit 1 of this batch); what remains is one 2-pixel row at the bottom
+  of the green box. The reference fixes `height: 194px` for a 100px inline image in a 40px font,
+  i.e. a 110px line box; our `line-height: normal` strut measures 108.48px (font descent 8.48px,
+  ascent 36.21px at 40px). This is the font metric and the §10.8.1 strut, not the cascade.
+  **From 6.K (this batch) to 6.J + 6.A.**
 
 ## Edits outside owned files
 
 - `Lite/Parser.cs`: removed the old regex-based `InlineImports` method body (36 lines) so the spec-compliant `InlineImports` lives in owned `Lite/Parser.Cascade.cs`. The HTML5 gate was not rerun (per lane rules).
 
 ## Progress
+
+### Batch 2, commit 1 - `inherit` passes the parent's COMPUTED font-relative length (§6.2.1)
+
+- **Handed in from 6.C:** `margin-em-inherit-001` / `padding-em-inherit-001` (official and WPT
+  twins, 4 served paths). AngleSharp replaces the `inherit` keyword with the parent's SPECIFIED
+  value, so `#child { margin: inherit }` under `#parent { margin: 2em; font-size: 28px }` reached
+  layout as the string `2em`, which the child's own 40px font scaled to 80px instead of the
+  parent's computed 56px.
+- **Fix (`Parser.Cascade.cs`):** after the cascade, a declaration whose computed value is a bare
+  `em`/`ex` length is checked against the element's own explicit cascade
+  (`ComputeExplicitStyle`, which still holds the `inherit` keyword). When the own winner is
+  `inherit`, the keyword is stamped into the override channel, which 6.C's
+  `ResolvePendingCssWideKeywords` resolves from the parent's computed value. A cheap gate keeps
+  the second cascade pass to elements whose matching rules or style attribute actually spell
+  `inherit`. No fork patch changed.
+- **Moved in K: none** (these cases belong to 6.C, not to this lane).
+- **Still fails, honestly:** all four served paths now put `#child` at the exact geometry the
+  test states (`offsetLeft=238`, `offsetTop=174`, margin `56/84/28/112`) and the *official*
+  renders are fully green with no red. The maintained WPT twins (`margin-em-inherit-001.xht`,
+  `padding-em-inherit-001.xht`) still diff by **one 2-pixel row** (784 and 800 px): their
+  reference fixes the green box at `height: 194px`, which needs a 110px line box for the inline
+  100px image, i.e. a 10px font descent at 40px. Our serif metric gives a 108.48px line box
+  (descent 8.48px), so the box is 1.5px short. Probe: a 40px text line measures 44.69px
+  (ascent 36.21, descent 8.48). That is `line-height: normal` strut/font metrics, not cascade:
+  **handed to 6.J/6.A** (see Handed in).
+- **Checks:**
+  - Build: `dotnet build Lite.sln -c Release` succeeded.
+  - Units: full suite 736 passed, 0 failed, including the new
+    `CascadeTests.Inherit_StylesheetMarginAndPaddingTakeParentComputedEm`.
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 0/37 official, 1/65 WPT (unchanged).
+  - `K-pass.txt`: 1,166/1,166 (611/611 official, 555/555 WPT).
+  - Canary: 960/960 (492/492 official, 468/468 WPT).
+  - `C-pass.txt` (cascade change reaches every lane): 2,974/2,974 (1,401/1,401 official,
+    1,573/1,573 WPT).
 
 ### Fix round (batch 1 losses): ignored statements no longer end the `@import` prologue (`Parser.Cascade.cs`)
 - **Losses found by the integrator** (`fix-losses.txt`, each passing at base `05228a26`): `at-import-009`, `at-import-010`, `at-rule-008`, `at-rule-009`, official and WPT (8 cases).

@@ -970,6 +970,64 @@ internal static partial class Parser
         // cascade order (origin, !important, specificity, source order).
         ApplyPseudoElementRules(element, node);
 
+        StampOwnInheritOverRelativeLengths(element, node);
+    }
+
+    private static readonly Regex s_fontRelativeLength =
+        new(@"^[+-]?(\d+(\.\d*)?|\.\d+)(em|ex)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// CSS 2.1 §6.2.1: 'inherit' takes the parent's COMPUTED value, and an 'em'/'ex' length
+    /// computes against the font of the element that declares it (§4.3.2). AngleSharp resolves
+    /// the keyword by copying the parent's SPECIFIED declaration into the element's own cascade,
+    /// so <c>#child { margin: inherit }</c> under <c>#parent { font-size: 28px; margin: 2em }</c>
+    /// reached layout as a bare "2em" that the child's own 40px font then scaled to 80px instead
+    /// of 56px (margin-em-inherit-001, padding-em-inherit-001). Once the keyword is replaced it
+    /// is indistinguishable from an authored "2em", so the element's own winning declaration is
+    /// read here: where it is 'inherit' and the cascade substituted a font-relative length, the
+    /// keyword goes to the override channel, which <see cref="StyleResolver"/> resolves against
+    /// the parent's computed value (parents first).
+    /// </summary>
+    private static void StampOwnInheritOverRelativeLengths(IElement element, LayoutNode node)
+    {
+        List<string>? candidates = null;
+        try
+        {
+            foreach (var property in node.Style)
+            {
+                if (property.Name is not { Length: > 0 } name || node.StyleOverrides.ContainsKey(name)) continue;
+                if (s_fontRelativeLength.IsMatch(property.Value?.Trim() ?? "")) (candidates ??= []).Add(name);
+            }
+        }
+        catch { return; }
+        if (candidates is null) return;
+
+        // Cheap gate before a second cascade pass: some matching rule or the style attribute
+        // must spell 'inherit' for one of the candidates.
+        ICssStyleDeclaration? inline = null;
+        try { if (element.HasAttribute("style")) inline = element.GetStyle(); }
+        catch { inline = null; }
+        bool SaysInherit(ICssStyleDeclaration? style, string prop) =>
+            style is not null && string.Equals(style.GetPropertyValueSafe(prop)?.Trim(), "inherit",
+                StringComparison.OrdinalIgnoreCase);
+        if (!candidates.Any(prop => SaysInherit(inline, prop) || _staticMatches.Any(m => SaysInherit(m.Style, prop))))
+            return;
+
+        // The element's own cascade (origin, !important, specificity, order and the style
+        // attribute), without inheritance: does 'inherit' win there?
+        ICssStyleDeclaration own;
+        try
+        {
+            var window = element.Owner?.DefaultView;
+            if (window is null) return;
+            var device = element.Owner!.Context.GetService<IRenderDevice>() ?? new DefaultRenderDevice();
+            own = window.GetStyleCollection(device).ComputeExplicitStyle(element);
+        }
+        catch { return; }
+
+        foreach (var prop in candidates)
+            if (SaysInherit(own, prop))
+                node.StyleOverrides[prop] = "inherit";
     }
 
     /// <summary>A rule's place in the §6.4.1 cascade: its declarations, the specificity of
