@@ -306,13 +306,40 @@ internal static partial class Drawer
             var node = stack.Pop();
             if (!visited.Add(node)) continue;
             if (node.GetPosition() == PositionType.Fixed)
+            {
                 // PaintNodeInner, not PaintNode: PaintNode skips every fixed box so the normal
                 // tree pass leaves them for this one. Routing back through it made this pass a
                 // no-op, so a position:fixed box was laid out correctly and then never painted.
-                PaintNodeInner(canvas, node, viewportWidth);
-            else
-                for (int i = node.Children.Count - 1; i >= 0; i--)
-                    stack.Push(node.Children[i]);
+                // §11.1.2: the 'clip: rect()' of an absolutely or fixed positioned ancestor
+                // applies to the box's descendants too, so this separate paint replays the clip
+                // of every such ancestor between the root and the box — the same replay
+                // PaintThroughClippers makes for stacking items (clipping-010: a fixed child of
+                // a clipped fixed parent painted outside the clip once it was painted at all).
+                // An ancestor's overflow clip does NOT come along (§11.1.1: the clip covers no
+                // descendant whose containing block is the viewport — clipping-007).
+                List<SKRect>? clips = null;
+                for (var a = node.Parent; a is not null; a = a.Parent)
+                    if (a.GetPosition() is PositionType.Absolute or PositionType.Fixed
+                        && a.GetClipRect() is { } cr)
+                        (clips ??= []).Add(cr);
+                if (clips is null)
+                    PaintNodeInner(canvas, node, viewportWidth);
+                else
+                {
+                    canvas.Save();
+                    foreach (var cr in clips) canvas.ClipRect(cr);
+                    PaintNodeInner(canvas, node, viewportWidth);
+                    canvas.Restore();
+                }
+            }
+            // §10.1: a fixed box is NOT the containing block of its own position:fixed
+            // descendants (only a transform/filter/perspective would be) — they anchor to the
+            // viewport like this one, so the walk must keep descending through the subtree for
+            // them (clipping-006: a fixed child of a fixed overflow box was laid out and then
+            // painted by nobody). PaintChildrenSorted's stacking walk skips fixed children
+            // (CollectStackingItems), so the subtree paint above did not already draw them.
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+                stack.Push(node.Children[i]);
         }
     }
 
