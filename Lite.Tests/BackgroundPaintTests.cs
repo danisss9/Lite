@@ -109,4 +109,27 @@ public static class BackgroundPaintTests
         Equal(0, botGreen);
         True(botRed > 0, "no-repeat 2:1 SVG should leave the bottom 100×50 band showing the red background");
     }
+
+    [Test]
+    public static void BackgroundPosition_ExUsesFontMeasuredXHeight()
+    {
+        FontRegistry.RegisterFile(Path.Combine(
+            Lite.Conformance.Harness.ConformancePaths.Vendor, "wpt", "fonts", "Ahem.ttf"));
+        // Ahem's x-height is 0.8em (16px at 20px font-size), so 7.5ex is 120px, not 75px (0.5em).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}" +
+            "#t{font:20px/1 Ahem;width:135px;height:40px;background-color:red}</style></head>" +
+            "<body><div id=t></div></body></html>",
+            isSrcdoc: true, "http://test/", 200, 100);
+        var node = FindById(page.Root, "t")!;
+        node.StyleOverrides["background-image"] = GreenTile();
+        node.StyleOverrides["background-repeat"] = "no-repeat";
+        node.StyleOverrides["background-position"] = "7.5ex 0px";
+
+        using var bitmap = Drawer.DrawToBitmap(200, 100, page.Root, new Viewport { ViewportHeight = 100 });
+        var (atMeasured, _) = Count(bitmap, new SKRect(120, 0, 135, 15));
+        var (atHalfEm, _) = Count(bitmap, new SKRect(75, 0, 90, 15));
+        True(atMeasured > 0, "7.5ex in 20px Ahem should place the 15×15 tile at x=120");
+        Equal(0, atHalfEm);
+    }
 }

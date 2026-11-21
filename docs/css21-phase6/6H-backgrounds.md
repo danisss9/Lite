@@ -77,3 +77,6 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - **Commit 1 (SVG background images, CSS 2.1 §14.2.1 / CSS Images 3 §5.3):** added `Lite/Media/SvgImage.cs`, cached fetched SVG documents in `ResourceLoader.FetchSvgImage`, and resolved vector concrete sizes and rasterization against the background positioning area in `Drawer.Backgrounds.cs`.
   - **Moved (14 fail → pass):** `background-intrinsic-001/002/003/006/007/008/009` (7 official + 7 WPT).
   - **Checks:** units 736 passed / 0 failed; css21 gate 51/1; wpt gate 86/2; `H.txt` 14/61 (7/30 official + 7/31 WPT); `H-pass.txt` 1274/1274 (694/694 official + 580/580 WPT); `canary.txt` 960/960 (492/492 official + 468/468 WPT).
+- **Commit 2 (font-scoped `ex` in background positioning/sizing, CSS 2.1 §4.3.2 & §14.2.1):** scoped `CssUnits.ForFont(node)` around background size/position resolution in `Drawer.Backgrounds.cs` so `ex` uses the element's measured x-height instead of the unscoped `0.5em` fallback.
+  - **Moved (8 fail → pass):** `background-position-001/002/091/092` (4 official + 4 WPT).
+  - **Checks:** units 737 passed / 0 failed; css21 gate 51/1; wpt gate 86/2; `H.txt` 22/61 (11/30 official + 11/31 WPT); `H-pass.txt` 1274/1274 (694/694 official + 580/580 WPT); `canary.txt` 960/960 (492/492 official + 468/468 WPT).

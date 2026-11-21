@@ -147,7 +147,9 @@ internal static partial class Drawer
                          _bgFixedScrollX + _viewportWidth, _viewportScrollY + _bgFixedScrollY + _viewportHeight)
             : paddingBox;
 
-        // Resolve image draw size
+        // Resolve image draw size and position in the element's font scope so 'ex' uses the
+        // font's measured x-height rather than the unscoped 0.5em fallback (CSS 2.1 §4.3.2, §14.2.1).
+        using var _ = CssUnits.ForFont(node);
         float fontSize = node.GetFontSize();
         float drawW, drawH;
         if (vector is not null)
