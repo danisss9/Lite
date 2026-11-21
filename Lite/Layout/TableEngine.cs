@@ -1357,6 +1357,24 @@ internal static class TableEngine
         return adjusted;
     }
 
+    /// <summary>CSS 2.1 §11.1.1 (erratum s.11.1.1b) with §17.4: 'overflow' on a table applies to
+    /// the TABLE box, not the table wrapper box, so a clipping table clips its rows and cells to
+    /// the table box's padding box (the band between the captions); the captions sit outside
+    /// the table box and are not clipped by it, so their own boxes join the clip region. The
+    /// clip used to be the wrapper's padding box, so cell content overflowing into a caption's
+    /// margin band stayed visible (s-11-1-1b-001's red border above the square). Returns null
+    /// for a box that is not a table.</summary>
+    internal static SKPath? OverflowClipPath(LayoutNode table)
+    {
+        if (table.GetDisplay() is not (DisplayType.Table or DisplayType.InlineTable)) return null;
+        var path = new SKPath();
+        path.AddRect(ExcludeCaptionBands(table, table.Box).PaddingBox);
+        foreach (var child in table.Children)
+            if (IsCaption(child) && child.Box.BorderBox is { Width: > 0, Height: > 0 } captionBox)
+                path.AddRect(captionBox);
+        return path;
+    }
+
     /// <summary>§17.5.2.1 fixed table layout: a column element's width sets its column; otherwise
     /// a first-row cell's width does (a spanning cell's is shared over its columns); the columns
     /// left over divide the remaining space equally whatever their content, and space the
