@@ -56,6 +56,11 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
   spans them; the render itself has the second line shifted left under the bullet (the intended
   result). Suggest ignoring a band whose component is the box border, or grouping text
   components only.
+- `first-letter-punctuation-184` (official, from 6.F, batch 2): the test's U+166D CANADIAN
+  SYLLABICS CHI SIGN is `Po` in the suite's Unicode tables, but .NET 8's CharUnicodeInfo reports
+  `So`, so §5.12.1's punctuation set cannot include it and the first letter is the `T` after it
+  (the check then sees "the text painted no ink" for the filler). Needs a reviewed defect or an
+  explicit category override in `FirstLetterLength`.
 
 - `text-align-applies-to-007`, `012`, `013`, `015` (official + WPT) — filler text is flush with the table/body content box (`x=8` left / `x=792` right with 8px body margin), but the judge compares against viewport edges `0` / `800`. — from 6.A
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_

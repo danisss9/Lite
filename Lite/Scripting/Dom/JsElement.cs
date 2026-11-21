@@ -110,6 +110,11 @@ public class JsElement
         var old = DomNode?.TextContent ?? Node.DisplayText;
         if (DomNode is not null) DomNode.TextContent = data;
         Node.TextOverride = data;
+        // CSS 2.1 §5.12.2: the block's ::first-letter split is a function of this text, so the
+        // containing blocks must rebuild it (first-letter-nested-002/003). A folded parent keeps
+        // its own copy of the text, so re-project it first.
+        if (Node.Parent is { DomNode: IElement } parent) ReProjectAfterMutation(parent);
+        else Parser.RefreshFirstLetterForAncestors(Node);
         MutationObserverRegistry.NotifyCharacterData(_engine, Node, old);
     }
 
@@ -1426,6 +1431,10 @@ public class JsElement
             StyleResolver.Apply(node, lost.Distinct().ToList());
             RecascadeDependents(node, name, oldValue);
         }
+        // CSS 2.1 §12.2: attr() reads the attribute's current value, so a generated box whose
+        // 'content' uses attr() must re-evaluate its text after the change
+        // (before-after-dynamic-attr-001).
+        if (!name.StartsWith('_')) Parser.RefreshGeneratedAttributeContent(node);
         if ((node.OwningDocument?.Engine ?? JsEngine.Instance) is { } eng)
         {
             MutationObserverRegistry.NotifyAttribute(eng.RawEngine, node, name, oldValue);

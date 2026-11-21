@@ -2697,6 +2697,9 @@ internal static partial class Parser
             // resolved long ago. ApplyTree applies only where the flag is still set, so this is
             // a no-op walk for the common reuse case.
             StyleResolver.ApplyTree(layout);
+            // §5.12.2: the first-letter split is a function of the mutated subtree's text, and
+            // re-projection keeps the boxes, so the containing blocks must rebuild it.
+            RefreshFirstLetterForAncestors(layout);
         }
         finally
         {

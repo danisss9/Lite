@@ -24,6 +24,14 @@ Branch `css21/p6-d`, worktree `C:\Repos\Lite-p6-d`. Case list `Lite.Conformance/
 
 - `clipping-006`, `clipping-007` (official+WPT, 4): `overflow: hidden` on a `position: fixed` ancestor clips a `position: fixed` descendant whose containing block is the viewport (`PaintThroughClippers` / containing-block clipping in `Drawer.cs`) (from 6.I). — **clipping-006 FIXED in 09a4aea1 (the fixed-descendant paint + §11.1.2 clip replay); clipping-007 already passed.**
 - `outline-layout-002` (official+WPT, 2): `span1`'s 50px solid white outline paints before `span2`'s red text instead of after inline siblings in the stacking context (CSS 2.1 Appendix E §E.2 step 10) (from 6.I). — **still open** (not reached this batch).
+- `content-177` (WPT, from 6.F): `<div><span class="test">ED</span><span class="control">…</span></div>`
+  with both spans `position: absolute; top: 0; left: 0` — the later red "ED" of the test span paints
+  over the green control, but the reference paints the control last. The generated text itself is
+  correct (verified by render); this is stacked-abspos paint order (Appendix E), not generated
+  content.
+
+- `clipping-006`, `clipping-007` (official+WPT, 4): `overflow: hidden` on a `position: fixed` ancestor clips a `position: fixed` descendant whose containing block is the viewport (`PaintThroughClippers` / containing-block clipping in `Drawer.cs`) (from 6.I).
+- `outline-layout-002` (official+WPT, 2): `span1`'s 50px solid white outline paints before `span2`'s red text instead of after inline siblings in the stacking context (CSS 2.1 Appendix E §E.2 step 10) (from 6.I).
 
 - `css/CSS2/box-display/containing-block-017.xht`, `containing-block-018.xht` — the WPT manual copy now runs the
   fail-closed selftest route and fails on a large visible red box (the page's stated condition is "no red visible");

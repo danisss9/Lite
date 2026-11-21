@@ -182,6 +182,113 @@ public static class GeneratedContentTests
         True(letter.GetFloat() == FloatType.Left, letter.GetFloat().ToString());
     }
 
+    [Test]
+    public static void CounterReset_RepeatedNameResetsOneInstance()
+    {
+        // §12.4: "If the same counter is specified more than once in the value of the
+        // 'counter-reset' and 'counter-increment' properties, each reset/increment of the counter
+        // is processed in the order specified" — the repeated name acts on the one instance this
+        // declaration created (counters-root-000: `c 0 c 4 c 0` then `c 1 c 3` is 4, not 0.4.4.8).
+        var root = Parse("<div><span class=\"c\"></span></div>",
+            "html { counter-reset: c 0 c 4 c 0; counter-increment: c 1 c 3; } " +
+            "body { counter-reset: c 3; counter-increment: c 5; } " +
+            "span.c:before { content: counters(c, \".\"); }");
+        Equal("4.8", Find(root, "#pseudo-before")!.DisplayText);
+    }
+
+    [Test]
+    public static void HiddenElementsPseudo_DoesNotIncrement()
+    {
+        // §12.1/§12.4: a 'display: none' element generates no boxes, so its ::before does not
+        // exist and cannot increment a counter either (counter-increment-display-004 renders
+        // 1, 2, 3 with the hidden div's `div:before` skipped).
+        var root = Parse("<div></div><div style=\"display: none\"></div><div></div><div></div>",
+            "body { counter-reset: n; } div:before { counter-increment: n 1; content: counter(n); }");
+        var texts = new List<string>();
+        void Walk(LayoutNode node)
+        {
+            if (node.TagName == "#pseudo-before" && node.Parent?.GetDisplay() != DisplayType.None)
+                texts.Add(node.DisplayText);
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        Equal("1,2,3", string.Join(",", texts));
+    }
+
+    [Test]
+    public static void Attr_InGeneratedContent_FollowsAnAttributeChange()
+    {
+        // §12.2: attr(X) returns the attribute's value for the subject; a generated box reads it
+        // as the document stands now, so an attribute set after load re-evaluates the text
+        // (before-after-dynamic-attr-001: body's my-attr becomes "before" after onload).
+        var root = Parse("<div id=\"d\" data-b=\"xyz\"></div>" +
+                         "<script>var d = document.getElementById('d'); d.setAttribute('data-a', 'before');" +
+                         "d.setAttribute('data-b', 'after!');</script>",
+            "#d:before { content: attr(data-a); } #d:after { content: attr(data-b); }");
+        var div = Find(root, "DIV");
+        True(div is not null, "no DIV");
+        Equal("before", Find(div!, "#pseudo-before")!.DisplayText);
+        Equal("after!", Find(div!, "#pseudo-after")!.DisplayText);
+    }
+
+    [Test]
+    public static void FirstLetter_PseudoTextTakesTheHostInheritedColor()
+    {
+        // §5.12.2: ::first-letter of a ::before applies to the generated text, and the split boxes
+        // inherit from that pseudo box. Its own `color: green` lives in the pseudo's override
+        // channel, which a #text child does not see (before-first-letter-selector-001 painted the
+        // letter and its tail black).
+        var root = Parse("<div></div>",
+            "div:before { content: 'Filler Text'; color: green; } div:first-letter { font-size: 98px; }");
+        var pseudo = Find(root, "#pseudo-before")!;
+        var letter = Find(pseudo, "#pseudo-first-letter")!;
+        True(letter.GetColor() == new SkiaSharp.SKColor(0, 128, 0), letter.GetColor().ToString());
+        var tail = Find(pseudo, "#text")!;
+        True(tail.GetColor() == new SkiaSharp.SKColor(0, 128, 0), tail.GetColor().ToString());
+    }
+
+    [Test]
+    public static void FirstLetter_SkipsAnOutOfFlowBox()
+    {
+        // §5.12.2: an absolutely positioned box is not on the first line, so the first letter is
+        // the text run after it (first-letter-abspos).
+        var root = Parse("<div><span>F</span>PASS</div>",
+            "div::first-letter { color: green; } span { position: absolute; color: transparent; }");
+        Equal("P", LettersIn(root));
+    }
+
+    [Test]
+    public static void FirstLetter_IsRebuiltAfterADynamicTextChange()
+    {
+        // §5.12.2: the split is a function of the block's first-line text. nested-003 appends the
+        // text after layout and nested-002 clears the block's own text so the letter moves into
+        // the child; re-projection keeps the block's box, so the split must be rebuilt by hand.
+        var appended = Parse("<div><span></span></div>" +
+                             "<script>var s = document.getElementsByTagName('span')[0];" +
+                             "document.body.offsetWidth;" +
+                             "s.appendChild(document.createTextNode('This is text'));</script>",
+            "div { color: black; } div:first-letter { color: green; }");
+        Equal("T", LettersIn(appended));
+
+        var cleared = Parse("<div>This is more text<span>This is text</span></div>" +
+                            "<script>document.body.offsetWidth;" +
+                            "document.getElementsByTagName('div')[0].firstChild.data = '';</script>",
+            "div { color: black; } div:first-letter { color: green; }");
+        Equal("T", LettersIn(cleared));
+    }
+
+    private static string LettersIn(LayoutNode root)
+    {
+        var text = "";
+        void Walk(LayoutNode node)
+        {
+            if (node.TagName == "#pseudo-first-letter") text += node.DisplayText;
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        return text;
+    }
+
     private static LayoutNode Parse(string body, string css)
     {
         var page = Parser.ParseChildPage(

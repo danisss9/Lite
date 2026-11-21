@@ -44,6 +44,33 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
   `insertBefore` (`counter-increment-000/001/002`, `counter-reset-000/001/002`,
   `counter-increment-display-004`, `counters-root-000`). Dynamic pseudo/rule generation is parked
   to 6.K per the README; 6.F has not touched it.
+  **Batch 2 update (6.F):** 6.F now rebuilds the `::first-letter` split after a CharacterData
+  mutation (`Lite/Parser.GeneratedContent.cs` `RefreshFirstLetter`, called from
+  `Parser.ReProjectChildren` and `JsElement.SetCharacterData`), which closed
+  `first-letter-nested-002/003/004/005`; `counter-increment-display-004` and `counters-root-000`
+  are fixed outright (a hidden element's pseudo does not increment; repeated names reset one
+  instance). What remains yours: the counters' pages use `setTimeout('run()', 0)` and the engine's
+  `setTimeout` accepts only a function (`TypeError: not a function`), so the mutation never
+  happens; and the inserted element still needs its own generated box.
+- **Batch 2 hand-ins (from 6.F):**
+  - `before-after-dynamic-restyle-001` (official + WPT): a class change that first makes
+    `.cl:after` match must create the box; 6.F's refresh only rewrites existing `attr()` text.
+  - `first-letter-quote-002/004/005` (quote-002/005 WPT, quote-004 both) and
+    `first-letter-punctuation-184`: the first letter must start at punctuation that sits in an
+    earlier box. 6.F wrote the split but did not land it: it makes
+    `first-letter-dynamic-001`'s REFERENCE green while the subject's `:first-letter` rule (added to
+    a `<style>` after parse) is never collected, a pass-list loss. Land the two together.
+    `first-letter-punctuation-184` is separately a Unicode-version question (.NET 8: U+166D is
+    `So`) — see 6.M.
+  - `first-letter-dynamic-001/002/003a/003b` (official + WPT): rules added to a `<style>` element
+    after parse never enter `Current.PseudoElementRules` (collected once at parse start), so a
+    new `:first-letter`/`:before` rule never matches. Needs collection on sheet mutation plus a
+    recascade.
+  - `first-letter-selector-028` (WPT): same selector-list neutralization as 011–014
+    (`div#test:first-letter, span#reference { … }`), which you already have.
+  - `before-inheritable-002` / `after-inheritable-002` (official + WPT) and `before-after-001`:
+    still undiagnosed by 6.F; `before-after-001` is the invalid `:before:after` case you already
+    have.
 
 - `first-line-selector-016` (official + WPT) — `span, div:first-line { color: white; }` is neutralized as a whole in `Parser.Cascade.cs`, leaving `<span>FAIL</span>` inheriting `div`'s `color: red` (40 red px). — from 6.A
 - `border-{top,right,bottom,left}-color-030` (official, 4) and `outline-color-030` (official, 1): 4-digit hex `#1000` is parsed as transparent instead of rejected as invalid CSS 2.1 color (already listed in your Opens with) (from 6.I).

@@ -32,7 +32,7 @@ internal static partial class Parser
         // §12.4: an element that is not displayed cannot increment or reset a counter. The
         // authored keyword decides: table-column(-group) maps to no box internally, yet such
         // elements are displayed and their counters apply (counter-increment-applies-to-005).
-        var display = node.TryResolveStyle("display", out var ov) ? ov : node.Style.GetPropertyValueSafe("display");
+        var display = HostDisplay(node);
         if (!display.Trim().Equals("none", StringComparison.OrdinalIgnoreCase))
         {
             // The rule channel only carries matched style rules; an inline declaration outranks
@@ -73,12 +73,74 @@ internal static partial class Parser
     private static (Dictionary<string, int>? Values, Dictionary<string, List<int>>? Stacks) PseudoCounters(
         LayoutNode node, Dictionary<string, string>? pseudoStyles, List<string> scope)
     {
-        if (pseudoStyles is null || !pseudoStyles.ContainsKey("content") ||
+        // §12.1/§12.4: an element with 'display: none' generates no boxes at all, so its
+        // ::before/::after do not exist and cannot increment or reset a counter either
+        // (counter-increment-display-004: the hidden div's `div:before` skipped a number).
+        if (pseudoStyles is null || !pseudoStyles.ContainsKey("content") || HostIsNotDisplayed(node) ||
             ResolvePseudoDisplay(node, pseudoStyles).Equals("none", StringComparison.OrdinalIgnoreCase))
             return (node.CounterValues, node.CounterStacks);
         ApplyCounterProperties(pseudoStyles.GetValueOrDefault("counter-reset"),
             pseudoStyles.GetValueOrDefault("counter-increment"), scope);
         return SnapshotCounters();
+    }
+
+    /// <summary>The element's own authored 'display' keyword (the override channel first).</summary>
+    private static string HostDisplay(LayoutNode node) =>
+        node.TryResolveStyle("display", out var ov) ? ov : node.Style.GetPropertyValueSafe("display");
+
+    private static bool HostIsNotDisplayed(LayoutNode node) =>
+        HostDisplay(node).Trim().Equals("none", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// CSS 2.1 §12.2: attr(X) "returns as a string the value of attribute X for the subject of the
+    /// selector". The value is read from the document as it stands now, not when the box was
+    /// generated, so a generated box whose 'content' uses attr() follows an attribute change; its
+    /// parse-time text otherwise stays frozen (before-after-dynamic-attr-001 sets the body's
+    /// my-attr after load and expects "before"). Only attr() text is re-evaluated: counters and
+    /// quotes are snapshots of other state, and a content value without attr() cannot have
+    /// changed with an attribute.
+    /// </summary>
+    internal static void RefreshGeneratedAttributeContent(LayoutNode node)
+    {
+        var previous = Current;
+        if (node.DocumentState?.ParserContext is { } context) Current = context;
+        try
+        {
+            Recompute(node, "#pseudo-before", node.BeforeStyles);
+            Recompute(node, "#pseudo-after", node.AfterStyles);
+        }
+        finally
+        {
+            Current = previous;
+        }
+
+        // The pseudo box is a direct child of the element; a table/layout normalizer may have
+        // wrapped it in an anonymous box, so look through those (never into another element).
+        static void Recompute(LayoutNode host, string pseudoTag, Dictionary<string, string>? styles)
+        {
+            if (styles is null || !styles.TryGetValue("content", out var content) ||
+                !content.Contains("attr(", StringComparison.OrdinalIgnoreCase))
+                return;
+            if (FindGeneratedChild(host, pseudoTag) is not { } pseudo) return;
+            var text = ParseContentValue(content, host, new QuoteState(QuotePairs(host, styles), 0));
+            if (text is null) return;
+            pseudo.TextOverride = text;
+            NormalizeGeneratedWhitespace(pseudo);
+        }
+    }
+
+    /// <summary>The element's generated child, looking through the anonymous boxes the layout
+    /// normalizers wrap around children (never into another element's subtree).</summary>
+    private static LayoutNode? FindGeneratedChild(LayoutNode node, string pseudoTag)
+    {
+        foreach (var child in node.Children)
+        {
+            if (child.TagName == pseudoTag) return child;
+            if (child.DomNode is null && child.TagName.StartsWith("#anon", StringComparison.Ordinal) &&
+                FindGeneratedChild(child, pseudoTag) is { } nested)
+                return nested;
+        }
+        return null;
     }
 
     /// <summary>§12.4.1: a counter-reset's scope is the element, its descendants AND its following
@@ -91,18 +153,26 @@ internal static partial class Parser
     /// on the same box, scoped the same way.</summary>
     private static void ApplyCounterProperties(string? reset, string? increment, List<string>? scope)
     {
+        // §12.4: "If the same counter is specified more than once in the value of the
+        // 'counter-reset' and 'counter-increment' properties, each reset/increment of the counter
+        // is processed in the order specified" — a repeated name resets the instance this
+        // declaration already created; it does not nest a new one under it (counters-root-000's
+        // `html { counter-reset: c 0 c 4 c 0 }` is one instance whose value ends at 0).
+        HashSet<string>? resetHere = null;
         if (reset is not null && !reset.Equals("none", StringComparison.OrdinalIgnoreCase))
             foreach (var part in ParseCounterSpec(reset, 0))
             {
                 if (!_counters.TryGetValue(part.Name, out var stack))
                     _counters[part.Name] = stack = new List<int>();
-                if (scope is not null && scope.Contains(part.Name) && stack.Count > 0)
+                if (stack.Count > 0 && (resetHere?.Contains(part.Name) == true ||
+                                        (scope is not null && scope.Contains(part.Name))))
                     stack[^1] = part.Value;         // a later sibling's reset replaces the instance
                 else
                 {
                     stack.Add(part.Value);          // push a new nested instance
                     scope?.Add(part.Name);
                 }
+                (resetHere ??= new HashSet<string>(StringComparer.Ordinal)).Add(part.Name);
             }
 
         if (increment is not null && !increment.Equals("none", StringComparison.OrdinalIgnoreCase))
@@ -194,6 +264,18 @@ internal static partial class Parser
             textChild.Parent = node;
             node.Children.Add(textChild);
             node.TextOverride = "";
+        }
+        else if (hasBefore && hasAfter && string.IsNullOrWhiteSpace(directTextRaw) && directTextRaw.Length > 0)
+        {
+            // §16.6.1: a whitespace-only text node between the two generated boxes is mid-line,
+            // so it keeps one collapsed space (the body's "\n" in before-after-dynamic-attr-001
+            // renders "before after!"). At the start or end of a line the spaces are removed,
+            // which is why only the ::before+::after form keeps it.
+            var space = new LayoutNode(null, "#text", " ", node.Style);
+            space.ResetNonInheritedStyles();
+            space.StyleOverrides["display"] = "inline";
+            space.Parent = node;
+            node.Children.Add(space);       // ::before lands at 0 below, ::after is appended
         }
 
         if (hasBefore)
@@ -375,9 +457,18 @@ internal static partial class Parser
         var len = FirstLetterLength(text);
         if (len <= 0) return;
 
+        SplitFirstLetter(node, host, len, styles);
+    }
+
+    /// <summary>Splits the first <paramref name="len"/> characters of <paramref name="host"/>'s
+    /// text into a ::first-letter box followed by the rest of its text.</summary>
+    private static void SplitFirstLetter(LayoutNode node, LayoutNode host, int len, Dictionary<string, string> styles)
+    {
+        var text = host.DisplayText;
         var letter = new LayoutNode(null, "#pseudo-first-letter", text[..len], host.Style);
         letter.ResetNonInheritedStyles();
         letter.StyleOverrides["display"] = "inline";
+        CopyInheritedStyles(host, letter);
         foreach (var (p, v) in styles)
             if (p != "content" && p != "display")
                 letter.StyleOverrides[p] = ResolvePseudoValue(node, p, v);
@@ -389,6 +480,7 @@ internal static partial class Parser
         var rest = new LayoutNode(null, "#text", text[len..], host.Style);
         rest.ResetNonInheritedStyles();
         rest.StyleOverrides["display"] = "inline";
+        CopyInheritedStyles(host, rest);
         // The tail is an inline child once the letter is split off, so it starts from the
         // initial baseline rather than reading the host's non-inherited 'vertical-align'
         // (a table cell's UA 'middle' pushed the rest of the text 2px down:
@@ -402,6 +494,71 @@ internal static partial class Parser
         rest.Parent = host;
         host.Children.Insert(0, rest);
         host.Children.Insert(0, letter);
+    }
+
+    /// <summary>Copies the host's inherited values into a synthesized box. The split boxes are new
+    /// inline boxes between the host and its text, and a #text child only shares its parent's
+    /// Style object, not the parent's override channel — so a ::before's own `color: green` was
+    /// lost by the letter and its tail (before-first-letter-selector-001 painted both black).</summary>
+    private static void CopyInheritedStyles(LayoutNode host, LayoutNode target)
+    {
+        var source = host.TagName == "#text" && host.Parent is { } parent ? parent : host;
+        foreach (var prop in PropertyTable.InheritedProperties)
+            if (source.TryResolveStyle(prop, out var value))
+                target.StyleOverrides.TryAdd(prop, value);
+    }
+
+    /// <summary>CSS 2.1 §5.12.2: the ::first-letter box follows the block's first-line text, which a
+    /// DOM mutation can change; re-projection preserves the block's box, so the split is never
+    /// rebuilt (first-letter-quote-004 appends the text after layout, nested-003/004/005 set it).
+    /// Rebuilds the split only when the stored one no longer matches the document.</summary>
+    internal static void RefreshFirstLetter(LayoutNode block)
+    {
+        if (block.FirstLetterStyles is not { Count: > 0 }) return;
+        if (!HasFirstLetterSplit(block) || UndoStaleFirstLetterSplit(block))
+            CreateFirstLetterChild(block);
+    }
+
+    /// <summary>Re-runs ::first-letter generation for <paramref name="node"/> and the blocks that
+    /// contain it, after its text changed.</summary>
+    internal static void RefreshFirstLetterForAncestors(LayoutNode node)
+    {
+        for (var block = node; block is not null; block = block.Parent)
+            RefreshFirstLetter(block);
+    }
+
+    private static bool HasFirstLetterSplit(LayoutNode node)
+    {
+        foreach (var child in node.Children)
+            if (child.TagName == "#pseudo-first-letter" || HasFirstLetterSplit(child)) return true;
+        return false;
+    }
+
+    /// <summary>True when the split under <paramref name="node"/> was stale and removed. The split
+    /// inserted one #pseudo-first-letter and a synthetic #text tail at its host's child list; its
+    /// text was taken out of the host, so a host whose document text no longer matches that pair
+    /// has been mutated. The host's text is left in the override channel for the re-split, and an
+    /// unchanged split stays (a later sibling's mutation does not disturb it). A generated box's
+    /// own text is not a function of the DOM and is left alone.</summary>
+    private static bool UndoStaleFirstLetterSplit(LayoutNode node)
+    {
+        foreach (var child in node.Children)
+            if (UndoStaleFirstLetterSplit(child)) return true;
+
+        var idx = node.Children.FindIndex(c => c.TagName == "#pseudo-first-letter");
+        if (idx < 0 || node.DomNode is not (IText or IElement)) return false;
+        var letter = node.Children[idx];
+        var tail = idx + 1 < node.Children.Count && node.Children[idx + 1].TagName == "#text" &&
+                   node.Children[idx + 1].DomNode is null
+            ? node.Children[idx + 1] : null;
+        var splitText = letter.DisplayText + (tail?.DisplayText ?? "");
+        var current = CollapseWhitespace(node.DomNode.TextContent ?? "");
+        if (current == splitText) return false;
+
+        node.Children.Remove(letter);
+        if (tail is not null) node.Children.Remove(tail);
+        node.TextOverride = current;
+        return true;
     }
 
     /// <summary>The nearest node in document order whose own text would start
