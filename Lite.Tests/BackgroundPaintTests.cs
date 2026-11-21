@@ -132,4 +132,24 @@ public static class BackgroundPaintTests
         True(atMeasured > 0, "7.5ex in 20px Ahem should place the 15×15 tile at x=120");
         Equal(0, atHalfEm);
     }
+
+    [Test]
+    public static void BackgroundImage_PaintsIntoBorderAreaBehindTransparentBorder()
+    {
+        // CSS 2.1 §14.2: the padding box is the positioning origin, while the background image
+        // paints and tiles into the border box (so it shows through transparent/dotted borders).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}" +
+            "#t{width:60px;height:60px;border:10px solid transparent;background-color:red}</style></head>" +
+            "<body><div id=t></div></body></html>",
+            isSrcdoc: true, "http://test/", 120, 120);
+        var node = FindById(page.Root, "t")!;
+        node.StyleOverrides["background-image"] = GreenTile();
+        node.StyleOverrides["background-repeat"] = "repeat";
+
+        using var bitmap = Drawer.DrawToBitmap(120, 120, page.Root, new Viewport { ViewportHeight = 120 });
+        var (borderGreen, borderRed) = Count(bitmap, new SKRect(0, 0, 80, 10));
+        True(borderGreen > 0, "the tiled background image should paint across the top border area");
+        Equal(0, borderRed);
+    }
 }

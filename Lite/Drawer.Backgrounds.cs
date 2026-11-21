@@ -108,16 +108,19 @@ internal static partial class Drawer
 
     /// <summary><paramref name="paintArea"/> overrides where the image paints (and repeats):
     /// the canvas background (§14.2) is positioned against the root box but "covers the entire
-    /// canvas", so it paints over the whole page, not just the root's padding box.</summary>
+    /// canvas", so it paints over the whole page, not just the root's border box. Otherwise
+    /// §14.2 positions the image against the padding box and clips/tiles it to the border box.</summary>
     private static void DrawBackgroundImage(SKCanvas canvas, LayoutNode node, BoxDimensions box, SKRect? paintArea) =>
-        DrawBackgroundImageIn(canvas, node, box.PaddingBox, paintArea);
+        DrawBackgroundImageIn(canvas, node, box.PaddingBox, paintArea, box.BorderBox);
 
     /// <summary>Paints an element's background image against an explicit positioning area —
     /// the padding box of a box, or the content area of one inline fragment (§14.2: an inline
     /// box's background covers the content area the line assembled, not its line-height
-    /// fragment box).</summary>
+    /// fragment box). <paramref name="borderBox"/> is the box's border area, which clips and
+    /// bounds tiling per §14.2 ("the background of the content, padding and border areas of a
+    /// box") while <paramref name="paddingBox"/> stays the positioning origin.</summary>
     internal static void DrawBackgroundImageIn(SKCanvas canvas, LayoutNode node, SKRect paddingBox,
-        SKRect? paintArea = null)
+        SKRect? paintArea = null, SKRect? borderBox = null)
     {
         var imageUrl = node.GetBackgroundImage();
         if (imageUrl == null) return;
@@ -141,7 +144,7 @@ internal static partial class Drawer
         // clipped to the element's padding box, but its placement is independent of where the
         // element scrolled to.
         bool fixedBg = node.IsBackgroundFixed();
-        var clipArea = paintArea ?? paddingBox;
+        var clipArea = paintArea ?? borderBox ?? paddingBox;
         var area = fixedBg
             ? new SKRect(_bgFixedScrollX, _viewportScrollY + _bgFixedScrollY,
                          _bgFixedScrollX + _viewportWidth, _viewportScrollY + _bgFixedScrollY + _viewportHeight)
@@ -187,9 +190,9 @@ internal static partial class Drawer
         bool repeatX = repeat is "repeat" or "repeat-x";
         bool repeatY = repeat is "repeat" or "repeat-y";
 
-        // Repeated tiles cover the painted area: the box's own (its padding box) or, for the
+        // Repeated tiles cover the painted area: the box's border box (§14.2) or, for the
         // canvas background, the whole page.
-        var tiled = paintArea ?? area;
+        var tiled = clipArea;
         float startX = repeatX ? area.Left + offX - (float)Math.Ceiling((area.Left + offX - tiled.Left) / drawW) * drawW : area.Left + offX;
         float startY = repeatY ? area.Top + offY - (float)Math.Ceiling((area.Top + offY - tiled.Top) / drawH) * drawH : area.Top + offY;
         float endX = repeatX ? tiled.Right : startX + drawW;
