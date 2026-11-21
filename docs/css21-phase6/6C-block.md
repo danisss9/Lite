@@ -92,6 +92,16 @@ needs a look at the test's positioned layer before I can say the cause is one th
 
 ## Edits outside owned files
 
+- **Lite/Scripting/QuickJsInterop.cs** (commit 69d5f09e, one branch plus a JS proxy
+  literal): a `JsStyle` wrapper now goes through a Proxy so unbound string properties
+  reach `getPropertyValue`/`setProperty`/`removeProperty`, with camelCase mapped to the
+  hyphenated CSS name. CSSOM defines CSSStyleDeclaration as a named-property object; before
+  this every scripted write outside `JsStyle`'s fixed CLR list was an expando the layout
+  never saw (`style[marginProp]`, `style.flexWrap`, `style.direction` in
+  floats-wrap-bfc-with-margin's generated rows). Merge-next expect: any page that writes a
+  CSS property not exposed as a CLR member now actually applies it. C-pass 2,974/2,974,
+  B-pass 494/494 and canary 960/960 read green with it in.
+
 - **Lite/Scripting/Dom/JsElement.cs** (commit a6f13280, one getter pair): `offsetLeft`/
   `offsetTop` now read `BorderBox.Left/Top` instead of `MarginBox.*` — CSSOM View reports the
   border edge, and the margin edge made `auto-margins-root-element` read 0 instead of 700.
@@ -217,3 +227,91 @@ stable (20 November) shows Chrome, Edge and Firefox pass max-height-separates-ma
 - `canary.txt` 960/960.
 
 Each new unit test fails on the pre-fix engine.
+
+## Batch 2 (queue C.txt, 81 official + 113 WPT)
+
+### Commit 69d5f09e — CSSStyleDeclaration named properties reach layout
+
+- **Moved (0 on the lane lists directly):** unblocks the generated rows of
+  `floats-wrap-bfc-with-margin-001..010`, whose script writes
+  `style[marginProp]` (hyphenated), `style.flexWrap` and `style.direction`. All three were
+  written into a JS expando because `JsStyle` bound only a fixed camelCase CLR list.
+- **What changed:** `QuickJsInterop` wraps a `JsStyle` in a Proxy; unbound string names
+  go to `getPropertyValue`/`setProperty`/`removeProperty`, camelCase converted to the
+  hyphenated CSS name. Target and proxy are cached per element (style identity holds).
+- **Checks:** covered by the series-head run below (cac4a979); the two new units pass and
+  no list or pass-list reading was taken for this commit alone.
+
+### Commit cac4a979 — BFCs beside floats and unresolvable percentage heights
+
+- **Moved (2):** `new-fc-beside-adjoining-float` (WPT, B list — the first trial merge's
+  pass is back) and `child-bottom-margin-in-unresolvable-percentage-height` (WPT, 6.K
+  hand-in). The latter now renders the reference; both height cases below do too.
+- **What changed — §10.3.3/§9.5:** an auto-width BFC's border box fills the float band.
+  A margin on the float's side lies outside the border box (it may overlap the float's
+  margin box), so it neither narrows nor moves the box; a far-side margin insets it. A
+  negative total inline-axis margin is the §10.3.3 lower bound (`containing width −
+  margins`) and props the border box up until it cannot fit beside the float, so it wraps
+  below. This advances the negative-margin rows of `floats-wrap-bfc-with-margin-001..010`
+  (they wrap now; the cases still differ — see below).
+- **What changed — §8.3.1/§9.5:** the adjoining-chain fit test used the grandparent's
+  width, so `new-fc-beside-adjoining-float`'s 300px red box in a 200px outer box made
+  200 + 100 look too wide and severed the 190px chain (regression from 03fd69de). The
+  test now resolves the holder's containing block to the nearest definite ancestor
+  content width; the float rides to the chain bottom.
+- **What changed — §10.5:** a percentage height against an auto-height containing block
+  computes to `auto` (not 0); the root resolves against the initial containing block.
+- **Still fails, honestly:**
+  - `floats-wrap-bfc-with-margin-001..010`: the block side now wraps the negative rows,
+    but `-001`/`-002`/`-003` still differ from their references by one flex line: the
+    references set `align-content: start` on a wrapping inline-flex, and AngleSharp drops
+    that declaration entirely (probe: `align-content` raw `''`), so the reference falls
+    back to `stretch` and its second line starts ~6px lower than the block side's
+    float-bottom wrap (expected aqua top 28 vs actual 22 in the first cell). That is a
+    parser/value gap, not the flex algorithm. `-004`/`-005`/`-006`/`-008`/`-009` need the
+    used-width/placement reading for a 51px far-side margin (and `-010` a negative
+    margin-top) settled; `new-fc-separates-from-float` still passes.
+  - `height-percentage-003a`, `min-height-percentage-003`: the layout now matches the
+    reference; the only pixels left are two anti-aliased text pixels at the end of the
+    sentence (x=705, y=5–6). Their assertions hold (green page, no red/scrollbar). That
+    is a text/font difference, not block flow.
+  - `margin-collapse-145..148`: every diagnostic says "the two shapes render
+    identically"; the judge's shape count reads 1 ink band where it expects 2. The ink
+    geometry matches the control, so this looks like the same minimum-band detector
+    issue as `height-014` — 6.M, not block flow.
+  - `margin-collapse-132/133/162`: unchanged (float placement inside/after a collapsed
+    chain plus 162's 3200-pixel z-order/float diff).
+- **Checks (series head cac4a979):**
+  - units 741/0 (one full run; 6 new tests);
+  - gates css21 51/0 + 1 expected-fail, wpt 86/0 + 2 expected-fail;
+  - `C.txt` 0/81 official + 0/113 WPT (the listed cases are still the batch-2 failures);
+  - `B.txt` 0/39 official + 1/85 WPT (`new-fc-beside-adjoining-float`);
+  - `C-pass.txt` 1,401/1,401 + 1,573/1,573;
+  - `B-pass.txt` 204/204 + 290/290;
+  - `canary.txt` 492/492 + 468/468.
+
+### Handed on (batch 2)
+
+**To 6.B (floats):** `floats-wrap-bfc-with-margin-004/005/006/008/009/010` still need
+the used-width/placement reading for a BFC whose far-side margin exceeds the float band
+(51px) and for `-010`'s negative margin-top; the negative-margin rows of `-001..003/007`
+now wrap on the block side, so only the reference side remains (next item).
+
+**To 6.K (cascade/syntax):** the references for `-001`/`-002`/`-003` set
+`align-content: start`; AngleSharp drops the declaration (`GetPropertyValueSafe` returns
+`""`), so the reference flex container stays at the initial `stretch` and its wrapped
+line starts ~6px lower than the block side. Accepting the CSS Box Alignment `start`/`end`
+keywords (or `flex-start`-equivalent) for `align-content` should close those three.
+
+**To 6.M (judges):** `margin-collapse-145..148` render both columns identically, but the
+shape detector reads one ink band where the stated condition compares two (same minimum
+band issue as `height-014`).
+
+**To 6.J (fonts):** `height-percentage-003a` and `min-height-percentage-003` differ from
+their references by two anti-aliased pixels at the tail of the text line; layout is
+otherwise identical.
+
+### Batch-2 stop
+
+Two commits on `css21/p6-c` after `52f3bb54`. One lane-list move on B and one on K; no
+losses on C-pass, B-pass, canary or either curated gate. Stopping here for the integrator.
