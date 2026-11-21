@@ -605,7 +605,7 @@
         "screen",
         "print"
       ],
-      "status": "failing",
+      "status": "implemented",
       "tests": []
     },
     {
@@ -654,7 +654,7 @@
         "screen",
         "print"
       ],
-      "status": "failing",
+      "status": "implemented",
       "tests": []
     },
     {
@@ -702,7 +702,7 @@
         "screen",
         "print"
       ],
-      "status": "failing",
+      "status": "untested",
       "tests": []
     },
     {
@@ -746,7 +746,7 @@
         "screen",
         "print"
       ],
-      "status": "failing",
+      "status": "untested",
       "tests": []
     },
     {
@@ -1016,7 +1016,7 @@
         "screen",
         "print"
       ],
-      "status": "failing",
+      "status": "implemented",
       "tests": []
     },
     {
@@ -1708,7 +1708,7 @@
         "screen",
         "print"
       ],
-      "status": "failing",
+      "status": "untested",
       "tests": []
     },
     {
@@ -1912,7 +1912,7 @@
         "screen",
         "print"
       ],
-      "status": "failing",
+      "status": "untested",
       "tests": []
     },
     {
@@ -1923,7 +1923,7 @@
         "screen",
         "print"
       ],
-      "status": "failing",
+      "status": "untested",
       "tests": []
     },
     {
@@ -1934,7 +1934,7 @@
         "screen",
         "print"
       ],
-      "status": "failing",
+      "status": "untested",
       "tests": []
     },
     {
@@ -1956,7 +1956,7 @@
         "screen",
         "print"
       ],
-      "status": "failing",
+      "status": "untested",
       "tests": []
     },
     {
@@ -2113,7 +2113,7 @@
         "screen",
         "print"
       ],
-      "status": "failing",
+      "status": "untested",
       "tests": []
     },
     {

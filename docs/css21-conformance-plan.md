@@ -779,6 +779,45 @@ The phases, in order:
         `block-in-inline-001`).
     - **Open review item.** 6.H's route fix in `SelfTestOracle.cs` turned 48 background
       scroll cases into passes. 6.M audits those renders by eye in batch 2.
+  - **Batch 2 (21 November): 13 lanes, 6.G (bidi) among them, merged with 0 losses.**
+    - **Result.** A full upstream baseline against batch 1: official 7,949 → **8,084**, WPT
+      7,543 → **7,709** (301 new passes), with **0 losses**. Units 789/789; curated gates 51/1 and
+      86/2. Obligations: 37 → **40** implemented (5.11.4, 5.12.3, 9.2.2.1). Eight move from failing
+      to untested, because they now have only manual-pending or unsupported cases left.
+    - **Merge conflicts, resolved in the integration:**
+      - **6.B vs 6.C (BFC beside floats).** Kept 6.B's full-height `FitBfcBesideFloats` and re-added
+        6.C's §10.3.3 negative-margin prop-up, counting the START margin only. 6.C's version also
+        counted the end margin, which under `rtl` pushed `new-fc-beside-float-with-margin-rtl` (a
+        batch-1 pass) below its float.
+      - **6.G vs 6.J (`ReorderForBidi`).** Kept 6.G's fragment loop. Added 6.J's rule that a
+        `<br>` is a level-0 line terminator, and restored `ChainLevel`, which 6.J's commit had
+        deleted.
+      - **6.A vs 6.J (line-box metrics).** Applied 6.A's top/bottom aligned-subtree anchoring
+        over 6.J's content-range metrics, and excluded host-anchored items in `LineMetrics` too.
+    - **Cross-lane regressions found and fixed in the integration:**
+      - **Bidi stripping removed an invisible marker character.** 6.G's X9 stripping removed BN
+        characters from rendered text. That emptied 6.F's U+FEFF marker line, so an empty list
+        item became 0 tall. Only RLE/LRE/RLO/LRO/PDF are now stripped (UAX #9 §5.2).
+      - **Inherited relative lengths were copied raw.** 6.K's override channel passed raw `1em`
+        values to descendants, which broke 6.A's `line-height` inheritance. Relative lengths are
+        now computed on the declaring element before they are passed on (§6.2.1).
+      - **`top: inherit` lost dynamic changes.** 6.K's em/ex `inherit` stamp froze the inherited
+        `top` (`dynamic-top-change-002/003`). The stamp is limited to margins and padding.
+      - **List markers lost their bullet.** 6.A's rule that anonymous boxes paint no background
+        caught the generated `#pseudo-marker`, so the list item's background covered the inside
+        bullet (`list-style-position-applies-to-008`). Markers keep their paint.
+    - **Evidence (6.X).**
+      - The 25 gzip-bodied `html4` files are decompressed, and the tree hash is re-pinned.
+      - Reclassified, by ruling, out of the screen matrix: `cascade-import-005..012` (defective,
+        external host); `max-height-separates-margin`, `inherit-computed-001` and
+        `inline-block-baseline-003..006` (CSS 2.2 later-feature); `text-indent-intrinsic-003/004`.
+    - **Judges (6.M).** All 48 of 6.H's scroll passes were audited by eye and confirmed real. The
+      cat-scroll, font-family, tiny-size and weight sentences are now machine-read.
+    - **Still open:**
+      - `font-matching-rule-009` (the serif-default decision);
+      - `fonts-012`;
+      - `font-family-015` and `font-size-116` (metric residues);
+      - the batch-2 hand-ins recorded in each lane's notes.
 - **Phase 7, the flip.**
   1. Freeze inventory edits and run the upstream-mode baseline on the committed tree.
   2. Commit the generator's flips, then run a second baseline (any edit changes the identity).
