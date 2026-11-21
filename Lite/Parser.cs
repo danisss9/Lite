@@ -1712,10 +1712,9 @@ internal static partial class Parser
         }
     }
 
-    /// <summary>Decomposes a `background` shorthand (§14.2) into its longhands. A null value in the
-    /// result means "no declaration" (only ever background-color, which the shorthand leaves to
-    /// whatever the cascade already had when it names no colour). Returns null for 'inherit',
-    /// which the cascade resolves on its own, and for an empty value.</summary>
+    /// <summary>Decomposes a `background` shorthand (§14.2.1) into its longhands, resetting every
+    /// omitted component (including background-color) to its initial value. Returns null for
+    /// 'inherit', which the cascade resolves on its own, and for an empty value.</summary>
     private static List<(string Prop, string? Val)>? SplitBackgroundShorthand(string value)
     {
         var v = value.Trim();
@@ -1761,7 +1760,7 @@ internal static partial class Parser
                 1 => position[0],
                 _ => $"{position[0]} {position[1]}",
             }),
-            ("background-color", color),
+            ("background-color", color ?? "transparent"),
         ];
     }
 

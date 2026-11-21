@@ -55,6 +55,7 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 - `Lite.Conformance/Css21/SelfTestOracle.cs` (6.M) — commit `cbe1d649`: parse `scroll.then` into `ScrollSpec`. One-line route fix; 6.M owns the file.
 - `Lite/Layout/StyleResolver.cs` + `Lite/Parser.Cascade.cs` (6.K) — commit `fd3c10fd`: `StoreProp` now marks every key it writes in `CascadeAppliedProps` (so a shorthand's parse-time longhands are retractable), and a winning shorthand covers its longhands in the initial-value fallback. Both files are 6.K's.
+- `Lite/Parser.Cascade.cs` + `Lite/Parser.cs` (6.K) — batch 2 Commit 5: `SplitCssDeclarations` respects parentheses/quotes so `url(data:image/png;base64,...)` is not split at `;`; `SplitBackgroundShorthand` resets omitted `background-color` to `transparent` (§14.2.1); `LastBackgroundDeclaration`/`RescuedBackgroundFor` rescue a dropped `background:` shorthand written after earlier `background-*` longhands while abstaining when a `background-*` longhand follows the shorthand. Verified with `K-pass.txt` (1166/1166, 0 losses).
 - `Lite/Drawer.cs` (shared, no lane owner) — commit `6eea0bea`: paint background images on all inline painting paths (`DrawBackgroundImageIn`); batch 2 Commit 4: guard §14.2 `body`-to-canvas background propagation to `root.TagName == "HTML"` only.
 - `Lite/Drawer.Text.cs` (6.A's text painting; the list-marker members belong to 6.F) — commit `6eea0bea`: `PaintListItem` paints the background image and gradient.
 
@@ -86,3 +87,15 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 - **Commit 4 (non-HTML XML root does not propagate `body` background to canvas, CSS 2.1 §14.2):** guarded `FindBody(root)` in `Drawer.cs` (shared, no lane owner) to `root.TagName == "HTML"`.
   - **Moved (1 fail → manual-pending):** `css/CSS2/other-formats/xml/background-20.xml` (465,888 red pixels → 0 red pixels; route awaits manual observation).
   - **Checks:** units 739 passed / 0 failed; css21 gate 51/1; wpt gate 86/2; `H.txt` 22 pass + 5 manual-pending + 34 fail; `H-pass.txt` 1274/1274 (694/694 official + 580/580 WPT); `canary.txt` 960/960 (492/492 official + 468/468 WPT).
+- **Commit 5 (`data:` URI semicolon preservation and `background` shorthand reset, CSS 2.1 §4.1.1 & §14.2.1):** replaced bare `.Split(';')` in `Parser.Cascade.cs` with `SplitCssDeclarations` (respecting parentheses/quotes); updated `SplitBackgroundShorthand` in `Parser.cs` to reset omitted `background-color` to `transparent`; updated `LastBackgroundDeclaration`/`RescuedBackgroundFor` so a dropped `background:` shorthand after an earlier `background-*` longhand is rescued without clobbering later longhands.
+  - **Moved (2 fail → pass):** `background-reset-001` (official + WPT). Also closes the parked `data:` URI `;` truncation finding.
+  - **Checks:** units 741 passed / 0 failed; css21 gate 51/1; wpt gate 86/2; `H.txt` 24 pass + 5 manual-pending + 32 fail (12/30 official + 12/31 WPT pass); `H-pass.txt` 1274/1274 (694/694 official + 580/580 WPT); `K-pass.txt` 1166/1166 (611/611 official + 555/555 WPT); `canary.txt` 960/960 (492/492 official + 468/468 WPT).
+
+**Batch 2 summary — Moved: 24 fail → pass, 5 fail → manual-pending (was 0/61; now 24 pass, 5 manual-pending, 32 fail).**
+
+**Still failing (32) and why:**
+- **23 in 6.M (judges/routes):** 12 scroll route (`background-046/049/067/072/079/084`, official + WPT), 6 tiling judge (`background-013/023/028`, official + WPT), 2 scroll viewport-clip judge (`background-bg-pos-207`, official + WPT), 3 timer route (official `background-root-101/102/103`).
+- **4 in 6.A/6.J (text/fonts):** `background-root-006/007` (official + WPT) — text wrapping differs from reference.
+- **2 in 6.E (tables):** `background-position-applies-to-001a/002a` (WPT) — tbody/thead geometry offset.
+- **1 in 6.K / DOM restyle:** `background-root-103` (WPT) — `html[lang]` attribute mutation does not re-cascade `body`.
+- **2 in 6.H (open):** `background-attachment-007` (official + WPT) — dropped from 9074 to 3274 red pixels after Commit 3; remaining 3274 red pixels need render inspection in next batch.

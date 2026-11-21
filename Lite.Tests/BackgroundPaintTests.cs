@@ -175,4 +175,39 @@ public static class BackgroundPaintTests
         True(bodyRed > 0, "the body element itself should still paint its own red background");
         Equal(0, canvasRed);
     }
+
+    [Test]
+    public static void BackgroundShorthand_DataUriWithSemicolonSurvivesCascade()
+    {
+        // CSS 2.1 §4.1.1: ';' inside url(data:image/png;base64,...) is part of the URI token,
+        // not a declaration separator.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}" +
+            $"#t{{width:60px;height:60px;background:red {GreenTile()} repeat}}</style></head>" +
+            "<body><div id=t></div></body></html>",
+            isSrcdoc: true, "http://test/", 120, 120);
+        var node = FindById(page.Root, "t")!;
+
+        using var bitmap = Drawer.DrawToBitmap(120, 120, page.Root, new Viewport { ViewportHeight = 120 });
+        var (green, red) = Count(bitmap, node.Box.PaddingBox);
+        True(green > 0, "the data:image/png;base64 background image should survive declaration splitting and paint green");
+        Equal(0, red);
+    }
+
+    [Test]
+    public static void BackgroundShorthand_ResetsEarlierBackgroundColorToTransparent()
+    {
+        // CSS 2.1 §14.2.1: a valid `background` shorthand first resets all individual background
+        // properties (including background-color) to their initial values (transparent).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}" +
+            "#t{background-color:red;background:bottom fixed;width:60px;height:60px}</style></head>" +
+            "<body><div id=t></div></body></html>",
+            isSrcdoc: true, "http://test/", 120, 120);
+        var node = FindById(page.Root, "t")!;
+
+        using var bitmap = Drawer.DrawToBitmap(120, 120, page.Root, new Viewport { ViewportHeight = 120 });
+        var (_, red) = Count(bitmap, node.Box.PaddingBox);
+        Equal(0, red);
+    }
 }

@@ -1043,7 +1043,7 @@ internal static partial class Parser
         {
             foreach (var property in style)
                 if (property.Name is { Length: > 0 } name) names.Add(name);
-            foreach (var decl in (style.CssText ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries))
+            foreach (var decl in SplitCssDeclarations(style.CssText ?? ""))
                 if (decl.IndexOf(':') is var colon and > 0) names.Add(decl[..colon].Trim());
         }
         catch { /* an unreadable block declares nothing */ }
@@ -1193,7 +1193,7 @@ internal static partial class Parser
         // Also parse CssText to get all properties (display, color, etc.)
         if (!string.IsNullOrEmpty(cssText))
         {
-            foreach (var decl in cssText.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            foreach (var decl in SplitCssDeclarations(cssText))
             {
                 var colon = decl.IndexOf(':');
                 if (colon < 0) continue;
@@ -1393,7 +1393,7 @@ internal static partial class Parser
     private static void ParseCssTextForListStyle(string cssText, LayoutNode node)
     {
         if (string.IsNullOrEmpty(cssText)) return;
-        foreach (var declaration in cssText.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var declaration in SplitCssDeclarations(cssText))
         {
             var colonIdx = declaration.IndexOf(':');
             if (colonIdx < 0) continue;
@@ -1472,7 +1472,7 @@ internal static partial class Parser
     {
         if (string.IsNullOrEmpty(cssText)) return;
 
-        foreach (var declaration in cssText.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var declaration in SplitCssDeclarations(cssText))
         {
             var colonIdx = declaration.IndexOf(':');
             if (colonIdx < 0) continue;
@@ -1792,7 +1792,7 @@ internal static partial class Parser
         var props = new Dictionary<string, string>();
 
         // Parse from CssText to get all properties
-        foreach (var decl in cssText.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var decl in SplitCssDeclarations(cssText))
         {
             var colon = decl.IndexOf(':');
             if (colon < 0) continue;
@@ -2157,7 +2157,15 @@ internal static partial class Parser
             if (hadBrace) continue;
             var colon = IndexOfSignificant(decl, 0, ':');
             if (colon < 0) continue;
-            if (!decl[..colon].Trim().Equals("background", StringComparison.OrdinalIgnoreCase)) continue;
+            var propName = decl[..colon].Trim();
+            if (propName.StartsWith("background-", StringComparison.OrdinalIgnoreCase))
+            {
+                // A later background-* longhand overrides an earlier shorthand (§14.2 ordering),
+                // so do not rescue an earlier shorthand over it.
+                found = null;
+                continue;
+            }
+            if (!propName.Equals("background", StringComparison.OrdinalIgnoreCase)) continue;
             var value = decl[(colon + 1)..].Trim();
             if (value.EndsWith("important", StringComparison.OrdinalIgnoreCase))
             {
@@ -2282,8 +2290,65 @@ internal static partial class Parser
         if (raw.Count != 1) return null;
         var cssText = styleRule.Style?.CssText;
         if (!string.IsNullOrEmpty(cssText) &&
-            cssText.Contains("background", StringComparison.OrdinalIgnoreCase)) return null;
+            cssText.Contains("background", StringComparison.OrdinalIgnoreCase))
+        {
+            // When AngleSharp kept an earlier background-* longhand (e.g. background-color: red)
+            // while dropping a later `background:` shorthand (background-reset-001), rescue the
+            // shorthand only if at least one of its declared components is missing from CSSOM.
+            if (SplitBackgroundShorthand(raw.Value) is not { } expected) return null;
+            var dropped = false;
+            foreach (var (prop, val) in expected)
+            {
+                if (val is null || IsBackgroundInitial(prop, val)) continue;
+                if (string.IsNullOrEmpty(styleRule.Style?.GetPropertyValueSafe(prop)))
+                {
+                    dropped = true;
+                    break;
+                }
+            }
+            if (!dropped) return null;
+        }
         return raw.Value;
+    }
+
+    private static bool IsBackgroundInitial(string prop, string val) => prop switch
+    {
+        "background-image" => val == "none",
+        "background-repeat" => val == "repeat",
+        "background-attachment" => val == "scroll",
+        "background-position" => val == "0% 0%",
+        "background-color" => val == "transparent",
+        _ => false,
+    };
+
+    /// <summary>Splits a CSS declaration block on top-level semicolons, ignoring ';' inside
+    /// parentheses (such as <c>url(data:image/png;base64,...)</c>) and quoted strings (CSS 2.1 §4.1.1).</summary>
+    private static List<string> SplitCssDeclarations(string cssText)
+    {
+        var result = new List<string>();
+        var depth = 0;
+        var quote = '\0';
+        var start = 0;
+        for (var i = 0; i <= cssText.Length; i++)
+        {
+            if (i < cssText.Length)
+            {
+                var c = cssText[i];
+                if (c == '\\') { i++; continue; }
+                if (quote != '\0') { if (c == quote) quote = '\0'; continue; }
+                if (c is '"' or '\'') { quote = c; continue; }
+                if (c == '(') { depth++; continue; }
+                if (c == ')') { depth = Math.Max(0, depth - 1); continue; }
+                if (c != ';' || depth != 0) continue;
+            }
+            if (i > start)
+            {
+                var part = cssText[start..i];
+                if (!string.IsNullOrWhiteSpace(part)) result.Add(part);
+            }
+            start = i + 1;
+        }
+        return result;
     }
 
     private static void CollectRulesFromSheet(ICssRuleList rules, RuleOrigin origin = RuleOrigin.Author)
@@ -2403,7 +2468,7 @@ internal static partial class Parser
         var important = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (string.IsNullOrEmpty(cssText)) return (props, important);
 
-        foreach (var decl in cssText.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var decl in SplitCssDeclarations(cssText))
         {
             var colon = decl.IndexOf(':');
             if (colon < 0) continue;
