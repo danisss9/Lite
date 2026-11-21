@@ -92,9 +92,7 @@ internal static class TableEngine
         float captionBottomH = 0f;
         if (caption is not null)
         {
-            var side = caption.TryResolveStyle("caption-side", out var cs)
-                ? cs : caption.Style.GetPropertyValueSafe("caption-side");
-            captionBottom = side?.Trim() == "bottom";
+            captionBottom = CaptionSide(caption) == "bottom";
             if (!captionBottom)
                 captionTopH = LayoutCaptionBlock(caption, contentX, contentY, contentW, viewportW, viewportH);
         }
@@ -110,7 +108,10 @@ internal static class TableEngine
             var cellW = CellSpanWidth(colWidths, p.Col, p.ColSpan, spacing);
             var cellPad = cell.GetPadding(cellW, viewportH, cellFontSize);
             var cellBord = cell.GetBorderWidth();
-            var cellMarg = cell.GetMargin(cellW, viewportH, cellFontSize);
+            // §17.5: "Internal table elements do not have margins." A cell's declared margin
+            // (a UA 8px on BODY, or a test's negative margin) must not inset or shift it:
+            // s-11-1-1b-005's body cell was 4px wide (8px margins inside a 20px cell).
+            var cellMarg = default(EdgeSizes);
 
             var cx = CellX(contentX, colWidths, p.Col, spacing) + cellMarg.Left + cellBord.Left + cellPad.Left;
             var cw = Math.Max(0f, cellW
@@ -291,7 +292,8 @@ internal static class TableEngine
             var rowFontSize = rowNode.GetFontSize();
             var rowPad = rowNode.GetPadding(contentW, viewportH, rowFontSize);
             var rowBord = rowNode.GetBorderWidth();
-            var rowMarg = rowNode.GetMargin(contentW, viewportH, rowFontSize);
+            // §17.5: internal table elements (rows, row groups, columns, cells) have no margins.
+            var rowMarg = default(EdgeSizes);
 
             var rowCX = contentX + rowMarg.Left + rowBord.Left + rowPad.Left;
             var rowCY = rowYs[r] + rowMarg.Top + rowBord.Top + rowPad.Top;
@@ -400,6 +402,23 @@ internal static class TableEngine
             new CaptionInsets(captionTopH, captionBottomH, BoxEngine.Generation));
 
         return ry - contentY;
+    }
+
+    /// <summary>§17.4: 'caption-side' is an inherited property, so a caption inherits it from
+    /// the table (and the table from its own ancestors). The cascade keeps the table's value in
+    /// its StyleOverrides channel, which the caption's style object does not see, so walk up;
+    /// reading only the caption's own style left caption-side-applies-to-006/007's caption on
+    /// top despite the table's 'bottom'. The initial value is 'top'.</summary>
+    private static string CaptionSide(LayoutNode caption)
+    {
+        for (var n = caption; n is not null; n = n.Parent)
+        {
+            var raw = n.TryResolveStyle("caption-side", out var ov)
+                ? ov : n.Style.GetPropertyValueSafe("caption-side");
+            var value = raw?.Trim();
+            if (!string.IsNullOrEmpty(value) && value != "inherit") return value;
+        }
+        return "top";
     }
 
     /// <summary>Lays out a table CAPTION as a block spanning the table width and returns its
@@ -1369,6 +1388,24 @@ internal static class TableEngine
         var adjusted = box;
         adjusted.ContentBox = new SKRect(content.Left, top, content.Right, bottom);
         return adjusted;
+    }
+
+    /// <summary>CSS 2.1 §11.1.1 (erratum s.11.1.1b) with §17.4: 'overflow' on a table applies to
+    /// the TABLE box, not the table wrapper box, so a clipping table clips its rows and cells to
+    /// the table box's padding box (the band between the captions); the captions sit outside
+    /// the table box and are not clipped by it, so their own boxes join the clip region. The
+    /// clip used to be the wrapper's padding box, so cell content overflowing into a caption's
+    /// margin band stayed visible (s-11-1-1b-001's red border above the square). Returns null
+    /// for a box that is not a table.</summary>
+    internal static SKPath? OverflowClipPath(LayoutNode table)
+    {
+        if (table.GetDisplay() is not (DisplayType.Table or DisplayType.InlineTable)) return null;
+        var path = new SKPath();
+        path.AddRect(ExcludeCaptionBands(table, table.Box).PaddingBox);
+        foreach (var child in table.Children)
+            if (IsCaption(child) && child.Box.BorderBox is { Width: > 0, Height: > 0 } captionBox)
+                path.AddRect(captionBox);
+        return path;
     }
 
     /// <summary>§17.5.2.1 fixed table layout: a column element's width sets its column; otherwise

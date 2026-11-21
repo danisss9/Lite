@@ -214,6 +214,110 @@ public static class TableSizingTests
         }
     }
 
+    [Test]
+    public static void OverflowOnTable_ClipsTheTableBoxNotTheWrapper()
+    {
+        // §11.1.1 erratum s.11.1.1b (s-11-1-1b-001/003): 'overflow: hidden' on a table clips to
+        // the table box, so a cell's content overflowing upward into the top caption's margin
+        // band is hidden; 'auto'/'scroll' on a table box mean 'visible'.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0} table{border-spacing:0;margin-top:40px}" +
+            " #h{overflow:hidden} #a{overflow:auto} caption{margin-bottom:10px} td{padding:0}" +
+            " div{width:20px;height:25px;border-top:10px solid red;margin-top:-15px;background:black}</style>" +
+            "<table id=\"h\"><caption></caption><tr><td><div></div></td></tr></table>" +
+            "<table id=\"a\"><tr><td><div></div></td></tr></table>");
+        var hidden = Find(root, "TABLE", "h")!;
+        var auto = Find(root, "TABLE", "a")!;
+        True(auto.GetOverflow() == OverflowType.Visible, $"'auto' on a table box must be 'visible', got {auto.GetOverflow()}");
+        True(hidden.GetOverflow() == OverflowType.Hidden, "'hidden' on a table must stay 'hidden'");
+        using var bitmap = Drawer.DrawToBitmap(100, 200, root, new Viewport { ViewportHeight = 200 });
+        // Table #h: wrapper at 40, table box at 50 (caption margin), the div's red border at 35..45.
+        var top = hidden.Box.BorderBox.Top;
+        True(bitmap.GetPixel(10, (int)top + 7) == SkiaSharp.SKColors.White,
+            $"the caption band must not show the cell's overflow, got {bitmap.GetPixel(10, (int)top + 7)}");
+        True(bitmap.GetPixel(10, (int)top + 12) == SkiaSharp.SKColors.Black,
+            $"the table box must show the cell's content, got {bitmap.GetPixel(10, (int)top + 12)}");
+        // Table #a ('auto' = 'visible'): the red border above the table box paints.
+        var aTop = auto.Box.BorderBox.Top;
+        True(bitmap.GetPixel(10, (int)aTop - 10) == SkiaSharp.SKColors.Red,
+            $"an 'auto' table must not clip its overflow, got {bitmap.GetPixel(10, (int)aTop - 10)}");
+    }
+
+    [Test]
+    public static void TableCellAndRow_IgnoreMargins()
+    {
+        // §17.5: "Internal table elements do not have margins." A cell's declared margins must
+        // not inset or shift it — s-11-1-1b-005's BODY cell was 4px wide (8px UA margins in a
+        // 20px cell) and s-11-1-1b-006's -15px cell margin lifted the black square.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0} #t{display:table;border-spacing:0}" +
+            " #r{display:table-row;margin-top:11px}" +
+            " #c{display:table-cell;width:20px;height:20px;margin:7px 9px -15px 3px}</style>" +
+            "<div id=\"t\"><div id=\"r\"><div id=\"c\"></div></div></div>");
+        var table = Find(root, "DIV", "t")!;
+        var row = Find(root, "DIV", "r")!;
+        var cell = Find(root, "DIV", "c")!;
+        True(Math.Abs(cell.Box.BorderBox.Left - table.Box.ContentBox.Left) < 0.01f,
+            $"a cell's left margin must be ignored, cell {cell.Box.BorderBox.Left} vs table {table.Box.ContentBox.Left}");
+        True(Math.Abs(cell.Box.BorderBox.Top - row.Box.BorderBox.Top) < 0.01f,
+            $"a cell's top margin must be ignored, cell {cell.Box.BorderBox.Top} vs row {row.Box.BorderBox.Top}");
+        True(Math.Abs(cell.Box.BorderBox.Width - 20f) < 0.01f,
+            $"horizontal margins must not shrink the cell, got {cell.Box.BorderBox.Width}");
+        True(Math.Abs(table.Box.BorderBox.Height - 20f) < 0.01f,
+            $"vertical margins must not move the rows, table height {table.Box.BorderBox.Height}");
+        True(Math.Abs(row.Box.BorderBox.Top - table.Box.ContentBox.Top) < 0.01f,
+            $"a row's top margin must be ignored, row {row.Box.BorderBox.Top} vs table {table.Box.ContentBox.Top}");
+    }
+
+    [Test]
+    public static void TableOverflowOnRootOrBody_PropagatesToTheViewport()
+    {
+        // §11.1.1: the root element's 'overflow' applies to the viewport (and the first BODY
+        // child's when the root is 'visible'); "the element from which the value is propagated
+        // must then have a used value for 'overflow' of 'visible'". s-11-1-1b-005/006 make the
+        // propagating element itself a table, whose box must not clip on top of the viewport.
+        var htmlTable = Layout("<!DOCTYPE html><style>html{display:table;overflow:hidden;margin:0}" +
+            " body{display:table-cell;margin:0}</style><p>x</p>");
+        var html = Find(htmlTable, "HTML")!;
+        True(html.GetOverflow() == OverflowType.Visible,
+            $"HTML's used overflow must be 'visible', got {html.GetOverflow()}");
+        True(BoxEngine.ViewportOverflow(htmlTable) == OverflowType.Hidden,
+            "the viewport must still apply HTML's 'hidden'");
+
+        var bodyTable = Layout("<!DOCTYPE html><style>html{margin:0}" +
+            " body{display:table;overflow:scroll;margin:0} div{display:table-cell}</style><div>x</div>");
+        var body = Find(bodyTable, "BODY")!;
+        True(body.GetOverflow() == OverflowType.Visible,
+            $"BODY's used overflow must be 'visible', got {body.GetOverflow()}");
+        True(BoxEngine.ViewportOverflow(bodyTable) == OverflowType.Scroll,
+            "the viewport must still apply BODY's 'scroll'");
+    }
+
+    [Test]
+    public static void CaptionSide_IsInheritedFromTheTable()
+    {
+        // §17.4: 'caption-side' is inherited, so the caption takes the table's value
+        // (caption-side-applies-to-006/007: 'caption-side: bottom' on display:table /
+        // inline-table left our caption on top because only its own style was read).
+        string CaptionTop(string tableRule, string captionRule)
+        {
+            var root = Layout("<!DOCTYPE html><style>body{margin:0} #t{" + tableRule + "}" +
+                " #c{display:table-caption" + captionRule + "} #r{display:table-row}" +
+                " #x{display:table-cell;width:20px;height:20px}</style>" +
+                "<div id=\"t\"><div id=\"c\">cap</div><div id=\"r\"><div id=\"x\"></div></div></div>");
+            return Find(root, "DIV", "c")!.Box.BorderBox.Top.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+        float Top(string rule, string cap) => float.Parse(CaptionTop(rule, cap), System.Globalization.CultureInfo.InvariantCulture);
+        var bottom = Top("display:table;caption-side:bottom", "");
+        var bottomInline = Top("display:inline-table;caption-side:bottom", "");
+        var top = Top("display:table", "");
+        var ownTop = Top("display:table;caption-side:bottom", ";caption-side:top");
+        True(bottom > 0f && Math.Abs(bottom - bottomInline) < 0.01f,
+            $"table and inline-table must both put the inherited 'bottom' caption below, got {bottom} and {bottomInline}");
+        // Both captions sit below their 20px cell: the position includes the caption's height.
+        True(Math.Abs(bottom - 20f) < 0.01f, $"the inherited 'bottom' caption must start below the 20px cell, top {bottom}");
+        True(Math.Abs(bottom - top - 20f) < 0.01f, $"the caption's side must change its position by the cell height, {top} -> {bottom}");
+        True(Math.Abs(ownTop - top) < 0.01f, $"the caption's own 'top' must win over the table's 'bottom', got {ownTop} vs {top}");
+    }
+
     private static void True(bool condition, string message)
     {
         if (!condition) throw new Exception(message);

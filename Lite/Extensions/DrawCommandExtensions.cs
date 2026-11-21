@@ -602,7 +602,11 @@ public static class StyleExtensions
     public static bool IsPositioned(this LayoutNode node) =>
         node.GetPosition() != PositionType.Static;
 
-    public static OverflowType GetOverflow(this LayoutNode node)
+    /// <summary>The <c>overflow</c> value as declared on the element, i.e. the computed value
+    /// before the ┬º11.1.1 viewport-propagation and table-box adjustments. The propagation
+    /// itself must read this, not the used value: the element a value propagates FROM gets a
+    /// used value of 'visible' while the viewport still applies the declared one.</summary>
+    internal static OverflowType DeclaredOverflow(this LayoutNode node)
     {
         var raw = node.TryResolveStyle(PropertyNames.Overflow, out var ov)
             ? ov : node.Style.GetPropertyValueSafe(PropertyNames.Overflow);
@@ -614,6 +618,36 @@ public static class StyleExtensions
             _ => OverflowType.Visible,
         };
     }
+
+    public static OverflowType GetOverflow(this LayoutNode node)
+    {
+        var declared = node.DeclaredOverflow();
+        if (declared == OverflowType.Visible) return OverflowType.Visible;
+        // ┬º11.1.1: "The element from which the value is propagated must then have a used value
+        // for 'overflow' of 'visible'." Without this, an HTML/BODY box that is itself a table
+        // (display:table) clipped its content to its table box on top of the viewport clip.
+        if (PropagatesOverflowToViewport(node)) return OverflowType.Visible;
+        // ┬º11.1.1 (erratum s.11.1.1b): 'scroll' and 'auto' ÔÇö "When used on table boxes, this
+        // value has the same meaning as 'visible'".
+        if (declared is OverflowType.Scroll or OverflowType.Auto && IsTableBoxForOverflow(node))
+            return OverflowType.Visible;
+        return declared;
+    }
+
+    /// <summary>True when <paramref name="node"/> is the element whose 'overflow' the UA applies
+    /// to the viewport (┬º11.1.1): the root element, or the first BODY child of an HTML root whose
+    /// own 'overflow' is 'visible'.</summary>
+    private static bool PropagatesOverflowToViewport(LayoutNode node)
+    {
+        if (node.TagName == "HTML") return true;
+        if (node.TagName != "BODY") return false;
+        for (var a = node.Parent; a is not null; a = a.Parent)
+            if (a.TagName == "HTML") return a.DeclaredOverflow() == OverflowType.Visible;
+        return false;
+    }
+
+    private static bool IsTableBoxForOverflow(LayoutNode node) =>
+        node.GetDisplay() is DisplayType.Table or DisplayType.InlineTable;
 
     /// <summary>Parses the CSS <c>clip: rect(top,right,bottom,left)</c> property into an
     /// absolute clip rectangle (offsets relative to the element's border box). Returns null

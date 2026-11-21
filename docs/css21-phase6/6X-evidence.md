@@ -21,6 +21,12 @@ Branch `css21/p6-x`, worktree `C:\Repos\Lite-p6-x`. Case list `Lite.Conformance/
 
 ## Handed in
 
+- `css/CSS2/css21-errata/s-11-1-1b-002.html`, `-003.html`, `-004.html` (from 6.E): defective
+  upstream reftests, exclusion candidates. The engine now follows §11.1.1/erratum s.11.1.1b, and
+  Chromium fails the same comparisons: 002's black square renders at y 50..74 but 002-ref puts the
+  table at `margin-top:60px` (square 94..113); 003/004 (no caption, `overflow:auto/scroll`) point at
+  the captioned 001-ref, whose square is at 60..79 against the test's 35..54. 6.E moved 001, 005,
+  006, 008 and 009.
 - `content-159` (official + WPT, from 6.F): served as XHTML, the `div:lang(en) { quotes: '"' '"'
   "'" "'" }` declaration is lost, so the pseudo content renders the default curly quotes instead
   of the straight ones the reference uses. `--render` (which serves .xht as HTML) matches the

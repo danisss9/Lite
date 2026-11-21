@@ -386,14 +386,15 @@ internal static partial class BoxEngine
     /// element has an HTML 'body' element as a child, user agents must instead apply the
     /// 'overflow' property from the first such child element to the viewport, if the value
     /// on the root element is 'visible'." <paramref name="root"/> is the HTML box or the
-    /// document box above it.</summary>
+    /// document box above it. Reads the DECLARED value: the element it propagates from gets a
+    /// used value of 'visible' (┬º11.1.1), which is what <c>GetOverflow</c> returns.</summary>
     internal static OverflowType ViewportOverflow(LayoutNode root)
     {
         var html = root.TagName == "HTML" ? root : root.Children.FirstOrDefault(c => c.TagName == "HTML");
-        if (html is null) return root.GetOverflow();
-        var overflow = html.GetOverflow();
+        if (html is null) return root.DeclaredOverflow();
+        var overflow = html.DeclaredOverflow();
         if (overflow == OverflowType.Visible && html.Children.FirstOrDefault(c => c.TagName == "BODY") is { } body)
-            overflow = body.GetOverflow();
+            overflow = body.DeclaredOverflow();
         return overflow;
     }
 

@@ -24,6 +24,17 @@ Branch `css21/p6-m`, worktree `C:\Repos\Lite-p6-m`. Case list `Lite.Conformance/
 
 ## Handed in
 
+- `table-visual-layout-007.xht`, `table-visual-layout-008.xht` (WPT, from 6.E): the render is the
+  three squares navy → blue → aqua in source order, but `GradientLighter` calls `SameHue` with the
+  stated `blue` and a ±30° band; aqua (hue 180) is 60° from blue (240), so the family has 2 shapes
+  and needs 3. The sentence "each square is a lighter blue than the previous one" is about
+  lightness; widen the hue band (or compare lightness only) for this check.
+- `border-spacing-003/083/084/095`, `border-spacing-applies-to-014/015` (official + WPT, from 6.E):
+  the renders match the sentences (e.g. 003 shows the 1px bar exactly in the 1px gap between the two
+  black bars), but `Components` merges the touching bar with the bars/cells, so `BarGap` sees 1
+  top-level shape instead of 3 and `no-horizontal-gap` counts 0/1 blue shapes. A same-colour,
+  touching 1px marker needs the segmentation split by geometry (the bar shares an edge), not by ink.
+
 - `list-style-type-001`, `list-style-applies-to-005/006`, `list-style-type-applies-to-005/006`
   (official + WPT, from 6.F): `round-dot` rejects a 16px disc. The render is a filled circle 7-8px
   across including antialiasing, but `Components`' 5x5 ink bbox has every bbox edge inked, so

@@ -517,6 +517,11 @@ internal static partial class Drawer
                 var rr = new SKRoundRect(node.Box.PaddingBox, clipRx, clipRy);
                 canvas.ClipRoundRect(rr, antialias: true);
             }
+            else if (TableEngine.OverflowClipPath(node) is { } tableClip)
+            {
+                // ┬º11.1.1 erratum s.11.1.1b: a table clips to its table box, not its wrapper.
+                using (tableClip) canvas.ClipPath(tableClip);
+            }
             else
             {
                 canvas.ClipRect(node.Box.PaddingBox);
@@ -1315,7 +1320,10 @@ internal static partial class Drawer
             // the box's own overflow clip, as PaintNode orders them.
             if (cssClip is { } cr) canvas.ClipRect(cr);
             if (!clips) continue;
-            canvas.ClipRect(BoxEngine.ScrollportRect(a));
+            if (TableEngine.OverflowClipPath(a) is { } tableClip)
+                using (tableClip) canvas.ClipPath(tableClip);  // ┬º11.1.1 erratum s.11.1.1b
+            else
+                canvas.ClipRect(BoxEngine.ScrollportRect(a));
             if (a.ScrollState is { } ss && (ss.NeedsScrollbar || ss.NeedsHorizontalScrollbar))
                 canvas.Translate(-ss.ScrollX, -ss.ScrollY);
         }
