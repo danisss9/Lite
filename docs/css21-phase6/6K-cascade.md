@@ -100,11 +100,64 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
   { color: green }` must beat `html { color: red }`; AngleSharp's match of `:root:first-child`
   on the document element is the suspect.
 
+- **`escapes-001` (official + WPT), from 6.K to 6.J (font fallback):** the render is correct
+  (green background, white text) and the only pixel difference is the glyph face: the test's
+  `font-family: "\"", '\'', serif` should fall through the two unavailable quoted families to
+  `serif`, but our font selection lands on the default sans. The declaration parses (background
+  applies); the family-list fallback does not.
+
+- **`escaped-newline-001` (official + WPT), from 6.K: parsing parked.** The paint trace shows no
+  generated text at all on the test page (the reference page paints `Filler Text Filler Text`
+  correctly), so the `div:before` rule is being lost, not mis-measured. The value is
+  `"Filler\<escaped newline> Text\00000a<newline> Filler Text"`; patch 008 handles the escaped
+  newline and `ConsumeEscape` consumes the whitespace after the hex escape, so the remaining
+  suspect is the CSSOM serialization/host `ParseCssTextToDict` round trip of a string containing
+  a line feed. Needs a focused parser probe next batch.
+
+- **Remaining syntax/matching cases not investigated this batch** (`matching-brackets-001/003`,
+  `at-rule-013`, `malformed-decl-block-001`, `c71-fwd-parsing-001`, `ident-020`,
+  `numbers-units-018`, `c64-uri-000`): `numbers-units-018` is root-em/ex (6.C), `c64-uri-000`
+  looks like a broken test (above); the rest need per-case parser probes with the fork before
+  any fix.
+
 ## Edits outside owned files
 
 - `Lite/Parser.cs`: removed the old regex-based `InlineImports` method body (36 lines) so the spec-compliant `InlineImports` lives in owned `Lite/Parser.Cascade.cs`. The HTML5 gate was not rerun (per lane rules).
+- Batch 2, `Lite/Parser.cs` (shared with the HTML5 track; the HTML5 gate was not rerun):
+  - `ParseState.ContentLanguage` plus its two fetch-path assignments (`TraversePage` and
+    `ParseChildPage`) for `:lang()`'s HTTP document language (commit 2);
+  - `StyleResolver.InheritOverrideChannelIntoSubtree(node)` after `ApplyPresentationalHints`
+    (commit 2), so a child element/text run inherits an override-channel value;
+  - the linked-sheet `<style>` insertion at the link's position instead of `head.AppendChild`
+    (commit 4).
 
 ## Progress
+
+### Batch 2, commit 4 - a fetched `<link>` sheet keeps its source-order position (§6.4.1)
+
+- **Spec:** CSS 2.1 §6.4.1: declarations of one origin with equal specificity are ordered by
+  source order; §14.3 defines `<link rel=stylesheet>` as an author sheet at its document position.
+- **Root cause:** `Parser.cs` eagerly fetches every linked sheet and appends the generated
+  `<style>` element to the END of `<head>`. A `<link>` placed BEFORE an inline `<style>` therefore
+  cascaded AFTER it: `c32-cascading-000`'s linked `.c { color: red }` beat the later inline
+  `.c { color: green }`, reddening the last paragraph.
+- **Fix:** the generated `<style>` is inserted at the link's own position
+  (`link.Parent.InsertBefore(styleEl, link.NextSibling)`); the head-append remains as the
+  detached-link fallback.
+- **Moved (2):** `css21-official/html4/c32-cascading-000.htm`,
+  `css/CSS2/css1/c32-cascading-000.xht`.
+- **Edits outside owned files:** `Lite/Parser.cs` (shared with the HTML5 track). **The HTML5 gate
+  was not rerun** (lane rules).
+- **Checks:**
+  - Build: succeeded.
+  - Units: 739 passed, 0 failed, including the new
+    `CascadeTests.LinkedSheetKeepsItsSourceOrderBeforeALaterStyleElement` (a data: `<link>`
+    before an inline `<style>`).
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 4/37 official, 8/65 WPT (from 0/37 + 1/65 at batch start; **11 cases moved** —
+    12 now pass, of which `inherit-static-offset-003` already passed).
+  - `K-pass.txt`: 1,166/1,166; Canary: 960/960.
+  - `C-pass.txt` (source-order change reaches every page): 2,974/2,974.
 
 ### Batch 2, commit 3 - `! important` (whitespace) keeps its priority (AngleSharp.Css patch 013)
 

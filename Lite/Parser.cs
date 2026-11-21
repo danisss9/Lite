@@ -423,7 +423,12 @@ internal static partial class Parser
                 css = InlineImports(css, cssBase, sheetCharset);
                 var styleEl = document.CreateElement("style");
                 styleEl.TextContent = css;
-                head.AppendChild(styleEl);
+                // Keep the sheet at the LINK's position in document order (§6.4.1 orders equal
+                // origins by source order): appending every fetched sheet to the end of <head>
+                // put it AFTER a later <style> block, so c32-cascading-000's inline
+                // `.c { color: green }` beat the earlier linked `.c { color: red }`.
+                if (link.Parent is { } linkParent) linkParent.InsertBefore(styleEl, link.NextSibling);
+                else head.AppendChild(styleEl);
             }
             catch (Exception ex)
             {

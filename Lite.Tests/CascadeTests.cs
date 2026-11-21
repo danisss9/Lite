@@ -41,6 +41,24 @@ public static class CascadeTests
     }
 
     [Test]
+    public static void LinkedSheetKeepsItsSourceOrderBeforeALaterStyleElement()
+    {
+        // §6.4.1 orders declarations of one origin by source order. The eagerly fetched
+        // <link rel=stylesheet> must stay at the link's position: appended to the end of <head>
+        // its `.c { color: red }` beat the LATER inline `.c { color: green }` (c32-cascading-000).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head>" +
+            "<link rel='stylesheet' href='data:text/css,.c%7Bcolor%3Ared%7D'>" +
+            "<style>.c { color: green }</style>" +
+            "</head><body><p class='c' id='c'>x</p></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        LayoutNode? F(LayoutNode n, string id) =>
+            n.Id == id ? n : n.Children.Select(c => F(c, id)).FirstOrDefault(r => r != null);
+        True(F(page.Root, "c")!.GetColor() == new SkiaSharp.SKColor(0, 128, 0),
+            $"the later inline sheet wins at equal specificity, got {F(page.Root, "c")!.GetColor()}");
+    }
+
+    [Test]
     public static void Lang_MatchesRangesDocumentLanguageAndReachesText()
     {
         // §5.11.4: ':lang(C)' takes the nearest lang/xml:lang; with none in scope the document
