@@ -108,21 +108,29 @@ internal static partial class Drawer
 
     /// <summary><paramref name="paintArea"/> overrides where the image paints (and repeats):
     /// the canvas background (§14.2) is positioned against the root box but "covers the entire
-    /// canvas", so it paints over the whole page, not just the root's padding box.</summary>
+    /// canvas", so it paints over the whole page, not just the root's border box. Otherwise
+    /// §14.2 positions the image against the padding box and clips/tiles it to the border box.</summary>
     private static void DrawBackgroundImage(SKCanvas canvas, LayoutNode node, BoxDimensions box, SKRect? paintArea) =>
-        DrawBackgroundImageIn(canvas, node, box.PaddingBox, paintArea);
+        DrawBackgroundImageIn(canvas, node, box.PaddingBox, paintArea, box.BorderBox);
 
     /// <summary>Paints an element's background image against an explicit positioning area —
     /// the padding box of a box, or the content area of one inline fragment (§14.2: an inline
     /// box's background covers the content area the line assembled, not its line-height
-    /// fragment box).</summary>
+    /// fragment box). <paramref name="borderBox"/> is the box's border area, which clips and
+    /// bounds tiling per §14.2 ("the background of the content, padding and border areas of a
+    /// box") while <paramref name="paddingBox"/> stays the positioning origin.</summary>
     internal static void DrawBackgroundImageIn(SKCanvas canvas, LayoutNode node, SKRect paddingBox,
-        SKRect? paintArea = null)
+        SKRect? paintArea = null, SKRect? borderBox = null)
     {
         var imageUrl = node.GetBackgroundImage();
         if (imageUrl == null) return;
         var bitmap = ResourceLoader.FetchImage(imageUrl, node.DocumentState?.BaseUrl, node.DocumentState?.Session);
-        if (bitmap == null) return;
+        // An SVG image has no raster size of its own: it is sized against the positioning area
+        // below and rasterized at that size.
+        var vector = bitmap is null
+            ? ResourceLoader.FetchSvgImage(imageUrl, node.DocumentState?.BaseUrl, node.DocumentState?.Session)
+            : null;
+        if (bitmap == null && vector == null) return;
 
         var repeat = node.GetBackgroundRepeat();
         var (posX, posY) = node.GetBackgroundPosition();
@@ -136,18 +144,26 @@ internal static partial class Drawer
         // clipped to the element's padding box, but its placement is independent of where the
         // element scrolled to.
         bool fixedBg = node.IsBackgroundFixed();
-        var clipArea = paintArea ?? paddingBox;
+        var clipArea = paintArea ?? borderBox ?? paddingBox;
         var area = fixedBg
             ? new SKRect(_bgFixedScrollX, _viewportScrollY + _bgFixedScrollY,
                          _bgFixedScrollX + _viewportWidth, _viewportScrollY + _bgFixedScrollY + _viewportHeight)
             : paddingBox;
 
-        // Resolve image draw size
+        // Resolve image draw size and position in the element's font scope so 'ex' uses the
+        // font's measured x-height rather than the unscoped 0.5em fallback (CSS 2.1 §4.3.2, §14.2.1).
+        using var _ = CssUnits.ForFont(node);
         float fontSize = node.GetFontSize();
-        float drawW = bitmap.Width, drawH = bitmap.Height;
-        if (sizeW == "cover" || sizeW == "contain")
+        float drawW, drawH;
+        if (vector is not null)
         {
-            var scaleX = area.Width / bitmap.Width;
+            (drawW, drawH) = VectorDrawSize(vector, sizeW, sizeH, area, fontSize);
+            if (drawW <= 0 || drawH <= 0) return;
+            bitmap = vector.Rasterize(drawW, drawH);
+        }
+        else if (sizeW == "cover" || sizeW == "contain")
+        {
+            var scaleX = area.Width / bitmap!.Width;
             var scaleY = area.Height / bitmap.Height;
             var scale = sizeW == "cover" ? Math.Max(scaleX, scaleY) : Math.Min(scaleX, scaleY);
             drawW = bitmap.Width * scale;
@@ -155,9 +171,10 @@ internal static partial class Drawer
         }
         else
         {
-            if (sizeW != "auto") drawW = ResolveBgDimension(sizeW, area.Width, fontSize);
-            if (sizeH != "auto") drawH = ResolveBgDimension(sizeH, area.Height, fontSize);
+            drawW = sizeW != "auto" ? ResolveBgDimension(sizeW, area.Width, fontSize) : bitmap!.Width;
+            drawH = sizeH != "auto" ? ResolveBgDimension(sizeH, area.Height, fontSize) : bitmap!.Height;
         }
+        if (bitmap is null) return;
 
         // Resolve position
         float offX = ResolveBgPosition(posX, area.Width, drawW, fontSize);
@@ -173,9 +190,9 @@ internal static partial class Drawer
         bool repeatX = repeat is "repeat" or "repeat-x";
         bool repeatY = repeat is "repeat" or "repeat-y";
 
-        // Repeated tiles cover the painted area: the box's own (its padding box) or, for the
+        // Repeated tiles cover the painted area: the box's border box (§14.2) or, for the
         // canvas background, the whole page.
-        var tiled = paintArea ?? area;
+        var tiled = clipArea;
         float startX = repeatX ? area.Left + offX - (float)Math.Ceiling((area.Left + offX - tiled.Left) / drawW) * drawW : area.Left + offX;
         float startY = repeatY ? area.Top + offY - (float)Math.Ceiling((area.Top + offY - tiled.Top) / drawH) * drawH : area.Top + offY;
         float endX = repeatX ? tiled.Right : startX + drawW;
@@ -193,6 +210,28 @@ internal static partial class Drawer
         }
 
         canvas.Restore();
+    }
+
+    /// <summary>The size an SVG background image paints at. CSS 2.1 §14.2.1 places the image
+    /// in the background positioning area; an image without intrinsic dimensions takes its
+    /// size from that area, by CSS Images 3 §5.3's default sizing algorithm (the default object
+    /// size is the positioning area), and <c>cover</c>/<c>contain</c> scale its intrinsic
+    /// ratio to the area (css3-background §3.9).</summary>
+    private static (float Width, float Height) VectorDrawSize(Lite.Media.SvgImage image, string sizeW, string sizeH,
+        SKRect area, float fontSize)
+    {
+        if (sizeW is "cover" or "contain")
+        {
+            if (image.Ratio is not { } ratio) return (area.Width, area.Height);
+            var wide = area.Width / area.Height > ratio;
+            // contain fits the ratio inside the area; cover fills it, overflowing one axis.
+            return wide == (sizeW == "contain")
+                ? (area.Height * ratio, area.Height)
+                : (area.Width, area.Width / ratio);
+        }
+        float? w = sizeW != "auto" ? ResolveBgDimension(sizeW, area.Width, fontSize) : null;
+        float? h = sizeH != "auto" ? ResolveBgDimension(sizeH, area.Height, fontSize) : null;
+        return image.ConcreteSize(w, h, area.Width, area.Height);
     }
 
     private static float ResolveBgDimension(string val, float total, float fontSize)

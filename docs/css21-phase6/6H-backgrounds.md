@@ -55,7 +55,8 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 - `Lite.Conformance/Css21/SelfTestOracle.cs` (6.M) — commit `cbe1d649`: parse `scroll.then` into `ScrollSpec`. One-line route fix; 6.M owns the file.
 - `Lite/Layout/StyleResolver.cs` + `Lite/Parser.Cascade.cs` (6.K) — commit `fd3c10fd`: `StoreProp` now marks every key it writes in `CascadeAppliedProps` (so a shorthand's parse-time longhands are retractable), and a winning shorthand covers its longhands in the initial-value fallback. Both files are 6.K's.
-- `Lite/Drawer.cs` (shared, no lane owner) — commit `6eea0bea`: paint background images on all inline painting paths (`DrawBackgroundImageIn`).
+- `Lite/Parser.Cascade.cs` + `Lite/Parser.cs` (6.K) — batch 2 Commit 5: `SplitCssDeclarations` respects parentheses/quotes so `url(data:image/png;base64,...)` is not split at `;`; `SplitBackgroundShorthand` resets omitted `background-color` to `transparent` (§14.2.1); `LastBackgroundDeclaration`/`RescuedBackgroundFor` rescue a dropped `background:` shorthand written after earlier `background-*` longhands while abstaining when a `background-*` longhand follows the shorthand. Verified with `K-pass.txt` (1166/1166, 0 losses).
+- `Lite/Drawer.cs` (shared, no lane owner) — commit `6eea0bea`: paint background images on all inline painting paths (`DrawBackgroundImageIn`); batch 2 Commit 4: guard §14.2 `body`-to-canvas background propagation to `root.TagName == "HTML"` only.
 - `Lite/Drawer.Text.cs` (6.A's text painting; the list-marker members belong to 6.F) — commit `6eea0bea`: `PaintListItem` paints the background image and gradient.
 
 ## Progress
@@ -71,3 +72,30 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 **Still failing (57) and why:** 12 route (`046/049/067/072/079/084`), 6 judge (`013/023/028`), 2 judge (`bg-pos-207`), 3 timer route (official `root-101/102/103`), 2 attachment border/judge, 8 `ex` (6.J), 14 SVG background decode, 2 reset shorthand (6.K), 4 `root-006/007` text wrap, 2 `position-applies-to-001a/002a` table geometry (6.E), 1 `background-20.xml`, 1 `root-103` (attribute-selector restyle: `html[lang]` change does not re-cascade `body`; `JsElement.OnAttributeChanged` only recascades `class`/`id`/`data-*`).
 
 **Checks (batch head `6eea0bea`):** units 652 passed / 0 failed; css21 gate 51 passed / 0 failed / 1 expected-fail; wpt gate 86 / 0 / 2; lane H report `H-after.json` 58 pass + 1 manual-pending + 57 fail; canary `canary-after.json` 300/300.
+
+### Batch 2 — 2026-11-21
+
+- **Commit 1 (SVG background images, CSS 2.1 §14.2.1 / CSS Images 3 §5.3):** added `Lite/Media/SvgImage.cs`, cached fetched SVG documents in `ResourceLoader.FetchSvgImage`, and resolved vector concrete sizes and rasterization against the background positioning area in `Drawer.Backgrounds.cs`.
+  - **Moved (14 fail → pass):** `background-intrinsic-001/002/003/006/007/008/009` (7 official + 7 WPT).
+  - **Checks:** units 736 passed / 0 failed; css21 gate 51/1; wpt gate 86/2; `H.txt` 14/61 (7/30 official + 7/31 WPT); `H-pass.txt` 1274/1274 (694/694 official + 580/580 WPT); `canary.txt` 960/960 (492/492 official + 468/468 WPT).
+- **Commit 2 (font-scoped `ex` in background positioning/sizing, CSS 2.1 §4.3.2 & §14.2.1):** scoped `CssUnits.ForFont(node)` around background size/position resolution in `Drawer.Backgrounds.cs` so `ex` uses the element's measured x-height instead of the unscoped `0.5em` fallback.
+  - **Moved (8 fail → pass):** `background-position-001/002/091/092` (4 official + 4 WPT).
+  - **Checks:** units 737 passed / 0 failed; css21 gate 51/1; wpt gate 86/2; `H.txt` 22/61 (11/30 official + 11/31 WPT); `H-pass.txt` 1274/1274 (694/694 official + 580/580 WPT); `canary.txt` 960/960 (492/492 official + 468/468 WPT).
+- **Commit 3 (paint and tile background images into the border box, CSS 2.1 §14.2):** `DrawBackgroundImage` now passes `box.BorderBox` as the clip/tile area while keeping `box.PaddingBox` as the positioning origin, matching `background-color` so background images show behind dotted/transparent borders.
+  - **Moved (4 fail → manual-pending):** `background-attachment-005/006` (2 official + 2 WPT; both dropped to 0 red pixels and now await manual scroll observation). `background-attachment-007` (official + WPT) dropped from 9074 to 3274 red pixels (investigating remaining red).
+  - **Checks:** units 738 passed / 0 failed; css21 gate 51/1; wpt gate 86/2; `H.txt` 22 pass + 4 manual-pending + 35 fail; `H-pass.txt` 1274/1274 (694/694 official + 580/580 WPT); `canary.txt` 960/960 (492/492 official + 468/468 WPT).
+- **Commit 4 (non-HTML XML root does not propagate `body` background to canvas, CSS 2.1 §14.2):** guarded `FindBody(root)` in `Drawer.cs` (shared, no lane owner) to `root.TagName == "HTML"`.
+  - **Moved (1 fail → manual-pending):** `css/CSS2/other-formats/xml/background-20.xml` (465,888 red pixels → 0 red pixels; route awaits manual observation).
+  - **Checks:** units 739 passed / 0 failed; css21 gate 51/1; wpt gate 86/2; `H.txt` 22 pass + 5 manual-pending + 34 fail; `H-pass.txt` 1274/1274 (694/694 official + 580/580 WPT); `canary.txt` 960/960 (492/492 official + 468/468 WPT).
+- **Commit 5 (`data:` URI semicolon preservation and `background` shorthand reset, CSS 2.1 §4.1.1 & §14.2.1):** replaced bare `.Split(';')` in `Parser.Cascade.cs` with `SplitCssDeclarations` (respecting parentheses/quotes); updated `SplitBackgroundShorthand` in `Parser.cs` to reset omitted `background-color` to `transparent`; updated `LastBackgroundDeclaration`/`RescuedBackgroundFor` so a dropped `background:` shorthand after an earlier `background-*` longhand is rescued without clobbering later longhands.
+  - **Moved (2 fail → pass):** `background-reset-001` (official + WPT). Also closes the parked `data:` URI `;` truncation finding.
+  - **Checks:** units 741 passed / 0 failed; css21 gate 51/1; wpt gate 86/2; `H.txt` 24 pass + 5 manual-pending + 32 fail (12/30 official + 12/31 WPT pass); `H-pass.txt` 1274/1274 (694/694 official + 580/580 WPT); `K-pass.txt` 1166/1166 (611/611 official + 555/555 WPT); `canary.txt` 960/960 (492/492 official + 468/468 WPT).
+
+**Batch 2 summary — Moved: 24 fail → pass, 5 fail → manual-pending (was 0/61; now 24 pass, 5 manual-pending, 32 fail).**
+
+**Still failing (32) and why:**
+- **23 in 6.M (judges/routes):** 12 scroll route (`background-046/049/067/072/079/084`, official + WPT), 6 tiling judge (`background-013/023/028`, official + WPT), 2 scroll viewport-clip judge (`background-bg-pos-207`, official + WPT), 3 timer route (official `background-root-101/102/103`).
+- **4 in 6.A/6.J (text/fonts):** `background-root-006/007` (official + WPT) — text wrapping differs from reference.
+- **2 in 6.E (tables):** `background-position-applies-to-001a/002a` (WPT) — tbody/thead geometry offset.
+- **1 in 6.K / DOM restyle:** `background-root-103` (WPT) — `html[lang]` attribute mutation does not re-cascade `body`.
+- **2 in 6.H (open):** `background-attachment-007` (official + WPT) — dropped from 9074 to 3274 red pixels after Commit 3; remaining 3274 red pixels need render inspection in next batch.

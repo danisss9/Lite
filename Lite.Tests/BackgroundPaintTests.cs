@@ -82,4 +82,132 @@ public static class BackgroundPaintTests
         True(green > 0, "the list item's background image should paint over its padding box");
         Equal(0, red);
     }
+
+    [Test]
+    public static void SvgBackgroundImage_SizesAgainstPositioningAreaAndRasterizes()
+    {
+        var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'>" +
+                  "<rect width='2' height='1' fill='green'/></svg>";
+        var uri = "url(data:image/svg+xml;base64," +
+                  Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(svg)) + ")";
+
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}" +
+            "#t{width:100px;height:100px;background-color:red}</style></head>" +
+            "<body><div id=t></div></body></html>",
+            isSrcdoc: true, "http://test/", 200, 200);
+        var node = FindById(page.Root, "t")!;
+        node.StyleOverrides["background-image"] = uri;
+        node.StyleOverrides["background-repeat"] = "no-repeat";
+
+        // Ratio 2:1 with no intrinsic width/height: concrete size in 100×100 is 100×50 (CSS Images 3 §5.3).
+        using var bitmap = Drawer.DrawToBitmap(200, 200, page.Root, new Viewport { ViewportHeight = 200 });
+        var (topGreen, topRed) = Count(bitmap, new SKRect(0, 0, 100, 50));
+        var (botGreen, botRed) = Count(bitmap, new SKRect(0, 50, 100, 100));
+        True(topGreen > 0, "the SVG background should fill the top 100×50 band");
+        Equal(0, topRed);
+        Equal(0, botGreen);
+        True(botRed > 0, "no-repeat 2:1 SVG should leave the bottom 100×50 band showing the red background");
+    }
+
+    [Test]
+    public static void BackgroundPosition_ExUsesFontMeasuredXHeight()
+    {
+        FontRegistry.RegisterFile(Path.Combine(
+            Lite.Conformance.Harness.ConformancePaths.Vendor, "wpt", "fonts", "Ahem.ttf"));
+        // Ahem's x-height is 0.8em (16px at 20px font-size), so 7.5ex is 120px, not 75px (0.5em).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}" +
+            "#t{font:20px/1 Ahem;width:135px;height:40px;background-color:red}</style></head>" +
+            "<body><div id=t></div></body></html>",
+            isSrcdoc: true, "http://test/", 200, 100);
+        var node = FindById(page.Root, "t")!;
+        node.StyleOverrides["background-image"] = GreenTile();
+        node.StyleOverrides["background-repeat"] = "no-repeat";
+        node.StyleOverrides["background-position"] = "7.5ex 0px";
+
+        using var bitmap = Drawer.DrawToBitmap(200, 100, page.Root, new Viewport { ViewportHeight = 100 });
+        var (atMeasured, _) = Count(bitmap, new SKRect(120, 0, 135, 15));
+        var (atHalfEm, _) = Count(bitmap, new SKRect(75, 0, 90, 15));
+        True(atMeasured > 0, "7.5ex in 20px Ahem should place the 15×15 tile at x=120");
+        Equal(0, atHalfEm);
+    }
+
+    [Test]
+    public static void BackgroundImage_PaintsIntoBorderAreaBehindTransparentBorder()
+    {
+        // CSS 2.1 §14.2: the padding box is the positioning origin, while the background image
+        // paints and tiles into the border box (so it shows through transparent/dotted borders).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}" +
+            "#t{width:60px;height:60px;border:10px solid transparent;background-color:red}</style></head>" +
+            "<body><div id=t></div></body></html>",
+            isSrcdoc: true, "http://test/", 120, 120);
+        var node = FindById(page.Root, "t")!;
+        node.StyleOverrides["background-image"] = GreenTile();
+        node.StyleOverrides["background-repeat"] = "repeat";
+
+        using var bitmap = Drawer.DrawToBitmap(120, 120, page.Root, new Viewport { ViewportHeight = 120 });
+        var (borderGreen, borderRed) = Count(bitmap, new SKRect(0, 0, 80, 10));
+        True(borderGreen > 0, "the tiled background image should paint across the top border area");
+        Equal(0, borderRed);
+    }
+
+    [Test]
+    public static void NonHtmlRoot_DoesNotPropagateBodyBackgroundToCanvas()
+    {
+        // CSS 2.1 §14.2: only an HTML/XHTML html root propagates its body child's background
+        // to the canvas; a generic XML root leaves the canvas at its default (white).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}</style></head><body></body></html>",
+            isSrcdoc: true, "http://test/", 200, 120);
+        var genericRoot = new LayoutNode(null, "GENERIC", "", page.Root.Style);
+        var body = new LayoutNode(null, "BODY", "", page.Root.Style);
+        body.StyleOverrides["display"] = "block";
+        body.StyleOverrides["background-color"] = "red";
+        body.StyleOverrides["height"] = "20px";
+        genericRoot.Children.Add(body);
+        body.Parent = genericRoot;
+
+        using var bitmap = Drawer.DrawToBitmap(200, 120, genericRoot, new Viewport { ViewportHeight = 120 });
+        var (_, bodyRed) = Count(bitmap, new SKRect(0, 0, 200, 20));
+        var (_, canvasRed) = Count(bitmap, new SKRect(0, 60, 200, 120));
+        True(bodyRed > 0, "the body element itself should still paint its own red background");
+        Equal(0, canvasRed);
+    }
+
+    [Test]
+    public static void BackgroundShorthand_DataUriWithSemicolonSurvivesCascade()
+    {
+        // CSS 2.1 §4.1.1: ';' inside url(data:image/png;base64,...) is part of the URI token,
+        // not a declaration separator.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}" +
+            $"#t{{width:60px;height:60px;background:red {GreenTile()} repeat}}</style></head>" +
+            "<body><div id=t></div></body></html>",
+            isSrcdoc: true, "http://test/", 120, 120);
+        var node = FindById(page.Root, "t")!;
+
+        using var bitmap = Drawer.DrawToBitmap(120, 120, page.Root, new Viewport { ViewportHeight = 120 });
+        var (green, red) = Count(bitmap, node.Box.PaddingBox);
+        True(green > 0, "the data:image/png;base64 background image should survive declaration splitting and paint green");
+        Equal(0, red);
+    }
+
+    [Test]
+    public static void BackgroundShorthand_ResetsEarlierBackgroundColorToTransparent()
+    {
+        // CSS 2.1 §14.2.1: a valid `background` shorthand first resets all individual background
+        // properties (including background-color) to their initial values (transparent).
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}" +
+            "#t{background-color:red;background:bottom fixed;width:60px;height:60px}</style></head>" +
+            "<body><div id=t></div></body></html>",
+            isSrcdoc: true, "http://test/", 120, 120);
+        var node = FindById(page.Root, "t")!;
+
+        using var bitmap = Drawer.DrawToBitmap(120, 120, page.Root, new Viewport { ViewportHeight = 120 });
+        var (_, red) = Count(bitmap, node.Box.PaddingBox);
+        Equal(0, red);
+    }
 }

@@ -15,7 +15,7 @@ internal static class ResourceLoader
         if (src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
         {
             lock (cache) if (cache.TryGetValue(src, out var cachedData)) return Shown(cachedData);
-            var bitmap = DecodeDataUri(src);
+            var bitmap = DecodeDataUri(src, session);
             lock (cache) cache[src] = bitmap;
             return Shown(bitmap);
         }
@@ -28,7 +28,7 @@ internal static class ResourceLoader
         try
         {
             var bytes = session.Client.GetByteArrayAsync(resolved).Result;
-            var bitmap = DecodeFetchedImage(bytes);
+            var bitmap = RememberVector(session, resolved, bytes) ? null : DecodeFetchedImage(bytes);
             lock (cache) cache[resolved] = bitmap;
             return Shown(bitmap);
         }
@@ -60,12 +60,42 @@ internal static class ResourceLoader
         catch (Exception error) { session.Diagnostics.Enqueue($"bytes {resolved}: {error.Message}"); return null; }
     }
 
-    private static SKBitmap? DecodeDataUri(string dataUri)
+    private static SKBitmap? DecodeDataUri(string dataUri, BrowserSession session)
     {
         // data:[<mediatype>][;base64],<data> — DataUri handles percent-encoded base64 payloads.
         if (!DataUri.TryDecodeBytes(dataUri, out var bytes, out _)) return null;
-        try { return DecodeFetchedImage(bytes); }
+        try { return RememberVector(session, dataUri, bytes) ? null : DecodeFetchedImage(bytes); }
         catch { return null; }
+    }
+
+    /// <summary>SVG documents fetched as images, per session and URL. SKCodec decodes no SVG,
+    /// so <see cref="FetchImage"/> yields null for one; a painter that can size a vector image
+    /// (the background painter) asks for it through <see cref="FetchSvgImage"/>.</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<BrowserSession,
+        Dictionary<string, SvgImage>> Vectors = new();
+
+    /// <summary>Keeps <paramref name="bytes"/> as a vector image when they are an SVG document
+    /// (checked before raster decoding, which throws on SVG bytes); true when they were.</summary>
+    private static bool RememberVector(BrowserSession session, string key, byte[] bytes)
+    {
+        if (SvgImage.TryParse(bytes) is not { } svg) return false;
+        var map = Vectors.GetOrCreateValue(session);
+        lock (map) map[key] = svg;
+        return true;
+    }
+
+    /// <summary>The SVG image at <paramref name="src"/>, when it is one (an image whose bytes
+    /// did not decode as a raster). The fetch goes through <see cref="FetchImage"/>, so it is
+    /// shared with the raster cache.</summary>
+    internal static SvgImage? FetchSvgImage(string src, string? baseUrl, BrowserSession? session = null)
+    {
+        session ??= FallbackSession;
+        var key = src.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ? src : ResolveUrl(src, baseUrl);
+        if (key is null) return null;
+        var map = Vectors.GetOrCreateValue(session);
+        lock (map) if (map.TryGetValue(key, out var known)) return known;
+        if (FetchImage(src, baseUrl, session) is not null) return null;
+        lock (map) return map.GetValueOrDefault(key);
     }
 
     /// <summary>The painters fetch backgrounds and list images on every paint, so a fetch
