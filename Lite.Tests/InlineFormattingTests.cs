@@ -254,4 +254,30 @@ public static class InlineFormattingTests
             True(red == 0, $"the text child must not paint the host's red background ({name}), got {red} red px");
         }
     }
+    [Test]
+    public static void VerticalAlignTop_TextHangsOnHostBaseline()
+    {
+        // CSS 2.1 §10.8.1 / §9.2.1.1: the bare text inside a 'vertical-align: top' span is an
+        // anonymous inline box with the initial 'vertical-align: baseline', so it sits on the
+        // span's baseline beside a taller child; it does not top-align on its own
+        // (anonymous-inline-inherit-001).
+        var root = Layout(
+            "<!DOCTYPE html><html><body style='margin:0;font:20px/1 Ahem'>" +
+            "<div><span style='vertical-align:top'><span id='big' style='font-size:100px'>A</span><span id='x'>x</span></span></div>" +
+            "<div><span style='vertical-align:top'><span id='big2' style='font-size:100px'>A</span>x</span></div>" +
+            "</body></html>");
+        var big = FindNode(root, n => n.Id == "big")!;
+        var x = FindNode(root, n => n.Id == "x")!;
+        var big2 = FindNode(root, n => n.Id == "big2")!;
+        var bare = big2.Parent!.Children.First(c => c.TagName == "#text" && (c.Text ?? "").Contains('x'));
+        // Ahem's baseline is 0.8em below the top: 80px for the 100px 'A', 16px for the 20px 'x'.
+        var bigBaseline = big.Box.ContentBox.Top + 80f;
+        var xBaseline = x.Box.ContentBox.Top + 16f;
+        True(Math.Abs(bigBaseline - xBaseline) < 0.5f,
+            $"the span child 'x' shares the host's baseline ({bigBaseline}), got {xBaseline}");
+        var big2Baseline = big2.Box.ContentBox.Top + 80f;
+        var bareBaseline = bare.Box.ContentBox.Top + 16f;
+        True(Math.Abs(big2Baseline - bareBaseline) < 0.5f,
+            $"the bare text 'x' shares the host's baseline ({big2Baseline}), got {bareBaseline}");
+    }
 }
