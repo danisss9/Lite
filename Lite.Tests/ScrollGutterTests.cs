@@ -145,4 +145,33 @@ public static class ScrollGutterTests
                 $"pass {pass}: the escaped abspos child must not widen the content past the box (the 200px full-width thumb the references render), got {ss.ContentWidth}");
         }
     }
+
+    [Test]
+    public static void MaxHeightClampedAutoBox_TracksVerticalScrollExtent()
+    {
+        // The parked max-height finding: an 'overflow: auto' box whose height comes from
+        // 'max-height' clamping its natural content has no explicit height, so the auto-height
+        // branch tracked only the width axis and the clamp never re-checked the vertical — the
+        // box could not scroll to its cut-off content. §11.1.1: the scrollable area spans the
+        // box's laid-out content; with the clamp the container is the clamped height.
+        // Two passes mirror the render pipeline: the state must survive a re-layout.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><style>body{margin:0}" +
+            "#s{width:200px;max-height:100px;overflow:auto} #c{height:300px}</style>" +
+            "<div id=\"s\"><div id=\"c\"></div></div>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        var s = FindId(page.Root, "s")!;
+        for (var pass = 0; pass < 2; pass++)
+        {
+            BoxEngine.Layout(page.Root, 800, 600);
+            var ss = s.ScrollState;
+            True(ss is not null, $"pass {pass}: the clamped auto box must track its scroll state");
+            True(Math.Abs(ss!.ContentHeight - 300f) < 0.5f,
+                $"pass {pass}: content extent is the natural 300px, got {ss.ContentHeight}");
+            True(Math.Abs(ss.ContainerHeight - 100f) < 0.5f,
+                $"pass {pass}: the container is the max-height-clamped 100px, got {ss.ContainerHeight}");
+            True(ss.ContainerHeight < ss.ContentHeight,
+                $"pass {pass}: the box must be scrollable vertically");
+        }
+    }
 }
