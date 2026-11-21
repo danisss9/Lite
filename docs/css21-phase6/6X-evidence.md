@@ -172,3 +172,28 @@ the plan's 19 November decision would be reversed.
   - **Checks:** build Release 0 warnings/errors; units 735/735; curated gates `css21` 51/0/1 xfail,
     `wpt` 86/0/2 xfail; `--suite css21-inventory` 9,290 WPT / 9,364 official / 18,086 screen
     blockers / 570 print blockers.
+- **21 November — clear-cut CSS 2.2 `later-feature` and defective official reference reclassifications (one commit, evidence only).**
+  - **6 WPT cases → `later-feature`** (all assert post-2011 CSS 2.2 changes contradicting the
+    pinned 2011-06-07 Recommendation; `media` and `requirementIds` cleared, contradicting 2.1
+    sentences quoted in `rationale`):
+    - `css/CSS2/normal-flow/max-height-separates-margin.html` (CSS 2.2 `s.8.3.1c` vs CSS 2.1
+      §8.3.1 `'auto'` computed height; mutually exclusive with passing `margin-collapse-038`).
+    - `css/CSS2/cascade/inherit-computed-001.html` (CSS 2.2 `s.6.2.1` vs CSS 2.1 §8.5.2
+      `border-*-color` initial `"the value of the 'color' property"` and Computed value `"the
+      computed value is the same as the specified value"`).
+    - `css/CSS2/visudet/inline-block-baseline-003.xht`..`006.xht` (CSS 2.2 `s.10.8.1` vs CSS 2.1
+      §10.8.1 `"The baseline of an 'inline-block' is the baseline of its last line box in the
+      normal flow, unless it has either no in-flow line boxes or if its 'overflow' property has a
+      computed value other than 'visible', in which case the baseline is the bottom margin edge."`).
+  - **2 official cases → `defective` (`contradicts-target`) with passing WPT `maintained-twin` replacements:**
+    - `css21-official/html4/text-indent-intrinsic-003.htm` → `css/CSS2/text/text-indent-intrinsic-003.xht`
+    - `css21-official/html4/text-indent-intrinsic-004.htm` → `css/CSS2/text/text-indent-intrinsic-004.xht`
+    - Both 2011-03-23 `-ref.htm` files gave `width: 0` / `width: 1em` for the `&#x200B;` wrapped
+      lines contradicting §16.1 (`"This property specifies the indentation of the first line of text
+      in a block container."`); WPT fixed both references to `1em` / `3em` and both WPT twins pass.
+  - **Deferred to user judgment (not recorded yet):** `vertical-align-sub-001` / `vertical-align-super-001`
+    (official + WPT, 4 cases) and `css/CSS2/cascade-import/cascade-import-005..012.xht` (8 cases).
+  - **Checks:** build Release succeeded; units 735/735; curated gates `css21` 51/0/1 xfail, `wpt`
+    86/0/2 xfail; `--suite css21-inventory` 9,290 WPT / 9,364 official / 18,080 screen blockers
+    (15 `defective-without-passing-replacement`, 28 `implemented-without-evidence`, 17,877
+    `missing-case`, 10 `missing-evidence`, 150 `unimplemented`) / 570 print blockers.

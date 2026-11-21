@@ -19481,14 +19481,10 @@
     },
     {
       "path": "css/CSS2/cascade/inherit-computed-001.html",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.2.1. cites CSS 2.2 anchors (same anchor names as the pinned 2.1 target; the citation is recorded, not adopted as a target change). cites later specifications: http://www.w3.org/TR/CSS22/changes.html#s.6.2.1.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.6.2.1"
-      ]
+      "classification": "later-feature",
+      "rationale": "Reviewed 2026-11-21: CSS 2.2 change (links http://www.w3.org/TR/CSS22/changes.html#s.6.2.1) asserting that border: inherit on em inherits the parent's resolved border color rather than em's color. Contradicts CSS 2.1 REC (2011-06-07) 8.5.2, where border-*-color has Initial \"the value of the 'color' property\" and Computed value \"the computed value is the same as the specified value\" (so omitting border-color on p leaves its computed value as the value of the color property, which resolves to em's color: red).",
+      "media": [],
+      "requirementIds": []
     },
     {
       "path": "css/CSS2/cascade/inherit-computed-002.html",
@@ -55233,14 +55229,10 @@
     },
     {
       "path": "css/CSS2/normal-flow/max-height-separates-margin.html",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.8.3.1. cites CSS 2.2 anchors (same anchor names as the pinned 2.1 target; the citation is recorded, not adopted as a target change).",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.8.3.1"
-      ]
+      "classification": "later-feature",
+      "rationale": "Reviewed 2026-11-21: CSS 2.2 change (s.8.3.1c, links https://www.w3.org/TR/CSS22/box.html#collapsing-margins) asserting that max-height separates a parent bottom margin from its last in-flow child bottom margin. Contradicts CSS 2.1 REC (2011-06-07) 8.3.1: \"Two margins are adjoining if and only if: ... bottom margin of a last in-flow child and bottom margin of its parent if the parent has 'auto' computed height\" (a max-height clamp does not change the computed value of height from auto). Mutually exclusive with passing CSS 2.1 case margin-collapse-038 (official + WPT).",
+      "media": [],
+      "requirementIds": []
     },
     {
       "path": "css/CSS2/normal-flow/max-width-001.xht",
@@ -99189,47 +99181,31 @@
     },
     {
       "path": "css/CSS2/visudet/inline-block-baseline-003.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.8.1. cites CSS 2.2 anchors (same anchor names as the pinned 2.1 target; the citation is recorded, not adopted as a target change). cites later specifications: http://www.w3.org/TR/CSS22/changes.html#s.10.8.1.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.8.1"
-      ]
+      "classification": "later-feature",
+      "rationale": "Reviewed 2026-11-21: CSS 2.2 proposal (links http://www.w3.org/TR/CSS22/changes.html#s.10.8.1) asserting that the baseline of an inline-block with non-visible overflow is the higher of its bottom margin edge or its last line box baseline. Contradicts CSS 2.1 REC (2011-06-07) 10.8.1: \"The baseline of an 'inline-block' is the baseline of its last line box in the normal flow, unless it has either no in-flow line boxes or if its 'overflow' property has a computed value other than 'visible', in which case the baseline is the bottom margin edge.\"",
+      "media": [],
+      "requirementIds": []
     },
     {
       "path": "css/CSS2/visudet/inline-block-baseline-004.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.8.1. cites CSS 2.2 anchors (same anchor names as the pinned 2.1 target; the citation is recorded, not adopted as a target change). cites later specifications: http://www.w3.org/TR/CSS22/changes.html#s.10.8.1.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.8.1"
-      ]
+      "classification": "later-feature",
+      "rationale": "Reviewed 2026-11-21: CSS 2.2 proposal (links http://www.w3.org/TR/CSS22/changes.html#s.10.8.1) asserting that the baseline of an inline-block with non-visible overflow is the higher of its bottom margin edge or its last line box baseline. Contradicts CSS 2.1 REC (2011-06-07) 10.8.1: \"The baseline of an 'inline-block' is the baseline of its last line box in the normal flow, unless it has either no in-flow line boxes or if its 'overflow' property has a computed value other than 'visible', in which case the baseline is the bottom margin edge.\"",
+      "media": [],
+      "requirementIds": []
     },
     {
       "path": "css/CSS2/visudet/inline-block-baseline-005.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.8.1. cites CSS 2.2 anchors (same anchor names as the pinned 2.1 target; the citation is recorded, not adopted as a target change). cites later specifications: http://www.w3.org/TR/CSS22/changes.html#s.10.8.1.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.8.1"
-      ]
+      "classification": "later-feature",
+      "rationale": "Reviewed 2026-11-21: CSS 2.2 proposal (links http://www.w3.org/TR/CSS22/changes.html#s.10.8.1) asserting that the baseline of an inline-block with non-visible overflow is the higher of its bottom margin edge or its last line box baseline. Contradicts CSS 2.1 REC (2011-06-07) 10.8.1: \"The baseline of an 'inline-block' is the baseline of its last line box in the normal flow, unless it has either no in-flow line boxes or if its 'overflow' property has a computed value other than 'visible', in which case the baseline is the bottom margin edge.\"",
+      "media": [],
+      "requirementIds": []
     },
     {
       "path": "css/CSS2/visudet/inline-block-baseline-006.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.10.8.1. cites CSS 2.2 anchors (same anchor names as the pinned 2.1 target; the citation is recorded, not adopted as a target change). cites later specifications: http://www.w3.org/TR/CSS22/changes.html#s.10.8.1.",
-      "media": [
-        "screen"
-      ],
-      "requirementIds": [
-        "css21.10.8.1"
-      ]
+      "classification": "later-feature",
+      "rationale": "Reviewed 2026-11-21: CSS 2.2 proposal (links http://www.w3.org/TR/CSS22/changes.html#s.10.8.1) asserting that the baseline of an inline-block with non-visible overflow is the higher of its bottom margin edge or its last line box baseline. Contradicts CSS 2.1 REC (2011-06-07) 10.8.1: \"The baseline of an 'inline-block' is the baseline of its last line box in the normal flow, unless it has either no in-flow line boxes or if its 'overflow' property has a computed value other than 'visible', in which case the baseline is the bottom margin edge.\"",
+      "media": [],
+      "requirementIds": []
     },
     {
       "path": "css/CSS2/visudet/inline-block-baseline-010.xht",
@@ -197752,24 +197728,48 @@
     },
     {
       "path": "css21-official/html4/text-indent-intrinsic-003.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.16.1.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.16.1. Reviewed 2026-11-21: defective 2011-03-23 reference (width: 0 and width: 1em for the U+200B wrapped lines); the WPT-maintained twin fixes the reference to 1em and 3em and carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.16.1"
+      ],
+      "defect": {
+        "kind": "contradicts-target",
+        "citation": "CSS 2.1 REC (2011-06-07) 16.1: \"This property specifies the indentation of the first line of text in a block container.\"",
+        "detail": "The 2011-03-23 official reference text-indent-intrinsic-003-ref.htm gives width: 0 and width: 1em for the two &#x200B; lines where the second line after the zero-width break opportunity is 1em and 3em wide (unindented, since text-indent: -3em applies only to the first formatted line per 16.1). The WPT-maintained twin fixes those reference boxes to 1em and 3em and passes."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/text/text-indent-intrinsic-003.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
       "path": "css21-official/html4/text-indent-intrinsic-004.htm",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.16.1.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-05: official-suite case classified applicable. maps to obligations css21.16.1. Reviewed 2026-11-21: defective 2011-03-23 reference (width: 0 and width: 1em for the U+200B wrapped lines); the WPT-maintained twin fixes the reference to 1em and 3em and carries the obligation.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.16.1"
+      ],
+      "defect": {
+        "kind": "contradicts-target",
+        "citation": "CSS 2.1 REC (2011-06-07) 16.1: \"This property specifies the indentation of the first line of text in a block container.\"",
+        "detail": "The 2011-03-23 official reference text-indent-intrinsic-004-ref.htm gives width: 0 and width: 1em for the two &#x200B; lines where the second line after the zero-width break opportunity is 1em and 3em wide (unindented, since text-indent: -3em applies only to the first formatted line per 16.1). The WPT-maintained twin fixes those reference boxes to 1em and 3em and passes."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/text/text-indent-intrinsic-004.xht",
+          "relation": "maintained-twin"
+        }
       ]
     },
     {
