@@ -52,11 +52,82 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
   ascent 36.21px at 40px). This is the font metric and the §10.8.1 strut, not the cascade.
   **From 6.K (this batch) to 6.J + 6.A.**
 
+- **`default-attribute-selector-007/008` (official + WPT, 4 cases), from 6.K to 6.I (Drawer
+  painter):** the selectors are correct — the test's `input`/`button` green background never
+  paints because `Drawer.PaintInput` (Lite/Drawer.cs:1771) fills text-like inputs with
+  `SKColors.White` and a hardcoded grey border, and `PaintButton` (line 2204) paints native
+  chrome; the author `background-color`/border is not consulted. The painted dominant colour is
+  the chrome grey (`#cacaca` / `#a0a0a0`). A fix is: when the element carries an author
+  background or border, `DrawBorders` + `GetBackgroundColor` instead of the native chrome.
+
+- **`cascade-001/004/006/010/011` and `html-precedence-003` (official), from 6.K to 6.X
+  (evidence/vendor):** the official `html4/support/cascade.css` and
+  `html4/support/html-precedence-003.css` are missing from the vendored official tree, so
+  `WptVisualPage.UserStyleSession` finds no user sheet and the prerequisite user styles never
+  apply. The maintained WPT copies (`css/CSS2/cascade/support/cascade.css`,
+  `support/html-precedence-003.css`) exist and are identical. `cascade-012`'s imported sheet was
+  a real engine bug and is fixed in commit 3.
+
+- **`html-precedence-004/005` (WPT), from 6.K to 6.M:** the user stylesheet is quoted inside the
+  test text, not linked; a harness cannot know it. Manual-pending, like the existing
+  user-stylesheet judges.
+- **`pseudo-007` (official + WPT), from 6.K to 6.X:** the maintained WPT twin's `rel=match` is
+  `universal-selector-002-ref.xht` (blue borders around viewport and div) while the test only
+  sets `div:fiRsT-cHiLd { color: green }` and carries no border rule. No engine can match that
+  reference; the official copy's own diagnostic passes. The reference (or the match) needs fixing
+  upstream.
+- **`pseudo-008` (official + WPT), from 6.K to 6.A/6.F:** `<div> </div>` between `::before`
+  ("Filler") and `::after` ("Text") carries a single space that must collapse to one space
+  (reference: "Filler Text"). Our generated line comes out without the space (a collapsible
+  whitespace-only text run between the two boxes is dropped).
+- **`c64-uri-000`, from 6.K to 6.X:** the test's own support sheets (`css1test64a.css`,
+  `css1test64b.css`) set `background: red url(support/swatch-red.png)` for `.one`/`.two`, and
+  `swatch-red.png` is solid red, while the page and the WPT reference demand three GREEN
+  backgrounds. The test contradicts its own stylesheets as vendored.
+- **`numbers-units-018`, from 6.K to 6.C:** §4.3.2 on the root element — `20em`/`20ex` in
+  `html { margin-left: 20em; margin-top: 20ex }` must use the INITIAL font size (16px), not the
+  root's own `font: 20px`. The em/ex conversion lives in `Lite/Layout/CssUnits.cs` (6.C).
+- **`html-attribute-021/022` (iframe `marginheight`/`marginwidth`), from 6.K to 6.H:** the nested
+  document's `* { background-color: green }` on `html`/`body` must propagate to the frame's
+  canvas; our iframe paints white (no canvas-background propagation for child documents), so the
+  frame shows no green box at all. The margin attributes themselves are low-precedence hints and
+  not the blocker.
+- **`specificity-011` (WPT), from 6.K: parked for 6.F/6.I.** `div :after { content: "PASSED";
+  border-top: solid teal }` matches (the base selector resolves to `div *`), but the reference's
+  teal top / blue bottom borders on the generated inline do not match ours; needs a render diff
+  of the ::after border painting, not the cascade.
+- **`first-child-selector-003` (WPT), from 6.K: needs a selector-engine look.** `:root:first-child
+  { color: green }` must beat `html { color: red }`; AngleSharp's match of `:root:first-child`
+  on the document element is the suspect.
+
 ## Edits outside owned files
 
 - `Lite/Parser.cs`: removed the old regex-based `InlineImports` method body (36 lines) so the spec-compliant `InlineImports` lives in owned `Lite/Parser.Cascade.cs`. The HTML5 gate was not rerun (per lane rules).
 
 ## Progress
+
+### Batch 2, commit 3 - `! important` (whitespace) keeps its priority (AngleSharp.Css patch 013)
+
+- **Spec:** CSS 2.1 §4.1.9: a declaration's priority is `!` followed by optional whitespace and
+  the keyword `important`.
+- **Root cause:** `CssBuilder.CreateValue` required the exact string `!important` at the end of
+  the value, so `cascade-012`'s imported `support/cascade-012.css` (`.test { color: green !
+  important }`) lost its priority and the later author `color: red` won. The host's
+  `NormalizeImportantBangs` only rewrites `<style>` blocks in the HTML source, never `@import`ed
+  text — the fork patch covers every sheet.
+- **Moved (1 case):** `css/CSS2/cascade/cascade-012.xht`.
+- **Still failing (related):** none of the other `! important` cases; K-pass held.
+- **Checks:**
+  - Build: succeeded.
+  - Units: 738 passed, 0 failed, including the new
+    `CssErrorRecoveryTests.BangImportant_AllowsWhitespaceBeforeTheKeyword` (fails on pristine).
+  - Curated gates: `css21` 51/0/1 xfail, `wpt` 86/0/2 xfail.
+  - Lane K: 3/37 official, 7/65 WPT (from 0/37 + 1/65 at batch start: **9 cases moved** in the
+    batch).
+  - `K-pass.txt`: 1,166/1,166; Canary: 960/960.
+  - `A-pass.txt` (parser change reaches every stylesheet): 1,405/1,405.
+  - Fork patch: next number is now 014 in `Lite.AngleSharp.Css/README.md`. The HTML5 gate was
+    not rerun (lane rules); the fork is shared with the HTML5 track.
 
 ### Batch 2, commit 2 - `:lang()` language ranges, document language and override-channel inheritance (§5.11.4 / §6.2.1)
 
