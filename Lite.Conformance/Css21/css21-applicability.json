@@ -18600,90 +18600,186 @@
     },
     {
       "path": "css/CSS2/cascade-import/cascade-import-005.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. cites later specifications: http://www.w3.org/TR/css-cascade-3/#cascading; http://www.w3.org/TR/css-cascade-4/#cascading.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. Reviewed 2026-11-21 (user ruling): defective missing-input; fetches stylesheets from unvendored external CGI host http://software.hixie.ch/utilities/cgi/test-tools/delayed-file and requires interactive alternate-stylesheet selection (HTML 4.01 14.3.1, not CSS 2.1 6.4.1). Self-contained passing reftest css/CSS2/cascade/sort-by-order-001.xht carries css21.6.4.1.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.6.4.1"
+      ],
+      "defect": {
+        "kind": "missing-input",
+        "citation": "CSS 2.1 REC (2011-06-07) 6.4.1: \"Finally, sort by order specified: if two declarations have the same weight, origin and specificity, the latter specified wins.\" (HTML 4.01 14.3.1: \"User agents should also allow users to select from alternate style sheets.\")",
+        "detail": "All stylesheet inputs are fetched from the unvendored external third-party CGI endpoint http://software.hixie.ch/utilities/cgi/test-tools/delayed-file?pause=... rather than pinned WPT resources, and the test requires interactive alternate-stylesheet selection (plus <meta http-equiv=\"Link\"> in 007/008/011/012) outside CSS 2.1 6.4.1. css/CSS2/cascade/sort-by-order-001.xht tests 6.4.1 document-order cascading as a self-contained reftest."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/cascade/sort-by-order-001.xht",
+          "relation": "authored-equivalent"
+        }
       ]
     },
     {
       "path": "css/CSS2/cascade-import/cascade-import-006.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. cites later specifications: http://www.w3.org/TR/css-cascade-3/#cascading; http://www.w3.org/TR/css-cascade-4/#cascading.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. Reviewed 2026-11-21 (user ruling): defective missing-input; fetches stylesheets from unvendored external CGI host http://software.hixie.ch/utilities/cgi/test-tools/delayed-file and requires interactive alternate-stylesheet selection (HTML 4.01 14.3.1, not CSS 2.1 6.4.1). Self-contained passing reftest css/CSS2/cascade/sort-by-order-001.xht carries css21.6.4.1.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.6.4.1"
+      ],
+      "defect": {
+        "kind": "missing-input",
+        "citation": "CSS 2.1 REC (2011-06-07) 6.4.1: \"Finally, sort by order specified: if two declarations have the same weight, origin and specificity, the latter specified wins.\" (HTML 4.01 14.3.1: \"User agents should also allow users to select from alternate style sheets.\")",
+        "detail": "All stylesheet inputs are fetched from the unvendored external third-party CGI endpoint http://software.hixie.ch/utilities/cgi/test-tools/delayed-file?pause=... rather than pinned WPT resources, and the test requires interactive alternate-stylesheet selection (plus <meta http-equiv=\"Link\"> in 007/008/011/012) outside CSS 2.1 6.4.1. css/CSS2/cascade/sort-by-order-001.xht tests 6.4.1 document-order cascading as a self-contained reftest."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/cascade/sort-by-order-001.xht",
+          "relation": "authored-equivalent"
+        }
       ]
     },
     {
       "path": "css/CSS2/cascade-import/cascade-import-007.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. cites later specifications: http://www.w3.org/TR/css-cascade-3/#cascading; http://www.w3.org/TR/css-cascade-4/#cascading.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. Reviewed 2026-11-21 (user ruling): defective missing-input; fetches stylesheets from unvendored external CGI host http://software.hixie.ch/utilities/cgi/test-tools/delayed-file and requires interactive alternate-stylesheet selection (HTML 4.01 14.3.1, not CSS 2.1 6.4.1). Self-contained passing reftest css/CSS2/cascade/sort-by-order-001.xht carries css21.6.4.1.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.6.4.1"
+      ],
+      "defect": {
+        "kind": "missing-input",
+        "citation": "CSS 2.1 REC (2011-06-07) 6.4.1: \"Finally, sort by order specified: if two declarations have the same weight, origin and specificity, the latter specified wins.\" (HTML 4.01 14.3.1: \"User agents should also allow users to select from alternate style sheets.\")",
+        "detail": "All stylesheet inputs are fetched from the unvendored external third-party CGI endpoint http://software.hixie.ch/utilities/cgi/test-tools/delayed-file?pause=... rather than pinned WPT resources, and the test requires interactive alternate-stylesheet selection (plus <meta http-equiv=\"Link\"> in 007/008/011/012) outside CSS 2.1 6.4.1. css/CSS2/cascade/sort-by-order-001.xht tests 6.4.1 document-order cascading as a self-contained reftest."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/cascade/sort-by-order-001.xht",
+          "relation": "authored-equivalent"
+        }
       ]
     },
     {
       "path": "css/CSS2/cascade-import/cascade-import-008.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. cites later specifications: http://www.w3.org/TR/css-cascade-3/#cascading; http://www.w3.org/TR/css-cascade-4/#cascading.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. Reviewed 2026-11-21 (user ruling): defective missing-input; fetches stylesheets from unvendored external CGI host http://software.hixie.ch/utilities/cgi/test-tools/delayed-file and requires interactive alternate-stylesheet selection (HTML 4.01 14.3.1, not CSS 2.1 6.4.1). Self-contained passing reftest css/CSS2/cascade/sort-by-order-001.xht carries css21.6.4.1.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.6.4.1"
+      ],
+      "defect": {
+        "kind": "missing-input",
+        "citation": "CSS 2.1 REC (2011-06-07) 6.4.1: \"Finally, sort by order specified: if two declarations have the same weight, origin and specificity, the latter specified wins.\" (HTML 4.01 14.3.1: \"User agents should also allow users to select from alternate style sheets.\")",
+        "detail": "All stylesheet inputs are fetched from the unvendored external third-party CGI endpoint http://software.hixie.ch/utilities/cgi/test-tools/delayed-file?pause=... rather than pinned WPT resources, and the test requires interactive alternate-stylesheet selection (plus <meta http-equiv=\"Link\"> in 007/008/011/012) outside CSS 2.1 6.4.1. css/CSS2/cascade/sort-by-order-001.xht tests 6.4.1 document-order cascading as a self-contained reftest."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/cascade/sort-by-order-001.xht",
+          "relation": "authored-equivalent"
+        }
       ]
     },
     {
       "path": "css/CSS2/cascade-import/cascade-import-009.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. cites later specifications: http://www.w3.org/TR/css-cascade-3/#cascading; http://www.w3.org/TR/css-cascade-4/#cascading.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. Reviewed 2026-11-21 (user ruling): defective missing-input; fetches stylesheets from unvendored external CGI host http://software.hixie.ch/utilities/cgi/test-tools/delayed-file and requires interactive alternate-stylesheet selection (HTML 4.01 14.3.1, not CSS 2.1 6.4.1). Self-contained passing reftest css/CSS2/cascade/sort-by-order-001.xht carries css21.6.4.1.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.6.4.1"
+      ],
+      "defect": {
+        "kind": "missing-input",
+        "citation": "CSS 2.1 REC (2011-06-07) 6.4.1: \"Finally, sort by order specified: if two declarations have the same weight, origin and specificity, the latter specified wins.\" (HTML 4.01 14.3.1: \"User agents should also allow users to select from alternate style sheets.\")",
+        "detail": "All stylesheet inputs are fetched from the unvendored external third-party CGI endpoint http://software.hixie.ch/utilities/cgi/test-tools/delayed-file?pause=... rather than pinned WPT resources, and the test requires interactive alternate-stylesheet selection (plus <meta http-equiv=\"Link\"> in 007/008/011/012) outside CSS 2.1 6.4.1. css/CSS2/cascade/sort-by-order-001.xht tests 6.4.1 document-order cascading as a self-contained reftest."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/cascade/sort-by-order-001.xht",
+          "relation": "authored-equivalent"
+        }
       ]
     },
     {
       "path": "css/CSS2/cascade-import/cascade-import-010.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. cites later specifications: http://www.w3.org/TR/css-cascade-3/#cascading; http://www.w3.org/TR/css-cascade-4/#cascading.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. Reviewed 2026-11-21 (user ruling): defective missing-input; fetches stylesheets from unvendored external CGI host http://software.hixie.ch/utilities/cgi/test-tools/delayed-file and requires interactive alternate-stylesheet selection (HTML 4.01 14.3.1, not CSS 2.1 6.4.1). Self-contained passing reftest css/CSS2/cascade/sort-by-order-001.xht carries css21.6.4.1.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.6.4.1"
+      ],
+      "defect": {
+        "kind": "missing-input",
+        "citation": "CSS 2.1 REC (2011-06-07) 6.4.1: \"Finally, sort by order specified: if two declarations have the same weight, origin and specificity, the latter specified wins.\" (HTML 4.01 14.3.1: \"User agents should also allow users to select from alternate style sheets.\")",
+        "detail": "All stylesheet inputs are fetched from the unvendored external third-party CGI endpoint http://software.hixie.ch/utilities/cgi/test-tools/delayed-file?pause=... rather than pinned WPT resources, and the test requires interactive alternate-stylesheet selection (plus <meta http-equiv=\"Link\"> in 007/008/011/012) outside CSS 2.1 6.4.1. css/CSS2/cascade/sort-by-order-001.xht tests 6.4.1 document-order cascading as a self-contained reftest."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/cascade/sort-by-order-001.xht",
+          "relation": "authored-equivalent"
+        }
       ]
     },
     {
       "path": "css/CSS2/cascade-import/cascade-import-011.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. cites later specifications: http://www.w3.org/TR/css-cascade-3/#cascading; http://www.w3.org/TR/css-cascade-4/#cascading.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. Reviewed 2026-11-21 (user ruling): defective missing-input; fetches stylesheets from unvendored external CGI host http://software.hixie.ch/utilities/cgi/test-tools/delayed-file and requires interactive alternate-stylesheet selection (HTML 4.01 14.3.1, not CSS 2.1 6.4.1). Self-contained passing reftest css/CSS2/cascade/sort-by-order-001.xht carries css21.6.4.1.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.6.4.1"
+      ],
+      "defect": {
+        "kind": "missing-input",
+        "citation": "CSS 2.1 REC (2011-06-07) 6.4.1: \"Finally, sort by order specified: if two declarations have the same weight, origin and specificity, the latter specified wins.\" (HTML 4.01 14.3.1: \"User agents should also allow users to select from alternate style sheets.\")",
+        "detail": "All stylesheet inputs are fetched from the unvendored external third-party CGI endpoint http://software.hixie.ch/utilities/cgi/test-tools/delayed-file?pause=... rather than pinned WPT resources, and the test requires interactive alternate-stylesheet selection (plus <meta http-equiv=\"Link\"> in 007/008/011/012) outside CSS 2.1 6.4.1. css/CSS2/cascade/sort-by-order-001.xht tests 6.4.1 document-order cascading as a self-contained reftest."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/cascade/sort-by-order-001.xht",
+          "relation": "authored-equivalent"
+        }
       ]
     },
     {
       "path": "css/CSS2/cascade-import/cascade-import-012.xht",
-      "classification": "applicable",
-      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. cites later specifications: http://www.w3.org/TR/css-cascade-3/#cascading; http://www.w3.org/TR/css-cascade-4/#cascading.",
+      "classification": "defective",
+      "rationale": "Reviewed 2026-10-07: WPT css/CSS2 case classified applicable. maps to obligations css21.6.4.1. Reviewed 2026-11-21 (user ruling): defective missing-input; fetches stylesheets from unvendored external CGI host http://software.hixie.ch/utilities/cgi/test-tools/delayed-file and requires interactive alternate-stylesheet selection (HTML 4.01 14.3.1, not CSS 2.1 6.4.1). Self-contained passing reftest css/CSS2/cascade/sort-by-order-001.xht carries css21.6.4.1.",
       "media": [
         "screen"
       ],
       "requirementIds": [
         "css21.6.4.1"
+      ],
+      "defect": {
+        "kind": "missing-input",
+        "citation": "CSS 2.1 REC (2011-06-07) 6.4.1: \"Finally, sort by order specified: if two declarations have the same weight, origin and specificity, the latter specified wins.\" (HTML 4.01 14.3.1: \"User agents should also allow users to select from alternate style sheets.\")",
+        "detail": "All stylesheet inputs are fetched from the unvendored external third-party CGI endpoint http://software.hixie.ch/utilities/cgi/test-tools/delayed-file?pause=... rather than pinned WPT resources, and the test requires interactive alternate-stylesheet selection (plus <meta http-equiv=\"Link\"> in 007/008/011/012) outside CSS 2.1 6.4.1. css/CSS2/cascade/sort-by-order-001.xht tests 6.4.1 document-order cascading as a self-contained reftest."
+      },
+      "replacements": [
+        {
+          "suite": "css21-wpt",
+          "path": "css/CSS2/cascade/sort-by-order-001.xht",
+          "relation": "authored-equivalent"
+        }
       ]
     },
     {

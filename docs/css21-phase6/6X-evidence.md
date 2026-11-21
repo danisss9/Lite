@@ -91,6 +91,17 @@ the plan's 19 November decision would be reversed.
 - **`background-animated-001` → keep applicable/implemented.** No change; the 19 November
   animated-image decision and the `image-animates` judge stand.
 
+### Rulings, 21 November
+
+- **`vertical-align-sub-001` & `vertical-align-super-001` (official + WPT, 4 cases) → keep applicable.**
+  Do not exclude CSS 2.1 tests for AA overdraw; leave AA fringe handling to 6.M / harness.
+- **`css/CSS2/cascade-import/cascade-import-005..012.xht` (8 WPT cases) → `defective` (`missing-input`).**
+  All 8 fetch stylesheets from the unvendored external CGI host
+  `http://software.hixie.ch/utilities/cgi/test-tools/delayed-file` and require interactive
+  alternate-stylesheet selection (HTML 4.01 §14.3.1, not CSS 2.1 §6.4.1). Paired with the
+  self-contained passing §6.4.1 reftest `css/CSS2/cascade/sort-by-order-001.xht` (`authored-equivalent`,
+  which carries `css21.6.4.1` on `screen`).
+
 ## Progress
 
 - **20 November — the xhtml1 variant (one commit, no engine changes).**
@@ -196,4 +207,15 @@ the plan's 19 November decision would be reversed.
   - **Checks:** build Release succeeded; units 735/735; curated gates `css21` 51/0/1 xfail, `wpt`
     86/0/2 xfail; `--suite css21-inventory` 9,290 WPT / 9,364 official / 18,080 screen blockers
     (15 `defective-without-passing-replacement`, 28 `implemented-without-evidence`, 17,877
+    `missing-case`, 10 `missing-evidence`, 150 `unimplemented`) / 570 print blockers.
+- **21 November — user rulings on `cascade-import-005..012` and `vertical-align-sub/super-001` (one commit, evidence only).**
+  - `css/CSS2/cascade-import/cascade-import-005..012.xht` (8 WPT cases) reclassified **`defective`
+    (`missing-input`)** with §6.4.1 and HTML 4.01 §14.3.1 cited, paired with self-contained passing
+    replacement `css/CSS2/cascade/sort-by-order-001.xht` (`authored-equivalent`, `css21.6.4.1` on
+    `screen`).
+  - `vertical-align-sub-001` and `vertical-align-super-001` (official + WPT, 4 cases) recorded as
+    ruled **keep applicable** (no applicability change; AA fringe handling stays with 6.M / harness).
+  - **Checks:** build Release succeeded; units 735/735; curated gates `css21` 51/0/1 xfail, `wpt`
+    86/0/2 xfail; `--suite css21-inventory` 9,290 WPT / 9,364 official / **18,080 screen blockers**
+    (23 `defective-without-passing-replacement`, 28 `implemented-without-evidence`, 17,869
     `missing-case`, 10 `missing-evidence`, 150 `unimplemented`) / 570 print blockers.
