@@ -704,7 +704,17 @@ internal static partial class Drawer
         // Generic inline: if this node carries text (e.g. <strong>, <em>, <mark>, <code>, #TEXT)
         if (!string.IsNullOrEmpty(node.DisplayText))
         {
-            var bgColor = node.GetBackgroundColor();
+            // §9.2.1.1 / §6.2.1: an anonymous inline box (synthesized #text) inherits the
+            // inheritable properties of its parent but takes the INITIAL value for every
+            // non-inherited one — its background is transparent, not the host's. Resolving the
+            // shared style object's 'background-color' here painted the host's colour over each
+            // line fragment, erasing the block's background image under every text run
+            // (c548-ln-ht-003's glyph-row stripes). A §9.2.1.1 block-in-inline PIECE keeps the
+            // legacy paint: the piece is the continuation of the same inline box, no paint path
+            // lays a background of the piece's own behind its content yet, and its text
+            // children carrying the box's background is visually equivalent.
+            var paintsOwnBackground = !node.TagName.StartsWith('#') || node.Parent?.SplitFrom is not null;
+            var bgColor = paintsOwnBackground ? node.GetBackgroundColor() : SKColors.Transparent;
             using var font = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
 
@@ -722,8 +732,9 @@ internal static partial class Drawer
                         canvas.DrawRect(fragmentBox, fragBg);
                     }
                     // §14.2: a background image paints and repeats over the inline box's
-                    // content area, one area per line fragment.
-                    DrawBackgroundImageIn(canvas, node, fragmentBox);
+                    // content area, one area per line fragment (element inlines only — an
+                    // anonymous #text box paints no background layers of its own, §9.2.1.1).
+                    if (paintsOwnBackground) DrawBackgroundImageIn(canvas, node, fragmentBox);
                     DrawWrappedText(canvas, node, text, rect.Left, rect.Top, SliceWidth(node, text, font, rect.Width), font, paint, lineAligned: true);
                 }
                 return;
@@ -738,8 +749,9 @@ internal static partial class Drawer
                 canvas.DrawRect(inlineBox.PaddingBox, bgPaint);
             }
             // §14.2: the background image is positioned against the same padding box and tiles
-            // over it; the inline box has no block decoration pass, so it paints here.
-            DrawBackgroundImageIn(canvas, node, inlineBox.PaddingBox);
+            // over it; the inline box has no block decoration pass, so it paints here
+            // (element inlines only — an anonymous #text box paints no background layers, §9.2.1.1).
+            if (paintsOwnBackground) DrawBackgroundImageIn(canvas, node, inlineBox.PaddingBox);
             // NOTE: an inline box's BORDERS are still not drawn. Reserving room for them in the
             // line and stroking them here was measured against the CSS 2.1 suite and came out
             // flat: it fixes the tests that expect a visible inline border, and breaks the same
@@ -1385,6 +1397,13 @@ internal static partial class Drawer
         // the element that produced them — painting "their" borders would paint the HOST's
         // border as an inner ring (content-white-space-001's bordered div around a :before).
         var paintsOwnBorders = !node.TagName.StartsWith('#');
+        // §9.2.1.1 / §6.2.1: an anonymous #text box takes the INITIAL value for every
+        // non-inherited property — its background is transparent, not the host's. The host's
+        // colour painted here covered each fragment's content area, wiping the block's
+        // background image under every text run (c548-ln-ht-003). A §9.2.1.1 block-in-inline
+        // piece's text keeps the legacy paint: no path paints the piece's own background behind
+        // its content yet, and the piece is the continuation of the same inline box.
+        var paintsOwnBackground = paintsOwnBorders || node.Parent?.SplitFrom is not null;
         // §14.2: a boxless inline wrapper's BACKGROUND paints over each line fragment's padding
         // box too — it was never painted, so an inline whose content is another inline showed
         // no background at all, not even under its child's margin (inline-formatting-context-002:
@@ -1449,7 +1468,7 @@ internal static partial class Drawer
                 var (rect, text) = fragments[fi];
                 if (hitTarget) _hitRegions.Add(CursorRegion(rect, node, nodeKey: node.NodeKey));
                 var box = FragmentBox(fi, BoxEngine.InlineContentArea(node, rect));
-                if (bgColor != SKColors.Transparent)
+                if (paintsOwnBackground && bgColor != SKColors.Transparent)
                 {
                     using var fragBg = new SKPaint { Color = bgColor };
                     canvas.DrawRect(box.PaddingBox, fragBg);
@@ -1468,7 +1487,7 @@ internal static partial class Drawer
             return true;
         }
         var decorated = string.IsNullOrEmpty(node.DisplayText) ? node.Box : BoxEngine.InlineContentArea(node, node.Box);
-        if (bgColor != SKColors.Transparent && !wrapperBackground)
+        if (paintsOwnBackground && bgColor != SKColors.Transparent && !wrapperBackground)
         {
             using var bgPaint = new SKPaint { Color = bgColor };
             canvas.DrawRect(decorated.PaddingBox, bgPaint);

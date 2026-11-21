@@ -1,6 +1,8 @@
+using Lite;
 using Lite.Layout;
 using Lite.Models;
 using Lite.Extensions;
+using SkiaSharp;
 using static Lite.Tests.TestRunner;
 
 namespace Lite.Tests;
@@ -187,5 +189,69 @@ public static class InlineFormattingTests
             $"a number still inherits as the factor (2 x 40px = 80px), got {c.GetLineHeight(c.GetFontSize())}");
         True(Math.Abs(a.Box.ContentBox.Height - 10f) < 0.5f,
             $"the 50px child's line box is 10px tall, got {a.Box.ContentBox.Height}");
+    }
+
+    private static string GreenTile() =>
+        "url(data:image/png;base64," + Convert.ToBase64String(File.ReadAllBytes(
+            Path.Combine(Lite.Conformance.Harness.ConformancePaths.Vendor,
+                "css21-official-20110323", "html4", "support", "green15x15.png"))) + ")";
+
+    private static (int Green, int Red) CountColors(SKBitmap bitmap, SKRect area)
+    {
+        True(area.Width > 3 && area.Height > 3, $"the painted area should be laid out, got {area}");
+        var green = 0;
+        var red = 0;
+        for (var y = Math.Max(1, (int)area.Top + 1); y < Math.Min(bitmap.Height - 1, (int)area.Bottom - 1); y++)
+            for (var x = Math.Max(1, (int)area.Left + 1); x < Math.Min(bitmap.Width - 1, (int)area.Right - 1); x++)
+            {
+                var c = bitmap.GetPixel(x, y);
+                if (c.Red == 0 && c.Green == 128 && c.Blue == 0) green++;
+                if (c.Red == 255 && c.Green == 0 && c.Blue == 0) red++;
+            }
+        return (green, red);
+    }
+
+    [Test]
+    public static void AnonymousText_DoesNotPaintHostBackground()
+    {
+        // CSS 2.1 §9.2.1.1 / §6.2.1: an anonymous inline box (the parser's #text) inherits the
+        // inheritable properties and takes the INITIAL value for every non-inherited one — its
+        // background is transparent, never the host's. The text child resolved the host's
+        // shared style object's 'background-color' and painted it over each line fragment's
+        // content area, erasing the block's background image under every text run
+        // (c548-ln-ht-003's glyph-row stripes). Both painting paths are checked: a wrapped
+        // text child (per-line fragments) and a single-line one.
+        var greenTile = GreenTile();
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><head><style>body{margin:0}" +
+            "#w{background-color:red;font:20px Ahem;width:100px}" +
+            "#s{background-color:red;font:20px Ahem;width:300px}</style></head>" +
+            "<body><div id=w>aa aa aa</div><div id=s>aa aa</div></body></html>",
+            isSrcdoc: true, "http://test/", 400, 300);
+        var wrapped = FindNode(page.Root, n => n.Id == "w")!;
+        var single = FindNode(page.Root, n => n.Id == "s")!;
+        foreach (var n in new[] { wrapped, single })
+        {
+            n.StyleOverrides["background-image"] = greenTile;
+            n.StyleOverrides["background-repeat"] = "repeat";
+        }
+        using var bitmap = Drawer.DrawToBitmap(400, 300, page.Root, new Viewport { ViewportHeight = 300 });
+        var dbg = new List<string>();
+        foreach (var (box, name) in new[] { (wrapped.Box.ContentBox, "wrapped"), (single.Box.ContentBox, "single-line") })
+        {
+            dbg.Add($"DBG {name}: box=({box.Left},{box.Top}) {box.Width}x{box.Height} wfrags={wrapped.InlineFragments?.Count ?? 0} sfrags={single.InlineFragments?.Count ?? 0}");
+            var (green, red) = CountColors(bitmap, box);
+            dbg.Add($"DBG {name}: green={green} red={red}");
+        }
+        File.WriteAllLines("C:\\Repos\\Lite\\.claude\\worktrees\\p6-a\\Lite.Conformance\\artifacts\\unitdbg2.log", dbg);
+        using var encoded = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+        using var fs = File.OpenWrite("C:\\Repos\\Lite\\.claude\\worktrees\\p6-a\\Lite.Conformance\\artifacts\\unitdbg2.png");
+        encoded.SaveTo(fs);
+        foreach (var (box, name) in new[] { (wrapped.Box.ContentBox, "wrapped"), (single.Box.ContentBox, "single-line") })
+        {
+            var (green, red) = CountColors(bitmap, box);
+            True(green > 0, $"the block's background image should show under the text ({name})");
+            True(red == 0, $"the text child must not paint the host's red background ({name}), got {red} red px");
+        }
     }
 }
