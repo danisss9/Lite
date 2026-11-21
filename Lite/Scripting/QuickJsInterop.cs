@@ -39,6 +39,7 @@ public sealed class Engine : IDisposable
     private QuickJsValue? _makeProxy;
     private QuickJsValue? _makeConstructor;
     private QuickJsValue? _makeDynamicProxy;
+    private QuickJsValue? _makeStyleProxy;
     private QuickJsValue? _stringify;
     private bool _elementProtoInstalled;
     private QuickJsValue? _elemGet;
@@ -226,6 +227,43 @@ public sealed class Engine : IDisposable
         var hostType = value.GetType();
         var typeMembers = GetTypeMembers(hostType);
         var indexer = typeMembers.IntIndexer;
+        if (value is JsStyle)
+        {
+            // CSSOM's CSSStyleDeclaration is a named-property object: `style['margin-left']`
+            // and `style.setProperty('margin-left', …)` are the same mutation, and the
+            // hyphenated name is not a bound C# member (only `marginLeft` is). Without this
+            // proxy a scripted `el.style[prop] = value` silently became an expando on the
+            // wrapper, so floats-wrap-bfc-with-margin's generated BFCs never received their
+            // negative margins.
+            if (_indexProxies.TryGetValue(value, out var cachedStyle)) return cachedStyle.Clone();
+            // The cached proxy traps keep reading the target, so neither may be disposed here.
+            var styleTarget = _realm.HostObjects.Wrap(value, binding => BindMembers(typeMembers, binding));
+            if (!_branded.Contains(value)) Brand(styleTarget, value);
+            _makeStyleProxy ??= _realm.Eval("""
+                (target) => new Proxy(target, {
+                  // CSSOM named properties: the hyphenated form is canonical, and the camelCase
+                  // form is the IDL attribute alias (`style.flexWrap` ≡ `style['flex-wrap']`).
+                  // Unbound camelCase names must be forwarded as their hyphenated property, or
+                  // a scripted write becomes an expando that layout never sees.
+                  _cssName(p) { return p.replace(/[A-Z]/g, c => '-' + c.toLowerCase()); },
+                  get(t, p, r) {
+                    if (typeof p === 'string' && !Reflect.has(t, p)) return t.getPropertyValue(this._cssName(p)) || '';
+                    return Reflect.get(t, p, r);
+                  },
+                  set(t, p, v, r) {
+                    if (typeof p === 'string' && !Reflect.has(t, p)) { t.setProperty(this._cssName(p), String(v)); return true; }
+                    return Reflect.set(t, p, v, r);
+                  },
+                  deleteProperty(t, p) {
+                    if (typeof p === 'string' && !Reflect.has(t, p)) { t.removeProperty(this._cssName(p)); return true; }
+                    return Reflect.deleteProperty(t, p);
+                  }
+                })
+                """);
+            var styleProxy = _makeStyleProxy.Call(arguments: [styleTarget]);
+            CacheIndexProxy(value, styleProxy);
+            return styleProxy.Clone();
+        }
         if (indexer is null)
         {
             var useElementProto = value is JsElement && EnsureElementPrototype();
