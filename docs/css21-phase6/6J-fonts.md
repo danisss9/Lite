@@ -28,6 +28,8 @@ _(Other lanes add cases here that belong to this lane, one line each: case, caus
 
 - `css/CSS2/css1/c527-font-008.xht` (and the official `c527-font-008.htm`) — `.nine { font: oblique normal 700 18px/200% sans-serif; }` paints every run at 12px: the `font` shorthand's size (and the 200% line-height) is not applied. The judge now reads the instruction paragraph's own runs and reports "every painted run is 12px, the sentence states 18px". From 6.M.
 
+- `font-family-rule-011` (official + WPT, from 6.M): `#test2 { font-family: default; }` (unquoted) matches the installed `"default"` family in the engine: both "X" elements paint the Ahem filled box, so the page has no letter X. The judge now reads the second element geometrically and fails honestly ("renders as a filled box, not a letter"); the test's stated condition needs the unquoted name to be treated as the reserved keyword and fall back to the initial family. `font-family-rule-012…016` (serif, sans-serif, cursive, fantasy, monospace) do fall back and now pass.
+
 ## Edits outside owned files
 
 - `Lite/Parser.cs`: 3 lines wiring `ComputedFontWeight` on parsed elements (CSS 2.1 §15.6); `ResolveFontSizeValue` steps `larger`/`smaller` through the §15.7 absolute-size table; reject invalid `font` shorthands in `FontSizeOf`/`OwnFontLineHeightDeclaration` and reset leaked `font-family`/`line-height` (§15.8 / §10.8.1 / §6.2.1). **Batch 2:** `FontSizeOf` skips the bare-number `<font-weight>` when scanning the `font` shorthand for the size (§15.8/§4.3.2, c527-font-008).

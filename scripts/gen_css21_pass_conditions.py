@@ -990,7 +990,11 @@ def visual_check(sentence: str | None) -> dict | None:
         return {'kind': 'slanted-box'}
     # --- Batch 2: the stated conditions of the next ~2,000 formerly-unsupported cases. ---
     if m := TEXT_VISIBLE.match(clause):
-        return {'kind': 'text-color', 'color': m.group(1)}
+        # Two absolutely positioned copies of the filler text overlap; the stated colour must
+        # still show through around/under the obscuring copy. A "visible" reading, not the
+        # dominant-ink reading text-color makes.
+        return {'kind': 'text-visible', 'color': m.group(1),
+                **({'colorB': m.group(2)} if m.group(2) else {})}
     if m := TEXT_BASELINE.match(clause) or TEXT_BASELINE_TOP.match(clause):
         return {'kind': 'text-baseline', 'edge': 'top' if 'vertically aligned to the top' in clause else 'bottom'}
     if TEXT_ON_ONE_LINE.match(clause):

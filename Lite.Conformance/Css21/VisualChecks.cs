@@ -198,6 +198,7 @@ internal static class VisualChecks
             "spans-stack" => ComponentCheck(check, bitmap, top, path),
             "border-sample" => BorderSample(check, bitmap, root, path),
             "text-color" => TextColor(check, bitmap, root, top, sentence),
+            "text-visible" => TextVisible(check, bitmap, root, top),
             "text-on-background" => TextOnBackground(check, bitmap, root, top),
             "line-align" => LineAlign(check, bitmap, root, top),
             "scrollbars" => Scrollbars(check, bitmap, root, top),
@@ -2288,10 +2289,45 @@ internal static class VisualChecks
         var ink = TwoToneCoverage(mid, band);
         if (ink < 0.25)
             return Fail($"after scrolling down, the bottom band shows {Pct(ink)} image ink (needs 25%+)");
+        // The two-tone share counts white, which a blank white box satisfies on its own. "A
+        // picture of a cat repeated across the bottom" is the line art's dark ink, spread over
+        // most of the band's width — one 98px tile covers about half of a 200px scrollport, so
+        // a single unrepeated cat cannot reach the share — and the row must still be there
+        // after it moved.
+        foreach (var (label, bmp) in new[] { ("after scrolling down", mid), ("after scrolling right", after) })
+        {
+            var (dark, spread) = DarkInkSpread(bmp, band);
+            if (dark < 0.05)
+                return Fail($"{label}, the bottom band shows {Pct(dark)} dark line-art ink (needs 5%+)");
+            if (spread < 0.75)
+                return Fail($"{label}, the bottom band's line art spans {Pct(spread)} of its width (a repeated row needs 75%+)");
+        }
         var move = DiffFraction(mid, after, band);
         if (move < 0.05)
             return Fail($"scrolling right changed only {Pct(move)} of the bottom band (the row did not move)");
         return Pass();
+    }
+
+    /// <summary>The dark (line-art) pixel share of a crop and the share of its columns that
+    /// hold any dark pixel.</summary>
+    internal static (double Dark, double Spread) DarkInkSpread(SKBitmap bitmap, SKRectI crop)
+    {
+        static bool Dark(SKColor c) => c.Red <= 0x30 && c.Green <= 0x30 && c.Blue <= 0x30;
+        long dark = 0, total = 0;
+        var columns = 0;
+        for (var x = crop.Left; x < crop.Right; x++)
+        {
+            var any = false;
+            for (var y = crop.Top; y < crop.Bottom; y++)
+            {
+                total++;
+                if (!Dark(bitmap.GetPixel(x, y))) continue;
+                dark++;
+                any = true;
+            }
+            if (any) columns++;
+        }
+        return total == 0 ? (0, 0) : ((double)dark / total, (double)columns / Math.Max(1, crop.Width));
     }
 
     /// <summary>"…cat images across the top. Also, the cat images move when the box is
@@ -2360,7 +2396,8 @@ internal static class VisualChecks
         {
             failure = check.Kind switch
             {
-                "one-shape" => OneShape(check, shapes),
+                "one-shape" => check.Variant == "tiny" && shapes.Count == 0 && bitmap is not null
+                    ? TinyInk(bitmap, top) : OneShape(check, shapes),
                 "same-dimension" => SameDimension(check, shapes),
                 "bar-gap" => BarGap(shapes),
                 "line-style" => LineStyle(check, shapes),
@@ -2375,7 +2412,7 @@ internal static class VisualChecks
                 "marker-bullet" => MarkerBullet(check, shapes),
                 "round-dot" => RoundDot(shapes),
                 "double-line" => DoubleLine(shapes),
-                "slanted-box" => SlantedBox(shapes),
+                "slanted-box" => SlantedBox(shapes, bitmap),
                 "line-marker" => FromResult(bitmap is null ? null : LineMarker(check, bitmap, top, "")),
                 "bullet-beside" => FromResult(bitmap is null ? null : BulletBeside(check, bitmap, top, "")),
                 "bar-stack" => FromResult(bitmap is null ? null : BarStack(check, bitmap, top, "")),
@@ -2437,6 +2474,7 @@ internal static class VisualChecks
         "border-ring" => $"one box with a {(check.Color is null ? "" : check.Color + " ")}{check.Shape} border",
         "border-sample" => "the center box's border matches the stated style and the sample",
         "text-color" => $"the filler text is {check.Color}",
+        "text-visible" => $"the {check.Color} text is visible{(check.ColorB is { } over ? $" (it may be partly under the {over} text)" : "")}",
         "text-on-background" => $"the {(check.Anchor == "link" ? "link" : check.Needle ?? "filler text")} is {check.Color} text on {check.BoxColor}",
         "bolder" => $"the {check.Needle ?? "subject"} text grows bolder",
         "line-align" => $"the {check.Color ?? ""} images on each line share their {check.Variant ?? "top"}".Replace("  ", " "),
@@ -2515,6 +2553,27 @@ internal static class VisualChecks
         if (check.Variant == "tiny" && (shape.Width > 12 || shape.Height > 12))
             return $"the shape is {shape.Width}x{shape.Height}px — not tiny";
         return null;
+    }
+
+    /// <summary>"There is a tiny box below" at a 1px or 1pt font size: the one Ahem glyph is a
+    /// single pixel or a 2x2 antialiased cluster, which the component read drops (it keeps no
+    /// one-pixel-wide shape). Every ink pixel below the instructions must sit inside one 4x4
+    /// square; ink anywhere else, or no ink, fails.</summary>
+    internal static string? TinyInk(SKBitmap bitmap, int top)
+    {
+        var region = new SKRectI(0, Math.Max(0, top), bitmap.Width, bitmap.Height);
+        var background = CropBackground(bitmap, region);
+        int left = int.MaxValue, right = -1, minY = int.MaxValue, maxY = -1;
+        var pixels = bitmap.Pixels;
+        for (var y = region.Top; y < region.Bottom; y++)
+        for (var x = region.Left; x < region.Right; x++)
+        {
+            if (Distance(pixels[y * bitmap.Width + x], background) <= InkThreshold) continue;
+            left = Math.Min(left, x); right = Math.Max(right, x); minY = Math.Min(minY, y); maxY = Math.Max(maxY, y);
+        }
+        if (right < 0) return "no ink below the instructions";
+        var (w, h) = (right - left + 1, maxY - minY + 1);
+        return w <= 4 && h <= 4 ? null : $"the ink below spans {w}x{h}px — not one tiny box";
     }
 
     /// <summary>A stated color names the CSS keyword, except that the suite's prose calls
@@ -3330,12 +3389,51 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
     }
 
     /// <summary>One large non-rectangular shape: a box that has been slanted.</summary>
-    private static string? SlantedBox(IReadOnlyList<Component> shapes)
+    private static string? SlantedBox(IReadOnlyList<Component> shapes, SKBitmap? bitmap = null)
     {
         if (shapes.Count != 1) return $"{shapes.Count} top-level shapes below the instructions";
         var shape = shapes[0];
         if (shape.Rectangular) return "the shape is a straight rectangle, not slanted";
-        if ((long)shape.Width * shape.Height < 1500) return $"the shape is only {shape.Width}x{shape.Height}";
+        if ((long)shape.Width * shape.Height >= 1500) return null;
+        // A smaller shape is the suite's own box: one slanted Ahem glyph at the 16px initial
+        // size (20x16 once sheared). Size alone cannot tell it from a slanted letter, so read
+        // the shape itself: a sheared box is a parallelogram — every row one run of the same
+        // length, the runs' starts drifting one way.
+        if (bitmap is null || shape.Height < 10)
+            return $"the shape is only {shape.Width}x{shape.Height}";
+        return Parallelogram(bitmap, shape) is { } why ? $"the {shape.Width}x{shape.Height} shape is not a slanted box: {why}" : null;
+    }
+
+    /// <summary>Null when the component reads as a sheared filled box: each interior row is
+    /// a single ink run, the run lengths agree within 3px, the run starts move monotonically
+    /// (1px jitter allowed) by at least 2px over the height, and the box is mostly ink.</summary>
+    internal static string? Parallelogram(SKBitmap bitmap, Component shape)
+    {
+        var background = CropBackground(bitmap, SKRectI.Intersect(SKRectI.Inflate(
+            new SKRectI(shape.Left, shape.Top, shape.Right, shape.Bottom), 4, 4), new SKRectI(0, 0, bitmap.Width, bitmap.Height)));
+        var runs = new List<(int Start, int Length)>();
+        for (var y = shape.Top + 1; y < shape.Bottom - 1; y++)
+        {
+            int start = -1, end = -1, count = 0;
+            var inRun = false;
+            for (var x = shape.Left; x < shape.Right; x++)
+            {
+                var ink = Distance(bitmap.GetPixel(x, y), background) > InkThreshold;
+                if (ink && !inRun) { count++; if (start < 0) start = x; }
+                if (ink) end = x;
+                inRun = ink;
+            }
+            if (count != 1) return $"row {y} holds {count} ink runs";
+            runs.Add((start, end - start + 1));
+        }
+        if (runs.Count < 6) return "too few rows";
+        if (runs.Max(r => r.Length) - runs.Min(r => r.Length) > 3) return "the rows differ in length";
+        var drift = runs[^1].Start - runs[0].Start;
+        if (Math.Abs(drift) < 2) return "the rows do not shift";
+        var sign = Math.Sign(drift);
+        for (var k = 1; k < runs.Count; k++)
+            if ((runs[k].Start - runs[k - 1].Start) * sign < -1) return "the rows shift both ways";
+        if (FillRatio(bitmap, shape) < 0.6) return "the shape is mostly empty";
         return null;
     }
 
@@ -3852,6 +3950,59 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
         return new(WptRunner.Cat.Pass, describe, 1, 0, [new(describe, 0, null)], 0);
     }
 
+    /// <summary>"The green text is visible. It can be partially obscured by the black text"
+    /// (font-weight-010…014): two absolutely positioned copies of the filler text overlap, so
+    /// the dominant ink can be the obscuring colour while the stated one still shows. The read
+    /// counts the stated colour's own pixels (the pure keyword, not antialiased blends) over the
+    /// filler-text elements' union: they must be at least 5% of the ink and 300px. Two
+    /// identical glyph runs stacked exactly leave none of the lower colour pure, so a weight
+    /// that did not apply fails.</summary>
+    private static WptRunner.RunResult TextVisible(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top)
+    {
+        var assertion = Describe(check);
+        if (check.Color is null || !Named.ContainsKey(check.Color))
+            return new(WptRunner.Cat.Unsupported, "Visual check: stated color is not a named color", 0, 0);
+        var nodes = new List<LayoutNode>();
+        void Walk(LayoutNode node)
+        {
+            if (!node.TagName.StartsWith('#') && node.Box.BorderBox.Top >= top &&
+                Normalize(Text(node)).Contains("filler text", StringComparison.Ordinal) &&
+                node.Box.BorderBox.Width > 0 && node.Box.BorderBox.Height > 0)
+                nodes.Add(node);
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        if (nodes.Count == 0)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no filler-text element below the instructions", 0, 0);
+        var ink = ElementInk(bitmap, nodes, 1, out var box);
+        if (ink.Count == 0)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the text painted no ink", 1, 1, [new(assertion, 1, "no ink")], 0);
+        var (stated, all) = ColorShare(bitmap, box, check.Color);
+        var share = all == 0 ? 0 : (double)stated / all;
+        return stated >= 300 && share >= 0.05
+            ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
+            : new(WptRunner.Cat.Fail, $"{assertion}: {stated} {check.Color} pixels ({share:P0} of the ink; needs 300+ and 5%+)", 1, 1,
+                [new(assertion, 1, $"{stated} {check.Color} pixels")], 0);
+    }
+
+    /// <summary>The stated colour's own (unblended) pixels and the whole ink count inside a
+    /// crop: a partly obscured text run leaves a share of its pure colour, while a run covered
+    /// exactly leaves none.</summary>
+    internal static (long Stated, long Ink) ColorShare(SKBitmap bitmap, SKRectI box, string color)
+    {
+        var background = CropBackground(bitmap, box);
+        long stated = 0, all = 0;
+        for (var y = box.Top; y < box.Bottom; y++)
+        for (var x = box.Left; x < box.Right; x++)
+        {
+            var p = bitmap.GetPixel(x, y);
+            if (Distance(p, background) <= InkThreshold) continue;
+            all++;
+            if (Matches(color, new SKColor(p.Red, p.Green, p.Blue))) stated++;
+        }
+        return (stated, all);
+    }
+
     /// <summary>"Below, the left 'Green Text' is green and the right 'Black Text' is black"
     /// (and the upper/lower variant): each named text element carries its own stated ink
     /// color. <c>Ordered</c> pins repeated needles to their occurrence (the upper/lower
@@ -4314,6 +4465,8 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
     /// also requires exactly one box sitting entirely above it, not touching it.</summary>
     private static WptRunner.RunResult LetterX(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top, string path)
     {
+        if (check.Variant == "box-above")
+            return LetterXBoxAbove(check, bitmap, root, top);
         var x = FindNodeByText(root, top, "x", exact: true);
         if (x is null)
             return new(WptRunner.Cat.Unsupported, "Visual check: no letter-x element below the instructions", 0, 0);
@@ -4349,6 +4502,108 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
             ? new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0)
             : new(WptRunner.Cat.Fail, $"{assertion}: {above.Count} boxes sit above the letter x", 1, 1,
                 [new(assertion, 1, $"{above.Count} boxes above the x")], 0);
+    }
+
+    /// <summary>"There is a box above the letter 'X' below": the font-family-rule family puts
+    /// the same "X" in two elements — the first in the test font (Ahem paints a filled box),
+    /// the second in a font the page must fall back from. The letter is the LAST element whose
+    /// text is exactly "x", and it must paint a glyph (the ink's own bounding box is not a
+    /// solid rectangle); exactly one shape overlaps its column above it, and that shape is a
+    /// filled rectangle (one Ahem glyph, 16px at the initial size). A page that paints both
+    /// elements as boxes fails: there is no letter.</summary>
+    private static WptRunner.RunResult LetterXBoxAbove(VisualCheck check, SKBitmap bitmap, LayoutNode root, int top)
+    {
+        var assertion = Describe(check);
+        var letters = new List<LayoutNode>();
+        void Walk(LayoutNode node)
+        {
+            if (!node.TagName.StartsWith('#') && node.Box.BorderBox.Top >= top && Normalize(Text(node)) == "x")
+            {
+                // The deepest element carrying the text: a wrapper whose only text is the
+                // letter is the same letter.
+                letters.RemoveAll(l => IsAncestor(node, l) || IsAncestor(l, node));
+                letters.Add(node);
+            }
+            foreach (var child in node.Children) Walk(child);
+        }
+        Walk(root);
+        if (letters.Count == 0)
+            return new(WptRunner.Cat.Unsupported, "Visual check: no letter-x element below the instructions", 0, 0);
+        var letter = letters[^1];
+        // The ink presence read is GEOMETRIC, like LetterX: a 16px fallback glyph's
+        // antialiased pixels separate past the join threshold and shatter into 1x1 fragments
+        // the component read discards (font-family-rule-013's sans-serif X).
+        var border = letter.Box.BorderBox;
+        // Do not inflate the top edge: the box above ends where the letter's line box starts,
+        // and one inflated row would both contaminate the glyph's fill ratio and make the
+        // shape above count as intersecting the letter.
+        var lx = SKRectI.Round(new SKRect(border.Left - 1, border.Top, border.Right + 1, border.Bottom + 1));
+        lx.Intersect(new SKRectI(0, 0, bitmap.Width, bitmap.Height));
+        var background = CropBackground(bitmap, lx);
+        var pixels = bitmap.Pixels;
+        int left = int.MaxValue, right = -1, minY = int.MaxValue, maxY = -1;
+        long inkPixels = 0;
+        for (var y = lx.Top; y < lx.Bottom; y++)
+        for (var x = lx.Left; x < lx.Right; x++)
+        {
+            if (ChannelDistance(pixels[y * bitmap.Width + x], background) <= InkThreshold) continue;
+            inkPixels++;
+            left = Math.Min(left, x); right = Math.Max(right, x);
+            minY = Math.Min(minY, y); maxY = Math.Max(maxY, y);
+        }
+        if (inkPixels < 12)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the letter x painted no ink", 1, 1,
+                [new(assertion, 1, "no ink in the x's box")], 0);
+        var glyph = new Component(left, minY, right + 1, maxY + 1, true, SKColors.Black);
+        if (Math.Min(glyph.Width, glyph.Height) >= 8 && FillRatio(bitmap, glyph) >= 0.9)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the letter x renders as a filled box, not a letter", 1, 1,
+                [new(assertion, 1, "the x is a box")], 0);
+        var components = Components(bitmap, top, out var clipped);
+        if (clipped)
+            return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
+        var guard = new Component(glyph.Left, glyph.Top, glyph.Right, glyph.Bottom, true, default);
+        var above = TopLevel(components).Where(c => c.Bottom <= glyph.Top + 1 &&
+            c.Left < glyph.Right && c.Right > glyph.Left && !c.Intersects(guard)).ToList();
+        if (above.Count != 1)
+            return new(WptRunner.Cat.Fail, $"{assertion}: {above.Count} shapes sit above the letter x", 1, 1,
+                [new(assertion, 1, $"{above.Count} shapes above the x")], 0);
+        var box = above[0];
+        if (!box.Rectangular || Math.Min(box.Width, box.Height) < 12 || FillRatio(bitmap, box) < 0.9)
+            return new(WptRunner.Cat.Fail, $"{assertion}: the shape above the x ({box.Width}x{box.Height}) is not a filled box", 1, 1,
+                [new(assertion, 1, "the shape above is not a box")], 0);
+        return new(WptRunner.Cat.Pass, assertion, 1, 0, [new(assertion, 0, null)], 0);
+    }
+
+    private static bool IsAncestor(LayoutNode ancestor, LayoutNode node)
+    {
+        for (var p = node.Parent; p is not null; p = p.Parent)
+            if (ReferenceEquals(p, ancestor)) return true;
+        return false;
+    }
+
+    /// <summary>The share of a component's bounding box that is ink against the crop's
+    /// background: a filled box (an Ahem glyph) is near 1, a letter's strokes far below.</summary>
+    internal static double FillRatio(SKBitmap bitmap, Component c)
+    {
+        // The background is read on a 2px ring just outside the box, never inside it.
+        var counts = new Dictionary<uint, long>();
+        for (var y = c.Top - 2; y < c.Bottom + 2; y++)
+        for (var x = c.Left - 2; x < c.Right + 2; x++)
+        {
+            if (x < 0 || y < 0 || x >= bitmap.Width || y >= bitmap.Height) continue;
+            if (x >= c.Left && x < c.Right && y >= c.Top && y < c.Bottom) continue;
+            var p = (uint)bitmap.GetPixel(x, y);
+            counts[p] = counts.GetValueOrDefault(p) + 1;
+        }
+        var background = counts.Count == 0 ? SKColors.White : new SKColor(counts.MaxBy(kv => kv.Value).Key);
+        long ink = 0, total = 0;
+        for (var y = c.Top; y < c.Bottom; y++)
+        for (var x = c.Left; x < c.Right; x++)
+        {
+            total++;
+            if (Distance(bitmap.GetPixel(x, y), background) > InkThreshold) ink++;
+        }
+        return total == 0 ? 0 : (double)ink / total;
     }
 
     /// <summary>Classifies one horizontal band's pattern from the runs along its densest
@@ -4920,7 +5175,10 @@ private static string? StackThree(VisualCheck check, IReadOnlyList<Component> sh
                 [new(assertion, 1, $"{ink.Count} ink component(s) in the words' box")], 0);
         var components = Components(bitmap, top, out var clipped);
         if (clipped) return new(WptRunner.Cat.Unsupported, "Visual check: content reaches the viewport edge", 0, 0);
-        var boxes = TopLevel(components).Where(s => Math.Min(s.Width, s.Height) >= 20 &&
+        // The suite's "box" is one Ahem glyph at the 16px initial size: a filled rectangle at
+        // least 12px on a side (a fallback glyph is neither filled nor rectangular).
+        var boxes = TopLevel(components).Where(s => Math.Min(s.Width, s.Height) >= 12 && s.Rectangular &&
+            FillRatio(bitmap, s) >= 0.9 &&
             Matches(check.Color!, s.Color) && !s.Contains(new Component(box.Left, box.Top, box.Right, box.Bottom, true, default)) &&
             s.Top >= box.Bottom - 2).ToList();
         return boxes.Count >= 1

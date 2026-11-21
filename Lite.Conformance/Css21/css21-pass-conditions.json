@@ -11688,8 +11688,9 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "text-color",
-    "color": "green"
+    "kind": "text-visible",
+    "color": "green",
+    "colorB": "black"
    }
   },
   {
@@ -11700,8 +11701,9 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "text-color",
-    "color": "green"
+    "kind": "text-visible",
+    "color": "green",
+    "colorB": "black"
    }
   },
   {
@@ -11712,8 +11714,9 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "text-color",
-    "color": "green"
+    "kind": "text-visible",
+    "color": "green",
+    "colorB": "black"
    }
   },
   {
@@ -11724,8 +11727,9 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "text-color",
-    "color": "green"
+    "kind": "text-visible",
+    "color": "green",
+    "colorB": "black"
    }
   },
   {
@@ -11736,8 +11740,9 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "text-color",
-    "color": "green"
+    "kind": "text-visible",
+    "color": "green",
+    "colorB": "black"
    }
   },
   {
@@ -87912,8 +87917,9 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "text-color",
-    "color": "green"
+    "kind": "text-visible",
+    "color": "green",
+    "colorB": "black"
    }
   },
   {
@@ -87924,8 +87930,9 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "text-color",
-    "color": "green"
+    "kind": "text-visible",
+    "color": "green",
+    "colorB": "black"
    }
   },
   {
@@ -87936,8 +87943,9 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "text-color",
-    "color": "green"
+    "kind": "text-visible",
+    "color": "green",
+    "colorB": "black"
    }
   },
   {
@@ -87948,8 +87956,9 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "text-color",
-    "color": "green"
+    "kind": "text-visible",
+    "color": "green",
+    "colorB": "black"
    }
   },
   {
@@ -87960,8 +87969,9 @@
    "twin": null,
    "reviewed": false,
    "check": {
-    "kind": "text-color",
-    "color": "green"
+    "kind": "text-visible",
+    "color": "green",
+    "colorB": "black"
    }
   },
   {

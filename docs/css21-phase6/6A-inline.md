@@ -30,6 +30,12 @@ Branch `css21/p6-a`, worktree `C:\Repos\Lite-p6-a`. Case list `Lite.Conformance/
 
 - `border-001`, `border-003` (official+WPT, 4): the bordered test box renders pixel-perfectly; the WPT reference (`border-001-ref.xht` / `border-003-ref.xht`) uses Ahem text with `word-spacing` which mis-wraps in inline layout (from 6.I).
 
+- `text-align-applies-to-007/012/013/015` (official + WPT, 8, from 6.M): a judge-only content-edge
+  read does fix these four (the line sits at the 8px-margined body's 792/8, not the viewport's
+  800/0), but it flips 12 currently-passing siblings (`…-006/008/009/010/011/014`) whose bordered
+  `width: 100%` tables overflow to x=798 — see the 6.E hand-in on table percentage width. Parked
+  here until that sizing is fixed; the judge keeps the old fallback for now.
+
 ## Edits outside owned files
 
 - `Lite/Parser.cs` (1-line fix in `Traverse` mixed-children loop: call `NormalizeTextWhitespace(textNode.Data, ws)` instead of `CollapseWhitespace(textNode.Data)`, matching the leaf-text path at line 1078, so `white-space: pre`/`pre-wrap`/`pre-line` preserves newlines and spaces in mixed-children elements).
