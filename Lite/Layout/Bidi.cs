@@ -225,23 +225,32 @@ internal static class Bidi
         BidiClassTable.ClassOf(c) is BidiClass.BN or BidiClass.RLE or BidiClass.LRE
             or BidiClass.RLO or BidiClass.LRO or BidiClass.PDF;
 
-    /// <summary>Whether a string carries an explicit bidi formatting character that X9
-    /// removes from the rendering.</summary>
+    /// <summary>The explicit embedding and override controls (RLE, LRE, RLO, LRO, PDF). They
+    /// never render and are dropped from the drawn text. BN characters, which X9 also removes
+    /// from the ALGORITHM, stay in the text (UAX #9 §5.2 lets an implementation retain them):
+    /// they are zero-width default-ignorables that paint nothing, and some are content. A lone
+    /// U+FEFF holds an empty list item's marker line (§12.5.1); stripping it emptied the line.</summary>
+    private static bool IsEmbeddingControl(char c) =>
+        BidiClassTable.ClassOf(c) is BidiClass.RLE or BidiClass.LRE
+            or BidiClass.RLO or BidiClass.LRO or BidiClass.PDF;
+
+    /// <summary>Whether a string carries an explicit embedding or override control, which
+    /// never renders.</summary>
     public static bool HasExplicitFormatting(string text)
     {
         foreach (var c in text)
-            if (IsRemovedByX9(c)) return true;
+            if (IsEmbeddingControl(c)) return true;
         return false;
     }
 
-    /// <summary>The string as it renders under X9: explicit formatting characters and BN
-    /// removed (they occupy no space and paint nothing).</summary>
+    /// <summary>The string as it renders: explicit embedding and override controls removed
+    /// (they occupy no space and paint nothing). BN characters are kept.</summary>
     public static string WithoutExplicitFormatting(string text)
     {
         if (!HasExplicitFormatting(text)) return text;
         var builder = new System.Text.StringBuilder(text.Length);
         foreach (var c in text)
-            if (!IsRemovedByX9(c)) builder.Append(c);
+            if (!IsEmbeddingControl(c)) builder.Append(c);
         return builder.ToString();
     }
 
