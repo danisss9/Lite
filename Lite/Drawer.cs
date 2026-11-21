@@ -770,7 +770,7 @@ internal static partial class Drawer
             // legacy paint: the piece is the continuation of the same inline box, no paint path
             // lays a background of the piece's own behind its content yet, and its text
             // children carrying the box's background is visually equivalent.
-            var paintsOwnBackground = !node.TagName.StartsWith('#') || node.Parent?.SplitFrom is not null;
+            var paintsOwnBackground = !node.TagName.StartsWith('#') || node.TagName == "#pseudo-marker" || node.Parent?.SplitFrom is not null;
             var bgColor = paintsOwnBackground ? node.GetBackgroundColor() : SKColors.Transparent;
             using var font = TextMeasure.CreateFont(node);
             using var paint = new SKPaint { Color = node.GetColor(), IsAntialias = true };
@@ -1463,7 +1463,7 @@ internal static partial class Drawer
         // background image under every text run (c548-ln-ht-003). A §9.2.1.1 block-in-inline
         // piece's text keeps the legacy paint: no path paints the piece's own background behind
         // its content yet, and the piece is the continuation of the same inline box.
-        var paintsOwnBackground = paintsOwnBorders || node.Parent?.SplitFrom is not null;
+        var paintsOwnBackground = paintsOwnBorders || node.TagName == "#pseudo-marker" || node.Parent?.SplitFrom is not null;
         // §14.2: a boxless inline wrapper's BACKGROUND paints over each line fragment's padding
         // box too — it was never painted, so an inline whose content is another inline showed
         // no background at all, not even under its child's margin (inline-formatting-context-002:
