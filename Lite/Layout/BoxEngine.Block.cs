@@ -169,8 +169,16 @@ internal static partial class BoxEngine
         // height:auto is content-based — GetHeight returns the containing-block height for auto (the
         // width-style "fill" behaviour of GetSize), which must NOT be treated as an explicit height.
         var isBorderBox = node.Style.GetPropertyValueSafe("box-sizing") == "border-box";
-        var hasExplicitH = !node.IsAutoHeight();
-        var explicitH = hasExplicitH ? node.GetHeight(parentContentHeight, 0, viewportHeight) : 0f;
+        // §10.5: a percentage height resolves against the containing block's height only when that
+        // height is specified explicitly; otherwise "the value computes to 'auto'". Reading it as
+        // 0 gave a 'height: 100%' child of an auto-height box a zero height (its bottom margin then
+        // collapsed past it: child-bottom-margin-in-unresolvable-percentage-height). The document
+        // root's containing block is the initial containing block, whose height is the viewport's
+        // (§10.1), so the root's percentage DOES resolve (height-percentage-003a).
+        var percentHeight = IsPercentValue(node, "height");
+        var heightBasis = node.TagName == "HTML" ? viewportHeight : parentContentHeight;
+        var hasExplicitH = !node.IsAutoHeight() && !(percentHeight && heightBasis <= 0f);
+        var explicitH = hasExplicitH ? node.GetHeight(heightBasis, 0, viewportHeight) : 0f;
         var knownContentH = hasExplicitH
             ? (isBorderBox ? Math.Max(0f, explicitH - border.Top - border.Bottom - padding.Top - padding.Bottom) : explicitH)
             : 0f;
@@ -408,15 +416,15 @@ internal static partial class BoxEngine
         // against the containing block height; when that is auto (parentContentHeight == 0) an
         // unresolvable percentage max-height computes to 'none' and min-height to 0.
         var unclampedH = contentH;
-        var maxH = node.GetMaxHeight(parentContentHeight, fontSize);
-        if (maxH < float.PositiveInfinity && !(IsPercentValue(node, "max-height") && parentContentHeight <= 0f))
+        var maxH = node.GetMaxHeight(heightBasis, fontSize);
+        if (maxH < float.PositiveInfinity && !(IsPercentValue(node, "max-height") && heightBasis <= 0f))
         {
             var maxContent = isBorderBox
                 ? Math.Max(0f, maxH - border.Top - border.Bottom - padding.Top - padding.Bottom) : maxH;
             if (contentH > maxContent) contentH = maxContent;
         }
-        var minH = node.GetMinHeight(parentContentHeight, fontSize);
-        if (minH > 0f && !(IsPercentValue(node, "min-height") && parentContentHeight <= 0f))
+        var minH = node.GetMinHeight(heightBasis, fontSize);
+        if (minH > 0f && !(IsPercentValue(node, "min-height") && heightBasis <= 0f))
         {
             var minContent = isBorderBox
                 ? Math.Max(0f, minH - border.Top - border.Bottom - padding.Top - padding.Bottom) : minH;
@@ -730,15 +738,22 @@ internal static partial class BoxEngine
     private static bool BfcCannotFitBesideFloats(LayoutNode floatHolder, LayoutNode bfc, float cbWidth)
     {
         if (!EstablishesBlockFormattingContext(bfc) || bfc.IsAutoWidth()) return false;
+        // The float holder's containing block is its parent's CONTENT box, which is not
+        // <paramref name="cbWidth"/> when that parent has an explicit width of its own: the
+        // margin chain is computed from the grandparent's width down (the 300px red box in
+        // new-fc-beside-adjoining-float, inside a 200px outer box). Reading the grandparent's
+        // width made 200px float + 100px BFC look too wide for the 200px outer box and severed
+        // an adjoining chain that does fit in the real 300px containing block.
+        var holderCb = DefiniteContentWidthOfAncestors(floatHolder, cbWidth);
         var floatsW = 0f;
         foreach (var child in floatHolder.Children)
         {
             if (child.TagName == "#text" || child.GetFloat() == FloatType.None) continue;
             if (child.GetDisplay() == DisplayType.None) continue;
             if (child.IsAutoWidth()) return false;
-            floatsW += OuterWidth(child, cbWidth);
+            floatsW += OuterWidth(child, holderCb);
         }
-        return floatsW > 0f && floatsW + OuterWidth(bfc, cbWidth) > cbWidth + 0.01f;
+        return floatsW > 0f && floatsW + OuterWidth(bfc, holderCb) > holderCb + 0.01f;
 
         static float OuterWidth(LayoutNode n, float cb)
         {
@@ -750,6 +765,25 @@ internal static partial class BoxEngine
                 w += pad.Left + pad.Right + bord.Left + bord.Right;
             return w + n.GetMarginLeft(total: cb, size: fs) + n.GetMarginRight(total: cb, size: fs);
         }
+    }
+
+    /// <summary>The content-box width of the nearest ancestor that has a definite one — the
+    /// containing block width for a margin chain below it. An auto-width ancestor fills ITS
+    /// containing block, so the walk continues upward; with none, the inherited width stands.</summary>
+    private static float DefiniteContentWidthOfAncestors(LayoutNode node, float inherited)
+    {
+        for (var p = node.Parent; p is not null; p = p.Parent)
+        {
+            if (p.IsAutoWidth()) continue;
+            var fs = p.GetFontSize();
+            var pad = p.GetPadding(inherited, 0, fs);
+            var bord = p.GetBorderWidth();
+            var w = p.GetWidth(inherited);
+            if (p.Style.GetPropertyValueSafe("box-sizing") == "border-box")
+                w = Math.Max(0f, w - pad.Left - pad.Right - bord.Left - bord.Right);
+            return w;
+        }
+        return inherited;
     }
 
     /// <summary>Whether <paramref name="node"/> self-collapses: no in-flow content, no
@@ -1117,12 +1151,29 @@ internal static partial class BoxEngine
                     // must not overlap, and a BFC's specified width is not narrowed by the band
                     // (floats-bfc-001's 200px BFC drops below the 150px float and grows its
                     // auto-height parent to full coverage).
-                    var wantedW = child.IsAutoWidth()
-                        ? effW
+                    // An auto-width BFC fills the band with its BORDER box. Its own margin on the
+                    // float's side lies between the border box and the float and may overlap the
+                    // float's margin box (§9.5 constrains only the border box), so that margin
+                    // neither narrows the box nor moves it; a margin on the far side insets it
+                    // from that edge (floats-wrap-bfc-with-margin's reference leaves the
+                    // same-side positive margins out entirely). §10.3.3's width equation is also
+                    // a lower bound: content width = containing block width − margins − edges,
+                    // so a NEGATIVE total inline-axis margin "props up" the border box to
+                    // containing block width − margins, which no longer fits beside the float —
+                    // it must go below it (floats-wrap-bfc-with-margin-001..010).
+                    var autoBfc = child.IsAutoWidth();
+                    var marginLeft = child.IsAutoMarginLeft() ? 0f : child.GetMarginLeft(total: contentW, size: childFontSize);
+                    var marginRight = child.IsAutoMarginRight() ? 0f : child.GetMarginRight(total: contentW, size: childFontSize);
+                    var floatOnLeft = effX > contentX + 0.5f;
+                    var floatOnRight = effX + effW < contentX + contentW - 0.5f;
+                    var wantedW = autoBfc
+                        ? Math.Max(0f, effW - (floatOnLeft ? 0f : marginLeft) - (floatOnRight ? 0f : marginRight))
                         : Math.Max(0f, child.GetWidth(contentW)
                                        + child.GetBorderWidth().Left + child.GetBorderWidth().Right
                                        + (child.GetPadding(contentW, viewportHeight, childFontSize).Left
                                           + child.GetPadding(contentW, viewportHeight, childFontSize).Right));
+                    if (autoBfc && marginLeft + marginRight < 0f)
+                        wantedW = Math.Max(wantedW, Math.Max(0f, contentW - marginLeft - marginRight));
                     if (wantedW > effW + 0.5f)
                     {
                         var floatBottom = borderTop;
@@ -1132,7 +1183,15 @@ internal static partial class BoxEngine
                             borderTop = floatBottom;
                             (effX, effW) = AvailableBand(floats, borderTop, 1, contentX, contentW);
                             RetireFloats(floats, borderTop);
+                            floatOnLeft = floatOnRight = false;
                         }
+                    }
+                    if (autoBfc && (floatOnLeft || floatOnRight))
+                    {
+                        // Give LayoutBlock the margin-box origin and available width that make its
+                        // auto-width border box fill the band with only the far-side margin inside.
+                        effX -= floatOnLeft ? marginLeft : 0f;
+                        effW += (floatOnLeft ? marginLeft : 0f) + (floatOnRight ? marginRight : 0f);
                     }
                 }
                 // The pre-layout state of the spent-chain flag: the ride gate below must know

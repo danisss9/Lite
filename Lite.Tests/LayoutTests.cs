@@ -404,6 +404,31 @@ public static class LayoutTests
     }
 
     [Test]
+    public static void NewFormattingContext_ThatFitsBesideChainFloat_PullsFloatDown()
+    {
+        // WPT new-fc-beside-adjoining-float (§8.3.1, §9.5): the float is out of flow inside the
+        // first (self-collapsing) child, so the following 100px 'overflow: hidden' box's 190px
+        // top margin adjoins the chain and pulls the 200px float down to that chain bottom. The
+        // 300px red containing block's content width (not the 200px outer box) decides that the
+        // float and the new context fit side by side, so the chain must not be severed.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div id='outer' style='overflow:hidden;width:200px;background:green'>" +
+            "<div id='red' style='width:300px;margin-top:50px;background:red'>" +
+            "<div><div id='fl' style='float:left;width:200px;height:10px;background:green'></div></div>" +
+            "<div id='fc' style='margin-top:190px;overflow:hidden;width:100px;height:10px;background:red'></div>" +
+            "</div></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var outer = FindNode(page.Root, n => n.Id == "outer")!;
+        var fl = FindNode(page.Root, n => n.Id == "fl")!;
+        True(Math.Abs(fl.Box.ContentBox.Top - 190f) < 0.5f,
+            $"the adjoining float rides to the 190px chain bottom, got {fl.Box.ContentBox.Top}");
+        True(Math.Abs(outer.Box.ContentBox.Height - 200f) < 0.5f,
+            $"the outer formatting context stays 200px tall (the float covers the red band), got {outer.Box.ContentBox.Height}");
+    }
+
+    [Test]
     public static void NewFormattingContext_ThatCannotFitBesideChainFloat_SeparatesItsMargin()
     {
         // WPT new-fc-separates-from-float (§9.5, §9.5.2): the float-only first child chains
@@ -505,6 +530,88 @@ public static class LayoutTests
         var m = inner.Box.Margin;
         True(Math.Abs(m.Left - 175f) < 0.5f,
             $"expected margin-left 175 (100 - 50 - (-125)), got {m.Left}");
+    }
+
+    [Test]
+    public static void AutoWidthBfc_NegativeMarginPropsUpAndWrapsBelowFloat()
+    {
+        // WPT floats-wrap-bfc-with-margin (§10.3.3 + §9.5): a 30px containing block with a
+        // 14px-margin-box float leaves a 16px band. An auto-width new formatting context
+        // narrows to the band (border box 16), but §10.3.3's equation is a lower bound too:
+        // with 'margin-left: -17px' the used border box is 30 - (-17) = 47, which cannot fit
+        // beside the float, so it goes below it. With 'margin-left: 5px' the narrowed border
+        // box is 11 and stays beside.
+        LayoutNode FloatBox() => Block(new()
+        {
+            ["width"] = "7px", ["height"] = "8px", ["float"] = "left",
+            ["margin-left"] = "2px", ["margin-right"] = "3px",
+            ["border-left-width"] = "1px", ["border-right-width"] = "1px",
+            ["border-left-style"] = "solid", ["border-right-style"] = "solid",
+        });
+        LayoutNode Bfc(string marginLeft) => Block(new()
+        {
+            ["display"] = "flow-root", ["height"] = "15px", ["margin-left"] = marginLeft,
+        });
+        var negative = Bfc("-17px");
+        LayoutTree(Block(new() { ["width"] = "30px" }, FloatBox(), negative));
+        var positive = Bfc("5px");
+        LayoutTree(Block(new() { ["width"] = "30px" }, FloatBox(), positive));
+        True(negative.Box.BorderBox.Top >= 8f - 0.5f,
+            $"the propped-up BFC (border box 47) cannot fit beside the 14px float and belongs below it (8), got {negative.Box.BorderBox.Top}");
+        True(Math.Abs(negative.Box.BorderBox.Width - 47f) < 0.5f,
+            $"expected the §10.3.3 border box 30 - (-17) = 47, got {negative.Box.BorderBox.Width}");
+        True(Math.Abs(positive.Box.BorderBox.Top) < 0.5f,
+            $"a positive margin only shrinks the narrowed box (11), so it stays beside the float, got {positive.Box.BorderBox.Top}");
+    }
+
+    [Test]
+    public static void AutoWidthBfc_NegativeMarginWrapsInsideInlineBlock()
+    {
+        // The same shape as floats-wrap-bfc-with-margin, which builds its rows as
+        // inline-blocks with scripted inline styles: inside the inline-block's formatting
+        // context a 14px float leaves 16px, and the auto-width flow-root with
+        // 'margin-left: -17px' props up to 47px and goes below the float.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><html><body style='margin:0'>" +
+            "<div id='row' style='display:inline-block;width:30px;height:40px;border:1px solid gray'>" +
+            "<div id='fl' style='float:left;width:7px;height:8px;background:fuchsia;" +
+            "border:1px solid purple;margin:1px 3px 1px 2px'></div>" +
+            "<div id='bfc' style='display:flow-root;background:aqua;height:15px;" +
+            "border:1px solid blue;margin-left:-17px'></div>" +
+            "</div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        BoxEngine.Layout(page.Root, 800, 600);
+        var fl = FindNode(page.Root, n => n.Id == "fl")!;
+        var bfc = FindNode(page.Root, n => n.Id == "bfc")!;
+        True(bfc.Box.BorderBox.Top >= fl.Box.BorderBox.Bottom - 0.5f,
+            $"the propped-up BFC goes below the float (float bottom {fl.Box.BorderBox.Bottom}), got {bfc.Box.BorderBox.Top}");
+        True(Math.Abs(bfc.Box.BorderBox.Width - 47f) < 0.5f,
+            $"expected the §10.3.3 border box 30 - (-17) = 47, got {bfc.Box.BorderBox.Width}");
+    }
+
+    [Test]
+    public static void PercentageHeight_Unresolvable_ComputesToAuto()
+    {
+        // WPT child-bottom-margin-in-unresolvable-percentage-height (§10.5): a percentage height
+        // resolves only when the containing block's height is specified explicitly. Here the
+        // parent's height is auto, so the child's 'height: 100%' computes to 'auto' and its
+        // content (20px) defines the height — it is NOT a used 0. The root, by contrast, resolves
+        // its percentage against the initial containing block (the viewport).
+        var leaf = Block(new() { ["height"] = "20px" });
+        var percent = Block(new() { ["height"] = "100%" }, leaf);
+        LayoutTree(Block(new() { ["width"] = "100px" }, percent));
+        True(Math.Abs(percent.Box.ContentBox.Height - 20f) < 0.5f,
+            $"an unresolvable percentage height computes to auto (20), got {percent.Box.ContentBox.Height}");
+
+        var root = new LayoutNode(null, "HTML", "", _styleCache.Style);
+        var body = new LayoutNode(null, "BODY", "", _styleCache.Style);
+        root.StyleOverrides["display"] = "block";
+        body.StyleOverrides["display"] = "block";
+        root.StyleOverrides["height"] = "100%";
+        root.AddChild(body);
+        BoxEngine.Layout(root, 800, 600);
+        True(Math.Abs(root.Box.ContentBox.Height - 600f) < 1f,
+            $"the root's percentage height resolves against the initial containing block (600), got {root.Box.ContentBox.Height}");
     }
 
     [Test]

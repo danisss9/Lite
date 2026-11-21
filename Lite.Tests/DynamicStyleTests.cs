@@ -60,6 +60,68 @@ public static class DynamicStyleTests
     }
 
     [Test]
+    public static void ScriptBuiltBfc_NegativeMarginWrapsBelowFloat()
+    {
+        // floats-wrap-bfc-with-margin's shape, built by script exactly as the test does: the
+        // class rules must reach the created elements and the inline 'margin-left' must feed
+        // §10.3.3's prop-up, so the auto-width flow-root goes below the 14px float.
+        var root = Layout("<!DOCTYPE html><style>body{margin:0}" +
+            ".container{display:inline-block;width:30px;height:40px;border:1px solid gray}" +
+            ".float{float:left;width:7px;height:8px;border:1px solid purple;margin:1px 3px 1px 2px}" +
+            ".bfc{display:flow-root;height:15px;border:1px solid blue;background:aqua}</style>" +
+            "<body onload=\"var c=document.createElement('div');c.className='container';" +
+            "document.body.appendChild(c);" +
+            "var f=document.createElement('div');f.className='float';c.appendChild(f);" +
+            "var b=document.createElement('div');b.className='bfc';b.style['margin-left']='-17px';" +
+            "c.appendChild(b);\"></body>");
+        var bfc = FindClass(root, "bfc");
+        True(bfc is not null, "bfc missing");
+        True(bfc!.Box.BorderBox.Top >= 12f - 0.5f,
+            $"the propped-up BFC goes below the float (12), got {bfc.Box.BorderBox.Top}");
+        True(Math.Abs(bfc.Box.BorderBox.Width - 47f) < 0.5f,
+            $"expected the §10.3.3 border box 30 - (-17) = 47, got {bfc.Box.BorderBox.Width}");
+    }
+
+    [Test]
+    public static void ScriptStyleIndexer_ClearsTheGeneratedTestWaitState()
+    {
+        // The full floats-wrap-bfc-with-margin script (test and reference shapes): a thrown
+        // exception in any style write leaves the html.reftest-wait class in place and the
+        // runner reports a timeout.
+        var root = Layout("<!DOCTYPE html><style>.g{width:500px}.c{display:inline-block;width:30px;height:40px}" +
+            ".f{width:7px;height:8px}.b{display:flow-root;height:15px}</style>" +
+            "<body onload=\"" +
+            "const M=[-30,-20,-17,0,5,10,14];const S=['left','right'];const D=['ltr','rtl'];" +
+            "function add(c,p){let e=document.createElement('div');if(c)e.classList.add(c);p.appendChild(e);return e}" +
+            "for(let d of D)for(let f of S)for(let s of S){" +
+            "let g=add('g',document.body);g.style.direction=d;let prop='margin-'+s;" +
+            "for(let v of M){let c=add('c',g);let fl=add('f',c);fl.style.cssFloat=f;" +
+            "let b=add('b',c);b.style[prop]=v+'px';" +
+            "if(v<0){c.style.flexWrap='wrap';if((f=='right')!=(d=='rtl'))c.style.flexDirection='row-reverse';" +
+            "b.style.width=(30-2-v)+'px';}}}" +
+            "var m=document.createElement('div');m.id='done';document.body.appendChild(m);\"></body>");
+        var done = FindTagOrId(root, "done");
+        True(done is not null,
+            "the script must reach its last statement (a style write threw or the loop never ended)");
+    }
+
+    private static LayoutNode? FindTagOrId(LayoutNode node, string id)
+    {
+        if (node.Id == id) return node;
+        foreach (var c in node.Children)
+            if (FindTagOrId(c, id) is { } found) return found;
+        return null;
+    }
+
+    private static LayoutNode? FindTag(LayoutNode node, string tag)
+    {
+        if (node.TagName == tag) return node;
+        foreach (var c in node.Children)
+            if (FindTag(c, tag) is { } found) return found;
+        return null;
+    }
+
+    [Test]
     public static void MaxHeight_ClampsInlineBlocksFloatsAndCaptions()
     {
         // §10.7: 'height: 200px; max-height: 100px' is 100px tall on an inline-block
