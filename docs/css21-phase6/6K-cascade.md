@@ -21,6 +21,15 @@ Branch `css21/p6-k`, worktree `C:\Repos\Lite-p6-k`. Case list `Lite.Conformance/
 
 ## Handed in
 
+- `table-visual-layout-012` (official + WPT, from 6.E): `background` shorthand vs `background-color`
+  longhand. A LOWER-specificity shorthand declaration wins over a more specific longhand when the
+  shorthand comes later: on a plain `div`, `div{background-color:orange} #x{background-color:blue}`
+  renders blue, but `#x{background-color:blue} div{background:orange}` renders orange.
+  `getComputedStyle(div).backgroundColor` already reads orange, so it is the computed-style cascade
+  (AngleSharp's shorthand expansion order), not the painter. The test's `#cell{background-color:blue}`
+  loses to `td{background:orange}`, so the rowspan cell paints orange; it probably affects 6.H too.
+  6.E's TableEngine only consumes the computed colour.
+
 - `first-letter-selector-011/012/013/014` (official + WPT, from 6.F): a selector list that mixes a
   pseudo-element part with a normal part (`div p:first-letter, span { color: green; margin: 15px }`)
   is lifted whole by `TryExtractPseudoElementRule`/`NeutralizePseudoElementRules`, so the `span`

@@ -23,6 +23,14 @@ Branch `css21/p6-g`, worktree `C:\Repos\Lite-p6-g`. Case list `Lite.Conformance/
 
 _(Other lanes add cases here that belong to this lane, one line each: case, cause, from lane.)_
 
+- `css/CSS2/tables/border-conflict-element-029.xht` (WPT, from 6.E): `<table dir/ direction: rtl>`
+  with three `<col>`s; the first `<col>` must be the RIGHTMOST column, so its black left/right
+  border beats the following columns' red right border in §17.6.2.1's conflict. 6.E has NOT changed
+  `TableEngine`'s column X order (`BuildGrid`/`CellX` still place column 0 on the left), so the
+  red border survives (935 red pixels). The cell positions and the border-conflict winner both
+  follow the table's 'direction'; 6.E can carry the TableEngine side if 6.G lands the direction
+  handling, or 6.G can take both. Coordinate before either branch edits `BuildGrid`/`CellX`.
+
 - `css/CSS2/text/text-align-bidi-008.xht`, `text-align-bidi-009.xht`, `text-align-bidi-010.xht` — the justified RTL
   paragraph's lines do not end on one edge: the inked band ends alternate 641..787 / 631..785 (a 10px spread) though
   the box content box is 628..790. §16.2 requires justified lines to line up on both edges, so this is the known
