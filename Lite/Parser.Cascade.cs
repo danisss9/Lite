@@ -1012,6 +1012,12 @@ internal static partial class Parser
             foreach (var property in node.Style)
             {
                 if (property.Name is not { Length: > 0 } name || node.StyleOverrides.ContainsKey(name)) continue;
+                // Margins and padding only: those are the properties whose 'inherit' StyleResolver
+                // re-resolves from the declared channel on every recascade. A stamped 'inherit' on
+                // an offset was resolved once, so a later script change to the parent's 'top' never
+                // reached the child (dynamic-top-change-002/003 kept a stale position).
+                if (!(name.StartsWith("margin-", StringComparison.Ordinal) ||
+                      name.StartsWith("padding-", StringComparison.Ordinal))) continue;
                 if (s_fontRelativeLength.IsMatch(property.Value?.Trim() ?? "")) (candidates ??= []).Add(name);
             }
         }
