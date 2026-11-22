@@ -104,14 +104,7 @@ internal class JsEngine : IDisposable
                 // lets Promise .then() continuations (e.g. from fetch) actually execute.
                 FlushMicrotasks();
             }
-            catch (Exception ex)
-            {
-                // The report itself is cancelable (ReportScriptError); no extra default report here.
-                var error = ex is QuickJsException js && js.ErrorValue is { } value
-                    ? new JsValue(_engine, value.Clone()) : (JsValue)ex.Message;
-                ReportScriptError(error);
-                if (ex is QuickJsException quickJsError) quickJsError.Dispose();
-            }
+            catch (Exception ex) { ReportDrainError(ex); }
             ran = true;
         }
         // Deliver any queued observer notifications even when no macrotask ran this turn (e.g. a
@@ -120,6 +113,34 @@ internal class JsEngine : IDisposable
         Dom.ResizeObserverRegistry.DeliverAll(_engine);
         Dom.IntersectionObserverRegistry.DeliverAll(_engine);
         return ran;
+    }
+
+    /// <summary>Runs any timers whose deadline has passed. The headless pump calls this at the
+    /// start of each turn, so a due 0 ms timeout is not overtaken by an unbounded run of queued
+    /// immediate macrotasks (the simulated media timeline queues one per tick and used to end
+    /// playback before pause-move-within-document's step_timeout(0) could observe it).</summary>
+    internal void ProcessDueTimersNow() => _jsWindow.ProcessDueTimers();
+
+    /// <summary>Runs one timer callback on the UI thread with a microtask checkpoint after it.
+    /// The timer scheduler invokes due callbacks directly (in deadline order) rather than queuing
+    /// each as a separate macrotask, so the error containment is shared with <see cref="DrainTasks"/>.</summary>
+    internal void InvokeTimerCallback(JsValue fn)
+    {
+        try
+        {
+            RawEngine.Invoke(fn);
+            FlushMicrotasks();
+        }
+        catch (Exception ex) { ReportDrainError(ex); }
+    }
+
+    private void ReportDrainError(Exception ex)
+    {
+        // The report itself is cancelable (ReportScriptError); no extra default report here.
+        var error = ex is QuickJsException js && js.ErrorValue is { } value
+            ? new JsValue(_engine, value.Clone()) : (JsValue)ex.Message;
+        ReportScriptError(error);
+        if (ex is QuickJsException quickJsError) quickJsError.Dispose();
     }
 
     /// <summary>The current viewport (layout) size in CSS pixels.</summary>

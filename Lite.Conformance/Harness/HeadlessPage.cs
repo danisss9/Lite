@@ -15,6 +15,10 @@ internal static class HeadlessPage
 
     private static bool PumpFrame(JsEngine engine)
     {
+        // Due timers (a step_timeout(0), a media timeline tick) run before this turn's queued
+        // immediate macrotasks: otherwise a fast task producer can run indefinitely and a test's
+        // zero-delay check only gets serviced after the producer has already finished.
+        engine.ProcessDueTimersNow();
         var worked = engine.DrainTree();
         engine.FlushMicrotasksTree();
         var clock = FrameClocks.GetValue(engine, _ => new());

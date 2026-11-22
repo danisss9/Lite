@@ -7,7 +7,23 @@ internal class JsWindow
 {
     private readonly JsEngine _engine;
     private int _nextTimerId = 1;
-    private readonly Dictionary<int, System.Threading.Timer> _timers = [];
+
+    // Timers share ONE OS timer armed at the earliest deadline. Per-timer timers fired from
+    // independent pool threads, so a 20 ms timer could enqueue its callback before a 10 ms one
+    // that was merely delayed by load: the WPT window.onerror cases assert the 10 ms error ran
+    // before the 20 ms check and failed intermittently on busy shards. Deadlines are drained in
+    // (due, id) order on the UI thread instead.
+    private sealed class TimerEntry
+    {
+        public required int Id { get; init; }
+        public required long Due { get; set; }
+        public required int Period { get; init; }
+        public required JsValue Fn { get; init; }
+        public bool OneShot => Period <= 0;
+    }
+    private readonly Dictionary<int, TimerEntry> _timers = [];
+    private readonly object _timerLock = new();
+    private System.Threading.Timer? _timer;
 
     // Viewport dimensions
     public int innerWidth { get; set; }
@@ -179,38 +195,73 @@ internal class JsWindow
 
     internal bool HasListener(string type) => _listeners.Any(l => l.EventType == type);
 
-    public int setTimeout(JsValue fn, int delay = 0)
+    public int setTimeout(JsValue fn, int delay = 0) => AddTimer(fn, Math.Max(0, delay), period: 0);
+
+    public int setInterval(JsValue fn, int delay = 0) => AddTimer(fn, Math.Max(1, delay), period: Math.Max(1, delay));
+
+    private int AddTimer(JsValue fn, int delayMs, int period)
     {
         var id = _nextTimerId++;
-        if (delay < 0) delay = 0;
-        var timer = new System.Threading.Timer(_ =>
+        lock (_timerLock)
         {
-            // Marshal the callback onto the UI thread's event loop — QuickJS is bound to its owning thread.
-            _engine.EnqueueMacrotask(() => _engine.RawEngine.Invoke(fn));
-            lock (_timers) { _timers.Remove(id); }
-        }, null, delay, Timeout.Infinite);
-        lock (_timers) { _timers[id] = timer; }
+            _timers[id] = new TimerEntry
+            {
+                Id = id,
+                Due = Environment.TickCount64 + delayMs,
+                Period = period,
+                Fn = fn,
+            };
+            ArmTimerLocked();
+        }
         return id;
     }
 
-    public int setInterval(JsValue fn, int delay = 0)
+    /// <summary>Arms the one OS timer at the earliest pending deadline (caller holds the lock).</summary>
+    private void ArmTimerLocked()
     {
-        var id = _nextTimerId++;
-        if (delay <= 0) delay = 1;
-        var timer = new System.Threading.Timer(_ =>
+        if (_timers.Count == 0)
         {
-            _engine.EnqueueMacrotask(() => _engine.RawEngine.Invoke(fn));
-        }, null, delay, delay);
-        lock (_timers) { _timers[id] = timer; }
-        return id;
+            _timer?.Dispose();
+            _timer = null;
+            return;
+        }
+        var next = _timers.Values.Min(t => t.Due);
+        var due = Math.Max(0, next - Environment.TickCount64);
+        if (_timer is null)
+            _timer = new System.Threading.Timer(_ => _engine.EnqueueMacrotask(ProcessDueTimers), null, due, Timeout.Infinite);
+        else
+            _timer.Change(due, Timeout.Infinite);
+    }
+
+    /// <summary>Runs every timer due now, in (due, id) order, on the UI thread. Each callback gets
+    /// its own error containment and microtask checkpoint, so a throwing timer cannot skip the
+    /// rest of the due batch.</summary>
+    internal void ProcessDueTimers()
+    {
+        List<JsValue> due;
+        lock (_timerLock)
+        {
+            var now = Environment.TickCount64;
+            due = _timers.Values
+                .Where(t => t.Due <= now)
+                .OrderBy(t => t.Due).ThenBy(t => t.Id)
+                .Select(t => t.Fn)
+                .ToList();
+            foreach (var timer in _timers.Values.Where(t => t.Due <= now).ToList())
+            {
+                if (timer.OneShot) _timers.Remove(timer.Id);
+                else timer.Due = now + timer.Period;
+            }
+            ArmTimerLocked();
+        }
+        foreach (var fn in due) _engine.InvokeTimerCallback(fn);
     }
 
     public void clearTimeout(int id)
     {
-        lock (_timers)
+        lock (_timerLock)
         {
-            if (_timers.Remove(id, out var timer))
-                timer.Dispose();
+            if (_timers.Remove(id)) ArmTimerLocked();
         }
     }
 
@@ -218,9 +269,10 @@ internal class JsWindow
 
     internal void StopTimers()
     {
-        lock (_timers)
+        lock (_timerLock)
         {
-            foreach (var timer in _timers.Values) timer.Dispose();
+            _timer?.Dispose();
+            _timer = null;
             _timers.Clear();
         }
         _rafCallbacks.Clear();
