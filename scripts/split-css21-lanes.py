@@ -12,9 +12,11 @@ baseline CSV and writes, under Lite.Conformance/artifacts/lanes/:
   canary.txt      a fixed, stratified sample of passing cases every lane re-runs for 0 losses
   summary.md      counts per lane and outcome
 
-Lanes are assigned by test-name stem first (both suites share stems through the WPT twins),
-then by WPT css/CSS2 directory; anything unmatched goes to lane L (mixed-corpus triage).
-This is a routing aid for the work queue, not a conformance claim.
+Cases are routed in three steps. Judge-misread cases (JUDGE_NAMES: the render is right and
+the check misreads it, per the 6.M hand-ins) go to lane J. Everything else is matched by
+test-name stem first (both suites share stems through the WPT twins), then by WPT css/CSS2
+directory, onto the batch-1/2 routing areas (A..L), and MERGED folds those areas into the
+batch-3 lanes. This is a routing aid for the work queue, not a conformance claim.
 """
 
 from __future__ import annotations
@@ -32,19 +34,52 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT / "Lite.Conformance" / "artifacts"
 
+# Batch-3 lanes (22 November): lanes whose files collided in batches 1-2 are merged.
 LANES = {
-    "A": "inline and line box",
-    "B": "floats and clear",
-    "C": "block flow and sizing",
-    "D": "positioning and viewport",
-    "E": "tables",
-    "F": "generated content and lists",
-    "G": "bidi (wave 2)",
-    "H": "backgrounds",
-    "I": "borders, outline and visual effects",
-    "J": "fonts",
-    "K": "selectors, cascade and syntax",
-    "L": "mixed-corpus triage",
+    "T": "text: inline, line box and fonts",
+    "F": "flow: block, margins, floats and clear",
+    "P": "positioning and viewport",
+    "Tb": "tables",
+    "G": "generated content and lists",
+    "Bd": "bidi",
+    "V": "visual: borders, outline and backgrounds",
+    "S": "selectors, cascade and syntax",
+    "J": "judges and evidence (no engine)",
+}
+
+# The batch-1/2 routing areas (the keys STEM_RULES and WPT_DIRS use) -> batch-3 lane.
+MERGED = {
+    "A": "T", "J": "T",          # inline + fonts
+    "B": "F", "C": "F",          # floats + block flow
+    "D": "P",
+    "E": "Tb",
+    "F": "G",                    # generated content
+    "G": "Bd",                   # bidi
+    "H": "V", "I": "V",          # backgrounds + borders
+    "K": "S",
+    "L": "J",                    # unmatched / inline-svg: an open scope call, held by J
+}
+
+# Failing cases whose render matches the sentence while the judge misreads it (6.M "Handed
+# in"). Matched against the file name without its extension; they go to lane J, never to an
+# engine lane.
+JUDGE_NAMES = re.compile(r"^(?:"
+    r"table-visual-layout-00[78]|border-spacing-(?:003|083|084|095)|border-spacing-applies-to-01[45]|"
+    r"text-align-bidi-00[234]|direction-unicode-bidi-02[678]|"
+    r"list-style-type-001|list-style-type-017|list-style(?:-type)?-applies-to-00[56]|"
+    r"list-style-position-02[02]|content-008|content-142|quotes-applies-to-00[56]|content-counters-003|"
+    r"first-letter-punctuation-184|text-align-applies-to-0(?:07|12|13|15)|table-height-algorithm-03[12]|"
+    r"border-(?:top|right|bottom|left)-style-00[78]|border-style-rendering-00[12]|"
+    r"border-style-00[3478]|border-style-shorthand-00[234]|"
+    r"border-01[678]|border-(?:left|right)-01[67]|border-(?:top|bottom)-017|"
+    r"border-(?:top|right|bottom|left)-width-(?:092|047)|border-(?:top|bottom)-width-014|"
+    r"border-(?:top|bottom|left|right)(?:-color|-style|-width)?-applies-to-010|"
+    r"outline-style-applies-to-008|clipping-017|c5525-fltmult-000|c5518-brdr-t-001|c5520-brdr-b-001"
+    r")$")
+
+# Single-case reroutes across engine lanes (from the batch-2 hand-ins).
+CASE_LANES = {
+    "computed-float-position-absolute": "S",   # getComputedStyle().float: CSSOM, not float layout
 }
 
 # First match wins. Patterns run against the file-name stem (lower-cased, extension and
@@ -108,15 +143,24 @@ def stem(path: str) -> str:
     return re.sub(r"[-_ ]?\d+[a-z]?$", "", name) or name
 
 
-def lane_of(path: str) -> str:
+def area_of(path: str) -> str:
     s = stem(path)
-    for lane, pattern in STEM_RULES:
+    for area, pattern in STEM_RULES:
         if re.search(pattern, s):
-            return lane
+            return area
     parts = path.split("/")
     if len(parts) >= 4 and parts[0] == "css" and parts[1] == "CSS2":
         return WPT_DIRS.get(parts[2], "L")
     return "L"
+
+
+def lane_of(path: str) -> str:
+    name = re.sub(r"\.(htm|html|xht|xhtml|xml|svg)$", "", path.rsplit("/", 1)[-1].lower())
+    if JUDGE_NAMES.match(name):
+        return "J"
+    if name in CASE_LANES:
+        return CASE_LANES[name]
+    return MERGED[area_of(path)]
 
 
 def cluster_of(suite: str, path: str) -> str:
@@ -149,7 +193,7 @@ def main() -> int:
     parser.add_argument("sources", nargs="*",
                         help="shard JSON reports or a baseline CSV (default: the newest complete shard set)")
     parser.add_argument("--out", default=str(ARTIFACTS / "lanes"))
-    parser.add_argument("--canary-per-lane", type=int, default=80)
+    parser.add_argument("--canary-per-lane", type=int, default=107)
     args = parser.parse_args()
 
     sources = args.sources or sorted(glob.glob(str(ARTIFACTS / "css21-full-screen-*-of-*.json")))
@@ -208,7 +252,7 @@ def main() -> int:
         orr = sum(c[("css21-official", o)] for o in ROUTE_OUTCOMES)
         wr = sum(c[("css21-wpt", o)] for o in ROUTE_OUTCOMES)
         lines.append(f"| {lane} | {scope} | {of} | {wf} | {orr} | {wr} |")
-    lines += ["", f"Judges/routes queue (lane M): {len(routes)} cases. Canary: {len(canary)} passing cases."]
+    lines += ["", f"Routes queue (unsupported + manual-pending, out of batch-3 scope): {len(routes)} cases. Canary: {len(canary)} passing cases."]
     (out / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
     return 0
