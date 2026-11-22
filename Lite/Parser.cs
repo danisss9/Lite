@@ -48,7 +48,7 @@ internal static partial class Parser
         input { display: inline-block; cursor: text; }
         input[type="checkbox"] { cursor: default; }
         button { display: inline-block; cursor: pointer; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-color: #a0a0a0; border-right-color: #a0a0a0; border-bottom-color: #a0a0a0; border-left-color: #a0a0a0; border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; }
-        strong, b { font-weight: bold; }
+        strong, b { font-weight: bolder; }
         em, i, cite, dfn { font-style: italic; }
         u, ins { text-decoration: underline; }
         s, del, strike { text-decoration: line-through; }
@@ -133,7 +133,17 @@ internal static partial class Parser
     private static IConfiguration BaseParseConfiguration() => Configuration.Default
         .Without<AngleSharp.Browser.IMetaHandler>()
         .WithCss()
-        .With(new ScriptingFlagOnlyService());
+        .With(new ScriptingFlagOnlyService())
+        // AngleSharp's ':lang()' falls back to the browsing context's culture when no lang
+        // attribute is in scope (HtmlElement.Language -> GetLanguage() -> CurrentUICulture),
+        // so 'p:lang(en)' matched every <p> on an en-US host and nothing on a pt-BR one: the
+        // same page styled differently per developer machine and per CI runner
+        // (CascadeTests.Lang_MatchesRangesDocumentLanguageAndReachesText failed only on
+        // windows-latest). CSS 2.1 §5.11.4 takes the language from lang/xml:lang, the
+        // Content-Language header or <meta>, all of which Lite's own matcher reads
+        // (Parser.Cascade.ElementMatchesLang); the invariant culture leaves the context
+        // reporting no language, so the host locale can never decide a selector.
+        .With(System.Globalization.CultureInfo.InvariantCulture);
 
     private sealed class ScriptingFlagOnlyService : IScriptingService
     {

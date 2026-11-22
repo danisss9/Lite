@@ -236,17 +236,6 @@ public static class InlineFormattingTests
             n.StyleOverrides["background-repeat"] = "repeat";
         }
         using var bitmap = Drawer.DrawToBitmap(400, 300, page.Root, new Viewport { ViewportHeight = 300 });
-        var dbg = new List<string>();
-        foreach (var (box, name) in new[] { (wrapped.Box.ContentBox, "wrapped"), (single.Box.ContentBox, "single-line") })
-        {
-            dbg.Add($"DBG {name}: box=({box.Left},{box.Top}) {box.Width}x{box.Height} wfrags={wrapped.InlineFragments?.Count ?? 0} sfrags={single.InlineFragments?.Count ?? 0}");
-            var (green, red) = CountColors(bitmap, box);
-            dbg.Add($"DBG {name}: green={green} red={red}");
-        }
-        File.WriteAllLines("C:\\Repos\\Lite\\.claude\\worktrees\\p6-a\\Lite.Conformance\\artifacts\\unitdbg2.log", dbg);
-        using var encoded = bitmap.Encode(SKEncodedImageFormat.Png, 100);
-        using var fs = File.OpenWrite("C:\\Repos\\Lite\\.claude\\worktrees\\p6-a\\Lite.Conformance\\artifacts\\unitdbg2.png");
-        encoded.SaveTo(fs);
         foreach (var (box, name) in new[] { (wrapped.Box.ContentBox, "wrapped"), (single.Box.ContentBox, "single-line") })
         {
             var (green, red) = CountColors(bitmap, box);

@@ -101,11 +101,25 @@ public static class FontUnitTests
         // CSS 2.1 §15.2 / §15.3: missing glyphs fall back through the element's font-family list
         // before trying system symbol fallbacks (font-family-013, fonts-013); default-ignorable
         // bidi control characters must not trigger fallback (fonts-011).
-        var ahemPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Lite.Conformance", "vendor", "wpt", "fonts", "Ahem.ttf");
+        // Both faces come from the vendored WPT fonts so the fallback chain is the same on every
+        // runner OS: 'Times New Roman' is absent from the Linux images, which left the list with
+        // one resolvable family even though the engine's fallback was correct.
+        var fonts = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Lite.Conformance", "vendor", "wpt", "fonts");
+        var ahemPath = Path.Combine(fonts, "Ahem.ttf");
+        var latoPath = Path.Combine(fonts, "Lato-Medium.ttf");
         if (File.Exists(ahemPath)) FontRegistry.RegisterFile(ahemPath);
+        // Take the family name from the file's name table: it is the name RegisterFile keys the
+        // face under on every platform (no guess about "Lato" vs "Lato Medium").
+        string? latoFamily = null;
+        if (File.Exists(latoPath))
+        {
+            FontRegistry.RegisterFile(latoPath);
+            using var lato = SKTypeface.FromFile(latoPath);
+            latoFamily = lato?.FamilyName;
+        }
 
         var page = Parse(
-            "<span id=\"fb\" style=\"font-family: Ahem, 'Times New Roman'\">&#x0162;&#x0119;&#x015F;&#x0163;</span>" +
+            $"<span id=\"fb\" style=\"font-family: Ahem, '{latoFamily}'\">&#x0162;&#x0119;&#x015F;&#x0163;</span>" +
             "<span id=\"bidi\" style=\"font-family: Ahem\">X&#x202E;X&#x202C;</span>");
         var fbEl = Find(page, "fb")!;
         var fbNode = fbEl.Children.Count > 0 ? fbEl.Children[0] : fbEl;
@@ -115,9 +129,9 @@ public static class FontUnitTests
         {
             using var fbFont = TextMeasure.CreateFont(fbNode);
             True(!fbFont.Typeface.FamilyName.Equals("Ahem", StringComparison.OrdinalIgnoreCase),
-                $"Ahem lacks U+0162; expected fallback to Times New Roman, got {fbFont.Typeface.FamilyName}");
-            True(fbFont.Typeface.FamilyName.Equals("Times New Roman", StringComparison.OrdinalIgnoreCase),
-                $"expected Times New Roman from font-family list, got {fbFont.Typeface.FamilyName}");
+                $"Ahem lacks U+0162; expected the later family, got {fbFont.Typeface.FamilyName}");
+            True(fbFont.Typeface.FamilyName.Equals(families[1], StringComparison.OrdinalIgnoreCase),
+                $"expected {families[1]} from the font-family list, got {fbFont.Typeface.FamilyName}");
 
             var bidiEl = Find(page, "bidi")!;
             var bidiNode = bidiEl.Children.Count > 0 ? bidiEl.Children[0] : bidiEl;
