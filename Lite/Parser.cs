@@ -503,8 +503,14 @@ internal static partial class Parser
         foreach (var styleEl in document.QuerySelectorAll("style"))
         {
             var text = styleEl.TextContent;
-            if (text.Contains("@import", StringComparison.OrdinalIgnoreCase))
-                styleEl.TextContent = InlineImports(text, _documentBaseUrl ?? _baseUrl ?? "", Current.Charset);
+            if (!text.Contains("@import", StringComparison.OrdinalIgnoreCase)) continue;
+            var inlined = InlineImports(text, _documentBaseUrl ?? _baseUrl ?? "", Current.Charset);
+            // An @import that cannot be inlined (a malformed target, an unfetchable sheet) leaves
+            // nothing to expand: the CSS parser ignores the statement either way, so keep the
+            // authored text in the script-visible DOM instead of blanking the <style> element
+            // (html5lib tests16 #77/#174 expect the raw-text content to survive).
+            if (inlined.Length > 0 || string.IsNullOrWhiteSpace(text))
+                styleEl.TextContent = inlined;
         }
 
         // §4.2 parsing errors: drop illegal declarations from the sheet text after import
