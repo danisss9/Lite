@@ -702,50 +702,63 @@ internal static partial class BoxEngine
     /// side is a different boundary).</summary>
     private static MarginChain SelfCollapserBottomJoin(LayoutNode empty, float cbWidth)
     {
-        var fontSize = empty.GetFontSize();
-        var bottom = MarginChain.Of(empty.GetMarginBottom(total: cbWidth, size: fontSize));
-        var parent = empty.Parent;
-        if (parent is null) return bottom;
-        var started = false;
-        foreach (var sibling in parent.Children)
+        // Iterative over the run of consecutive self-collapsing siblings: adjoining is a simple
+        // left fold, and a loop cannot overflow the stack on a long run (or hang on a cyclic
+        // child list, the shape that crashed move-first-element…embolden.html before the DOM
+        // move re-projected the old parent).
+        var chain = MarginChain.Of(empty.GetMarginBottom(total: cbWidth, size: empty.GetFontSize()));
+        var current = empty;
+        // A proper tree never offers the same box twice; a corrupted/aliased child list would
+        // otherwise let the fold revisit a node forever.
+        var visited = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance) { empty };
+        while (current.Parent is { } parent)
         {
-            if (!started)
+            var started = false;
+            LayoutNode? nextSelfCollapser = null;
+            foreach (var sibling in parent.Children)
             {
-                if (ReferenceEquals(sibling, empty)) started = true;
-                continue;
+                if (!started)
+                {
+                    if (ReferenceEquals(sibling, current)) started = true;
+                    continue;
+                }
+                var d = sibling.GetDisplay();
+                if (d == DisplayType.None) continue;
+                var pos = sibling.GetPosition();
+                if (pos == PositionType.Absolute || pos == PositionType.Fixed) continue;
+                if (sibling.TagName == "#text")
+                {
+                    if (string.IsNullOrWhiteSpace(sibling.DisplayText)) continue;
+                    return chain; // inline content terminates the chain (and contains it)
+                }
+                if (sibling.GetFloat() != FloatType.None) return chain;
+                var isBlock = d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex or DisplayType.Table;
+                if (!isBlock) return chain;
+                if (sibling.GetClear() != ClearType.None) return chain;
+                // A self-collapser chains through its floats (they are out of flow), but those
+                // floats sit at the chain's position: a following box that establishes a new
+                // block formatting context and cannot fit beside them (§9.5: its border box must
+                // not overlap their margin boxes) is pushed below them, and that separates its
+                // top margin from the chain the way clearance does (§9.5.2) — it must not join
+                // the chain and drag the floats down with it (new-fc-separates-from-float).
+                if (BfcCannotFitBesideFloats(current, sibling, cbWidth)) return chain;
+                var joined = chain + GetEffectiveTopMarginChain(sibling, cbWidth);
+                // §8.3.1: adjoining is transitive. When the sibling self-collapses too, its own
+                // bottom margin adjoins the NEXT in-flow sibling's top margin, so the chain runs
+                // on through every consecutive self-collapsing sibling (margin-collapse-min-
+                // height-001.xht: the 5em chain reaches the parent's top margin through two
+                // empty divs and the float-only last child, and — that parent having a non-zero
+                // 'min-height' — is spent above the parent instead of below it).
+                if (!SelfCollapses(sibling, cbWidth) || !visited.Add(sibling)) return joined;
+                chain = joined + MarginChain.Of(
+                    sibling.GetMarginBottom(total: cbWidth, size: sibling.GetFontSize()));
+                nextSelfCollapser = sibling;
+                break;
             }
-            var d = sibling.GetDisplay();
-            if (d == DisplayType.None) continue;
-            var pos = sibling.GetPosition();
-            if (pos == PositionType.Absolute || pos == PositionType.Fixed) continue;
-            if (sibling.TagName == "#text")
-            {
-                if (string.IsNullOrWhiteSpace(sibling.DisplayText)) continue;
-                return bottom; // inline content terminates the chain (and contains it)
-            }
-            if (sibling.GetFloat() != FloatType.None) return bottom;
-            var isBlock = d is DisplayType.Block or DisplayType.ListItem or DisplayType.Flex or DisplayType.Table;
-            if (!isBlock) return bottom;
-            if (sibling.GetClear() != ClearType.None) return bottom;
-            // A self-collapser chains through its floats (they are out of flow), but those
-            // floats sit at the chain's position: a following box that establishes a new block
-            // formatting context and cannot fit beside them (§9.5: its border box must not
-            // overlap their margin boxes) is pushed below them, and that separates its top
-            // margin from the chain the way clearance does (§9.5.2) — it must not join the
-            // chain and drag the floats down with it (new-fc-separates-from-float).
-            if (BfcCannotFitBesideFloats(empty, sibling, cbWidth)) return bottom;
-            var joined = bottom + GetEffectiveTopMarginChain(sibling, cbWidth);
-            // §8.3.1: adjoining is transitive. When the sibling self-collapses too, its own
-            // bottom margin adjoins the NEXT in-flow sibling's top margin, so the chain runs on
-            // through every consecutive self-collapsing sibling (margin-collapse-min-height-
-            // 001.xht: the 5em chain reaches the parent's top margin through two empty divs and
-            // the float-only last child, and — that parent having a non-zero 'min-height' — is
-            // spent above the parent instead of below it).
-            return SelfCollapses(sibling, cbWidth)
-                ? joined + SelfCollapserBottomJoin(sibling, cbWidth)
-                : joined;
+            if (nextSelfCollapser is null) return chain;
+            current = nextSelfCollapser;
         }
-        return bottom;
+        return chain;
     }
 
     /// <summary>Whether <paramref name="bfc"/> establishes a new block formatting context that

@@ -1992,8 +1992,14 @@ public class JsElement
             // children in DOM order. A direct splice cannot find its insertion point once the
             // layout normalizers have wrapped children in anonymous boxes (block-in-inline
             // pieces, anonymous table rows/cells) — re-projection restores DOM order instead.
+            // The node may come from another parent: the DOM move detaches it there, and that
+            // parent's projection must drop its stale box too (execCommand('bold') moved a
+            // block <h6> into the new wrapper and left it also under the old span, so the same
+            // LayoutNode appeared twice and the margin chain never terminated).
+            var previousDomParent = childDom.Parent;
             parentDom.AppendChild(childDom);
             ReProjectAfterMutation();
+            ReProjectPreviousParent(previousDomParent, parentDom);
             var idx = Node.Children.IndexOf(child.Node);
             var prev = idx > 0 ? Node.Children[idx - 1] : null;
             MutationObserverRegistry.NotifyChildList(_engine, Node, [child.Node], null, prev, null);
@@ -2049,8 +2055,10 @@ public class JsElement
         {
             if (refNode?.DomNode is { } reference && !ReferenceEquals(reference.Parent, parentDom))
                 ThrowDom("NotFoundError", "Reference node not found");
+            var previousDomParent = childDom.Parent;
             parentDom.InsertBefore(childDom, refNode?.DomNode);
             ReProjectAfterMutation();
+            ReProjectPreviousParent(previousDomParent, parentDom);
             StyleResolver.ApplyTree(newNode.Node);
             MutationObserverRegistry.NotifyChildList(_engine, Node, [newNode.Node], null, null, refNode?.Node);
             newNode.ExecuteInsertedScript();
@@ -2089,8 +2097,10 @@ public class JsElement
         {
             if (!ReferenceEquals(oldDom.Parent, parentDom))
                 ThrowDom("NotFoundError", "Old node not found");
+            var previousDomParent = newDom.Parent;
             parentDom.ReplaceChild(newDom, oldDom);
             ReProjectAfterMutation();
+            ReProjectPreviousParent(previousDomParent, parentDom);
             StyleResolver.ApplyTree(newNode.Node);
             oldNode.Node.Parent = null;
             newNode.ExecuteInsertedScript();
@@ -2359,6 +2369,16 @@ public class JsElement
             if (node.DomNode is IElement parentElement && node.DocumentState is { } owner)
                 Parser.ReProjectChildren(parentElement, owner);
             JsEngine.For(_engine)?.SyncWindowNamedProperties();
+        }
+
+        /// <summary>Re-projects the parent a moved DOM node came from, when it is not the new
+        /// parent: the DOM move detached the child there, but its LayoutNode child list still
+        /// holds the old box (the stale copy then aliases the real one in the new parent).</summary>
+        private void ReProjectPreviousParent(INode? previousParent, INode currentParent)
+        {
+            if (previousParent is IElement previousElement && !ReferenceEquals(previousParent, currentParent)
+                && Node.DocumentState is { } owner)
+                Parser.ReProjectChildren(previousElement, owner);
         }
 
         /// <summary>Runs the inserted-content hooks (script execution, iframe load) after the whole

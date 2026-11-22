@@ -1,4 +1,5 @@
 using Lite;
+using Lite.Models;
 using Lite.Scripting;
 using static Lite.Tests.TestRunner;
 
@@ -113,6 +114,31 @@ public static class EditingTests
             globalThis.out = out.join('|');
             """);
         Equal("false|true|false|true|bold-ok", Eval(engine, "out"));
+    }
+
+    [Test]
+    public static void MovingAChildAcrossParents_DoesNotLeaveAnAliasedLayoutBox()
+    {
+        // The DOM move detaches the child at the old parent; if only the new parent is
+        // re-projected, the old parent keeps the same LayoutNode too. execCommand('bold') does
+        // exactly this when it wraps a block child: the block then sat under both the wrapper
+        // and the old inline span, and the duplicated self-collapsing box made the margin-chain
+        // walk loop forever (move-first-element…embolden.html's crashtest).
+        var page = Parser.ParseChildPage(
+            "<!doctype html><body><div id=src><h6 id=block></h6></div><div id=dst></div></body></html>",
+            isSrcdoc: true, "http://test/", 800, 600);
+        page.Engine!.RawEngine.Execute(
+            "document.getElementById('dst').appendChild(document.getElementById('block'));");
+        var seen = new HashSet<LayoutNode>(ReferenceEqualityComparer.Instance);
+        static void Walk(LayoutNode node, HashSet<LayoutNode> seen)
+        {
+            if (!seen.Add(node)) throw new Exception($"LayoutNode {node.TagName} appears twice in the layout tree");
+            foreach (var child in node.Children) Walk(child, seen);
+        }
+        Walk(page.Root, seen);
+        True(page.Engine.RawEngine.Evaluate(
+            "document.getElementById('block').parentNode.id").ToString() == "dst",
+            "the block should have moved to the destination");
     }
 
     [Test]

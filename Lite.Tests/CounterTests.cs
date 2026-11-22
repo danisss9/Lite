@@ -1,3 +1,4 @@
+using Lite.Layout;
 using Lite.Models;
 using static Lite.Tests.TestRunner;
 
@@ -113,6 +114,46 @@ public static class CounterTests
         var texts = Generated("li:before { content: counter(list-item); }",
             "<ol><li><ol><li></li></ol></li><li></li></ol>");
         True(texts.SequenceEqual(["1", "1", "2"]), string.Join(",", texts));
+    }
+
+    [Test]
+    public static void OrderedListIndex_FollowsReversedStartValueAndDynamicChanges()
+    {
+        // HTML §4.4.6: 'start' seeds the first ordinal, 'reversed' counts down (from the item
+        // count when 'start' is absent), and an 'li value' sets that item and continues from
+        // it. The index is read from the current list so script changes renumber at once.
+        var page = Parser.ParseChildPage(
+            "<!DOCTYPE html><body>" +
+            "<ol reversed start=5><li id=a>A</li><li id=b>B</li><li id=c>C</li></ol>" +
+            "<ol><li id=d value=5>D</li><li id=e>E</li><li id=f value=2>F</li><li id=g>G</li></ol>" +
+            "<ol reversed><li id=h>H</li><div><li id=i>I</li><li id=j>J</li></div></ol>" +
+            "<ol id=list><li id=k>K</li><li id=l>L</li></ol>" +
+            "</body></html>", isSrcdoc: true, "http://test/", 800, 600);
+        LayoutNode Find(string id)
+        {
+            LayoutNode? Found(LayoutNode n) => n.Id == id ? n :
+                n.Children.Select(Found).FirstOrDefault(r => r is not null);
+            return Found(page.Root)!;
+        }
+        Equal(5, CssCounterStyles.ListItemIndex(Find("a")));
+        Equal(4, CssCounterStyles.ListItemIndex(Find("b")));
+        Equal(3, CssCounterStyles.ListItemIndex(Find("c")));
+        Equal(5, CssCounterStyles.ListItemIndex(Find("d")));
+        Equal(6, CssCounterStyles.ListItemIndex(Find("e")));
+        Equal(2, CssCounterStyles.ListItemIndex(Find("f")));
+        Equal(3, CssCounterStyles.ListItemIndex(Find("g")));
+        // A wrapper between the list and its items does not start a new list (reversed-1d).
+        Equal(3, CssCounterStyles.ListItemIndex(Find("h")));
+        Equal(2, CssCounterStyles.ListItemIndex(Find("i")));
+        Equal(1, CssCounterStyles.ListItemIndex(Find("j")));
+        // Script-set 'reversed' and an appended item renumber the existing markers.
+        page.Engine!.RawEngine.Execute(
+            "document.getElementById('list').setAttribute('reversed',''); " +
+            "var li=document.createElement('li'); li.id='m'; li.textContent='M'; " +
+            "document.getElementById('list').appendChild(li);");
+        Equal(3, CssCounterStyles.ListItemIndex(Find("k")));
+        Equal(2, CssCounterStyles.ListItemIndex(Find("l")));
+        Equal(1, CssCounterStyles.ListItemIndex(Find("m")));
     }
 
     private static List<string> Generated(string css, string body)

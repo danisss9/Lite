@@ -269,17 +269,9 @@ internal static partial class Drawer
         // CSS 2.1 §12.4: the marker's ordinal is the 'list-item' counter — the parser
         // implicitly resets it at the list and increments it per item, and an author's
         // `counter-reset: list-item -3` participates (list-style-type-017's negative numbers
-        // and counter-reset-increment-002). The sibling count is only the fallback for a node
-        // with no counter snapshot (a projected/script-created box).
-        if (node.CounterValues?.TryGetValue("list-item", out var counter) == true) return counter;
-        if (node.Parent == null) return 1;
-        var index = 1;
-        foreach (var sibling in node.Parent.Children)
-        {
-            if (sibling == node) break;
-            if (sibling.TagName == "LI") index++;
-        }
-        return index;
+        // and counter-reset-increment-002). The list is read at paint time so a script-set
+        // 'reversed'/'value' or an appended item renumbers immediately.
+        return Layout.CssCounterStyles.ListItemIndex(node);
     }
 
     /// <summary>The width of line <paramref name="index"/>'s float band, or <paramref name="fallback"/>

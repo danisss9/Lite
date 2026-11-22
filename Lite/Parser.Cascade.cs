@@ -2012,23 +2012,26 @@ internal static partial class Parser
         string? inherited = null;
         for (var node = element; node is not null; node = node.ParentElement)
         {
+            // An EMPTY lang attribute is itself the in-scope language: HTML §3.2.6.2 makes
+            // 'lang=""' say "the language is unknown", which suppresses the HTTP/meta document
+            // language instead of falling back to it (the-lang-attribute-009/010).
+            if (node.HasAttribute("lang"))
+            {
+                inherited = node.GetAttribute("lang")!.Trim();
+                break;
+            }
             // XML documents carry the namespaced spelling; HTML uses the bare attribute. In an
             // HTML document a literal 'xml:lang' attribute sits in no namespace and sets no
             // language (HTML §3.2.6.2) — only the XML-namespaced one, which the HTML parser
             // gives foreign (SVG/MathML) elements, counts (xml-lang-selectors-002).
-            var lang = node.GetAttribute("lang");
-            if (string.IsNullOrEmpty(lang))
-            {
-                var htmlDocument = node.Owner is AngleSharp.Html.Dom.IHtmlDocument;
-                var xmlLang = node.Attributes.FirstOrDefault(a =>
-                    !htmlDocument && a.Name.Equals("xml:lang", StringComparison.OrdinalIgnoreCase) ||
-                    a.NamespaceUri == "http://www.w3.org/XML/1998/namespace" && a.LocalName == "lang");
-                lang = xmlLang?.Value;
-            }
-            if (!string.IsNullOrEmpty(lang)) { inherited = lang.Trim(); break; }
+            var htmlDocument = node.Owner is AngleSharp.Html.Dom.IHtmlDocument;
+            var xmlLang = node.Attributes.FirstOrDefault(a =>
+                !htmlDocument && a.Name.Equals("xml:lang", StringComparison.OrdinalIgnoreCase) ||
+                a.NamespaceUri == "http://www.w3.org/XML/1998/namespace" && a.LocalName == "lang");
+            if (xmlLang is not null) { inherited = xmlLang.Value.Trim(); break; }
         }
         inherited ??= DocumentLanguage(element);
-        if (inherited is null) return false;
+        if (string.IsNullOrEmpty(inherited)) return false;
         // A language range matches when the tags are equal, or when the element's tag is the
         // range plus a hyphen and further subtags: 'en' never matches ':lang(en-GB)'.
         return inherited.Equals(wanted, StringComparison.OrdinalIgnoreCase) ||

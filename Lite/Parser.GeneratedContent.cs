@@ -48,7 +48,17 @@ internal static partial class Parser
             // hint — unless the author's own counter-reset names it (list-style-type-017's
             // `ol { counter-reset: list-item -3 }` must win).
             if (display.Trim().Equals("list-item", StringComparison.OrdinalIgnoreCase))
-                ApplyCounterProperties(null, "list-item", enclosing);
+            {
+                // HTML §4.4.6: a 'reversed' ordered list counts DOWN (its implicit increment is
+                // -1) and an 'li value' attribute sets that item's ordinal, continuing from there
+                // (reversed-2.html and its value-bearing reference).
+                var parent = element.ParentElement;
+                var reversed = parent is not null && TagOf(parent) == "OL" && parent.HasAttribute("reversed");
+                ApplyCounterProperties(null, reversed ? "list-item -1" : "list-item", enclosing);
+                if (int.TryParse(element.GetAttribute("value"), out var itemValue) &&
+                    _counters.TryGetValue("list-item", out var listItem) && listItem.Count > 0)
+                    listItem[^1] = itemValue;
+            }
             else if (TagOf(element) is "OL" or "UL" or "DIR" or "MENU")
             {
                 // HTML's 'start' hint sets the list's first ordinal (start-1 before the item's
@@ -56,8 +66,16 @@ internal static partial class Parser
                 // writes both `counter-reset: list-item -3` and `start="-3"` and expects -3.
                 // Without 'start', the author's reset (if it names list-item) stands, else the
                 // list restarts the counter at 0 for its items (§12.4's implicit reset).
+                // A reversed list seeds the counter one ABOVE its first ordinal, because every
+                // item decrements it; with no 'start' that ordinal is the item count.
+                var reversed = TagOf(element) == "OL" && element.HasAttribute("reversed");
                 if (TagOf(element) == "OL" && int.TryParse(element.GetAttribute("start"), out var parsedStart))
-                    ApplyCounterProperties($"list-item {parsedStart - 1}", null, enclosing);
+                    ApplyCounterProperties($"list-item {(reversed ? parsedStart + 1 : parsedStart - 1)}", null, enclosing);
+                else if (reversed)
+                {
+                    if (reset is null || !reset.Contains("list-item", StringComparison.OrdinalIgnoreCase))
+                        ApplyCounterProperties($"list-item {element.Children.Count(c => TagOf(c) == "LI") + 1}", null, enclosing);
+                }
                 else if (reset is null || !reset.Contains("list-item", StringComparison.OrdinalIgnoreCase))
                     ApplyCounterProperties("list-item 0", null, enclosing);
             }

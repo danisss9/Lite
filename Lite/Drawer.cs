@@ -411,17 +411,21 @@ internal static partial class Drawer
             }
         }
 
-        // position:sticky — behaves like relative but offset is clamped to viewport scroll
+        // position:sticky — behaves like relative but its offset is clamped to the scrollport
+        // of the nearest scrolling ancestor (the viewport when there is none).
         if (pos == PositionType.Sticky)
         {
             var fontSize = node.GetFontSize();
             var stickyTop = node.GetOffsetTop(node.Box.ContentBox.Height, fontSize);
             if (!float.IsNaN(stickyTop))
             {
-                // Node's layout position in content coordinates
+                // Node's layout position in content coordinates.
                 var nodeY = node.Box.MarginBox.Top;
-                // Target position in viewport: viewportScrollY + stickyTop
-                var targetY = _viewportScrollY + stickyTop;
+                // The scrollport's top and the ancestor content's scroll offset, both in layout
+                // coordinates: page scroll cancels between them, while a nested scroll box
+                // (the fieldset in sticky-content.html) is what the sticky offset is relative to.
+                var (scrollY, scrollportTop) = StickyScrollOrigin(node);
+                var targetY = scrollportTop + scrollY + stickyTop;
                 var dy = 0f;
                 if (nodeY < targetY)
                 {
@@ -446,6 +450,22 @@ internal static partial class Drawer
         }
 
         PaintNodeInner(canvas, node, viewportWidth);
+    }
+
+    /// <summary>The scroll offset and scrollport top (both in the sticky box's layout coordinate
+    /// system) of the nearest scroll container ancestor: the viewport when there is none. A
+    /// sticky box is clamped against its nearest scrollport, not the page, so a page offset would
+    /// place it at the wrong band inside an overflowing element (sticky-content.html).</summary>
+    private static (float ScrollY, float ScrollportTop) StickyScrollOrigin(LayoutNode node)
+    {
+        for (var parent = node.Parent; parent is not null; parent = parent.Parent)
+        {
+            if (parent.TagName is "HTML" or "BODY" || parent.TagName.StartsWith('#')) continue;
+            if (parent.GetOverflow() is not (OverflowType.Scroll or OverflowType.Auto or OverflowType.Hidden))
+                continue;
+            return (parent.ScrollState?.ScrollY ?? 0f, BoxEngine.ScrollportRect(parent).Top);
+        }
+        return (_viewportScrollY, 0f);
     }
 
     private static void PaintNodeInner(SKCanvas canvas, LayoutNode node, int viewportWidth)

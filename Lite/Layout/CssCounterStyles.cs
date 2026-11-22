@@ -1,3 +1,6 @@
+using Lite.Extensions;
+using Lite.Models;
+
 namespace Lite.Layout;
 
 /// <summary>CSS 2.1 §4.3.1 counter (list) styles: the text a counter's value renders as in
@@ -67,6 +70,75 @@ internal static class CssCounterStyles
         "disc" or "circle" or "square" => Content(index, style) + " ",
         _ => (Format(index, style) ?? index.ToString()) + ". ",
     };
+
+    /// <summary>The ordinal an ordered list item's marker shows, read from the CURRENT list so
+    /// a script-set 'reversed' or an appended item renumbers immediately (reversed-1b/1c.html).
+    /// An authored 'list-item' counter (counter-reset/-increment on the item or an ancestor)
+    /// keeps the parse-time snapshot: the author's numbers are not the HTML ordinal.
+    /// Anonymous wrappers are descended through; a nested list's items belong to that list.</summary>
+    internal static int ListItemIndex(LayoutNode node)
+    {
+        for (var n = node; n is not null; n = n.Parent)
+            if (DeclaresListItemCounter(n)) return SnapshotIndex(node);
+
+        var list = node.Parent;
+        while (list is not null && list.TagName is not ("OL" or "UL" or "DIR" or "MENU")) list = list.Parent;
+        if (list is null || list.TagName != "OL") return SnapshotIndex(node);
+
+        var items = new List<LayoutNode>();
+        Collect(list, items);
+        var reversed = list.Attributes.ContainsKey("reversed");
+        var index = reversed ? items.Count : 1;
+        if (list.Attributes.TryGetValue("start", out var startText) && int.TryParse(startText, out var start))
+            index = start;
+        var step = reversed ? -1 : 1;
+        foreach (var item in items)
+        {
+            if (item.Attributes.TryGetValue("value", out var valueText) && int.TryParse(valueText, out var value))
+                index = value;
+            if (ReferenceEquals(item, node)) return index;
+            index += step;
+        }
+        return SnapshotIndex(node);
+
+        static void Collect(LayoutNode parent, List<LayoutNode> items)
+        {
+            foreach (var child in parent.Children)
+            {
+                if (child.TagName is "OL" or "UL" or "DIR" or "MENU") continue;
+                if (child.GetDisplay() == DisplayType.None) continue;
+                if (child.GetDisplay() == DisplayType.ListItem) { items.Add(child); continue; }
+                // The list owner is the nearest ol/ul ancestor, ignoring ordinary wrappers: an
+                // <li> under a <div> between the list and the item still belongs to the list
+                // (reversed-1d.html). A collected item's own subtree is not entered, so a
+                // nested list's items stay with their own list.
+                Collect(child, items);
+            }
+        }
+
+        static bool DeclaresListItemCounter(LayoutNode n)
+        {
+            static bool Names(string? value) =>
+                value?.Contains("list-item", StringComparison.OrdinalIgnoreCase) == true;
+            return Names(n.StyleOverrides.GetValueOrDefault("counter-reset")) ||
+                   Names(n.StyleOverrides.GetValueOrDefault("counter-increment")) ||
+                   Names(n.Style.GetPropertyValueSafe("counter-reset")) ||
+                   Names(n.Style.GetPropertyValueSafe("counter-increment"));
+        }
+
+        static int SnapshotIndex(LayoutNode n)
+        {
+            if (n.CounterValues?.TryGetValue("list-item", out var counter) == true) return counter;
+            var index = 1;
+            if (n.Parent is { } parent)
+                foreach (var sibling in parent.Children)
+                {
+                    if (ReferenceEquals(sibling, n)) break;
+                    if (sibling.TagName == "LI") index++;
+                }
+            return index;
+        }
+    }
 
     /// <summary>The counter's text in the given style, without any marker suffix. Returns
     /// null for the bullet styles (the caller draws the glyph) and for 'none'.</summary>
