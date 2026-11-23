@@ -234,9 +234,25 @@ internal class JsWindow
         var next = _timers.Values.Min(t => t.Due);
         var due = TicksToCeilingMs(next - Stopwatch.GetTimestamp());
         if (_timer is null)
-            _timer = new System.Threading.Timer(_ => _engine.EnqueueMacrotask(ProcessDueTimers), null, due, Timeout.Infinite);
+            _timer = new System.Threading.Timer(_ => OnTimerWake(), null, due, Timeout.Infinite);
         else
             _timer.Change(due, Timeout.Infinite);
+    }
+
+    /// <summary>The shared OS timer woke. System.Threading.Timer quantizes due times to whole
+    /// milliseconds, so a wake armed for a sub-millisecond remainder (e.g. setTimeout(fn, 1)) can
+    /// land just before the high-resolution deadline. Enqueuing the pump then would find nothing
+    /// due and leave the callback for a later drain; re-arm instead, so only a genuinely due
+    /// deadline reaches the queue.</summary>
+    private void OnTimerWake()
+    {
+        bool due;
+        lock (_timerLock)
+        {
+            due = _timers.Count > 0 && _timers.Values.Min(t => t.Due) <= Stopwatch.GetTimestamp();
+            if (!due) ArmTimerLocked();
+        }
+        if (due) _engine.EnqueueMacrotask(ProcessDueTimers);
     }
 
     /// <summary>Runs every timer due now, in (due, id) order, on the UI thread. Each callback gets
