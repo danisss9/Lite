@@ -27,9 +27,9 @@ jobs:
     timeout-minutes: 180
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.x"
           # The restore is cache-fed from the central package manifest, so repeated runs do
@@ -46,12 +46,12 @@ jobs:
 
       - name: Restore pinned conformance inputs
         id: vendor-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -69,7 +69,7 @@ jobs:
         if: always() && steps.vendor-cache.outputs.cache-hit != 'true'
         # The html5 prepare job may save the same key concurrently; a lost reservation is benign.
         continue-on-error: true
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
@@ -138,7 +138,7 @@ jobs:
 
       - name: Upload compatibility evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: compatibility-evidence
           path: |
@@ -161,9 +161,9 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.x"
           # The restore is cache-fed from the central package manifest, so repeated runs do
@@ -180,12 +180,12 @@ jobs:
 
       - name: Restore pinned conformance inputs
         id: vendor-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -200,7 +200,7 @@ jobs:
       - name: Save pinned conformance inputs
         if: steps.vendor-cache.outputs.cache-hit != 'true'
         continue-on-error: true
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
@@ -217,7 +217,7 @@ jobs:
         run: tar -czf html5-runner-build.tar.gz Lite.Conformance/bin/Release/net8.0 Lite.Conformance/artifacts/wpt-manifest.json Lite.Conformance/artifacts/wpt-manifest.json.meta.json
 
       - name: Upload the shared build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: html5-runner-build
           path: html5-runner-build.tar.gz
@@ -227,7 +227,7 @@ jobs:
       # sources through it) but runs no dotnet, so it downloads these two small files
       # instead of the whole build tarball.
       - name: Upload the WPT manifest for the gate job
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: html5-wpt-manifest
           path: |
@@ -247,9 +247,9 @@ jobs:
         shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.x"
 
@@ -257,7 +257,7 @@ jobs:
       # here, and no shard races another to reserve the same cache key.
       - name: Restore pinned conformance inputs
         id: vendor-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
@@ -271,7 +271,7 @@ jobs:
         run: ./scripts/fetch-tests.ps1 -IncludeCss21Official
 
       - name: Download the shared build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: html5-runner-build
           path: .
@@ -285,7 +285,7 @@ jobs:
 
       - name: Upload shard evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: html5-shard-${{ matrix.shard }}
           path: Lite.Conformance/artifacts/html5-results-${{ matrix.shard }}-of-16.json
@@ -301,9 +301,9 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -311,13 +311,13 @@ jobs:
       # the generated WPT manifest; the gate runs no dotnet, so it needs only that manifest,
       # not the shared build tarball (and no second vendor fetch).
       - name: Download the WPT manifest
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: html5-wpt-manifest
           path: Lite.Conformance/artifacts
 
       - name: Download shard evidence
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: html5-shard-*
           merge-multiple: true
@@ -337,7 +337,7 @@ jobs:
 
       - name: Upload merged baseline
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: html5-baseline
           path: |
@@ -354,9 +354,9 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.x"
           cache: true
@@ -364,13 +364,13 @@ jobs:
             Directory.Packages.props
             **/*.csproj
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Restore pinned conformance inputs
         id: vendor-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
@@ -381,7 +381,7 @@ jobs:
 
       - name: Save pinned conformance inputs
         if: always() && steps.vendor-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
@@ -401,7 +401,7 @@ jobs:
 
       - name: Upload unit test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unit-results-linux
           path: Lite.Conformance/artifacts/unit-results-linux.json

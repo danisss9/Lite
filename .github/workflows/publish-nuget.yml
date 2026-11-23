@@ -16,12 +16,12 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build Linux QuickJS bridge
         run: bash Lite.QuickJs/build-quickjs.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: quickjs-linux-x64
           path: |
@@ -39,14 +39,14 @@ jobs:
       version: ${{ steps.version.outputs.VERSION }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Extract version from tag
         id: version
         shell: bash
         run: echo "VERSION=${GITHUB_REF_NAME#lite_}" >> $GITHUB_OUTPUT
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0.x'
           cache: true
@@ -71,13 +71,13 @@ jobs:
             throw "Tag version ${{ steps.version.outputs.VERSION }} does not match Lite.QuickJs.csproj version $quickJsVersion."
           }
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
       - name: Restore pinned conformance inputs
         id: vendor-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
@@ -90,7 +90,7 @@ jobs:
         # Persist the vendor tree even when the fetch fails: it is resumable, and a failed
         # release gate must not force the next run to re-clone ~245 MB from scratch.
         if: always() && steps.vendor-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: Lite.Conformance/vendor
           key: conformance-${{ runner.os }}-${{ hashFiles('Lite.Conformance/test-suites.lock.json', 'scripts/fetch-tests.ps1') }}
@@ -157,7 +157,7 @@ jobs:
 
       - name: Upload compatibility evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-compatibility-evidence
           path: |
@@ -166,7 +166,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Download Linux QuickJS bridge
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: quickjs-linux-x64
           path: Lite.QuickJs/runtimes/linux-x64/native
@@ -178,7 +178,7 @@ jobs:
         run: dotnet pack Lite/Lite.csproj --configuration Release --no-build /p:Version=${{ steps.version.outputs.VERSION }} --output nupkg
 
       - name: Upload release packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-packages
           path: |
@@ -200,11 +200,11 @@ jobs:
 
     steps:
       - name: Download release packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: release-packages
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0.x'
 
@@ -221,7 +221,7 @@ jobs:
         run: dotnet nuget push nupkg/danisss9.Lite.${{ needs.build.outputs.version }}.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: v${{ needs.build.outputs.version }}
           files: |
