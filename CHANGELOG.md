@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+- Multi-target `Lite`, `Lite.QuickJs`, `Lite.AngleSharp`, `Lite.AngleSharp.Css`, `Lite.Media`, `Lite.Conformance`, and `Lite.Tests` across `net6.0`, `net7.0`, `net8.0`, `net9.0`, and `net10.0` (instead of `net8.0` only), keeping `.NET 8+` fast paths (`SearchValues`, `FrozenDictionary`, `IndexOfAnyInRange`) on newer frameworks while adding `.NET 6`/`7` compatibility shims and polyfills, deduplicating `Lite.QuickJs`'s native bridge build across parallel TFM builds, and running `Lite.Tests` across all 5 frameworks in CI.
+
 ## [0.3.0] - 2026-11-14
 
 This release turns the HTML 5.0 track from plans into gates and carries CSS 2.1 past the 80% line: the applicability inventory closes under the runner's guarded omission check, the html5lib tokenizer corpus and the parse-fidelity copies gate in CI, testdriver input automation opens the harness-blocked tail, and the document-creation/encoding, forms, editing/selection, obsolete-reflection and document.write-streaming packages land against measured subtest counts while the reviewed assertion gate shards and banks its pass baseline. Paragraph-level bidi reordering, the float/line-break boundary corrections, the stylesheet-charset chain, the per-part XML selector gate and the CSS-wide-shorthand expansion move the validating official sweep to 7,394/9,039 (81.8%). The engine stops reflecting host members per node wrapper — the DOM surface binds once on the WebIDL prototypes, an inline box's left margin paints on its first fragment only, a preserved-text cell measures its widest hard line, the parse pipeline keeps the author's `<meta charset>` declaration verbatim, and `registerProtocolHandler` resolves a path-absolute URL against the page. Units 568/568; curated gates css21 51 pass / 1 published expected-fail, wpt 86 pass / 2 published expected-fails, acid 3/3.
