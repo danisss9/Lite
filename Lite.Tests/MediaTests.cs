@@ -24,7 +24,15 @@ public static class MediaTests
 
     private static void Pump(JsEngine e)
     {
-        for (int i = 0; i < 50; i++) { e.DrainTree(); e.FlushMicrotasksTree(); }
+        // The simulated timeline ticks in real time (10 ms), so a tight drain loop would never
+        // reach 'ended'; pump for up to 500 ms while sleeping between empty turns.
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (sw.ElapsedMilliseconds < 500)
+        {
+            e.DrainTree();
+            e.FlushMicrotasksTree();
+            Thread.Sleep(1);
+        }
     }
 
     private static object? Val(JsEngine e, string name) => e.RawEngine.GetValue(name).ToObject();

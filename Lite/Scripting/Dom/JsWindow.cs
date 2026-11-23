@@ -236,7 +236,7 @@ internal class JsWindow
     /// <summary>Runs every timer due now, in (due, id) order, on the UI thread. Each callback gets
     /// its own error containment and microtask checkpoint, so a throwing timer cannot skip the
     /// rest of the due batch.</summary>
-    internal void ProcessDueTimers()
+    private void ProcessDueTimers()
     {
         List<JsValue> due;
         lock (_timerLock)

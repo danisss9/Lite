@@ -115,12 +115,6 @@ internal class JsEngine : IDisposable
         return ran;
     }
 
-    /// <summary>Runs any timers whose deadline has passed. The headless pump calls this at the
-    /// start of each turn, so a due 0 ms timeout is not overtaken by an unbounded run of queued
-    /// immediate macrotasks (the simulated media timeline queues one per tick and used to end
-    /// playback before pause-move-within-document's step_timeout(0) could observe it).</summary>
-    internal void ProcessDueTimersNow() => _jsWindow.ProcessDueTimers();
-
     /// <summary>Runs one timer callback on the UI thread with a microtask checkpoint after it.
     /// The timer scheduler invokes due callbacks directly (in deadline order) rather than queuing
     /// each as a separate macrotask, so the error containment is shared with <see cref="DrainTasks"/>.</summary>

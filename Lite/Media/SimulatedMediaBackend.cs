@@ -22,6 +22,10 @@ internal sealed class SimulatedMediaBackend : IMediaBackend
     private double _volume = 1.0;
     private bool _muted;
     private int _playToken;        // invalidates in-flight ticks across pause/load
+    private System.Threading.Timer? _tickTimer;
+    // Ticks are paced in real time (not queued immediately), so a test's step_timeout(0) after
+    // 'playing' runs before the fake timeline can fast-forward to 'ended' (the pause-move case).
+    private const int TickIntervalMs = 10;
 
     public SimulatedMediaBackend(Action<Action> schedule, Action<string> dispatch)
     {
@@ -61,6 +65,8 @@ internal sealed class SimulatedMediaBackend : IMediaBackend
     public void Load(string? src, double duration, bool loop)
     {
         _playToken++;
+        _tickTimer?.Dispose();
+        _tickTimer = null;
         _duration = duration > 0 ? duration : 0;
         _loop = loop;
         _currentTime = 0;
@@ -94,12 +100,24 @@ internal sealed class SimulatedMediaBackend : IMediaBackend
         if (_paused) return;
         _paused = true;
         _playToken++;             // cancel pending ticks
+        _tickTimer?.Dispose();
+        _tickTimer = null;
         _schedule(() => _dispatch("pause"));
     }
 
-    public void Dispose() => _playToken++;
+    public void Dispose()
+    {
+        _playToken++;
+        _tickTimer?.Dispose();
+        _tickTimer = null;
+    }
 
-    private void ScheduleTick(int token) => _schedule(() => Tick(token));
+    private void ScheduleTick(int token)
+    {
+        _tickTimer?.Dispose();
+        _tickTimer = new System.Threading.Timer(_ => _schedule(() => Tick(token)), null,
+            TickIntervalMs, Timeout.Infinite);
+    }
 
     // One advance of the fake clock. Step is sized so a handful of ticks reaches the end, keeping
     // tests fast and deterministic; the live window plays this fake timeline quickly (no decoder).
