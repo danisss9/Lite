@@ -1134,7 +1134,7 @@ public static class StyleExtensions
             // §10.8.1: <length> raises (positive) or lowers (negative) the box's baseline;
             // <percentage> does the same relative to the element's own line-height.
             var v when v.EndsWith('%') => VerticalAlignType.Percentage,
-            var v when v.Length > 0 && (char.IsAsciiDigit(v[0]) || v[0] is '-' or '.' or '+') => VerticalAlignType.Length,
+            var v when v.Length > 0 && (AsciiChar.IsDigit(v[0]) || v[0] is '-' or '.' or '+') => VerticalAlignType.Length,
             _ => VerticalAlignType.Baseline,
         };
     }

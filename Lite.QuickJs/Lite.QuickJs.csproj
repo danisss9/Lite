@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Version>0.3.0</Version>
@@ -56,8 +56,14 @@
 
   <!-- Default: build the bridge from the pinned archive + patches (MinGW-w64 gcc on Windows,
        gcc on Linux). The scripts skip the compile when the existing library and its .build.json
-       record already match the current inputs. -->
+       record already match the current inputs. Delegating via RemoveProperties="TargetFramework"
+       ensures MSBuild runs the native build once across all multi-targeted inner builds instead
+       of racing on shared obj/quickjs and runtimes/ paths. -->
   <Target Name="BuildQuickJsNative" BeforeTargets="CoreCompile" Condition="'$(LiteQuickJsPrebuilt)' != 'true'">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="_BuildQuickJsNativeImpl" RemoveProperties="TargetFramework" />
+  </Target>
+
+  <Target Name="_BuildQuickJsNativeImpl" Condition="'$(LiteQuickJsPrebuilt)' != 'true'">
     <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))" ContinueOnError="true"
           Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build-quickjs.ps1&quot; -OutputPath &quot;$(QuickJsNativeOutput)&quot;">
       <Output TaskParameter="ExitCode" PropertyName="_QuickJsNativeExitCode" />
@@ -74,6 +80,10 @@
        record's inputSha256 and the dll's SHA-256 equals its nativeDllSha256. The dll is untracked;
        LiteQuickJsPrebuiltSource copies one into place first (e.g. into a fresh worktree). -->
   <Target Name="VerifyQuickJsPrebuilt" BeforeTargets="CoreCompile" Condition="'$(LiteQuickJsPrebuilt)' == 'true'">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="_VerifyQuickJsPrebuiltImpl" RemoveProperties="TargetFramework" />
+  </Target>
+
+  <Target Name="_VerifyQuickJsPrebuiltImpl" Condition="'$(LiteQuickJsPrebuilt)' == 'true'">
     <Error Condition="!$([MSBuild]::IsOSPlatform('Windows'))"
            Text="LiteQuickJsPrebuilt is supported on Windows only; on Linux install gcc and build without it." />
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\verify-quickjs-prebuilt.ps1&quot; -OutputPath &quot;$(QuickJsNativeOutput)&quot; -PrebuiltSource &quot;$(LiteQuickJsPrebuiltSource)&quot;" />

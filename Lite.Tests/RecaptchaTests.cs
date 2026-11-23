@@ -56,8 +56,7 @@ public static class RecaptchaTests
 
     internal static int LiveSmoke()
     {
-        var builder = WebApplication.CreateBuilder(new WebApplicationOptions());
-        builder.WebHost.UseKestrelCore().UseUrls("http://127.0.0.1:0");
+        var builder = TestWebServer.CreateBuilder();
         var app = builder.Build();
         var proxy = new HttpClient();
         app.MapGet("/recaptcha/api.js", async () =>

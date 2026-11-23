@@ -1448,8 +1448,8 @@ public class BrowserWindow
         "\\" => 0xDC,
         "]" => 0xDD,
         "'" => 0xDE,
-        _ when key.Length == 1 && char.IsAsciiDigit(key[0]) => key[0],
-        _ when key.Length == 1 && char.IsAsciiLetter(key[0]) => char.ToUpperInvariant(key[0]),
+        _ when key.Length == 1 && AsciiChar.IsDigit(key[0]) => key[0],
+        _ when key.Length == 1 && AsciiChar.IsLetter(key[0]) => char.ToUpperInvariant(key[0]),
         _ when key.Length >= 2 && key[0] == 'F' && int.TryParse(key[1..], out var fn) && fn is >= 1 and <= 12 => 0x70 + fn - 1,
         _ => 0
     };

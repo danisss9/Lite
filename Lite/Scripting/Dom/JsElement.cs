@@ -3219,7 +3219,7 @@ public class JsDataset
         for (var i = 0; i < attribute.Length; i++)
         {
             var c = attribute[i];
-            if (c == '-' && i + 1 < attribute.Length && char.IsAsciiLetterLower(attribute[i + 1]))
+            if (c == '-' && i + 1 < attribute.Length && AsciiChar.IsLetterLower(attribute[i + 1]))
                 sb.Append(char.ToUpperInvariant(attribute[++i]));
             else
                 sb.Append(c);

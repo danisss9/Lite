@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Lite.Conformance.Test262;
 
@@ -387,7 +388,7 @@ internal static class Es2020HostRunner
                 "Timer-callback import did not resolve against the module's URL");
         },
     };
-    internal static string[] TestNames => Cases.Keys.Order(StringComparer.Ordinal).ToArray();
+    internal static string[] TestNames => Cases.Keys.OrderBy(static x => x, StringComparer.Ordinal).ToArray();
 
     internal const string ExpectedFailuresFile = "Test262/es2020-host-expected-failures.txt";
 
@@ -457,8 +458,14 @@ internal static class Es2020HostRunner
         internal JsEngine Empty() => HeadlessPage.Load(BaseUrl + "/empty.html").Engine;
         private static WebApplication Start(Site site)
         {
+#if NET8_0_OR_GREATER
             var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
             builder.WebHost.UseKestrelCore().UseUrls("http://127.0.0.1:0");
+#else
+            var builder = WebApplication.CreateBuilder();
+            builder.Logging.ClearProviders();
+            builder.WebHost.UseUrls("http://127.0.0.1:0");
+#endif
             var app = builder.Build();
             app.Run(async context =>
             {

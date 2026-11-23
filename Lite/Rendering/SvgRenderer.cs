@@ -307,7 +307,7 @@ internal static class SvgRenderer
                 var r = ParseColorComponent(parts[0]);
                 var g = ParseColorComponent(parts[1]);
                 var bl = ParseColorComponent(parts[2]);
-                var a = parts.Length >= 4 && float.TryParse(parts[3], CultureInfo.InvariantCulture, out var av) ? (byte)(av * 255) : (byte)255;
+                var a = parts.Length >= 4 && float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var av) ? (byte)(av * 255) : (byte)255;
                 return new SKColor(r, g, bl, a);
             }
         }
@@ -359,7 +359,7 @@ internal static class SvgRenderer
     private static byte ParseColorComponent(string s)
     {
         s = s.Trim();
-        if (s.EndsWith('%') && float.TryParse(s[..^1], CultureInfo.InvariantCulture, out var pct))
+        if (s.EndsWith('%') && float.TryParse(s[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out var pct))
             return (byte)(pct / 100f * 255);
         return byte.TryParse(s, out var v) ? v : (byte)0;
     }

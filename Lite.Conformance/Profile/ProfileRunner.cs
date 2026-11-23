@@ -182,12 +182,16 @@ internal static class ProfileRunner
             : Path.GetFullPath(reportPath);
         var parent = Path.GetDirectoryName(destination);
         if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+#if NET7_0_OR_GREATER
         var jsonOptions = new JsonSerializerOptions(JsonSerializerOptions.Default) { WriteIndented = true };
+#else
+        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+#endif
         File.WriteAllText(destination, report.ToJsonString(jsonOptions) + Environment.NewLine,
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         Console.WriteLine($"  PASS  compatibility contract ({requirements.Length} classified entries)");
-        foreach (var specification in SpecificationIds.Order())
+        foreach (var specification in SpecificationIds.OrderBy(static x => x))
         {
             var c = counts[specification]!.AsObject();
             Console.WriteLine($"        {specification}: implemented={c["implemented"]}, failing={c["failing"]}, " +
@@ -570,7 +574,7 @@ internal static class ProfileRunner
                 : requirements.Where(r => Text(r, "specification") == specification);
             var entries = source.ToArray();
             var counts = new JsonObject();
-            foreach (var status in Statuses.Order())
+            foreach (var status in Statuses.OrderBy(static x => x))
                 counts[status] = entries.Count(r => Text(r, "status") == status);
             counts["entries"] = entries.Length;
             result[specification] = counts;

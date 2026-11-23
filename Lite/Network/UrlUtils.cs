@@ -17,11 +17,11 @@ internal static class UrlUtils
         if (string.IsNullOrEmpty(url)) return false;
         var colon = url.IndexOf(':');
         if (colon <= 0) return false;
-        if (!char.IsAsciiLetter(url[0])) return false;
+        if (!AsciiChar.IsLetter(url[0])) return false;
         for (int i = 1; i < colon; i++)
         {
             var c = url[i];
-            if (!char.IsAsciiLetterOrDigit(c) && c != '+' && c != '-' && c != '.') return false;
+            if (!AsciiChar.IsLetterOrDigit(c) && c != '+' && c != '-' && c != '.') return false;
         }
         return Uri.TryCreate(url, UriKind.Absolute, out _);
     }

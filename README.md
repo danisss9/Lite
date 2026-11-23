@@ -26,7 +26,7 @@ HTML and CSS are parsed with AngleSharp, layout is calculated by Lite's own layo
 ## Requirements
 
 - Windows x64, or Linux x64 with an X11 display (Wayland desktops work through XWayland)
-- .NET 8 SDK
+- .NET 6, 7, 8, 9, or 10 (consumers); .NET 10 SDK to build the multi-targeted repository
 - To build the repository's QuickJS native library: MinGW-w64 GCC on Windows; `gcc`, `git`, `curl`, and `xz` on Linux
 - An HTTP or HTTPS URL to render
 
@@ -138,7 +138,7 @@ The QuickJS bridge is built as part of `Lite.QuickJs`: `build-quickjs.ps1` produ
 Run the regression suite:
 
 ```powershell
-dotnet run --project Lite.Tests/Lite.Tests.csproj -c Release
+dotnet run --project Lite.Tests/Lite.Tests.csproj -c Release -f net8.0
 ```
 
 The upstream conformance suites are downloaded separately and pinned by `Lite.Conformance/test-suites.lock.json` (on Linux, run the scripts with PowerShell 7 `pwsh`):
@@ -150,12 +150,12 @@ The upstream conformance suites are downloaded separately and pinned by `Lite.Co
 # those if the tree is ever missing or fails its pin check.
 ./scripts/fetch-tests.ps1 -IncludeCss21Official
 
-dotnet run --project Lite.Conformance -c Release -- --suite profile
-dotnet run --project Lite.Conformance -c Release -- --suite css21
-dotnet run --project Lite.Conformance -c Release -- --suite wpt
-dotnet run --project Lite.Conformance -c Release -- --suite html5
-dotnet run --project Lite.Conformance -c Release -- --suite test262
-dotnet run --project Lite.Conformance -c Release -- --suite acid
+dotnet run --project Lite.Conformance -c Release -f net8.0 -- --suite profile
+dotnet run --project Lite.Conformance -c Release -f net8.0 -- --suite css21
+dotnet run --project Lite.Conformance -c Release -f net8.0 -- --suite wpt
+dotnet run --project Lite.Conformance -c Release -f net8.0 -- --suite html5
+dotnet run --project Lite.Conformance -c Release -f net8.0 -- --suite test262
+dotnet run --project Lite.Conformance -c Release -f net8.0 -- --suite acid
 ```
 
 The WPT/HTML/CSS suites execute through one persistent worker process per run (recycled every 200 tests), so wall time tracks engine work rather than per-test process startup. Set `LITE_WPT_ISOLATED=1` to fall back to the per-test fresh process (used for crash attribution comparisons). `--shard i/N` splits a suite across concurrent processes; `scripts/run-css21-baseline.ps1` sizes its shard count to the machine by default, and `python scripts/run-es2020.py` already runs the JS suite in eight shards. Known-slow pages whose outcome is timeout under any budget get reviewed reduced kill budgets in `Lite.Conformance/Wpt/test-timeouts.txt`.

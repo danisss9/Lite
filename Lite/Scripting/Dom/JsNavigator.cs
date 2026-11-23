@@ -68,7 +68,7 @@ public class JsNavigator
         { "bitcoin", "geo", "im", "irc", "ircs", "magnet", "mailto", "mms", "mx", "news", "nntp",
           "openpgp4fpr", "sip", "sms", "smsto", "ssh", "tel", "urn", "webcal", "wtai", "xmpp" };
         if (!safe.Contains(scheme) && !(scheme.Length > 4 && scheme.StartsWith("web+", StringComparison.Ordinal)
-            && scheme[4..].Length >= 1 && scheme[4..].All(char.IsAsciiLetterOrDigit)))
+            && scheme[4..].Length >= 1 && scheme[4..].All(AsciiChar.IsLetterOrDigit)))
             throw JsErrors.Native(pageEngine, "SyntaxError",
                 $"Failed to execute 'registerProtocolHandler': The scheme '{scheme}' is not safe.");
         var origin = JsEngine.Instance?.Origin ?? "null";

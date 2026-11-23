@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Lite.Conformance.Css21;
 using Lite.Conformance.Wpt;
 
@@ -66,8 +67,14 @@ internal static class ConformanceServer
         // registry is cleared on every document load.
         EnsureTestFontsProvisioned();
 
+#if NET8_0_OR_GREATER
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
         builder.WebHost.UseKestrelCore();
+        builder.Services.AddRoutingCore();
+#else
+        var builder = WebApplication.CreateBuilder();
+        builder.Logging.ClearProviders();
+#endif
         // Port zero asks Kestrel for an unused loopback port, allowing shards to run in parallel.
         // A fixed port remains available for diagnostics through LITE_CONFORMANCE_PORT.
         var configuredPort = Environment.GetEnvironmentVariable("LITE_CONFORMANCE_PORT");
@@ -75,7 +82,6 @@ internal static class ConformanceServer
             ? parsedPort
             : 0;
         builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
-        builder.Services.AddRoutingCore();
 
         var app = builder.Build();
 

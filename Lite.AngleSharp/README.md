@@ -12,7 +12,7 @@ conformance track can carry tree-construction patches the NuGet package does not
   `Key.snk`, which this project signs with).
 - Scope: `src/AngleSharp/**` only (no upstream tests, benchmarks or docs). The upstream
   project file is replaced by `Lite.AngleSharp.csproj`, which keeps the upstream compile
-  surface for net8.0 (`Nullable` enable, LangVersion latest, SYSLIB0014 suppressed).
+  surface for net6.0;net7.0;net8.0;net9.0;net10.0 (`Nullable` enable, LangVersion latest, SYSLIB0014 suppressed).
 
 ## Patch policy
 

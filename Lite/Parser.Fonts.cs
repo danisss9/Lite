@@ -148,7 +148,7 @@ internal static partial class Parser
             if (TextMeasure.IsValidFontWeight(token) && !token.Equals("normal", StringComparison.OrdinalIgnoreCase))
                 return token;
             var t = token.Split('/')[0];
-            if (t.Length > 0 && (char.IsAsciiDigit(t[0]) || t[0] == '.' || t.EndsWith('%'))) break;
+            if (t.Length > 0 && (AsciiChar.IsDigit(t[0]) || t[0] == '.' || t.EndsWith('%'))) break;
         }
         return "normal";
     }

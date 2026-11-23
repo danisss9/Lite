@@ -12,7 +12,7 @@ conformance track can carry parser patches the NuGet package does not have.
   `Key.snk`, which this project signs with).
 - Scope: `src/AngleSharp.Css/**` only (no upstream tests, benchmarks or docs). The upstream
   project file is replaced by `Lite.AngleSharp.Css.csproj`, which compiles the same sources
-  for net8.0 against the vendored `Lite.AngleSharp` core instead of the NuGet AngleSharp.
+  for net6.0;net7.0;net8.0;net9.0;net10.0 against the vendored `Lite.AngleSharp` core instead of the NuGet AngleSharp.
 
 ## Patch policy
 

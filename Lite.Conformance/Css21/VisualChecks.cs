@@ -1060,7 +1060,7 @@ internal static class VisualChecks
             if (mismatch)
                 return Fail2(assertion, $"no painted run resolved the stated {mode} face (families: {below[0].Typeface})");
         }
-        if (check.Edge is { } pitchText && float.TryParse(pitchText, System.Globalization.CultureInfo.InvariantCulture, out var pitch))
+        if (check.Edge is { } pitchText && float.TryParse(pitchText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pitch))
         {
             var baselines = below.Select(e => e.BaselineY).Distinct().OrderBy(v => v).ToList();
             if (baselines.Count < 2)

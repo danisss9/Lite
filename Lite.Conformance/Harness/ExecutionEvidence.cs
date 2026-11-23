@@ -43,7 +43,7 @@ internal static class ExecutionEvidence
     {
         var root = Path.GetFullPath(Path.Combine(ConformancePaths.ProjectRoot, ".."));
         var names = Git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
-            .Split('\0', StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
+            .Split('\0', StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.Ordinal).OrderBy(static x => x, StringComparer.Ordinal);
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (var name in names)
         {
@@ -106,7 +106,7 @@ internal static class ExecutionEvidence
             hash.AppendData(Encoding.UTF8.GetBytes(Git(root, "rev-parse", "HEAD")));
             hash.AppendData(Encoding.UTF8.GetBytes(Git(root, "diff", "HEAD", "--binary", "--no-ext-diff")));
             foreach (var name in Git(root, "ls-files", "-z", "--others", "--exclude-standard")
-                         .Split('\0', StringSplitOptions.RemoveEmptyEntries).Order(StringComparer.Ordinal))
+                         .Split('\0', StringSplitOptions.RemoveEmptyEntries).OrderBy(static x => x, StringComparer.Ordinal))
                 hash.AppendData(Encoding.UTF8.GetBytes(name + "\0" + HashFile(Path.Combine(root, name))));
         }
         if (File.Exists(WptCatalog.ManifestPath))

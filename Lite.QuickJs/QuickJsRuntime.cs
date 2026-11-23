@@ -197,7 +197,7 @@ internal sealed class QuickJsRuntime : IDisposable
 
     internal void CheckThread()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_disposed) throw new ObjectDisposedException(GetType().FullName);
         if (Environment.CurrentManagedThreadId != _threadId)
             throw new InvalidOperationException("QuickJS runtime accessed from another thread");
     }
@@ -212,7 +212,7 @@ internal sealed class QuickJsRuntime : IDisposable
     /// </summary>
     internal void TransferToCurrentThread()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_disposed) throw new ObjectDisposedException(GetType().FullName);
         if (Environment.CurrentManagedThreadId == _threadId) return;
         _threadId = Environment.CurrentManagedThreadId;
         Native.lite_runtime_update_stack_top(Handle);

@@ -96,10 +96,7 @@ public static class RelativePositioningTests
             "</head><body><div id=\"grandparent\"><div id=\"parent\">" +
             "<div id=\"red\" class=\"testDiv\"></div></div>" +
             "<div id=\"green\" class=\"testDiv\"></div></div></body></html>";
-        var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
-        builder.WebHost.UseKestrelCore();
-        builder.WebHost.UseUrls("http://127.0.0.1:0");
-        builder.Services.AddRoutingCore();
+        var builder = TestWebServer.CreateBuilder();
         var app = builder.Build();
         app.Run(ctx => { ctx.Response.ContentType = "text/html"; return ctx.Response.WriteAsync(page); });
         app.Start();

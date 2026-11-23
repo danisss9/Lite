@@ -338,7 +338,7 @@ internal static partial class Parser
 
             var kwStart = i + 1;
             var kwEnd = kwStart;
-            while (kwEnd < css.Length && (char.IsAsciiLetterOrDigit(css[kwEnd]) || css[kwEnd] == '-'))
+            while (kwEnd < css.Length && (AsciiChar.IsLetterOrDigit(css[kwEnd]) || css[kwEnd] == '-'))
                 kwEnd++;
             var kw = css.AsSpan(kwStart, kwEnd - kwStart);
 
@@ -1987,7 +1987,7 @@ internal static partial class Parser
             var compound = part.Split([' ', '>', '+', '~'], StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
             if (compound is null) continue;
             var i = 0;
-            while (i < compound.Length && (char.IsAsciiLetterOrDigit(compound[i]) || compound[i] is '-' or '_')) i++;
+            while (i < compound.Length && (AsciiChar.IsLetterOrDigit(compound[i]) || compound[i] is '-' or '_')) i++;
             var type = compound[..i];
             if (type.Length == 0 || type == "*") return true;
             if (element.LocalName.Equals(type, StringComparison.Ordinal)) return true;

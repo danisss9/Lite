@@ -1776,7 +1776,7 @@ internal static partial class Parser
             else if (lower is "scroll" or "fixed" or "local") attachment = lower;
             else if (lower is "left" or "right" or "top" or "bottom" or "center"
                      || lower.EndsWith("%", StringComparison.Ordinal)
-                     || char.IsAsciiDigit(lower[0]) || lower[0] == '.' || lower[0] == '-')
+                     || AsciiChar.IsDigit(lower[0]) || lower[0] == '.' || lower[0] == '-')
                 position.Add(lower);
             else color = t;   // a colour keyword or function
         }
@@ -2057,7 +2057,7 @@ internal static partial class Parser
             // size left 'font: 900 5em/0 serif' (font-family-015) and 'font: oblique normal 700
             // 18px/200% sans-serif' (c527-font-008) at the inherited size.
             if (token.IndexOf('/') < 0 && IsUnitlessNonZeroNumber(t)) continue;
-            if (char.IsAsciiDigit(t[0]) || t[0] == '.') return t;
+            if (AsciiChar.IsDigit(t[0]) || t[0] == '.') return t;
             if (t.ToLowerInvariant() is "xx-small" or "x-small" or "small" or "medium" or "large"
                 or "x-large" or "xx-large" or "larger" or "smaller") return t;
         }

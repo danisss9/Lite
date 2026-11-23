@@ -30,7 +30,7 @@ internal static class WptRunner
             .Where(HtmlApplicability.IsIncluded)
             .Select(t => t["path"]!.GetValue<string>())
             .Where(p => terms is null or { Length: 0 } || terms.Any(term => p.Contains(term, StringComparison.Ordinal)))
-            .Order(StringComparer.Ordinal);
+            .OrderBy(static x => x, StringComparer.Ordinal);
         var entries = shard.Apply(paths.SelectMany(Expand)).ToArray();
         if (entries.Length == 0) { Console.WriteLine("html5: no reviewed applicable tests match."); return 2; }
         // The reviewed baseline lists paths that passed in a banked run. Under --baseline the

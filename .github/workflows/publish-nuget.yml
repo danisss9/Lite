@@ -48,7 +48,12 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: |
+            6.0.x
+            7.0.x
+            8.0.x
+            9.0.x
+            10.0.x
           cache: true
           cache-dependency-path: |
             Directory.Packages.props
@@ -115,16 +120,25 @@ jobs:
           }
 
       - name: Export HTML inventory backlog
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html5-inventory
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --framework net8.0 --no-build -- --suite html5-inventory
 
-      - name: Unit tests
-        run: dotnet run --project Lite.Tests/Lite.Tests.csproj --configuration Release --no-build --no-restore -- --report Lite.Conformance/artifacts/unit-results.json
+      - name: Unit tests (net8.0)
+        run: dotnet run --project Lite.Tests/Lite.Tests.csproj --configuration Release --framework net8.0 --no-build --no-restore -- --report Lite.Conformance/artifacts/unit-results.json
+
+      - name: Unit tests (net6.0, net7.0, net9.0, net10.0)
+        shell: pwsh
+        run: |
+          foreach ($tfm in @('net6.0', 'net7.0', 'net9.0', 'net10.0')) {
+            Write-Host "=== Running Lite.Tests on $tfm ==="
+            dotnet run --project Lite.Tests/Lite.Tests.csproj --configuration Release --framework $tfm --no-build --no-restore
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: CSS 2.1 gate
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite css21 --report Lite.Conformance/artifacts/css21-results.json
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --framework net8.0 --no-build -- --suite css21 --report Lite.Conformance/artifacts/css21-results.json
 
       - name: WPT gate
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite wpt --report Lite.Conformance/artifacts/wpt-results.json
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --framework net8.0 --no-build -- --suite wpt --report Lite.Conformance/artifacts/wpt-results.json
 
       - name: Full ES2020 language and host release gate (eight Windows shards)
         run: python scripts/run-es2020.py --output Lite.Conformance/artifacts/es2020 --evidence Lite.Conformance/artifacts/unit-results.json --require-ready
@@ -132,18 +146,18 @@ jobs:
       # Acid2 is tracked as a known failing profile entry. Keep the release gate aligned with
       # regular CI by enforcing the approved Acid1 regression without presenting Acid2 as green.
       - name: Acid1 regression
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite acid --filter acid1
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --framework net8.0 --no-build -- --suite acid --filter acid1
 
       # The complete reviewed queue needs tens of hours of engine time and runs on the nightly
       # sharded workflow; publish keeps the same fast baseline smoke slice as CI so a tag never
       # waits on (and then fails) an all-green queue that is still ~80% red.
       - name: HTML 5.0 reviewed assertion smoke gate
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html5 --filter "lite/|dom/collections|dom/lists|dom/traversal|editing/crashtests|selection/crashtests|selection/caret|selection/textcontrols|html/obsolete" --baseline Wpt/html5-baseline-passes.txt --report Lite.Conformance/artifacts/html5-smoke-results.json
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --framework net8.0 --no-build -- --suite html5 --filter "lite/|dom/collections|dom/lists|dom/traversal|editing/crashtests|selection/crashtests|selection/caret|selection/textcontrols|html/obsolete" --baseline Wpt/html5-baseline-passes.txt --report Lite.Conformance/artifacts/html5-smoke-results.json
 
       - name: HTML 5.0 parse-fidelity gate
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html5-parse --report Lite.Conformance/artifacts/html5-parse-gate.json
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --framework net8.0 --no-build -- --suite html5-parse --report Lite.Conformance/artifacts/html5-parse-gate.json
       - name: HTML 5.0 tokenizer gate
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite html5-tokenizer --report Lite.Conformance/artifacts/html5-tokenizer-gate.json
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --framework net8.0 --no-build -- --suite html5-tokenizer --report Lite.Conformance/artifacts/html5-tokenizer-gate.json
 
       # Publishes the contract and every readiness verdict (release, ES2020, HTML 5.0, CSS 2.1)
       # as release evidence without enforcing them, exactly like regular CI. The ES2020 normative
@@ -153,7 +167,7 @@ jobs:
       # program completes. Re-add the flag once the review and implementation gaps close.
       - name: Generate HTML 5.0 compatibility evidence
         if: always()
-        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --no-build -- --suite profile --report compatibility-report.json --evidence Lite.Conformance/artifacts/unit-results.json --evidence Lite.Conformance/artifacts/wpt-results.json --evidence Lite.Conformance/artifacts/html5-results.json --evidence Lite.Conformance/artifacts/html5-smoke-results.json --evidence Lite.Conformance/artifacts/css21-results.json --evidence Lite.Conformance/artifacts/es2020/host.json --evidence Lite.Conformance/artifacts/es2020/test262-0.json --evidence Lite.Conformance/artifacts/es2020/test262-1.json --evidence Lite.Conformance/artifacts/es2020/test262-2.json --evidence Lite.Conformance/artifacts/es2020/test262-3.json --evidence Lite.Conformance/artifacts/es2020/test262-4.json --evidence Lite.Conformance/artifacts/es2020/test262-5.json --evidence Lite.Conformance/artifacts/es2020/test262-6.json --evidence Lite.Conformance/artifacts/es2020/test262-7.json
+        run: dotnet run --project Lite.Conformance/Lite.Conformance.csproj --configuration Release --framework net8.0 --no-build -- --suite profile --report compatibility-report.json --evidence Lite.Conformance/artifacts/unit-results.json --evidence Lite.Conformance/artifacts/wpt-results.json --evidence Lite.Conformance/artifacts/html5-results.json --evidence Lite.Conformance/artifacts/html5-smoke-results.json --evidence Lite.Conformance/artifacts/css21-results.json --evidence Lite.Conformance/artifacts/es2020/host.json --evidence Lite.Conformance/artifacts/es2020/test262-0.json --evidence Lite.Conformance/artifacts/es2020/test262-1.json --evidence Lite.Conformance/artifacts/es2020/test262-2.json --evidence Lite.Conformance/artifacts/es2020/test262-3.json --evidence Lite.Conformance/artifacts/es2020/test262-4.json --evidence Lite.Conformance/artifacts/es2020/test262-5.json --evidence Lite.Conformance/artifacts/es2020/test262-6.json --evidence Lite.Conformance/artifacts/es2020/test262-7.json
 
       - name: Upload compatibility evidence
         if: always()
@@ -206,7 +220,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       - name: NuGet login (OIDC to short-lived API key)
         id: login

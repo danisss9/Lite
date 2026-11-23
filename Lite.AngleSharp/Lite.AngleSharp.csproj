@@ -6,7 +6,7 @@
        signed with upstream's committed Key.snk (token e83494dcdc6d31ea) — so NuGet
        AngleSharp.Css 1.0.2 keeps binding without a fork of its own. See README.md. -->
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
     <AssemblyName>AngleSharp</AssemblyName>
     <RootNamespace>AngleSharp</RootNamespace>
     <Version>1.7.3.0</Version>

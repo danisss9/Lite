@@ -29,10 +29,7 @@ public static class GoogleSearchTests
 
         internal ReplayServer()
         {
-            var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
-            builder.WebHost.UseKestrelCore();
-            builder.WebHost.UseUrls("http://127.0.0.1:0");
-            builder.Services.AddRoutingCore();
+            var builder = TestWebServer.CreateBuilder();
             _app = builder.Build();
             _app.Run(async ctx =>
             {

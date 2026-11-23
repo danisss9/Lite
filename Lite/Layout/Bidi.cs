@@ -40,11 +40,26 @@ internal static class Bidi
 
     /// <summary>Whether the stream carries any strong RTL (or Arabic-number) content, or an
     /// embedding scope that could reorder — the cheap gate before the full computation.</summary>
-    public static bool HasBidiContent(string text) =>
-        text.AsSpan().IndexOfAnyInRange('\u0590', '\u08FF') >= 0 ||
-        text.AsSpan().IndexOfAnyInRange('\u200E', '\u200F') >= 0 ||
-        text.AsSpan().IndexOfAnyInRange('\u202A', '\u202E') >= 0 ||
-        text.AsSpan().IndexOfAnyInRange('\u2066', '\u2069') >= 0;
+    public static bool HasBidiContent(string text)
+    {
+#if NET8_0_OR_GREATER
+        var span = text.AsSpan();
+        return span.IndexOfAnyInRange('\u0590', '\u08FF') >= 0 ||
+               span.IndexOfAnyInRange('\u200E', '\u200F') >= 0 ||
+               span.IndexOfAnyInRange('\u202A', '\u202E') >= 0 ||
+               span.IndexOfAnyInRange('\u2066', '\u2069') >= 0;
+#else
+        foreach (var c in text)
+        {
+            if ((c >= '\u0590' && c <= '\u08FF') ||
+                (c >= '\u200E' && c <= '\u200F') ||
+                (c >= '\u202A' && c <= '\u202E') ||
+                (c >= '\u2066' && c <= '\u2069'))
+                return true;
+        }
+        return false;
+#endif
+    }
 
     /// <summary>The resolved embedding level per char (after X/W/N/I) and the reordered visual
     /// string. Direct port of the derivation's resolve_levels_and_types + reorder, extended
