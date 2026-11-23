@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Lite.Scripting.Runtime;
 using Lite.Models;
 
@@ -207,7 +208,7 @@ internal class JsWindow
             _timers[id] = new TimerEntry
             {
                 Id = id,
-                Due = Environment.TickCount64 + delayMs,
+                Due = Stopwatch.GetTimestamp() + MsToTicks(delayMs),
                 Period = period,
                 Fn = fn,
             };
@@ -215,6 +216,11 @@ internal class JsWindow
         }
         return id;
     }
+
+    private static long MsToTicks(int ms) => (long)(ms * (double)Stopwatch.Frequency / 1000.0);
+
+    private static int TicksToCeilingMs(long ticks) =>
+        ticks <= 0 ? 0 : (int)Math.Ceiling(ticks * 1000.0 / Stopwatch.Frequency);
 
     /// <summary>Arms the one OS timer at the earliest pending deadline (caller holds the lock).</summary>
     private void ArmTimerLocked()
@@ -226,7 +232,7 @@ internal class JsWindow
             return;
         }
         var next = _timers.Values.Min(t => t.Due);
-        var due = Math.Max(0, next - Environment.TickCount64);
+        var due = TicksToCeilingMs(next - Stopwatch.GetTimestamp());
         if (_timer is null)
             _timer = new System.Threading.Timer(_ => _engine.EnqueueMacrotask(ProcessDueTimers), null, due, Timeout.Infinite);
         else
@@ -241,7 +247,10 @@ internal class JsWindow
         List<JsValue> due;
         lock (_timerLock)
         {
-            var now = Environment.TickCount64;
+            // Stopwatch, not Environment.TickCount64: the latter's ~15.6 ms Windows resolution let
+            // a 1 ms timer's OS callback fire before the deadline compared as due, so the callback
+            // ran on a later drain (EventLoopTests.PromiseContinuation_RunsAfterTimerCallback).
+            var now = Stopwatch.GetTimestamp();
             due = _timers.Values
                 .Where(t => t.Due <= now)
                 .OrderBy(t => t.Due).ThenBy(t => t.Id)
@@ -250,7 +259,7 @@ internal class JsWindow
             foreach (var timer in _timers.Values.Where(t => t.Due <= now).ToList())
             {
                 if (timer.OneShot) _timers.Remove(timer.Id);
-                else timer.Due = now + timer.Period;
+                else timer.Due = now + MsToTicks(timer.Period);
             }
             ArmTimerLocked();
         }
